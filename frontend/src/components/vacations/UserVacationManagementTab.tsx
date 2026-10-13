@@ -36,6 +36,8 @@ interface UserVacationBalance {
     dias: number;
     diasWeProdu: number;
     diasProyectadosAl31: number;
+    /** Hasta qué día se supuso que sigue trabajando; null = no se proyectó porque la relación ya terminó. */
+    proyectadoHasta: string | null;
     aniosAl31: number;
     diasLey: number;
     arca: {
@@ -784,7 +786,11 @@ export const UserVacationManagementTab: React.FC = () => {
             )}
             <div className="rounded-lg bg-gray-50 dark:bg-gray-900/40 p-3 text-xs space-y-1">
               <p className="font-semibold">Días por ley para {selectedYear}</p>
-              <p>Antigüedad proyectada al 31/12/{selectedYear}: {antiguedadDe.antiguedad.diasProyectadosAl31.toLocaleString("es-AR")} días ≈ {antiguedadDe.antiguedad.aniosAl31} años → <span className="font-semibold text-violet-600 dark:text-violet-400">{antiguedadDe.antiguedad.diasLey} días</span> (LCT: 14 hasta 5 años, 21 hasta 10, 28 hasta 20, 35 después; menos de 6 meses, 1 cada 20 trabajados).</p>
+              <p>
+                {antiguedadDe.antiguedad.proyectadoHasta
+                  ? `A los ${antiguedadDe.antiguedad.dias.toLocaleString("es-AR")} días trabajados se les suma lo que falta hasta el ${formatDate(antiguedadDe.antiguedad.proyectadoHasta)}${antiguedadDe.antiguedad.arca ? (antiguedadDe.antiguedad.arca.tieneRelacionAbierta ? " (tiene una relación abierta)" : " (su última relación termina ese día)") : " (está activo, se supone que sigue hasta fin de año)"}: `
+                  : `No se proyecta nada: ${antiguedadDe.antiguedad.arca ? "su última relación en ARCA ya terminó" : "no está activo"}. Antigüedad al 31/12/${selectedYear}: `}
+                {antiguedadDe.antiguedad.diasProyectadosAl31.toLocaleString("es-AR")} días ≈ {antiguedadDe.antiguedad.aniosAl31} años → <span className="font-semibold text-violet-600 dark:text-violet-400">{antiguedadDe.antiguedad.diasLey} días</span> (LCT: 14 hasta 5 años, 21 hasta 10, 28 hasta 20, 35 después; menos de 6 meses, 1 cada 20 trabajados).</p>
               <p>Total anual = días por ley + días extra{antiguedadDe.extraVacationDays ? ` (${antiguedadDe.extraVacationDays})` : ""} + beneficio de la compañía (+ arrastre si está habilitado) = <span className="font-semibold">{antiguedadDe.calculated.totalAnnual}</span>{antiguedadDe.override?.totalAnnual !== undefined && antiguedadDe.override.totalAnnual !== antiguedadDe.calculated.totalAnnual ? `, editado a mano a ${antiguedadDe.override.totalAnnual}` : ""}.</p>
             </div>
             <p className="text-xs text-gray-500">El detalle de cada relación (fechas, modalidad, puesto, obra social) está en Documentos → Antigüedad ARCA.</p>

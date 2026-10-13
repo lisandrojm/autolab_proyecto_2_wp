@@ -705,13 +705,29 @@ router.get("/users-balance", async (req: any, res) => {
       const seniorityText = calculateSeniorityText(user.hireDate, contractsDays);
 
       // C. LCT days based on seniority at Dec 31 of selectedYear
+      /*
+        HASTA CUÁNDO SE PROYECTA. Los días por ley se fijan con la antigüedad al 31/12 del período, así
+        que a lo trabajado hasta hoy se le suma lo que falta. Sin ARCA, la única pista es si la persona
+        está activa: se supone que sigue hasta fin de año (y a una jornada de un día que ya terminó le
+        regalaba 80 días y 4 de vacaciones). Con ARCA se sabe: si tiene una relación abierta se proyecta
+        hasta el 31/12; si su última relación termina después de hoy, hasta ese fin (o el 31/12, lo que
+        llegue primero); si ya terminó, no se proyecta nada.
+      */
       let projectedTotalDays = contractsDays;
-      if (contractsDays > 0 && user.metadata?.activo !== false) {
+      let proyectadoHasta: string | null = null;
+      {
         const now = new Date();
         const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59, 999);
-        if (yearEnd > now) {
-          const daysToYearEnd = Math.max(0, Math.ceil((yearEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-          projectedTotalDays += daysToYearEnd;
+        let hasta: Date | null = null;
+        if (arca) {
+          if (arca.tieneRelacionAbierta) hasta = yearEnd;
+          else if (arca.ultimaFecha && new Date(arca.ultimaFecha) > now) hasta = new Date(Math.min(new Date(arca.ultimaFecha).getTime(), yearEnd.getTime()));
+        } else if (contractsDays > 0 && user.metadata?.activo !== false) {
+          hasta = yearEnd;
+        }
+        if (hasta && hasta > now) {
+          projectedTotalDays += Math.max(0, Math.ceil((hasta.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+          proyectadoHasta = hasta.toISOString().slice(0, 10);
         }
       }
 
@@ -777,6 +793,8 @@ router.get("/users-balance", async (req: any, res) => {
           dias: contractsDays,
           diasWeProdu: diasDeContratosWeProdu,
           diasProyectadosAl31: Math.round(projectedTotalDays),
+          /** Hasta qué día se supuso que sigue trabajando (null = no se proyectó: la relación ya terminó). */
+          proyectadoHasta,
           aniosAl31: Math.round(seniorityYears * 100) / 100,
           diasLey: lawDays,
           arca: arca
