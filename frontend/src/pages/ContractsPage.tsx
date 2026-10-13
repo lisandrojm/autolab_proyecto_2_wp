@@ -827,7 +827,7 @@ export const ContractsPage: React.FC = () => {
                           {record.reemplazo ? (
                             <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-800/50 w-fit">
                               <FontAwesomeIcon icon={faIdCard} className="text-[9px]" />
-                              <span>{replacedNames[String(record.empleado_id_reemplezado)] || `ID: ${record.empleado_id_reemplezado}`}</span>
+                              <span>{record.nombre_reemplazado || replacedNames[String(record.empleado_id_reemplezado)] || `ID: ${record.empleado_id_reemplezado}`}</span>
                             </div>
                           ) : (
                             <span className="text-xs text-gray-400">—</span>

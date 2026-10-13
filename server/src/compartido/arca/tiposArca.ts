@@ -72,6 +72,8 @@ export interface ContractOverviewRow {
   areaShiftAssignments: { areaId: string | any; shiftIds: (string | any)[] }[];
   reemplazo: boolean;
   empleado_id_reemplezado?: number | null;
+  /** El nombre de la persona reemplazada (el server lo resuelve por su id de FRAME). Vacío si no se encontró. */
+  nombre_reemplazado?: string;
   fecha_alta_contrato: string;
   fecha_baja_contrato: string;
   /** Cuándo se cargó el contrato en el sistema: ISO completo o "YYYY-MM-DD" según quién lo creó; vacío en los importados. */
