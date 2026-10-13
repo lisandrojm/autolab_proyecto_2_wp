@@ -1373,6 +1373,21 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 filasExtra.forEach((f) => contratoPorFila.set(claveFila(f.id, f.idx), porId.get(f.id)?.get(f.idx) || {}));
             }
         }
+        /*
+          A QUIÉN REEMPLAZA CADA CONTRATO, POR NOMBRE. El contrato guarda el id de FRAME de la persona
+          reemplazada (`empleado_id_reemplezado`) y la pantalla lo buscaba entre las filas de la MISMA
+          página: si esa persona estaba en otra página, o no tenía contrato en la lista, se veía «ID: 752».
+          Una consulta por los ids de la página, sólo el nombre.
+        */
+        const idsReemplazados = [...new Set([...contratoPorFila.values()].filter((c) => c?.reemplazo && c.empleado_id_reemplezado != null && c.empleado_id_reemplezado !== "").map((c) => String(c.empleado_id_reemplezado)))];
+        const nombreReemplazado = new Map();
+        if (idsReemplazados.length > 0) {
+            // `metadata.id` puede estar guardado como número o como texto según de dónde vino la ficha.
+            const valores = [...idsReemplazados, ...idsReemplazados.map(Number).filter((n) => Number.isFinite(n))];
+            const reemplazados = await User.find({ tenantId: req.tenantObjectId, "metadata.id": { $in: valores } }).select("firstName lastName email metadata.id").lean();
+            for (const u of reemplazados)
+                nombreReemplazado.set(String(u.metadata?.id), `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email);
+        }
         const fullRows = pageRows.map(({ _alta, _orden, _contratoOrden, ...r }) => {
             const c = contratoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || {};
             return {
@@ -1383,6 +1398,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 areaShiftAssignments: c.areaShiftAssignments || [],
                 reemplazo: !!c.reemplazo,
                 empleado_id_reemplezado: c.empleado_id_reemplezado ?? null,
+                nombre_reemplazado: c.reemplazo && c.empleado_id_reemplezado != null ? nombreReemplazado.get(String(c.empleado_id_reemplezado)) || "" : "",
                 fecha_alta_contrato: c.fecha_alta_contrato || "",
                 fecha_baja_contrato: c.fecha_baja_contrato || "",
                 // Cuándo se cargó el contrato en el sistema (columna «Fecha de creación»).

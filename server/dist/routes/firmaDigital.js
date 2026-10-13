@@ -66,6 +66,8 @@ router.get("/config", async (_req, res) => {
   texto custom.
 */
 const YA_ENVIADO = "Este trámite ya se envió a firmar: sus documentos quedan como se enviaron.";
+/** Errores de generarContratoPdf / generarReleasePdf que son culpa del pedido, no del server. */
+const statusDeErrorDePdf = (msg) => (/no encontrad/i.test(msg) ? 404 : /no tiene texto escrito|no tiene contenido redactado|no es custom/i.test(msg) ? 400 : 500);
 const generarContratoSchema = z.object({
     projectId: z.string().min(1),
     userId: z.string().min(1),
@@ -131,7 +133,9 @@ router.post("/generar-contrato", async (req, res) => {
     }
     catch (error) {
         console.error("Firma digital generar-contrato error:", error);
-        res.status(500).json({ error: error?.message || "No se pudo generar el contrato." });
+        // Plantilla sin contenido o contrato custom sin texto: es un 400 (lo que falta lo tiene que poner
+        // quien genera), no una falla del server.
+        res.status(statusDeErrorDePdf(String(error?.message || ""))).json({ error: error?.message || "No se pudo generar el contrato." });
     }
 });
 const generarReleaseSchema = z.object({
@@ -197,7 +201,7 @@ router.post("/generar-release", async (req, res) => {
     }
     catch (error) {
         console.error("Firma digital generar-release error:", error);
-        res.status(500).json({ error: error?.message || "No se pudieron generar los release(s)." });
+        res.status(statusDeErrorDePdf(String(error?.message || ""))).json({ error: error?.message || "No se pudieron generar los release(s)." });
     }
 });
 /** Borra un archivo guardado en disco a partir de su URL pública `/storage/...` — no falla si ya no existe. */
@@ -317,8 +321,6 @@ async function cargarTramite(tenantObjectId, projectId, userId, contractIndex) {
         return null;
     return up;
 }
-/** Errores de generarContratoPdf / generarReleasePdf que son culpa del pedido, no del server. */
-const statusDeErrorDePdf = (msg) => (/no encontrad/i.test(msg) ? 404 : /no tiene texto escrito|no tiene contenido redactado|no es custom/i.test(msg) ? 400 : 500);
 // POST /firma-digital/contenido-custom-contrato - «Guardar borrador» del modal del Contrato custom.
 router.post("/contenido-custom-contrato", async (req, res) => {
     try {
