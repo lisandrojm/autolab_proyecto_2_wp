@@ -16,6 +16,7 @@ import { Project } from "../models/Project.js";
 import UserProject from "../models/UserProject.js";
 import { hoyArgentina } from "../utils/contratoVigencia.js";
 import { contratosQueRigenDeLasPersonas } from "../utils/contratosQueRigen.js";
+import { AntiguedadArca } from "../models/AntiguedadArca.js";
 import fs from "fs";
 import path from "path";
 import { Client } from "../models/Client.js";
@@ -517,7 +518,7 @@ router.get("/users-balance", async (req: any, res) => {
       campo del `metadata` que la pantalla mira.
     */
     const users = await User.find({ tenantId, isSystem: { $ne: true } })
-      .select("firstName lastName email hireDate extraVacationDays carryOverVacationDays metadata.activo projectIds")
+      .select("firstName lastName email hireDate extraVacationDays carryOverVacationDays metadata.activo metadata.cuit projectIds")
       .lean();
 
     /*
@@ -611,6 +612,30 @@ router.get("/users-balance", async (req: any, res) => {
     const globalBenefitDays = globalConfig?.diasBeneficio || 0;
     const isArrastreEnabled = globalConfig?.permiteArrastre || false;
 
+    /*
+      LA ANTIGÜEDAD SEGÚN ARCA, CUANDO LA HAY.
+
+      `AntiguedadArca` es la cuenta hecha sobre las relaciones laborales que ARCA tiene registradas
+      de la persona con las empleadoras del tenant (Documentos → Antigüedad ARCA): los días de cada
+      relación sumados, sin contar dos veces los que se solapan. Es el registro oficial, así que si la
+      persona está ahí, esa cuenta reemplaza a la suma de contratos de WeProdu (que cuenta dos veces
+      un día con dos contratos y no sabe nada de lo anterior a WeProdu). Se usa la fila GLOBAL (todas
+      las empleadoras juntas). Quien no está en ARCA sigue como antes: contratos, o la fecha de ingreso.
+      La respuesta dice de dónde salió cada antigüedad (`antiguedad.fuente`) para poder explicarlo.
+    */
+    const cuilDe = (u: any) => String(u.metadata?.cuit || "").replace(/\D/g, "");
+    const isoDe = (d: any) => (d ? new Date(d).toISOString().slice(0, 10) : null);
+    const arcaPorCuil = new Map<string, any>();
+    {
+      const cuils = users.map(cuilDe).filter((c) => c.length === 11);
+      if (cuils.length) {
+        const filas: any[] = await AntiguedadArca.find({ tenantId: req.tenantObjectId || tenantId, empleadoraCuit: null, cuil: { $in: cuils } })
+          .select("cuil primeraAlta ultimaFecha diasTrabajados antiguedadDesdePrimeraAlta cantidadContratos empresas tieneRelacionAbierta calculadoEl")
+          .lean();
+        for (const f of filas) arcaPorCuil.set(f.cuil, f);
+      }
+    }
+
     // Helper: calculate seniority text
     const { differenceInYears, differenceInMonths, differenceInDays } = await import("date-fns");
     const calculateSeniorityText = (hireDate?: Date, contractsDays: number = 0): string => {
@@ -669,6 +694,12 @@ router.get("/users-balance", async (req: any, res) => {
           );
         }, 0);
       }
+
+      // Si ARCA tiene a la persona, manda su cuenta (ver arriba). Lo de WeProdu viaja aparte, para compararlo.
+      const arca = arcaPorCuil.get(cuilDe(user)) || null;
+      const diasDeContratosWeProdu = contractsDays;
+      if (arca) contractsDays = arca.diasTrabajados;
+      const fuenteAntiguedad: "arca" | "contratos" | "ingreso" | "ninguna" = arca ? "arca" : contractsDays > 0 ? "contratos" : user.hireDate ? "ingreso" : "ninguna";
 
       // B. Seniority Text (relative to today)
       const seniorityText = calculateSeniorityText(user.hireDate, contractsDays);
@@ -740,6 +771,27 @@ router.get("/users-balance", async (req: any, res) => {
         email: user.email,
         hireDate: user.hireDate ? user.hireDate.toISOString().split("T")[0] : null,
         seniority: seniorityText,
+        // De dónde salió la antigüedad y cómo se llegó a los días por ley: es lo que explica el modal de la grilla.
+        antiguedad: {
+          fuente: fuenteAntiguedad,
+          dias: contractsDays,
+          diasWeProdu: diasDeContratosWeProdu,
+          diasProyectadosAl31: Math.round(projectedTotalDays),
+          aniosAl31: Math.round(seniorityYears * 100) / 100,
+          diasLey: lawDays,
+          arca: arca
+            ? {
+                primeraAlta: isoDe(arca.primeraAlta),
+                ultimaFecha: isoDe(arca.ultimaFecha),
+                diasTrabajados: arca.diasTrabajados,
+                antiguedadDesdePrimeraAlta: arca.antiguedadDesdePrimeraAlta,
+                cantidadContratos: arca.cantidadContratos,
+                empresas: arca.empresas || [],
+                tieneRelacionAbierta: !!arca.tieneRelacionAbierta,
+                calculadoEl: arca.calculadoEl,
+              }
+            : null,
+        },
         // Días extra: beneficio de la compañía por encima de los que fija la LCT. Ya está sumado en
         // `calculated.totalAnnual`, pero se devuelve aparte para poder verlo y editarlo en la grilla.
         extraVacationDays: extraDays,

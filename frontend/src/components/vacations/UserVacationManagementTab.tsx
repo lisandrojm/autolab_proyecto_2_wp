@@ -30,6 +30,25 @@ interface UserVacationBalance {
   email: string;
   hireDate: string | null;
   seniority: string;
+  /** De dónde salió la antigüedad y cómo se llegó a los días por ley (ver el modal de la celda). */
+  antiguedad?: {
+    fuente: "arca" | "contratos" | "ingreso" | "ninguna";
+    dias: number;
+    diasWeProdu: number;
+    diasProyectadosAl31: number;
+    aniosAl31: number;
+    diasLey: number;
+    arca: {
+      primeraAlta: string | null;
+      ultimaFecha: string | null;
+      diasTrabajados: number;
+      antiguedadDesdePrimeraAlta: { dias: number; anios: number };
+      cantidadContratos: number;
+      empresas: string[];
+      tieneRelacionAbierta: boolean;
+      calculadoEl: string;
+    } | null;
+  };
   /** Días extra: beneficio de la compañía, ya sumado dentro de `calculated.totalAnnual`. */
   extraVacationDays?: number;
   calculated: {
@@ -127,6 +146,8 @@ export const UserVacationManagementTab: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [openInfo, setOpenInfo] = useState(false);
   const [openInfoExtra, setOpenInfoExtra] = useState(false);
+  /** La persona cuya cuenta de antigüedad se está mirando. */
+  const [antiguedadDe, setAntiguedadDe] = useState<UserVacationBalance | null>(null);
   /**
    * Página que se está viendo. Son 1573 personas: dibujarlas todas son 1573 filas con cinco inputs
    * cada una —casi ocho mil campos— y el navegador se arrastra al tipear en cualquiera de ellos.
@@ -570,8 +591,19 @@ export const UserVacationManagementTab: React.FC = () => {
                       <div>
                         Ingreso: <span className="font-semibold text-gray-750 dark:text-gray-300">{formatDate(balance.hireDate)}</span>
                       </div>
-                      <div className="mt-0.5">
+                      <div className="mt-0.5 flex items-center gap-1.5">
                         Antigüedad: <span className="font-semibold text-gray-750 dark:text-gray-300">{balance.seniority}</span>
+                        {/* De dónde salió: ARCA (el registro oficial) o lo de WeProdu. El click abre la cuenta. */}
+                        {balance.antiguedad && balance.antiguedad.fuente !== "ninguna" && (
+                          <button
+                            type="button"
+                            onClick={() => setAntiguedadDe(balance)}
+                            title="Ver cómo se calculó la antigüedad y los días por ley"
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase font-bold hover:opacity-80 ${balance.antiguedad.fuente === "arca" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}
+                          >
+                            {balance.antiguedad.fuente === "arca" ? "ARCA" : balance.antiguedad.fuente === "contratos" ? "Contratos" : "Ingreso"}
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
@@ -711,8 +743,53 @@ export const UserVacationManagementTab: React.FC = () => {
               </li>
             </ul>
           </div>
+          <div>
+            <p className="font-semibold mb-2">La antigüedad</p>
+            <p>
+              Si la persona está en ARCA, la antigüedad es la de sus relaciones laborales registradas en Simplificación Registral (etiqueta{" "}
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ARCA</span>): los días de cada relación sumados, sin
+              contar dos veces los que se solapan, y una relación abierta cuenta hasta hoy. Si no está en ARCA, se suman los contratos cargados en WeProdu, y si tampoco hay, se usa la
+              fecha de ingreso. Con esa antigüedad proyectada al 31 de diciembre del período se fijan los días por ley (LCT: 14 hasta 5 años, 21 hasta 10, 28 hasta 20, 35 después;
+              menos de 6 meses, 1 día cada 20 trabajados). Tocando la etiqueta se ve la cuenta de cada persona; el detalle de las relaciones está en Documentos → Antigüedad ARCA.
+            </p>
+          </div>
           <p className="text-xs text-gray-500">Un valor con el borde resaltado es un cambio sin guardar.</p>
         </div>
+      </InfoModal>
+
+      {/* La cuenta de la antigüedad de una persona: de dónde salió y cómo se llegó a los días por ley. */}
+      <InfoModal isOpen={!!antiguedadDe} onClose={() => setAntiguedadDe(null)} title={`Antigüedad de ${antiguedadDe?.firstName || ""} ${antiguedadDe?.lastName || ""}`} size="md">
+        {antiguedadDe?.antiguedad && (
+          <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+            {antiguedadDe.antiguedad.arca ? (
+              <>
+                <p>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Según ARCA</span>: las relaciones laborales registradas en Simplificación Registral con las empleadoras,
+                  sincronizadas el {formatDate(antiguedadDe.antiguedad.arca.calculadoEl?.slice(0, 10) || null)}.
+                </p>
+                <ul className="space-y-1 text-xs">
+                  <li>Primera alta: <span className="font-semibold">{formatDate(antiguedadDe.antiguedad.arca.primeraAlta)}</span></li>
+                  <li>Última fecha: <span className="font-semibold">{formatDate(antiguedadDe.antiguedad.arca.ultimaFecha)}</span>{antiguedadDe.antiguedad.arca.tieneRelacionAbierta && <span className="ml-1 text-emerald-600">(tiene una relación abierta)</span>}</li>
+                  <li>Relaciones registradas: <span className="font-semibold">{antiguedadDe.antiguedad.arca.cantidadContratos}</span> con {antiguedadDe.antiguedad.arca.empresas.length} empleadora(s)</li>
+                  <li>Días trabajados (sin contar dos veces los solapados): <span className="font-semibold">{antiguedadDe.antiguedad.arca.diasTrabajados.toLocaleString("es-AR")}</span> → {antiguedadDe.seniority}</li>
+                  <li>Desde la primera alta hasta hoy, con huecos: {antiguedadDe.antiguedad.arca.antiguedadDesdePrimeraAlta.dias.toLocaleString("es-AR")} días ({antiguedadDe.antiguedad.arca.antiguedadDesdePrimeraAlta.anios} años)</li>
+                  {antiguedadDe.antiguedad.diasWeProdu > 0 && <li className="text-gray-500">Los contratos cargados en WeProdu suman {antiguedadDe.antiguedad.diasWeProdu.toLocaleString("es-AR")} días; manda ARCA.</li>}
+                </ul>
+              </>
+            ) : (
+              <p>
+                <span className="font-semibold">{antiguedadDe.antiguedad.fuente === "contratos" ? "Según los contratos de WeProdu" : "Según la fecha de ingreso"}</span>: la persona no figura en las relaciones laborales de ARCA (no tiene CUIL cargado, o ARCA no tiene relaciones suyas con estas empleadoras).{" "}
+                {antiguedadDe.antiguedad.fuente === "contratos" ? `Se suman los días de sus contratos: ${antiguedadDe.antiguedad.dias.toLocaleString("es-AR")} días.` : `Ingreso: ${formatDate(antiguedadDe.hireDate)}.`}
+              </p>
+            )}
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-900/40 p-3 text-xs space-y-1">
+              <p className="font-semibold">Días por ley para {selectedYear}</p>
+              <p>Antigüedad proyectada al 31/12/{selectedYear}: {antiguedadDe.antiguedad.diasProyectadosAl31.toLocaleString("es-AR")} días ≈ {antiguedadDe.antiguedad.aniosAl31} años → <span className="font-semibold text-violet-600 dark:text-violet-400">{antiguedadDe.antiguedad.diasLey} días</span> (LCT: 14 hasta 5 años, 21 hasta 10, 28 hasta 20, 35 después; menos de 6 meses, 1 cada 20 trabajados).</p>
+              <p>Total anual = días por ley + días extra{antiguedadDe.extraVacationDays ? ` (${antiguedadDe.extraVacationDays})` : ""} + beneficio de la compañía (+ arrastre si está habilitado) = <span className="font-semibold">{antiguedadDe.calculated.totalAnnual}</span>{antiguedadDe.override?.totalAnnual !== undefined && antiguedadDe.override.totalAnnual !== antiguedadDe.calculated.totalAnnual ? `, editado a mano a ${antiguedadDe.override.totalAnnual}` : ""}.</p>
+            </div>
+            <p className="text-xs text-gray-500">El detalle de cada relación (fechas, modalidad, puesto, obra social) está en Documentos → Antigüedad ARCA.</p>
+          </div>
+        )}
       </InfoModal>
 
       <InfoModal isOpen={openInfoExtra} onClose={() => setOpenInfoExtra(false)} title="Días Extra" size="sm">
