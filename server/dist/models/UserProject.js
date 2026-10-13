@@ -109,6 +109,16 @@ const contractSchema = new Schema({
     firmaGeneradoAt: { type: Date },
     firmaReleasesGeneradoAt: { type: Date },
     firmaEnviadaAt: { type: Date },
+    contenidoCustomContrato: { type: String, default: null, maxlength: 200000 },
+    contenidoCustomReleases: [
+        {
+            _id: false,
+            releaseId: { type: String },
+            content: { type: String, maxlength: 200000 },
+        },
+    ],
+    contenidoCustomEditadoPor: { type: Schema.Types.ObjectId, ref: "User" },
+    contenidoCustomEditadoEl: { type: Date },
     solicitudId: { type: Schema.Types.ObjectId, ref: "User" },
     origen: { type: String, enum: ["agregar_miembro"] },
     areaShiftAssignments: [

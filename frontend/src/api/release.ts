@@ -1,5 +1,6 @@
 import { GRUPO_FIRMA, GrupoVariables } from "./variableFirma";
 import axios from "./axiosConfig";
+import { relanzarErrorDeBlob } from "../utils/errorDeBlob";
 
 export interface Release {
   _id: string;
@@ -13,6 +14,8 @@ export interface Release {
   releaseTipoId?: string | { _id: string; name: string; isActive?: boolean; requiereFirma?: boolean };
   isActive: boolean;
   usaMembrete?: boolean;
+  /** Plantilla custom: `content` es sólo el placeholder; el texto se escribe en Firma digital para cada trámite (ver `@compartido/textoCustom`). */
+  esCustom?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -25,6 +28,8 @@ export interface ReleaseInput {
   releaseTipoId?: string;
   isActive?: boolean;
   usaMembrete?: boolean;
+  /** Plantilla custom: `content` es sólo el placeholder; el texto se escribe en Firma digital para cada trámite (ver `@compartido/textoCustom`). */
+  esCustom?: boolean;
 }
 
 /**
@@ -160,7 +165,7 @@ export const releasesAPI = {
 
   /** Descarga el PDF con las variables reemplazadas por los datos del empleado/contrato. */
   downloadFilled: async (release: Release, ctx: { userId: string; projectId: string; contractIndex: number; empresaId?: string }): Promise<void> => {
-    const response = await axios.get(`/releases/${release._id}/download-filled`, { params: ctx, responseType: "blob" });
+    const response = await axios.get(`/releases/${release._id}/download-filled`, { params: ctx, responseType: "blob" }).catch(relanzarErrorDeBlob);
     // Sin override: el nombre lo decide el backend (ver contratosFrame.downloadFilled).
     downloadBlob(response.data, fileNameFromDisposition(response.headers?.["content-disposition"], `${release.name}.pdf`));
   },

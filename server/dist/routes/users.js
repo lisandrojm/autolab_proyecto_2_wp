@@ -926,6 +926,7 @@ const CAMPOS_FILA_CONTRATO = [
     "altaDocumentoUrl", "altaDocumentoNombre", "altaArcaPresentada",
     "constanciaVigenciaDesde", "constanciaVigenciaHasta", "constanciaVerificador", "constanciaAfipEstado", "constanciaAfipConsultadaAt", "constanciaAfipDropboxSubidaAt",
     "firmaContratoUrl", "firmaContratoNombre", "firmaReleases", "firmaGeneradoAt", "firmaReleasesGeneradoAt", "firmaEnviadaAt",
+    "contenidoCustomContrato", "contenidoCustomReleases",
     "empresaContratoId", "empresaReleaseId", "nombre_empresa_contrato", "nombre_empresa_release",
     "categoria_sat_id", "rol_frame_id", "sede_id", "tipo_contrato_id", "sucursalArcaId", "actividadArca",
     "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "obraSocialBloqueada",
@@ -1413,6 +1414,9 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 firmaGeneradoAt: c.firmaGeneradoAt || "",
                 firmaReleasesGeneradoAt: c.firmaReleasesGeneradoAt || "",
                 firmaEnviadaAt: c.firmaEnviadaAt || "",
+                // Texto de Contrato custom / Release custom escrito para este trámite (ver compartido/textoCustom.ts).
+                contenidoCustomContrato: c.contenidoCustomContrato || "",
+                contenidoCustomReleases: (c.contenidoCustomReleases || []).map((x) => ({ releaseId: String(x.releaseId), content: String(x.content || "") })),
                 empresaContratoId: c.empresaContratoId ? String(c.empresaContratoId) : "",
                 empresaReleaseId: c.empresaReleaseId ? String(c.empresaReleaseId) : releaseUnicaPorProyecto.get(String(r.projectId))?.id || "",
                 nombre_empresa_contrato: c.nombre_empresa_contrato || "",

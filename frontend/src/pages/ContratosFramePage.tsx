@@ -18,6 +18,8 @@ import { SeleccionMultiple } from '../components/ui/SeleccionMultiple';
 import { contratosAPI, ContratoItem, tiposDeContratoActivos } from '../api/contratos';
 import { RichTextEditor } from '../components/ui/RichTextEditor';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
+import { BadgeCustom, CuerpoPlantillaCustom, TildePlantillaCustom } from '../components/contratacion/PlantillaCustom';
+import { PLACEHOLDER_CONTRATO_CUSTOM } from '@compartido/textoCustom';
 
 const emptyForm = { nombre: '', externalId: '', content: '', contratoIds: [] as string[] };
 
@@ -78,6 +80,8 @@ export const ContratosFramePage: React.FC = () => {
   const [form, setForm] = useState({ ...emptyForm });
   const [usaMembrete, setUsaMembrete] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  // Plantilla custom: el cuerpo se escribe en Firma digital para cada trámite.
+  const [esCustom, setEsCustom] = useState(false);
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
@@ -135,6 +139,7 @@ export const ContratosFramePage: React.FC = () => {
     setForm({ ...emptyForm });
     setUsaMembrete(false);
     setIsActive(true);
+    setEsCustom(false);
     setShowModal(true);
   };
 
@@ -149,6 +154,7 @@ export const ContratosFramePage: React.FC = () => {
     });
     setUsaMembrete(!!item.usaMembrete);
     setIsActive(item.isActive ?? true);
+    setEsCustom(!!item.esCustom);
     setShowModal(true);
   };
 
@@ -183,9 +189,10 @@ export const ContratosFramePage: React.FC = () => {
         nombre: form.nombre.trim(),
         contratoIds: form.contratoIds,
         externalId: form.externalId.trim(),
-        content: form.content,
+        content: esCustom ? PLACEHOLDER_CONTRATO_CUSTOM : form.content,
         usaMembrete,
         isActive,
+        esCustom,
         ...(duplicando && !editing ? { duplicarDe: duplicando._id } : {}),
       };
 
@@ -257,7 +264,9 @@ export const ContratosFramePage: React.FC = () => {
 
   /** Genera y descarga un PDF de ejemplo con el contenido actual del editor (sin guardar). */
   const handlePreview = async () => {
-    if (!hasContent(form.content)) {
+    // Custom: se previsualiza el placeholder, para ver el membrete y la firma.
+    const contenido = esCustom ? PLACEHOLDER_CONTRATO_CUSTOM : form.content;
+    if (!hasContent(contenido)) {
       sweetAlert.error('Sin contenido', 'Escribí el contenido del contrato para previsualizarlo.');
       return;
     }
@@ -266,7 +275,7 @@ export const ContratosFramePage: React.FC = () => {
       // Este botón ya cambia a "Generando...", pero está en el pie del modal y con el editor scrolleado
       // queda fuera de la vista: el aviso es lo único que se ve desde donde uno estaba mirando.
       sweetAlert.loading('Generando la previsualización…', 'Puede tardar unos segundos.');
-      const blob = await contratoFrameAPI.preview(form.content, usaMembrete);
+      const blob = await contratoFrameAPI.preview(contenido, usaMembrete);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -342,7 +351,7 @@ export const ContratosFramePage: React.FC = () => {
               header={{
                 title: item.name,
                 icon: faFileContract,
-                badges: [item.isActive === false ? { text: 'Inactivo', variant: 'destructive' } : { text: 'Activo', variant: 'green' }, item.usaMembrete ? { text: 'Membrete activo', variant: 'green' } : { text: 'Membrete inactivo', variant: 'default' }, ...(item.externalId ? [{ text: `ID ${item.externalId}`, variant: 'blue' as const }] : [])],
+                badges: [item.isActive === false ? { text: 'Inactivo', variant: 'destructive' } : { text: 'Activo', variant: 'green' }, ...(item.esCustom ? [{ text: 'Custom', variant: 'info' as const }] : []), item.usaMembrete ? { text: 'Membrete activo', variant: 'green' } : { text: 'Membrete inactivo', variant: 'default' }, ...(item.externalId ? [{ text: `ID ${item.externalId}`, variant: 'blue' as const }] : [])],
               }}
               footer={{
                 leftContent: undefined,
@@ -424,12 +433,13 @@ export const ContratosFramePage: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
               {filtered.map((item) => {
-                const sinContenido = !hasContent(item.content || '');
+                const sinContenido = !item.esCustom && !hasContent(item.content || '');
                 return (
                   <tr key={item._id} className={`cursor-pointer ${sinContenido ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-900/20'}`} onClick={() => openEdit(item)}>
                     <td className={`px-5 py-3 text-sm font-medium ${sinContenido ? 'text-red-700 dark:text-red-300' : 'text-gray-900 dark:text-white'}`}>
                       <span className="inline-flex items-center gap-2">
                         {item.name}
+                        {item.esCustom && <BadgeCustom />}
                         {sinContenido && (
                           <button
                             type="button"
@@ -458,6 +468,8 @@ export const ContratosFramePage: React.FC = () => {
                     <td className="px-5 py-3 text-sm hidden lg:table-cell">
                       {sinContenido ? (
                         <span className="font-medium text-red-600 dark:text-red-400">Sin contenido</span>
+                      ) : item.esCustom ? (
+                        <span className="text-gray-500 dark:text-gray-400 italic">Se escribe en Firma digital</span>
                       ) : (
                         <span className="truncate max-w-[280px] block text-gray-500 dark:text-gray-400" title="Contenido redactado">
                           {contentPreview(item.content || '')}
@@ -580,6 +592,8 @@ export const ContratosFramePage: React.FC = () => {
 
             <MembreteToggle checked={usaMembrete} onChange={setUsaMembrete} />
 
+            <TildePlantillaCustom checked={esCustom} onChange={setEsCustom} />
+
             {/* Contenido del contrato */}
             <div>
               <div className="flex items-center gap-1.5 mb-1">
@@ -588,8 +602,14 @@ export const ContratosFramePage: React.FC = () => {
                   <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
                 </button>
               </div>
+              {esCustom ? (
+                <CuerpoPlantillaCustom placeholder={PLACEHOLDER_CONTRATO_CUSTOM} />
+              ) : (
+                <>
               <RichTextEditor value={form.content} onChange={(html) => setForm((f) => ({ ...f, content: html }))} variables={contratoVariables} variablesTitle="Variables del contrato" />
               <p className="text-xs text-gray-500 mt-1">Opcional: podés crear el contrato y redactarlo más adelante, pero sin contenido no se puede generar el PDF. Las variables se reemplazan al descargar con los datos de la persona y de la empresa seteada en el proyecto (Empresa del Contrato).</p>
+                </>
+              )}
             </div>
           </div>
         </form>

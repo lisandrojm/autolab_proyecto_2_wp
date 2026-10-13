@@ -111,6 +111,12 @@ export interface ContractOverviewRow {
     firmaGeneradoAt?: string;
     firmaReleasesGeneradoAt?: string;
     firmaEnviadaAt?: string;
+    /** Contrato custom / Release custom: el texto escrito para este trámite (ver compartido/textoCustom.ts). */
+    contenidoCustomContrato?: string;
+    contenidoCustomReleases?: {
+        releaseId: string;
+        content: string;
+    }[];
     empresaContratoId?: string;
     empresaReleaseId?: string;
     nombre_empresa_contrato?: string;

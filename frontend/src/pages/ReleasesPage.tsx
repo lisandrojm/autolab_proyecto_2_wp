@@ -20,6 +20,8 @@ import { MembreteToggle } from "../components/MembreteToggle";
 import { RichTextEditor } from "../components/ui/RichTextEditor";
 import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
 import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
+import { BadgeCustom, CuerpoPlantillaCustom, TildePlantillaCustom } from "../components/contratacion/PlantillaCustom";
+import { PLACEHOLDER_RELEASE_CUSTOM } from "@compartido/textoCustom";
 
 interface ReleaseFormData {
   name: string;
@@ -29,6 +31,8 @@ interface ReleaseFormData {
   releaseTipoId: string;
   isActive: boolean;
   usaMembrete: boolean;
+  /** Release custom: el cuerpo se escribe en Firma digital para cada trámite. */
+  esCustom: boolean;
 }
 
 const EMPTY_FORM: ReleaseFormData = {
@@ -39,6 +43,7 @@ const EMPTY_FORM: ReleaseFormData = {
   releaseTipoId: "",
   isActive: true,
   usaMembrete: false,
+  esCustom: false,
 };
 
 /** El editor devuelve "<p></p>" cuando está vacío: chequeamos que haya texto real. */
@@ -147,6 +152,7 @@ export function ReleasesPage() {
       releaseTipoId: tipoId || "",
       isActive: release.isActive,
       usaMembrete: release.usaMembrete ?? false,
+      esCustom: !!release.esCustom,
     });
     setErrors({});
     setShowModal(true);
@@ -209,14 +215,16 @@ export function ReleasesPage() {
 
   /** Genera y descarga un PDF de ejemplo con el contenido actual del editor (sin guardar). */
   const handlePreview = async () => {
-    if (!hasContent(formData.content)) {
+    // Custom: se previsualiza el placeholder, para ver el membrete y la firma.
+    const contenido = formData.esCustom ? PLACEHOLDER_RELEASE_CUSTOM : formData.content;
+    if (!hasContent(contenido)) {
       Swal.fire("Sin contenido", "Escribí el contenido del release para previsualizarlo", "warning");
       return;
     }
     try {
       setPreviewing(true);
       sweetAlert.loading("Generando la previsualización…", "Puede tardar unos segundos.");
-      const blob = await releasesAPI.preview(formData.content, formData.usaMembrete);
+      const blob = await releasesAPI.preview(contenido, formData.usaMembrete);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -238,7 +246,7 @@ export function ReleasesPage() {
     if (!formData.name.trim()) newErrors.name = "El nombre es requerido";
     if (!formData.version.trim()) newErrors.version = "La versión es requerida";
     if (!formData.releaseTipoId) newErrors.releaseTipoId = "El tipo de release es requerido";
-    if (!hasContent(formData.content)) newErrors.content = "El contenido es requerido";
+    if (!formData.esCustom && !hasContent(formData.content)) newErrors.content = "El contenido es requerido";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -253,10 +261,11 @@ export function ReleasesPage() {
         name: formData.name,
         version: formData.version,
         description: formData.description,
-        content: formData.content,
+        content: formData.esCustom ? PLACEHOLDER_RELEASE_CUSTOM : formData.content,
         releaseTipoId: formData.releaseTipoId,
         isActive: formData.isActive,
         usaMembrete: formData.usaMembrete,
+        esCustom: formData.esCustom,
       };
 
       if (editingRelease) {
@@ -348,7 +357,7 @@ export function ReleasesPage() {
                     icon: faRocket,
                     title: release.name,
                     subtitle: `Versión ${release.version}`,
-                    badges: [getBadge(release), release.usaMembrete ? { text: "Membrete activo", variant: "green" as const } : { text: "Membrete inactivo", variant: "default" as const }],
+                    badges: [getBadge(release), ...(release.esCustom ? [{ text: "Custom", variant: "info" as const }] : []), release.usaMembrete ? { text: "Membrete activo", variant: "green" as const } : { text: "Membrete inactivo", variant: "default" as const }],
                   }}
                   footer={{
                     leftContent: null,
@@ -423,7 +432,12 @@ export function ReleasesPage() {
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
                   {filteredReleases.map((release) => (
                     <tr key={release._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 cursor-pointer" onClick={() => openEdit(release)}>
-                      <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{release.name}</td>
+                      <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                        <span className="inline-flex items-center gap-2">
+                          {release.name}
+                          {release.esCustom && <BadgeCustom />}
+                        </span>
+                      </td>
                       <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{release.version}</td>
                       <td className="px-5 py-3 text-sm whitespace-nowrap">
                         <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>{release.isActive ? "Activo" : "Inactivo"}</span>
@@ -432,7 +446,9 @@ export function ReleasesPage() {
                         <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.usaMembrete ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"}`}>{release.usaMembrete ? "Activo" : "Inactivo"}</span>
                       </td>
                       <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
-                        {hasContent(release.content || "") ? (
+                        {release.esCustom ? (
+                          <span className="italic">Se escribe en Firma digital</span>
+                        ) : hasContent(release.content || "") ? (
                           <span className="truncate max-w-[260px] block" title="Contenido redactado">
                             {(release.content || "")
                               .replace(/<[^>]*>/g, " ")
@@ -565,11 +581,22 @@ export function ReleasesPage() {
 
             <MembreteToggle checked={formData.usaMembrete} onChange={(v) => setFormData({ ...formData, usaMembrete: v })} />
 
+            <TildePlantillaCustom checked={formData.esCustom} onChange={(v) => setFormData((f) => ({ ...f, esCustom: v }))} />
+
             {/* Contenido del release */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contenido *</label>
-              <RichTextEditor value={formData.content} onChange={(html) => setFormData((f) => ({ ...f, content: html }))} variables={releaseVariables} variablesTitle="Variables del release" />
-              <p className="text-xs text-gray-500 mt-1">Las variables se reemplazan al descargar con los datos de la persona y de la empresa seteada en el proyecto (Empresa del Release).</p>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contenido{formData.esCustom ? "" : " *"}</label>
+              {formData.esCustom ? (
+                <>
+                  <CuerpoPlantillaCustom placeholder={PLACEHOLDER_RELEASE_CUSTOM} />
+                  <p className="text-xs text-gray-500 mt-1">Un release custom no se exige en ningún trámite: lo lleva sólo el que tenga texto escrito.</p>
+                </>
+              ) : (
+                <>
+                  <RichTextEditor value={formData.content} onChange={(html) => setFormData((f) => ({ ...f, content: html }))} variables={releaseVariables} variablesTitle="Variables del release" />
+                  <p className="text-xs text-gray-500 mt-1">Las variables se reemplazan al descargar con los datos de la persona y de la empresa seteada en el proyecto (Empresa del Release).</p>
+                </>
+              )}
               {errors.content && <p className="text-sm text-red-500 mt-1">{errors.content}</p>}
             </div>
           </div>

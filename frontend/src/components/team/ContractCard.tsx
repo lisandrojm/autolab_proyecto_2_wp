@@ -184,8 +184,12 @@ export const estadoImpositivoDelContrato = (contract: Contract, contratoFrames: 
 /**
  * El contrato se puede generar si la plantilla tiene contenido REAL redactado. El editor devuelve
  * "<p></p>" cuando está vacío (truthy como string), así que se mira el texto sin etiquetas.
+ *
+ * Una plantilla CUSTOM no tiene contenido propio (sólo el placeholder): el texto es del trámite. Se
+ * deja generar, y si el trámite todavía no tiene texto, el server lo dice (ver `@compartido/textoCustom`).
  */
 export const templateHasContent = (cf: ContratoFrameItem | null): boolean =>
+  !!cf?.esCustom ||
   !!cf?.content && cf.content.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim().length > 0;
 
 

@@ -1949,6 +1949,13 @@ router.get("/projects/:projectId/contratos-desalineados", requireTenant, authent
   }
 });
 
+/** Lo que `assign-member` arrastra del contrato anterior al editarlo (el wizard no lo manda). */
+const CAMPOS_FIRMA_DIGITAL = [
+  "firmaContratoUrl", "firmaContratoNombre", "firmaReleases", "firmaEmpresaContratoId", "firmaEmpresaReleaseId",
+  "firmaGeneradoAt", "firmaReleasesGeneradoAt", "firmaEnviadaAt",
+  "contenidoCustomContrato", "contenidoCustomReleases", "contenidoCustomEditadoPor", "contenidoCustomEditadoEl",
+];
+
 // POST /projects/:projectId/assign-member - Specialized endpoint for the wizard
 router.post("/projects/:projectId/assign-member", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
@@ -2221,6 +2228,12 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         if ((enrichedContract as any).solicitudId === undefined && (prevContract as any).solicitudId) (enrichedContract as any).solicitudId = (prevContract as any).solicitudId;
         // Editar no le cambia el origen al contrato.
         if ((prevContract as any).origen) (enrichedContract as any).origen = (prevContract as any).origen;
+        // Lo de Firma digital tampoco lo conoce el wizard: los PDFs generados, si ya se envió a firmar y
+        // el texto de Contrato/Release custom. Sin arrastrarlos, editar el contrato borraba el texto
+        // escrito y dejaba un trámite ya enviado como si nunca se hubiera enviado.
+        for (const campo of CAMPOS_FIRMA_DIGITAL) {
+          if ((enrichedContract as any)[campo] === undefined && (prevContract as any)[campo] !== undefined) (enrichedContract as any)[campo] = (prevContract as any)[campo];
+        }
       }
 
       if (hasExplicitIndex) {

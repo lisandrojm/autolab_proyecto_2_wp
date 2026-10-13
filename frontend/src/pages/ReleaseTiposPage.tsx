@@ -12,6 +12,8 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faEdit, faTrash, faRocket, faFilePdf, faFileSignature, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { releaseTiposAPI, ReleaseTipoItem } from "../api/releaseTipos";
+import { releasesAPI } from "../api/release";
+import { BadgeCustom } from "../components/contratacion/PlantillaCustom";
 import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 
 const normalizar = (s: string): string =>
@@ -40,6 +42,8 @@ export const ReleaseTiposPage: React.FC = () => {
   const navigate = useNavigate();
   const puedeAbrir = usePuedeAbrir();
   const [tipos, setTipos] = useState<ReleaseTipoItem[]>([]);
+  // Los tipos que tienen algún release custom (el texto se escribe en Firma digital): llevan el badge.
+  const [tiposConCustom, setTiposConCustom] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -76,7 +80,9 @@ export const ReleaseTiposPage: React.FC = () => {
   const cargar = async () => {
     try {
       setLoading(true);
-      setTipos(await releaseTiposAPI.list());
+      const [lista, releases] = await Promise.all([releaseTiposAPI.list(), releasesAPI.getAll().catch(() => [])]);
+      setTipos(lista);
+      setTiposConCustom(new Set(releases.filter((r) => r.esCustom).map((r) => (typeof r.releaseTipoId === "object" ? r.releaseTipoId?._id : r.releaseTipoId) || "")));
     } catch (e) {
       console.error("Error cargando tipos de release:", e);
       sweetAlert.error("Error", "No se pudieron cargar los tipos de release.");
@@ -208,6 +214,7 @@ export const ReleaseTiposPage: React.FC = () => {
                 badges: [
                   { text: tipo.isActive === false ? "Inactivo" : "Activo", variant: tipo.isActive === false ? "destructive" : "green" },
                   { text: tipo.requiereFirma === false ? "No se envía a firmar" : "Se envía a firmar", variant: tipo.requiereFirma === false ? "default" : "green", icon: faFileSignature },
+                  ...(tiposConCustom.has(tipo._id) ? [{ text: "Custom", variant: "info" as const }] : []),
                 ],
               }}
               footer={{
@@ -250,7 +257,12 @@ export const ReleaseTiposPage: React.FC = () => {
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {filtrados.map((tipo) => (
                   <tr key={tipo._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                    <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">{tipo.name}</td>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">
+                      <span className="inline-flex items-center gap-2">
+                        {tipo.name}
+                        {tiposConCustom.has(tipo._id) && <BadgeCustom />}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${tipo.isActive === false ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"}`}>{tipo.isActive === false ? "Inactivo" : "Activo"}</span>
                     </td>

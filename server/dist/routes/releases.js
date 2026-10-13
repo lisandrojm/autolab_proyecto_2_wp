@@ -11,6 +11,7 @@ import { requireTenant } from "../middleware/tenant.js";
 import { buildEmployeeDocData } from "../utils/employeeDocData.js";
 import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
 import { buildDocPdf, getDummyDocVariables, htmlHasText, empresaToMembrete } from "../utils/documentPdf.js";
+import { PLACEHOLDER_RELEASE_CUSTOM, textoCustomDeRelease, textoCustomUsable } from "../compartido/textoCustom.js";
 const router = Router();
 // El release se redacta en la plataforma (editor con formato) y se guarda como HTML en `content`.
 // El PDF se genera al descargar, reemplazando las variables `{{variable}}`.
@@ -21,6 +22,10 @@ const ReleaseSchema = z.object({
     content: z.string().max(200000).optional(),
     releaseTipoId: z.string().optional(),
     isActive: z
+        .union([z.boolean(), z.string()])
+        .optional()
+        .transform((v) => (typeof v === "string" ? v === "true" : v)),
+    esCustom: z
         .union([z.boolean(), z.string()])
         .optional()
         .transform((v) => (typeof v === "string" ? v === "true" : v)),
@@ -138,12 +143,17 @@ router.get("/:id/download", authenticateToken, requireTenant, async (req, res) =
  * directo en el handler, reutilizable desde otros routers (p. ej. "Generar" de Firma Digital) sin
  * pasar por un round-trip HTTP.
  */
+/**
+ * RELEASE CUSTOM (`esCustom`): el cuerpo es el texto escrito para este trámite
+ * (`contract.contenidoCustomReleases`), o `contenidoCustom` si se pasa (la vista previa de Firma
+ * digital). Ver `generarContratoPdf`.
+ */
 export async function generarReleasePdf(opts) {
     const { tenantId, releaseId, userId, projectId, contractIndex, empresaId } = opts;
     const release = await Release.findOne({ _id: releaseId, tenantId });
     if (!release)
         throw new Error("Release no encontrado");
-    if (!htmlHasText(release.content))
+    if (!release.esCustom && !htmlHasText(release.content))
         throw new Error("El release no tiene contenido redactado");
     const user = await User.findOne({ _id: userId, tenantId }).populate({ path: "metadata.projects", model: UserProject }).lean();
     if (!user)
@@ -159,6 +169,9 @@ export async function generarReleasePdf(opts) {
     if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length)
         idx = contracts.length - 1;
     const contract = contracts[idx] || {};
+    const cuerpo = release.esCustom ? (opts.contenidoCustom ?? textoCustomDeRelease(contract.contenidoCustomReleases, String(release._id)) ?? "") : release.content;
+    if (release.esCustom && !textoCustomUsable(cuerpo))
+        throw new Error(`El release custom «${release.name}» no tiene texto escrito para este trámite: escribilo en Firma digital antes de generarlo`);
     const project = await Project.findOne({ _id: projectId, tenantId }).lean();
     const empresas = project?.releaseEmpresas || [];
     const empresasIds = empresas.map((e) => String(e));
@@ -167,7 +180,7 @@ export async function generarReleasePdf(opts) {
     const empresa = chosenId ? await Company.findById(chosenId).lean() : null;
     const data = await buildEmployeeDocData(user, up, contract, empresa);
     const membrete = release.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
-    const buffer = await buildDocPdf(release.content, data, membrete);
+    const buffer = await buildDocPdf(cuerpo, data, membrete);
     // Ver `nomenclaturaService`: el patrón es configurable y el default reproduce el nombre de antes.
     const filename = await nombreArchivoDocumento({ tenantId: opts.tenantId, tipo: "Release", user, up, contract, empresa, docName: release.name, extra: opts.extra });
     return { buffer, filename, empresaIdUsado: chosenId || "" };
@@ -191,7 +204,7 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req,
     catch (error) {
         console.error("Download filled release error:", error);
         const msg = String(error?.message || "");
-        const status = /no encontrado/i.test(msg) ? 404 : /no tiene contenido redactado/i.test(msg) ? 400 : 500;
+        const status = /no encontrado/i.test(msg) ? 404 : /no tiene contenido redactado|no tiene texto escrito/i.test(msg) ? 400 : 500;
         res.status(status).json({ error: msg || "No se pudo generar el release con los datos." });
     }
 });
@@ -209,7 +222,9 @@ router.post("/", authenticateToken, requireTenant, async (req, res) => {
         }
         const release = new Release({
             ...validatedData,
-            content: htmlHasText(validatedData.content) ? validatedData.content : "",
+            // Custom: la plantilla guarda sólo el placeholder; el texto se escribe en cada trámite.
+            content: validatedData.esCustom ? PLACEHOLDER_RELEASE_CUSTOM : htmlHasText(validatedData.content) ? validatedData.content : "",
+            esCustom: !!validatedData.esCustom,
             tenantId: req.tenantObjectId,
         });
         await release.save();
@@ -251,7 +266,11 @@ router.put("/:id", authenticateToken, requireTenant, async (req, res) => {
         release.version = validatedData.version;
         if (validatedData.description !== undefined)
             release.description = validatedData.description;
-        if (validatedData.content !== undefined)
+        if (validatedData.esCustom !== undefined)
+            release.esCustom = validatedData.esCustom;
+        if (release.esCustom)
+            release.content = PLACEHOLDER_RELEASE_CUSTOM;
+        else if (validatedData.content !== undefined)
             release.content = htmlHasText(validatedData.content) ? validatedData.content : "";
         if (validatedData.isActive !== undefined)
             release.isActive = validatedData.isActive;

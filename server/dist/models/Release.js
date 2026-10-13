@@ -36,6 +36,7 @@ const releaseSchema = new Schema({
         type: Boolean,
         default: false,
     },
+    esCustom: { type: Boolean, default: false },
 }, { timestamps: true, collection: "release" });
 releaseSchema.index({ tenantId: 1, isActive: 1 });
 export const Release = mongoose.model("Release", releaseSchema);

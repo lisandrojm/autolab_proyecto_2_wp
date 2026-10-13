@@ -157,8 +157,8 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
     const originalIndex = indiceEnBD(contract);
     try {
       await contratoFrameAPI.downloadFilled(template as ContratoFrameItem, { userId: user._id, projectId, contractIndex: originalIndex, empresaId });
-    } catch {
-      sweetAlert.error("Error", "No se pudo descargar el contrato.");
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo descargar el contrato.");
     }
   };
 
@@ -167,8 +167,8 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
     const originalIndex = indiceEnBD(contract);
     try {
       await releasesAPI.downloadFilled(release, { userId: user._id, projectId, contractIndex: originalIndex, empresaId });
-    } catch {
-      sweetAlert.error("Error", "No se pudo descargar el release.");
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo descargar el release.");
     }
   };
 

@@ -1,4 +1,5 @@
 import axios from "./axiosConfig";
+import { relanzarErrorDeBlob } from "../utils/errorDeBlob";
 
 export interface FirmaDigitalConfig {
   /** Nombre del estado ("ENVIO DE DOCUMENTACION") que alimenta la bandeja "Firma Digital", resuelto
@@ -73,6 +74,23 @@ export interface EnviarFirmaResponse {
   enviados: number;
 }
 
+/** El trámite (persona × proyecto × contrato) al que pertenece el texto custom. */
+export interface TramiteFirma {
+  projectId: string;
+  userId: string;
+  contractIndex: number;
+}
+
+/** Un PDF pedido como blob, con el mensaje de error del server a la vista (ver `relanzarErrorDeBlob`). */
+async function pedirPdf(url: string, body: unknown): Promise<Blob> {
+  try {
+    const { data } = await axios.post(url, body, { responseType: "blob", timeout: 120000 });
+    return data;
+  } catch (error) {
+    return relanzarErrorDeBlob(error);
+  }
+}
+
 export const firmaDigitalAPI = {
   async config(): Promise<FirmaDigitalConfig> {
     const { data } = await axios.get("/firma-digital/config");
@@ -99,6 +117,28 @@ export const firmaDigitalAPI = {
   /** Ícono de tacho junto al/los Release(s) ya generados — borra los PDFs y limpia los campos. */
   async eliminarRelease(target: EliminarFirmaTarget): Promise<void> {
     await axios.post("/firma-digital/eliminar-release", target);
+  },
+
+  /** Contrato custom: guarda el texto escrito para este trámite (borrador; no genera el PDF). */
+  async guardarContenidoCustomContrato(payload: TramiteFirma & { content: string }): Promise<{ contenidoCustomContrato: string; contenidoCustomEditadoEl: string }> {
+    const { data } = await axios.post("/firma-digital/contenido-custom-contrato", payload);
+    return data;
+  },
+
+  /** Release custom: ídem, por release. Guardar vacío (o el placeholder) lo quita del trámite. */
+  async guardarContenidoCustomRelease(payload: TramiteFirma & { releaseId: string; content: string }): Promise<{ contenidoCustomReleases: { releaseId: string; content: string }[]; contenidoCustomEditadoEl: string }> {
+    const { data } = await axios.post("/firma-digital/contenido-custom-release", payload);
+    return data;
+  },
+
+  /** Vista previa del Contrato custom con los datos reales del trámite y el texto del editor (sin guardarlo). */
+  previewContratoCustom(payload: TramiteFirma & { content: string; contratoTemplateId: string; empresaId?: string }): Promise<Blob> {
+    return pedirPdf("/firma-digital/preview-contrato-custom", payload);
+  },
+
+  /** Ídem, para un Release custom. */
+  previewReleaseCustom(payload: TramiteFirma & { content: string; releaseId: string; empresaId?: string }): Promise<Blob> {
+    return pedirPdf("/firma-digital/preview-release-custom", payload);
   },
 
   /** Puede tardar (una subida a Dropbox por documento) — timeout propio más largo. */

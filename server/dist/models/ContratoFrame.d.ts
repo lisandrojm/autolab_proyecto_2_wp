@@ -34,6 +34,12 @@ export interface IContratoFrame extends Document {
     usaMembrete: boolean;
     /** Contrato activo/inactivo (para habilitarlo o no en el catálogo). */
     isActive: boolean;
+    /**
+     * PLANTILLA CUSTOM: el cuerpo se escribe al generar el documento (Firma digital) y vive en el trámite
+     * (`UserProject.contracts[i].contenidoCustom…`). `content` guarda sólo el placeholder. Ver
+     * `compartido/textoCustom.ts`.
+     */
+    esCustom: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

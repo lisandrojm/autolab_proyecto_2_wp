@@ -24,16 +24,16 @@ export const downloadContractRow = async (record: ContractOverviewRow, contratoF
   }
   try {
     await contratoFrameAPI.downloadFilled(template as ContratoFrameItem, { userId: record.userId, projectId: record.projectId, contractIndex: record.contractIndex, empresaId });
-  } catch {
-    sweetAlert.error("Error", "No se pudo descargar el contrato.");
+  } catch (e: any) {
+    sweetAlert.error("Error", e?.response?.data?.error || "No se pudo descargar el contrato.");
   }
 };
 
 export const downloadReleaseRow = async (record: ContractOverviewRow, release: Release, empresaId?: string) => {
   try {
     await releasesAPI.downloadFilled(release, { userId: record.userId, projectId: record.projectId, contractIndex: record.contractIndex, empresaId });
-  } catch {
-    sweetAlert.error("Error", "No se pudo descargar el release.");
+  } catch (e: any) {
+    sweetAlert.error("Error", e?.response?.data?.error || "No se pudo descargar el release.");
   }
 };
 

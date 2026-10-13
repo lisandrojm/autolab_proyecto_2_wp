@@ -10,6 +10,11 @@ export interface ReleasePdfResult {
  * directo en el handler, reutilizable desde otros routers (p. ej. "Generar" de Firma Digital) sin
  * pasar por un round-trip HTTP.
  */
+/**
+ * RELEASE CUSTOM (`esCustom`): el cuerpo es el texto escrito para este trámite
+ * (`contract.contenidoCustomReleases`), o `contenidoCustom` si se pasa (la vista previa de Firma
+ * digital). Ver `generarContratoPdf`.
+ */
 export declare function generarReleasePdf(opts: {
     tenantId: string;
     releaseId: string;
@@ -18,5 +23,6 @@ export declare function generarReleasePdf(opts: {
     contractIndex: number;
     empresaId?: string;
     extra?: string;
+    contenidoCustom?: string;
 }): Promise<ReleasePdfResult>;
 export { router as ReleaseRoutes };

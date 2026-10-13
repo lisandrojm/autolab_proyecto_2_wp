@@ -18,6 +18,7 @@ const contratoFrameSchema = new Schema({
     },
     usaMembrete: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
+    esCustom: { type: Boolean, default: false },
 }, {
     timestamps: true,
     collection: "contratos-frame",

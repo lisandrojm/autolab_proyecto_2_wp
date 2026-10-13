@@ -16,6 +16,9 @@ import { ETIQUETA_TRAMITE } from "../utils/employeeDocData.js";
 import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
 import { generarContratoPdf } from "./contratosFrame.js";
 import { generarReleasePdf } from "./releases.js";
+import { ContratoFrame } from "../models/ContratoFrame.js";
+import { Release } from "../models/Release.js";
+import { textoCustomUsable } from "../compartido/textoCustom.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const router = Router();
@@ -56,6 +59,13 @@ router.get("/config", async (_req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
+/*
+  YA ENVIADO = SOLO LECTURA (pedido del 13/10/2026). Antes, borrar el PDF de un trámite ya enviado
+  dejaba `firmaEnviadaAt` en null y se podía generar y mandar otra vez: dos documentos distintos del
+  mismo trámite en Dropbox Sign. Ahora, una vez enviado, no se genera, no se borra y no se edita el
+  texto custom.
+*/
+const YA_ENVIADO = "Este trámite ya se envió a firmar: sus documentos quedan como se enviaron.";
 const generarContratoSchema = z.object({
     projectId: z.string().min(1),
     userId: z.string().min(1),
@@ -94,6 +104,10 @@ router.post("/generar-contrato", async (req, res) => {
         const up = await UserProject.findOne({ projectId, userId });
         if (!up || contractIndex < 0 || contractIndex >= up.contracts.length) {
             res.status(404).json({ error: "Contrato no encontrado." });
+            return;
+        }
+        if (up.contracts[contractIndex].firmaEnviadaAt) {
+            res.status(409).json({ error: YA_ENVIADO });
             return;
         }
         const dir = path.join(__dirname, "../../storage", tenantId, userId, "firma");
@@ -156,6 +170,10 @@ router.post("/generar-release", async (req, res) => {
             res.status(404).json({ error: "Contrato no encontrado." });
             return;
         }
+        if (up.contracts[contractIndex].firmaEnviadaAt) {
+            res.status(409).json({ error: YA_ENVIADO });
+            return;
+        }
         const dir = path.join(__dirname, "../../storage", tenantId, userId, "firma");
         fs.mkdirSync(dir, { recursive: true });
         const firmaReleases = [];
@@ -210,6 +228,10 @@ router.post("/eliminar-contrato", async (req, res) => {
             res.status(404).json({ error: "Contrato no encontrado." });
             return;
         }
+        if (contract.firmaEnviadaAt) {
+            res.status(409).json({ error: YA_ENVIADO });
+            return;
+        }
         borrarArchivoStorage(contract.firmaContratoUrl);
         up.contracts[contractIndex] = {
             ...contract.toObject(),
@@ -244,6 +266,10 @@ router.post("/eliminar-release", async (req, res) => {
             res.status(404).json({ error: "Contrato no encontrado." });
             return;
         }
+        if (contract.firmaEnviadaAt) {
+            res.status(409).json({ error: YA_ENVIADO });
+            return;
+        }
         (contract.firmaReleases || []).forEach((r) => borrarArchivoStorage(r.url));
         up.contracts[contractIndex] = {
             ...contract.toObject(),
@@ -259,6 +285,184 @@ router.post("/eliminar-release", async (req, res) => {
     catch (error) {
         console.error("Firma digital eliminar-release error:", error);
         res.status(500).json({ error: error?.message || "No se pudieron eliminar los release(s)." });
+    }
+});
+/*
+  TEXTO CUSTOM (Contrato custom / Release custom, ver `compartido/textoCustom.ts`).
+
+  El texto se escribe en Firma digital y se guarda en el trámite, no en la plantilla. Guardar el
+  borrador no genera nada; «Guardar y generar» del modal guarda y después llama a generar-contrato /
+  generar-release como siempre. La vista previa arma el PDF con los datos REALES del trámite y lo que
+  está en el editor, sin guardarlo.
+
+  A diferencia de generar/eliminar (que vienen de antes y confían en el par proyecto-persona), estos
+  verifican que el proyecto y la persona sean del tenant, como /enviar.
+*/
+const tramiteSchema = z.object({
+    projectId: z.string().min(1),
+    userId: z.string().min(1),
+    contractIndex: z.number().int().min(0),
+});
+const contenidoSchema = z.string().max(200000);
+/** El UserProject del trámite si el proyecto y la persona son de este tenant y el contrato existe. */
+async function cargarTramite(tenantObjectId, projectId, userId, contractIndex) {
+    const [project, user] = await Promise.all([
+        Project.exists({ _id: projectId, tenantId: tenantObjectId }),
+        User.exists({ _id: userId, tenantId: tenantObjectId }),
+    ]);
+    if (!project || !user)
+        return null;
+    const up = await UserProject.findOne({ projectId, userId });
+    if (!up || contractIndex >= up.contracts.length)
+        return null;
+    return up;
+}
+/** Errores de generarContratoPdf / generarReleasePdf que son culpa del pedido, no del server. */
+const statusDeErrorDePdf = (msg) => (/no encontrad/i.test(msg) ? 404 : /no tiene texto escrito|no tiene contenido redactado|no es custom/i.test(msg) ? 400 : 500);
+// POST /firma-digital/contenido-custom-contrato - «Guardar borrador» del modal del Contrato custom.
+router.post("/contenido-custom-contrato", async (req, res) => {
+    try {
+        const parsed = tramiteSchema.extend({ content: contenidoSchema }).safeParse(req.body);
+        if (!parsed.success) {
+            res.status(400).json({ error: "Datos inválidos para guardar el texto del contrato." });
+            return;
+        }
+        const { projectId, userId, contractIndex, content } = parsed.data;
+        const up = await cargarTramite(req.tenantObjectId, projectId, userId, contractIndex);
+        if (!up) {
+            res.status(404).json({ error: "Contrato no encontrado." });
+            return;
+        }
+        const contract = up.contracts[contractIndex];
+        if (contract.firmaEnviadaAt) {
+            res.status(409).json({ error: YA_ENVIADO });
+            return;
+        }
+        const contenidoCustomEditadoEl = new Date();
+        up.contracts[contractIndex] = {
+            ...contract.toObject(),
+            contenidoCustomContrato: content,
+            contenidoCustomEditadoPor: req.user?.userId || null,
+            contenidoCustomEditadoEl,
+        };
+        up.markModified("contracts");
+        await up.save();
+        res.json({ contenidoCustomContrato: content, contenidoCustomEditadoEl });
+    }
+    catch (error) {
+        console.error("Firma digital contenido-custom-contrato error:", error);
+        res.status(500).json({ error: error?.message || "No se pudo guardar el texto del contrato." });
+    }
+});
+// POST /firma-digital/contenido-custom-release - «Guardar borrador» del modal de un Release custom.
+router.post("/contenido-custom-release", async (req, res) => {
+    try {
+        const parsed = tramiteSchema.extend({ releaseId: z.string().min(1), content: contenidoSchema }).safeParse(req.body);
+        if (!parsed.success) {
+            res.status(400).json({ error: "Datos inválidos para guardar el texto del release." });
+            return;
+        }
+        const { projectId, userId, contractIndex, releaseId, content } = parsed.data;
+        const release = await Release.findOne({ _id: releaseId, tenantId: req.tenantObjectId }).select("esCustom").lean();
+        if (!release) {
+            res.status(404).json({ error: "Release no encontrado." });
+            return;
+        }
+        if (!release.esCustom) {
+            res.status(400).json({ error: "Ese release no es custom: su texto sale de la plantilla." });
+            return;
+        }
+        const up = await cargarTramite(req.tenantObjectId, projectId, userId, contractIndex);
+        if (!up) {
+            res.status(404).json({ error: "Contrato no encontrado." });
+            return;
+        }
+        const contract = up.contracts[contractIndex];
+        if (contract.firmaEnviadaAt) {
+            res.status(409).json({ error: YA_ENVIADO });
+            return;
+        }
+        // Un texto por release: se reemplaza el que había. Si se vacía, se quita (el release custom es
+        // opcional por trámite: sin texto —o con el placeholder—, la fila no lo lleva).
+        const otros = (contract.contenidoCustomReleases || [])
+            .map((c) => ({ releaseId: String(c.releaseId), content: c.content }))
+            .filter((c) => c.releaseId !== releaseId);
+        const contenidoCustomReleases = textoCustomUsable(content) ? [...otros, { releaseId, content }] : otros;
+        const contenidoCustomEditadoEl = new Date();
+        up.contracts[contractIndex] = {
+            ...contract.toObject(),
+            contenidoCustomReleases,
+            contenidoCustomEditadoPor: req.user?.userId || null,
+            contenidoCustomEditadoEl,
+        };
+        up.markModified("contracts");
+        await up.save();
+        res.json({ contenidoCustomReleases, contenidoCustomEditadoEl });
+    }
+    catch (error) {
+        console.error("Firma digital contenido-custom-release error:", error);
+        res.status(500).json({ error: error?.message || "No se pudo guardar el texto del release." });
+    }
+});
+const previewSchema = tramiteSchema.extend({ content: contenidoSchema, empresaId: z.string().optional() });
+function enviarPdfEnLinea(res, buffer, nombre) {
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename*=UTF-8''${encodeURIComponent(nombre)}.pdf`);
+    res.send(buffer);
+}
+// POST /firma-digital/preview-contrato-custom - «Vista previa» del modal: el PDF con los datos reales
+// del trámite y el texto del editor, sin guardar nada.
+router.post("/preview-contrato-custom", async (req, res) => {
+    try {
+        const parsed = previewSchema.extend({ contratoTemplateId: z.string().min(1) }).safeParse(req.body);
+        if (!parsed.success) {
+            res.status(400).json({ error: "Datos inválidos para la vista previa." });
+            return;
+        }
+        const { projectId, userId, contractIndex, content, empresaId, contratoTemplateId } = parsed.data;
+        if (!(await cargarTramite(req.tenantObjectId, projectId, userId, contractIndex))) {
+            res.status(404).json({ error: "Contrato no encontrado." });
+            return;
+        }
+        const plantilla = await ContratoFrame.findById(contratoTemplateId).select("esCustom").lean();
+        if (!plantilla?.esCustom) {
+            res.status(400).json({ error: "La plantilla no es custom." });
+            return;
+        }
+        const pdf = await generarContratoPdf({ tenantId: String(req.tenantObjectId), templateId: contratoTemplateId, userId, projectId, contractIndex, empresaId, contenidoCustom: content });
+        enviarPdfEnLinea(res, pdf.buffer, `Vista_previa_${pdf.filename}`);
+    }
+    catch (error) {
+        const msg = String(error?.message || "");
+        console.error("Firma digital preview-contrato-custom error:", error);
+        res.status(statusDeErrorDePdf(msg)).json({ error: msg || "No se pudo armar la vista previa." });
+    }
+});
+// POST /firma-digital/preview-release-custom - ídem, para un Release custom.
+router.post("/preview-release-custom", async (req, res) => {
+    try {
+        const parsed = previewSchema.extend({ releaseId: z.string().min(1) }).safeParse(req.body);
+        if (!parsed.success) {
+            res.status(400).json({ error: "Datos inválidos para la vista previa." });
+            return;
+        }
+        const { projectId, userId, contractIndex, content, empresaId, releaseId } = parsed.data;
+        if (!(await cargarTramite(req.tenantObjectId, projectId, userId, contractIndex))) {
+            res.status(404).json({ error: "Contrato no encontrado." });
+            return;
+        }
+        const release = await Release.findOne({ _id: releaseId, tenantId: req.tenantObjectId }).select("esCustom").lean();
+        if (!release?.esCustom) {
+            res.status(400).json({ error: "El release no es custom." });
+            return;
+        }
+        const pdf = await generarReleasePdf({ tenantId: String(req.tenantObjectId), releaseId, userId, projectId, contractIndex, empresaId, contenidoCustom: content });
+        enviarPdfEnLinea(res, pdf.buffer, `Vista_previa_${pdf.filename}`);
+    }
+    catch (error) {
+        const msg = String(error?.message || "");
+        console.error("Firma digital preview-release-custom error:", error);
+        res.status(statusDeErrorDePdf(msg)).json({ error: msg || "No se pudo armar la vista previa." });
     }
 });
 const enviarTargetSchema = z.object({

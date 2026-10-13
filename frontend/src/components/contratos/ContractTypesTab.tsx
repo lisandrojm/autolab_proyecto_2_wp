@@ -11,6 +11,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrash, faCopy, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo, faFilePdf, faArrowUpRightFromSquare, faTriangleExclamation, faUserShield } from '@fortawesome/free-solid-svg-icons';
 import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { contratoFrameAPI, ContratoFrameItem, contratosDePlantilla, plantillaEsDeContrato } from '../../api/contratosFrame';
+import { BadgeCustom } from '../contratacion/PlantillaCustom';
 import { infoAPI, InfoItem } from '../../api/info';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { SelectorCodigoArca } from '../arca/SelectorCodigoArca';
@@ -381,6 +382,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
 
   /** Plantillas ("Plantillas | Contratos") que ya tiene asignadas un Contrato (vacío si todavía no tiene ninguna). */
   const plantillasDe = (contratoId: string): ContratoFrameItem[] => plantillas.filter((p) => plantillaEsDeContrato(p, contratoId));
+  /** El tipo tiene una plantilla custom: el texto de sus contratos se escribe en Firma digital. */
+  const tienePlantillaCustom = (contratoId: string) => plantillasDe(contratoId).some((p) => p.esCustom);
 
   /**
    * Los códigos ARCA que tiene cargados un tipo de contrato, resueltos contra sus catálogos.
@@ -770,7 +773,12 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                   const misEstados = estadosPorContrato.get(contrato._id) || [];
                   return (
                     <tr key={contrato._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                      <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">{contrato.name}</td>
+                      <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">
+                        <span className="inline-flex items-center gap-2">
+                          {contrato.name}
+                          {tienePlantillaCustom(contrato._id) && <BadgeCustom />}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.cantidadJornadas ?? '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.multiplicadorDiario ?? '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.horasPorJornada ?? '—'}</td>
@@ -840,6 +848,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                     {contrato.isActive === false ? 'Inactivo' : 'Activo'}
                   </span>
                   <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{contrato.name}</span>
+                  {tienePlantillaCustom(contrato._id) && <BadgeCustom className="w-fit" />}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400 pt-1 border-t border-gray-100 dark:border-gray-700/60">

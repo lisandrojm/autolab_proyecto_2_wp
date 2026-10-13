@@ -1,5 +1,6 @@
 import { GRUPO_FIRMA, GrupoVariables } from "./variableFirma";
 import axios from "./axiosConfig";
+import { relanzarErrorDeBlob } from "../utils/errorDeBlob";
 
 export interface ContratoFrameItem {
   _id: string;
@@ -21,6 +22,8 @@ export interface ContratoFrameItem {
   };
   usaMembrete?: boolean;
   isActive?: boolean;
+  /** Plantilla custom: `content` es sólo el placeholder; el texto se escribe en Firma digital para cada trámite (ver `@compartido/textoCustom`). */
+  esCustom?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -33,6 +36,8 @@ export interface ContratoFrameInput {
   content?: string;
   usaMembrete?: boolean;
   isActive?: boolean;
+  /** Plantilla custom: `content` es sólo el placeholder; el texto se escribe en Firma digital para cada trámite (ver `@compartido/textoCustom`). */
+  esCustom?: boolean;
   /** Al duplicar: el `_id` de la original. El server pone la copia en los mismos estados. */
   duplicarDe?: string;
 }
@@ -176,7 +181,7 @@ class ContratoFrameAPI {
 
   /** Descarga el PDF con las variables reemplazadas por los datos del empleado/contrato. */
   async downloadFilled(item: ContratoFrameItem, ctx: { userId: string; projectId: string; contractIndex: number; empresaId?: string }): Promise<void> {
-    const response = await axios.get(`/contratos-frame/${item._id}/download-filled`, { params: ctx, responseType: "blob" });
+    const response = await axios.get(`/contratos-frame/${item._id}/download-filled`, { params: ctx, responseType: "blob" }).catch(relanzarErrorDeBlob);
     // Sin override: el nombre lo decide el backend, que es el único que tiene todos los datos
     // (email, CUIL/DNI, período del contrato) y el mismo que se sube a Dropbox Sign.
     downloadBlob(response.data, fileNameFromDisposition(response.headers?.["content-disposition"], `${item.name}.pdf`));

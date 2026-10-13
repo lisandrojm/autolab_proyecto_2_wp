@@ -274,6 +274,13 @@ interface IContract {
     firmaGeneradoAt?: Date;
     firmaReleasesGeneradoAt?: Date;
     firmaEnviadaAt?: Date;
+    contenidoCustomContrato?: string | null;
+    contenidoCustomReleases?: {
+        releaseId: string;
+        content: string;
+    }[];
+    contenidoCustomEditadoPor?: Types.ObjectId | string | null;
+    contenidoCustomEditadoEl?: Date | null;
     areaShiftAssignments?: {
         areaId: Types.ObjectId | string;
         shiftIds: (Types.ObjectId | string)[];

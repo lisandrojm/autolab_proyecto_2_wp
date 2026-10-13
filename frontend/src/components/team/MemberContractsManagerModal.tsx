@@ -138,8 +138,8 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
     if (!userId) return;
     try {
       await contratoFrameAPI.downloadFilled(template as ContratoFrameItem, { userId, projectId: r.projectId, contractIndex: r.contractIndex, empresaId });
-    } catch {
-      sweetAlert.error("Error", "No se pudo descargar el contrato.");
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo descargar el contrato.");
     }
   };
 
@@ -147,8 +147,8 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
     if (!userId) return;
     try {
       await releasesAPI.downloadFilled(release, { userId, projectId: r.projectId, contractIndex: r.contractIndex, empresaId });
-    } catch {
-      sweetAlert.error("Error", "No se pudo descargar el release.");
+    } catch (e: any) {
+      sweetAlert.error("Error", e?.response?.data?.error || "No se pudo descargar el release.");
     }
   };
 

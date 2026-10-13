@@ -314,7 +314,7 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
   */
   const conNeto = Number(proporcionNeto) > 0;
   const textoNeto = (que: string) => `${que} bruto menos los descuentos de ley (queda el ${(Number(proporcionNeto) * 100).toLocaleString("es-AR", { maximumFractionDigits: 2 })} %, como en la escala). Si lo cambiás, el bruto se recalcula.`;
-  const campoNeto = (unidad: UnidadImporte, rotulo: string, que: string, deshabilitado: boolean) => {
+  const campoNeto = (unidad: UnidadImporte, rotulo: string, que: string, deshabilitado: boolean, clase: string = claseCampo) => {
     const v = valorDe[unidad];
     const valor = enEdicion?.unidad === unidad && enEdicion.neto ? enEdicion.texto : v === null || !Number.isFinite(v) ? "" : (v * Number(proporcionNeto)).toFixed(2);
     const ayudaNeto = ayuda(textoNeto(que));
@@ -329,10 +329,10 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
         {adornoCampo ? (
           <div className="relative">
             {adornoCampo}
-            <CampoImporte valor={valor} onCambio={(t) => cambiarImporte(unidad, t, true)} onBlur={soltar} disabled={bloqueado || deshabilitado} className={claseCampo} />
+            <CampoImporte valor={valor} onCambio={(t) => cambiarImporte(unidad, t, true)} onBlur={soltar} disabled={bloqueado || deshabilitado} className={clase} />
           </div>
         ) : (
-          <CampoImporte valor={valor} onCambio={(t) => cambiarImporte(unidad, t, true)} onBlur={soltar} disabled={bloqueado || deshabilitado} className={claseCampo} />
+          <CampoImporte valor={valor} onCambio={(t) => cambiarImporte(unidad, t, true)} onBlur={soltar} disabled={bloqueado || deshabilitado} className={clase} />
         )}
         {!infoEnRotulo && ayudaNeto}
       </div>
@@ -372,7 +372,7 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
         <>
           {campo("jornada", "Importe por jornada neto", sinJornadas, ayuda(sinJornadas ? TEXTO_SIN_JORNADAS : "Si lo cambiás, se recalculan los demás."), claseCampo)}
           {campo("semana", "Importe por semana neto", sinJornadas || diasSemana <= 0, ayuda(sinJornadas ? TEXTO_SIN_JORNADAS : diasSemana > 0 ? `Jornada × ${diasSemana} ${diasSemana === 1 ? "día" : "días"} por semana.` : "Marcá los días que trabaja para calcularlo."), claseCampo)}
-          {campo("mes", "Importe mensual neto", mesesEq <= 0 || sinJornadas, ayuda(mesesEq > 0 && !sinJornadas ? (Number(jornadasDelTipo) > 0 ? `Jornada × ${jornadasDelTipo} jornadas por mes del tipo de contrato.` : "Se prorratea según los días hábiles de cada mes del período.") : TEXTO_SIN_JORNADAS), claseCampo)}
+          {campo("mes", "Importe mensual neto", mesesEq <= 0 || sinJornadas, ayuda(mesesEq > 0 && !sinJornadas ? (Number(jornadasDelTipo) > 0 ? `Jornada × ${jornadasDelTipo} jornadas por mes del tipo de contrato.` : "Se prorratea según los días hábiles de cada mes del período.") : TEXTO_SIN_JORNADAS), claseCampoTotal)}
         </>
       ) : (
       <>
@@ -381,7 +381,7 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
       {campo("jornada", conNeto ? "Importe por jornada bruto" : "Importe por Jornada", sinJornadas, sinJornadas ? ayuda(TEXTO_SIN_JORNADAS) : ayudaJornada ?? ayuda("Total ÷ jornadas del contrato. Varía según los días hábiles de cada mes."), claseCampo)}
       {conNeto && campoNeto("semana", "Importe por semana neto", "El importe por semana", sinJornadas || diasSemana <= 0)}
       {campo("semana", conNeto ? "Importe por semana bruto" : "Importe por Semana", sinJornadas || diasSemana <= 0, ayuda(sinJornadas ? TEXTO_SIN_JORNADAS : diasSemana > 0 ? `Jornada × ${diasSemana} ${diasSemana === 1 ? "día" : "días"} por semana. Si lo cambiás, se recalculan los demás.` : "Marcá los días que trabaja para calcularlo."), claseCampo)}
-      {conNeto && campoNeto("mes", "Importe mensual neto", "El importe mensual", mesesEq <= 0 || sinJornadas)}
+      {conNeto && campoNeto("mes", "Importe mensual neto", "El importe mensual", mesesEq <= 0 || sinJornadas, claseCampoTotal)}
       {campo("mes", conNeto ? "Importe mensual bruto" : "Importe mensual", mesesEq <= 0 || sinJornadas, ayuda(mesesEq > 0 && !sinJornadas ? (Number(jornadasDelTipo) > 0 ? `Jornada × ${jornadasDelTipo} jornadas por mes del tipo de contrato. Si lo cambiás, se recalculan los demás.` : indeterminado ? `Un mes completo: jornada × ${jornadas} jornadas. Si lo cambiás, se recalculan los demás.` : "Se prorratea según los días hábiles reales de cada mes del período. Si lo cambiás, se recalculan los demás.") : TEXTO_SIN_JORNADAS), claseCampo)}
       </>
       )}

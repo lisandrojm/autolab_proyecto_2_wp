@@ -13,6 +13,7 @@ import { buildEmployeeDocData } from "../utils/employeeDocData.js";
 import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
 import { buildDocPdf, getDummyDocVariables, htmlHasText, empresaToMembrete } from "../utils/documentPdf.js";
 import { ensureContratosBackfilled } from "./contratos.js";
+import { PLACEHOLDER_CONTRATO_CUSTOM, textoCustomUsable } from "../compartido/textoCustom.js";
 
 const router = Router();
 
@@ -133,11 +134,17 @@ export interface DocPdfResult {
  * directo en el handler, ahora reutilizable desde otros routers (p. ej. "Generar" de Firma Digital)
  * sin pasar por un round-trip HTTP.
  */
-export async function generarContratoPdf(opts: { tenantId: string; templateId: string; userId: string; projectId: string; contractIndex: number; empresaId?: string; extra?: string }): Promise<DocPdfResult> {
+/**
+ * PLANTILLA CUSTOM (`esCustom`): el cuerpo no es `item.content` (el placeholder) sino el texto escrito
+ * para este trámite (`contract.contenidoCustomContrato`), o `contenidoCustom` si se pasa — la vista
+ * previa de Firma digital muestra lo que está en el editor sin guardarlo. Membrete, datos y nombre del
+ * archivo salen igual que siempre.
+ */
+export async function generarContratoPdf(opts: { tenantId: string; templateId: string; userId: string; projectId: string; contractIndex: number; empresaId?: string; extra?: string; contenidoCustom?: string }): Promise<DocPdfResult> {
   const { tenantId, templateId, userId, projectId, contractIndex, empresaId } = opts;
   const item = await ContratoFrame.findById(templateId);
   if (!item) throw new Error("Contrato no encontrado");
-  if (!htmlHasText(item.content)) throw new Error("El contrato no tiene contenido redactado");
+  if (!item.esCustom && !htmlHasText(item.content)) throw new Error("El contrato no tiene contenido redactado");
 
   const user = await User.findOne({ _id: userId, tenantId }).populate({ path: "metadata.projects", model: UserProject }).lean();
   if (!user) throw new Error("Empleado no encontrado");
@@ -153,6 +160,9 @@ export async function generarContratoPdf(opts: { tenantId: string; templateId: s
   if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length) idx = contracts.length - 1;
   const contract: any = contracts[idx] || {};
 
+  const cuerpo = item.esCustom ? (opts.contenidoCustom ?? contract.contenidoCustomContrato ?? "") : item.content;
+  if (item.esCustom && !textoCustomUsable(cuerpo)) throw new Error("El contrato custom no tiene texto escrito para este trámite: escribilo en Firma digital antes de generarlo");
+
   const project = await Project.findOne({ _id: projectId, tenantId }).lean();
   const empresas: any[] = (project as any)?.contratoEmpresas || [];
   const empresasIds = empresas.map((e) => String(e));
@@ -162,7 +172,7 @@ export async function generarContratoPdf(opts: { tenantId: string; templateId: s
   const data = await buildEmployeeDocData(user, up, contract, empresa);
 
   const membrete = item.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
-  const buffer = await buildDocPdf(item.content, data, membrete);
+  const buffer = await buildDocPdf(cuerpo, data, membrete);
   // El nombre sale del patrón que el tenant tenga configurado (Plantillas → Nomenclatura de
   // archivos). Sin configurar, rige el de fábrica, que es exactamente el de antes.
   const filename = await nombreArchivoDocumento({ tenantId: opts.tenantId, tipo: "Contrato", user, up, contract, empresa, extra: opts.extra });
@@ -187,7 +197,7 @@ router.get("/:id/download-filled", authenticateToken, async (req: AuthenticatedR
   } catch (error: any) {
     console.error("Download filled ContratoFrame error:", error);
     const msg = String(error?.message || "");
-    const status = /no encontrado/i.test(msg) ? 404 : /no tiene contenido redactado/i.test(msg) ? 400 : 500;
+    const status = /no encontrado/i.test(msg) ? 404 : /no tiene contenido redactado|no tiene texto escrito/i.test(msg) ? 400 : 500;
     res.status(status).json({ error: msg || "No se pudo generar el contrato con los datos." });
   }
 });
@@ -195,7 +205,8 @@ router.get("/:id/download-filled", authenticateToken, async (req: AuthenticatedR
 // POST / - crear
 router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { nombre, externalId, content, usaMembrete, isActive, duplicarDe } = req.body;
+    const { nombre, externalId, content, usaMembrete, isActive, duplicarDe, esCustom } = req.body;
+    const custom = esCustom === "true" || esCustom === true;
     if (!nombre || !String(nombre).trim()) {
       res.status(400).json({ error: "El nombre es obligatorio" });
       return;
@@ -212,7 +223,9 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
     const created = await ContratoFrame.create({
       name: String(nombre).trim(),
       externalId: externalId ? String(externalId).trim() : "",
-      content: htmlHasText(content) ? String(content) : "",
+      // Custom: la plantilla guarda sólo el placeholder; el texto se escribe en cada trámite.
+      content: custom ? PLACEHOLDER_CONTRATO_CUSTOM : htmlHasText(content) ? String(content) : "",
+      esCustom: custom,
       contratoId: contrato._id,
       contratoIds: elegidos.contratos.map((c) => c._id),
       usaMembrete: usaMembrete === "true" || usaMembrete === true,
@@ -248,7 +261,7 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
 router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { nombre, externalId, content, contratoId, contratoIds, usaMembrete, isActive } = req.body;
+    const { nombre, externalId, content, contratoId, contratoIds, usaMembrete, isActive, esCustom } = req.body;
     const item = await ContratoFrame.findById(id);
     if (!item) {
       res.status(404).json({ error: "Contrato no encontrado" });
@@ -265,7 +278,9 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Res
       const idNum = Number(externalId);
       if (!isNaN(idNum)) item.data.id = idNum;
     }
-    if (content !== undefined) item.content = htmlHasText(content) ? String(content) : "";
+    if (esCustom !== undefined) item.esCustom = esCustom === "true" || esCustom === true;
+    if (item.esCustom) item.content = PLACEHOLDER_CONTRATO_CUSTOM;
+    else if (content !== undefined) item.content = htmlHasText(content) ? String(content) : "";
 
     if (contratoId !== undefined || contratoIds !== undefined) {
       const elegidos = await contratosDelBody(req.body);

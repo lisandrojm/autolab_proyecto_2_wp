@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { valoracionesDeCategoria } from '@compartido/valoracionesDeCategoria';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt, faRotateRight } from '@fortawesome/free-solid-svg-icons';
+import { faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt, faRotateRight, faPenToSquare, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { BotonOrden, useOrdenTabla } from '../ui/OrdenTabla';
 import { fechaISO } from '../../utils/contratoVigencia';
 import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
@@ -10,13 +10,15 @@ import { MOBILE_ACTIVITY_LOGS as PERMISO_NOVEDADES_MOBILE } from '../../utils/pe
 import { projectsAPI } from '../../api/projects';
 import { CLAVE_CACHE_EMPRESAS, companiesAPI, Company } from '../../api/companies';
 import { infoAPI, InfoItem } from '../../api/info';
-import { ContratoFrameItem } from '../../api/contratosFrame';
+import { ContratoFrameItem, contratoVariables } from '../../api/contratosFrame';
 import { CLAVE_CACHE_TIPOS_CONTRATO, contratosAPI, ContratoItem } from '../../api/contratos';
 import { categoriaSatAPI, CategoriaSatItem } from '../../api/categoriasSat';
 import { claveCacheCatalogo, createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { arcaSucursalesAPI, ArcaSucursal, CLAVE_CACHE_SUCURSALES } from '../../api/arcaSucursales';
 import { DatosArcaDetalle, BadgeArca, ProgresoArca } from './DatosArcaDetalle';
-import { Release } from '../../api/release';
+import { Release, releaseVariables } from '../../api/release';
+import { TextoCustomModal } from './TextoCustomModal';
+import { PLACEHOLDER_CONTRATO_CUSTOM, PLACEHOLDER_RELEASE_CUSTOM, textoCustomDeRelease, textoCustomUsable } from '@compartido/textoCustom';
 import { firmaDigitalAPI, FirmaDigitalConfig } from '../../api/firmaDigital';
 import { afipAPI } from '../../api/afip';
 import { SinCuitValidacionModal, TIPO_DOC_SIN_CUIT_LABEL } from './SinCuitValidacionModal';
@@ -3068,7 +3070,14 @@ const GenerarMenu: React.FC<{ empresas: EmpresaOption[]; onGenerar: (empresaId?:
  *  se puede seleccionar para "Enviar a firmar" (hacen falta AMBOS: contrato y release(s), de los que
  *  efectivamente apliquen — ver `contratoRequiereFirma`/`releaseRequiereFirma` más abajo). */
 const contratoGenerado = (r: ContractOverviewRow): boolean => !!r.firmaGeneradoAt;
-const releasesGenerados = (r: ContractOverviewRow, releasesAplicables: Release[]): boolean => releasesAplicables.length === 0 || !!r.firmaReleasesGeneradoAt;
+const releasesGenerados = (r: ContractOverviewRow, releasesAplicables: Release[]): boolean => {
+  if (releasesAplicables.length === 0) return true;
+  if (!r.firmaReleasesGeneradoAt) return false;
+  // Un release custom entra al grupo cuando se le escribe el texto: si se sumó después de generar, el
+  // grupo generado ya no es el que se tiene que enviar.
+  const conPdf = new Set((r.firmaReleases || []).map((f) => f.releaseId));
+  return releasesAplicables.filter((a) => a.esCustom).every((a) => conPdf.has(a._id));
+};
 
 /** Si el Tipo de Contrato de la plantilla (populado en `template.contratoId`) tiene tildado "Se envía
  *  a firmar" — sin el dato poblado, se asume que sí (comportamiento previo a que existiera el campo). */
@@ -3093,7 +3102,15 @@ const contratoRequiereFirmaAlta = (template: ContratoFrameItem | null): boolean 
  * LOS RELEASES QUE VAN A FIRMA PARA ESTA FILA: los que su tipo de release manda a firmar, y sólo si el
  * Tipo de Contrato también lo pide («Se envía a firmar el release»). Tienen que decir que sí los dos.
  */
-const releasesDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[]): Release[] => (contratoRequiereFirmaRelease(template) ? releasesQueFirman : []);
+const releasesDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[], record: ContractOverviewRow): Release[] =>
+  contratoRequiereFirmaRelease(template) ? releasesQueFirman.filter((r) => !r.esCustom || textoCustomUsable(textoCustomDeRelease(record.contenidoCustomReleases, r._id))) : [];
+
+/**
+ * LOS RELEASES CUSTOM QUE ESTA FILA PODRÍA LLEVAR (decisión del 13/10/2026): no se exigen. Un release
+ * custom va a firma sólo en el trámite que tenga su texto escrito (`releasesDeLaFila`); acá están todos,
+ * con texto o sin, para ofrecer escribirlo.
+ */
+const releasesCustomDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[]): Release[] => (contratoRequiereFirmaRelease(template) ? releasesQueFirman.filter((r) => r.esCustom) : []);
 
 /** El alta de ARCA va a firma: trámite de alta temprana, documento cargado y el tipo lo pide. */
 const altaVaAFirma = (record: ContractOverviewRow, template: ContratoFrameItem | null, tipo?: TipoImpositivo): boolean => tipo === 'alta_temprana_afip' && !!record.altaDocumentoUrl && contratoRequiereFirmaAlta(template);
@@ -3114,7 +3131,7 @@ const calcularEnviable = (record: ContractOverviewRow, contratoFrames: ContratoF
   if (record.firmaEnviadaAt) return false;
   const template = findTemplate(record as unknown as Contract, contratoFrames);
   const contratoAplica = contratoRequiereFirma(template);
-  const releasesAplicables = releasesDeLaFila(template, releasesQueFirman);
+  const releasesAplicables = releasesDeLaFila(template, releasesQueFirman, record);
   const contratoOk = !contratoAplica || contratoGenerado(record);
   const releaseOk = releasesAplicables.length === 0 || releasesGenerados(record, releasesAplicables);
   // El alta ya está cargada (no se genera acá): si es lo único que va a firma, alcanza con ella.
@@ -3138,34 +3155,59 @@ const FirmaContratoCell: React.FC<{
   const [generando, setGenerando] = useState(false);
   const [descargando, setDescargando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
+  // Contrato custom: el modal del texto, con la empresa con la que se va a generar.
+  const [modalTexto, setModalTexto] = useState<{ empresaId?: string } | null>(null);
   const template = findTemplate(record as unknown as Contract, contratoFrames);
-  const puedeGenerar = templateHasContent(template);
+  const esCustom = !!template?.esCustom;
+  // Una plantilla custom no tiene contenido propio (sólo el placeholder): se genera desde el modal.
+  const puedeGenerar = esCustom || templateHasContent(template);
   const requiereFirma = contratoRequiereFirma(template);
+  const enviado = !!record.firmaEnviadaAt;
   const tramite = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados)?.data?.tipoImpositivo as TipoImpositivo | undefined;
+  const tramiteFirma = { projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex };
 
   const savedContratoEmpresaId = record.empresaContratoId || '';
   const contratoEmpresas = record.contratoEmpresas || [];
   const empresasParaGenerar: EmpresaOption[] = savedContratoEmpresaId ? [{ id: savedContratoEmpresaId, label: record.nombre_empresa_contrato || contratoEmpresas.find((e) => e.id === savedContratoEmpresaId)?.label || savedContratoEmpresaId }] : contratoEmpresas;
 
+  const generarPdf = async (empresaId?: string) => {
+    if (!template) return;
+    const res = await firmaDigitalAPI.generarContrato({ ...tramiteFirma, contratoTemplateId: template._id, empresaContratoId: empresaId, tramite });
+    // La respuesta ya trae los campos que cambian: se parchea la fila en vez de releer el listado.
+    onGenerado({ firmaContratoUrl: res.firmaContratoUrl, firmaContratoNombre: res.firmaContratoNombre, firmaGeneradoAt: res.firmaGeneradoAt });
+  };
+
   const generar = async (empresaId?: string) => {
     if (!template) return;
+    // Custom: primero el texto. El modal guarda y genera.
+    if (esCustom) {
+      setModalTexto({ empresaId });
+      return;
+    }
     setGenerando(true);
     try {
-      const res = await firmaDigitalAPI.generarContrato({
-        projectId: record.projectId,
-        userId: record.userId,
-        contractIndex: record.contractIndex,
-        contratoTemplateId: template._id,
-        empresaContratoId: empresaId,
-        tramite,
-      });
-      // La respuesta ya trae los campos que cambian: se parchea la fila en vez de releer el listado.
-      onGenerado({ firmaContratoUrl: res.firmaContratoUrl, firmaContratoNombre: res.firmaContratoNombre, firmaGeneradoAt: res.firmaGeneradoAt });
+      await generarPdf(empresaId);
     } catch (e: any) {
       sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo generar el contrato.');
     } finally {
       setGenerando(false);
     }
+  };
+
+  const guardarTexto = async (texto: string) => {
+    const res = await firmaDigitalAPI.guardarContenidoCustomContrato({ ...tramiteFirma, content: texto });
+    onGenerado({ contenidoCustomContrato: res.contenidoCustomContrato });
+  };
+
+  /** «Guardar y generar» / «Guardar y regenerar»: si ya había un PDF, se borra y se arma de nuevo. */
+  const guardarYGenerar = async (texto: string) => {
+    await guardarTexto(texto);
+    if (contratoGenerado(record)) {
+      await firmaDigitalAPI.eliminarContrato(tramiteFirma);
+      onGenerado({ firmaContratoUrl: '', firmaContratoNombre: '', firmaGeneradoAt: '' });
+    }
+    await generarPdf(modalTexto?.empresaId);
+    sweetAlert.success('Contrato generado', 'Revisalo en el PDF antes de enviarlo a firmar.');
   };
 
   const descargar = async () => {
@@ -3181,11 +3223,11 @@ const FirmaContratoCell: React.FC<{
   };
 
   const eliminar = async () => {
-    const confirm = await sweetAlert.confirm('Eliminar contrato generado', 'Se borra el PDF generado y se puede volver a generar (por ejemplo, para elegir otra empresa). Esto no afecta nada ya enviado a firmar.', 'Sí, eliminar', 'Cancelar');
+    const confirm = await sweetAlert.confirm('Eliminar contrato generado', esCustom ? 'Se borra el PDF generado y se puede volver a generar. El texto escrito queda guardado como borrador.' : 'Se borra el PDF generado y se puede volver a generar (por ejemplo, para elegir otra empresa).', 'Sí, eliminar', 'Cancelar');
     if (!confirm.isConfirmed) return;
     setEliminando(true);
     try {
-      await firmaDigitalAPI.eliminarContrato({ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex });
+      await firmaDigitalAPI.eliminarContrato(tramiteFirma);
       onGenerado({ firmaContratoUrl: '', firmaContratoNombre: '', firmaGeneradoAt: '' });
     } catch (e: any) {
       sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo eliminar el contrato.');
@@ -3194,9 +3236,28 @@ const FirmaContratoCell: React.FC<{
     }
   };
 
+  const modal = esCustom && template && (
+    <TextoCustomModal
+      isOpen={!!modalTexto}
+      onClose={() => setModalTexto(null)}
+      titulo={enviado ? 'Texto del contrato enviado' : 'Texto del contrato'}
+      subtitulo={`${record.userName || ''} · ${template.name}`}
+      textoGuardado={record.contenidoCustomContrato || ''}
+      placeholder={PLACEHOLDER_CONTRATO_CUSTOM}
+      variables={contratoVariables}
+      soloLectura={enviado}
+      rotuloGenerar={contratoGenerado(record) ? 'Guardar y regenerar' : 'Guardar y generar'}
+      permitirBorrador={!contratoGenerado(record)}
+      onGuardar={guardarTexto}
+      onVistaPrevia={(texto) => firmaDigitalAPI.previewContratoCustom({ ...tramiteFirma, content: texto, contratoTemplateId: template._id, empresaId: modalTexto?.empresaId || savedContratoEmpresaId || undefined })}
+      onGenerar={guardarYGenerar}
+    />
+  );
+
   if (!contratoGenerado(record)) {
+    const hayBorrador = textoCustomUsable(record.contenidoCustomContrato);
     return (
-      <div className="flex items-center justify-center min-w-[120px]" onClick={(e) => e.stopPropagation()}>
+      <div className="flex flex-col items-center justify-center gap-1 min-w-[120px]" onClick={(e) => e.stopPropagation()}>
         {!requiereFirma ? (
           <span className="text-xs text-gray-400" title='Este Tipo de Contrato no tiene tildado "Se envía a firmar"'>
             No se envía a Firma
@@ -3218,6 +3279,12 @@ const FirmaContratoCell: React.FC<{
             Sin plantilla
           </span>
         )}
+        {requiereFirma && esCustom && (
+          <span className={`text-[10px] ${hayBorrador ? 'text-violet-600 dark:text-violet-400' : 'text-gray-400'}`} title="Contrato custom: el texto se escribe al generar">
+            Custom · {hayBorrador ? 'borrador guardado' : 'falta el texto'}
+          </span>
+        )}
+        {modal}
       </div>
     );
   }
@@ -3231,16 +3298,25 @@ const FirmaContratoCell: React.FC<{
         <button type="button" onClick={descargar} disabled={descargando} title="Descargar contrato" className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           <FontAwesomeIcon icon={descargando ? faSpinner : faDownload} spin={descargando} className="h-4 w-4" />
         </button>
-        <button type="button" onClick={eliminar} disabled={eliminando} title="Eliminar y volver a generar" className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-          <FontAwesomeIcon icon={eliminando ? faSpinner : faTrash} spin={eliminando} className="h-4 w-4" />
-        </button>
+        {esCustom && (
+          <button type="button" onClick={() => setModalTexto({ empresaId: savedContratoEmpresaId || undefined })} title={enviado ? 'Ver el texto enviado' : 'Editar el texto y regenerar'} className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+            <FontAwesomeIcon icon={enviado ? faFileLines : faPenToSquare} className="h-4 w-4" />
+          </button>
+        )}
+        {/* Ya enviado = solo lectura: borrar dejaba volver a generar y mandar otro documento del mismo trámite. */}
+        {!enviado && (
+          <button type="button" onClick={eliminar} disabled={eliminando} title="Eliminar y volver a generar" className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <FontAwesomeIcon icon={eliminando ? faSpinner : faTrash} spin={eliminando} className="h-4 w-4" />
+          </button>
+        )}
       </div>
-      {record.firmaEnviadaAt && (
+      {enviado && (
         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap w-fit">
           <FontAwesomeIcon icon={faCheck} className="h-2.5 w-2.5" />
           Enviado
         </span>
       )}
+      {modal}
     </div>
   );
 };
@@ -3249,6 +3325,9 @@ const FirmaContratoCell: React.FC<{
  * Celda "Release" de la pestaña Firma digital: botón "Generar" independiente (mismo patrón que
  * Contrato, con menú de empresa si aplica) → una vez generados, ícono de PDF (ver) + descargar por
  * cada release activo.
+ *
+ * RELEASES CUSTOM: no se exigen en ninguna fila. Cada uno aparece como un botón para escribirle el
+ * texto; con texto, entra en el grupo que se genera y se envía (ver `releasesDeLaFila`).
  */
 const FirmaReleaseCell: React.FC<{
   record: ContractOverviewRow;
@@ -3256,37 +3335,81 @@ const FirmaReleaseCell: React.FC<{
   allEstados: InfoItem[];
   /** Todos los releases activos del proyecto (para saber si hay alguno, más allá de si aplican). */
   activeReleases: Release[];
-  /** Solo los releases activos cuyo Tipo tiene tildado "Se envía a firmar". */
+  /** Los que van a firma en esta fila: los normales y los custom que tienen texto. */
   releasesAplicables: Release[];
+  /** Los releases custom que esta fila podría llevar (tengan texto o no). */
+  releasesCustom: Release[];
   onGenerado: (patch?: Partial<ContractOverviewRow>) => void;
-}> = ({ record, contratoFrames, allEstados, activeReleases, releasesAplicables, onGenerado }) => {
+}> = ({ record, contratoFrames, allEstados, activeReleases, releasesAplicables, releasesCustom, onGenerado }) => {
   const [generando, setGenerando] = useState(false);
   const [descargando, setDescargando] = useState<string | null>(null);
   const [eliminando, setEliminando] = useState(false);
+  // Release custom: el modal del texto de ese release.
+  const [modalRelease, setModalRelease] = useState<Release | null>(null);
   const firmaReleases = record.firmaReleases || [];
+  const enviado = !!record.firmaEnviadaAt;
   const tramite = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados)?.data?.tipoImpositivo as TipoImpositivo | undefined;
+  const tramiteFirma = { projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex };
 
   const savedReleaseEmpresaId = record.empresaReleaseId || '';
   const releaseEmpresas = record.releaseEmpresas || [];
   const empresasParaGenerar: EmpresaOption[] = savedReleaseEmpresaId ? [{ id: savedReleaseEmpresaId, label: record.nombre_empresa_release || releaseEmpresas.find((e) => e.id === savedReleaseEmpresaId)?.label || savedReleaseEmpresaId }] : releaseEmpresas;
+  const faltaEmpresa = !savedReleaseEmpresaId && releaseEmpresas.length > 0;
+  const textoDe = (releaseId: string) => textoCustomDeRelease(record.contenidoCustomReleases, releaseId) || '';
+  const tienePdf = (releaseId: string) => firmaReleases.some((f) => f.releaseId === releaseId);
+
+  /**
+   * Genera el grupo de releases. Si ya había PDFs se borran antes: el grupo cambia cuando se agrega o
+   * se quita un release custom, y los que sobran no tienen que quedar para el envío.
+   */
+  const generarGrupo = async (releaseIds: string[], empresaId?: string) => {
+    if (firmaReleases.length > 0) {
+      await firmaDigitalAPI.eliminarRelease(tramiteFirma);
+      onGenerado({ firmaReleases: [], firmaReleasesGeneradoAt: '' });
+    }
+    if (releaseIds.length === 0) return;
+    const res = await firmaDigitalAPI.generarRelease({ ...tramiteFirma, releaseIds, empresaReleaseId: empresaId, tramite });
+    onGenerado({ firmaReleases: res.firmaReleases, firmaReleasesGeneradoAt: res.firmaReleasesGeneradoAt });
+  };
 
   const generar = async (empresaId?: string) => {
     setGenerando(true);
     try {
-      const res = await firmaDigitalAPI.generarRelease({
-        projectId: record.projectId,
-        userId: record.userId,
-        contractIndex: record.contractIndex,
-        releaseIds: releasesAplicables.map((r) => r._id),
-        empresaReleaseId: empresaId,
-        tramite,
-      });
-      onGenerado({ firmaReleases: res.firmaReleases, firmaReleasesGeneradoAt: res.firmaReleasesGeneradoAt });
+      await generarGrupo(
+        releasesAplicables.map((r) => r._id),
+        empresaId,
+      );
     } catch (e: any) {
       sweetAlert.error('Error', e?.response?.data?.error || 'No se pudieron generar los release(s).');
     } finally {
       setGenerando(false);
     }
+  };
+
+  /** Guarda el texto de un release custom y devuelve los textos del trámite como quedaron. */
+  const guardarTexto = async (release: Release, texto: string) => {
+    const res = await firmaDigitalAPI.guardarContenidoCustomRelease({ ...tramiteFirma, releaseId: release._id, content: texto });
+    onGenerado({ contenidoCustomReleases: res.contenidoCustomReleases });
+    return res.contenidoCustomReleases;
+  };
+
+  /** Los ids del grupo con los textos custom recién guardados (la fila todavía no se re-renderizó). */
+  const idsDelGrupo = (contenidos: { releaseId: string; content: string }[]) =>
+    releasesAplicables
+      .filter((r) => !r.esCustom)
+      .concat(releasesCustom.filter((r) => textoCustomUsable(textoCustomDeRelease(contenidos, r._id))))
+      .map((r) => r._id);
+
+  const guardarYGenerar = async (release: Release, texto: string) => {
+    const contenidos = await guardarTexto(release, texto);
+    await generarGrupo(idsDelGrupo(contenidos), savedReleaseEmpresaId || undefined);
+    sweetAlert.success('Release(s) generados', 'Revisalos en el PDF antes de enviarlos a firmar.');
+  };
+
+  const quitar = async (release: Release) => {
+    const contenidos = await guardarTexto(release, '');
+    // Si estaba generado, se regenera el grupo sin él (o se borra, si era el único).
+    if (tienePdf(release._id)) await generarGrupo(idsDelGrupo(contenidos), savedReleaseEmpresaId || undefined);
   };
 
   const descargar = async (url: string, nombre: string) => {
@@ -3301,11 +3424,11 @@ const FirmaReleaseCell: React.FC<{
   };
 
   const eliminar = async () => {
-    const confirm = await sweetAlert.confirm('Eliminar release(s) generados', 'Se borran los PDFs generados (todos juntos, se generan como grupo) y se puede volver a generar. Esto no afecta nada ya enviado a firmar.', 'Sí, eliminar', 'Cancelar');
+    const confirm = await sweetAlert.confirm('Eliminar release(s) generados', 'Se borran los PDFs generados (todos juntos, se generan como grupo) y se puede volver a generar. Los textos de los releases custom quedan guardados.', 'Sí, eliminar', 'Cancelar');
     if (!confirm.isConfirmed) return;
     setEliminando(true);
     try {
-      await firmaDigitalAPI.eliminarRelease({ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex });
+      await firmaDigitalAPI.eliminarRelease(tramiteFirma);
       onGenerado({ firmaReleases: [], firmaReleasesGeneradoAt: '' });
     } catch (e: any) {
       sweetAlert.error('Error', e?.response?.data?.error || 'No se pudieron eliminar los release(s).');
@@ -3314,11 +3437,56 @@ const FirmaReleaseCell: React.FC<{
     }
   };
 
+  const modal = modalRelease && (
+    <TextoCustomModal
+      isOpen={!!modalRelease}
+      onClose={() => setModalRelease(null)}
+      titulo={enviado ? `Texto enviado · ${modalRelease.name}` : `Texto del release · ${modalRelease.name}`}
+      subtitulo={record.userName || ''}
+      textoGuardado={textoDe(modalRelease._id)}
+      placeholder={PLACEHOLDER_RELEASE_CUSTOM}
+      variables={releaseVariables}
+      soloLectura={enviado}
+      rotuloGenerar={firmaReleases.length > 0 ? 'Guardar y regenerar releases' : 'Guardar y generar releases'}
+      motivoSinGenerar={faltaEmpresa ? 'Para generar, elegí primero la empresa del release en la celda. El texto se puede guardar igual.' : undefined}
+      permitirBorrador={!tienePdf(modalRelease._id)}
+      onGuardar={async (texto) => {
+        await guardarTexto(modalRelease, texto);
+      }}
+      onVistaPrevia={(texto) => firmaDigitalAPI.previewReleaseCustom({ ...tramiteFirma, content: texto, releaseId: modalRelease._id, empresaId: savedReleaseEmpresaId || undefined })}
+      onGenerar={(texto) => guardarYGenerar(modalRelease, texto)}
+      onQuitar={textoDe(modalRelease._id) || tienePdf(modalRelease._id) ? () => quitar(modalRelease) : undefined}
+    />
+  );
+
+  /** Un botón por release custom que todavía no tiene PDF: con texto (borrador) o para escribirlo. */
+  const botonesCustom = !enviado && releasesCustom.filter((r) => !tienePdf(r._id)).length > 0 && (
+    <div className="flex flex-wrap justify-center gap-1">
+      {releasesCustom
+        .filter((r) => !tienePdf(r._id))
+        .map((r) => {
+          const conTexto = textoCustomUsable(textoDe(r._id));
+          return (
+            <button
+              key={r._id}
+              type="button"
+              onClick={() => setModalRelease(r)}
+              title={conTexto ? `${r.name}: borrador guardado, entra en el próximo «Generar»` : `${r.name}: opcional. Escribí el texto para sumarlo a este trámite`}
+              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap transition-colors ${conTexto ? 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800' : 'border-dashed border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800'}`}
+            >
+              <FontAwesomeIcon icon={conTexto ? faPenToSquare : faPlus} className="h-2.5 w-2.5" />
+              {r.name}
+            </button>
+          );
+        })}
+    </div>
+  );
+
   if (activeReleases.length === 0) {
     return <span className="text-xs text-gray-400">—</span>;
   }
 
-  if (releasesAplicables.length === 0) {
+  if (releasesAplicables.length === 0 && releasesCustom.length === 0) {
     return (
       <span className="text-xs text-gray-400" title='Ni el Tipo de Contrato («Se envía a firmar el release») ni ningún Tipo de Release de este proyecto lo mandan a firmar'>
         No se envía a Firma
@@ -3326,11 +3494,21 @@ const FirmaReleaseCell: React.FC<{
     );
   }
 
+  // Sólo hay releases custom y ninguno tiene texto: no se exige nada; se ofrece escribirlos.
+  if (releasesAplicables.length === 0 && firmaReleases.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-1 min-w-[120px]" onClick={(e) => e.stopPropagation()}>
+        {enviado ? <span className="text-xs text-gray-400">Sin release</span> : botonesCustom}
+        {modal}
+      </div>
+    );
+  }
+
   if (!releasesGenerados(record, releasesAplicables)) {
     return (
-      <div className="flex items-center justify-center min-w-[120px]" onClick={(e) => e.stopPropagation()}>
+      <div className="flex flex-col items-center justify-center gap-1 min-w-[120px]" onClick={(e) => e.stopPropagation()}>
         {/* Mismo criterio que el Contrato: la empresa se elige antes de generar, no en el momento. */}
-        {!savedReleaseEmpresaId && releaseEmpresas.length > 0 ? (
+        {faltaEmpresa ? (
           <EmpresaSelectCell record={record} campo="release" requerido onGuardado={onGenerado} />
         ) : (
           <div className="flex items-center gap-1">
@@ -3338,6 +3516,8 @@ const FirmaReleaseCell: React.FC<{
             {savedReleaseEmpresaId && !record.empresaReleaseDelProyecto && <QuitarEmpresaBtn record={record} campo="release" onQuitado={onGenerado} />}
           </div>
         )}
+        {botonesCustom}
+        {modal}
       </div>
     );
   }
@@ -3345,7 +3525,8 @@ const FirmaReleaseCell: React.FC<{
   return (
     <div className="flex flex-col items-center gap-1 min-w-[150px]" onClick={(e) => e.stopPropagation()}>
       {firmaReleases.map((r) => {
-        const label = activeReleases.find((ar) => ar._id === r.releaseId)?.name || 'Release';
+        const release = activeReleases.find((ar) => ar._id === r.releaseId);
+        const label = release?.name || 'Release';
         return (
           <div key={r.releaseId} className="flex items-center justify-center gap-3">
             <a href={getImageUrl(r.url)} target="_blank" rel="noopener noreferrer" title={r.nombre} className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
@@ -3354,12 +3535,22 @@ const FirmaReleaseCell: React.FC<{
             <button type="button" onClick={() => descargar(r.url, r.nombre)} disabled={descargando === r.url} title={`Descargar ${label}`} className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               <FontAwesomeIcon icon={descargando === r.url ? faSpinner : faDownload} spin={descargando === r.url} className="h-4 w-4" />
             </button>
-            <button type="button" onClick={eliminar} disabled={eliminando} title="Eliminar y volver a generar" className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              <FontAwesomeIcon icon={eliminando ? faSpinner : faTrash} spin={eliminando} className="h-4 w-4" />
-            </button>
+            {release?.esCustom && (
+              <button type="button" onClick={() => setModalRelease(release)} title={enviado ? `Ver el texto enviado de ${label}` : `Editar el texto de ${label} y regenerar`} className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                <FontAwesomeIcon icon={enviado ? faFileLines : faPenToSquare} className="h-4 w-4" />
+              </button>
+            )}
+            {/* Ya enviado = solo lectura (ver FirmaContratoCell). */}
+            {!enviado && (
+              <button type="button" onClick={eliminar} disabled={eliminando} title="Eliminar y volver a generar" className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <FontAwesomeIcon icon={eliminando ? faSpinner : faTrash} spin={eliminando} className="h-4 w-4" />
+              </button>
+            )}
           </div>
         );
       })}
+      {botonesCustom}
+      {modal}
     </div>
   );
 };
@@ -3609,7 +3800,7 @@ export const ContractBulkFirmaTab: React.FC<{
         contractIndex: r.contractIndex,
         tipoImpositivo: tipoDelRow(r),
         incluirContrato: contratoRequiereFirma(findTemplate(r as unknown as Contract, contratoFrames)),
-        incluirReleases: releasesDeLaFila(findTemplate(r as unknown as Contract, contratoFrames), releasesQueFirman).length > 0,
+        incluirReleases: releasesDeLaFila(findTemplate(r as unknown as Contract, contratoFrames), releasesQueFirman, r).length > 0,
         incluirAlta: altaVaAFirma(r, findTemplate(r as unknown as Contract, contratoFrames), tipoDelRow(r)),
       }));
       const res = await firmaDigitalAPI.enviar(targets);
@@ -3772,7 +3963,7 @@ export const ContractBulkFirmaTab: React.FC<{
                   const tipo = tipoDelRow(r);
                   const template = findTemplate(r as unknown as Contract, contratoFrames);
                   const contratoAplica = contratoRequiereFirma(template);
-                  const releasesFila = releasesDeLaFila(template, releasesQueFirman);
+                  const releasesFila = releasesDeLaFila(template, releasesQueFirman, r);
                   const enviable = calcularEnviable(r, contratoFrames, releasesQueFirman, tipo);
                   return (
                     <tr key={rowKey(r)} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
@@ -3825,7 +4016,7 @@ export const ContractBulkFirmaTab: React.FC<{
                         <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} onGenerado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                       <td className="px-4 py-3">
-                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesFila} onGenerado={(patch) => aplicarCambio(r, patch)} />
+                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesFila} releasesCustom={releasesCustomDeLaFila(template, releasesQueFirman)} onGenerado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>

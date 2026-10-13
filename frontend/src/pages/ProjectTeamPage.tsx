@@ -289,6 +289,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
    */
   const [renovando, setRenovando] = useState(false);
   /*
+    CONTRATO CUSTOM AL RENOVAR: el texto que se escribió en Firma digital para el contrato vencido, como
+    punto de partida del nuevo (ver `@compartido/textoCustom`). Viaja sólo si el contrato nuevo es del
+    mismo tipo (misma plantilla); si se cambió el tipo, el texto viejo no tiene nada que ver.
+  */
+  const textoCustomDeRenovacion = useRef<{ nombreContrato: string; texto: string } | null>(null);
+  /*
     LO QUE QUIEN APRUEBA LE QUIERE DECIR A QUIEN PIDIÓ EL ALTA.
 
     Aprobar casi nunca es sólo decir que sí: se abre el alta y se corrige lo que venga mal. Los
@@ -1952,6 +1958,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     */
     const contratoPorIndice = typeof contractIndex === 'number' ? ((lastProject?.contracts as any[])?.[contractIndex] ?? null) : null;
     const lastContract = contratoPorIndice || contractOverride || elQueRige;
+    textoCustomDeRenovacion.current = renovar && (lastContract as any)?.contenidoCustomContrato ? { nombreContrato: String(lastContract?.nombre_contrato || ''), texto: String((lastContract as any).contenidoCustomContrato) } : null;
 
     /*
       Sin índice explícito el backend actualiza el ÚLTIMO contrato del array. Como acá se precargó el
@@ -2571,6 +2578,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         comentarioRevision: approvingSolicitudId ? comentarioRevision.trim() || undefined : undefined,
         contract: {
           ...wizardData,
+          ...(renovando && textoCustomDeRenovacion.current && textoCustomDeRenovacion.current.nombreContrato === wizardData.nombre_contrato ? { contenidoCustomContrato: textoCustomDeRenovacion.current.texto } : {}),
           fecha_baja_contrato: esTiempoIndeterminado && !porDiasSueltosWizard ? '' : wizardData.fecha_baja_contrato,
           // Sólo con días sueltos: si el tipo pasó a ser por período, los días que hubiera quedan afuera.
           fechas_trabajadas: porDiasSueltosWizard ? wizardData.fechas_trabajadas : [],

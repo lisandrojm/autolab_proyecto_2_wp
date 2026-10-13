@@ -10,6 +10,12 @@ export interface DocPdfResult {
  * directo en el handler, ahora reutilizable desde otros routers (p. ej. "Generar" de Firma Digital)
  * sin pasar por un round-trip HTTP.
  */
+/**
+ * PLANTILLA CUSTOM (`esCustom`): el cuerpo no es `item.content` (el placeholder) sino el texto escrito
+ * para este trámite (`contract.contenidoCustomContrato`), o `contenidoCustom` si se pasa — la vista
+ * previa de Firma digital muestra lo que está en el editor sin guardarlo. Membrete, datos y nombre del
+ * archivo salen igual que siempre.
+ */
 export declare function generarContratoPdf(opts: {
     tenantId: string;
     templateId: string;
@@ -18,5 +24,6 @@ export declare function generarContratoPdf(opts: {
     contractIndex: number;
     empresaId?: string;
     extra?: string;
+    contenidoCustom?: string;
 }): Promise<DocPdfResult>;
 export { router as contratoFrameRoutes };

@@ -284,6 +284,13 @@ interface IContract {
   firmaGeneradoAt?: Date;
   firmaReleasesGeneradoAt?: Date;
   firmaEnviadaAt?: Date;
+  // CONTRATO / RELEASE CUSTOM: el cuerpo que se escribió en Firma digital para ESTE trámite, cuando la
+  // plantilla es `esCustom` (ver `compartido/textoCustom.ts`). No es una plantilla reutilizable. Borrar
+  // el PDF (eliminar-contrato / eliminar-release) no lo toca: queda como borrador para re-editar.
+  contenidoCustomContrato?: string | null;
+  contenidoCustomReleases?: { releaseId: string; content: string }[];
+  contenidoCustomEditadoPor?: Types.ObjectId | string | null;
+  contenidoCustomEditadoEl?: Date | null;
   areaShiftAssignments?: {
     areaId: Types.ObjectId | string;
     shiftIds: (Types.ObjectId | string)[];
@@ -456,6 +463,16 @@ const contractSchema = new Schema<IContract>(
     firmaGeneradoAt: { type: Date },
     firmaReleasesGeneradoAt: { type: Date },
     firmaEnviadaAt: { type: Date },
+    contenidoCustomContrato: { type: String, default: null, maxlength: 200000 },
+    contenidoCustomReleases: [
+      {
+        _id: false,
+        releaseId: { type: String },
+        content: { type: String, maxlength: 200000 },
+      },
+    ],
+    contenidoCustomEditadoPor: { type: Schema.Types.ObjectId, ref: "User" },
+    contenidoCustomEditadoEl: { type: Date },
     solicitudId: { type: Schema.Types.ObjectId, ref: "User" },
     origen: { type: String, enum: ["agregar_miembro"] },
     areaShiftAssignments: [

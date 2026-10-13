@@ -454,8 +454,32 @@ router.get("/users-balance", async (req, res) => {
           campo del `metadata` que la pantalla mira.
         */
         const users = await User.find({ tenantId, isSystem: { $ne: true } })
-            .select("firstName lastName email hireDate extraVacationDays carryOverVacationDays metadata.activo metadata.cuit projectIds")
+            .select("firstName lastName email hireDate extraVacationDays carryOverVacationDays metadata.activo metadata.cuit metadata.roles_frame projectIds")
             .lean();
+        /*
+          LOS ROLES EMPRESA PROPIOS DE LA FICHA (`metadata.roles_frame`), POR NOMBRE.
+    
+          Son los que la tarjeta de Usuarios muestra como «Rol/es Empresa» y los que `externalInfo.rolFrames`
+          suma en `routes/users.ts`. Quien no tiene proyecto ni contrato (un fotógrafo cargado sólo en la
+          ficha) no tiene otro rol que éste, y la grilla decía «Sin rol empresa» aunque su tarjeta dijera
+          FOTOGRAFO. Una sola consulta por los ids de todos, sólo el nombre.
+        */
+        const idsRolesPropios = new Set();
+        for (const u of users)
+            for (const id of u.metadata?.roles_frame || [])
+                if (id)
+                    idsRolesPropios.add(String(id));
+        const nombreDeRolPropio = new Map();
+        if (idsRolesPropios.size) {
+            const { RoleFrame } = await import("../models/RoleFrame.js");
+            const filas = await RoleFrame.find({ _id: { $in: Array.from(idsRolesPropios) } }).select("name").lean();
+            for (const rf of filas)
+                if (rf.name)
+                    nombreDeRolPropio.set(String(rf._id), rf.name);
+        }
+        const rolesPropiosDe = (u) => (u.metadata?.roles_frame || [])
+            .map((id) => ({ id: String(id), nombre: nombreDeRolPropio.get(String(id)) || "" }))
+            .filter((r) => r.nombre);
         /*
           LOS CONTRATOS, EN CUATRO CAMPOS POR CONTRATO.
     
@@ -500,9 +524,12 @@ router.get("/users-balance", async (req, res) => {
          * EL ROL EMPRESA CON EL QUE FIGURA HOY.
          *
          * Misma regla que tenía la pantalla: el último contrato no vencido que declare uno y, si ninguno
-         * lo declara, el del vínculo con el proyecto.
+         * lo declara, el del vínculo con el proyecto. Si tampoco hay vínculo que lo diga, los roles propios
+         * de la ficha (todos, como los muestra la tarjeta de Usuarios). Van ÚLTIMOS y no sumados: la
+         * columna dice con qué rol figura HOY, y eso lo fija el contrato cuando lo hay; la ficha es lo
+         * declarado de la persona, que sólo alcanza cuando no hay nada contratado que lo diga.
          */
-        const rolEmpresaDe = (misVinculos) => {
+        const rolEmpresaDe = (misVinculos, rolesPropios) => {
             let rol = "Sin rol empresa";
             const ahora = Date.now();
             for (const v of misVinculos) {
@@ -516,6 +543,8 @@ router.get("/users-balance", async (req, res) => {
                 if (rol === "Sin rol empresa" && v.nombre_rol_frame)
                     rol = v.nombre_rol_frame;
             }
+            if (rol === "Sin rol empresa" && rolesPropios.length)
+                rol = rolesPropios.map((r) => r.nombre).join(", ");
             return rol;
         };
         // 2. Fetch all overrides for the selected year
@@ -770,10 +799,16 @@ router.get("/users-balance", async (req, res) => {
                   Antes recorría `metadata.projects` con todos los contratos adentro para sacar estas tres
                   cosas. Se calculan acá, con las mismas funciones, y viajan como tres campos.
                 */
-                rolEmpresa: rolEmpresaDe(misVinculos),
+                rolEmpresa: rolEmpresaDe(misVinculos, rolesPropiosDe(user)),
                 contratoQueRige: contratoQueRigeDe.get(uIdStr) || null,
-                // Para el filtro por rol empresa, que mira el vínculo y no el contrato.
-                rolesFrame: misVinculos.map((v) => ({ rol_frame_id: v.rol_frame_id ?? null, nombre_rol_frame: v.nombre_rol_frame || "" })),
+                // Para el filtro por rol empresa, que mira el vínculo y no el contrato. Suma los roles propios
+                // de la ficha, como el filtro `rolFrame` de `routes/users.ts`: si no, filtrar por FOTOGRAFO
+                // escondería a quien la columna muestra como FOTOGRAFO. Su id es el `_id` del RoleFrame (no
+                // `null`), para que no empate por `==` con un rol sin `externalId`.
+                rolesFrame: [
+                    ...misVinculos.map((v) => ({ rol_frame_id: v.rol_frame_id ?? null, nombre_rol_frame: v.nombre_rol_frame || "" })),
+                    ...rolesPropiosDe(user).map((r) => ({ rol_frame_id: r.id, nombre_rol_frame: r.nombre })),
+                ],
             });
         }
         res.json(responseData);
