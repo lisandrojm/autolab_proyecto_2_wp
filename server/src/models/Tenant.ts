@@ -157,10 +157,28 @@ export interface ITenant extends Document {
       validacionAutomaticaObrasSociales?: { activa?: boolean };
       presentacionAutomatica?: {
         activa?: boolean;
+        /** A qué hora corre (Argentina) y cuántos días de anticipación. Ver `horarioAltasAutomaticas.ts`. */
+        hora?: number;
+        minuto?: number;
+        diasAntes?: number;
         /** "YYYY-MM-DD" del último día que corrió: no se repite en el mismo día. */
         ultimoDia?: string;
         /** Qué hizo la última vez: por empresa, y lo que no se presentó con su motivo. */
         ultimaCorrida?: any;
+      };
+      /**
+       * SINCRONIZACIÓN DE RELACIONES LABORALES: una vez por día lee en ARCA los movimientos (altas y
+       * bajas) del mes de cada empleadora y actualiza `RelacionLaboralArca` y `AntiguedadArca`
+       * (ver `services/arca/sincronizarRelaciones.ts`). Sólo lee; aun así se prende a mano.
+       */
+      sincronizacionRelaciones?: {
+        activa?: boolean;
+        /** "HH:MM" en hora argentina. Lejos de las 14:00 de la presentación de altas: comparten la sesión. */
+        hora?: string;
+        /** Cuántos meses hacia atrás se consultan (el actual incluido). */
+        meses?: number;
+        ultimoDia?: string;
+        ultimaSync?: any;
       };
     };
     /**
@@ -330,8 +348,20 @@ const tenantSchema = new Schema<ITenant>(
         },
         presentacionAutomatica: {
           activa: { type: Boolean, default: false },
+          // Declarados a propósito: el esquema es `strict`, y un `$set` sobre un camino que no está
+          // acá Mongoose lo descarta en silencio (la hora configurada no se guardaba).
+          hora: { type: Number },
+          minuto: { type: Number },
+          diasAntes: { type: Number },
           ultimoDia: { type: String },
           ultimaCorrida: { type: Schema.Types.Mixed },
+        },
+        sincronizacionRelaciones: {
+          activa: { type: Boolean, default: false },
+          hora: { type: String },
+          meses: { type: Number },
+          ultimoDia: { type: String },
+          ultimaSync: { type: Schema.Types.Mixed },
         },
       },
       dropboxSign: {
