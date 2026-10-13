@@ -215,8 +215,10 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
               <FontAwesomeIcon icon={verUltima ? faChevronDown : faChevronRight} className="h-3 w-3" />
               <FontAwesomeIcon icon={ultima.error ? faCircleXmark : faCircleCheck} className={ultima.error ? "text-red-500" : "text-green-500"} />
               Última sincronización {hace(ultima.fecha)} ({fechaHora(ultima.fecha)}{ultima.automatica ? ", automática" : ""}) · {ultima.meses.join(", ")} ·{" "}
-              {ultima.error ? <span className="text-red-600">{ultima.error}</span> : `${ultima.empresas.reduce((s, e) => s + e.nuevas, 0)} nuevas, ${ultima.empresas.reduce((s, e) => s + e.actualizadas, 0)} actualizadas, ${ultima.empresas.reduce((s, e) => s + e.bajasAplicadas, 0)} bajas · ${Math.round(ultima.duracionMs / 1000)} s`}
+              {`${ultima.empresas.reduce((s, e) => s + e.nuevas, 0)} nuevas, ${ultima.empresas.reduce((s, e) => s + e.actualizadas, 0)} actualizadas, ${ultima.empresas.reduce((s, e) => s + e.bajasAplicadas, 0)} bajas · ${Math.round(ultima.duracionMs / 1000)} s`}
+              {ultima.error && <span className="text-red-600"> · {ultima.error}</span>}
             </button>
+            {ultima.htmlGuardado && <p className="mt-1 text-[11px] text-amber-600">Se guardó una pantalla de ARCA para revisar: <code>{ultima.htmlGuardado}</code></p>}
             {verUltima && (
               <table className="mt-2 min-w-[480px] text-xs">
                 <thead>

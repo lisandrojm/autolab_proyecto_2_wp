@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { paginasDelPaginador, resultadoDeConsulta, textoPeriodo } from "./consulta-relaciones-arca.mjs";
+import { filasDelTxt, indiceDeSiguiente, paginasDelPaginador, resultadoDeConsulta, textoPeriodo } from "./consulta-relaciones-arca.mjs";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 
@@ -46,6 +46,16 @@ describe("el paginador", () => {
     assert.deepEqual(paginasDelPaginador(hrefs), [2, 3]);
   });
   it("sin paginador, nada", () => assert.deepEqual(paginasDelPaginador(["Consulta.aspx", ""]), []));
+  it("«Siguiente» se reconoce por Page$Next o por lo que dice, y no si está deshabilitado", () => {
+    assert.equal(indiceDeSiguiente([{ texto: "Volver" }, { href: "javascript:__doPostBack('gv','Page$Next')", texto: "" }]), 1);
+    assert.equal(indiceDeSiguiente([{ texto: "Volver" }, { value: "Siguiente" }]), 1);
+    assert.equal(indiceDeSiguiente([{ texto: " > " }]), 0);
+    assert.equal(indiceDeSiguiente([{ texto: "»", disabled: true }, { texto: "Imprimir" }]), -1);
+    assert.equal(indiceDeSiguiente([{ texto: "Siguiente paso" }]), -1);
+  });
+  it("cuenta las filas de un TXT por el CUIL del principio", () => {
+    assert.equal(filasDelTxt(Buffer.from("CUIL  APELLIDO\r\n20111111111 A\r\n27222222222 B\r\n", "latin1")), 2);
+  });
 });
 
 describe("el motor sólo lee", () => {

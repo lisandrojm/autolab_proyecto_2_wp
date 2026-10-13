@@ -127,12 +127,23 @@ export async function sincronizarRelacionesTenant(tenantId: string, o: { meses?:
     const motor = (await import(pathToFileURL(MOTOR_RELACIONES).href)) as any;
 
     const cuilsTocados = new Set<string>();
-    let reaperturas = 0;
-    /** Reabre la sesión una sola vez por corrida; la segunda caída aborta. */
+    /**
+     * UNA SESIÓN POR EMPLEADORA. Volver al selector de CUIT estando ya adentro hace que ARCA cierre la
+     * sesión (comprobado el 2026-10-12: cayó al pasar a la segunda y a la tercera empleadora). Así que
+     * cambiar de empleadora es cerrar el navegador y abrir otra sesión (~10 s): no es una caída, es el
+     * camino. La sesión tibia sólo sirve si quedó parada en el selector.
+     */
+    const sesionEnElSelector = async (motivo: string) => {
+      const enSelector = !!sesion && !sesion.page.isClosed() && /\/login\/IndexContribuyente\.aspx/i.test(sesion.page.url());
+      if (enSelector) return;
+      await sesion?.browser.close().catch(() => {});
+      sesion = null;
+      await abrir(motivo);
+    };
+    /** Una caída de verdad (a mitad de una consulta) se reintenta UNA vez por empleadora. */
     const reabrir = async (motivo: string) => {
-      if (reaperturas >= 1) { sesionCaida = true; throw new Error(`La sesión de ARCA se cayó dos veces (${motivo}). Se aborta para no insistir contra el organismo.`); }
-      reaperturas++;
-      await sesion!.browser.close().catch(() => {});
+      await sesion?.browser.close().catch(() => {});
+      sesion = null;
       await abrir(motivo);
     };
 
@@ -140,28 +151,40 @@ export async function sincronizarRelacionesTenant(tenantId: string, o: { meses?:
       const cuit = soloDigitos(e.cuit);
       const re: ResumenSyncEmpresa = { cuit, razonSocial: String(e.razonSocial || ""), meses: [], nuevas: 0, actualizadas: 0, bajasAplicadas: 0, sinCambios: 0 };
       resumen.empresas.push(re);
+      let reabiertaParaEsta = false;
       try {
         avisar(`${re.razonSocial}: eligiendo la empleadora en ARCA`);
+        await sesionEnElSelector(`cambio de empleadora: ${re.razonSocial}`);
         try {
           await motor.entrarComoEmpleadora(sesion!.page, cuit);
         } catch (err: any) {
           if (String(err?.message) !== "sin_sesion") throw err;
+          reabiertaParaEsta = true;
           await reabrir("al elegir la empleadora");
           await motor.entrarComoEmpleadora(sesion!.page, cuit);
         }
         for (const mes of meses) {
           avisar(`${re.razonSocial}: consultando los movimientos de ${mes}`);
-          let r = await motor.consultarMovimientosDelMes({ page: sesion!.page, mes, onProgreso: (p: any) => { if (p?.tipo === "pagina") avisar(`${re.razonSocial} · ${mes}: página ${p.numero}`); } });
+          const onProgreso = (p: any) => { if (p?.tipo === "pagina") avisar(`${re.razonSocial} · ${mes}: página ${p.numero}`); };
+          let r = await motor.consultarMovimientosDelMes({ page: sesion!.page, mes, onProgreso });
           if (r.resultado === "sin_sesion") {
+            if (reabiertaParaEsta) { sesionCaida = true; throw new Error(`La sesión de ARCA se cayó dos veces con ${re.razonSocial} (consultando ${mes}). Se deja esta empleadora para la próxima corrida.`); }
+            reabiertaParaEsta = true;
             await reabrir(`consultando ${mes}`);
             await motor.entrarComoEmpleadora(sesion!.page, cuit);
-            r = await motor.consultarMovimientosDelMes({ page: sesion!.page, mes });
+            r = await motor.consultarMovimientosDelMes({ page: sesion!.page, mes, onProgreso });
           }
           if (r.resultado === "sin_datos") { re.meses.push({ mes, resultado: "sin_datos", paginas: 0, filas: 0, descartes: 0 }); continue; }
           if (r.resultado !== "ok") {
             const ruta = await guardarHtml(tenantId, cuit, mes, r.html);
             resumen.htmlGuardado = ruta;
             throw new Error(`ARCA mostró una pantalla que el motor no reconoce (${r.detalle}). ${ruta ? `El HTML quedó en ${ruta}.` : ""}`);
+          }
+          // Una página «redonda» (múltiplo de 30) sin paginador detectado puede ser un paginador que no
+          // se reconoció: se guarda la pantalla para mirarla, sin frenar nada.
+          if (r.htmlDiagnostico) {
+            const ruta = await guardarHtml(tenantId, cuit, `${mes}_paginador`, r.htmlDiagnostico);
+            if (ruta) { resumen.htmlGuardado = ruta; avisar(`${re.razonSocial} · ${mes}: ${r.paginas.length} página(s) y no vi paginador; guardé la pantalla en ${ruta}`); }
           }
           let filas: any[] = [];
           let descartes = 0;
@@ -179,10 +202,14 @@ export async function sincronizarRelacionesTenant(tenantId: string, o: { meses?:
       } catch (err: any) {
         re.error = String(err?.message || err);
         avisar(`${re.razonSocial}: ${re.error}`);
-        // Una pantalla desconocida o la sesión caída dos veces van a repetirse con la empleadora siguiente: se corta.
-        if (resumen.htmlGuardado || sesionCaida) throw err;
+        // Una pantalla desconocida va a repetirse con la empleadora siguiente: se corta. Lo demás (una
+        // sesión que se cayó dos veces, un CUIT que el delegado no tiene) es de ESTA empleadora: se sigue
+        // con la próxima, y lo que quedó se reintenta en la corrida siguiente.
+        if (resumen.htmlGuardado && /no reconoce/.test(re.error)) throw err;
+        sesionCaida = false;
       }
     }
+    if (resumen.empresas.some((x) => x.error)) resumen.error = `Con error: ${resumen.empresas.filter((x) => x.error).map((x) => x.razonSocial).join(", ")}. Lo demás se sincronizó.`;
 
     avisar("Recalculando la antigüedad…");
     const abiertas = await cuilsConRelacionAbierta(tenantObjectId);

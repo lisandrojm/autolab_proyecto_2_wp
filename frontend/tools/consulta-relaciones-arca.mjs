@@ -63,6 +63,20 @@ export function paginasDelPaginador(hrefs) {
   return [...out].sort((a, b) => a - b);
 }
 
+/**
+ * El control «Siguiente» de un paginador que no muestra números: un link con `Page$Next`, o un botón o
+ * link que diga «Siguiente», «>» o «»». Devuelve su índice en `controles`, o -1. Puro.
+ */
+export function indiceDeSiguiente(controles) {
+  const dice = (s) => /^(siguiente|sig\.?|next|>|»|>>|›)$/i.test(String(s || "").replace(/\s+/g, " ").trim());
+  return controles.findIndex((c) => !c.disabled && (/Page\$Next/i.test(`${c.href || ""} ${c.onclick || ""}`) || dice(c.texto) || dice(c.value) || dice(c.title)));
+}
+
+/** Cuántas filas de relación (CUIL al principio) trae un TXT. Para sospechar de un paginador no visto. */
+export function filasDelTxt(buf) {
+  return (Buffer.from(buf).toString("latin1").match(/^\d{11} /gm) || []).length;
+}
+
 // ------------------------------------------------------------------ pantalla
 async function leerResultado(page) {
   const leido = await page
@@ -171,6 +185,36 @@ async function irAPagina(page, n) {
   return esperarEstado(async () => (await paginaActual(page)) === n, { ms: 20_000, que: `la página ${n} del resultado`, log });
 }
 
+/** Los controles clickeables de la pantalla, con lo que dicen: para encontrar un «Siguiente». */
+async function controlesDePantalla(page) {
+  return page
+    .evaluate(() =>
+      [...document.querySelectorAll("a, input[type=submit], input[type=button], input[type=image], button")]
+        .filter((el) => el.offsetParent !== null)
+        .map((el, i) => ({ i, href: el.getAttribute("href") || "", onclick: el.getAttribute("onclick") || "", texto: el.textContent || "", value: el.getAttribute("value") || "", title: `${el.getAttribute("title") || ""} ${el.getAttribute("alt") || ""}`, disabled: !!el.disabled, id: el.id || "" })),
+    )
+    .catch(() => []);
+}
+
+/** La «firma» del listado en pantalla: los CUIL en el orden en que aparecen. Cambia cuando cambia la página. */
+async function firmaDelListado(page) {
+  const txt = await page.evaluate(() => document.body?.innerText || "").catch(() => "");
+  return (txt.match(/(?<!\d)\d{2}-?\d{8}-?\d(?!\d)/g) || []).join(",");
+}
+
+/** Aprieta «Siguiente» y espera a que el listado cambie. `false` si no hay «Siguiente» o no cambió (última página). */
+async function irASiguiente(page) {
+  const controles = await controlesDePantalla(page);
+  const i = indiceDeSiguiente(controles);
+  if (i < 0) return false;
+  const antes = await firmaDelListado(page);
+  const c = controles[i];
+  const objetivo = c.id ? page.locator(`[id="${c.id}"]`).first() : page.locator("a, input[type=submit], input[type=button], input[type=image], button").nth(c.i);
+  if (!(await objetivo.count())) return false;
+  await objetivo.click();
+  return esperarEstado(async () => (await firmaDelListado(page)) !== antes, { ms: 20_000, que: "la página siguiente del resultado", log });
+}
+
 // ------------------------------------------------------------------ la consulta
 /**
  * Consulta los movimientos de UN mes de UNA empleadora y baja el TXT de todas sus páginas.
@@ -228,10 +272,12 @@ export async function consultarMovimientosDelMes({ page, mes, onProgreso = () =>
   onProgreso({ tipo: "pagina", mes, numero: 1 });
 
   // Las demás páginas: el paginador muestra una ventana de números; se avanza de a una y se vuelve a mirar.
+  let paginador = "ninguno";
   let vistas = new Set([1]);
   for (;;) {
     const disponibles = paginasDelPaginador(await hrefsDePaginador(page)).filter((n) => !vistas.has(n));
     if (disponibles.length === 0) break;
+    paginador = "numeros";
     const n = disponibles[0];
     if (!(await irAPagina(page, n))) return { ...(await desconocida(`No pude pasar a la página ${n} del resultado.`)), paginasParciales: paginas };
     const b = await bajarTxt(page, base);
@@ -241,5 +287,21 @@ export async function consultarMovimientosDelMes({ page, mes, onProgreso = () =>
     onProgreso({ tipo: "pagina", mes, numero: n });
     if (vistas.size > 500) return desconocida("El paginador no termina nunca: más de 500 páginas.");
   }
-  return { resultado: "ok", paginas, cantidadPaginas: paginas.length };
+  // Sin números: un paginador de «Siguiente» (Page$Next o un botón que lo diga). Se avanza hasta que el listado no cambie.
+  if (paginador === "ninguno") {
+    for (let n = 2; n <= 500; n++) {
+      if (!(await irASiguiente(page))) break;
+      paginador = "siguiente";
+      const b = await bajarTxt(page, base);
+      if (!b) return { ...(await desconocida(`No pude bajar el TXT de la página ${n}.`)), paginasParciales: paginas };
+      // El mismo TXT que la página anterior = ARCA no avanzó: se terminó.
+      if (Buffer.compare(b, paginas[paginas.length - 1]) === 0) break;
+      paginas.push(b);
+      onProgreso({ tipo: "pagina", mes, numero: n });
+    }
+  }
+  // Una sola página «redonda» (múltiplo de 30) y ningún paginador a la vista: puede haber más páginas que
+  // no supe ver. Se devuelve la pantalla para guardarla y mirarla, sin frenar la lectura.
+  const sospechoso = paginador === "ninguno" && paginas.length === 1 && filasDelTxt(paginas[0]) > 0 && filasDelTxt(paginas[0]) % 30 === 0;
+  return { resultado: "ok", paginas, cantidadPaginas: paginas.length, paginador, ...(sospechoso ? { htmlDiagnostico: await htmlAnonimo(page) } : {}) };
 }
