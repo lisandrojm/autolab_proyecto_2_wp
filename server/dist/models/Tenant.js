@@ -84,8 +84,20 @@ const tenantSchema = new Schema({
             },
             presentacionAutomatica: {
                 activa: { type: Boolean, default: false },
+                // Declarados a propósito: el esquema es `strict`, y un `$set` sobre un camino que no está
+                // acá Mongoose lo descarta en silencio (la hora configurada no se guardaba).
+                hora: { type: Number },
+                minuto: { type: Number },
+                diasAntes: { type: Number },
                 ultimoDia: { type: String },
                 ultimaCorrida: { type: Schema.Types.Mixed },
+            },
+            sincronizacionRelaciones: {
+                activa: { type: Boolean, default: false },
+                hora: { type: String },
+                meses: { type: Number },
+                ultimoDia: { type: String },
+                ultimaSync: { type: Schema.Types.Mixed },
             },
         },
         dropboxSign: {

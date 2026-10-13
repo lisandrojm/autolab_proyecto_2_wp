@@ -20,3 +20,5 @@ export declare const MOTOR: string;
 export declare const MOTOR_ALTAS: string;
 /** El lector de catálogos de ARCA (solo lectura, cero clicks). Ver `catalogoArcaSync.ts`. */
 export declare const MOTOR_CATALOGOS: string;
+/** Consultas de Relaciones Laborales por mes de movimientos y descarga del TXT. SÓLO LEE. */
+export declare const MOTOR_RELACIONES: string;

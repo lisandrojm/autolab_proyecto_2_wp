@@ -1,13 +1,14 @@
 import { useCallback, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLandmark, faFileSignature, faIdCard } from "@fortawesome/free-solid-svg-icons";
+import { faLandmark, faFileSignature, faIdCard, faHourglassHalf } from "@fortawesome/free-solid-svg-icons";
 import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { DropboxTab } from "../components/documents/DropboxTab";
+import { AntiguedadArcaTab } from "../components/arca/AntiguedadArcaTab";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 
-type TabKey = "dropbox" | "afip" | "paritarias" | "registros";
+type TabKey = "dropbox" | "afip" | "paritarias" | "registros" | "antiguedad";
 
 export function DocumentsPage() {
   const puedeAbrir = usePuedeAbrir();
@@ -47,6 +48,10 @@ export function DocumentsPage() {
                 <FontAwesomeIcon icon={faIdCard} className="text-xs" />
                 Registros
               </button>
+              <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === "antiguedad" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("antiguedad")} title="La antigüedad de cada persona según las relaciones laborales que ARCA tiene registradas, sincronizadas todos los días">
+                <FontAwesomeIcon icon={faHourglassHalf} className="text-xs" />
+                Antigüedad ARCA
+              </button>
             </div>
               {puedeAbrir("/escaneo-dropbox") && (
                 <a
@@ -82,6 +87,12 @@ export function DocumentsPage() {
               se abren en pantalla desde la tabla, sin bajarlos.
             */}
             {activeTab === "registros" && <DropboxTab key="registros" fixedRoot="/WEPRODU/Registros" rootLabel="Registros" onCountChange={handleCountChange} />}
+            {/*
+              Antigüedad ARCA: no es Dropbox. Es la copia local de las relaciones laborales de
+              Simplificación Registral (sembrada desde los TXT de /WEPRODU/ARCA/Contratos y
+              sincronizada a diario) y la antigüedad calculada sobre ella.
+            */}
+            {activeTab === "antiguedad" && <AntiguedadArcaTab key="antiguedad" onCountChange={handleCountChange} />}
           </div>
         </div>
       }

@@ -22,3 +22,5 @@ export const MOTOR = resolve(RAIZ_REPO, "frontend/tools/validar-obras-sociales.m
 export const MOTOR_ALTAS = resolve(RAIZ_REPO, "frontend/tools/altas-arca.mjs");
 /** El lector de catálogos de ARCA (solo lectura, cero clicks). Ver `catalogoArcaSync.ts`. */
 export const MOTOR_CATALOGOS = resolve(RAIZ_REPO, "frontend/tools/catalogos-arca.mjs");
+/** Consultas de Relaciones Laborales por mes de movimientos y descarga del TXT. SÓLO LEE. */
+export const MOTOR_RELACIONES = resolve(RAIZ_REPO, "frontend/tools/consulta-relaciones-arca.mjs");
