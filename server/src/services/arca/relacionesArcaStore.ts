@@ -4,6 +4,7 @@ import { AntiguedadArca } from "../../models/AntiguedadArca.js";
 import type { RelacionLaboralTxt } from "../../compartido/arca/relacionesLaboralesTxt.js";
 import { aplicaBaja, ganaLaNueva, unaPorClave, type ModoCarga } from "../../utils/versionRelacionArca.js";
 import { antiguedadesDe, type RelacionParaAntiguedad } from "../../utils/antiguedadArca.js";
+import { textoAntiguedad, type AntiguedadArcaResumen } from "../../compartido/antiguedadTexto.js";
 
 /**
  * LA PERSISTENCIA DE LAS RELACIONES LABORALES DE ARCA Y DE LA ANTIGÜEDAD. Lo único que toca Mongo
@@ -154,6 +155,35 @@ export async function recalcularAntiguedad(tenantId: Types.ObjectId, cuils: Iter
     if (!dryRun && ops.length) await AntiguedadArca.bulkWrite(ops, { ordered: false });
   }
   return escritas;
+}
+
+/**
+ * La antigüedad según ARCA de un conjunto de personas, por CUIL (fila global: todas las empleadoras),
+ * lista para viajar a una pantalla. Quien no está en ARCA no aparece en el mapa. Una sola consulta.
+ */
+export async function antiguedadArcaPorCuil(tenantId: Types.ObjectId, cuils: Iterable<string>): Promise<Map<string, AntiguedadArcaResumen>> {
+  const lista = [...new Set([...cuils].map((c) => String(c || "").replace(/\D/g, "")).filter((c) => c.length === 11))];
+  const out = new Map<string, AntiguedadArcaResumen>();
+  for (const lote of enLotes(lista, LOTE_IN)) {
+    const filas: any[] = await AntiguedadArca.find({ tenantId, empleadoraCuit: null, cuil: { $in: lote } })
+      .select("cuil primeraAlta ultimaFecha diasTrabajados antiguedadDesdePrimeraAlta cantidadContratos empresas tieneRelacionAbierta calculadoEl")
+      .lean();
+    for (const f of filas) {
+      out.set(f.cuil, {
+        fuente: "arca",
+        diasTrabajados: f.diasTrabajados,
+        texto: textoAntiguedad(f.diasTrabajados),
+        primeraAlta: isoDe(f.primeraAlta),
+        ultimaFecha: isoDe(f.ultimaFecha),
+        antiguedadDesdePrimeraAlta: f.antiguedadDesdePrimeraAlta,
+        cantidadContratos: f.cantidadContratos,
+        empresas: f.empresas || [],
+        tieneRelacionAbierta: !!f.tieneRelacionAbierta,
+        calculadoEl: f.calculadoEl ? new Date(f.calculadoEl).toISOString() : null,
+      });
+    }
+  }
+  return out;
 }
 
 /**

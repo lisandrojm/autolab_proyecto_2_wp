@@ -117,6 +117,8 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
   // Calculate available days consistent with display
   const totalSeniorityDays = useMemo(() => {
+    // Si la persona está en ARCA, manda esa cuenta (días trabajados, sin contar dos veces los solapados).
+    if (profile?.antiguedadArca) return profile.antiguedadArca.diasTrabajados as number;
     return (profile?.metadata?.projects || []).reduce(
       (acc: number, p: any) =>
         acc +
@@ -318,6 +320,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   };
 
   const calculateAntiguedad = () => {
+    if (profile?.antiguedadArca) return `${profile.antiguedadArca.texto} (según ARCA)`;
     if (totalSeniorityDays === 0) {
       if (!profile?.hireDate) return '0 días';
       const hireDate = parseISO(profile.hireDate);

@@ -51,6 +51,7 @@ import { contratosQueRigenDeLasPersonas, contratosQueRigenDelProyecto } from "..
 import { momentoDeCarga } from "../utils/archivoDeContrato.js";
 import { claveEstado } from "../utils/estadoClave.js";
 import { estadoDeRenovacion, procesoTerminadoSegunEstados } from "../utils/estadoDeRenovacion.js";
+import { antiguedadArcaPorCuil } from "../services/arca/relacionesArcaStore.js";
 import { nombreParaSellar } from "../services/arca/nombreArca.js";
 const router = Router();
 /* ------------------- Filtros del equipo de un proyecto (client-side → server) -------------------
@@ -806,12 +807,16 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
         const totalesPorUsuario = new Map();
         for (const f of filasTotales)
             totalesPorUsuario.set(String(f._id), { jornadas: Number(f.jornadas) || 0, contratos: Number(f.contratos) || 0 });
+        // La antigüedad según ARCA (Documentos → Antigüedad ARCA), por CUIL: la ficha la prefiere a la suma
+        // de jornadas de WeProdu. En modo tabla no viaja el CUIL (ni hace falta la antigüedad).
+        const antiguedadArca = teamTable ? new Map() : await antiguedadArcaPorCuil(req.tenantObjectId, enrichedUsers.map((u) => String(u.metadata?.cuit || "")));
         res.json({
             users: enrichedUsers.map((u) => {
                 const totales = totalesPorUsuario.get(String(u._id));
                 const rige = contratoQueRige?.get(String(u._id)) || null;
                 return {
                     ...u,
+                    antiguedadArca: antiguedadArca.get(String(u.metadata?.cuit || "").replace(/\D/g, "")) || null,
                     // Sólo en modo tabla. `lastContractIndex` es la posición en el array del UserProject: es lo
                     // que esperan editar, descargar y subir documentación.
                     ...(teamTable

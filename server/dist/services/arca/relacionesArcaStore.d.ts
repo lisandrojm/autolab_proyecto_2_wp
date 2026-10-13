@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import { type OrigenRelacionArca } from "../../models/RelacionLaboralArca.js";
 import type { RelacionLaboralTxt } from "../../compartido/arca/relacionesLaboralesTxt.js";
 import { type ModoCarga } from "../../utils/versionRelacionArca.js";
+import { type AntiguedadArcaResumen } from "../../compartido/antiguedadTexto.js";
 /**
  * LA PERSISTENCIA DE LAS RELACIONES LABORALES DE ARCA Y DE LA ANTIGÜEDAD. Lo único que toca Mongo
  * en este módulo; las decisiones (qué versión gana, cuánto suma la antigüedad) están en
@@ -43,6 +44,11 @@ export declare function guardarRelaciones(o: {
  * se le pasa. Devuelve cuántas filas escribió. Si un CUIL ya no tiene relaciones, borra sus filas.
  */
 export declare function recalcularAntiguedad(tenantId: Types.ObjectId, cuils: Iterable<string>, hoy: string, dryRun?: boolean): Promise<number>;
+/**
+ * La antigüedad según ARCA de un conjunto de personas, por CUIL (fila global: todas las empleadoras),
+ * lista para viajar a una pantalla. Quien no está en ARCA no aparece en el mapa. Una sola consulta.
+ */
+export declare function antiguedadArcaPorCuil(tenantId: Types.ObjectId, cuils: Iterable<string>): Promise<Map<string, AntiguedadArcaResumen>>;
 /**
  * Los CUIL con alguna relación abierta: su antigüedad crece un día por día, así que el sync diario
  * los recalcula aunque ARCA no haya informado nada nuevo de ellos.

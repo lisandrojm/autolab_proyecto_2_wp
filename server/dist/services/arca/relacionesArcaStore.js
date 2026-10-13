@@ -2,6 +2,7 @@ import { RelacionLaboralArca } from "../../models/RelacionLaboralArca.js";
 import { AntiguedadArca } from "../../models/AntiguedadArca.js";
 import { aplicaBaja, ganaLaNueva, unaPorClave } from "../../utils/versionRelacionArca.js";
 import { antiguedadesDe } from "../../utils/antiguedadArca.js";
+import { textoAntiguedad } from "../../compartido/antiguedadTexto.js";
 /**
  * LA PERSISTENCIA DE LAS RELACIONES LABORALES DE ARCA Y DE LA ANTIGÜEDAD. Lo único que toca Mongo
  * en este módulo; las decisiones (qué versión gana, cuánto suma la antigüedad) están en
@@ -139,6 +140,34 @@ export async function recalcularAntiguedad(tenantId, cuils, hoy, dryRun = false)
             await AntiguedadArca.bulkWrite(ops, { ordered: false });
     }
     return escritas;
+}
+/**
+ * La antigüedad según ARCA de un conjunto de personas, por CUIL (fila global: todas las empleadoras),
+ * lista para viajar a una pantalla. Quien no está en ARCA no aparece en el mapa. Una sola consulta.
+ */
+export async function antiguedadArcaPorCuil(tenantId, cuils) {
+    const lista = [...new Set([...cuils].map((c) => String(c || "").replace(/\D/g, "")).filter((c) => c.length === 11))];
+    const out = new Map();
+    for (const lote of enLotes(lista, LOTE_IN)) {
+        const filas = await AntiguedadArca.find({ tenantId, empleadoraCuit: null, cuil: { $in: lote } })
+            .select("cuil primeraAlta ultimaFecha diasTrabajados antiguedadDesdePrimeraAlta cantidadContratos empresas tieneRelacionAbierta calculadoEl")
+            .lean();
+        for (const f of filas) {
+            out.set(f.cuil, {
+                fuente: "arca",
+                diasTrabajados: f.diasTrabajados,
+                texto: textoAntiguedad(f.diasTrabajados),
+                primeraAlta: isoDe(f.primeraAlta),
+                ultimaFecha: isoDe(f.ultimaFecha),
+                antiguedadDesdePrimeraAlta: f.antiguedadDesdePrimeraAlta,
+                cantidadContratos: f.cantidadContratos,
+                empresas: f.empresas || [],
+                tieneRelacionAbierta: !!f.tieneRelacionAbierta,
+                calculadoEl: f.calculadoEl ? new Date(f.calculadoEl).toISOString() : null,
+            });
+        }
+    }
+    return out;
 }
 /**
  * Los CUIL con alguna relación abierta: su antigüedad crece un día por día, así que el sync diario

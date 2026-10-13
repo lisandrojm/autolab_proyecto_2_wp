@@ -8,6 +8,7 @@ import { Area } from '../models/Area.js';
 import { RoleFrame } from '../models/RoleFrame.js';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js';
 import { requireTenant, TenantRequest } from '../middleware/tenant.js';
+import { antiguedadArcaPorCuil } from '../services/arca/relacionesArcaStore.js';
 
 const router = Router();
 
@@ -286,7 +287,11 @@ router.get('/', async (req: AuthenticatedRequest & TenantRequest, res) => {
       console.error('Error evaluating contract rules for user:', e);
     }
 
-    res.json({ ...profile, areaName, areaMembers, positionName, levelName, roleNames, extraVacationDays, carryOverVacationDays, projectIds, externalInfo, metadata, vacationsEnabled });
+    // La antigüedad según ARCA, si la persona está en Simplificación Registral: la app la muestra en
+    // vez de sumar sus contratos de WeProdu (que cuentan dos veces los días solapados).
+    const antiguedadArca = (await antiguedadArcaPorCuil(req.tenantObjectId as mongoose.Types.ObjectId, [String((user as any)?.metadata?.cuit || "")])).get(String((user as any)?.metadata?.cuit || "").replace(/\D/g, "")) || null;
+
+    res.json({ ...profile, areaName, areaMembers, positionName, levelName, roleNames, extraVacationDays, carryOverVacationDays, projectIds, externalInfo, metadata, vacationsEnabled, antiguedadArca });
   } catch (error) {
     console.error('Get profile error:', error);
     if (error instanceof Error) {

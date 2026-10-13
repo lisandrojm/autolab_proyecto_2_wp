@@ -1,9 +1,12 @@
 import axios from "./axiosConfig";
+import type { AntiguedadArcaResumen } from "@compartido/antiguedadTexto";
 
 export interface ProfileData {
   _id: string;
   tenantId: string;
   userId: string;
+  /** La antigüedad según ARCA (relaciones laborales de Simplificación Registral), si la persona está ahí. */
+  antiguedadArca?: AntiguedadArcaResumen | null;
   email: string;
   firstName: string;
   lastName: string;

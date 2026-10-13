@@ -2,6 +2,8 @@ import axios from "./axiosConfig";
 import { emitUsersChanged } from "../utils/navbarEvents";
 
 import type { ContractOverviewRow } from "@compartido/arca/tiposArca";
+import type { AntiguedadArcaResumen } from "@compartido/antiguedadTexto";
+export type { AntiguedadArcaResumen } from "@compartido/antiguedadTexto";
 export type { SinCuitDocumento, SinCuitValidacion, AltaArcaPresentada, ContractOverviewRow } from "@compartido/arca/tiposArca";
 
 /* ---------- Tipos base ---------- */
@@ -177,6 +179,8 @@ export interface UserProjectMetadata {
 export interface User {
   _id: string;
   email: string;
+  /** La antigüedad según ARCA (Documentos → Antigüedad ARCA), si la persona está ahí. `null` si no. */
+  antiguedadArca?: AntiguedadArcaResumen | null;
   firstName?: string;
   lastName?: string;
   role?: "admin" | "user" | "manager" | "client";

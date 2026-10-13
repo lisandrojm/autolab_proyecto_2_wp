@@ -119,6 +119,9 @@ export default function Profile({ onChangePersonalData, onBack }: { onChangePers
 
   // 2. Calculate Seniority
   const calculateTotalSeniority = () => {
+    // Si la persona está en ARCA, manda esa cuenta: los días trabajados según Simplificación
+    // Registral, sin contar dos veces los solapados (la suma de contratos de abajo sí los duplica).
+    if (profile?.antiguedadArca) return { totalDays: profile.antiguedadArca.diasTrabajados, text: profile.antiguedadArca.texto, arca: true };
     if (!profile?.metadata?.projects) return { totalDays: 0, text: '0 días' };
 
     const totalDays = (profile.metadata.projects || []).reduce(
@@ -192,7 +195,7 @@ export default function Profile({ onChangePersonalData, onBack }: { onChangePers
           </div>
           <div>
             <p className="text-sm font-black text-slate-900 dark:text-slate-100 leading-tight">{seniority.text || '0 días'}</p>
-            <p className="text-[9px] text-slate-400 uppercase font-black tracking-tighter">Antigüedad</p>
+            <p className="text-[9px] text-slate-400 uppercase font-black tracking-tighter">Antigüedad{(seniority as any).arca ? ' · según ARCA' : ''}</p>
           </div>
         </div>
         <div className="bg-white dark:bg-slate-900/70 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 flex items-center gap-3">

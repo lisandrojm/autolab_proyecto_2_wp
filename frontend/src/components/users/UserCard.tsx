@@ -418,7 +418,9 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
             }, 0) ||
               0);
 
-          const conAntiguedad = totalDaysCount > 0 || !!user.metadata?.documento;
+          // Si la persona está en ARCA, manda esa cuenta (días trabajados según Simplificación Registral).
+          const arca = user.antiguedadArca || null;
+          const conAntiguedad = !!arca || totalDaysCount > 0 || !!user.metadata?.documento;
           if (!conAntiguedad && !onCalificar) return null;
 
           return (
@@ -428,12 +430,16 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
                     <FontAwesomeIcon icon={faClock} className="text-gray-300" />
                     Antigüedad Total
+                    {arca && <span className="px-1 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-[8px]" title="Según las relaciones laborales registradas en ARCA (Documentos → Antigüedad ARCA)">ARCA</span>}
                   </label>
                   <div className="text-gray-900 dark:text-gray-100 text-sm font-semibold">
-                    {totalDaysCount} {totalDaysCount === 1 ? "día" : "días"}
+                    {arca ? arca.texto : `${totalDaysCount} ${totalDaysCount === 1 ? "día" : "días"}`}
                   </div>
-
-                  {totalDaysCount > 0 && <div className="text-[9px] text-gray-400 mt-0.5 ml-1">({totalDaysCount} días en total)</div>}
+                  {arca ? (
+                    <div className="text-[9px] text-gray-400 mt-0.5 ml-1">({arca.diasTrabajados} días trabajados en {arca.cantidadContratos} {arca.cantidadContratos === 1 ? "relación" : "relaciones"}{totalDaysCount > 0 ? ` · ${totalDaysCount} jornadas en WeProdu` : ""})</div>
+                  ) : (
+                    totalDaysCount > 0 && <div className="text-[9px] text-gray-400 mt-0.5 ml-1">({totalDaysCount} días en total)</div>
+                  )}
                 </div>
               )}
               {onCalificar && (

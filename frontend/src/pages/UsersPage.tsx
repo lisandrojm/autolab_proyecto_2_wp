@@ -1582,19 +1582,24 @@ export const UsersPage: React.FC = () => {
                           return acc + (p.contracts?.reduce((pAcc: number, c: any) => pAcc + (c.cantidad_jornadas_laborales || 0), 0) || 0);
                         }, 0) || 0;
 
-                      if (totalDaysCount === 0) return null;
+                      // Si la persona está en ARCA, manda esa cuenta (días trabajados según Simplificación Registral).
+                      const arca = viewUser.antiguedadArca || null;
+                      if (!arca && totalDaysCount === 0) return null;
 
                       return (
                         <div className="space-y-1">
                           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                             <FontAwesomeIcon icon={faClock} className="text-gray-300" />
                             Antigüedad Total
+                            {arca && <span className="px-1 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-[8px]" title="Según las relaciones laborales registradas en ARCA (Documentos → Antigüedad ARCA)">ARCA</span>}
                           </label>
                           <div>
                             <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                              {totalDaysCount} {totalDaysCount === 1 ? 'día' : 'días'}
+                              {arca ? arca.texto : `${totalDaysCount} ${totalDaysCount === 1 ? 'día' : 'días'}`}
                             </p>
-                            <p className="text-[10px] text-gray-400 mt-0.5">({totalDaysCount} días en total)</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">
+                              {arca ? `(${arca.diasTrabajados} días trabajados en ${arca.cantidadContratos} ${arca.cantidadContratos === 1 ? 'relación' : 'relaciones'}${totalDaysCount > 0 ? ` · ${totalDaysCount} jornadas en WeProdu` : ''})` : `(${totalDaysCount} días en total)`}
+                            </p>
                           </div>
                         </div>
                       );
