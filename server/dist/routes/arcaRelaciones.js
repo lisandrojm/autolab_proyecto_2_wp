@@ -101,6 +101,34 @@ router.get("/persona/:cuil", requireTenant, authenticateToken, permiso, async (r
         errorDe(res, e);
     }
 });
+/**
+ * POST /arca/relaciones/personas { cuils } — las relaciones de VARIAS personas, resumidas, de la más
+ * nueva a la más vieja. Es la columna «Contratos en ARCA» de Contratación → Contratos, para cruzar lo
+ * que dice WeProdu con lo que dice ARCA sin abrir persona por persona.
+ *
+ * Una sola consulta para toda la página y sólo los campos que la celda muestra: con Atlas lejos lo que
+ * pesa son los bytes (ver memoria «Atlas dev lento por volumen»). El detalle completo de una persona
+ * sigue saliendo de `/persona/:cuil`, cuando se abre.
+ */
+router.post("/personas", requireTenant, authenticateToken, permiso, async (req, res) => {
+    try {
+        const cuils = [...new Set((Array.isArray(req.body?.cuils) ? req.body.cuils : []).map(soloDigitos).filter((c) => c.length === 11))].slice(0, 1000);
+        const relaciones = {};
+        if (cuils.length) {
+            const docs = await RelacionLaboralArca.find({ tenantId: req.tenantObjectId, cuil: { $in: cuils } })
+                .sort({ fechaInicio: -1 })
+                .select("cuil empleadoraCuit fechaInicio fechaFin modalidadContrato puestoDesempenado -_id")
+                .lean();
+            for (const d of docs) {
+                (relaciones[d.cuil] ||= []).push({ empleadoraCuit: d.empleadoraCuit, fechaInicio: isoDe(d.fechaInicio), fechaFin: isoDe(d.fechaFin), modalidadContrato: d.modalidadContrato || "", puestoDesempenado: d.puestoDesempenado || "" });
+            }
+        }
+        res.json({ empresas: await empresasConCuit(), relaciones });
+    }
+    catch (e) {
+        errorDe(res, e);
+    }
+});
 /** GET /arca/relaciones/estado — la sincronización: config, en curso, última corrida y totales. */
 router.get("/estado", requireTenant, authenticateToken, permiso, async (req, res) => {
     try {

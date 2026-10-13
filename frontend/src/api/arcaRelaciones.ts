@@ -89,7 +89,22 @@ export interface EstadoSyncRelaciones {
   hoy: string;
 }
 
+/** Una relación resumida, para la columna «Contratos en ARCA» de Contratación → Contratos. */
+export interface RelacionResumida {
+  empleadoraCuit: string;
+  fechaInicio: string;
+  /** `null` = sigue abierta. */
+  fechaFin: string | null;
+  modalidadContrato: string;
+  puestoDesempenado: string;
+}
+
 export const arcaRelacionesAPI = {
+  /** Las relaciones de varias personas por CUIL, de la más nueva a la más vieja (una sola consulta). */
+  async relacionesDePersonas(cuils: string[]): Promise<{ empresas: EmpresaConCuit[]; relaciones: Record<string, RelacionResumida[]> }> {
+    const { data } = await axios.post("/arca/relaciones/personas", { cuils });
+    return data;
+  },
   async antiguedad(params: { empresaCuit?: string; cuil?: string; q?: string; limit?: number } = {}): Promise<{ total: number; empresas: EmpresaConCuit[]; filas: AntiguedadFila[] }> {
     const { data } = await axios.get("/arca/relaciones/antiguedad", { params });
     return data;

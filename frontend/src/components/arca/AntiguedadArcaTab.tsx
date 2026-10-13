@@ -5,6 +5,7 @@ import { arcaRelacionesAPI, type AntiguedadFila, type EmpresaConCuit, type Estad
 import { BotonOrden, useOrdenTabla } from "../ui/OrdenTabla";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { TablaRelacionesArca } from "./TablaRelacionesArca";
 
 /*
   ANTIGÜEDAD SEGÚN ARCA: la copia local de las relaciones laborales de Simplificación Registral y la
@@ -27,7 +28,6 @@ const hace = (iso: string) => {
 /** "5,53 años"; los días van debajo, en gris. */
 const anios = (a: number) => `${a.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} años`;
 const dias = (d: number) => `${d.toLocaleString("es-AR")} días`;
-const importe = (n: number | null) => (n === null || n === undefined ? "—" : n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 
 const th = "px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 text-left";
 const td = "px-4 py-3 text-sm text-gray-700 dark:text-gray-300";
@@ -319,34 +319,7 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
                           {rel === "cargando" || !rel ? (
                             <span className="text-xs text-gray-500"><FontAwesomeIcon icon={faSpinner} spin /> Cargando relaciones…</span>
                           ) : (
-                            <table className="min-w-full text-xs">
-                              <thead>
-                                <tr>
-                                  <th className={th}>Empleadora</th>
-                                  <th className={th}>Inicio</th>
-                                  <th className={th}>Fin</th>
-                                  <th className={th}>Modalidad</th>
-                                  <th className={th}>Puesto / Categoría</th>
-                                  <th className={th}>Obra social</th>
-                                  <th className={th}>Retribución</th>
-                                  <th className={th}>Baja</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {rel.map((r) => (
-                                  <tr key={r._id} className="border-t border-gray-100 dark:border-gray-800 align-top">
-                                    <td className="px-4 py-2 whitespace-nowrap">{razonSocialDe(r.empleadoraCuit)}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap">{fechaCorta(r.fechaInicio)}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap">{r.fechaFin ? fechaCorta(r.fechaFin) : <span className="text-green-600 font-semibold">abierta</span>}</td>
-                                    <td className="px-4 py-2 max-w-[220px]">{r.modalidadContrato}</td>
-                                    <td className="px-4 py-2 max-w-[260px]">{r.puestoDesempenado}{r.categoria && <span className="block text-gray-500">{r.categoria}</span>}</td>
-                                    <td className="px-4 py-2 max-w-[220px]">{r.obraSocial}</td>
-                                    <td className="px-4 py-2 whitespace-nowrap text-right">{importe(r.retribucionPactada)} <span className="text-gray-400">{r.modLiquidacion}</span></td>
-                                    <td className="px-4 py-2 max-w-[220px]">{r.situacionBaja}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                            <TablaRelacionesArca relaciones={rel} razonSocialDe={razonSocialDe} />
                           )}
                         </td>
                       </tr>

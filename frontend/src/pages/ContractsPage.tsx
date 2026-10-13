@@ -34,6 +34,8 @@ import { AlcanceBanner } from '../components/context/AlcanceBanner';
 import { useEmpresaContextStore } from '../stores/empresaContextStore';
 import { firmaDigitalAPI, FirmaDigitalConfig } from '../api/firmaDigital';
 import { MOBILE_ACTIVITY_LOGS as PERMISO_NOVEDADES_MOBILE } from '../utils/permisosMobile';
+import { arcaRelacionesAPI, EmpresaConCuit, RelacionResumida } from '../api/arcaRelaciones';
+import { CeldaContratosArca } from '../components/arca/CeldaContratosArca';
 
 /*
   Filtro por lo que la persona PUEDE HACER en la app, no por cómo se llama su rol.
@@ -141,6 +143,33 @@ export const ContractsPage: React.FC = () => {
   */
   const { orden, alternar } = useOrden();
   const ordenProps = { orden, onAlternar: alternar };
+
+  /*
+    CONTRATOS EN ARCA (columna): las relaciones de las personas de la página, por CUIL, en una consulta
+    aparte para no demorar la tabla. Se guardan las ya traídas: al paginar sólo se piden las nuevas.
+    `null` = no se pudo consultar (la celda no dice «sin contratos», que sería mentir).
+  */
+  const [relacionesArca, setRelacionesArca] = useState<Record<string, RelacionResumida[] | null>>({});
+  const [empresasArca, setEmpresasArca] = useState<EmpresaConCuit[]>([]);
+  const cuilDe = (cuit?: string) => String(cuit || '').replace(/\D/g, '');
+  useEffect(() => {
+    const faltan = [...new Set(rows.map((r) => cuilDe(r.cuit)).filter((c) => c.length === 11 && !(c in relacionesArca)))];
+    if (faltan.length === 0) return;
+    let vigente = true;
+    arcaRelacionesAPI
+      .relacionesDePersonas(faltan)
+      .then(({ empresas, relaciones }) => {
+        if (!vigente) return;
+        setEmpresasArca(empresas);
+        setRelacionesArca((prev) => ({ ...prev, ...Object.fromEntries(faltan.map((c) => [c, relaciones[c] || []])) }));
+      })
+      .catch(() => vigente && setRelacionesArca((prev) => ({ ...prev, ...Object.fromEntries(faltan.map((c) => [c, null])) })));
+    return () => {
+      vigente = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
+  const razonSocialArca = (cuit: string) => empresasArca.find((e) => e.cuit === cuit)?.razonSocial || cuit;
   const [allAreas, setAllAreas] = useState<Area[]>([]);
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [totalRows, setTotalRows] = useState(0);
@@ -644,7 +673,7 @@ export const ContractsPage: React.FC = () => {
           ) : effectiveViewMode === 'table' ? (
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
               <div className="overflow-x-auto custom-scrollbar min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-1.5rem)]">
-                <table className="w-full text-left border-collapse min-w-[2750px]">
+                <table className="w-full text-left border-collapse min-w-[3010px]">
                   <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
                     <tr className="border-b border-gray-100 dark:border-gray-800">
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
@@ -661,6 +690,9 @@ export const ContractsPage: React.FC = () => {
                         <BotonOrden columna="contratos" {...ordenProps}>
                           Contratos
                         </BotonOrden>
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Las relaciones laborales que ARCA tiene de la persona, de la más nueva a la más vieja (última sincronización)">
+                        Contratos en ARCA
                       </th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
                         <BotonOrden columna="cliente" {...ordenProps}>
@@ -731,6 +763,13 @@ export const ContractsPage: React.FC = () => {
                           <span className="text-sm font-bold px-2.5 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona en el proyecto">
                             {record.contractsInProject}
                           </span>
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          {relacionesArca[cuilDe(record.cuit)] === null ? (
+                            <span className="text-xs text-gray-400" title="No se pudo consultar">—</span>
+                          ) : (
+                            <CeldaContratosArca cuil={record.cuit} nombre={record.userName} relaciones={relacionesArca[cuilDe(record.cuit)] ?? undefined} razonSocialDe={razonSocialArca} />
+                          )}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{record.clientName || '—'}</td>
                         <td className="px-4 py-3">
