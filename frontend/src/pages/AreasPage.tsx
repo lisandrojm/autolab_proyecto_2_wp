@@ -13,6 +13,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrash, faPlus, faShieldHalved, faLayerGroup, faUserTie, faUserGraduate, faUserGear, faTable, faGrip, faClock, faUserShield, faLock } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
+import { fechaDeCalendario } from '../utils/fechas';
 
 // const HELP_KEY = "areas" as const; // TODO: Add help content if needed
 
@@ -494,7 +495,7 @@ export const AreasPage: React.FC = () => {
             <EmptyState
               icon={faShieldHalved}
               title={startDate || endDate ? 'No hay áreas en este rango de fechas' : 'No hay áreas'}
-              description={startDate || endDate ? `No se encontraron áreas ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : 'Crea tu primera área para comenzar.'}
+              description={startDate || endDate ? `No se encontraron áreas ${startDate && endDate ? `desde ${fechaDeCalendario(startDate)?.toLocaleDateString()} hasta ${fechaDeCalendario(endDate)?.toLocaleDateString()}` : startDate ? `desde ${fechaDeCalendario(startDate)?.toLocaleDateString()}` : `hasta ${fechaDeCalendario(endDate)?.toLocaleDateString()}`}` : 'Crea tu primera área para comenzar.'}
               action={
                 canManage
                   ? {

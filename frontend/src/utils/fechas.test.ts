@@ -10,7 +10,7 @@ process.env.TZ = 'America/Argentina/Buenos_Aires';
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatearInstante, formatearFechaCalendario } from './fechas.js';
+import { formatearInstante, formatearFechaCalendario, fechaDeCalendario } from './fechas.js';
 
 describe('fecha de calendario: no se convierte de huso', () => {
   it('el 1 de julio se muestra el 1 de julio, no el 30 de junio', () => {
@@ -65,5 +65,27 @@ describe('instante: sí se convierte, y muestra la hora', () => {
   it('sin valor devuelve un guion', () => {
     assert.equal(formatearInstante(null), '—');
     assert.equal(formatearInstante(undefined), '—');
+  });
+});
+
+describe('fechaDeCalendario: el mismo día, como Date local', () => {
+  it('"2026-10-13" es el 13 de octubre a medianoche local, no el 12 a las 21', () => {
+    const d = fechaDeCalendario('2026-10-13')!;
+    assert.equal(d.getDate(), 13);
+    assert.equal(d.getMonth(), 9);
+    assert.equal(d.toLocaleDateString('es-AR'), '13/10/2026');
+  });
+  it('un ISO con hora toma sólo el día escrito', () => {
+    assert.equal(fechaDeCalendario('2026-10-13T00:00:00.000Z')!.getDate(), 13);
+  });
+  it('un Date viejo a medianoche UTC se lee en UTC', () => {
+    assert.equal(fechaDeCalendario(new Date(Date.UTC(2026, 9, 13)))!.getDate(), 13);
+  });
+  it('DD/MM/AAAA también', () => {
+    assert.equal(fechaDeCalendario('13/10/2026')!.getDate(), 13);
+  });
+  it('vacío o ilegible: null', () => {
+    assert.equal(fechaDeCalendario(''), null);
+    assert.equal(fechaDeCalendario('cualquier cosa'), null);
   });
 });

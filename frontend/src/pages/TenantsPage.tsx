@@ -10,6 +10,7 @@ import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBuilding, faEdit, faTrash, faPlus, faLock } from '@fortawesome/free-solid-svg-icons';
 import { getHelp, hasHelp } from '../data/help/helpContent';
+import { fechaDeCalendario } from '../utils/fechas';
 
 const HELP_KEY = 'tenants' as const;
 
@@ -773,7 +774,7 @@ export const TenantsPage: React.FC = () => {
             <EmptyState
               icon={faBuilding}
               title={startDate || endDate ? 'No hay tenants en este rango de fechas' : 'No hay tenants'}
-              description={startDate || endDate ? `No se encontraron tenants ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : 'Crea tu primer tenant para comenzar.'}
+              description={startDate || endDate ? `No se encontraron tenants ${startDate && endDate ? `desde ${fechaDeCalendario(startDate)?.toLocaleDateString()} hasta ${fechaDeCalendario(endDate)?.toLocaleDateString()}` : startDate ? `desde ${fechaDeCalendario(startDate)?.toLocaleDateString()}` : `hasta ${fechaDeCalendario(endDate)?.toLocaleDateString()}`}` : 'Crea tu primer tenant para comenzar.'}
               action={
                 canManage
                   ? {

@@ -28,6 +28,7 @@ import { faEdit, faUsers, faBriefcase, faFileLines, faUmbrellaBeach, faPlus, faL
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { areasAPI, Area } from "../api/areas";
 import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
+import { fechaDeCalendario } from '../utils/fechas';
 
 const HELP_KEY = "clientProjects" as const;
 
@@ -992,7 +993,7 @@ export const ProjectDetailPage: React.FC = () => {
                     {/* Otros datos */}
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Fecha Alta</span>
-                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{project.metadata?.fechaAlta ? new Date(project.metadata.fechaAlta).toLocaleDateString() : "—"}</span>
+                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{project.metadata?.fechaAlta ? fechaDeCalendario(project.metadata.fechaAlta)?.toLocaleDateString() : "—"}</span>
                     </div>
 
                     {/* Empresas (Contrato / Release) apiladas en la columna izquierda */}
@@ -1176,7 +1177,7 @@ export const ProjectDetailPage: React.FC = () => {
                 </label>
                 <div className="flex flex-col">
                   <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
-                    {project.startDate ? new Date(project.startDate).toLocaleDateString() : "—"} al {project.endDate ? new Date(project.endDate).toLocaleDateString() : "—"}
+                    {project.startDate ? fechaDeCalendario(project.startDate)?.toLocaleDateString() : "—"} al {project.endDate ? fechaDeCalendario(project.endDate)?.toLocaleDateString() : "—"}
                   </span>
                 </div>
               </div>

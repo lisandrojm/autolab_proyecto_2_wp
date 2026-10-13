@@ -21,7 +21,8 @@ import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { InfoModal } from "../../../../components/ui/InfoModal";
 import { overtimeUtils, splitOvertime } from "../../../../utils/overtimeUtils";
 
-import { esContratoVigente, getContratoActivo } from "../../../../utils/contratoVigencia";
+import { esContratoVigente, esFechaBajaVigente, getContratoActivo } from "../../../../utils/contratoVigencia";
+import { fechaDeCalendario } from "../../../../utils/fechas";
 import { coordinaAreas, MOBILE_ACTIVITY_COMPLIANCE } from "../../../../utils/permisosMobile";
 import { useAuthStore } from "../../../../stores/authStore";
 import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
@@ -73,21 +74,9 @@ const normalizeAreaShiftAssignments = (raw: any): { areaId: string; shiftIds: st
  * Un contrato está vigente si no tiene fecha de baja, o si la baja es de hoy en adelante.
  * Acepta ISO ("YYYY-MM-DD...") y el formato con día primero ("DD/MM/YYYY" o "DD-MM-YYYY").
  */
-const isContractVigente = (fechaBaja?: string | null): boolean => {
-  if (!fechaBaja) return true;
-  let endDate = new Date(fechaBaja);
-  if (isNaN(endDate.getTime()) && typeof fechaBaja === "string") {
-    const parts = fechaBaja.split(/[-/]/);
-    if (parts.length === 3 && parts[2].length === 4) {
-      endDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
-    }
-  }
-  if (isNaN(endDate.getTime())) return true;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  endDate.setHours(0, 0, 0, 0);
-  return endDate >= today;
-};
+// Por fecha de calendario: `new Date("2026-10-13")` es el 12 a las 21 en Argentina, y el último día
+// del contrato ya no contaba como vigente (no se le podía cargar la novedad de ese día).
+const isContractVigente = (fechaBaja?: string | null): boolean => esFechaBajaVigente(fechaBaja);
 
 /**
  * Vigencia del contrato que rige hoy para el miembro en el proyecto: el vigente más reciente.
@@ -910,8 +899,9 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
       const statusUpper = v.status?.toUpperCase();
       if (statusUpper !== "APPROVED" && statusUpper !== "DELIVERED") return false;
 
-      const start = new Date(v.startDate);
-      const end = new Date(v.endDate);
+      // Las vacaciones se guardan a medianoche UTC: leídas como instante empezaban y terminaban un día antes.
+      const start = fechaDeCalendario(v.startDate) || new Date(v.startDate);
+      const end = fechaDeCalendario(v.endDate) || new Date(v.endDate);
       start.setHours(0, 0, 0, 0);
       end.setHours(23, 59, 59, 999);
 
@@ -1055,19 +1045,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
             roles: u.roles,
             isActive: (u.metadata as any)?.activo !== false,
             hasActiveContract: !!u.metadata?.projects?.some((p) =>
-              p.contracts?.some((c) => {
-                if (!c.fecha_baja_contrato) return true;
-                let endDate = new Date(c.fecha_baja_contrato);
-                if (isNaN(endDate.getTime()) && typeof c.fecha_baja_contrato === "string") {
-                  const parts = c.fecha_baja_contrato.split(/[-/]/);
-                  if (parts.length === 3 && parts[2].length === 4) {
-                    endDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
-                  }
-                }
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                return endDate >= today;
-              }),
+              p.contracts?.some((c) => isContractVigente(c.fecha_baja_contrato)),
             ),
             metadataProjects:
               u.metadata?.projects?.map((p: any) => {

@@ -2,6 +2,7 @@ import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar, faUser, faCheck, faTimes, faClock, faBan } from "@fortawesome/free-solid-svg-icons";
 import { RequestData } from "../../api/requests";
+import { fechaDeCalendario } from "../../utils/fechas";
 
 interface RequestCardProps {
   request: RequestData;
@@ -61,7 +62,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request, onApprove, on
       <div className="space-y-2 mb-4">
         <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
           <span className="font-medium mr-2">Fechas:</span>
-          {new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}
+          {fechaDeCalendario(request.startDate)?.toLocaleDateString()} - {fechaDeCalendario(request.endDate)?.toLocaleDateString()}
         </div>
         <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
           <span className="font-medium mr-2">Días:</span>

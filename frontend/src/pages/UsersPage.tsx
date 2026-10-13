@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { usersAPI, User } from '../api/users';
+import { formatDate } from '../components/team/ContractCard';
 import { afipAPI, ResultadoValidarNombres } from '../api/afip';
 import { motivoCuitInvalido, cuitEsValido } from '../utils/cuit';
 import { NombreArca, estadoNombreArca } from '../components/arca/NombreArca';
@@ -1213,7 +1214,7 @@ export const UsersPage: React.FC = () => {
                           <FontAwesomeIcon icon={faCalendar} className="text-gray-300" />
                           Fecha Nacimiento
                         </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{new Date(viewUser.metadata.fechaNac).toLocaleDateString()}</p>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{formatDate(String(viewUser.metadata.fechaNac))}</p>
                       </div>
                     )}
 
@@ -1572,7 +1573,7 @@ export const UsersPage: React.FC = () => {
                           <FontAwesomeIcon icon={faBriefcase} className="text-gray-300" />
                           Fecha de Ingreso
                         </label>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{new Date(viewUser.hireDate).toLocaleDateString()}</p>
+                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{formatDate(String(viewUser.hireDate))}</p>
                       </div>
                     )}
 
@@ -1915,7 +1916,7 @@ export const UsersPage: React.FC = () => {
                                         <div className="space-y-0.5">
                                           <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Periodo</label>
                                           <p className="font-semibold text-gray-600 dark:text-gray-400">
-                                            {c.fecha_alta_contrato ? new Date(c.fecha_alta_contrato).toLocaleDateString() : '?'} - {c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato).toLocaleDateString() : 'Indef.'}
+                                            {c.fecha_alta_contrato ? formatDate(c.fecha_alta_contrato) : '?'} - {c.fecha_baja_contrato ? formatDate(c.fecha_baja_contrato) : 'Indef.'}
                                           </p>
                                         </div>
                                         <div className="space-y-0.5">

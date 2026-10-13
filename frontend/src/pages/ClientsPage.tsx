@@ -14,6 +14,7 @@ import { faClone, faEdit, faPlus, faTrash, faUsers } from '@fortawesome/free-sol
 import { clientsAPI, type Client } from '../api/clients';
 import { customAlphabet } from 'nanoid';
 import { getHelp, hasHelp } from '../data/help/helpContent';
+import { fechaDeCalendario } from '../utils/fechas';
 
 const HELP_KEY = 'clients' as const;
 
@@ -535,7 +536,7 @@ export const ClientsPage: React.FC = () => {
             <EmptyState
               icon={faUsers}
               title={startDate || endDate ? 'No hay clientes en este rango de fechas' : 'No hay clientes'}
-              description={startDate || endDate ? `No se encontraron clientes ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : 'Crea tu primer cliente para comenzar.'}
+              description={startDate || endDate ? `No se encontraron clientes ${startDate && endDate ? `desde ${fechaDeCalendario(startDate)?.toLocaleDateString()} hasta ${fechaDeCalendario(endDate)?.toLocaleDateString()}` : startDate ? `desde ${fechaDeCalendario(startDate)?.toLocaleDateString()}` : `hasta ${fechaDeCalendario(endDate)?.toLocaleDateString()}`}` : 'Crea tu primer cliente para comenzar.'}
               action={
                 canManage
                   ? {

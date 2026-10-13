@@ -6,6 +6,7 @@ import { Modal } from "./Modal";
 import { Project } from "../../../../api/projects";
 import { companiesAPI, Company } from "../../../../api/companies";
 import { nombreCentroCosto } from "../../../../utils/centroCosto";
+import { fechaDeCalendario } from "../../../../utils/fechas";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -89,7 +90,7 @@ export default function ProyectoInfoModal({ isOpen, onClose, proyecto, superviso
   const sede = nombresDeSedes(proyecto).join(", ") || (meta.sedeId ? `ID: ${meta.sedeId}` : "");
   // Sin el catálogo de centros (no se carga en el móvil): lo que resolvió el server, o su id.
   const centroCosto = nombreCentroCosto(proyecto as any);
-  const fechaAlta = meta.fechaAlta ? new Date(meta.fechaAlta).toLocaleDateString("es-AR") : "";
+  const fechaAlta = meta.fechaAlta ? fechaDeCalendario(meta.fechaAlta)?.toLocaleDateString("es-AR") || "" : "";
   const nombreEmpresa = (id: string) => empresas?.find((e) => String(e._id) === String(id))?.razonSocial || "";
   const contrato = (proyecto.contratoEmpresas || []).map(nombreEmpresa).filter(Boolean);
   const release = (proyecto.releaseEmpresas || []).map(nombreEmpresa).filter(Boolean);

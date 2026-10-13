@@ -6,6 +6,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 import { PostCard } from "./PostCard";
+import { fechaDeCalendario } from "../utils/fechas";
 
 interface Post {
   _id: string;
@@ -224,7 +225,7 @@ export const CampaignLaunchBoard: React.FC<CampaignLaunchBoardProps> = ({ campai
         <EmptyState
           icon={faPaperPlane}
           title={hasActiveDate ? "Sin posts en este rango" : "No hay posts"}
-          description={hasActiveDate ? `No se encontraron posts ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Esta campaña aún no tiene posts creados."}
+          description={hasActiveDate ? `No se encontraron posts ${startDate && endDate ? `desde ${fechaDeCalendario(startDate)?.toLocaleDateString()} hasta ${fechaDeCalendario(endDate)?.toLocaleDateString()}` : startDate ? `desde ${fechaDeCalendario(startDate)?.toLocaleDateString()}` : `hasta ${fechaDeCalendario(endDate)?.toLocaleDateString()}`}` : "Esta campaña aún no tiene posts creados."}
           action={{
             label: "Crear Post",
             onClick: onCreatePost,

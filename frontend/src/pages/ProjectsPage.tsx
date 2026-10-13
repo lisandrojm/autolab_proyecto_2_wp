@@ -34,6 +34,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
+import { fechaDeCalendario } from '../utils/fechas';
 
 export const ProjectsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -529,11 +530,11 @@ export const ProjectsPage: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 pb-4 border-b border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400" title="Fecha desde">
                     <FontAwesomeIcon icon={faCalendarDay} className="h-3.5 w-3.5 text-gray-400" />
-                    <span>{project.startDate ? new Date(project.startDate).toLocaleDateString() : '—'}</span>
+                    <span>{project.startDate ? fechaDeCalendario(project.startDate)?.toLocaleDateString() : '—'}</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400" title="Fecha hasta">
                     <FontAwesomeIcon icon={faCalendarCheck} className="h-3.5 w-3.5 text-gray-400" />
-                    <span>{project.endDate ? new Date(project.endDate).toLocaleDateString() : '—'}</span>
+                    <span>{project.endDate ? fechaDeCalendario(project.endDate)?.toLocaleDateString() : '—'}</span>
                   </div>
                 </div>
                 {/*

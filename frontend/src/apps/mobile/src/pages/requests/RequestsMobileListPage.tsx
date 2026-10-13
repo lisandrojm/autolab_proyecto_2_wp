@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faPlus, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan } from "@fortawesome/free-solid-svg-icons";
 import { requestsAPI, RequestData } from "../../../../../api/requests";
+import { fechaDeCalendario } from "../../../../../utils/fechas";
 
 interface RequestsMobileListPageProps {
   onNavigate: (view: "new" | "detail", id?: string) => void;
@@ -135,7 +136,7 @@ export default function RequestsMobileListPage({ onNavigate, onBack }: RequestsM
                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                       <FontAwesomeIcon icon={faCalendar} className="w-4 h-4" />
                       <span>
-                        {new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}
+                        {fechaDeCalendario(request.startDate)?.toLocaleDateString()} - {fechaDeCalendario(request.endDate)?.toLocaleDateString()}
                       </span>
                     </div>
                   </div>

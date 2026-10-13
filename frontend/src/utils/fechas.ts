@@ -53,3 +53,23 @@ export const formatearFechaCalendario = (valor?: string | Date | null): string =
   if (Number.isNaN(valor.getTime())) return String(valor);
   return `${valor.getUTCDate()}/${valor.getUTCMonth() + 1}/${valor.getUTCFullYear()}`;
 };
+
+/**
+ * Una FECHA DE CALENDARIO como `Date` LOCAL (medianoche de ese día donde está quien mira), para las
+ * pantallas que ya la formatean con `toLocaleDateString(...)` o `date-fns` y sólo necesitan que el día
+ * sea el correcto. Es el reemplazo directo de `new Date(fecha)` cuando el dato no es un instante.
+ *
+ * Mismas reglas que `formatearFechaCalendario`: de un string se toma la parte `AAAA-MM-DD` (o
+ * `DD/MM/AAAA`) sin convertir de huso; de un `Date` (los viejos, guardados a medianoche UTC) se toman
+ * sus componentes en UTC. `null` si no hay fecha o no se entiende.
+ */
+export const fechaDeCalendario = (valor?: string | Date | null): Date | null => {
+  if (!valor) return null;
+  if (valor instanceof Date) return Number.isNaN(valor.getTime()) ? null : new Date(valor.getUTCFullYear(), valor.getUTCMonth(), valor.getUTCDate());
+  const texto = String(valor).trim();
+  let m = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  m = texto.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  return null;
+};

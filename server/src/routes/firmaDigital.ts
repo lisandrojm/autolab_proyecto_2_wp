@@ -71,6 +71,9 @@ router.get("/config", async (_req: AuthenticatedRequest & TenantRequest, res) =>
 */
 const YA_ENVIADO = "Este trámite ya se envió a firmar: sus documentos quedan como se enviaron.";
 
+/** Errores de generarContratoPdf / generarReleasePdf que son culpa del pedido, no del server. */
+const statusDeErrorDePdf = (msg: string) => (/no encontrad/i.test(msg) ? 404 : /no tiene texto escrito|no tiene contenido redactado|no es custom/i.test(msg) ? 400 : 500);
+
 const generarContratoSchema = z.object({
   projectId: z.string().min(1),
   userId: z.string().min(1),
@@ -141,7 +144,9 @@ router.post("/generar-contrato", async (req: AuthenticatedRequest & TenantReques
     res.json({ firmaContratoUrl, firmaContratoNombre: contratoFilename, firmaGeneradoAt });
   } catch (error: any) {
     console.error("Firma digital generar-contrato error:", error);
-    res.status(500).json({ error: error?.message || "No se pudo generar el contrato." });
+    // Plantilla sin contenido o contrato custom sin texto: es un 400 (lo que falta lo tiene que poner
+    // quien genera), no una falla del server.
+    res.status(statusDeErrorDePdf(String(error?.message || ""))).json({ error: error?.message || "No se pudo generar el contrato." });
   }
 });
 
@@ -213,7 +218,7 @@ router.post("/generar-release", async (req: AuthenticatedRequest & TenantRequest
     res.json({ firmaReleases, firmaReleasesGeneradoAt });
   } catch (error: any) {
     console.error("Firma digital generar-release error:", error);
-    res.status(500).json({ error: error?.message || "No se pudieron generar los release(s)." });
+    res.status(statusDeErrorDePdf(String(error?.message || ""))).json({ error: error?.message || "No se pudieron generar los release(s)." });
   }
 });
 
@@ -339,8 +344,6 @@ async function cargarTramite(tenantObjectId: any, projectId: string, userId: str
   return up;
 }
 
-/** Errores de generarContratoPdf / generarReleasePdf que son culpa del pedido, no del server. */
-const statusDeErrorDePdf = (msg: string) => (/no encontrad/i.test(msg) ? 404 : /no tiene texto escrito|no tiene contenido redactado|no es custom/i.test(msg) ? 400 : 500);
 
 // POST /firma-digital/contenido-custom-contrato - «Guardar borrador» del modal del Contrato custom.
 router.post("/contenido-custom-contrato", async (req: AuthenticatedRequest & TenantRequest, res) => {

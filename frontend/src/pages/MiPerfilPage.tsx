@@ -10,6 +10,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faIdCard, faUser, faMapMarkerAlt, faUniversity, faCheck, faXmark, faUserShield } from '@fortawesome/free-solid-svg-icons';
+import { fechaDeCalendario } from '../utils/fechas';
 
 type ProfileTab = 'general' | 'domicilio' | 'bancarios' | 'sistema';
 
@@ -34,8 +35,9 @@ const BoolPill: React.FC<{ label: string; value?: boolean }> = ({ label, value }
 
 const formatDate = (value?: string) => {
   if (!value) return '';
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return value;
+  // Nacimiento e ingreso son días de calendario: como instante, en Argentina caían el día anterior.
+  const d = fechaDeCalendario(value);
+  if (!d) return value;
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 

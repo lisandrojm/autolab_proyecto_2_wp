@@ -33,6 +33,7 @@ import { VacationRequest } from '../../../../api/vacations';
 import { InfoModal } from '../../../../components/ui/InfoModal';
 import { calculateLCTVacationDays, calculateLCTDaysFromSeniority } from '../../../../utils/vacationLCT';
 import { vacationConfigAPI, VacationConfig } from '../../../../api/vacationConfig';
+import { fechaDeCalendario } from "../../../../utils/fechas";
 
 // Helper to parse date string as local date (ignoring time/timezone)
 const getLocalDate = (dateString: string) => {
@@ -123,8 +124,9 @@ export default function Vacations({ onNavigate }: VacationsProps) {
       (acc: number, p: any) =>
         acc +
         (p.contracts || []).reduce((cAcc: number, c: any) => {
-          const start = new Date(c.fecha_alta_contrato);
-          const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
+          // Días de calendario, no instantes (ver `fechaDeCalendario`).
+          const start = fechaDeCalendario(c.fecha_alta_contrato) || new Date(c.fecha_alta_contrato);
+          const end = fechaDeCalendario(c.fecha_baja_contrato) || new Date();
           return cAcc + Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
         }, 0),
       0,

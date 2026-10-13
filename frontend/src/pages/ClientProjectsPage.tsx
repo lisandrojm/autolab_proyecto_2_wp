@@ -29,6 +29,7 @@ import { CampoValoracion, cambiosDeValoracion, valorInicialValoracion } from '..
 import { ValoracionesPorRol } from '../components/proyectos/ValoracionesPorRol';
 import { RotuloConInfo } from '../components/proyectos/RotuloConInfo';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
+import { fechaDeCalendario } from '../utils/fechas';
 
 const HELP_KEY = 'clientProjects' as const;
 
@@ -920,8 +921,8 @@ export const ClientProjectsPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-4 px-6 text-xs text-gray-500 dark:text-gray-400">
-                      <div>{p.startDate ? new Date(p.startDate).toLocaleDateString() : '—'}</div>
-                      <div className="text-[10px] text-gray-400">a {p.endDate ? new Date(p.endDate).toLocaleDateString() : '—'}</div>
+                      <div>{p.startDate ? fechaDeCalendario(p.startDate)?.toLocaleDateString() : '—'}</div>
+                      <div className="text-[10px] text-gray-400">a {p.endDate ? fechaDeCalendario(p.endDate)?.toLocaleDateString() : '—'}</div>
                     </td>
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -1049,11 +1050,11 @@ export const ClientProjectsPage: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 pb-4 border-b border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400" title="Fecha desde">
                     <FontAwesomeIcon icon={faCalendarDay} className="h-3.5 w-3.5 text-gray-400" />
-                    <span>{project.startDate ? new Date(project.startDate).toLocaleDateString() : '—'}</span>
+                    <span>{project.startDate ? fechaDeCalendario(project.startDate)?.toLocaleDateString() : '—'}</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400" title="Fecha hasta">
                     <FontAwesomeIcon icon={faCalendarCheck} className="h-3.5 w-3.5 text-gray-400" />
-                    <span>{project.endDate ? new Date(project.endDate).toLocaleDateString() : '—'}</span>
+                    <span>{project.endDate ? fechaDeCalendario(project.endDate)?.toLocaleDateString() : '—'}</span>
                   </div>
                 </div>
 
@@ -1200,7 +1201,7 @@ export const ClientProjectsPage: React.FC = () => {
         <div className="text-center py-12">
           <FontAwesomeIcon icon={faBriefcase} className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No hay proyectos</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">{startDate || endDate ? `No se encontraron proyectos ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : 'Crea el primer proyecto para este cliente'}</p>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">{startDate || endDate ? `No se encontraron proyectos ${startDate && endDate ? `desde ${fechaDeCalendario(startDate)?.toLocaleDateString()} hasta ${fechaDeCalendario(endDate)?.toLocaleDateString()}` : startDate ? `desde ${fechaDeCalendario(startDate)?.toLocaleDateString()}` : `hasta ${fechaDeCalendario(endDate)?.toLocaleDateString()}`}` : 'Crea el primer proyecto para este cliente'}</p>
           <button onClick={handleOpenCreate} className="btn-primary">
             <FontAwesomeIcon icon={faPlus} className="h-5 w-5 mr-2" />
             Nuevo Proyecto

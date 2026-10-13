@@ -16,6 +16,7 @@ import { getOrderNumber, getCategoryName, getSubcategoriesArray } from "../utils
 import { InfoModal } from "../../../../components/ui/InfoModal";
 import { useProfile } from "../hooks/useProfile";
 import { orderConfigAPI } from "../../../../api/orderConfig";
+import { esFechaBajaVigente } from "../../../../utils/contratoVigencia";
 
 interface OrdersProps {
   onNavigate: (view: ViewType) => void;
@@ -127,20 +128,16 @@ export default function Orders({ onNavigate, initialCategoryType, onIntentConsum
       if (project.contracts && project.contracts.length > 0) {
         // Sort contracts: active ones first
         const sortedContracts = [...project.contracts].sort((a, b) => {
-          const endA = a.fecha_baja_contrato ? new Date(a.fecha_baja_contrato).getTime() : Infinity;
-          const endB = b.fecha_baja_contrato ? new Date(b.fecha_baja_contrato).getTime() : Infinity;
-          const now = new Date().getTime();
-          const activeA = endA >= now;
-          const activeB = endB >= now;
+          const activeA = esFechaBajaVigente(a.fecha_baja_contrato);
+          const activeB = esFechaBajaVigente(b.fecha_baja_contrato);
           if (activeA && !activeB) return -1;
           if (!activeA && activeB) return 1;
           return 0;
         });
 
         for (const contract of sortedContracts) {
-          const endDate = contract.fecha_baja_contrato ? new Date(contract.fecha_baja_contrato) : null;
-          if (endDate) endDate.setHours(23, 59, 59, 999);
-          const isActive = !endDate || endDate.getTime() >= new Date().getTime();
+          // Por fecha de calendario (ver `esFechaBajaVigente`): con `new Date("AAAA-MM-DD")` el último día no contaba.
+          const isActive = esFechaBajaVigente(contract.fecha_baja_contrato);
 
           if (isActive && contract.sueldo_mano) {
             const rawSalary = String(contract.sueldo_mano).replace(/[,.]/g, ""); // Convert things like "1.000,00" or similar to parsing ready if needed. Assuming it's typically a number, just safely parse
@@ -330,20 +327,16 @@ export default function Orders({ onNavigate, initialCategoryType, onIntentConsum
         if (project.contracts && project.contracts.length > 0) {
           // Sort contracts: active ones first
           const sortedContracts = [...project.contracts].sort((a, b) => {
-            const endA = a.fecha_baja_contrato ? new Date(a.fecha_baja_contrato).getTime() : Infinity;
-            const endB = b.fecha_baja_contrato ? new Date(b.fecha_baja_contrato).getTime() : Infinity;
-            const now = new Date().getTime();
-            const activeA = endA >= now;
-            const activeB = endB >= now;
+            const activeA = esFechaBajaVigente(a.fecha_baja_contrato);
+            const activeB = esFechaBajaVigente(b.fecha_baja_contrato);
             if (activeA && !activeB) return -1;
             if (!activeA && activeB) return 1;
             return 0;
           });
 
           for (const contract of sortedContracts) {
-            const endDate = contract.fecha_baja_contrato ? new Date(contract.fecha_baja_contrato) : null;
-            if (endDate) endDate.setHours(23, 59, 59, 999);
-            const isActive = !endDate || endDate.getTime() >= new Date().getTime();
+            // Por fecha de calendario (ver `esFechaBajaVigente`): con `new Date("AAAA-MM-DD")` el último día no contaba.
+            const isActive = esFechaBajaVigente(contract.fecha_baja_contrato);
 
             // Check ID
             if (contract.contractId || contract.id) {

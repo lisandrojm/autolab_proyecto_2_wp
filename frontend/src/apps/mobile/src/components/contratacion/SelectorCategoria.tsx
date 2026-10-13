@@ -5,6 +5,8 @@ import { Modal } from "../Modal";
 import { CategoriaSatItem } from "../../../../../api/categoriasSat";
 import { ChipSinValorar, ChipValoracion } from "../../../../../components/proyectos/ChipValoracion";
 import { fuzzyMatch } from "../../../../../utils/searchHelpers";
+import { fechaDeCalendario } from "../../../../../utils/fechas";
+import { hoyISO } from "../../../../../utils/contratoVigencia";
 
 /*
   LA CATEGORÍA, COMO SE ELIGE EN EL ALTA INDIVIDUAL: el campo, la ventana con buscador y el detalle
@@ -42,8 +44,9 @@ export interface OfertaDeCategorias {
 const pesos = (n?: number): string => (Number.isFinite(Number(n)) && Number(n) > 0 ? Number(n).toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2 }) : "—");
 const fechaDeEscala = (v?: string | Date): string => {
   if (!v) return "—";
-  const d = new Date(v as any);
-  return isNaN(d.getTime()) ? String(v) : d.toLocaleDateString("es-AR");
+  // La vigencia de una escala es un día de calendario, no un instante.
+  const d = fechaDeCalendario(v);
+  return d ? d.toLocaleDateString("es-AR") : String(v);
 };
 /** Una fila etiqueta/importe del detalle de la escala. */
 const FilaEscala: React.FC<{ label: string; valor: string; destacado?: boolean }> = ({ label, valor, destacado }) => (
@@ -211,7 +214,7 @@ export function ModalCategoria({ abierto, onCerrar, subtitulo, oferta, verTodasD
         {detalle &&
           (() => {
             const d: any = detalle.data || {};
-            const vencida = d.vigenciaHasta ? new Date(d.vigenciaHasta).getTime() < Date.now() : false;
+            const vencida = d.vigenciaHasta ? (fechaDeCalendario(d.vigenciaHasta)?.getTime() ?? Infinity) < fechaDeCalendario(hoyISO())!.getTime() : false;
             return (
               <div className="space-y-3">
                 <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">

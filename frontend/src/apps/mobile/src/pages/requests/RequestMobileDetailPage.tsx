@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faCalendar, faUser, faClock, faCheckCircle, faTimesCircle, faBan } from "@fortawesome/free-solid-svg-icons";
 import { requestsAPI, RequestData } from "../../../../../api/requests";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { fechaDeCalendario } from "../../../../../utils/fechas";
 
 interface RequestMobileDetailPageProps {
   requestId: string;
@@ -141,7 +142,7 @@ export default function RequestMobileDetailPage({ requestId, onBack }: RequestMo
               <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
                 <FontAwesomeIcon icon={faCalendar} className="w-4 h-4 text-gray-400" />
                 <span>
-                  {new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}
+                  {fechaDeCalendario(request.startDate)?.toLocaleDateString()} - {fechaDeCalendario(request.endDate)?.toLocaleDateString()}
                 </span>
               </div>
             </div>

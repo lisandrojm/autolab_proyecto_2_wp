@@ -17,6 +17,7 @@ import { getHelp, hasHelp } from "../data/help/helpContent";
 import { avisosDeRol, CAPACIDAD_ITEMS, CAPACIDAD_PERMISSIONS, esPermisoMobile, esPermisoPlataforma, MOBILE_GRUPOS, MOBILE_ITEMS, MOBILE_PERMISSIONS, PLANTILLAS_ROL } from "../utils/permisosMobile";
 import { useNavigate } from "react-router-dom";
 import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
+import { fechaDeCalendario } from "../utils/fechas";
 
 const HELP_KEY = "roles" as const;
 
@@ -1475,7 +1476,7 @@ export const RolesPage: React.FC = () => {
             <EmptyState
               icon={faShieldHalved}
               title={startDate || endDate ? "No hay roles en este rango de fechas" : "No hay roles"}
-              description={startDate || endDate ? `No se encontraron roles ${startDate && endDate ? `desde ${new Date(startDate).toLocaleDateString()} hasta ${new Date(endDate).toLocaleDateString()}` : startDate ? `desde ${new Date(startDate).toLocaleDateString()}` : `hasta ${new Date(endDate).toLocaleDateString()}`}` : "Crea tu primer rol para comenzar a gestionar permisos."}
+              description={startDate || endDate ? `No se encontraron roles ${startDate && endDate ? `desde ${fechaDeCalendario(startDate)?.toLocaleDateString()} hasta ${fechaDeCalendario(endDate)?.toLocaleDateString()}` : startDate ? `desde ${fechaDeCalendario(startDate)?.toLocaleDateString()}` : `hasta ${fechaDeCalendario(endDate)?.toLocaleDateString()}`}` : "Crea tu primer rol para comenzar a gestionar permisos."}
               action={
                 hasPermission("admin_roles:view")
                   ? {

@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faChevronDown, faFilter, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "./Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { fechaDeCalendario } from "../../utils/fechas";
 
 export interface FilterOption {
   value: string;
@@ -234,11 +235,11 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
     if (!dateFilter) return "";
 
     if (dateFilter.startDate && dateFilter.endDate) {
-      return `Desde ${new Date(dateFilter.startDate).toLocaleDateString()} hasta ${new Date(dateFilter.endDate).toLocaleDateString()}`;
+      return `Desde ${fechaDeCalendario(dateFilter.startDate)?.toLocaleDateString()} hasta ${fechaDeCalendario(dateFilter.endDate)?.toLocaleDateString()}`;
     } else if (dateFilter.startDate) {
-      return `Desde ${new Date(dateFilter.startDate).toLocaleDateString()}`;
+      return `Desde ${fechaDeCalendario(dateFilter.startDate)?.toLocaleDateString()}`;
     } else if (dateFilter.endDate) {
-      return `Hasta ${new Date(dateFilter.endDate).toLocaleDateString()}`;
+      return `Hasta ${fechaDeCalendario(dateFilter.endDate)?.toLocaleDateString()}`;
     }
     return "";
   };

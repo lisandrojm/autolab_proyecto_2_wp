@@ -17,6 +17,7 @@ import { NOVEDADES_CONTRATACION, NOVEDAD_REGISTRO, ProfileData } from "../../../
 import { contratosPorVencerAPI } from "../../../../api/contratosPorVencer";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
 import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
+import { esFechaBajaVigente } from "../../../../utils/contratoVigencia";
 
 /** La notificación destacada arriba de las tarjetas, apagada hasta que vivan en la campanita. Ver el render. */
 const MOSTRAR_NOTIFICACION_DESTACADA = false;
@@ -82,8 +83,9 @@ export default function Home({ onNavigate }: HomeProps) {
     p.metadata.projects.forEach((proj: any) => {
       if (proj.contracts) {
         proj.contracts.forEach((c: any) => {
-          const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
-          const isActive = !endDate || endDate >= new Date();
+          // Por fecha de calendario: `new Date("2026-10-13")` es el 12 a las 21 en Argentina, y el
+          // contrato dejaba de contar como activo antes de que terminara su último día.
+          const isActive = esFechaBajaVigente(c.fecha_baja_contrato);
           if (isActive) hasActive = true;
         });
       }

@@ -17,6 +17,7 @@ import { getContratoActivo } from "../../../utils/contratoVigencia";
 import { overtimeUtils, OvertimeSettings, splitOvertime } from "../../../utils/overtimeUtils";
 import * as XLSX from "xlsx";
 import { usePuedeAbrir } from "../../../hooks/usePuedeAbrir";
+import { fechaDeCalendario } from "../../../utils/fechas";
 
 
 interface NewsReportsModalProps {
@@ -407,7 +408,8 @@ const ContractDetailModal: React.FC<{
 function formatContractDate(dateStr?: string): string {
   if (!dateStr) return "-";
   try {
-    return format(new Date(dateStr), "dd/MM/yyyy");
+    // Fecha de calendario: `new Date("2026-10-13")` mostraría el 12 (medianoche UTC).
+    return format(fechaDeCalendario(dateStr) || new Date(dateStr), "dd/MM/yyyy");
   } catch {
     return dateStr;
   }

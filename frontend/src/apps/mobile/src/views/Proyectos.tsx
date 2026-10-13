@@ -12,6 +12,8 @@ import SectionHeader from '../components/SectionHeader';
 import { ViewType } from '../types';
 import ProyectoInfoModal from '../components/ProyectoInfoModal';
 import { etiquetaDeTurno } from '../../../../utils/jerarquiaTurnos';
+import { fechaDeCalendario } from '../../../../utils/fechas';
+import { esFechaBajaVigente } from '../../../../utils/contratoVigencia';
 
 /** Id de algo que puede venir poblado (objeto) o pelado (string). */
 const idDe = (x: any): string => (x && typeof x === 'object' ? String(x._id || x.id || '') : x ? String(x) : '');
@@ -114,9 +116,8 @@ export default function Proyectos({ onNavigate }: { onNavigate?: (view: ViewType
     // Find active contract or just the first one from the matched contracts
     const activeContract =
       matchedContracts.find((c: any) => {
-        const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
-        if (endDate) endDate.setHours(23, 59, 59, 999);
-        return !endDate || endDate.getTime() >= new Date().getTime();
+        // Por fecha de calendario: `new Date("2026-10-13")` es el 12 a las 21 en Argentina.
+        return esFechaBajaVigente(c.fecha_baja_contrato);
       }) || matchedContracts[0];
 
     const isResponsable = Number(proj.metadata?.responsableId) === Number(perfil?.metadata?.id);
@@ -288,7 +289,7 @@ export default function Proyectos({ onNavigate }: { onNavigate?: (view: ViewType
       schedule: activeContract?.hora_inicio && activeContract?.hora_fin ? `${activeContract.hora_inicio} - ${activeContract.hora_fin}` : 'Sin horario',
       isResponsable,
       contractType: activeContract?.nombre_contrato || 'Sin contrato',
-      dates: activeContract?.fecha_alta_contrato ? `${format(new Date(activeContract.fecha_alta_contrato), 'dd/MM/yy')} - ${activeContract.fecha_baja_contrato ? format(new Date(activeContract.fecha_baja_contrato), 'dd/MM/yy') : 'Actualidad'}` : 'Sin fechas',
+      dates: activeContract?.fecha_alta_contrato ? `${format(fechaDeCalendario(activeContract.fecha_alta_contrato)!, 'dd/MM/yy')} - ${activeContract.fecha_baja_contrato ? format(fechaDeCalendario(activeContract.fecha_baja_contrato)!, 'dd/MM/yy') : 'Actualidad'}` : 'Sin fechas',
       shiftsText: uniqueShiftNames || activeContract?.nombre_turno || 'Sin turno',
       detailedShifts,
       coordinatedShifts: coordinatedShiftsGrouped,

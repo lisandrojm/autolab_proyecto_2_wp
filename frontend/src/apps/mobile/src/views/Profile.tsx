@@ -10,6 +10,7 @@ import { infoAPI, InfoItem } from '../../../../api/info';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../../../api/simpleCatalog';
 import { MOBILE_ACTIVITY_LOGS } from '../../../../utils/permisosMobile';
 import { resumenSinBanco } from '../../../../utils/bancarios';
+import { fechaDeCalendario } from "../../../../utils/fechas";
 
 type RegistroInfoTab = 'general' | 'domicilio' | 'bancarios';
 
@@ -128,8 +129,9 @@ export default function Profile({ onChangePersonalData, onBack }: { onChangePers
       (acc: number, p: any) =>
         acc +
         (p.contracts || []).reduce((cAcc: number, c: any) => {
-          const start = new Date(c.fecha_alta_contrato);
-          const end = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : new Date();
+          // Días de calendario, no instantes (ver `fechaDeCalendario`).
+          const start = fechaDeCalendario(c.fecha_alta_contrato) || new Date(c.fecha_alta_contrato);
+          const end = fechaDeCalendario(c.fecha_baja_contrato) || new Date();
           return cAcc + Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
         }, 0),
       0,
@@ -224,7 +226,7 @@ export default function Profile({ onChangePersonalData, onBack }: { onChangePers
             </div>
             <div className="flex justify-between flex-1 items-center">
               <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Ingreso</p>
-              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{profile?.hireDate ? format(new Date(profile.hireDate), 'dd MMM yyyy', { locale: es }) : 'N/A'}</p>
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{profile?.hireDate ? format(fechaDeCalendario(profile.hireDate)!, 'dd MMM yyyy', { locale: es }) : 'N/A'}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">

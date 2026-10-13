@@ -2,6 +2,7 @@ import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faClock, faEye } from "@fortawesome/free-solid-svg-icons";
 import { RequestData } from "../../api/requests";
+import { fechaDeCalendario } from "../../utils/fechas";
 
 interface RequestTableProps {
   requests: RequestData[];
@@ -63,8 +64,8 @@ export const RequestTable: React.FC<RequestTableProps> = ({ requests, onApprove,
                   <div className="text-sm text-gray-900 dark:text-white">{getTypeLabel(request.typeKey)}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900 dark:text-white">{new Date(request.startDate).toLocaleDateString()}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">{new Date(request.endDate).toLocaleDateString()}</div>
+                  <div className="text-sm text-gray-900 dark:text-white">{fechaDeCalendario(request.startDate)?.toLocaleDateString()}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">{fechaDeCalendario(request.endDate)?.toLocaleDateString()}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{request.daysCount || 0}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
