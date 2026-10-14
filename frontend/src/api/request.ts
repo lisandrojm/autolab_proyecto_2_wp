@@ -147,6 +147,8 @@ export interface ParteConAsistencia {
   /** Aparte del nombre, para armar «Noche (18:00 - 00:00)» igual que el listado de Novedades. */
   shiftStartTime?: string;
   shiftEndTime?: string;
+  /** Quién cargó el parte (el coordinador de esa área y turno). */
+  coordinador?: string;
   /** El comentario del supervisor sobre la novedad entera: uno por (coordinador, proyecto, día). */
   comments?: string;
   attendance: {
@@ -160,6 +162,13 @@ export interface ParteConAsistencia {
     overtimeHours100: number;
     overtimeEntryTime?: string;
     overtimeExitTime?: string;
+    /**
+     * Si el parte no tiene turno (un coordinador con varios turnos en el área carga uno solo por día),
+     * el turno de ESTA persona deducido por su horario. Si el horario no es el de ningún turno, viaja
+     * el horario solo (`horario`, «11:00 - 17:00»).
+     */
+    turnoPorHorario?: { name: string; startTime: string; endTime: string };
+    horario?: string;
   }[];
 }
 

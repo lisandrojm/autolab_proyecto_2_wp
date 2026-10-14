@@ -518,14 +518,14 @@ router.get("/asistencias-del-periodo", async (req: AuthenticatedRequest & Tenant
       .select(
         // El área y el turno son DEL PARTE, no de la ficha: es dónde y en qué turno se trabajó ese
         // día. El mismo criterio que usa el filtro «Área / Turno» (ver `filtrosDeNovedades`).
-        "date projectId areaId shiftId " +
+        "date projectId areaId shiftId userId " +
           // Los dos textos libres que el reporte exporta, que son cosas distintas: `comments` es UNO
           // por novedad (el del supervisor, el que cuenta la columna «Comentarios» del listado) y
           // `attendance.notes` es la observación de ESA persona ese día, que carga el móvil.
           "comments " +
           "attendance.employeeId attendance.status attendance.absenceReason attendance.notes " +
           "attendance.overtimeHours attendance.overtimeHours50 attendance.overtimeHours100 " +
-          "attendance.inTime attendance.outTime",
+          "attendance.inTime attendance.outTime attendance.scheduleInTime attendance.scheduleOutTime",
       )
       .lean();
 
@@ -535,14 +535,49 @@ router.get("/asistencias-del-periodo", async (req: AuthenticatedRequest & Tenant
       una vez por parte.
     */
     const ids = [...new Set(partes.map((p) => String(p.projectId || "")).filter(Boolean))];
-    const [proyectos, areas, turnos] = await Promise.all([
-      Project.find({ _id: { $in: ids }, tenantId: req.tenantObjectId }).select("name").lean(),
+    // Quién cargó cada parte (el coordinador de esa área y turno), sólo el nombre.
+    const idsCoordinadores = [...new Set(partes.map((p) => String(p.userId || "")).filter(Boolean))];
+    const [proyectos, areas, turnos, coordinadores] = await Promise.all([
+      Project.find({ _id: { $in: ids }, tenantId: req.tenantObjectId }).select("name coordinatorAssignments").lean(),
       Area.find({ tenantId: req.tenantObjectId }).select("name").lean(),
       Shift.find({ tenantId: req.tenantObjectId }).select("name startTime endTime").lean(),
+      User.find({ _id: { $in: idsCoordinadores }, tenantId: req.tenantObjectId }).select("firstName lastName email").lean(),
     ]);
+    const nombreDeCoordinador = new Map((coordinadores as any[]).map((u: any) => [String(u._id), `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email || ""]));
     const nombreDeProyecto = new Map((proyectos as any[]).map((p: any) => [String(p._id), p.name]));
     const nombreDeArea = new Map((areas as any[]).map((a: any) => [String(a._id), a.name]));
     const turnoPorId = new Map((turnos as any[]).map((t: any) => [String(t._id), t]));
+
+    /*
+      EL TURNO DE CADA PERSONA CUANDO EL PARTE NO LO TIENE.
+
+      Un coordinador con varios turnos en un área (Libertador: mañana, tarde, noche y trasnoche)
+      carga UN parte por proyecto y día, y ese parte queda con el área y sin turno. Lo que sí guarda
+      es el horario de cada persona (`scheduleInTime`/`scheduleOutTime`), y casi siempre es el de un
+      turno: 12:00–18:00 es Tarde. Se busca primero entre los turnos de ESE coordinador en ESA área
+      del proyecto y, si ahí no está, entre todos. Sólo vale una coincidencia única; si no hay (un
+      11:00–17:00), viaja el horario solo y el reporte lo muestra así.
+    */
+    const turnosDelCoordinador = new Map<string, any[]>();
+    for (const pr of proyectos as any[]) {
+      for (const ca of pr.coordinatorAssignments || []) {
+        const t = turnoPorId.get(String(ca.shiftId || ""));
+        if (!t) continue;
+        const clave = `${String(pr._id)}|${String(ca.userId || "")}|${String(ca.areaId || "")}`;
+        const lista = turnosDelCoordinador.get(clave) || [];
+        if (!lista.includes(t)) lista.push(t);
+        turnosDelCoordinador.set(clave, lista);
+      }
+    }
+    const unicoPorHorario = (candidatos: any[], entrada: string, salida: string) => {
+      const coinciden = candidatos.filter((t) => t.startTime === entrada && t.endTime === salida);
+      return coinciden.length === 1 ? coinciden[0] : null;
+    };
+    const turnoPorHorario = (parte: any, a: any): any => {
+      if (parte.shiftId || !a.scheduleInTime || !a.scheduleOutTime) return null;
+      const delCoordinador = turnosDelCoordinador.get(`${String(parte.projectId || "")}|${String(parte.userId || "")}|${String(parte.areaId || "")}`) || [];
+      return unicoPorHorario(delCoordinador, a.scheduleInTime, a.scheduleOutTime) || unicoPorHorario(turnos as any[], a.scheduleInTime, a.scheduleOutTime);
+    };
 
     res.json(
       partes.map((p) => {
@@ -551,6 +586,7 @@ router.get("/asistencias-del-periodo", async (req: AuthenticatedRequest & Tenant
         date: p.date,
         projectIdRaw: String(p.projectId || ""),
         projectName: nombreDeProyecto.get(String(p.projectId || "")) || "Sin Proyecto",
+        coordinador: nombreDeCoordinador.get(String(p.userId || "")) || "",
         areaName: nombreDeArea.get(String(p.areaId || "")) || "",
         shiftName: turno?.name || "",
         // El horario viaja aparte del nombre para que la etiqueta se arme igual que en el listado
@@ -569,6 +605,13 @@ router.get("/asistencias-del-periodo", async (req: AuthenticatedRequest & Tenant
           // El reporte los llama «entrada/salida de las extras»; en el parte son `inTime`/`outTime`.
           overtimeEntryTime: a.inTime || undefined,
           overtimeExitTime: a.outTime || undefined,
+          // Sólo cuando el parte no tiene turno (ver `turnoPorHorario`).
+          ...(() => {
+            if (p.shiftId) return {};
+            const t = turnoPorHorario(p, a);
+            if (t) return { turnoPorHorario: { name: t.name, startTime: t.startTime || "", endTime: t.endTime || "" } };
+            return a.scheduleInTime && a.scheduleOutTime ? { horario: `${a.scheduleInTime} - ${a.scheduleOutTime}` } : {};
+          })(),
         })),
         };
       }),

@@ -76,6 +76,13 @@ interface EmployeeStats {
    */
   areas: string[];
   turnos: string[];
+  /**
+   * Los del CONTRATO solos, sin los de los partes. Con el filtro de área o turno puesto, son los que
+   * se le atribuyen a un parte que no trae área/turno cargado (ver el recorte por parte), y los que
+   * muestra el detalle diario los días en que el parte no los tiene.
+   */
+  areasDelContrato: string[];
+  turnosDelContrato: string[];
   dailyAttendance: Record<
     string,
     {
@@ -96,6 +103,12 @@ interface EmployeeStats {
        */
       area?: string;
       turno?: string;
+      /** El parte no tenía turno y este se dedujo por el horario de la persona (ver `turnoPorHorario`). */
+      turnoPorHorario?: boolean;
+      /** El horario de la persona cuando no coincide con ningún turno. */
+      horario?: string;
+      /** Quién cargó el parte de ese día (dos partes el mismo día: los dos, separados por coma). */
+      coordinador?: string;
       /**
        * Los dos textos libres del día, separados porque son de distinto autor y alcance:
        * `nota` es la observación sobre ESTA persona, `comentarioParte` el del supervisor sobre la
@@ -572,6 +585,8 @@ const DailyDetailModal: React.FC<DailyDetailModalProps> = ({ isOpen, onClose, st
               <tr className="bg-gray-800/50 text-[10px] uppercase tracking-wider text-gray-400 font-bold border-b border-gray-700">
                 <th className="py-3 px-6">Fecha / Día</th>
                 <th className="py-3 px-6 text-center">Estado de Asistencia</th>
+                <th className="py-3 px-6">Área / Turno</th>
+                <th className="py-3 px-6">Cargó el informe</th>
                 <th className="py-3 px-6">Motivo / Detalle de Novedad</th>
                 <th className="py-3 px-6 text-right">Información de Hs. Extras</th>
               </tr>
@@ -592,6 +607,47 @@ const DailyDetailModal: React.FC<DailyDetailModalProps> = ({ isOpen, onClose, st
                       </div>
                     </td>
                     <td className="py-3 px-6 text-center">{attendance ? <span className={`text-[9px] font-black px-2.5 py-1 rounded-md uppercase tracking-widest border ${attendance.status === "present" ? "bg-green-500/10 text-green-500 border-green-500/20" : attendance.status === "absent" ? "bg-red-500/10 text-red-500 border-red-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"}`}>{attendance.status === "present" ? "Presente" : attendance.status === "absent" ? "Ausente" : "Tardanza"}</span> : <span className="text-[9px] font-bold text-gray-700 uppercase italic opacity-20">Sin Registro</span>}</td>
+                    <td className="py-3 px-6">
+                      {/*
+                        EL ÁREA Y EL TURNO DE ESE DÍA. El área, la del parte; si el parte no la trae
+                        (una novedad por proyecto y día, sin área), la del contrato. El turno, el del
+                        parte; si no lo trae, el que corresponde al horario de la persona ese día (lo
+                        deduce el server); si el horario no es de ningún turno, el horario; y recién
+                        si no hay nada, el del contrato. Lo que no salió del parte va marcado.
+                      */}
+                      {!attendance ? (
+                        <span className="text-gray-700 text-sm">—</span>
+                      ) : (
+                        <div className="flex flex-col gap-0.5">
+                          {attendance.area ? (
+                            <span className="text-[11px] font-semibold text-gray-200">{attendance.area}</span>
+                          ) : (
+                            <span className="text-[11px] font-semibold text-gray-400" title="El parte de ese día no tiene área cargada: es la del contrato">
+                              {stats.areasDelContrato.join(", ") || "—"}
+                              {stats.areasDelContrato.length > 0 && <span className="ml-1 text-[9px] uppercase tracking-wider text-gray-600">según contrato</span>}
+                            </span>
+                          )}
+                          {attendance.turno ? (
+                            <span className="text-[10px] text-gray-400" title={attendance.turnoPorHorario ? "El parte no tiene turno cargado: es el turno que corresponde al horario de la persona ese día" : undefined}>
+                              {attendance.turno}
+                              {attendance.turnoPorHorario && <span className="ml-1 text-[9px] uppercase tracking-wider text-gray-600">por horario</span>}
+                            </span>
+                          ) : attendance.horario ? (
+                            <span className="text-[10px] text-gray-400" title="El parte no tiene turno cargado y el horario de la persona no es el de ningún turno">
+                              Horario {attendance.horario}
+                            </span>
+                          ) : stats.turnosDelContrato.length > 0 ? (
+                            <span className="text-[10px] text-gray-500" title="Ni el parte ni el horario dicen el turno: es el del contrato">
+                              {stats.turnosDelContrato.join(", ")}
+                              <span className="ml-1 text-[9px] uppercase tracking-wider text-gray-600">según contrato</span>
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-3 px-6">
+                      {attendance?.coordinador ? <span className="text-[11px] text-gray-300">{attendance.coordinador}</span> : <span className="text-gray-700 text-sm">—</span>}
+                    </td>
                     <td className="py-3 px-6">
                       <span className="text-[11px] text-gray-400 italic">{attendance?.reason ? <span className={`${attendance.status === "absent" ? "text-red-400 font-medium" : ""}`}>{attendance.reason}</span> : "-"}</span>
                     </td>
@@ -821,6 +877,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
    * Los ids pueden venir poblados (`{_id, name}`) o crudos, según el endpoint: se contemplan los
    * dos, como en el resto de la app.
    */
+  /** Lo que devuelve `areaTurnoDeContratos`, más una copia que no se toca con los partes (ver `areasDelContrato`). */
+  const conAreaTurnoDelContrato = (at: { areas: string[]; turnos: string[] }) => ({ ...at, areasDelContrato: [...at.areas], turnosDelContrato: [...at.turnos] });
+
   const areaTurnoDeContratos = useMemo(() => {
     const nombreArea = new Map(areasCatalogo.map((a) => [String(a._id), a.name]));
     const turnoPorId = new Map(turnosCatalogo.map((t) => [String(t._id), t]));
@@ -1121,7 +1180,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           contractBaja,
           /* De los MISMOS contratos que el resto de la fila (ver `areaTurnoDeContratos`), igual que
              la columna Horario Base: son varios cuando la persona trabaja en dos áreas o turnos. */
-          ...areaTurnoDeContratos(targetList),
+          ...conAreaTurnoDelContrato(areaTurnoDeContratos(targetList)),
           dailyAttendance: {},
         });
       });
@@ -1261,15 +1320,13 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             contractAlta,
             contractBaja,
             // Ídem arriba: esta rama también crea filas, así que también tiene que traerlos.
-            ...areaTurnoDeContratos(targets),
+            ...conAreaTurnoDelContrato(areaTurnoDeContratos(targets)),
             dailyAttendance: {},
           });
         }
 
         const stats = employeeMap.get(mapKey);
         if (!stats) return;
-
-        stats.totalRecords += 1;
 
         /*
           El área y el turno de ESTE parte, sin repetir.
@@ -1279,9 +1336,33 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           cosa —y suele estar vacía en los importados—.
         */
         const areaDelParte = report.areaName || "";
-        const turnoDelParte = report.shiftName
-          ? `${report.shiftName}${report.shiftStartTime && report.shiftEndTime ? ` (${report.shiftStartTime} - ${report.shiftEndTime})` : ""}`
-          : "";
+        /* Sin turno en el parte, el que el server dedujo por el horario de la persona (ver
+           `turnoPorHorario`): cuenta igual para la columna y el filtro. */
+        const turnoDeLaFila = report.shiftName ? { name: report.shiftName, startTime: report.shiftStartTime || "", endTime: report.shiftEndTime || "" } : record.turnoPorHorario;
+        const turnoDelParte = turnoDeLaFila ? `${turnoDeLaFila.name}${turnoDeLaFila.startTime && turnoDeLaFila.endTime ? ` (${turnoDeLaFila.startTime} - ${turnoDeLaFila.endTime})` : ""}` : "";
+        const turnoPorHorario = !report.shiftName && !!record.turnoPorHorario;
+        const horarioSinTurno = !turnoDeLaFila && record.horario ? record.horario : "";
+        /*
+          EL FILTRO DE ÁREA / TURNO RECORTA PARTES, NO SÓLO FILAS.
+
+          La fila junta todo lo de la persona en el proyecto. Filtrando sólo filas, alcanzaba con que
+          UN parte fuera de Libertador —un coordinador de Libertador que la anotó un día— para que la
+          fila entrara entera, con sus días de Técnica sumados y las dos áreas a la vista. Ahora cada
+          parte cuenta sólo si es de un área (y turno) elegido. Si el parte no trae área o turno —el
+          caso común: una novedad por proyecto y día—, se le atribuyen los del contrato de la fila.
+        */
+        if (areasSeleccionadas.length > 0) {
+          const areasEfectivas = areaDelParte ? [areaDelParte] : stats.areasDelContrato;
+          if (!areasEfectivas.some((a) => areasSeleccionadas.includes(a))) return;
+        }
+        if (turnosSeleccionados.length > 0) {
+          const turnosEfectivos = turnoDelParte ? [turnoDelParte] : stats.turnosDelContrato;
+          if (!turnosEfectivos.some((t) => turnosSeleccionados.includes(t))) return;
+        }
+
+        // Recién acá: un parte recortado por el filtro de área/turno no cuenta.
+        stats.totalRecords += 1;
+
         if (areaDelParte && !stats.areas.includes(areaDelParte)) stats.areas.push(areaDelParte);
         if (turnoDelParte && !stats.turnos.includes(turnoDelParte)) stats.turnos.push(turnoDelParte);
 
@@ -1340,6 +1421,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         stats.dailyAttendance[dateKey] = {
           area: sumarAlDia(stats.dailyAttendance[dateKey]?.area, areaDelParte),
           turno: sumarAlDia(stats.dailyAttendance[dateKey]?.turno, turnoDelParte),
+          turnoPorHorario: turnoPorHorario || !!stats.dailyAttendance[dateKey]?.turnoPorHorario,
+          horario: sumarAlDia(stats.dailyAttendance[dateKey]?.horario, horarioSinTurno),
+          coordinador: sumarAlDia(stats.dailyAttendance[dateKey]?.coordinador, report.coordinador || ""),
           /* Mismo criterio que el área: dos partes el mismo día suman sus textos en vez de que el
              segundo borre al primero. */
           nota: sumarAlDia(stats.dailyAttendance[dateKey]?.nota, (record.notes || "").trim()),
@@ -1405,9 +1489,12 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
        de cada lista, en cambio, alcanza con cualquiera. */
     if (areasSeleccionadas.length > 0) {
       results = results.filter((s) => s.areas.some((a) => areasSeleccionadas.includes(a)));
+      // La columna muestra sólo lo filtrado: lo demás ya no está sumado en la fila (ver el recorte por parte).
+      results = results.map((s) => ({ ...s, areas: s.areas.filter((a) => areasSeleccionadas.includes(a)) }));
     }
     if (turnosSeleccionados.length > 0) {
       results = results.filter((s) => s.turnos.some((t) => turnosSeleccionados.includes(t)));
+      results = results.map((s) => ({ ...s, turnos: s.turnos.filter((t) => turnosSeleccionados.includes(t)) }));
     }
     if (rolesEmpresaSeleccionados.length > 0) {
       results = results.filter((s) => (s.userProjectsData || []).some((up) => !!up.nombre_rol_frame && rolesEmpresaSeleccionados.includes(up.nombre_rol_frame)));
