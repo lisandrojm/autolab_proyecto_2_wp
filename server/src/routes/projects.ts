@@ -876,12 +876,24 @@ router.post("/clients/:clientId/projects", requireTenant, authenticateToken, req
       return;
     }
 
+    /*
+      EL PRIMER MIEMBRO ES EL COORDINADOR DEL PROYECTO, no quien está creando el proyecto. Antes se
+      agregaba al usuario de la sesión (un admin cargando proyectos quedaba como miembro de todos) y el
+      coordinador elegido en el formulario quedaba afuera del equipo. `metadata.responsableId` es su id
+      de FRAME (`metadata.id` del usuario): se busca y pasa a ser el único miembro inicial.
+    */
+    const coordinador: any = await User.findOne({ tenantId: req.tenantObjectId, "metadata.id": Number(data.metadata?.responsableId) }).select("_id").lean();
+    if (!coordinador) {
+      res.status(400).json({ error: "El coordinador elegido no existe en el sistema." });
+      return;
+    }
+
     const project = new Project({
       ...data,
       tenantId: req.tenantObjectId,
       clientId: clientObjectId,
       createdBy: req.user!.userId,
-      assignedUsers: [new Types.ObjectId(req.user!.userId)],
+      assignedUsers: [coordinador._id],
     });
 
     /*
@@ -923,8 +935,8 @@ router.post("/clients/:clientId/projects", requireTenant, authenticateToken, req
     // Actualizar el cliente para incluir el proyecto
     await Client.findByIdAndUpdate(clientObjectId, { $push: { proyectos: project._id } });
 
-    // Actualizar el usuario creador para incluir el proyecto
-    await User.findByIdAndUpdate(req.user!.userId, { $addToSet: { projectIds: project._id } });
+    // El coordinador (único miembro inicial) pasa a tener el proyecto entre los suyos.
+    await User.updateOne({ _id: coordinador._id }, { $addToSet: { projectIds: project._id } });
 
     const projectObj = project.toObject();
     await resolveProjectGlobalConfig(projectObj, req.tenantObjectId);
@@ -1367,6 +1379,21 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
 
       if (removed.length > 0) {
         await User.updateMany({ _id: { $in: removed }, tenantId: req.tenantObjectId }, { $pull: { projectIds: currentProject._id } });
+      }
+    }
+
+    /*
+      SI CAMBIA EL COORDINADOR, ENTRA AL EQUIPO. El coordinador del proyecto tiene que ser miembro
+      (es quien lo ve y lo gestiona desde la app); al elegir otro en el formulario se lo suma a
+      `assignedUsers` si no estaba. El anterior no se saca: puede seguir trabajando en el proyecto.
+    */
+    const nuevoResponsableId = Number((updateData as any).metadata?.responsableId);
+    if (Number.isFinite(nuevoResponsableId) && nuevoResponsableId !== Number(currentProject.metadata?.responsableId)) {
+      const coordinador: any = await User.findOne({ tenantId: req.tenantObjectId, "metadata.id": nuevoResponsableId }).select("_id").lean();
+      if (coordinador && !currentProject.assignedUsers.some((id) => String(id) === String(coordinador._id))) {
+        currentProject.assignedUsers.push(coordinador._id);
+        if (updateData.assignedUsers && !updateData.assignedUsers.includes(String(coordinador._id))) updateData.assignedUsers.push(String(coordinador._id));
+        await User.updateOne({ _id: coordinador._id }, { $addToSet: { projectIds: currentProject._id } });
       }
     }
 

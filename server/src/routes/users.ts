@@ -2306,14 +2306,20 @@ router.get("/directory", requireTenant, authenticateToken, async (req: Authentic
   }
 });
 
+/**
+ * GET /users/eligible-responsables — quiénes pueden ser «Coordinador del proyecto» en el formulario de
+ * proyectos: TODAS las personas activas con un rol que tenga la capacidad de coordinar (el rol
+ * «Coordinador»; ver `PROJECT_COORDINATOR` en `permisosMobile.ts`). Antes filtraba por la capacidad de
+ * Supervisor, y dejaba afuera a los coordinadores que no eran además supervisores.
+ */
 router.get("/eligible-responsables", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const rolesSupervisores = await Role.find({ tenantId: req.tenantObjectId, permissions: PROJECT_SUPERVISOR }).distinct("_id");
+    const rolesCoordinadores = await Role.find({ tenantId: req.tenantObjectId, permissions: PROJECT_COORDINATOR }).distinct("_id");
 
     const users = await User.find({
       tenantId: req.tenantObjectId,
       "metadata.activo": true,
-      roles: { $in: rolesSupervisores },
+      roles: { $in: rolesCoordinadores },
     })
       .select("firstName lastName email metadata isProjectResponsible")
       .populate("roles", "name")
