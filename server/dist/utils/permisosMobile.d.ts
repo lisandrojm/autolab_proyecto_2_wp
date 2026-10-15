@@ -57,9 +57,16 @@ export declare const ALL_CAPACIDADES: string[];
 /**
  * Con qué nacen los roles de sistema. Son los mismos que ofrecen las plantillas del editor de roles
  * (`frontend/src/utils/permisosMobile.ts`): si se cambia uno, se cambia el otro.
+ *
+ * LOS NOMBRES DE LAS CAPACIDADES QUEDARON AL REVÉS DE LOS ROLES, y conviene tenerlo presente:
+ *   rol «Supervisor»  → carga las novedades de su gente y tiene áreas y turnos a cargo:
+ *                       capacidad «Supervisa áreas y turnos» = `PROJECT_COORDINATOR`.
+ *   rol «Coordinador» → responde por el proyecto y sigue a los supervisores:
+ *                       capacidad «Coordinador del Proyecto» = `PROJECT_SUPERVISOR`.
+ * Las etiquetas de `CAPACIDAD_ITEMS` (frontend) son las que ve la gente y las que mandan.
  */
-export declare const PERMISOS_COORDINADOR: string[];
-export declare const PERMISOS_SUPERVISOR: string[];
+export declare const PERMISOS_ROL_SUPERVISOR: string[];
+export declare const PERMISOS_ROL_COORDINADOR: string[];
 export declare const esCapacidad: (permiso: string) => boolean;
 /** Permisos que este cambio retira. Se traducen en `migrateMobileYResponsable`. */
 export declare const LEGACY_MOBILE_COLLABORATOR = "mobile_collaborator:view";

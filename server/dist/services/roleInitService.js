@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import { Role } from '../models/Role.js';
 import { User } from '../models/User.js';
-import { ALL_MOBILE_PERMISSIONS, LEGACY_MOBILE_COLLABORATOR, LEGACY_MOBILE_COORDINATOR, LEGACY_PROJECT_RESPONSIBLE, MOBILE_BASE_PERMISSIONS, MOBILE_ORDERS, PERMISOS_COORDINADOR, PERMISOS_SUPERVISOR, PROJECT_COORDINATOR } from '../utils/permisosMobile.js';
+import { ALL_MOBILE_PERMISSIONS, LEGACY_MOBILE_COLLABORATOR, LEGACY_MOBILE_COORDINATOR, LEGACY_PROJECT_RESPONSIBLE, MOBILE_BASE_PERMISSIONS, MOBILE_ORDERS, PERMISOS_ROL_COORDINADOR, PERMISOS_ROL_SUPERVISOR, PROJECT_COORDINATOR, PROJECT_SUPERVISOR } from '../utils/permisosMobile.js';
 /**
  * ═══════════════════════════════════════════════════════════════════════
  * PERMISOS PARA ROL USER - SISTEMA SIMPLIFICADO
@@ -159,12 +159,14 @@ export async function ensureDefaultRoles(tenantId) {
       Son los que reciben las altas y los que la gente reconoce por nombre, así que conviene que existan
       siempre y que nadie los borre sin querer. Lo que ven SÍ se edita: son permisos como cualquier otro.
   
-      Nacen con lo de las plantillas del editor: el Coordinador CARGA novedades, el Supervisor SIGUE el
-      cumplimiento de sus coordinadores. Los permisos se ponen sólo al CREARLOS: después son de quien los
-      edita, y destildar algo no se revierte en el próximo arranque (ver `ensureRole`).
+      Nacen con lo de las plantillas del editor: el Supervisor tiene áreas y turnos a cargo y CARGA las
+      novedades de su gente; el Coordinador responde por el proyecto y SIGUE el cumplimiento de sus
+      supervisores. Los permisos se ponen sólo al CREARLOS: después son de quien los edita, y destildar
+      algo no se revierte en el próximo arranque (ver `ensureRole`). La única excepción son las dos
+      capacidades de Proyectos, que van una por rol (ver `alinearCapacidadesDeRolesDeSistema`).
     */
-    await ensureRole(tid, 'Supervisor', PERMISOS_SUPERVISOR, 'Supervisa a los coordinadores: sigue su cumplimiento de novedades', false, true);
-    await ensureRole(tid, 'Coordinador', PERMISOS_COORDINADOR, 'Tiene áreas y turnos a cargo, y carga las novedades de su gente', false, true);
+    await ensureRole(tid, 'Supervisor', PERMISOS_ROL_SUPERVISOR, 'Supervisa áreas y turnos y carga las novedades de su gente', false, true);
+    await ensureRole(tid, 'Coordinador', PERMISOS_ROL_COORDINADOR, 'Coordina a los supervisores: sigue su cumplimiento y pide altas', false, true);
     await ensureRole(tid, 'Colaborador', MOBILE_BASE_PERMISSIONS, 'Sus pedidos y sus vacaciones desde la app', true, true);
     /*
       EL ROL «RESPONSABLE DE PROYECTO» YA NO SE CREA, y la migración lo borra.
@@ -390,7 +392,8 @@ export async function migrateMobileYResponsable(tenantId) {
         }
         if (permisos.delete(LEGACY_MOBILE_COORDINATOR)) {
             // Lo que hace un coordinador, no todo el móvil: el seguimiento de novedades es del supervisor.
-            PERMISOS_COORDINADOR.filter((p) => p !== PROJECT_COORDINATOR).forEach((p) => permisos.add(p));
+            // El viejo «Mobile Coordinador» cargaba novedades: es lo que hoy hace el rol Supervisor.
+            PERMISOS_ROL_SUPERVISOR.filter((p) => p !== PROJECT_COORDINATOR).forEach((p) => permisos.add(p));
         }
         permisos.delete(LEGACY_PROJECT_RESPONSIBLE);
         const finales = [...permisos];
@@ -419,6 +422,8 @@ export async function migrateMobileYResponsable(tenantId) {
     await retirarRolResponsable(tid);
     // ── 6) El rol «User» se retira: el por defecto pasa a ser «Colaborador» ──
     await retirarRolUser(tid);
+    // ── 6b) Las dos capacidades de Proyectos, una por rol de sistema ──
+    await alinearCapacidadesDeRolesDeSistema(tid);
     /*
       ── 7) El rol por defecto debería abrir la app: se AVISA, no se corrige ──
   
@@ -437,6 +442,36 @@ export async function migrateMobileYResponsable(tenantId) {
         // Un tenant sin NINGÚN rol es uno recién creado: `ensureDefaultRoles`, que corre a continuación,
         // le va a armar el rol por defecto. Avisar ahí sería una alarma por algo que se resuelve solo.
         console.warn(`[RoleInit] ⚠️ El tenant ${tid} no tiene rol por defecto: las altas van a quedar sin acceso a la app.`);
+    }
+}
+/**
+ * LAS CAPACIDADES DE PROYECTOS VAN UNA POR ROL DE SISTEMA: «Supervisa áreas y turnos» es del rol
+ * Supervisor y «Coordinador del Proyecto» es del rol Coordinador. Es la única configuración de roles que
+ * el arranque SÍ corrige, y a propósito: las etiquetas de la ficha de cada persona («Supervisa áreas y
+ * turnos») salen de las capacidades de sus roles, y con las dos tildadas en «Coordinador» todo
+ * coordinador figuraba como supervisor aunque le sacaran el rol Supervisor. Desde que asignar a alguien
+ * a un área/turno le pone solo el rol Supervisor (ver `PUT /projects/:id`), un coordinador que
+ * supervisa tiene los dos roles, y cada etiqueta vuelve a decir la verdad.
+ *
+ * Idempotente: sólo escribe si hay algo que corregir, y sólo en los dos roles de sistema por nombre.
+ */
+export async function alinearCapacidadesDeRolesDeSistema(tenantId) {
+    const tid = new Types.ObjectId(tenantId);
+    const reglas = [
+        { nombre: /^supervisor$/i, propia: PROJECT_COORDINATOR, ajena: PROJECT_SUPERVISOR },
+        { nombre: /^coordinador$/i, propia: PROJECT_SUPERVISOR, ajena: PROJECT_COORDINATOR },
+    ];
+    for (const regla of reglas) {
+        const rol = await Role.findOne({ tenantId: tid, isSystem: true, name: regla.nombre });
+        if (!rol)
+            continue;
+        const tieneAjena = rol.permissions.includes(regla.ajena);
+        const faltaPropia = !rol.permissions.includes(regla.propia);
+        if (!tieneAjena && !faltaPropia)
+            continue;
+        rol.permissions = [...rol.permissions.filter((p) => p !== regla.ajena), ...(faltaPropia ? [regla.propia] : [])];
+        await rol.save();
+        console.log(`[RoleInit] ♻️ Rol "${rol.name}": ${tieneAjena ? `se le quitó «${regla.ajena}»` : ''}${tieneAjena && faltaPropia ? ' y ' : ''}${faltaPropia ? `se le puso «${regla.propia}»` : ''} (tenant ${tid})`);
     }
 }
 /**

@@ -64,9 +64,16 @@ export const ALL_CAPACIDADES = [PROJECT_SUPERVISOR, PROJECT_COORDINATOR];
 /**
  * Con qué nacen los roles de sistema. Son los mismos que ofrecen las plantillas del editor de roles
  * (`frontend/src/utils/permisosMobile.ts`): si se cambia uno, se cambia el otro.
+ *
+ * LOS NOMBRES DE LAS CAPACIDADES QUEDARON AL REVÉS DE LOS ROLES, y conviene tenerlo presente:
+ *   rol «Supervisor»  → carga las novedades de su gente y tiene áreas y turnos a cargo:
+ *                       capacidad «Supervisa áreas y turnos» = `PROJECT_COORDINATOR`.
+ *   rol «Coordinador» → responde por el proyecto y sigue a los supervisores:
+ *                       capacidad «Coordinador del Proyecto» = `PROJECT_SUPERVISOR`.
+ * Las etiquetas de `CAPACIDAD_ITEMS` (frontend) son las que ve la gente y las que mandan.
  */
-export const PERMISOS_COORDINADOR = [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, MOBILE_ORDERS, MOBILE_VACATIONS, PROJECT_COORDINATOR];
-export const PERMISOS_SUPERVISOR = [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, PROJECT_SUPERVISOR];
+export const PERMISOS_ROL_SUPERVISOR = [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, MOBILE_ORDERS, MOBILE_VACATIONS, PROJECT_COORDINATOR];
+export const PERMISOS_ROL_COORDINADOR = [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, PROJECT_SUPERVISOR];
 export const esCapacidad = (permiso) => permiso.endsWith(":eligible");
 /** Permisos que este cambio retira. Se traducen en `migrateMobileYResponsable`. */
 export const LEGACY_MOBILE_COLLABORATOR = "mobile_collaborator:view";
