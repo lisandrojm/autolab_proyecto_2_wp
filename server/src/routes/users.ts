@@ -804,6 +804,16 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
       teamTable ? (Info.find({ tenantId: req.tenantObjectId, type: "estado-empleado" }).select("name data.ordenDependencia").lean() as Promise<any[]>) : Promise.resolve([] as any[]),
     ]);
     const procesoTerminado = procesoTerminadoSegunEstados(estadosFlujo, claveEstado);
+
+    /*
+      SIN CONTRATO EN ESTE PROYECTO: el último de cualquier otro (modo tabla). Hay gente en el equipo
+      que no tiene contrato acá —el coordinador del proyecto, alguien asignado a mano— y la columna
+      Contrato quedaba en «-» aunque la persona sí tuviera contratos en otro lado. Misma regla del que
+      rige (`contratosQueRigenDeLasPersonas`): vigente si hay; si no, el más reciente. Sólo para los de
+      la página que no tienen contrato acá: una consulta, y nada para el resto.
+    */
+    const sinContratoAca = teamTable ? idsPagina.filter((id: any) => !contratoQueRige?.get(String(id))) : [];
+    const contratoEnOtroProyecto = sinContratoAca.length > 0 ? await contratosQueRigenDeLasPersonas(sinContratoAca, hoyArgentina(), ["nombre_contrato", "nombre_proyecto"]) : new Map<string, any>();
     const solicitudesPorUsuario = new Map<string, any[]>();
     if (idsPagina.length > 0) {
       pendientes.forEach((s: any) => {
@@ -888,6 +898,8 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
                     }
                   : null,
                 lastContractIndex: rige?._indice ?? -1,
+                // Sólo cuando no tiene contrato en este proyecto (ver `contratoEnOtroProyecto`).
+                contratoEnOtroProyecto: rige ? null : contratoEnOtroProyecto.get(String(u._id)) || null,
               }
             : {}),
           // Sólo en modo selector: las dos fechas del contrato que rige hoy, o null si no tiene ninguno.
