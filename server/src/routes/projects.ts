@@ -1998,6 +1998,13 @@ const CAMPOS_FIRMA_DIGITAL = [
   "contenidoCustomContrato", "contenidoCustomReleases", "contenidoCustomEditadoPor", "contenidoCustomEditadoEl",
 ];
 
+/** "2026-03-16" (o un Date) → "16/03/2026", sin pasar por el huso. */
+const fechaDDMMAAAA = (v: any): string => {
+  const iso = v instanceof Date ? v.toISOString().slice(0, 10) : String(v || "").slice(0, 10);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v || "");
+};
+
 // POST /projects/:projectId/assign-member - Specialized endpoint for the wizard
 router.post("/projects/:projectId/assign-member", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
@@ -2123,7 +2130,8 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             // Overlap condition: (StartA <= EndB) and (EndA >= StartB)
             if (newStart <= exEnd && newEnd >= exStart) {
               return res.status(409).json({ 
-                error: `El turno ya está asignado a este usuario en el proyecto "${assignment.nombre_proyecto || 'otro proyecto'}" para las fechas seleccionadas.`,
+                // Con el período del contrato que choca y el turno: sin eso no se sabe qué fechas mover.
+                error: `Esta persona ya tiene el mismo turno en el proyecto "${assignment.nombre_proyecto || 'otro proyecto'}" del ${fechaDDMMAAAA(c.fecha_alta_contrato)} al ${c.fecha_baja_contrato ? fechaDDMMAAAA(c.fecha_baja_contrato) : "(sin fecha de baja)"}, y las fechas elegidas se superponen. Cambiá las fechas o el turno.`,
                 details: {
                   projectName: assignment.nombre_proyecto,
                   startDate: c.fecha_alta_contrato,

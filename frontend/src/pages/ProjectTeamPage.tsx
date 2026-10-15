@@ -1981,6 +1981,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     */
     const contratoPorIndice = typeof contractIndex === 'number' ? ((lastProject?.contracts as any[])?.[contractIndex] ?? null) : null;
     const lastContract = contratoPorIndice || contractOverride || elQueRige;
+    /*
+      PRECARGA DE OTRO PROYECTO: SIN FECHAS. Si la persona no tiene contrato en ESTE proyecto, la base
+      es su contrato del último proyecto donde lo tiene —rol, categoría, horario, empresa: es la misma
+      persona—. Pero las fechas son de aquel contrato, y con el mismo turno el server lo rechaza por
+      superposición con… su propio contrato del otro proyecto. Quedan vacías, como al renovar.
+    */
+    const precargaDeOtroProyecto = !currentProjectMeta && !contractOverride && typeof contractIndex !== 'number' && !!lastContract;
+    const sinFechasPrecargadas = renovar || precargaDeOtroProyecto;
     textoCustomDeRenovacion.current = renovar && (lastContract as any)?.contenidoCustomContrato ? { nombreContrato: String(lastContract?.nombre_contrato || ''), texto: String((lastContract as any).contenidoCustomContrato) } : null;
 
     /*
@@ -2407,15 +2415,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       hora_inicio: lastContract?.hora_inicio || metaHoraInicio || '09:00',
       hora_fin: lastContract?.hora_fin || metaHoraFin || '18:00',
       // Renovar deja el período vacío: es lo único que cambia, y precargar el vencido invita a guardarlo igual.
-      fecha_alta_contrato: renovar ? '' : formatDate(lastContract?.fecha_alta_contrato) || formatDate(new Date()),
-      fecha_baja_contrato: renovar ? '' : formatDate(lastContract?.fecha_baja_contrato),
+      fecha_alta_contrato: sinFechasPrecargadas ? '' : formatDate(lastContract?.fecha_alta_contrato) || formatDate(new Date()),
+      fecha_baja_contrato: sinFechasPrecargadas ? '' : formatDate(lastContract?.fecha_baja_contrato),
       cantidad_jornadas_laborales: lastContract?.cantidad_jornadas_laborales || 5,
       // Los contratos anteriores a este campo no traen días: se abren vacíos y hay que elegirlos,
       // en vez de inventar una semana que nadie declaró.
       dias_por_semana: Number((lastContract as any)?.dias_por_semana) || 5,
       dias_semana: Array.isArray((lastContract as any)?.dias_semana) ? ((lastContract as any).dias_semana as number[]) : [],
       dias_rotativos: !!(lastContract as any)?.dias_rotativos,
-      fechas_trabajadas: !renovar && Array.isArray((lastContract as any)?.fechas_trabajadas) ? ((lastContract as any).fechas_trabajadas as string[]) : [],
+      fechas_trabajadas: !sinFechasPrecargadas && Array.isArray((lastContract as any)?.fechas_trabajadas) ? ((lastContract as any).fechas_trabajadas as string[]) : [],
       sueldo_jornada: renovar && jornadaDeEscala > 0 ? jornadaDeEscala : lastContract?.sueldo_jornada || 0,
       sueldo_mano: lastContract?.sueldo_mano || 0,
       sueldo_mano_texto: lastContract?.sueldo_mano_texto || '',
@@ -2687,7 +2695,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       let errorMsg = 'Internal server error during assignment';
       if (error.response?.data?.error) {
         errorMsg = error.response.data.error;
-        if (error.response?.data?.details) {
+        // `details` a veces es un objeto (la superposición manda proyecto y fechas): pegarlo tal cual
+        // decía «Detalles: [object Object]». El mensaje del server ya trae lo que hay que saber.
+        if (typeof error.response?.data?.details === 'string' && error.response.data.details) {
           errorMsg += `\nDetalles: ${error.response.data.details}`;
         }
       }
