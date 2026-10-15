@@ -2219,6 +2219,8 @@ router.get("/eligible-responsables", requireTenant, authenticateToken, async (re
             tenantId: req.tenantObjectId,
             "metadata.activo": true,
             roles: { $in: rolesCoordinadores },
+            // Sin id de FRAME no hay forma de guardarlo como responsable (`metadata.responsableId`): no se ofrece.
+            "metadata.id": { $exists: true, $ne: null },
         })
             .select("firstName lastName email metadata isProjectResponsible")
             .populate("roles", "name")
