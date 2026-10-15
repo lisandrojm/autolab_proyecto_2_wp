@@ -8,7 +8,7 @@ import { Tenant } from "../models/Tenant.js";
 import { getTenantAfipConfig, consultarPadron } from "../services/afipService.js";
 import { usuarioExistenteConCuit } from "../services/arca/consultaCuit.js";
 import { cuitEsValido, normalizarCuit } from "../utils/constanciaPdf.js";
-import { MOBILE_ACTIVITY_LOGS, MOBILE_USERS, permisosDeRoles, permisosDeRolesIds, PROJECT_COORDINATOR } from "../utils/permisosMobile.js";
+import { MOBILE_ACTIVITY_LOGS, MOBILE_USERS, permisosDeRoles, permisosDeRolesIds, PROJECT_COORDINATOR, PROJECT_SUPERVISOR } from "../utils/permisosMobile.js";
 import { NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA, NOVEDAD_SOLICITUD_RECHAZADA, nombreDePersona, notificar, responsablesDeProyectos } from "../services/novedadesNotificaciones.js";
 import { Info } from "../models/Info.js";
 import { RoleFrame } from "../models/RoleFrame.js";
@@ -2203,14 +2203,18 @@ router.get("/directory", requireTenant, authenticateToken, async (req, res) => {
     }
 });
 /**
- * GET /users/eligible-responsables — quiénes pueden ser «Coordinador del proyecto» en el formulario de
- * proyectos: TODAS las personas activas con un rol que tenga la capacidad de coordinar (el rol
- * «Coordinador»; ver `PROJECT_COORDINATOR` en `permisosMobile.ts`). Antes filtraba por la capacidad de
- * Supervisor, y dejaba afuera a los coordinadores que no eran además supervisores.
+ * GET /users/eligible-responsables — quiénes pueden ser «Coordinador del Proyecto» en el formulario de
+ * proyectos: todas las personas activas con un rol que tenga ESA capacidad (Usuarios → Roles, sección
+ * Proyectos → «Coordinador del Proyecto»).
+ *
+ * OJO CON LOS NOMBRES: esa capacidad es la constante `PROJECT_SUPERVISOR` (el que responde por el
+ * proyecto y aprueba lo de los supervisores de área); `PROJECT_COORDINATOR` es «Supervisa áreas y
+ * turnos», la del rol Supervisor. Las constantes quedaron al revés de los nombres de los roles; las
+ * etiquetas de `CAPACIDAD_ITEMS` (frontend) son las que mandan.
  */
 router.get("/eligible-responsables", requireTenant, authenticateToken, async (req, res) => {
     try {
-        const rolesCoordinadores = await Role.find({ tenantId: req.tenantObjectId, permissions: PROJECT_COORDINATOR }).distinct("_id");
+        const rolesCoordinadores = await Role.find({ tenantId: req.tenantObjectId, permissions: PROJECT_SUPERVISOR }).distinct("_id");
         const users = await User.find({
             tenantId: req.tenantObjectId,
             "metadata.activo": true,

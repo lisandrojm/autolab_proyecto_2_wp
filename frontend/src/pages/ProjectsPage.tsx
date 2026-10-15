@@ -1105,7 +1105,7 @@ export const ProjectsPage: React.FC = () => {
             <li className="flex items-start gap-3">
               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
-                <strong>Rol Coordinador:</strong> tiene que tener un rol con la capacidad de coordinar (el rol «Coordinador»). Al crear el proyecto, el coordinador elegido queda como su primer y único miembro.
+                <strong>Capacidad «Coordinador del Proyecto»:</strong> alguno de sus roles tiene que tenerla tildada (Usuarios → Roles, sección Proyectos; la trae el rol «Coordinador»). Al crear el proyecto, el coordinador elegido queda como su primer y único miembro.
               </span>
             </li>
           </ul>
