@@ -641,14 +641,14 @@ export const ProjectsPage: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                  {/* PRIMERA COLUMNA (pedido del 15/10/2026): el centro de costo es como se nombra y se busca un
+                      proyecto. Mismo badge violeta que la ficha y la lista por cliente. */}
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Centro de Costo</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyecto</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valoración</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sede</th>
-                  {/* Junto a Sede y con el mismo badge violeta que la ficha y la lista por cliente:
-                      es el mismo dato y tiene que reconocerse igual en las tres pantallas. */}
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Centro de Costo</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Responsable</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creado</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
@@ -678,6 +678,13 @@ export const ProjectsPage: React.FC = () => {
                   return (
                     <tr key={project._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => handleProjectClick(project)}>
                       <td className="px-6 py-4">
+                        {centroCosto ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 whitespace-nowrap">{centroCosto}</span>
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="flex items-center justify-center shrink-0">
                             <FontAwesomeIcon icon={faBriefcase} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -703,13 +710,6 @@ export const ProjectsPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm text-gray-600 dark:text-gray-400">{sedeName}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {centroCosto ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 whitespace-nowrap">{centroCosto}</span>
-                        ) : (
-                          <span className="text-sm text-gray-400">—</span>
-                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
