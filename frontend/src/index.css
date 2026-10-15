@@ -90,6 +90,13 @@
     transition: background-color 9999s ease-in-out 0s;
   }
 
+  /* La lista desplegable de un <select> la dibuja el navegador con su propio esquema de color: en modo
+     oscuro salía blanca con texto gris y no se leía. `color-scheme: dark` le dice que la dibuje oscura. */
+  .dark select,
+  .dark option {
+    color-scheme: dark;
+  }
+
   .input-field {
     @apply w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white;
     /* Un campo apagado tiene que VERSE apagado. Sin esto se dibujaba igual que uno activo y la única

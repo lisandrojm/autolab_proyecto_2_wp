@@ -7,7 +7,7 @@ import { Area, areasAPI } from "../../api/areas";
 import { Shift, shiftsAPI } from "../../api/shifts";
 import { cachedFetch } from "../../utils/refCache";
 // Coordinar un turno requiere poder cargar sus novedades, que es un permiso. Ver ese módulo.
-import { coordinaAreas } from "../../utils/permisosMobile";
+import { coordinaAreas, permisosDeRoles, PROJECT_SUPERVISOR } from "../../utils/permisosMobile";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSave, faUserTie, faInfoCircle, faTable } from "@fortawesome/free-solid-svg-icons";
@@ -114,7 +114,12 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
     se habría vaciado sin avisar. Lo que hace falta para coordinar un turno es el permiso, no el
     nombre: sin él, esa persona no tendría dónde cargar las novedades de su área.
   */
-  const eligibleCoordinators = React.useMemo(() => teamMembers.filter((u) => coordinaAreas(u.roles)), [teamMembers]);
+  /*
+    Quién puede quedar a cargo de un área/turno: quien ya supervisa áreas y turnos (rol Supervisor) y
+    también quien es coordinador del proyecto (rol Coordinador). Al guardar, el server le agrega el rol
+    Supervisor a quien quede asignado: un coordinador que se pone a supervisar queda con los dos roles.
+  */
+  const eligibleCoordinators = React.useMemo(() => teamMembers.filter((u) => coordinaAreas(u.roles) || permisosDeRoles(u.roles).has(PROJECT_SUPERVISOR)), [teamMembers]);
 
   useEffect(() => {
     if (!loading && eligibleCoordinators.length === 0 && groupedCombinations.length > 0 && !autoShown) {
@@ -321,7 +326,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                     Asignación requerida
                   </p>
                   <p className="text-amber-700 dark:text-amber-500 leading-normal">
-                    Hay que sumar al equipo a alguien con un rol que incluya <strong>«Supervisa áreas y turnos»</strong>: es quien puede tener un área a cargo.
+                    Hay que sumar al equipo a alguien con rol <strong>Supervisor</strong> («Supervisa áreas y turnos») o <strong>Coordinador</strong> («Coordinador del Proyecto»): son quienes pueden tener un área a cargo.
                   </p>
                   <p className="text-[11px] text-amber-600 dark:text-amber-600 italic">
                     Volvé a la pestaña "Equipo" y agregá un miembro con un rol que lo incluya antes de configurar los supervisores acá.
@@ -334,8 +339,9 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                   </p>
                   <ul className="list-disc pl-5 space-y-1.5 marker:text-blue-500">
                     <li>Son miembros activos del <strong>equipo del proyecto</strong>.</li>
-                    <li>Alguno de sus roles incluye <strong>Proyectos → Supervisa áreas y turnos</strong>, que es lo que habilita tener un área a cargo.</li>
+                    <li>Alguno de sus roles incluye <strong>Proyectos → Supervisa áreas y turnos</strong> (rol Supervisor) o <strong>Coordinador del Proyecto</strong> (rol Coordinador).</li>
                   </ul>
+                  <p>Al guardar, quien queda a cargo de un turno recibe el rol <strong>Supervisor</strong> si no lo tenía: un coordinador que se pone a supervisar queda con los dos roles.</p>
                 </>
               )}
 

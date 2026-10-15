@@ -13,6 +13,7 @@ import { Project } from "../models/Project.js";
 import { Client } from "../models/Client.js";
 import { Valoracion } from "../models/Valoracion.js";
 import { RoleFrame } from "../models/RoleFrame.js";
+import { Role } from "../models/Role.js";
 import { valoracionParaMargen } from "../services/valoracionDelTenant.js";
 import { excepcionDelRol, idDeValoracion, normalizarValoracionesPorRol } from "../compartido/valoracionPorRol.js";
 import { ContratoFrame } from "../models/ContratoFrame.js";
@@ -1293,6 +1294,20 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
         const margenAntes = currentProject.margen ?? null;
         // Apply updates to currentProject
         Object.assign(currentProject, updateData);
+        /*
+          QUIEN QUEDA COMO SUPERVISOR DE UN ÁREA/TURNO PASA A TENER EL ROL SUPERVISOR. Elegirlo acá es
+          ponerlo a supervisar: no tiene sentido que después haya que ir a su ficha a tildar el rol. Un
+          coordinador que se pone a supervisar queda con los dos roles. Sólo se agrega, nunca se saca: si se
+          lo desasigna de un turno puede seguir supervisando otro proyecto.
+        */
+        if (Array.isArray(updateData.coordinatorAssignments)) {
+            const ids = [...new Set(updateData.coordinatorAssignments.map((a) => String(a?.userId || "")).filter((id) => Types.ObjectId.isValid(id)))];
+            if (ids.length > 0) {
+                const rolSupervisor = await Role.findOne({ tenantId: req.tenantObjectId, name: /^supervisor$/i }).select("_id").lean();
+                if (rolSupervisor)
+                    await User.updateMany({ _id: { $in: ids }, tenantId: req.tenantObjectId }, { $addToSet: { roles: rolSupervisor._id } });
+            }
+        }
         // Sync metadata
         if (!currentProject.metadata) {
             currentProject.metadata = {};
