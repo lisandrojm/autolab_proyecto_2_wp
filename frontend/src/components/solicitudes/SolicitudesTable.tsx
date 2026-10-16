@@ -236,14 +236,31 @@ interface SolicitudesTableProps {
   onCambiarSeleccion?: (ids: Set<string>) => void;
   /** Columna «Obra social» (validar contra ARCA): sólo la vista global, que trae el contrato de cada aprobada. */
   renderObraSocial?: (s: SolicitudVista) => React.ReactNode;
+  /**
+   * LA CASILLA DEL ENCABEZADO MARCA TODO EL LISTADO, no sólo la página (pedido del 16/10/2026): con
+   * esto, tildarla llama a `onSeleccionarTodas` (que trae las de todas las páginas) y queda tildada
+   * cuando la selección llega a `totalSeleccionable`. Sin esto, marca las de la página como siempre.
+   */
+  onSeleccionarTodas?: () => void;
+  totalSeleccionable?: number;
 }
 
-export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, onEditarAprobada, tituloAprobar, onVerDetalle, seleccionadas, onCambiarSeleccion, renderObraSocial }) => {
+export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, onEditarAprobada, tituloAprobar, onVerDetalle, seleccionadas, onCambiarSeleccion, renderObraSocial, onSeleccionarTodas, totalSeleccionable }) => {
   const { resolverRolFrame, resolverTramite } = catalogos;
   const conSeleccion = !!seleccionadas && !!onCambiarSeleccion;
   // La casilla del encabezado marca o desmarca las de ESTA página (la selección de otras páginas se conserva).
   const enPagina = solicitudes.filter((s) => seleccionadas?.has(s._id)).length;
   const todasEnPagina = solicitudes.length > 0 && enPagina === solicitudes.length;
+  // Con `onSeleccionarTodas`, la casilla habla del listado entero (ver la prop).
+  const porListado = !!onSeleccionarTodas && Number(totalSeleccionable) > 0;
+  const marcadas = seleccionadas?.size ?? 0;
+  const todoMarcado = porListado ? marcadas >= Number(totalSeleccionable) : todasEnPagina;
+  const algoMarcado = porListado ? marcadas > 0 : enPagina > 0;
+  const alternarEncabezado = () => {
+    if (!porListado) return alternarPagina();
+    if (todoMarcado) onCambiarSeleccion?.(new Set());
+    else onSeleccionarTodas!();
+  };
   const alternarPagina = () => {
     const nuevas = new Set(seleccionadas);
     for (const s of solicitudes) (todasEnPagina ? nuevas.delete(s._id) : nuevas.add(s._id));
@@ -266,12 +283,13 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 <th className="w-10 pl-4 py-3">
                   <input
                     type="checkbox"
-                    checked={todasEnPagina}
+                    checked={todoMarcado}
                     ref={(el) => {
-                      if (el) el.indeterminate = enPagina > 0 && !todasEnPagina;
+                      if (el) el.indeterminate = algoMarcado && !todoMarcado;
                     }}
-                    onChange={alternarPagina}
-                    aria-label={todasEnPagina ? "Desmarcar las de esta página" : "Marcar todas las de esta página"}
+                    onChange={alternarEncabezado}
+                    aria-label={porListado ? (todoMarcado ? "Desmarcar todas" : `Marcar las ${totalSeleccionable} del listado`) : todasEnPagina ? "Desmarcar las de esta página" : "Marcar todas las de esta página"}
+                    title={porListado ? (todoMarcado ? "Desmarcar todas" : `Marcar las ${totalSeleccionable} del listado (todas las páginas)`) : undefined}
                     className="h-4 w-4 rounded cursor-pointer"
                   />
                 </th>

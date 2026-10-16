@@ -654,6 +654,8 @@ export const SolicitudesPage: React.FC = () => {
           <SolicitudesTable
             seleccionadas={new Set(seleccion.keys())}
             onCambiarSeleccion={cambiarSeleccion}
+            onSeleccionarTodas={() => void seleccionarTodas()}
+            totalSeleccionable={total}
             solicitudes={solicitudes}
             catalogos={catalogos}
             mostrarProyectos
