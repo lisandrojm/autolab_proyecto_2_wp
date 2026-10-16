@@ -19,6 +19,7 @@ export interface ContratoInput {
   requiereFirma?: boolean;
   requiereFirmaRelease?: boolean;
   requiereFirmaAlta?: boolean;
+  releaseIds?: string[];
   isActive?: boolean;
   afipModalidadContrato?: string;
   afipTipoServicio?: string;
@@ -61,5 +62,19 @@ export const contratosAPI = new ContratosAPI();
  * los selectores. El que ya está elegido se conserva aunque esté inactivo (`elegidoId`): sacarlo de la
  * lista haría saltar el select a otro valor al editar un contrato o una plantilla de antes.
  */
+/**
+ * LOS RELEASES QUE LE TOCAN A UN TIPO DE CONTRATO («Plantilla de Release asignada», 16/10/2026).
+ *
+ * Los elegidos en su ABM; si no eligió ninguno —o no se sabe el tipo—, todos los que vienen, como
+ * antes de que existiera la asignación. Va antes de cualquier otro filtro (firma, custom): esos
+ * deciden qué se hace con los releases del tipo, éste decide cuáles son.
+ */
+export const releasesDelTipo = <R extends { _id: string }>(releases: R[], tipo: { data?: { releaseIds?: string[] } } | null | undefined): R[] => {
+  const ids = tipo?.data?.releaseIds;
+  if (!Array.isArray(ids) || ids.length === 0) return releases;
+  const elegidos = new Set(ids.map(String));
+  return releases.filter((r) => elegidos.has(String(r._id)));
+};
+
 export const tiposDeContratoActivos = <T extends { _id: string; isActive?: boolean }>(lista: T[], elegidoId?: string | null): T[] =>
   lista.filter((c) => c.isActive !== false || (!!elegidoId && c._id === elegidoId));

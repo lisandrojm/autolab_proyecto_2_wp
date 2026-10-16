@@ -993,7 +993,7 @@ const CAMPOS_FILA_CONTRATO = [
   "empresaContratoId", "empresaReleaseId", "nombre_empresa_contrato", "nombre_empresa_release",
   "categoria_sat_id", "rol_frame_id", "sede_id", "tipo_contrato_id", "sucursalArcaId", "actividadArca",
   "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "obraSocialBloqueada",
-  "sinCuitValidacion", "puestoDesempenado",
+  "sinCuitValidacion", "puestoDesempenado", "contrato_id",
 ];
 const PROYECCION_FILA_CONTRATO = Object.fromEntries(CAMPOS_FILA_CONTRATO.map((k) => [`c.${k}`, 1]));
 
@@ -1541,6 +1541,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         // Identidad del contrato, para que el cliente NO tenga que direccionarlo por índice: la
         // posición cambia sola si alguien borra otro contrato mientras esta pantalla está abierta.
         contratoId: c._id ? String(c._id) : "",
+        // El TIPO de contrato (`Contrato._id`): de ahí salen los releases que le tocan (ver `releaseIds`).
+        tipoContratoId: c.contrato_id ? String(c.contrato_id) : "",
         obraSocialConstatadaEn: c.obraSocialConstatadaEn || "",
         obraSocialConstatadaEl: c.obraSocialConstatadaEl || "",
         // "No figura en el padrón" es una respuesta constatada, no un vacío: la fila va en verde.

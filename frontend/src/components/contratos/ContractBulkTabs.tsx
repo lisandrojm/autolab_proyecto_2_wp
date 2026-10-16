@@ -11,7 +11,7 @@ import { projectsAPI } from '../../api/projects';
 import { CLAVE_CACHE_EMPRESAS, companiesAPI, Company } from '../../api/companies';
 import { infoAPI, InfoItem } from '../../api/info';
 import { ContratoFrameItem, contratoVariables } from '../../api/contratosFrame';
-import { CLAVE_CACHE_TIPOS_CONTRATO, contratosAPI, ContratoItem } from '../../api/contratos';
+import { CLAVE_CACHE_TIPOS_CONTRATO, contratosAPI, ContratoItem, releasesDelTipo } from '../../api/contratos';
 import { categoriaSatAPI, CategoriaSatItem } from '../../api/categoriasSat';
 import { claveCacheCatalogo, createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { arcaSucursalesAPI, ArcaSucursal, CLAVE_CACHE_SUCURSALES } from '../../api/arcaSucursales';
@@ -3154,15 +3154,27 @@ const contratoRequiereFirmaAlta = (template: ContratoFrameItem | null): boolean 
  * LOS RELEASES QUE VAN A FIRMA PARA ESTA FILA: los que su tipo de release manda a firmar, y sólo si el
  * Tipo de Contrato también lo pide («Se envía a firmar el release»). Tienen que decir que sí los dos.
  */
-const releasesDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[], record: ContractOverviewRow): Release[] =>
-  contratoRequiereFirmaRelease(template) ? releasesQueFirman.filter((r) => !r.esCustom || textoCustomUsable(textoCustomDeRelease(record.contenidoCustomReleases, r._id))) : [];
+const releasesDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[], record: ContractOverviewRow, tipos?: ContratoItem[]): Release[] =>
+  contratoRequiereFirmaRelease(template) ? releasesDelTipo(releasesQueFirman, tipoDeLaFila(record, template, tipos)).filter((r) => !r.esCustom || textoCustomUsable(textoCustomDeRelease(record.contenidoCustomReleases, r._id))) : [];
+
+/**
+ * EL TIPO DE CONTRATO DE LA FILA, para saber qué releases le tocan («Plantilla de Release asignada»):
+ * el que guarda el contrato (`tipoContratoId`) y, si no lo guarda, el principal de su plantilla.
+ */
+const tipoDeLaFila = (record: ContractOverviewRow, template: ContratoFrameItem | null, tipos?: ContratoItem[]): { data?: { releaseIds?: string[] } } | null => {
+  const propio = record.tipoContratoId && tipos ? tipos.find((t) => t._id === record.tipoContratoId) : undefined;
+  if (propio) return propio;
+  const principal = template?.contratoId;
+  return typeof principal === 'object' && principal ? (principal as { data?: { releaseIds?: string[] } }) : null;
+};
 
 /**
  * LOS RELEASES CUSTOM QUE ESTA FILA PODRÍA LLEVAR (decisión del 13/10/2026): no se exigen. Un release
  * custom va a firma sólo en el trámite que tenga su texto escrito (`releasesDeLaFila`); acá están todos,
  * con texto o sin, para ofrecer escribirlo.
  */
-const releasesCustomDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[]): Release[] => (contratoRequiereFirmaRelease(template) ? releasesQueFirman.filter((r) => r.esCustom) : []);
+const releasesCustomDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[], record?: ContractOverviewRow, tipos?: ContratoItem[]): Release[] =>
+  contratoRequiereFirmaRelease(template) ? releasesDelTipo(releasesQueFirman, record ? tipoDeLaFila(record, template, tipos) : null).filter((r) => r.esCustom) : [];
 
 /** El alta de ARCA va a firma: trámite de alta temprana, documento cargado y el tipo lo pide. */
 const altaVaAFirma = (record: ContractOverviewRow, template: ContratoFrameItem | null, tipo?: TipoImpositivo): boolean => tipo === 'alta_temprana_afip' && !!record.altaDocumentoUrl && contratoRequiereFirmaAlta(template);
@@ -3179,11 +3191,11 @@ const releaseRequiereFirma = (release: Release): boolean => {
  * no enviado. Si NI el Contrato NI ningún Release de este contrato requieren firma, no hay nada que
  * mandar y la fila nunca se habilita.
  */
-const calcularEnviable = (record: ContractOverviewRow, contratoFrames: ContratoFrameItem[], releasesQueFirman: Release[], tipo?: TipoImpositivo): boolean => {
+const calcularEnviable = (record: ContractOverviewRow, contratoFrames: ContratoFrameItem[], releasesQueFirman: Release[], tipo?: TipoImpositivo, tipos?: ContratoItem[]): boolean => {
   if (record.firmaEnviadaAt) return false;
   const template = findTemplate(record as unknown as Contract, contratoFrames);
   const contratoAplica = contratoRequiereFirma(template);
-  const releasesAplicables = releasesDeLaFila(template, releasesQueFirman, record);
+  const releasesAplicables = releasesDeLaFila(template, releasesQueFirman, record, tipos);
   const contratoOk = !contratoAplica || contratoGenerado(record);
   const releaseOk = releasesAplicables.length === 0 || releasesGenerados(record, releasesAplicables);
   // El alta ya está cargada (no se genera acá): si es lo único que va a firma, alcanza con ella.
@@ -3704,6 +3716,13 @@ export const ContractBulkFirmaTab: React.FC<{
   // Solo los releases activos cuyo Tipo tiene tildado "Se envía a firmar" — los demás no se generan
   // ni se mandan a firmar acá, aunque sigan existiendo como release del proyecto.
   const releasesQueFirman = useMemo(() => activeReleases.filter(releaseRequiereFirma), [activeReleases]);
+  // Los tipos de contrato: de cada uno salen los releases que le tocan («Plantilla de Release asignada»).
+  const [tiposContrato, setTiposContrato] = useState<ContratoItem[]>([]);
+  useEffect(() => {
+    cachedFetch(CLAVE_CACHE_TIPOS_CONTRATO, () => contratosAPI.list())
+      .then(setTiposContrato)
+      .catch(() => setTiposContrato([]));
+  }, []);
 
   // Mismo caché compartido que las otras pestañas de Gestión (ver CONTRACTS_OVERVIEW_CACHE):
   // volver acá desde otra sub-pestaña no repite la consulta. `load(true)` fuerza el refresco.
@@ -3810,7 +3829,7 @@ export const ContractBulkFirmaTab: React.FC<{
     });
   // Solo se pueden marcar (y enviar) los contratos con Contrato Y Release(s) ya generados (botones
   // independientes) y todavía no enviados.
-  const enviables = useMemo(() => filtered.filter((r) => calcularEnviable(r, contratoFrames, releasesQueFirman, tipoDelRow(r))), [filtered, contratoFrames, releasesQueFirman, tipoDelRow]);
+  const enviables = useMemo(() => filtered.filter((r) => calcularEnviable(r, contratoFrames, releasesQueFirman, tipoDelRow(r), tiposContrato)), [filtered, contratoFrames, releasesQueFirman, tipoDelRow, tiposContrato]);
 
   // Igual que en la otra pestaña: acota el render, no el conjunto. Ver `usePaginado`.
   // Mismo orden por columna que Trámite impositivo: se ordena todo lo filtrado y después se pagina.
@@ -3852,7 +3871,7 @@ export const ContractBulkFirmaTab: React.FC<{
         contractIndex: r.contractIndex,
         tipoImpositivo: tipoDelRow(r),
         incluirContrato: contratoRequiereFirma(findTemplate(r as unknown as Contract, contratoFrames)),
-        incluirReleases: releasesDeLaFila(findTemplate(r as unknown as Contract, contratoFrames), releasesQueFirman, r).length > 0,
+        incluirReleases: releasesDeLaFila(findTemplate(r as unknown as Contract, contratoFrames), releasesQueFirman, r, tiposContrato).length > 0,
         incluirAlta: altaVaAFirma(r, findTemplate(r as unknown as Contract, contratoFrames), tipoDelRow(r)),
       }));
       const res = await firmaDigitalAPI.enviar(targets);
@@ -4026,8 +4045,8 @@ export const ContractBulkFirmaTab: React.FC<{
                   const tipo = tipoDelRow(r);
                   const template = findTemplate(r as unknown as Contract, contratoFrames);
                   const contratoAplica = contratoRequiereFirma(template);
-                  const releasesFila = releasesDeLaFila(template, releasesQueFirman, r);
-                  const enviable = calcularEnviable(r, contratoFrames, releasesQueFirman, tipo);
+                  const releasesFila = releasesDeLaFila(template, releasesQueFirman, r, tiposContrato);
+                  const enviable = calcularEnviable(r, contratoFrames, releasesQueFirman, tipo, tiposContrato);
                   return (
                     <tr key={rowKey(r)} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
                       <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
@@ -4079,7 +4098,7 @@ export const ContractBulkFirmaTab: React.FC<{
                         <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} onGenerado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                       <td className="px-4 py-3">
-                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesFila} releasesCustom={releasesCustomDeLaFila(template, releasesQueFirman)} onGenerado={(patch) => aplicarCambio(r, patch)} />
+                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesFila} releasesCustom={releasesCustomDeLaFila(template, releasesQueFirman, r, tiposContrato)} onGenerado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>

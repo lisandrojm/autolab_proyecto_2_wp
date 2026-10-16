@@ -6,6 +6,7 @@ import { ContractOverviewRow, Contract, AltaArcaPresentada } from "../../api/use
 import { ContratoFrameItem, contratoFrameAPI } from "../../api/contratosFrame";
 import { InfoItem } from "../../api/info";
 import { Release, releasesAPI } from "../../api/release";
+import { releasesDelTipo } from "../../api/contratos";
 import { projectsAPI } from "../../api/projects";
 import { afipAPI } from "../../api/afip";
 import { estadoImpositivoDelContrato, findTemplate, templateHasContent, DownloadMenu } from "../team/ContractCard";
@@ -119,6 +120,12 @@ export const ContractDocsColumns: React.FC<{
   const asContract = record as unknown as Contract;
   const template = findTemplate(asContract, contratoFrames);
   const canDownloadContract = templateHasContent(template);
+  /*
+    Sólo los releases que le tocan a este tipo de contrato («Plantilla de Release asignada»). El tipo
+    sale del principal de su plantilla, que es el que trae poblado; sin releases elegidos, todos.
+  */
+  const principal = template?.contratoId;
+  const releasesDelContrato = releasesDelTipo(activeReleases, typeof principal === "object" && principal ? (principal as { data?: { releaseIds?: string[] } }) : null);
   const tipoContrato = record.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
   const estadoImpositivo = estadoImpositivoDelContrato(asContract, contratoFrames, allEstados);
   const tituloAlta = estadoImpositivo?.data?.etiquetaSecundaria?.trim() || (estadoImpositivo?.data?.tipoImpositivo === "alta_temprana_afip" ? "Alta ARCA" : "Documento de Servicios");
@@ -293,11 +300,11 @@ export const ContractDocsColumns: React.FC<{
       {/* Release | Empresa: por cada release activo, nombre + empresa(s) + descarga. */}
       {showRelease && (
         <td className="px-4 py-3" onClick={stop}>
-          {activeReleases.length === 0 ? (
+          {releasesDelContrato.length === 0 ? (
             <span className="text-xs text-gray-400">—</span>
           ) : (
             <div className="flex flex-col gap-1.5 min-w-[220px]">
-              {activeReleases.map((r) => (
+              {releasesDelContrato.map((r) => (
                 <div key={r._id} className="flex items-center justify-between gap-2">
                   <span className="text-xs text-gray-700 dark:text-gray-200 flex items-center gap-1.5 flex-wrap min-w-0" title={r.name}>
                     <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />

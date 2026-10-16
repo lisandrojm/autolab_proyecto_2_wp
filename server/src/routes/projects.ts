@@ -1030,6 +1030,48 @@ router.get("/projects/count", requireTenant, authenticateToken, requireAnyRole, 
 });
 
 // GET /projects/:projectId
+/*
+  GET /projects/asignaciones-de-equipo?projectIds=a,b,c
+  EL ÁREA Y TURNO DE CADA MIEMBRO SEGÚN EL EQUIPO (`teamConfig`), y nada más.
+
+  Es lo que muestra Gestionar Equipo —y lo que se edita en «Configurar miembro»—. El reporte de
+  Novedades lo leía de los contratos y de los partes, y no coincidía: AXEL ANDRES EANDI figuraba en
+  Libertador cuando el equipo lo tiene en Técnica (16/10/2026). El listado de proyectos excluye
+  `teamConfig` por pesado; acá viaja sólo `userId` y `areaShiftAssignments`.
+
+  Respuesta: { [projectId]: { [userId]: [{ areaId, shiftIds }] } }.
+*/
+router.get("/projects/asignaciones-de-equipo", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const ids = String(req.query.projectIds || "")
+      .split(",")
+      .map((x) => x.trim())
+      .filter((x) => Types.ObjectId.isValid(x));
+    if (ids.length === 0) {
+      res.json({});
+      return;
+    }
+    const proyectos: any[] = await Project.find({ tenantId: req.tenantObjectId, _id: { $in: ids.map((x) => new Types.ObjectId(x)) } })
+      .select("teamConfig.userId teamConfig.areaShiftAssignments")
+      .lean();
+    const out: Record<string, Record<string, { areaId: string; shiftIds: string[] }[]>> = {};
+    for (const p of proyectos) {
+      const porUsuario: Record<string, { areaId: string; shiftIds: string[] }[]> = {};
+      for (const c of p.teamConfig || []) {
+        const asignaciones = (c.areaShiftAssignments || [])
+          .map((a: any) => ({ areaId: String(a?.areaId?._id || a?.areaId || ""), shiftIds: (a?.shiftIds || []).map((sh: any) => String(sh?._id || sh)).filter(Boolean) }))
+          .filter((a: any) => a.areaId);
+        if (c.userId && asignaciones.length > 0) porUsuario[String(c.userId)] = asignaciones;
+      }
+      out[String(p._id)] = porUsuario;
+    }
+    res.json(out);
+  } catch (error) {
+    console.error("Get asignaciones de equipo error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     // Si además querés pertenencia/ACL finas, podrías mantener canViewDocument aquí.

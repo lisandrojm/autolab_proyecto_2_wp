@@ -410,6 +410,16 @@ class ProjectsAPI {
    * «Cargar novedades» es un permiso, tener gente a cargo es otra cosa. El server contesta un
    * número; no hace falta bajar los proyectos para saberlo.
    */
+  /**
+   * El área y turno de cada miembro SEGÚN EL EQUIPO (`teamConfig`): lo que muestra Gestionar Equipo.
+   * `{ [projectId]: { [userId]: [{ areaId, shiftIds }] } }`. Lo usa el reporte de Novedades.
+   */
+  async asignacionesDeEquipo(projectIds: string[]): Promise<Record<string, Record<string, { areaId: string; shiftIds: string[] }[]>>> {
+    if (projectIds.length === 0) return {};
+    const { data } = await axios.get(`/projects/asignaciones-de-equipo?projectIds=${encodeURIComponent(projectIds.join(","))}`, { headers: this.getHeaders() });
+    return data && typeof data === "object" ? data : {};
+  }
+
   async misAreasYTurnos(): Promise<{ combinaciones: number; proyectos: { _id: string; name: string }[] }> {
     const { data } = await axios.get(`/projects/mis-areas-turnos`, { headers: this.getHeaders() });
     return { combinaciones: Number(data?.combinaciones) || 0, proyectos: Array.isArray(data?.proyectos) ? data.proyectos : [] };

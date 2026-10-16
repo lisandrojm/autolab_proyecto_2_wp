@@ -130,6 +130,8 @@ export interface ContractOverviewRow {
    * índice: la posición cambia sola si se borra otro contrato mientras la pantalla está abierta.
    */
   contratoId?: string;
+  /** El TIPO de contrato (`Contrato._id`), si el contrato lo guarda: decide qué releases le tocan. */
+  tipoContratoId?: string;
   /**
    * Obra social de ESTE contrato (RNOS), no de la persona: ARCA la declara por alta (pos. 40-45) y
    * caduca sola por desregulación. Vacío no es un faltante — significa que se aplica la del convenio.
@@ -258,6 +260,8 @@ export interface ContratoItem {
     requiereFirmaRelease?: boolean;
     /** «Se envía a firmar el alta de ARCA» (sólo con alta temprana). Ausente = sí. */
     requiereFirmaAlta?: boolean;
+    /** «Plantilla de Release asignada». Vacío o ausente = todos los activos (ver `releasesDelTipo`). */
+    releaseIds?: string[];
     /** Códigos ARCA para el TXT de Alta masiva (específicos de convenio/modalidad). */
     afipModalidadContrato?: string;
     afipTipoServicio?: string;

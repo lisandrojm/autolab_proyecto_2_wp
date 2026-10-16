@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, eachDayOfInterval } from "date-fns";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -10,6 +10,7 @@ import { infoAPI, InfoItem } from "../../../api/info";
 import { categoriaSatAPI } from "../../../api/categoriasSat";
 import { roleFrameAPI } from "../../../api/roleFrames";
 import { areasAPI } from "../../../api/areas";
+import { projectsAPI } from "../../../api/projects";
 import { shiftsAPI } from "../../../api/shifts";
 import { activityReportsAPI, FiltrosDePersonas, ParteConAsistencia } from "../../../api/request";
 import { isContractVigente } from "../../team/ContractCard";
@@ -76,6 +77,8 @@ interface EmployeeStats {
    */
   areas: string[];
   turnos: string[];
+  /** El área y turno salen del EQUIPO (`teamConfig`), como en Gestionar Equipo: los partes no les suman. */
+  areaDelEquipo?: boolean;
   /**
    * Los del CONTRATO solos, sin los de los partes. Con el filtro de área o turno puesto, son los que
    * se le atribuyen a un parte que no trae área/turno cargado (ver el recorte por parte), y los que
@@ -851,6 +854,25 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     void shiftsAPI.getAll().then((s: any) => setTurnosCatalogo(s)).catch(() => setTurnosCatalogo([]));
   }, [isOpen]);
 
+  /*
+    EL ÁREA Y TURNO DE CADA PERSONA SEGÚN EL EQUIPO (`teamConfig`): lo mismo que muestra Gestionar
+    Equipo. Manda sobre los contratos y los partes (ver `areaTurnoDeFila`). Sin esto el reporte decía
+    «Libertador» de alguien que el equipo tiene en Técnica.
+  */
+  const [asignacionesEquipo, setAsignacionesEquipo] = useState<Record<string, Record<string, { areaId: string; shiftIds: string[] }[]>>>({});
+  const idsDeProyectos = useMemo(() => [...new Set((allProjects || []).map((p) => String(p.id)).filter(Boolean))].sort().join(","), [allProjects]);
+  useEffect(() => {
+    if (!isOpen || !idsDeProyectos) return;
+    let vigente = true;
+    projectsAPI
+      .asignacionesDeEquipo(idsDeProyectos.split(","))
+      .then((r) => vigente && setAsignacionesEquipo(r))
+      .catch(() => vigente && setAsignacionesEquipo({}));
+    return () => {
+      vigente = false;
+    };
+  }, [isOpen, idsDeProyectos]);
+
   /** id → nombre, para los campos que el contrato guarda solo como id. */
   const porId = (items: { name: string; data?: { id?: number } }[]) => {
     const m = new Map<string, string>();
@@ -915,6 +937,20 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       return { areas, turnos };
     };
   }, [areasCatalogo, turnosCatalogo]);
+  /**
+   * El área y turno de UNA FILA (persona + proyecto), con la precedencia de Gestionar Equipo: lo que
+   * dice el equipo (`teamConfig`) y, si ahí no tiene nada, sus contratos. `delEquipo` marca la primera:
+   * ahí los partes ya no suman áreas a la vista (ver el bucle de asistencia).
+   */
+  const areaTurnoDeFila = useCallback(
+    (userId: string, projectId: string | undefined, contratos: any[]) => {
+      const delEquipo = projectId ? asignacionesEquipo[String(projectId)]?.[String(userId)] : undefined;
+      if (delEquipo && delEquipo.length > 0) return { ...conAreaTurnoDelContrato(areaTurnoDeContratos([{ areaShiftAssignments: delEquipo }])), areaDelEquipo: true };
+      return { ...conAreaTurnoDelContrato(areaTurnoDeContratos(contratos)), areaDelEquipo: false };
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [asignacionesEquipo, areaTurnoDeContratos],
+  );
   /**
    * ROL/ES EMPRESA: VARIOS A LA VEZ.
    *
@@ -1180,7 +1216,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
           contractBaja,
           /* De los MISMOS contratos que el resto de la fila (ver `areaTurnoDeContratos`), igual que
              la columna Horario Base: son varios cuando la persona trabaja en dos áreas o turnos. */
-          ...conAreaTurnoDelContrato(areaTurnoDeContratos(targetList)),
+          ...areaTurnoDeFila(userIdStr, projectId, targetList),
           dailyAttendance: {},
         });
       });
@@ -1320,7 +1356,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             contractAlta,
             contractBaja,
             // Ídem arriba: esta rama también crea filas, así que también tiene que traerlos.
-            ...conAreaTurnoDelContrato(areaTurnoDeContratos(targets)),
+            ...areaTurnoDeFila(empIdStr, report.projectIdRaw, targets),
             dailyAttendance: {},
           });
         }
@@ -1363,8 +1399,11 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         // Recién acá: un parte recortado por el filtro de área/turno no cuenta.
         stats.totalRecords += 1;
 
-        if (areaDelParte && !stats.areas.includes(areaDelParte)) stats.areas.push(areaDelParte);
-        if (turnoDelParte && !stats.turnos.includes(turnoDelParte)) stats.turnos.push(turnoDelParte);
+        // Con área del equipo, la columna dice esa (como Gestionar Equipo); los partes ya no le suman.
+        if (!stats.areaDelEquipo) {
+          if (areaDelParte && !stats.areas.includes(areaDelParte)) stats.areas.push(areaDelParte);
+          if (turnoDelParte && !stats.turnos.includes(turnoDelParte)) stats.turnos.push(turnoDelParte);
+        }
 
         if (record.status === "present" || record.status === "late") {
           stats.daysPresent += 1;

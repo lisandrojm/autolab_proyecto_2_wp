@@ -11,6 +11,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrash, faCopy, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo, faFilePdf, faArrowUpRightFromSquare, faTriangleExclamation, faUserShield } from '@fortawesome/free-solid-svg-icons';
 import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { contratoFrameAPI, ContratoFrameItem, contratosDePlantilla, plantillaEsDeContrato } from '../../api/contratosFrame';
+import { releasesAPI, Release } from '../../api/release';
 import { BadgeCustom } from '../contratacion/PlantillaCustom';
 import { infoAPI, InfoItem } from '../../api/info';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
@@ -63,9 +64,11 @@ interface FormState {
   afipTipoServicio: string;
   afipModalidadLiquidacion: string;
   generaAlta: boolean;
+  /** «Plantilla de Release asignada»: ids de `Release`. Vacío = todos los activos. */
+  releaseIds: string[];
 }
 
-const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, modoFechas: 'periodo', requiereFirma: true, requiereFirmaRelease: true, requiereFirmaAlta: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
+const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, modoFechas: 'periodo', requiereFirma: true, requiereFirmaRelease: true, requiereFirmaAlta: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true, releaseIds: [] };
 
 const BadgeTiempoIndeterminado: React.FC = () => (
   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
@@ -156,6 +159,14 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   const [contratos, setContratos] = useState<ContratoItem[]>([]);
   const [plantillas, setPlantillas] = useState<ContratoFrameItem[]>([]);
   const [estados, setEstados] = useState<InfoItem[]>([]);
+  /** Los releases, para «Plantilla de Release asignada». Si no llegan, el bloque lo dice y no se toca. */
+  const [releases, setReleases] = useState<Release[]>([]);
+  useEffect(() => {
+    releasesAPI
+      .getAll()
+      .then(setReleases)
+      .catch(() => setReleases([]));
+  }, []);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -513,6 +524,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       // Si el contrato no tenía ninguno —quedaron así los de antes de esta regla— se muestra el
       // default elegido, a la vista y editable, en vez de dejar el formulario a medio llenar.
       estadoIds: conImpositivoGarantizado(estados, seleccionActual),
+      releaseIds: Array.isArray(contrato.data?.releaseIds) ? contrato.data.releaseIds.map(String) : [],
       afipModalidadContrato: contrato.data?.afipModalidadContrato || '',
       afipTipoServicio: contrato.data?.afipTipoServicio || '',
       afipModalidadLiquidacion: contrato.data?.afipModalidadLiquidacion || '',
@@ -631,6 +643,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       requiereFirma: form.requiereFirma,
       requiereFirmaRelease: form.requiereFirmaRelease,
       requiereFirmaAlta: form.requiereFirmaAlta,
+      releaseIds: form.releaseIds,
       isActive: form.isActive,
       afipModalidadContrato: form.afipModalidadContrato.trim(),
       afipTipoServicio: form.afipTipoServicio.trim(),
@@ -1096,7 +1109,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
               return (
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                    Plantilla{misPlantillas.length === 1 ? '' : 's'} asignada{misPlantillas.length === 1 ? '' : 's'}
+                    Plantilla{misPlantillas.length === 1 ? '' : 's'} de Contrato asignada{misPlantillas.length === 1 ? '' : 's'}
                     {misPlantillas.length > 0 ? <span className="ml-1.5 normal-case tracking-normal text-gray-500 dark:text-gray-400">({misPlantillas.length})</span> : null}
                   </label>
                   {misPlantillas.length === 0 ? (
@@ -1127,6 +1140,51 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                         ),
                       )}
                     </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/*
+              PLANTILLA DE RELEASE ASIGNADA (16/10/2026): qué releases le tocan a este tipo de contrato al
+              generar y enviar a firmar. Sin ninguno marcado salen TODOS los activos, como antes de que
+              existiera esto: los tipos que nadie configure siguen igual.
+            */}
+            {(() => {
+              const activos = releases.filter((r) => r.isActive !== false || form.releaseIds.includes(r._id));
+              const alternar = (id: string) => setForm((p) => ({ ...p, releaseIds: p.releaseIds.includes(id) ? p.releaseIds.filter((x) => x !== id) : [...p.releaseIds, id] }));
+              return (
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                    Plantilla de Release asignada
+                    {form.releaseIds.length > 0 ? <span className="ml-1.5 normal-case tracking-normal text-gray-500 dark:text-gray-400">({form.releaseIds.length})</span> : null}
+                  </label>
+                  {activos.length === 0 ? (
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">No hay releases cargados en Plantillas | Release.</p>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap gap-1.5">
+                        {activos.map((r) => {
+                          const elegido = form.releaseIds.includes(r._id);
+                          return (
+                            <button
+                              key={r._id}
+                              type="button"
+                              onClick={() => alternar(r._id)}
+                              aria-pressed={elegido}
+                              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition-colors ${elegido ? 'bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 border-violet-300 dark:border-violet-700' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-violet-300'}`}
+                            >
+                              <FontAwesomeIcon icon={faFilePdf} className="h-3 w-3" />
+                              {r.name}
+                              {r.isActive === false ? ' (inactivo)' : ''}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                        {form.releaseIds.length === 0 ? 'Ninguno marcado: a este tipo de contrato le tocan TODOS los releases activos. Marcá los que correspondan para que salgan sólo esos.' : 'Al generar y enviar a firmar, a este tipo de contrato le tocan sólo los marcados.'}
+                      </p>
+                    </>
                   )}
                 </div>
               );
