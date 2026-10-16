@@ -247,6 +247,44 @@ async function resolveProjectsGlobalConfig(projects, tenantId) {
         }
     }
 }
+/**
+ * EL COORDINADOR DEL PROYECTO, A NOMBRE: `metadata.responsableId` (el id de FRAME de la persona) →
+ * `metadataResolutions.responsable`. En bloque, una sola consulta para toda la página.
+ *
+ * Lo usan el listado general Y el de un cliente: el del cliente no lo resolvía y su columna
+ * «Coordinador» mostraba «ID: 27» donde el general mostraba el nombre.
+ */
+async function resolverResponsables(projects, tenantObjectId) {
+    const ids = new Set();
+    for (const p of projects)
+        if (p.metadata?.responsableId)
+            ids.add(Number(p.metadata.responsableId));
+    if (ids.size === 0)
+        return;
+    const responsables = await User.find({
+        tenantId: tenantObjectId,
+        // Número y texto: el `metadata.id` de algunos usuarios importados quedó guardado como "27".
+        "metadata.id": { $in: [...ids, ...[...ids].map(String)] },
+    })
+        .select("firstName lastName email metadata")
+        .lean();
+    const porId = new Map();
+    for (const r of responsables)
+        porId.set(String(r.metadata?.id), r);
+    for (const p of projects) {
+        const resp = p.metadata?.responsableId ? porId.get(String(p.metadata.responsableId)) : null;
+        if (!resp)
+            continue;
+        if (!p.metadataResolutions)
+            p.metadataResolutions = {};
+        p.metadataResolutions.responsable = {
+            _id: resp._id,
+            name: `${resp.firstName || ""} ${resp.lastName || ""}`.trim() || resp.email,
+            firstName: resp.firstName,
+            lastName: resp.lastName,
+        };
+    }
+}
 const router = Router();
 /**
  * Las sedes de un proyecto: `sedeIds` si las tiene; si no, la única de antes (`sedeId`).
@@ -537,38 +575,8 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
         // 3. BULK METADATA RESOLUTION (Sedes)
         await resolverSedes(projects);
         await resolverCentroCostoDeProyectos(projects);
-        // 4. BULK METADATA RESOLUTION (Responsables)
-        const responsableIds = new Set();
-        projects.forEach((p) => {
-            if (p.metadata?.responsableId) {
-                responsableIds.add(Number(p.metadata.responsableId));
-            }
-        });
-        if (responsableIds.size > 0) {
-            const responsables = await User.find({
-                tenantId: req.tenantObjectId,
-                // Número Y texto: hay usuarios con `metadata.id` guardado como "27" (importados), y con sólo el
-                // número no se encontraban — el listado mostraba «ID: 27» en vez del coordinador.
-                "metadata.id": { $in: [...Array.from(responsableIds), ...Array.from(responsableIds).map(String)] }
-            }).select("firstName lastName email metadata").lean();
-            const respMap = new Map();
-            responsables.forEach((r) => respMap.set(String(r.metadata?.id), r));
-            projects.forEach((p) => {
-                if (p.metadata?.responsableId) {
-                    const resp = respMap.get(String(p.metadata.responsableId));
-                    if (resp) {
-                        if (!p.metadataResolutions)
-                            p.metadataResolutions = {};
-                        p.metadataResolutions.responsable = {
-                            _id: resp._id,
-                            name: `${resp.firstName || ""} ${resp.lastName || ""}`.trim() || resp.email,
-                            firstName: resp.firstName,
-                            lastName: resp.lastName
-                        };
-                    }
-                }
-            });
-        }
+        // 4. El coordinador del proyecto, a nombre (ver `resolverResponsables`).
+        await resolverResponsables(projects, req.tenantObjectId);
         // 5. BULK PEOPLE COUNT (cantidad de personas asignadas al proyecto)
         // Se cuenta desde la colección users_&_projects (UserProject), fuente autoritativa.
         const projectIdsForCount = projects.map((p) => p._id);
@@ -765,6 +773,8 @@ async (req, res) => {
         await resolverSedes(projects);
         // El centro de costo, con el mismo criterio que el listado general (ver el helper).
         await resolverCentroCostoDeProyectos(projects);
+        // El coordinador a nombre, como en el listado general.
+        await resolverResponsables(projects, req.tenantObjectId);
         // Bulk People Count (cantidad de personas asignadas al proyecto)
         const projectIdsForCount = projects.map((p) => p._id);
         if (projectIdsForCount.length > 0) {
