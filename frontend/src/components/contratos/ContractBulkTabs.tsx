@@ -15,7 +15,7 @@ import { CLAVE_CACHE_TIPOS_CONTRATO, contratosAPI, ContratoItem } from '../../ap
 import { categoriaSatAPI, CategoriaSatItem } from '../../api/categoriasSat';
 import { claveCacheCatalogo, createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { arcaSucursalesAPI, ArcaSucursal, CLAVE_CACHE_SUCURSALES } from '../../api/arcaSucursales';
-import { DatosArcaDetalle, BadgeArca, ProgresoArca } from './DatosArcaDetalle';
+import { DatosArcaDetalle, BadgeArca as BadgeArcaBase, ProgresoArca } from './DatosArcaDetalle';
 import { Release, releaseVariables } from '../../api/release';
 import { TextoCustomModal } from './TextoCustomModal';
 import { PLACEHOLDER_CONTRATO_CUSTOM, PLACEHOLDER_RELEASE_CUSTOM, textoCustomDeRelease, textoCustomUsable } from '@compartido/textoCustom';
@@ -29,7 +29,7 @@ import { SearchAndFilters } from '../ui/SearchAndFilters';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
-import { ContractDocsColumns, ContractDocsHeaders, ContractActionsButtons, ContractActionsCell, ContractActionsHeader, downloadContractRow, downloadReleaseRow, uploadAltaRow } from './ContractRowDocs';
+import { ContractDocsColumns as ContractDocsColumnsBase, ContractDocsHeaders, ContractActionsButtons, ContractActionsCell as ContractActionsCellBase, ContractActionsHeader, downloadContractRow, downloadReleaseRow, uploadAltaRow } from './ContractRowDocs';
 import { resolveAfip, resolveAfip85, resolveAfipValues, esResuelto, problemasDeSucursalParaTxt, mensajeDeSucursalParaTxt, AfipRowResult, AfipValues, AfipCatalogs } from './afipCompleteness';
 import { CLAVE_CACHE_FUNCIONES, roleFrameAPI, RoleFrameItem } from '../../api/roleFrames';
 import { useValoraciones } from '../proyectos/ChipValoracion';
@@ -41,7 +41,7 @@ import { HistorialAltasArca } from './HistorialAltasArca';
 import { EstadoValidacionAutomaticaOS } from './EstadoValidacionAutomaticaOS';
 import { arcaCatalogoAPI, DIAS_CATALOGO_VIEJO } from '../../api/arcaCatalogo';
 import { PantallaValidarObrasSociales, FilaConstatacion } from './PantallaValidarObrasSociales';
-import { CeldaObraSocial, EstadoObraSocial, VistaObraSocial } from './CeldaObraSocial';
+import { CeldaObraSocial as CeldaObraSocialBase, EstadoObraSocial, VistaObraSocial } from './CeldaObraSocial';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit, cuitDisplay, noPoseeCuit } from './ConstanciaBulk';
 import { NombreArca, estadoNombreArca } from '../arca/NombreArca';
 import { sweetAlert } from '../../utils/sweetAlert';
@@ -403,7 +403,7 @@ const BotonHabilitarFirma: React.FC<{
   );
 };
 
-export const EstadoImpositivoCell: React.FC<{ record: ContractOverviewRow; contratoFrames: ContratoFrameItem[]; allEstados: InfoItem[] }> = ({ record, contratoFrames, allEstados }) => {
+const EstadoImpositivoCellBase: React.FC<{ record: ContractOverviewRow; contratoFrames: ContratoFrameItem[]; allEstados: InfoItem[] }> = ({ record, contratoFrames, allEstados }) => {
   const estadoImpositivo = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados);
   if (!estadoImpositivo) return <span className="text-xs text-gray-400">—</span>;
   return estadoImpositivo.data?.etiquetaSecundaria?.trim() ? <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px] whitespace-nowrap" /> : <EstadoBadge name={estadoImpositivo.name} className="text-[10px] whitespace-nowrap" />;
@@ -461,7 +461,7 @@ export const parcheEmpresa = (campo: 'contrato' | 'release', empresaId: string, 
  * vive en la FILA (`convenioFila`, en el componente de arriba) y no acá: dos celdas hermanas en
  * columnas distintas tienen que compartirlo, y una de ellas no puede ser dueña del estado de la otra.
  */
-const ConvenioSelectCell: React.FC<{ record: ContractOverviewRow; valores: AfipValues; cat: AfipCatalogs; convenio: string; onConvenio: (cct: string) => void }> = ({ record, valores, cat, convenio, onConvenio }) => {
+const ConvenioSelectCellBase: React.FC<{ record: ContractOverviewRow; valores: AfipValues; cat: AfipCatalogs; convenio: string; onConvenio: (cct: string) => void }> = ({ record, valores, cat, convenio, onConvenio }) => {
   // Con categoría cargada manda ELLA: el convenio del alta es el de su categoría, no una preferencia.
   const efectivo = valores.convenioCategoria || convenio;
   if (!record.empresaContratoId) return <span className="text-xs text-gray-400">Elegí la empleadora</span>;
@@ -500,7 +500,7 @@ const ConvenioSelectCell: React.FC<{ record: ContractOverviewRow; valores: AfipV
  * ESE domicilio. Por eso Actividad no se puede elegir antes que la Sucursal, y cambiar la sucursal
  * borra la actividad (lo hace el server, y por eso el parche de abajo la limpia también acá).
  */
-const SucursalSelectCell: React.FC<{ record: ContractOverviewRow; valores: AfipValues; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, onGuardado }) => {
+const SucursalSelectCellBase: React.FC<{ record: ContractOverviewRow; valores: AfipValues; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, onGuardado }) => {
   const [guardando, setGuardando] = useState(false);
 
   const guardar = async (sucursalId: string) => {
@@ -551,7 +551,7 @@ const SucursalSelectCell: React.FC<{ record: ContractOverviewRow; valores: AfipV
  * una opción sería pedir una decisión que no existe. Es la misma regla que en el modal — acá se ve el
  * valor heredado, en texto, y el selector aparece recién con dos o más.
  */
-const ActividadSelectCell: React.FC<{ record: ContractOverviewRow; valores: AfipValues; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, onGuardado }) => {
+const ActividadSelectCellBase: React.FC<{ record: ContractOverviewRow; valores: AfipValues; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, onGuardado }) => {
   const [guardando, setGuardando] = useState(false);
   const disponibles = valores.actividadesDisponibles;
 
@@ -601,7 +601,7 @@ const ActividadSelectCell: React.FC<{ record: ContractOverviewRow; valores: Afip
   );
 };
 
-const CategoriaSelectCell: React.FC<{ record: ContractOverviewRow; valores: AfipValues; cat: AfipCatalogs; convenio: string; nivelDeCategoria?: (rolFrameId: unknown, categoriaDataId: unknown) => string; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, cat, convenio, nivelDeCategoria, onGuardado }) => {
+const CategoriaSelectCellBase: React.FC<{ record: ContractOverviewRow; valores: AfipValues; cat: AfipCatalogs; convenio: string; nivelDeCategoria?: (rolFrameId: unknown, categoriaDataId: unknown) => string; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, cat, convenio, nivelDeCategoria, onGuardado }) => {
   const [guardando, setGuardando] = useState(false);
   const efectivo = valores.convenioCategoria || convenio;
 
@@ -698,7 +698,7 @@ export const BotonRenovar: React.FC<{ record: ContractOverviewRow; grande?: bool
   );
 };
 
-const EmpresaSelectCell: React.FC<{ record: ContractOverviewRow; campo: 'contrato' | 'release'; requerido: boolean; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, campo, requerido, onGuardado }) => {
+const EmpresaSelectCellBase: React.FC<{ record: ContractOverviewRow; campo: 'contrato' | 'release'; requerido: boolean; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, campo, requerido, onGuardado }) => {
   const [guardando, setGuardando] = useState(false);
   const empresas = (campo === 'contrato' ? record.contratoEmpresas : record.releaseEmpresas) || [];
   const empresaIdActual = campo === 'contrato' ? record.empresaContratoId : record.empresaReleaseId;
@@ -924,7 +924,7 @@ const fechaDeCarga = (s?: string): string => {
 
 const FlechaEncuadre = () => <span className="text-blue-500/70 dark:text-blue-400/70 font-normal ml-1">→</span>;
 
-const ObraSocialCell: React.FC<{
+const ObraSocialCellBase: React.FC<{
   record: ContractOverviewRow;
   valores: AfipValues;
   onAbrir: () => void;
@@ -971,6 +971,47 @@ const ObraSocialCell: React.FC<{
  * actual es un estado impositivo, con su trámite (Alta temprana de ARCA / Constancia de CUIT),
  * filtros y exportación a CSV.
  */
+/*
+  LAS CELDAS PESADAS DE CADA FILA, MEMORIZADAS (pedido del 16/10/2026: «tarda mucho en seleccionar»).
+
+  Tildar una fila cambia `selected`, y con él se volvía a dibujar la tabla entera: 25 filas con
+  desplegables de empresa, convenio, categoría, actividad, sucursal y obra social, cada uno con cientos
+  de opciones. Con esto, al tildar sólo se redibujan la casilla y el fondo de la fila; las celdas se
+  dibujan de nuevo cuando cambian SUS datos.
+
+  La comparación ignora las FUNCIONES: los callbacks se arman en línea (`(patch) => aplicarCambio(r,
+  patch)`) y cambian de identidad en cada render, pero hacen lo mismo — `aplicarCambio` y `load` son
+  `useCallback` y actualizan con `setRows(prev => …)`. Los objetos planos se comparan un nivel adentro:
+  `resolveAfipValues(r, cat)` arma uno nuevo en cada render con los mismos valores.
+*/
+const igualesSinFunciones = (a: Record<string, unknown>, b: Record<string, unknown>): boolean => {
+  const mismo = (x: unknown, y: unknown, profundo: boolean): boolean => {
+    if (Object.is(x, y)) return true;
+    if (typeof x === 'function' && typeof y === 'function') return true;
+    if (!profundo || !x || !y || typeof x !== 'object' || typeof y !== 'object' || Array.isArray(x) !== Array.isArray(y)) return false;
+    if (!Array.isArray(x) && (Object.getPrototypeOf(x) !== Object.prototype || Object.getPrototypeOf(y) !== Object.prototype)) return false;
+    const kx = Object.keys(x as object);
+    const ky = Object.keys(y as object);
+    return kx.length === ky.length && kx.every((k) => mismo((x as any)[k], (y as any)[k], false));
+  };
+  const ka = Object.keys(a);
+  return ka.length === Object.keys(b).length && ka.every((k) => mismo(a[k], b[k], true));
+};
+function memoSinFunciones<P extends object>(C: React.ComponentType<P>): React.FC<P> {
+  return React.memo(C, (a, b) => igualesSinFunciones(a as Record<string, unknown>, b as Record<string, unknown>)) as unknown as React.FC<P>;
+}
+const EmpresaSelectCell = memoSinFunciones(EmpresaSelectCellBase);
+const ConvenioSelectCell = memoSinFunciones(ConvenioSelectCellBase);
+const CategoriaSelectCell = memoSinFunciones(CategoriaSelectCellBase);
+const ObraSocialCell = memoSinFunciones(ObraSocialCellBase);
+const ActividadSelectCell = memoSinFunciones(ActividadSelectCellBase);
+const SucursalSelectCell = memoSinFunciones(SucursalSelectCellBase);
+const ContractDocsColumns = memoSinFunciones(ContractDocsColumnsBase);
+const ContractActionsCell = memoSinFunciones(ContractActionsCellBase);
+const BadgeArca = memoSinFunciones(BadgeArcaBase);
+const CeldaObraSocial = memoSinFunciones(CeldaObraSocialBase);
+export const EstadoImpositivoCell = memoSinFunciones(EstadoImpositivoCellBase);
+
 /**
  * LOS CATÁLOGOS CON LOS QUE SE RESUELVEN LOS DATOS ARCA DE UNA FILA (`resolveAfipValues`): categorías,
  * tipos de contrato, obras sociales, sedes, empresas, sucursales, convenios y los defaults de la
