@@ -8,7 +8,7 @@ import { InfoModal } from '../ui/InfoModal';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { BloqueEstado } from '../ui/BloqueEstado';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faTrash, faCopy, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo, faFilePdf, faArrowUpRightFromSquare, faTriangleExclamation, faUserShield } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faTrash, faCopy, faFileContract, faGrip, faTable, faFileInvoiceDollar, faInfinity, faFileSignature, faCircleInfo, faFilePdf, faArrowUpRightFromSquare, faTriangleExclamation, faUserShield, faRocket } from '@fortawesome/free-solid-svg-icons';
 import { contratosAPI, ContratoItem } from '../../api/contratos';
 import { contratoFrameAPI, ContratoFrameItem, contratosDePlantilla, plantillaEsDeContrato } from '../../api/contratosFrame';
 import { releasesAPI, Release } from '../../api/release';
@@ -170,6 +170,30 @@ const PlantillaChip: React.FC<{ plantilla: ContratoFrameItem; className?: string
     <Link to={`/contratos-frame?edit=${plantilla._id}`} target="_blank" className={`${base} hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors`} title="Abrir la plantilla en Plantillas | Contratos">
       <FontAwesomeIcon icon={faFilePdf} className="h-2.5 w-2.5" />
       {plantilla.name}
+    </Link>
+  );
+};
+
+/**
+ * Chip de un release («Plantillas | Releases»), en el color de la sección de releases. `general` =
+ * no está asignado a ningún contrato y lo lleva este tipo porque no eligió uno propio.
+ */
+const ReleaseChip: React.FC<{ release: Release; general?: boolean }> = ({ release, general = false }) => {
+  const puedeAbrir = usePuedeAbrir();
+  const base = 'inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400 border border-sky-100 dark:border-sky-800/50';
+  const titulo = `${release.esCustom ? 'Release custom: va sólo en los trámites que le escriben el texto. ' : ''}${general ? 'Este tipo no tiene un release propio: lleva el general, el que va con todos los contratos sin release elegido.' : 'Release asignado a este tipo de contrato.'}`;
+  const contenido = (
+    <>
+      <FontAwesomeIcon icon={faRocket} className="h-2.5 w-2.5" />
+      {release.name}
+      {general && <span className="font-normal opacity-70">· general</span>}
+      {release.esCustom && <span className="font-normal opacity-70">· opcional</span>}
+    </>
+  );
+  if (!puedeAbrir('/releases')) return <span className={base} title={titulo}>{contenido}</span>;
+  return (
+    <Link to="/releases" target="_blank" className={`${base} hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors`} title={`${titulo} Abrir Plantillas | Releases.`}>
+      {contenido}
     </Link>
   );
 };
@@ -437,6 +461,15 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
 
   /** Plantillas ("Plantillas | Contratos") que ya tiene asignadas un Contrato (vacío si todavía no tiene ninguna). */
   const plantillasDe = (contratoId: string): ContratoFrameItem[] => plantillas.filter((p) => plantillaEsDeContrato(p, contratoId));
+  /**
+   * EL RELEASE QUE LLEVA UN TIPO: los activos asignados a él (`Release.contratoIds`) o, si no tiene
+   * ninguno, los generales (los que no están asignados a nadie). Misma regla que el formulario.
+   */
+  const releasesDe = (contratoId: string): { lista: Release[]; generales: boolean } => {
+    const activos = releases.filter((r) => r.isActive !== false);
+    const propios = activos.filter((r) => (r.contratoIds || []).map(String).includes(contratoId));
+    return propios.length > 0 ? { lista: propios, generales: false } : { lista: activos.filter((r) => !(r.contratoIds || []).length), generales: true };
+  };
   /** El tipo tiene una plantilla custom: el texto de sus contratos se escribe en Firma digital. */
   const tienePlantillaCustom = (contratoId: string) => plantillasDe(contratoId).some((p) => p.esCustom);
 
@@ -893,6 +926,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                   <th className="px-4 py-3 font-semibold">Firma</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
                   <th className="px-4 py-3 font-semibold">Plantillas</th>
+                  <th className="px-4 py-3 font-semibold">Release</th>
                   <th className="px-4 py-3 font-semibold">Estados</th>
                   <th className="px-4 py-3 font-semibold text-right">Acciones</th>
                 </tr>
@@ -933,6 +967,20 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                             ))}
                           </div>
                         )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {(() => {
+                          const { lista, generales } = releasesDe(contrato._id);
+                          return lista.length === 0 ? (
+                            <span className="text-xs text-gray-400">—</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1 max-w-xs">
+                              {lista.map((rl) => (
+                                <ReleaseChip key={rl._id} release={rl} general={generales} />
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3">
                         {misEstados.length === 0 ? (
@@ -1016,6 +1064,21 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                     </div>
                   </div>
                 )}
+
+                {(() => {
+                  const { lista, generales } = releasesDe(contrato._id);
+                  if (lista.length === 0) return null;
+                  return (
+                    <div className="flex flex-col gap-1 pt-1 border-t border-gray-100 dark:border-gray-700/60">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Release</label>
+                      <div className="flex flex-wrap gap-1">
+                        {lista.map((rl) => (
+                          <ReleaseChip key={rl._id} release={rl} general={generales} />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {misEstados.length > 0 ? (
                   <div className="flex flex-col gap-1 pt-1 border-t border-gray-100 dark:border-gray-700/60">
