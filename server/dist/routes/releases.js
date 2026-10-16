@@ -33,7 +33,11 @@ const ReleaseSchema = z.object({
         .union([z.boolean(), z.string()])
         .optional()
         .transform((v) => (typeof v === "string" ? v === "true" : v)),
+    // Los tipos de contrato a los que pertenece. Vacío = todos (ver el modelo).
+    contratoIds: z.array(z.string()).optional(),
 });
+/** Ids de tipo de contrato únicos y válidos. */
+const limpiarContratoIds = (ids) => [...new Set((ids || []).map(String).filter((id) => /^[a-f0-9]{24}$/i.test(id)))];
 /**
  * Cabecera de descarga con el nombre canónico del archivo (`buildDocFileName`).
  *
@@ -225,6 +229,7 @@ router.post("/", authenticateToken, requireTenant, async (req, res) => {
             // Custom: la plantilla guarda sólo el placeholder; el texto se escribe en cada trámite.
             content: validatedData.esCustom ? PLACEHOLDER_RELEASE_CUSTOM : htmlHasText(validatedData.content) ? validatedData.content : "",
             esCustom: !!validatedData.esCustom,
+            contratoIds: limpiarContratoIds(validatedData.contratoIds),
             tenantId: req.tenantObjectId,
         });
         await release.save();
@@ -276,6 +281,8 @@ router.put("/:id", authenticateToken, requireTenant, async (req, res) => {
             release.isActive = validatedData.isActive;
         if (validatedData.usaMembrete !== undefined)
             release.usaMembrete = validatedData.usaMembrete;
+        if (validatedData.contratoIds !== undefined)
+            release.contratoIds = limpiarContratoIds(validatedData.contratoIds);
         await release.save();
         res.json(release);
     }

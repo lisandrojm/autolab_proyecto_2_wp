@@ -18,6 +18,12 @@ export interface IRelease extends Document {
    * `compartido/textoCustom.ts`.
    */
   esCustom: boolean;
+  /**
+   * LOS TIPOS DE CONTRATO A LOS QUE PERTENECE (`Contrato._id`), como `ContratoFrame.contratoIds`
+   * (16/10/2026). VACÍO o ausente = vale para TODOS los tipos, como antes de existir el campo: los
+   * releases que nadie asigne siguen saliendo para todos los contratos.
+   */
+  contratoIds?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,6 +67,7 @@ const releaseSchema = new Schema<IRelease>(
       default: false,
     },
     esCustom: { type: Boolean, default: false },
+    contratoIds: { type: [String], default: undefined },
   },
   { timestamps: true, collection: "release" },
 );

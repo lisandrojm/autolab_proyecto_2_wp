@@ -47,12 +47,6 @@ export interface IContrato extends Document {
      */
     requiereFirmaAlta?: boolean;
     /**
-     * «Plantilla de Release asignada»: los releases (`Release._id`) que le tocan a este tipo de contrato
-     * al generar y enviar a firmar. VACÍO o ausente = todos los activos, como antes de existir el campo
-     * (16/10/2026): así los tipos que nadie configuró siguen igual.
-     */
-    releaseIds?: string[];
-    /**
      * Códigos AFIP para la generación del TXT de Alta masiva. Son específicos del convenio/modalidad,
      * por eso se cargan por Tipo de Contrato. Se guardan como string para conservar ceros a la izquierda.
      */
@@ -106,7 +100,6 @@ const contratoSchema = new Schema<IContrato>(
       requiereFirma: { type: Boolean, default: true },
       requiereFirmaRelease: { type: Boolean, default: true },
       requiereFirmaAlta: { type: Boolean, default: true },
-      releaseIds: { type: [String], default: undefined },
       afipModalidadContrato: { type: String },
       afipTipoServicio: { type: String },
       afipActividad: { type: String },

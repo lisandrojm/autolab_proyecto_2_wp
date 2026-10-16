@@ -16,6 +16,8 @@ export interface Release {
   usaMembrete?: boolean;
   /** Plantilla custom: `content` es sólo el placeholder; el texto se escribe en Firma digital para cada trámite (ver `@compartido/textoCustom`). */
   esCustom?: boolean;
+  /** Los tipos de contrato a los que pertenece (`Contrato._id`). Vacío = todos (ver `releasesDelTipo`). */
+  contratoIds?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -30,6 +32,7 @@ export interface ReleaseInput {
   usaMembrete?: boolean;
   /** Plantilla custom: `content` es sólo el placeholder; el texto se escribe en Firma digital para cada trámite (ver `@compartido/textoCustom`). */
   esCustom?: boolean;
+  contratoIds?: string[];
 }
 
 /**

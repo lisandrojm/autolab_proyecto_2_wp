@@ -3154,18 +3154,19 @@ const contratoRequiereFirmaAlta = (template: ContratoFrameItem | null): boolean 
  * LOS RELEASES QUE VAN A FIRMA PARA ESTA FILA: los que su tipo de release manda a firmar, y sólo si el
  * Tipo de Contrato también lo pide («Se envía a firmar el release»). Tienen que decir que sí los dos.
  */
-const releasesDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[], record: ContractOverviewRow, tipos?: ContratoItem[]): Release[] =>
-  contratoRequiereFirmaRelease(template) ? releasesDelTipo(releasesQueFirman, tipoDeLaFila(record, template, tipos)).filter((r) => !r.esCustom || textoCustomUsable(textoCustomDeRelease(record.contenidoCustomReleases, r._id))) : [];
+const releasesDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[], record: ContractOverviewRow, tipos?: ContratoItem[], todosLosReleases?: Release[]): Release[] =>
+  contratoRequiereFirmaRelease(template) ? releasesDelTipo(releasesQueFirman, tipoDeLaFila(record, template, tipos), todosLosReleases).filter((r) => !r.esCustom || textoCustomUsable(textoCustomDeRelease(record.contenidoCustomReleases, r._id))) : [];
 
 /**
  * EL TIPO DE CONTRATO DE LA FILA, para saber qué releases le tocan («Plantilla de Release asignada»):
  * el que guarda el contrato (`tipoContratoId`) y, si no lo guarda, el principal de su plantilla.
  */
-const tipoDeLaFila = (record: ContractOverviewRow, template: ContratoFrameItem | null, tipos?: ContratoItem[]): { data?: { releaseIds?: string[] } } | null => {
+const tipoDeLaFila = (record: ContractOverviewRow, template: ContratoFrameItem | null, tipos?: ContratoItem[]): { _id?: string } | null => {
   const propio = record.tipoContratoId && tipos ? tipos.find((t) => t._id === record.tipoContratoId) : undefined;
   if (propio) return propio;
+  if (record.tipoContratoId) return { _id: record.tipoContratoId };
   const principal = template?.contratoId;
-  return typeof principal === 'object' && principal ? (principal as { data?: { releaseIds?: string[] } }) : null;
+  return typeof principal === 'object' && principal ? { _id: String((principal as { _id?: string })._id || '') } : typeof principal === 'string' ? { _id: principal } : null;
 };
 
 /**
@@ -3173,8 +3174,8 @@ const tipoDeLaFila = (record: ContractOverviewRow, template: ContratoFrameItem |
  * custom va a firma sólo en el trámite que tenga su texto escrito (`releasesDeLaFila`); acá están todos,
  * con texto o sin, para ofrecer escribirlo.
  */
-const releasesCustomDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[], record?: ContractOverviewRow, tipos?: ContratoItem[]): Release[] =>
-  contratoRequiereFirmaRelease(template) ? releasesDelTipo(releasesQueFirman, record ? tipoDeLaFila(record, template, tipos) : null).filter((r) => r.esCustom) : [];
+const releasesCustomDeLaFila = (template: ContratoFrameItem | null, releasesQueFirman: Release[], record?: ContractOverviewRow, tipos?: ContratoItem[], todosLosReleases?: Release[]): Release[] =>
+  contratoRequiereFirmaRelease(template) ? releasesDelTipo(releasesQueFirman, record ? tipoDeLaFila(record, template, tipos) : null, todosLosReleases).filter((r) => r.esCustom) : [];
 
 /** El alta de ARCA va a firma: trámite de alta temprana, documento cargado y el tipo lo pide. */
 const altaVaAFirma = (record: ContractOverviewRow, template: ContratoFrameItem | null, tipo?: TipoImpositivo): boolean => tipo === 'alta_temprana_afip' && !!record.altaDocumentoUrl && contratoRequiereFirmaAlta(template);
@@ -3191,11 +3192,11 @@ const releaseRequiereFirma = (release: Release): boolean => {
  * no enviado. Si NI el Contrato NI ningún Release de este contrato requieren firma, no hay nada que
  * mandar y la fila nunca se habilita.
  */
-const calcularEnviable = (record: ContractOverviewRow, contratoFrames: ContratoFrameItem[], releasesQueFirman: Release[], tipo?: TipoImpositivo, tipos?: ContratoItem[]): boolean => {
+const calcularEnviable = (record: ContractOverviewRow, contratoFrames: ContratoFrameItem[], releasesQueFirman: Release[], tipo?: TipoImpositivo, tipos?: ContratoItem[], todosLosReleases?: Release[]): boolean => {
   if (record.firmaEnviadaAt) return false;
   const template = findTemplate(record as unknown as Contract, contratoFrames);
   const contratoAplica = contratoRequiereFirma(template);
-  const releasesAplicables = releasesDeLaFila(template, releasesQueFirman, record, tipos);
+  const releasesAplicables = releasesDeLaFila(template, releasesQueFirman, record, tipos, todosLosReleases);
   const contratoOk = !contratoAplica || contratoGenerado(record);
   const releaseOk = releasesAplicables.length === 0 || releasesGenerados(record, releasesAplicables);
   // El alta ya está cargada (no se genera acá): si es lo único que va a firma, alcanza con ella.
@@ -3829,7 +3830,7 @@ export const ContractBulkFirmaTab: React.FC<{
     });
   // Solo se pueden marcar (y enviar) los contratos con Contrato Y Release(s) ya generados (botones
   // independientes) y todavía no enviados.
-  const enviables = useMemo(() => filtered.filter((r) => calcularEnviable(r, contratoFrames, releasesQueFirman, tipoDelRow(r), tiposContrato)), [filtered, contratoFrames, releasesQueFirman, tipoDelRow, tiposContrato]);
+  const enviables = useMemo(() => filtered.filter((r) => calcularEnviable(r, contratoFrames, releasesQueFirman, tipoDelRow(r), tiposContrato, activeReleases)), [filtered, contratoFrames, releasesQueFirman, tipoDelRow, tiposContrato, activeReleases]);
 
   // Igual que en la otra pestaña: acota el render, no el conjunto. Ver `usePaginado`.
   // Mismo orden por columna que Trámite impositivo: se ordena todo lo filtrado y después se pagina.
@@ -3871,7 +3872,7 @@ export const ContractBulkFirmaTab: React.FC<{
         contractIndex: r.contractIndex,
         tipoImpositivo: tipoDelRow(r),
         incluirContrato: contratoRequiereFirma(findTemplate(r as unknown as Contract, contratoFrames)),
-        incluirReleases: releasesDeLaFila(findTemplate(r as unknown as Contract, contratoFrames), releasesQueFirman, r, tiposContrato).length > 0,
+        incluirReleases: releasesDeLaFila(findTemplate(r as unknown as Contract, contratoFrames), releasesQueFirman, r, tiposContrato, activeReleases).length > 0,
         incluirAlta: altaVaAFirma(r, findTemplate(r as unknown as Contract, contratoFrames), tipoDelRow(r)),
       }));
       const res = await firmaDigitalAPI.enviar(targets);
@@ -4045,8 +4046,8 @@ export const ContractBulkFirmaTab: React.FC<{
                   const tipo = tipoDelRow(r);
                   const template = findTemplate(r as unknown as Contract, contratoFrames);
                   const contratoAplica = contratoRequiereFirma(template);
-                  const releasesFila = releasesDeLaFila(template, releasesQueFirman, r, tiposContrato);
-                  const enviable = calcularEnviable(r, contratoFrames, releasesQueFirman, tipo, tiposContrato);
+                  const releasesFila = releasesDeLaFila(template, releasesQueFirman, r, tiposContrato, activeReleases);
+                  const enviable = calcularEnviable(r, contratoFrames, releasesQueFirman, tipo, tiposContrato, activeReleases);
                   return (
                     <tr key={rowKey(r)} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
                       <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
@@ -4098,7 +4099,7 @@ export const ContractBulkFirmaTab: React.FC<{
                         <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} onGenerado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                       <td className="px-4 py-3">
-                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesFila} releasesCustom={releasesCustomDeLaFila(template, releasesQueFirman, r, tiposContrato)} onGenerado={(patch) => aplicarCambio(r, patch)} />
+                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesFila} releasesCustom={releasesCustomDeLaFila(template, releasesQueFirman, r, tiposContrato, activeReleases)} onGenerado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>

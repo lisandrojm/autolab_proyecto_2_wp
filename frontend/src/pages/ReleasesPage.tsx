@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageLayout } from "../components/ui/PageLayout";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { Card } from "../components/ui/Card";
@@ -12,6 +12,8 @@ import { faPlus, faEdit, faTrash, faRocket, faDownload, faEye } from "@fortaweso
 
 import { releasesAPI, Release, releaseVariables } from "../api/release";
 import { releaseTiposAPI, ReleaseTipoItem } from "../api/releaseTipos";
+import { contratosAPI, ContratoItem, tiposDeContratoActivos } from "../api/contratos";
+import { SeleccionMultiple } from "../components/ui/SeleccionMultiple";
 
 import Swal from "sweetalert2";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -33,6 +35,8 @@ interface ReleaseFormData {
   usaMembrete: boolean;
   /** Release custom: el cuerpo se escribe en Firma digital para cada trámite. */
   esCustom: boolean;
+  /** Los tipos de contrato a los que pertenece. Vacío = todos (ver `releaseEsDelTipo`). */
+  contratoIds: string[];
 }
 
 const EMPTY_FORM: ReleaseFormData = {
@@ -44,6 +48,7 @@ const EMPTY_FORM: ReleaseFormData = {
   isActive: true,
   usaMembrete: false,
   esCustom: false,
+  contratoIds: [],
 };
 
 /** El editor devuelve "<p></p>" cuando está vacío: chequeamos que haya texto real. */
@@ -100,6 +105,15 @@ export function ReleasesPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [previewing, setPreviewing] = useState(false);
 
+  // Los tipos de contrato, para asignar el release (como las plantillas de contrato).
+  const [contratos, setContratos] = useState<ContratoItem[]>([]);
+  useEffect(() => {
+    contratosAPI
+      .list()
+      .then(setContratos)
+      .catch(() => setContratos([]));
+  }, []);
+
   useEffect(() => {
     loadReleases();
     releaseTiposAPI
@@ -153,10 +167,27 @@ export function ReleasesPage() {
       isActive: release.isActive,
       usaMembrete: release.usaMembrete ?? false,
       esCustom: !!release.esCustom,
+      contratoIds: Array.isArray(release.contratoIds) ? release.contratoIds.map(String) : [],
     });
     setErrors({});
     setShowModal(true);
   };
+
+  // Abrir un release puntual cuando se llega con ?edit=<id> (desde Nuevo/Editar Contrato). Se limpia el
+  // parámetro para no reabrirlo.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId || releases.length === 0) return;
+    const r = releases.find((x) => x._id === editId);
+    if (r) {
+      openEdit(r);
+      const next = new URLSearchParams(searchParams);
+      next.delete("edit");
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [releases, searchParams]);
 
   const handleDelete = async (release: Release) => {
     const result = await Swal.fire({
@@ -266,6 +297,7 @@ export function ReleasesPage() {
         isActive: formData.isActive,
         usaMembrete: formData.usaMembrete,
         esCustom: formData.esCustom,
+        contratoIds: formData.contratoIds,
       };
 
       if (editingRelease) {
@@ -566,6 +598,32 @@ export function ReleasesPage() {
               {errors.releaseTipoId && <p className="text-sm text-red-500 mt-1">{errors.releaseTipoId}</p>}
               <p className="text-xs text-gray-500 mt-1">
                 Se administra en <strong>Releases</strong>.
+              </p>
+            </div>
+
+            {/*
+              LOS TIPOS DE CONTRATO DE ESTE RELEASE, como en las plantillas de contrato (16/10/2026). Un
+              contrato con releases asignados lleva SÓLO esos; uno sin ninguno lleva los que no están
+              asignados a nadie (como estaban todos antes). Ver `releasesDelTipo`.
+            */}
+            <div>
+              <SeleccionMultiple
+                label={<span className="block text-sm font-medium text-gray-700 dark:text-gray-300">Contratos</span>}
+                opciones={tiposDeContratoActivos(contratos)
+                  .concat(contratos.filter((c) => c.isActive === false && formData.contratoIds.includes(c._id)))
+                  .sort((a, b) => String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base" }))
+                  .map((c) => ({ id: c._id, nombre: c.isActive === false ? `${c.name} (inactivo)` : c.name }))}
+                valor={formData.contratoIds}
+                onChange={(ids) => setFormData((f) => ({ ...f, contratoIds: ids }))}
+                titulo="Contratos"
+                descripcion="los tipos de contrato que llevan este release"
+                placeholder={contratos.length ? "Elegí los tipos de contrato…" : "No hay contratos cargados"}
+                placeholderBusqueda="Buscar contrato..."
+                vacio="No hay contratos cargados: creá uno primero en Configuración → Contratos."
+                zIndex={95}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.contratoIds.length === 0 ? "Sin contratos elegidos, lo llevan los tipos de contrato que no tienen ningún release asignado." : "Este release va sólo con los tipos de contrato elegidos (y esos contratos llevan sólo sus releases asignados)."}
               </p>
             </div>
 

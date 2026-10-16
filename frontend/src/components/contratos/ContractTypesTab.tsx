@@ -20,7 +20,6 @@ import { MODALIDADES_OFRECIDAS } from './afipCompleteness';
 import { EstadoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
 import { estadoImpositivoElegido, estadoGeneraAltaTemprana, conImpositivoGarantizado } from './altaTemprana';
 import { usePuedeAbrir } from '../../hooks/usePuedeAbrir';
-import { LinkSiPuede } from '../LinkSiPuede';
 
 // Nomencladores de ARCA de los que salen los tres códigos. Se leen enteros (153 / 293 / 8 / 2): son
 // chicos y se cargan una vez al abrir la pestaña.
@@ -64,11 +63,9 @@ interface FormState {
   afipTipoServicio: string;
   afipModalidadLiquidacion: string;
   generaAlta: boolean;
-  /** «Plantilla de Release asignada»: ids de `Release`. Vacío = todos los activos. */
-  releaseIds: string[];
 }
 
-const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, modoFechas: 'periodo', requiereFirma: true, requiereFirmaRelease: true, requiereFirmaAlta: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true, releaseIds: [] };
+const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, modoFechas: 'periodo', requiereFirma: true, requiereFirmaRelease: true, requiereFirmaAlta: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
 
 const BadgeTiempoIndeterminado: React.FC = () => (
   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
@@ -101,17 +98,58 @@ const BadgeFirma: React.FC<{ activo: boolean; que?: string }> = ({ activo, que =
  * Botón y no enlace de texto: es la única acción de esa pantalla vacía, y un enlace embebido en un
  * párrafo de 11px no se lee como algo que se puede tocar.
  */
-const BotonIrAPlantillas: React.FC = () => (
-  <LinkSiPuede
-    to="/contratos-frame"
-    target="_blank"
-    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-800/60 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
-  >
-    <FontAwesomeIcon icon={faFilePdf} className="h-3 w-3" />
-    Plantillas | Contratos
-    <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-  </LinkSiPuede>
-);
+/*
+  ASIGNAR PLANTILLAS DESDE EL CONTRATO (16/10/2026): «Plantillas | Contratos» y «Plantillas | Releases»
+  con un botón «Asignar» que abre esta ventana. La asignación vive en la plantilla y en el release
+  (`contratoIds`); se escribe ahí al guardar el contrato (ver `aplicarAsignaciones`).
+*/
+const VentanaAsignar: React.FC<{
+  abierta: boolean;
+  onCerrar: () => void;
+  titulo: string;
+  opciones: { id: string; nombre: string; nota?: string }[];
+  valor: string[];
+  onChange: (ids: string[]) => void;
+  aviso?: React.ReactNode;
+  /** Elección única (releases: un contrato lleva UNO): elegir uno reemplaza al anterior. */
+  unico?: boolean;
+}> = ({ abierta, onCerrar, titulo, opciones, valor, onChange, aviso, unico = false }) => {
+  const [busqueda, setBusqueda] = useState('');
+  const q = busqueda.trim().toLowerCase();
+  const visibles = opciones.filter((o) => !q || o.nombre.toLowerCase().includes(q));
+  const alternar = (id: string) => onChange(valor.includes(id) ? valor.filter((x) => x !== id) : unico ? [id] : [...valor, id]);
+  return (
+    <Modal isOpen={abierta} onClose={onCerrar} title={titulo} subtitle={unico ? 'Elegí el que lleva este contrato' : 'Marcá las que lleva este contrato'} size="md" zIndex={95}>
+      <div className="space-y-3">
+        <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar…" className="input-field w-full" autoFocus />
+        {aviso}
+        {visibles.length === 0 ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400">No hay nada para elegir.</p>
+        ) : (
+          <ul className="max-h-[50vh] space-y-1 overflow-y-auto">
+            {visibles.map((o) => (
+              <li key={o.id}>
+                <label className="flex cursor-pointer items-start gap-2.5 rounded-lg px-2 py-2 hover:bg-gray-50 dark:hover:bg-gray-800">
+                  {/* Con `unico` es un radio que se puede destildar (tocar el elegido lo quita). */}
+                  <input type={unico ? 'radio' : 'checkbox'} checked={valor.includes(o.id)} onChange={() => alternar(o.id)} onClick={unico && valor.includes(o.id) ? () => alternar(o.id) : undefined} className={`mt-0.5 border-gray-300 text-violet-600 focus:ring-violet-500 ${unico ? '' : 'rounded'}`} />
+                  <span className="min-w-0">
+                    <span className="block text-sm text-gray-800 dark:text-gray-100">{o.nombre}</span>
+                    {o.nota && <span className="block text-[11px] text-gray-500 dark:text-gray-400">{o.nota}</span>}
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex justify-end">
+          <button type="button" onClick={onCerrar} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+            Listo
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
 
 /**
  * Chip con link a una Plantilla ("Plantillas | Contratos"): abre su editor en una pestaña nueva. Sin
@@ -180,6 +218,12 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   const [form, setForm] = useState<FormState>(FORM_VACIO);
   // Selección de Estados al abrir el modal: para diffear contra `form.estadoIds` al guardar.
   const [estadoIdsOriginal, setEstadoIdsOriginal] = useState<string[]>([]);
+  // Plantillas de contrato y releases asignados a este contrato (y cómo estaban al abrir, para el diff).
+  const [plantillasAsignadas, setPlantillasAsignadas] = useState<string[]>([]);
+  const [plantillasOriginal, setPlantillasOriginal] = useState<string[]>([]);
+  const [releasesAsignados, setReleasesAsignados] = useState<string[]>([]);
+  const [releasesOriginal, setReleasesOriginal] = useState<string[]>([]);
+  const [ventanaAsignar, setVentanaAsignar] = useState<'contratos' | 'releases' | null>(null);
 
   // Vista tarjetas/tabla, como el resto de los ABM: la tabla solo en pantallas grandes.
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
@@ -443,6 +487,11 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
     setDuplicando(contrato);
     setForm((f) => ({ ...f, name: `${contrato.name} (copia)`, isActive: true }));
     setEstadoIdsOriginal([]);
+    // La copia arranca sin plantillas: asignarlas a las dos sería cambiar las del contrato original.
+    setPlantillasAsignadas([]);
+    setPlantillasOriginal([]);
+    setReleasesAsignados([]);
+    setReleasesOriginal([]);
   };
 
   const abrirCrear = () => {
@@ -452,6 +501,10 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
     // por el que no pide nada dejaría pasar sin fricción justo al que sí la necesita.
     setForm({ ...FORM_VACIO, estadoIds: conImpositivoGarantizado(estados, []) });
     setEstadoIdsOriginal([]);
+    setPlantillasAsignadas([]);
+    setPlantillasOriginal([]);
+    setReleasesAsignados([]);
+    setReleasesOriginal([]);
     setShowModal(true);
   };
 
@@ -524,13 +577,19 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       // Si el contrato no tenía ninguno —quedaron así los de antes de esta regla— se muestra el
       // default elegido, a la vista y editable, en vez de dejar el formulario a medio llenar.
       estadoIds: conImpositivoGarantizado(estados, seleccionActual),
-      releaseIds: Array.isArray(contrato.data?.releaseIds) ? contrato.data.releaseIds.map(String) : [],
       afipModalidadContrato: contrato.data?.afipModalidadContrato || '',
       afipTipoServicio: contrato.data?.afipTipoServicio || '',
       afipModalidadLiquidacion: contrato.data?.afipModalidadLiquidacion || '',
       generaAlta: contrato.data?.generaAlta !== false,
     });
     setEstadoIdsOriginal(seleccionActual);
+    const misPlantillasIds = plantillas.filter((p) => plantillaEsDeContrato(p, contrato._id)).map((p) => String(p._id));
+    setPlantillasAsignadas(misPlantillasIds);
+    setPlantillasOriginal(misPlantillasIds);
+    // Sólo los asignados EXPLÍCITAMENTE: los que no eligieron ningún contrato valen para todos y se muestran aparte.
+    const misReleases = releases.filter((r) => (r.contratoIds || []).map(String).includes(contrato._id)).map((r) => r._id);
+    setReleasesAsignados(misReleases);
+    setReleasesOriginal(misReleases);
     setShowModal(true);
   };
 
@@ -565,13 +624,20 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
    * lo vincula a todas, destildarlo lo desvincula de todas (así lo pidió el usuario). Los Estados
    * globales (sin ningún tipo marcado) no se tocan: no hay forma de "restringirlos" desde acá.
    */
-  const sincronizarEstados = async (contratoId: string) => {
-    const misPlantillas = plantillaIdsDe(contratoId);
+  const sincronizarEstados = async (contratoId: string, plantillasFinales?: string[]) => {
+    const misPlantillas = plantillasFinales ?? plantillaIdsDe(contratoId);
     if (misPlantillas.length === 0) return;
 
     const antes = new Set(estadoIdsOriginal);
     const despues = new Set(form.estadoIds);
-    const cambiaron = estados.filter((e) => (e.data?.contratoFrameIds || []).length > 0 && antes.has(e._id) !== despues.has(e._id));
+    /* Los que cambiaron de tilde, y los tildados a los que les falta alguna plantilla recién asignada:
+       una plantilla nueva tiene que quedar con los mismos estados que las demás del contrato. */
+    const cambiaron = estados.filter((e) => {
+      const ids = (e.data?.contratoFrameIds || []).map(String);
+      if (ids.length === 0) return false;
+      if (antes.has(e._id) !== despues.has(e._id)) return true;
+      return despues.has(e._id) && misPlantillas.some((id) => !ids.includes(id));
+    });
 
     for (const estado of cambiaron) {
       const nuevosIds = new Set((estado.data?.contratoFrameIds || []).map(String));
@@ -611,6 +677,53 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   };
 
 
+  /*
+    ESCRIBE LAS ASIGNACIONES donde viven: en cada plantilla y en cada release (`contratoIds`), sumando o
+    sacando este contrato. Una plantilla no puede quedar sin contrato: si este era el único, no se le
+    saca (se avisa). Un release sí: sin contratos vuelve a valer para todos.
+  */
+  const aplicarAsignaciones = async (contratoId: string): Promise<string[]> => {
+    const errores: string[] = [];
+    const tocadas = new Set([...plantillasAsignadas, ...plantillasOriginal]);
+    for (const id of tocadas) {
+      const p = plantillas.find((x) => String(x._id) === id);
+      if (!p) continue;
+      const actuales = contratosDePlantilla(p);
+      const quiere = plantillasAsignadas.includes(id);
+      if (quiere === actuales.includes(contratoId)) continue;
+      const nuevos = quiere ? [...actuales, contratoId] : actuales.filter((c) => c !== contratoId);
+      if (nuevos.length === 0) {
+        errores.push(`«${p.name}» no se le sacó: es su único contrato (una plantilla tiene que tener al menos uno).`);
+        continue;
+      }
+      try {
+        await contratoFrameAPI.update(id, { contratoIds: nuevos } as any);
+      } catch (e: any) {
+        errores.push(`«${p.name}»: ${e?.response?.data?.error || 'no se pudo asignar'}`);
+      }
+    }
+    const tocados = new Set([...releasesAsignados, ...releasesOriginal]);
+    for (const id of tocados) {
+      const r = releases.find((x) => x._id === id);
+      if (!r) continue;
+      const actuales = (r.contratoIds || []).map(String);
+      const quiere = releasesAsignados.includes(id);
+      if (quiere === actuales.includes(contratoId)) continue;
+      const nuevos = quiere ? [...actuales, contratoId] : actuales.filter((c) => c !== contratoId);
+      try {
+        await releasesAPI.update(id, { name: r.name, version: r.version, contratoIds: nuevos });
+      } catch (e: any) {
+        errores.push(`«${r.name}»: ${e?.response?.data?.error || 'no se pudo asignar'}`);
+      }
+    }
+    try {
+      setReleases(await releasesAPI.getAll());
+    } catch {
+      /* se ve al recargar */
+    }
+    return errores;
+  };
+
   const guardar = async () => {
     setIntentoGuardar(true);
     /*
@@ -643,7 +756,6 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       requiereFirma: form.requiereFirma,
       requiereFirmaRelease: form.requiereFirmaRelease,
       requiereFirmaAlta: form.requiereFirmaAlta,
-      releaseIds: form.releaseIds,
       isActive: form.isActive,
       afipModalidadContrato: form.afipModalidadContrato.trim(),
       afipTipoServicio: form.afipTipoServicio.trim(),
@@ -659,14 +771,19 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
 
     try {
       setSaving(true);
+      const plantillasFinales = plantillasAsignadas;
+      let errores: string[] = [];
       if (editando) {
         await contratosAPI.update(editando._id, payload);
-        await sincronizarEstados(editando._id);
-        sweetAlert.success('Contrato actualizado', 'Los cambios se guardaron con éxito.');
+        errores = await aplicarAsignaciones(editando._id);
+        await sincronizarEstados(editando._id, plantillasFinales);
       } else {
-        await contratosAPI.create(payload);
-        sweetAlert.success(duplicando ? 'Contrato duplicado' : 'Contrato creado', 'Ya podés asignarle una Plantilla desde Plantillas | Contratos.');
+        const creado = await contratosAPI.create(payload);
+        errores = await aplicarAsignaciones(creado._id);
+        await sincronizarEstados(creado._id, plantillasFinales);
       }
+      if (errores.length > 0) sweetAlert.error('Se guardó el contrato, con avisos', errores.join('\n'));
+      else sweetAlert.success(editando ? 'Contrato actualizado' : duplicando ? 'Contrato duplicado' : 'Contrato creado', 'Los cambios se guardaron con éxito.');
       setShowModal(false);
       await cargar();
     } catch (e: any) {
@@ -1104,89 +1221,106 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
             </p>
           </div>
           <div className="space-y-5">
-            {(() => {
-              const misPlantillas = editando ? plantillasDe(editando._id) : [];
-              return (
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                    Plantilla{misPlantillas.length === 1 ? '' : 's'} de Contrato asignada{misPlantillas.length === 1 ? '' : 's'}
-                    {misPlantillas.length > 0 ? <span className="ml-1.5 normal-case tracking-normal text-gray-500 dark:text-gray-400">({misPlantillas.length})</span> : null}
-                  </label>
-                  {misPlantillas.length === 0 ? (
-                    <div className="space-y-2 ml-1">
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400">Todavía no tiene ninguna Plantilla asignada: creá una y elegí este Contrato.</p>
-                      <BotonIrAPlantillas />
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5">
-                      {misPlantillas.map((p) =>
-                        puedeAbrir('/contratos-frame') ? (
-                          <Link
-                            key={p._id}
-                            to={`/contratos-frame?edit=${p._id}`}
-                            target="_blank"
-                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-100 dark:border-violet-800/50 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
-                            title="Abrir la plantilla en Plantillas | Contratos"
-                          >
-                            <FontAwesomeIcon icon={faFilePdf} className="h-3 w-3" />
-                            {p.name}
-                            <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
-                          </Link>
-                        ) : (
-                          <span key={p._id} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border border-violet-100 dark:border-violet-800/50">
-                            <FontAwesomeIcon icon={faFilePdf} className="h-3 w-3" />
-                            {p.name}
-                          </span>
-                        ),
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
             {/*
-              PLANTILLA DE RELEASE ASIGNADA (16/10/2026): qué releases le tocan a este tipo de contrato al
-              generar y enviar a firmar. Sin ninguno marcado salen TODOS los activos, como antes de que
-              existiera esto: los tipos que nadie configure siguen igual.
+              PLANTILLAS | CONTRATOS y PLANTILLAS | RELEASES (16/10/2026): cada una con «Asignar», que abre
+              una ventana para elegir. Debajo, las asignadas como links. Se escriben al guardar el contrato
+              (ver `aplicarAsignaciones`).
             */}
             {(() => {
-              const activos = releases.filter((r) => r.isActive !== false || form.releaseIds.includes(r._id));
-              const alternar = (id: string) => setForm((p) => ({ ...p, releaseIds: p.releaseIds.includes(id) ? p.releaseIds.filter((x) => x !== id) : [...p.releaseIds, id] }));
-              return (
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                    Plantilla de Release asignada
-                    {form.releaseIds.length > 0 ? <span className="ml-1.5 normal-case tracking-normal text-gray-500 dark:text-gray-400">({form.releaseIds.length})</span> : null}
+              const chip = (key: string, nombre: string, href: string, general = false) => {
+                const clase = `inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border ${general ? 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700' : 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 border-violet-100 dark:border-violet-800/50'}`;
+                const contenido = (
+                  <>
+                    <FontAwesomeIcon icon={faFilePdf} className="h-3 w-3" />
+                    {nombre}
+                    {general && <span className="text-[10px] font-normal opacity-70">· sin contrato asignado</span>}
+                  </>
+                );
+                return puedeAbrir(href.split('?')[0]) ? (
+                  <Link key={key} to={href} target="_blank" className={`${clase} hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors`} title="Abrir en una pestaña nueva">
+                    {contenido}
+                    <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2.5 w-2.5" />
+                  </Link>
+                ) : (
+                  <span key={key} className={clase}>
+                    {contenido}
+                  </span>
+                );
+              };
+              const encabezado = (titulo: string, cantidad: number, abrir: () => void) => (
+                <div className="flex items-center gap-2 ml-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    {titulo}
+                    {cantidad > 0 ? <span className="ml-1.5 normal-case tracking-normal text-gray-500 dark:text-gray-400">({cantidad})</span> : null}
                   </label>
-                  {activos.length === 0 ? (
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">No hay releases cargados en Plantillas | Release.</p>
-                  ) : (
-                    <>
-                      <div className="flex flex-wrap gap-1.5">
-                        {activos.map((r) => {
-                          const elegido = form.releaseIds.includes(r._id);
-                          return (
-                            <button
-                              key={r._id}
-                              type="button"
-                              onClick={() => alternar(r._id)}
-                              aria-pressed={elegido}
-                              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition-colors ${elegido ? 'bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 border-violet-300 dark:border-violet-700' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-violet-300'}`}
-                            >
-                              <FontAwesomeIcon icon={faFilePdf} className="h-3 w-3" />
-                              {r.name}
-                              {r.isActive === false ? ' (inactivo)' : ''}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                        {form.releaseIds.length === 0 ? 'Ninguno marcado: a este tipo de contrato le tocan TODOS los releases activos. Marcá los que correspondan para que salgan sólo esos.' : 'Al generar y enviar a firmar, a este tipo de contrato le tocan sólo los marcados.'}
-                      </p>
-                    </>
-                  )}
+                  <button type="button" onClick={abrir} className="inline-flex items-center gap-1 rounded-md border border-blue-200 px-2 py-0.5 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/30">
+                    + Asignar
+                  </button>
                 </div>
+              );
+              const plantillasElegidas = plantillasAsignadas.map((id) => plantillas.find((p) => String(p._id) === id)).filter((p): p is ContratoFrameItem => !!p);
+              const releasesActivos = releases.filter((r) => r.isActive !== false);
+              const releasesElegidos = releasesAsignados.map((id) => releases.find((r) => r._id === id)).filter((r): r is Release => !!r);
+              // Los generales (sin contratos) sólo le tocan si no eligió ninguno: con uno elegido, va sólo ése.
+              const releasesGenerales = releasesAsignados.length > 0 ? [] : releasesActivos.filter((r) => !(r.contratoIds || []).length);
+              return (
+                <>
+                  <div className="space-y-1.5">
+                    {encabezado('Plantilla | Contrato', plantillasElegidas.length, () => setVentanaAsignar('contratos'))}
+                    {plantillasElegidas.length === 0 ? (
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Todavía no tiene plantilla de contrato. Asigná una con «Asignar».</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">{plantillasElegidas.map((p) => chip(String(p._id), p.name, `/contratos-frame?edit=${p._id}`))}</div>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    {encabezado('Plantilla | Release', releasesElegidos.length + releasesGenerales.length, () => setVentanaAsignar('releases'))}
+                    {releasesElegidos.length + releasesGenerales.length === 0 ? (
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Ningún release le toca a este contrato.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {releasesElegidos.map((r) => chip(r._id, r.name, `/releases?edit=${r._id}`))}
+                        {releasesGenerales.map((r) => chip(r._id, r.name, `/releases?edit=${r._id}`, true))}
+                      </div>
+                    )}
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                      {releasesElegidos.length > 0 ? 'Este contrato lleva sólo el release asignado.' : 'Sin releases asignados, lleva los que no están asignados a ningún contrato (en gris).'}
+                    </p>
+                  </div>
+                  <VentanaAsignar
+                    abierta={ventanaAsignar === 'contratos'}
+                    onCerrar={() => setVentanaAsignar(null)}
+                    titulo="Plantilla | Contrato"
+                    opciones={plantillas
+                      .filter((p) => p.isActive !== false || plantillasAsignadas.includes(String(p._id)))
+                      .map((p) => {
+                        const otros = contratosDePlantilla(p).filter((c) => c !== editando?._id);
+                        const nombresOtros = otros.map((c) => contratos.find((x) => x._id === c)?.name).filter(Boolean);
+                        return { id: String(p._id), nombre: p.name, nota: nombresOtros.length ? `También en: ${nombresOtros.join(', ')}` : undefined };
+                      })
+                      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))}
+                    valor={plantillasAsignadas}
+                    onChange={setPlantillasAsignadas}
+                    unico
+                  />
+                  <VentanaAsignar
+                    abierta={ventanaAsignar === 'releases'}
+                    onCerrar={() => setVentanaAsignar(null)}
+                    titulo="Plantilla | Release"
+                    opciones={releasesActivos
+                      .concat(releases.filter((r) => r.isActive === false && releasesAsignados.includes(r._id)))
+                      .map((r) => {
+                        const otros = (r.contratoIds || []).map(String).filter((c) => c !== editando?._id);
+                        const nombresOtros = otros.map((c) => contratos.find((x) => x._id === c)?.name).filter(Boolean);
+                        const nota = !(r.contratoIds || []).length ? 'Sin contratos asignados: lo llevan los contratos que no eligieron ningún release. Si lo marcás, pasa a ir sólo con los contratos elegidos.' : nombresOtros.length ? `También en: ${nombresOtros.join(', ')}` : undefined;
+                        return { id: r._id, nombre: r.name, nota };
+                      })
+                      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))}
+                    valor={releasesAsignados}
+                    onChange={setReleasesAsignados}
+                    unico
+                  />
+                </>
               );
             })()}
 

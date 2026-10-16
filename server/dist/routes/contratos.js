@@ -1,4 +1,3 @@
-import { Types } from "mongoose";
 import { Router } from "express";
 import { Contrato } from "../models/Contrato.js";
 import { ContratoFrame } from "../models/ContratoFrame.js";
@@ -98,12 +97,10 @@ const leerLimitesDeJornada = (horas, dias) => {
         return { horasPorJornada: null, diasPorSemana: null, error: "Los días por semana tienen que ser un número entero entre 1 y 7." };
     return { horasPorJornada: h, diasPorSemana: d };
 };
-/** Los releases asignados al tipo: ids únicos y válidos. Vacío = todos los activos (ver el modelo). */
-const leerReleaseIds = (v) => [...new Set((Array.isArray(v) ? v : []).map(String).filter((id) => Types.ObjectId.isValid(id)))];
 // POST / - crear
 router.post("/", authenticateToken, async (req, res) => {
     try {
-        const { nombre, cantidadJornadas, multiplicadorDiario, horasPorJornada, diasPorSemana, esTiempoIndeterminado, modoFechas, requiereFirma, requiereFirmaRelease, requiereFirmaAlta, releaseIds, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
+        const { nombre, cantidadJornadas, multiplicadorDiario, horasPorJornada, diasPorSemana, esTiempoIndeterminado, modoFechas, requiereFirma, requiereFirmaRelease, requiereFirmaAlta, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
         const limites = leerLimitesDeJornada(horasPorJornada, diasPorSemana);
         if (limites.error) {
             res.status(400).json({ error: limites.error });
@@ -131,7 +128,6 @@ router.post("/", authenticateToken, async (req, res) => {
                 requiereFirma: requiereFirma === undefined ? true : requiereFirma === "true" || requiereFirma === true,
                 requiereFirmaRelease: requiereFirmaRelease === undefined ? true : requiereFirmaRelease === "true" || requiereFirmaRelease === true,
                 requiereFirmaAlta: requiereFirmaAlta === undefined ? true : requiereFirmaAlta === "true" || requiereFirmaAlta === true,
-                releaseIds: leerReleaseIds(releaseIds),
                 afipModalidadContrato: afipModalidadContrato != null ? String(afipModalidadContrato).trim() : undefined,
                 afipTipoServicio: afipTipoServicio != null ? String(afipTipoServicio).trim() : undefined,
                 afipActividad: afipActividad != null ? String(afipActividad).trim() : undefined,
@@ -155,7 +151,7 @@ router.post("/", authenticateToken, async (req, res) => {
 // PUT /:id - actualizar
 router.put("/:id", authenticateToken, async (req, res) => {
     try {
-        const { nombre, cantidadJornadas, multiplicadorDiario, horasPorJornada, diasPorSemana, esTiempoIndeterminado, modoFechas, requiereFirma, requiereFirmaRelease, requiereFirmaAlta, releaseIds, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
+        const { nombre, cantidadJornadas, multiplicadorDiario, horasPorJornada, diasPorSemana, esTiempoIndeterminado, modoFechas, requiereFirma, requiereFirmaRelease, requiereFirmaAlta, isActive, afipModalidadContrato, afipTipoServicio, afipActividad, afipModalidadLiquidacion, generaAlta } = req.body;
         const limites = leerLimitesDeJornada(horasPorJornada, diasPorSemana);
         if (limites.error) {
             res.status(400).json({ error: limites.error });
@@ -197,8 +193,6 @@ router.put("/:id", authenticateToken, async (req, res) => {
             item.data.requiereFirmaRelease = requiereFirmaRelease === "true" || requiereFirmaRelease === true;
         if (requiereFirmaAlta !== undefined)
             item.data.requiereFirmaAlta = requiereFirmaAlta === "true" || requiereFirmaAlta === true;
-        if (releaseIds !== undefined)
-            item.data.releaseIds = leerReleaseIds(releaseIds);
         if (generaAlta !== undefined)
             item.data.generaAlta = generaAlta === "true" || generaAlta === true;
         if (afipModalidadContrato !== undefined)

@@ -121,11 +121,12 @@ export const ContractDocsColumns: React.FC<{
   const template = findTemplate(asContract, contratoFrames);
   const canDownloadContract = templateHasContent(template);
   /*
-    Sólo los releases que le tocan a este tipo de contrato («Plantilla de Release asignada»). El tipo
-    sale del principal de su plantilla, que es el que trae poblado; sin releases elegidos, todos.
+    Sólo los releases que le tocan a este tipo de contrato (`Release.contratoIds`): el tipo del
+    contrato si lo guarda y, si no, el principal de su plantilla. Los releases sin tipo, a todos.
   */
   const principal = template?.contratoId;
-  const releasesDelContrato = releasesDelTipo(activeReleases, typeof principal === "object" && principal ? (principal as { data?: { releaseIds?: string[] } }) : null);
+  const tipoId = (record as { tipoContratoId?: string; contrato_id?: string }).tipoContratoId || (record as { contrato_id?: string }).contrato_id || (typeof principal === "object" && principal ? String((principal as { _id?: string })._id || "") : typeof principal === "string" ? principal : "");
+  const releasesDelContrato = releasesDelTipo(activeReleases, tipoId ? { _id: tipoId } : null);
   const tipoContrato = record.nombre_contrato || template?.data?.nombre || template?.name || "Contrato";
   const estadoImpositivo = estadoImpositivoDelContrato(asContract, contratoFrames, allEstados);
   const tituloAlta = estadoImpositivo?.data?.etiquetaSecundaria?.trim() || (estadoImpositivo?.data?.tipoImpositivo === "alta_temprana_afip" ? "Alta ARCA" : "Documento de Servicios");

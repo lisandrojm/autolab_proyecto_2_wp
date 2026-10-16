@@ -37,6 +37,7 @@ const releaseSchema = new Schema({
         default: false,
     },
     esCustom: { type: Boolean, default: false },
+    contratoIds: { type: [String], default: undefined },
 }, { timestamps: true, collection: "release" });
 releaseSchema.index({ tenantId: 1, isActive: 1 });
 export const Release = mongoose.model("Release", releaseSchema);
