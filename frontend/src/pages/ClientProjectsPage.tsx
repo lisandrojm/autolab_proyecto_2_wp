@@ -23,7 +23,7 @@ import { SedesDelProyecto } from '../components/proyectos/SedesDelProyecto';
 import { CompanyMultiSelect } from '../components/CompanyMultiSelect';
 import { sedesDelForm, nombresDeSedes, sedesParaElForm } from '../utils/sedesProyecto';
 import { getImageUrl } from '../utils/imageHelpers';
-import { badgesDeValoracion, useValoraciones } from '../components/proyectos/ChipValoracion';
+import { badgesDeValoracion, ChipValoracionDelProyecto, idValoracionDe, useValoraciones } from '../components/proyectos/ChipValoracion';
 import { useThemeStore } from '../stores/themeStore';
 import { CampoValoracion, cambiosDeValoracion, valorInicialValoracion } from '../components/proyectos/CampoValoracion';
 import { ValoracionesPorRol } from '../components/proyectos/ValoracionesPorRol';
@@ -849,107 +849,113 @@ export const ClientProjectsPage: React.FC = () => {
         <LoadingSpinner message="Cargando proyectos..." />
       ) : effectiveViewMode === 'table' ? (
         <div className="mt-6 overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/50 shadow-sm">
-          <table className="w-full text-left text-sm whitespace-nowrap border-collapse">
+          {/*
+            LAS MISMAS COLUMNAS, EN EL MISMO ORDEN, QUE ADMIN › PROYECTOS (pedido del 16/10/2026): es el mismo
+            listado acotado a un cliente, y tiene que leerse igual. Si cambia una, cambian las dos
+            (`ProjectsPage.tsx`).
+          */}
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-800">
-                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Proyecto</th>
-                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sede</th>
-                {/* Pegado a Sede: los dos contestan «dónde se imputa esto», y separarlos obliga a
-                    cruzar la fila entera para leer un solo concepto. */}
-                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Centro de Costo</th>
-                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Responsable</th>
-                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Estado</th>
-                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Áreas y Turnos</th>
-                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Fechas</th>
-                <th className="py-4 px-6 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-right">Acciones</th>
+              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Centro de Costo</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyecto</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valoración</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sede/s</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Coordinador</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creado</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
               {visibleProjects.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     No se encontraron proyectos
                   </td>
                 </tr>
               ) : (
-                visibleProjects.map((p) => (
-                  <tr key={p._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors group">
-                    <td className="py-4 px-6 font-medium text-gray-900 dark:text-gray-100 cursor-pointer" onClick={() => navigate(`/projects/${p._id}`)}>
-                      {p.name}
-                    </td>
-                    <td className="py-4 px-6 text-gray-600 dark:text-gray-400">{nombresDeSedes(p).join(', ') || '—'}</td>
-                    <td className="py-4 px-6">
-                      {/*
-                        MISMO BADGE VIOLETA QUE LA FICHA DEL PROYECTO, a propósito: es el mismo dato y
-                        tiene que reconocerse igual desde el listado y desde adentro.
-
-                        El fallback a «ID: n» no es decorativo: un proyecto puede tener un
-                        `centroCostoId` que ya no resuelve contra el catálogo —porque lo borraron o
-                        cambió de id—, y mostrar «—» ahí diría que no tiene centro de costo cuando lo
-                        que pasa es que apunta a uno que no está. Son dos problemas distintos.
-                      */}
-                      {(() => {
-                        const cc = nombreCentroCosto(p);
-                        return cc ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50">{cc}</span>
+                visibleProjects.map((p) => {
+                  /* «ID: n» y no un guion cuando el id no resuelve: distingue «no tiene centro de costo» de
+                     «apunta a uno que no está en el catálogo». */
+                  const centroCosto = nombreCentroCosto(p);
+                  const statusColors: Record<string, string> = {
+                    active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                    on_hold: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                    completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                    archived: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
+                  };
+                  const statusLabel: Record<string, string> = { active: 'Activo', on_hold: 'En Espera', completed: 'Completado', archived: 'Archivado' };
+                  return (
+                    <tr key={p._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => navigate(`/projects/${p._id}`)}>
+                      <td className="px-6 py-4">
+                        {centroCosto ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 whitespace-nowrap">{centroCosto}</span>
                         ) : (
-                          <span className="text-gray-400">—</span>
-                        );
-                      })()}
-                    </td>
-                    <td className="py-4 px-6 text-gray-600 dark:text-gray-400">
-                      {p.metadataResolutions?.responsable ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[9px] font-bold">{(p.metadataResolutions.responsable.firstName || 'U').charAt(0).toUpperCase()}</div>
-                          <span>{p.metadataResolutions.responsable.firstName}</span>
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center shrink-0">
+                            <FontAwesomeIcon icon={faBriefcase} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{p.name}</span>
+                            <span className="text-xs text-gray-500 truncate max-w-[200px]">{p.description || 'Sin descripción'}</span>
+                          </div>
                         </div>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className={`inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${p.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : p.status === 'on_hold' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : p.status === 'completed' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>{p.status === 'active' ? 'Activo' : p.status === 'on_hold' ? 'En Espera' : p.status === 'completed' ? 'Completado' : 'Archivado'}</span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex flex-wrap gap-2 max-w-[250px]">
-                        {(p.areasConfig || []).map((ac: any, i: number) => (
-                          <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-100 dark:border-gray-700">
-                            {typeof ac.areaId === 'object' ? ac.areaId.name : '...'}
-                          </span>
-                        ))}
-                        {(!p.areasConfig || p.areasConfig.length === 0) && <span className="text-gray-400">—</span>}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 text-xs text-gray-500 dark:text-gray-400">
-                      <div>{p.startDate ? fechaDeCalendario(p.startDate)?.toLocaleDateString() : '—'}</div>
-                      <div className="text-[10px] text-gray-400">a {p.endDate ? fechaDeCalendario(p.endDate)?.toLocaleDateString() : '—'}</div>
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenEdit(p);
-                          }}
-                          className="p-1.5 text-gray-400 hover:text-gray-300 rounded transition-colors"
-                          title="Editar"
-                        >
-                          <FontAwesomeIcon icon={faEdit} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteProject(p._id);
-                          }}
-                          className="p-1.5 text-gray-400 hover:text-gray-300 rounded transition-colors"
-                          title="Eliminar"
-                        >
-                          <FontAwesomeIcon icon={faTrash} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300">{client?.name || 'Cliente'}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${statusColors[p.status] || statusColors.archived}`}>{statusLabel[p.status] || p.status}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {idValoracionDe(p.valoracionId) ? (
+                          <ChipValoracionDelProyecto project={p} valoraciones={valoraciones} className="py-1 rounded-md" />
+                        ) : (
+                          <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">{nombresDeSedes(p).join(', ') || '-'}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{p.metadataResolutions?.responsable ? `${p.metadataResolutions.responsable.firstName} ${p.metadataResolutions.responsable.lastName || ''}` : p.metadata?.responsableId ? `ID: ${p.metadata.responsableId}` : '-'}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-500">{new Date(p.createdAt).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEdit(p);
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-gray-300 rounded transition-colors"
+                            title="Editar"
+                          >
+                            <FontAwesomeIcon icon={faEdit} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteProject(p._id);
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-gray-300 rounded transition-colors"
+                            title="Eliminar"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

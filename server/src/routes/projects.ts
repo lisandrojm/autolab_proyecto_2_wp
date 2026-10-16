@@ -573,7 +573,9 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
     if (responsableIds.size > 0) {
       const responsables = await User.find({
         tenantId: req.tenantObjectId,
-        "metadata.id": { $in: Array.from(responsableIds) }
+        // Número Y texto: hay usuarios con `metadata.id` guardado como "27" (importados), y con sólo el
+        // número no se encontraban — el listado mostraba «ID: 27» en vez del coordinador.
+        "metadata.id": { $in: [...Array.from(responsableIds), ...Array.from(responsableIds).map(String)] }
       }).select("firstName lastName email metadata").lean();
 
       const respMap = new Map();
@@ -1121,7 +1123,7 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
 
       const [responsable, cliente, sedes, centroCosto, userCount] = await Promise.all([
         responsableId
-          ? User.findOne({ tenantId: req.tenantObjectId, "metadata.id": responsableId })
+          ? User.findOne({ tenantId: req.tenantObjectId, "metadata.id": { $in: [Number(responsableId), String(responsableId)] } })
               .select("firstName lastName email")
               .lean()
           : null,
