@@ -2325,6 +2325,17 @@ export const ContractBulkAfipTab: React.FC<{
             El eje X SIGUE siendo de este contenedor, y eso no cambió: las tres primeras columnas se
             quedan fijas con `sticky left-*`, que necesita justamente este scrollport horizontal.
           */}
+          {/* Cuántos hay tildados y cómo soltarlos, como en Solicitudes (pedido del 16/10/2026). */}
+          {selected.size > 0 && (
+            <div className="flex flex-wrap items-center gap-3 border-b border-blue-200 bg-blue-50 px-4 py-2.5 text-sm dark:border-blue-900 dark:bg-blue-950/40">
+              <span className="font-semibold text-blue-900 dark:text-blue-100">
+                {selected.size} {selected.size === 1 ? "seleccionado" : "seleccionados"}
+              </span>
+              <button type="button" onClick={() => setSelected(new Set())} className="font-semibold text-gray-600 hover:underline dark:text-gray-300">
+                Quitar selección
+              </button>
+            </div>
+          )}
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-separate border-spacing-0 min-w-[1650px]">
               <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
@@ -3939,6 +3950,17 @@ export const ContractBulkFirmaTab: React.FC<{
             El eje X SIGUE siendo de este contenedor, y eso no cambió: las tres primeras columnas se
             quedan fijas con `sticky left-*`, que necesita justamente este scrollport horizontal.
           */}
+          {/* Cuántos hay tildados y cómo soltarlos, como en Solicitudes (pedido del 16/10/2026). */}
+          {selected.size > 0 && (
+            <div className="flex flex-wrap items-center gap-3 border-b border-blue-200 bg-blue-50 px-4 py-2.5 text-sm dark:border-blue-900 dark:bg-blue-950/40">
+              <span className="font-semibold text-blue-900 dark:text-blue-100">
+                {selected.size} {selected.size === 1 ? "seleccionado" : "seleccionados"}
+              </span>
+              <button type="button" onClick={() => setSelected(new Set())} className="font-semibold text-gray-600 hover:underline dark:text-gray-300">
+                Quitar selección
+              </button>
+            </div>
+          )}
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-separate border-spacing-0 min-w-[1600px]">
               <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">

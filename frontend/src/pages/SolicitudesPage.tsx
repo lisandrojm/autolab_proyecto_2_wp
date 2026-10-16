@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserPlus, faChevronLeft, faChevronRight, faTrash, faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
@@ -295,7 +295,8 @@ export const SolicitudesPage: React.FC = () => {
   const hayFiltros = !!(busqueda || filtroEstado || filtroCliente || filtroProyecto);
 
   useEffect(() => {
-    setSeleccion(new Map());
+    soltarSeleccion();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busqueda, filtroEstado, filtroCliente, filtroProyecto]);
 
   const cambiarSeleccion = (ids: Set<string>) =>
@@ -308,18 +309,41 @@ export const SolicitudesPage: React.FC = () => {
       return nueva;
     });
 
-  /** Todas las que coinciden con los filtros, de todas las páginas. */
+  /*
+    TODAS LAS QUE COINCIDEN CON LOS FILTROS, de todas las páginas.
+
+    Antes se pedían de a 100 y EN SERIE, y cada página arma en el server la obra social de cada
+    aprobada (contratos, categorías, convenios): con 162 eran dos vueltas lentas una detrás de otra
+    sin que la pantalla cambiara. Ahora las de la página se marcan en el acto y el resto llega en UN
+    pedido (con `limit` = el total); mientras tanto la barra dice «Seleccionando…».
+  */
+  const [seleccionandoTodas, setSeleccionandoTodas] = useState(false);
+  // Sube al soltar la selección o filtrar: la respuesta de un «todas» anterior ya no vale y se descarta.
+  const vueltaSeleccion = useRef(0);
+  const soltarSeleccion = () => {
+    vueltaSeleccion.current++;
+    setSeleccionandoTodas(false);
+    setSeleccion(new Map());
+  };
   const seleccionarTodas = async () => {
+    const vuelta = ++vueltaSeleccion.current;
+    const enPagina = new Map(seleccion);
+    for (const s of solicitudes) enPagina.set(s._id, elegidaDe(s));
+    setSeleccion(enPagina);
+    if (enPagina.size >= total) return;
+    setSeleccionandoTodas(true);
     try {
-      const nueva = new Map(seleccion);
-      for (let pagina = 1, paginas = 1; pagina <= paginas; pagina++) {
-        const resp = await usersAPI.listSolicitudesOverview({ search: busqueda || undefined, estado: filtroEstado || undefined, clientId: filtroCliente || undefined, projectId: filtroProyecto || undefined, page: pagina, limit: 100 });
-        paginas = resp.totalPages;
+      const resp = await usersAPI.listSolicitudesOverview({ search: busqueda || undefined, estado: filtroEstado || undefined, clientId: filtroCliente || undefined, projectId: filtroProyecto || undefined, page: 1, limit: Math.max(total, 1) });
+      if (vuelta !== vueltaSeleccion.current) return;
+      setSeleccion((antes) => {
+        const nueva = new Map(antes);
         for (const r of resp.rows) nueva.set(r._id, elegidaDe(r));
-      }
-      setSeleccion(nueva);
+        return nueva;
+      });
     } catch {
-      sweetAlert.error("Error", "No se pudieron seleccionar todas.");
+      if (vuelta === vueltaSeleccion.current) sweetAlert.error("Error", "No se pudieron seleccionar todas.");
+    } finally {
+      if (vuelta === vueltaSeleccion.current) setSeleccionandoTodas(false);
     }
   };
 
@@ -601,12 +625,19 @@ export const SolicitudesPage: React.FC = () => {
               <span className="font-semibold text-blue-900 dark:text-blue-100">
                 {seleccion.size} {seleccion.size === 1 ? "seleccionada" : "seleccionadas"}
               </span>
-              {seleccion.size < total && (
-                <button type="button" onClick={() => void seleccionarTodas()} className="font-semibold text-blue-700 hover:underline dark:text-blue-300">
-                  Seleccionar las {total}
-                </button>
+              {seleccionandoTodas ? (
+                <span className="inline-flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+                  Seleccionando las {total}…
+                </span>
+              ) : (
+                seleccion.size < total && (
+                  <button type="button" onClick={() => void seleccionarTodas()} className="font-semibold text-blue-700 hover:underline dark:text-blue-300">
+                    Seleccionar las {total}
+                  </button>
+                )
               )}
-              <button type="button" onClick={() => setSeleccion(new Map())} className="font-semibold text-gray-600 hover:underline dark:text-gray-300">
+              <button type="button" onClick={soltarSeleccion} className="font-semibold text-gray-600 hover:underline dark:text-gray-300">
                 Quitar selección
               </button>
               {/* Aprobar y rechazar valen para las PENDIENTES de la selección; las demás se ignoran. */}
