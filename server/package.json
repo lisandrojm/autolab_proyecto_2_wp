@@ -166,7 +166,6 @@
     "firmante-email": "dotenv -e .env.production -- tsx src/scripts/variableEmailFirmante.ts",
     "tipos-contrato:arca:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/cargarCodigosArcaTipoContrato.ts",
     "tipos-contrato:arca": "dotenv -e .env.production -- tsx src/scripts/cargarCodigosArcaTipoContrato.ts",
-    "plantillas-custom:crear:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/crearPlantillasCustom.ts",
     "plantillas-custom:crear": "dotenv -e .env.production -- tsx src/scripts/crearPlantillasCustom.ts",
     "test:variables-plantilla": "tsx --test src/utils/variablesPlantilla.test.ts",
     "plantillas:auditar": "dotenv -e .env.production -- tsx src/scripts/auditarPlantillas.ts",

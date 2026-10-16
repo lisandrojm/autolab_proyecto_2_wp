@@ -18,6 +18,8 @@ export interface Release {
   esCustom?: boolean;
   /** Los tipos de contrato a los que pertenece (`Contrato._id`). Vacío = todos (ver `releasesDelTipo`). */
   contratoIds?: string[];
+  /** Del sistema («Contrato custom» / «Release custom» y sus tipos): no se puede eliminar. */
+  delSistema?: boolean;
   createdAt: string;
   updatedAt: string;
 }

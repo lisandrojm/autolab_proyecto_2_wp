@@ -228,15 +228,20 @@ export const ReleaseTiposPage: React.FC = () => {
                     title: "Editar",
                     variant: "default",
                   },
-                  {
-                    icon: faTrash,
-                    onClick: (e) => {
-                      e.stopPropagation();
-                      eliminar(tipo);
-                    },
-                    title: "Eliminar",
-                    variant: "default",
-                  },
+                  // El del sistema («Release custom») no se elimina.
+                  ...(tipo.delSistema
+                    ? []
+                    : [
+                        {
+                          icon: faTrash,
+                          onClick: (e: React.MouseEvent) => {
+                            e.stopPropagation();
+                            eliminar(tipo);
+                          },
+                          title: "Eliminar",
+                          variant: "default" as const,
+                        },
+                      ]),
                 ],
               }}
             />
@@ -274,9 +279,9 @@ export const ReleaseTiposPage: React.FC = () => {
                         <button onClick={() => abrirEditar(tipo)} className="p-2 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Editar tipo de release">
                           <FontAwesomeIcon icon={faEdit} />
                         </button>
-                        <button onClick={() => eliminar(tipo)} className="p-2 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Eliminar tipo de release">
+                        {!tipo.delSistema && (<button onClick={() => eliminar(tipo)} className="p-2 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Eliminar tipo de release">
                           <FontAwesomeIcon icon={faTrash} />
-                        </button>
+                        </button>)}
                       </div>
                     </td>
                   </tr>

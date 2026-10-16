@@ -11,6 +11,11 @@ export interface IReleaseTipo extends Document {
     tenantId: Types.ObjectId;
     name: string;
     isActive: boolean;
+    /**
+     * DEL SISTEMA: «Contrato custom» / «Release custom» (y sus tipos). Los crea el server solo (ver
+     * `services/plantillasCustomSistema.ts`) y no se pueden eliminar.
+     */
+    delSistema?: boolean;
     /** Si los Release de este tipo se envían a firmar (p. ej. por Dropbox Sign). */
     requiereFirma: boolean;
     createdAt: Date;

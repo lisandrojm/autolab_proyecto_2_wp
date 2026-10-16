@@ -242,6 +242,9 @@ export interface CategoriaSatItem {
 export interface ContratoItem {
   _id: string;
   name: string;
+  /** Del sistema («Contrato custom» / «Release custom» y sus tipos): no se puede eliminar. */
+  delSistema?: boolean;
+
   data: {
     cantidadJornadas: number;
     multiplicadorDiario: number;

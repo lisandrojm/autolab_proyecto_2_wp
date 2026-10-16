@@ -422,14 +422,19 @@ export function ReleasesPage() {
                           openEdit(release);
                         },
                       },
-                      {
-                        icon: faTrash,
-                        title: "Eliminar",
-                        onClick: (e: any) => {
-                          e.stopPropagation();
-                          handleDelete(release);
-                        },
-                      },
+                      // El del sistema («Release custom») no se elimina.
+                      ...(release.delSistema
+                        ? []
+                        : [
+                            {
+                              icon: faTrash,
+                              title: "Eliminar",
+                              onClick: (e: any) => {
+                                e.stopPropagation();
+                                handleDelete(release);
+                              },
+                            },
+                          ]),
                     ],
                   }}
                 >
@@ -508,9 +513,9 @@ export function ReleasesPage() {
                           <button onClick={() => openEdit(release)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Editar">
                             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                           </button>
-                          <button onClick={() => handleDelete(release)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Eliminar">
+                          {!release.delSistema && (<button onClick={() => handleDelete(release)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Eliminar">
                             <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                          </button>
+                          </button>)}
                         </div>
                       </td>
                     </tr>
@@ -639,7 +644,7 @@ export function ReleasesPage() {
 
             <MembreteToggle checked={formData.usaMembrete} onChange={(v) => setFormData({ ...formData, usaMembrete: v })} />
 
-            <TildePlantillaCustom checked={formData.esCustom} onChange={(v) => setFormData((f) => ({ ...f, esCustom: v }))} />
+            <TildePlantillaCustom checked={formData.esCustom} onChange={(v) => setFormData((f) => ({ ...f, esCustom: v }))} delSistema={!!editingRelease?.delSistema} />
 
             {/* Contenido del release */}
             <div>

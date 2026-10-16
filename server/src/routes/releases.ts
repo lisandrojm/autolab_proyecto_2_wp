@@ -13,6 +13,7 @@ import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
 import { buildDocPdf, getDummyDocVariables, htmlHasText, empresaToMembrete } from "../utils/documentPdf.js";
 import { PLACEHOLDER_RELEASE_CUSTOM, textoCustomDeRelease, textoCustomUsable } from "../compartido/textoCustom.js";
 
+import { asegurarPlantillasCustomSinRomper, MENSAJE_DEL_SISTEMA } from "../services/plantillasCustomSistema.js";
 const router = Router();
 
 // El release se redacta en la plataforma (editor con formato) y se guarda como HTML en `content`.
@@ -67,6 +68,7 @@ const sendPdf = (res: any, buffer: Buffer, baseName: string) => {
 
 router.get("/", authenticateToken, requireTenant, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
+    await asegurarPlantillasCustomSinRomper(req.tenantObjectId);
     const releases = await Release.find({
       tenantId: req.tenantObjectId,
     })
@@ -294,7 +296,8 @@ router.put("/:id", authenticateToken, requireTenant, async (req: AuthenticatedRe
     release.name = validatedData.name;
     release.version = validatedData.version;
     if (validatedData.description !== undefined) release.description = validatedData.description;
-    if (validatedData.esCustom !== undefined) release.esCustom = validatedData.esCustom;
+    // El del sistema es custom siempre: sin eso deja de ser «Release custom».
+    if (validatedData.esCustom !== undefined && !release.delSistema) release.esCustom = validatedData.esCustom;
     if (release.esCustom) release.content = PLACEHOLDER_RELEASE_CUSTOM;
     else if (validatedData.content !== undefined) release.content = htmlHasText(validatedData.content) ? validatedData.content : "";
     if (validatedData.isActive !== undefined) release.isActive = validatedData.isActive;
@@ -322,6 +325,10 @@ router.delete("/:id", authenticateToken, requireTenant, async (req: Authenticate
 
     if (!release) {
       res.status(404).json({ error: "Release no encontrado" });
+      return;
+    }
+    if ((release as any).delSistema) {
+      res.status(409).json({ error: MENSAJE_DEL_SISTEMA });
       return;
     }
 

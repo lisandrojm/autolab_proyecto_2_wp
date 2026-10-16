@@ -40,6 +40,11 @@ export interface IContratoFrame extends Document {
      * `compartido/textoCustom.ts`.
      */
     esCustom: boolean;
+    /**
+     * DEL SISTEMA: «Contrato custom» / «Release custom» (y sus tipos). Los crea el server solo (ver
+     * `services/plantillasCustomSistema.ts`) y no se pueden eliminar.
+     */
+    delSistema?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

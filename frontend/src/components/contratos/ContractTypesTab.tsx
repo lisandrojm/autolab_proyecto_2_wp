@@ -1003,7 +1003,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                         <div className="flex items-center justify-end gap-1">
                           <CardFooterAction icon={faCopy} title="Duplicar contrato" onClick={() => abrirDuplicar(contrato)} />
                           <CardFooterAction icon={faEdit} title="Editar contrato" onClick={() => abrirEditar(contrato)} />
-                          <CardFooterAction icon={faTrash} title="Eliminar contrato" onClick={() => eliminar(contrato)} />
+                          {!contrato.delSistema && <CardFooterAction icon={faTrash} title="Eliminar contrato" onClick={() => eliminar(contrato)} />}
                         </div>
                       </td>
                     </tr>
@@ -1139,7 +1139,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                   <div className="flex items-center gap-1">
                     <CardFooterAction icon={faCopy} title="Duplicar contrato" onClick={() => abrirDuplicar(contrato)} />
                     <CardFooterAction icon={faEdit} title="Editar contrato" onClick={() => abrirEditar(contrato)} />
-                    <CardFooterAction icon={faTrash} title="Eliminar contrato" onClick={() => eliminar(contrato)} />
+                    {!contrato.delSistema && <CardFooterAction icon={faTrash} title="Eliminar contrato" onClick={() => eliminar(contrato)} />}
                   </div>
                 </div>
               </div>

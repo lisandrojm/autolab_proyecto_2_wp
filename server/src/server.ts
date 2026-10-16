@@ -19,6 +19,7 @@ import { fileURLToPath } from "url";
 import { connectDB } from "./config/db.js";
 import { PlantillaEquipo } from "./models/PlantillaEquipo.js";
 import { seedOnStart, ensureSuperAdmin } from "./scripts/seedOnStart.js";
+import { asegurarPlantillasCustomEnTodos } from "./services/plantillasCustomSistema.js";
 import { ensureAllTenantsHaveDefaultRoles } from "./services/roleInitService.js";
 import { sembrarPaisesResidenciaUnaVez } from "./services/paisesResidenciaSeed.js";
 import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.js";
@@ -472,6 +473,12 @@ connectDB()
         console.error("❌ Failed to initialize sincronizacion-relaciones scheduler:", error);
       }
     }
+
+    // «Contrato custom» y «Release custom» son del sistema: se crean solos para cada tenant (en
+    // segundo plano: no demoran el arranque). Ver `services/plantillasCustomSistema.ts`.
+    // Una copia local contra la base real (SIN_TAREAS_PROGRAMADAS) no escribe al arrancar: igual se
+    // aseguran al abrir las pantallas.
+    if (process.env.SIN_TAREAS_PROGRAMADAS !== "true") void asegurarPlantillasCustomEnTodos().catch((error) => console.error("❌ plantillas custom:", error));
 
     if (String(env.SEED_ON_START) === "true") {
       try {

@@ -41,6 +41,11 @@ export interface IContratoFrame extends Document {
    * `compartido/textoCustom.ts`.
    */
   esCustom: boolean;
+  /**
+   * DEL SISTEMA: «Contrato custom» / «Release custom» (y sus tipos). Los crea el server solo (ver
+   * `services/plantillasCustomSistema.ts`) y no se pueden eliminar.
+   */
+  delSistema?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -66,6 +71,7 @@ const contratoFrameSchema = new Schema<IContratoFrame>(
     usaMembrete: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
     esCustom: { type: Boolean, default: false },
+    delSistema: { type: Boolean, default: false },
   },
   {
     timestamps: true,

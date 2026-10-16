@@ -18,6 +18,11 @@ export interface IRelease extends Document {
      */
     esCustom: boolean;
     /**
+     * DEL SISTEMA: «Contrato custom» / «Release custom» (y sus tipos). Los crea el server solo (ver
+     * `services/plantillasCustomSistema.ts`) y no se pueden eliminar.
+     */
+    delSistema?: boolean;
+    /**
      * LOS TIPOS DE CONTRATO A LOS QUE PERTENECE (`Contrato._id`), como `ContratoFrame.contratoIds`
      * (16/10/2026). VACÍO o ausente = vale para TODOS los tipos, como antes de existir el campo: los
      * releases que nadie asigne siguen saliendo para todos los contratos.

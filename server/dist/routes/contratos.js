@@ -2,6 +2,7 @@ import { Router } from "express";
 import { Contrato } from "../models/Contrato.js";
 import { ContratoFrame } from "../models/ContratoFrame.js";
 import { authenticateToken } from "../middleware/auth.js";
+import { asegurarPlantillasCustomSinRomper, MENSAJE_DEL_SISTEMA } from "../services/plantillasCustomSistema.js";
 const router = Router();
 const parseNum = (val) => {
     if (val === undefined || val === null || val === "")
@@ -69,8 +70,9 @@ async function ensureContratoIdsBackfilled() {
     await ContratoFrame.updateMany({ contratoId: { $exists: true, $ne: null }, contratoIds: { $exists: false } }, [{ $set: { contratoIds: ["$contratoId"] } }]);
 }
 // GET / - listar
-router.get("/", authenticateToken, async (_req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
     try {
+        await asegurarPlantillasCustomSinRomper(req.tenantObjectId);
         await ensureContratosBackfilled();
         const items = await Contrato.find().sort({ name: 1 }).lean();
         res.json(items);
@@ -230,6 +232,10 @@ router.put("/:id", authenticateToken, async (req, res) => {
 // DELETE /:id - eliminar
 router.delete("/:id", authenticateToken, async (req, res) => {
     try {
+        if (await Contrato.exists({ _id: req.params.id, delSistema: true })) {
+            res.status(409).json({ error: MENSAJE_DEL_SISTEMA });
+            return;
+        }
         // Cualquier plantilla que lo use, sea su tipo principal o uno más de su lista.
         const enUso = await ContratoFrame.countDocuments({ $or: [{ contratoId: req.params.id }, { contratoIds: req.params.id }] });
         if (enUso > 0) {

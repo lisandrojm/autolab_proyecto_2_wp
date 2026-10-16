@@ -9,6 +9,8 @@ export interface ReleaseTipoItem {
   name: string;
   isActive?: boolean;
   requiereFirma?: boolean;
+  /** Del sistema («Contrato custom» / «Release custom» y sus tipos): no se puede eliminar. */
+  delSistema?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -18,11 +18,13 @@ export const BadgeCustom: React.FC<{ className?: string }> = ({ className = "" }
 );
 
 /** El tilde del formulario de la plantilla. */
-export const TildePlantillaCustom: React.FC<{ checked: boolean; onChange: (v: boolean) => void }> = ({ checked, onChange }) => (
-  <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-    <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+export const TildePlantillaCustom: React.FC<{ checked: boolean; onChange: (v: boolean) => void; delSistema?: boolean }> = ({ checked, onChange, delSistema = false }) => (
+  <label className={`flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 ${delSistema ? "cursor-not-allowed" : "cursor-pointer"}`} title={delSistema ? "Es la plantilla custom del sistema: no puede dejar de serlo ni eliminarse." : undefined}>
+    {/* La del sistema es custom siempre: el tilde queda fijo. */}
+    <input type="checkbox" checked={delSistema || checked} disabled={delSistema} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60" />
     <span>
       <span className="font-medium">Plantilla custom</span> — el texto se escribe al generar el documento
+      {delSistema && <span className="block text-xs text-gray-500 dark:text-gray-400">Es la del sistema: no se puede desactivar ni eliminar.</span>}
     </span>
   </label>
 );

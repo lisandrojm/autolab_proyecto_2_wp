@@ -20,6 +20,7 @@ const contratoSchema = new Schema({
         generaAlta: { type: Boolean, default: true },
     },
     isActive: { type: Boolean, default: true },
+    delSistema: { type: Boolean, default: false },
 }, {
     timestamps: true,
     collection: "contratos",

@@ -24,6 +24,8 @@ export interface ContratoFrameItem {
   isActive?: boolean;
   /** Plantilla custom: `content` es sólo el placeholder; el texto se escribe en Firma digital para cada trámite (ver `@compartido/textoCustom`). */
   esCustom?: boolean;
+  /** Del sistema («Contrato custom» / «Release custom» y sus tipos): no se puede eliminar. */
+  delSistema?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

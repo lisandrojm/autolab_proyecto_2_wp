@@ -14,6 +14,7 @@ import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
 import { buildDocPdf, getDummyDocVariables, htmlHasText, empresaToMembrete } from "../utils/documentPdf.js";
 import { ensureContratosBackfilled } from "./contratos.js";
 import { PLACEHOLDER_CONTRATO_CUSTOM, textoCustomUsable } from "../compartido/textoCustom.js";
+import { asegurarPlantillasCustomSinRomper, MENSAJE_DEL_SISTEMA } from "../services/plantillasCustomSistema.js";
 const router = Router();
 const parseNum = (val) => {
     if (val === undefined || val === null || val === "")
@@ -60,8 +61,9 @@ async function contratosDelBody(body) {
     return { contratos: ids.map((id) => encontrados.find((c) => String(c._id) === id)) };
 }
 // GET / - listar
-router.get("/", authenticateToken, async (_req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
     try {
+        await asegurarPlantillasCustomSinRomper(req.tenantObjectId);
         await ensureContratosBackfilled();
         const items = await ContratoFrame.find().sort({ name: 1 }).populate({ path: "contratoId", select: "name isActive data.requiereFirma data.requiereFirmaRelease data.requiereFirmaAlta", model: Contrato }).lean();
         res.json(items);
@@ -271,7 +273,8 @@ router.put("/:id", authenticateToken, async (req, res) => {
             if (!isNaN(idNum))
                 item.data.id = idNum;
         }
-        if (esCustom !== undefined)
+        // La del sistema es custom siempre: sin eso deja de ser «Contrato custom».
+        if (esCustom !== undefined && !item.delSistema)
             item.esCustom = esCustom === "true" || esCustom === true;
         if (item.esCustom)
             item.content = PLACEHOLDER_CONTRATO_CUSTOM;
@@ -306,6 +309,10 @@ router.delete("/:id", authenticateToken, async (req, res) => {
         const item = await ContratoFrame.findById(req.params.id);
         if (!item) {
             res.status(404).json({ error: "Contrato no encontrado" });
+            return;
+        }
+        if (item.delSistema) {
+            res.status(409).json({ error: MENSAJE_DEL_SISTEMA });
             return;
         }
         await item.deleteOne();

@@ -5,6 +5,7 @@ import { Release } from "../models/Release.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 
+import { asegurarPlantillasCustomSinRomper, MENSAJE_DEL_SISTEMA } from "../services/plantillasCustomSistema.js";
 const router = Router();
 
 /**
@@ -51,6 +52,7 @@ async function ensureReleaseTiposBackfilled(tenantId: Types.ObjectId): Promise<v
 // GET / - listar
 router.get("/", authenticateToken, requireTenant, async (req: AuthenticatedRequest & TenantRequest, res: Response) => {
   try {
+    await asegurarPlantillasCustomSinRomper(req.tenantObjectId);
     await ensureReleaseTiposBackfilled(req.tenantObjectId!);
     const items = await ReleaseTipo.find({ tenantId: req.tenantObjectId }).sort({ name: 1 }).lean();
     res.json(items);
@@ -134,6 +136,10 @@ router.put("/:id", authenticateToken, requireTenant, async (req: AuthenticatedRe
 // DELETE /:id - eliminar
 router.delete("/:id", authenticateToken, requireTenant, async (req: AuthenticatedRequest & TenantRequest, res: Response) => {
   try {
+    if (await ReleaseTipo.exists({ _id: req.params.id, tenantId: req.tenantObjectId, delSistema: true })) {
+      res.status(409).json({ error: MENSAJE_DEL_SISTEMA });
+      return;
+    }
     const enUso = await Release.countDocuments({ releaseTipoId: req.params.id, tenantId: req.tenantObjectId });
     if (enUso > 0) {
       res.status(409).json({ error: `No se puede eliminar: ${enUso} release${enUso === 1 ? "" : "s"} lo tiene${enUso === 1 ? "" : "n"} asignado. Reasigná o eliminá ese${enUso === 1 ? "" : "s"} release${enUso === 1 ? "" : "s"} primero.` });
