@@ -260,7 +260,7 @@ export interface User {
    * `picker`). Reemplaza a bajarse las fechas de todos los contratos de todas las personas para
    * calcularlo en el cliente. `null` = no tiene ninguno.
    */
-  contratoQueRige?: { fecha_alta_contrato: string; fecha_baja_contrato: string } | null;
+  contratoQueRige?: ({ fecha_alta_contrato: string; fecha_baja_contrato: string; nombre_proyecto?: string } & Partial<Contract>) | null;
   contractCount?: number;
   lastContractIndex?: number;
   metadata?: {
@@ -893,6 +893,8 @@ export type ListadoUsuariosParams = {
     /** Personas puntuales por _id (separados por coma): para resolver a alguien que no está en la página. */
     ids?: string;
     slimProjects?: boolean;
+    /** El contrato que rige de cada persona, entero, en `contratoQueRige` (para copiarlo a otro proyecto). */
+    conContrato?: boolean;
     /**
      * Modo tabla de equipo (requiere `projectId`): trae sólo la entrada de ESE proyecto y, de sus
      * contratos, los campos que la tabla muestra. Suma `metadata.jornadasTotales` y
@@ -933,6 +935,7 @@ function paramsDelListado(params: ListadoUsuariosParams): URLSearchParams {
   if (params.rolFrame) searchParams.append("rolFrame", params.rolFrame);
   if (params.ids) searchParams.append("ids", params.ids);
   if (params.slimProjects) searchParams.append("slimProjects", "true");
+  if (params.conContrato) searchParams.append("conContrato", "true");
   if (params.teamTable) searchParams.append("teamTable", "true");
   return searchParams;
 }

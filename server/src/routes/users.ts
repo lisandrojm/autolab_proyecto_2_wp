@@ -465,6 +465,8 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
     // Lo usa la búsqueda de candidatos (que no muestra contratos): baja mucho la memoria.
     // El contrato se trae on-demand al abrir el wizard vía GET /users/:id.
     const slimProjects = req.query.slimProjects === "true";
+    // conContrato: el contrato que rige de cada persona de la página, ENTERO (para copiarlo a otro proyecto).
+    const conContrato = req.query.conContrato === "true";
 
     /*
       MODO TABLA DE EQUIPO (`?teamTable=true` + `projectId`): lo que Gestionar Equipo dibuja, y nada más.
@@ -806,6 +808,30 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
     const procesoTerminado = procesoTerminadoSegunEstados(estadosFlujo, claveEstado);
 
     /*
+      EL CONTRATO QUE RIGE, ENTERO (`conContrato=true`). Lo pide «Agregar miembros al equipo»: muestra
+      si la persona tiene un contrato vigente en otro proyecto y, si lo tiene, lo copia a este proyecto
+      sin pasar por el wizard. Misma regla que el picker (`getContratoActivo`), pero con todos los campos
+      del contrato, menos los pesados y los que son de un documento puntual.
+    */
+    const rigeCompleto = new Map<string, any>();
+    if (conContrato && idsPagina.length > 0) {
+      const vinculos: any[] = await UserProject.find({ userId: { $in: idsPagina } }).select("userId nombre_proyecto contracts").lean();
+      const porUsuario = new Map<string, any[]>();
+      for (const v of vinculos) {
+        const lista = porUsuario.get(String(v.userId)) || [];
+        for (const c of v.contracts || []) lista.push({ ...c, nombre_proyecto: c.nombre_proyecto || v.nombre_proyecto || "" });
+        porUsuario.set(String(v.userId), lista);
+      }
+      const hoy = hoyArgentina();
+      for (const [id, lista] of porUsuario) {
+        const c: any = getContratoActivo(lista, hoy);
+        if (!c) continue;
+        const { constanciaAfipRaw: _raw, contenidoCustomContrato: _cc, contenidoCustomReleases: _cr, altaConstancia: _ac, ...liviano } = c;
+        rigeCompleto.set(id, liviano);
+      }
+    }
+
+    /*
       SIN CONTRATO EN ESTE PROYECTO: el último de cualquier otro (modo tabla). Hay gente en el equipo
       que no tiene contrato acá —el coordinador del proyecto, alguien asignado a mano— y la columna
       Contrato quedaba en «-» aunque la persona sí tuviera contratos en otro lado. Misma regla del que
@@ -904,6 +930,8 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
             : {}),
           // Sólo en modo selector: las dos fechas del contrato que rige hoy, o null si no tiene ninguno.
           ...(picker ? { contratoQueRige: rigeEnElPicker?.get(String(u._id)) ?? null } : {}),
+          // Con `conContrato`: el que rige entero (ver arriba), o null si no tiene ninguno.
+          ...(conContrato ? { contratoQueRige: rigeCompleto.get(String(u._id)) ?? null } : {}),
           // `jornadasTotales`/`contratosTotales` sólo existen en el modo tabla; quien no los recibe
           // sigue sumando sobre `metadata.projects` como siempre.
           metadata: totales ? { ...u.metadata, jornadasTotales: totales.jornadas, contratosTotales: totales.contratos } : u.metadata,

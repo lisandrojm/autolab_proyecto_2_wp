@@ -36,6 +36,7 @@ import { CustomMultiDatePicker } from '../apps/mobile/src/components/CustomMulti
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
 import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
 import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
+import { copiaParaOtroProyecto } from '../utils/copiaContratoVigente';
 import { contratoFrameAPI, ContratoFrameItem, plantillaEsDeContrato, plantillaActivaParaFiltrar } from '../api/contratosFrame';
 import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoDePlantilla, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from '../utils/tramiteImpositivo';
 import { TipoContratoSelect } from '../components/contratos/TipoContratoSelect';
@@ -912,7 +913,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       try {
         setSearchingCandidates(true);
         // slimProjects (sin contratos) → carga liviana; el contrato se trae on-demand en handleOpenWizard.
-        const response = await usersAPI.list({ page: candPage, limit: CAND_PAGE_SIZE, metadataActivo: 'true', email: searchTerm || undefined, slimProjects: true });
+        const response = await usersAPI.list({ page: candPage, limit: CAND_PAGE_SIZE, metadataActivo: 'true', email: searchTerm || undefined, slimProjects: true, conContrato: true });
         if (reqId !== candReqIdRef.current) return;
         setCandidateUsers(response.users);
         setCandTotal(response.pagination.total);
@@ -2468,6 +2469,47 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     contrato ANTERIOR (su categoría, su convenio). Si todavía no llegaron, la apertura queda pendiente
     y se hace cuando llegan.
   */
+  /*
+    AGREGAR CON EL CONTRATO VIGENTE QUE YA TIENE EN OTRO PROYECTO, sin pasar por el wizard. Se copia ese
+    contrato a este proyecto (ver `copiaParaOtroProyecto`: sin área ni turno, que se asignan después
+    desde la tabla, y sin los documentos del otro proyecto) y se manda al mismo `assign-member` que usa
+    el wizard, así pasa por las mismas validaciones (valoración del proyecto, puesto, escala).
+  */
+  const [agregandoConContrato, setAgregandoConContrato] = useState<string | null>(null);
+  const agregarConContratoVigente = async (user: User) => {
+    const contrato = user.contratoQueRige;
+    if (!project || !contrato || !esContratoVigente(contrato as any)) return;
+    const nombre = user.metadata?.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+    const r = await sweetAlert.confirm(
+      'Agregar con su contrato vigente',
+      `${nombre} entra a este proyecto con su contrato ${contrato.nombre_contrato || ''} (alta ${formatContractDate(contrato.fecha_alta_contrato)}, baja ${contrato.fecha_baja_contrato ? formatContractDate(contrato.fecha_baja_contrato) : '—'})${contrato.nombre_proyecto ? `, el mismo que tiene en ${contrato.nombre_proyecto}` : ''}. El área y el turno se le asignan después desde la tabla de equipo.`,
+      'Sí, agregar',
+      'Cancelar',
+    );
+    if (!r.isConfirmed) return;
+    setAgregandoConContrato(user._id);
+    try {
+      await projectsAPI.assignMember(project._id, {
+        userId: user._id,
+        contract: {
+          ...copiaParaOtroProyecto(contrato as any),
+          externalEmployeeId: (user.metadata as any)?.id,
+          externalProjectId: (project.metadata as any)?.id || (project as any).externalId,
+        },
+      });
+      sweetAlert.success('Miembro agregado', `${nombre} entró con su contrato vigente.`);
+      const updatedProject = await projectsAPI.getProject(project._id, { team: 'ids' });
+      setProject(updatedProject);
+      setTeamConfig(updatedProject.teamConfig || []);
+      await fetchFullTeamLite();
+      fetchTeamPage(teamPage);
+    } catch (error: any) {
+      const msg = error?.response?.data?.error || error?.message || 'No se pudo agregar.';
+      sweetAlert.error('No se pudo agregar con ese contrato', `${msg}\nPodés agregarlo con un contrato nuevo desde «Nuevo contrato».`);
+    } finally {
+      setAgregandoConContrato(null);
+    }
+  };
   const [aperturaPendiente, setAperturaPendiente] = useState<Parameters<typeof abrirWizardAhora> | null>(null);
   const handleOpenWizard = async (...args: Parameters<typeof abrirWizardAhora>) => {
     if (!catalogosWizardListos) {
@@ -3532,20 +3574,21 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     <th className="px-4 py-3">Rol/es Empresa</th>
                     <th className="px-4 py-3">Proyecto/s</th>
                     <th className="px-4 py-3">Turnos asociados</th>
+                    <th className="px-4 py-3">Contrato</th>
                     <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-xs">
                   {searchingCandidates ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                         <FontAwesomeIcon icon={faSearch} className="animate-pulse mr-2" />
                         Buscando candidatos...
                       </td>
                     </tr>
                   ) : filteredCandidates.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                         {searchTerm ? `No se encontraron usuarios para "${searchTerm}"` : 'No hay usuarios disponibles para asignar'}
                       </td>
                     </tr>
@@ -3632,11 +3675,33 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                               )}
                             </div>
                           </td>
+                          {/* Su contrato que rige (vigente o no, en el proyecto que sea): decide cómo se lo puede agregar. */}
+                          <td className="px-4 py-3">
+                            {user.contratoQueRige ? <ContratoDeOtroProyecto contrato={user.contratoQueRige as any} conNombre /> : <span className="text-xs text-gray-400">Sin contrato</span>}
+                          </td>
                           <td className="px-4 py-3 text-right">
-                            <button onClick={() => handleOpenWizard(user._id)} className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold">
-                              <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
-                              Agregar
-                            </button>
+                            {user.contratoQueRige && esContratoVigente(user.contratoQueRige as any) ? (
+                              <div className="flex flex-col items-end gap-1.5">
+                                <button
+                                  onClick={() => void agregarConContratoVigente(user)}
+                                  disabled={agregandoConContrato === user._id}
+                                  title="Entra a este proyecto con el mismo contrato que ya tiene vigente; el área y el turno se asignan después"
+                                  className="btn-primary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto font-bold disabled:opacity-60 whitespace-nowrap"
+                                >
+                                  <FontAwesomeIcon icon={agregandoConContrato === user._id ? faSpinner : faFileContract} spin={agregandoConContrato === user._id} className="text-[10px]" />
+                                  Agregar con contrato vigente
+                                </button>
+                                <button onClick={() => handleOpenWizard(user._id)} className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold whitespace-nowrap">
+                                  <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
+                                  Nuevo contrato
+                                </button>
+                              </div>
+                            ) : (
+                              <button onClick={() => handleOpenWizard(user._id)} className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold">
+                                <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
+                                Agregar
+                              </button>
+                            )}
                           </td>
                         </tr>
                       );
