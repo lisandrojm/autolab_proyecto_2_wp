@@ -86,6 +86,8 @@ export interface IContrato extends Document {
    * `services/plantillasCustomSistema.ts`) y no se pueden eliminar.
    */
   delSistema?: boolean;
+  /** Orden manual (Configuración → Contratos → Ordenar). Es el orden en que se ofrecen en todos los selectores. */
+  orden?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -113,6 +115,8 @@ const contratoSchema = new Schema<IContrato>(
     },
     isActive: { type: Boolean, default: true },
     delSistema: { type: Boolean, default: false },
+    // 0 = sin ordenar todavía: va después de los ordenados, por nombre (ver el GET).
+    orden: { type: Number, default: 0 },
   },
   {
     timestamps: true,

@@ -52,7 +52,7 @@ async function leerCatalogosArca() {
     const [defaults, categorias, tipos, obrasSociales, sedes, empresas, sucursales, convenios, roleFrames, estados] = await Promise.all([
         getArcaDefaults(),
         listarCategoriasCompat(),
-        Contrato.find().sort({ name: 1 }).lean(),
+        Contrato.find().sort({ orden: 1, name: 1 }).lean(),
         // Sólo lo que mira el generador: convenios enteros eran 841 KB y 8 s por pedido.
         ObraSocial.find().select("externalId name data.id").sort({ name: 1 }).lean(),
         Info.find({ type: "sede" }).lean(),

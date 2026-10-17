@@ -616,7 +616,6 @@ export function ReleasesPage() {
                 label={<span className="block text-sm font-medium text-gray-700 dark:text-gray-300">Contratos</span>}
                 opciones={tiposDeContratoActivos(contratos)
                   .concat(contratos.filter((c) => c.isActive === false && formData.contratoIds.includes(c._id)))
-                  .sort((a, b) => String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base" }))
                   .map((c) => ({ id: c._id, nombre: c.isActive === false ? `${c.name} (inactivo)` : c.name }))}
                 valor={formData.contratoIds}
                 onChange={(ids) => setFormData((f) => ({ ...f, contratoIds: ids }))}

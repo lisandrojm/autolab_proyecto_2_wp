@@ -20,6 +20,10 @@ import { MODALIDADES_OFRECIDAS } from './afipCompleteness';
 import { EstadoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
 import { estadoImpositivoElegido, estadoGeneraAltaTemprana, conImpositivoGarantizado } from './altaTemprana';
 import { usePuedeAbrir } from '../../hooks/usePuedeAbrir';
+import { faGripVertical, faCheck, faMultiply } from '@fortawesome/free-solid-svg-icons';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // Nomencladores de ARCA de los que salen los tres códigos. Se leen enteros (153 / 293 / 8 / 2): son
 // chicos y se cargan una vez al abrir la pestaña.
@@ -213,6 +217,27 @@ const CardFooterAction: React.FC<{ icon: typeof faEdit; title: string; onClick: 
 /** Lo que la página puede pedirle a esta pestaña: el [+] de «Nuevo contrato» vive en el encabezado. */
 export type ContractTypesTabHandle = { abrirCrear: () => void };
 
+/** Una fila del modo ordenar: la manija, la posición, el nombre y si está activo. */
+const FilaOrdenable: React.FC<{ contrato: ContratoItem; index: number }> = ({ contrato, index }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: contrato._id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 1 : 0 };
+  return (
+    <tr ref={setNodeRef} style={style} {...attributes} {...listeners} className="bg-blue-50/40 dark:bg-blue-900/10 cursor-grab active:cursor-grabbing">
+      <td className="px-4 py-3 text-center text-blue-600 dark:text-blue-400">
+        <FontAwesomeIcon icon={faGripVertical} className="h-4 w-4" />
+      </td>
+      <td className="px-4 py-3 text-center font-bold text-blue-600 dark:text-blue-400">{index + 1}</td>
+      <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
+        {contrato.name}
+        {contrato.delSistema && <span className="ml-2 text-[9px] uppercase font-bold text-gray-400">sistema</span>}
+      </td>
+      <td className="px-4 py-3">
+        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${contrato.isActive === false ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}>{contrato.isActive === false ? 'Inactivo' : 'Activo'}</span>
+      </td>
+    </tr>
+  );
+};
+
 export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref) => {
   /** El tipo que la URL pide abrir. Lo manda el modal de Datos ARCA. Ver el efecto de mas abajo. */
   const [searchParamsTipos] = useSearchParams();
@@ -289,6 +314,40 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   useEffect(() => {
     cargar();
   }, []);
+
+  /*
+    ORDENAR (misma UX que Turnos y Estados): un botón «Ordenar» pasa la lista a una tabla simple que se
+    arrastra con dnd-kit, y «Guardar Orden» manda `orden = posición` de TODOS los tipos de una vez. Es
+    el orden en que los tipos se ofrecen en todos los selectores (el server los devuelve así). Se opera
+    siempre sobre la lista completa, nunca sobre la filtrada por la búsqueda: si no, los ocultos
+    quedarían con posiciones pisadas.
+  */
+  const [isReorderMode, setIsReorderMode] = useState(false);
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  const handleStartReorder = () => {
+    setSearchTerm('');
+    setIsReorderMode(true);
+  };
+  const handleCancelReorder = () => {
+    setIsReorderMode(false);
+    cargar();
+  };
+  const handleSaveReorder = async () => {
+    try {
+      await contratosAPI.reorder(contratos.map((ct, i) => ({ id: ct._id, orden: i + 1 })));
+      setIsReorderMode(false);
+      sweetAlert.success('Orden guardado', 'Los tipos de contrato se ofrecen en este orden en todos los selectores.');
+      await cargar();
+    } catch (e: any) {
+      sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo guardar el orden.');
+      await cargar();
+    }
+  };
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setContratos((items) => arrayMove(items, items.findIndex((x) => x._id === active.id), items.findIndex((x) => x._id === over.id)));
+  };
 
   /*
    * Los nomencladores de ARCA, para los tres selectores de códigos. Van aparte de `cargar()` a
@@ -880,7 +939,24 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
           <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar contrato..." />
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {isLarge && (
+          {isReorderMode ? (
+            <div className="flex items-center gap-2">
+              <button onClick={handleCancelReorder} className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-sm flex items-center gap-2">
+                <FontAwesomeIcon icon={faMultiply} />
+                Cancelar
+              </button>
+              <button onClick={handleSaveReorder} className="px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-all text-sm flex items-center gap-2">
+                <FontAwesomeIcon icon={faCheck} />
+                Guardar Orden
+              </button>
+            </div>
+          ) : (
+            <button onClick={handleStartReorder} disabled={loading || contratos.length < 2} title="Ordenar: el orden en que se ofrecen en todos los selectores" className="px-3 py-2 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-sm flex items-center gap-2 shadow-sm disabled:opacity-50">
+              <FontAwesomeIcon icon={faGripVertical} />
+              <span>Ordenar</span>
+            </button>
+          )}
+          {isLarge && !isReorderMode && (
             <div className="flex items-center gap-2">
               <button onClick={() => setViewMode('cards')} title="Vista de tarjetas" className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
                 <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
@@ -908,6 +984,29 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       {loading ? (
         <div className="flex justify-center items-center py-20">
           <LoadingSpinner message="Cargando contratos..." />
+        </div>
+      ) : isReorderMode ? (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <p className="px-4 py-2 text-[11px] text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-900/40">Arrastrá las filas. Este es el orden en que los tipos aparecen al elegir un contrato en toda la plataforma.</p>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={contratos.map((ct) => ct._id)} strategy={verticalListSortingStrategy}>
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    <th className="px-4 py-3 w-12 text-center">Ordenar</th>
+                    <th className="px-4 py-3 w-16 text-center">Orden</th>
+                    <th className="px-4 py-3">Nombre</th>
+                    <th className="px-4 py-3">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {contratos.map((ct, i) => (
+                    <FilaOrdenable key={ct._id} contrato={ct} index={i} />
+                  ))}
+                </tbody>
+              </table>
+            </SortableContext>
+          </DndContext>
         </div>
       ) : filtrados.length === 0 ? (
         <EmptyState icon={faFileContract} title={searchTerm ? 'Sin resultados' : 'Todavía no hay contratos'} description={searchTerm ? 'Probá con otra búsqueda.' : 'Creá el primer contrato para poder asignarle una Plantilla.'} />

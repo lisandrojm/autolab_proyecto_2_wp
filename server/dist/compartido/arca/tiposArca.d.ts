@@ -256,6 +256,8 @@ export interface ContratoItem {
     name: string;
     /** Del sistema («Contrato custom» / «Release custom» y sus tipos): no se puede eliminar. */
     delSistema?: boolean;
+    /** Orden manual (Configuración → Contratos → Ordenar). El server ya devuelve la lista en este orden. */
+    orden?: number;
     data: {
         cantidadJornadas: number;
         multiplicadorDiario: number;

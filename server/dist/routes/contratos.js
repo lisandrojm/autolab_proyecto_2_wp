@@ -74,11 +74,34 @@ router.get("/", authenticateToken, async (req, res) => {
     try {
         await asegurarPlantillasCustomSinRomper(req.tenantObjectId);
         await ensureContratosBackfilled();
-        const items = await Contrato.find().sort({ name: 1 }).lean();
-        res.json(items);
+        /*
+          EL ORDEN ES EL MANUAL (Configuración → Contratos → Ordenar), y es el que se ve en TODOS los
+          selectores: el wizard, las plantillas, los releases, la app. Los que todavía no se ordenaron
+          (orden 0) van al final, por nombre. Ningún consumidor debe volver a ordenar por nombre.
+        */
+        const items = await Contrato.find().sort({ orden: 1, name: 1 }).lean();
+        const ordenados = items.filter((c) => Number(c.orden) > 0);
+        const sinOrdenar = items.filter((c) => !(Number(c.orden) > 0));
+        res.json([...ordenados, ...sinOrdenar]);
     }
     catch (error) {
         console.error("Get contratos error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/** PATCH /contratos/reorder { items: [{ id, orden }] } — el orden manual, de una vez (como Turnos y Estados). */
+router.patch("/reorder", authenticateToken, async (req, res) => {
+    try {
+        const { items } = req.body;
+        if (!Array.isArray(items) || items.some((i) => !i?.id || !Number.isFinite(Number(i?.orden)))) {
+            res.status(400).json({ error: "Se requiere un array de items { id, orden }" });
+            return;
+        }
+        await Contrato.bulkWrite(items.map((i) => ({ updateOne: { filter: { _id: i.id }, update: { $set: { orden: Number(i.orden) } } } })));
+        res.json({ message: "Orden actualizado correctamente" });
+    }
+    catch (error) {
+        console.error("Reorder contratos error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -118,8 +141,11 @@ router.post("/", authenticateToken, async (req, res) => {
             res.status(409).json({ error: "Ya existe un contrato con ese nombre" });
             return;
         }
+        // Un tipo nuevo entra al final del orden manual, no entre medio.
+        const ultimo = await Contrato.findOne().sort({ orden: -1 }).select("orden").lean();
         const created = await Contrato.create({
             name,
+            orden: (Number(ultimo?.orden) || 0) + 1,
             data: {
                 cantidadJornadas: parseNum(cantidadJornadas),
                 multiplicadorDiario: parseNum(multiplicadorDiario),

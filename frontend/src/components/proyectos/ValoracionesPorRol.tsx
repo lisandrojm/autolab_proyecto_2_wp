@@ -68,7 +68,8 @@ export const ValoracionesPorRol: React.FC<{
   const cubre = (id: number, valoracionId: string) => (rolDe(id)?.data?.categoriasSat || []).some((c) => valoracionesDeCategoria(c).includes(valoracionId));
   const rolesOrdenados = useMemo(() => roles.filter((r) => r.data?.rol?.id != null).sort((a, b) => String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base" })), [roles]);
   // Para agregar una excepción, sólo los tipos activos; las filas ya cargadas muestran su nombre igual (`nombreContrato`).
-  const contratosOrdenados = useMemo(() => tiposDeContratoActivos(contratos).sort((a, b) => String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base" })), [contratos]);
+  // En el orden manual de Configuración → Contratos (el server ya lo manda así): no se reordena por nombre.
+  const contratosOrdenados = useMemo(() => tiposDeContratoActivos(contratos), [contratos]);
   /** Ese rol con ese tipo ya tiene excepción: no se ofrece de nuevo (se cambia en su fila). */
   const yaEsta = (rolFrameId: number, contratoId: string) => value.some((x) => claveDe(x) === claveDe({ rolFrameId, contratoId }));
 

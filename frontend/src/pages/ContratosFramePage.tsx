@@ -558,7 +558,6 @@ export const ContratosFramePage: React.FC = () => {
                 label={<span className="block text-sm font-medium text-gray-700 dark:text-gray-300">Contratos *</span>}
                 opciones={tiposDeContratoActivos(contratos)
                   .concat(contratos.filter((c) => c.isActive === false && form.contratoIds.includes(c._id)))
-                  .sort((a, b) => String(a.name).localeCompare(String(b.name), 'es', { sensitivity: 'base' }))
                   .map((c) => ({ id: c._id, nombre: c.isActive === false ? `${c.name} (inactivo)` : c.name }))}
                 valor={form.contratoIds}
                 onChange={(ids) => setForm((f) => ({ ...f, contratoIds: ids }))}

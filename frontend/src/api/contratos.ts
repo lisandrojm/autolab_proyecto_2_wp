@@ -28,9 +28,16 @@ export interface ContratoInput {
 }
 
 class ContratosAPI {
+  /** En el orden manual de Configuración → Contratos (`orden`), que es el que ven todos los selectores. */
   async list(): Promise<ContratoItem[]> {
     const { data } = await axios.get("/contratos");
     return data;
+  }
+
+  /** Guarda el orden manual de una vez (Ordenar en Configuración → Contratos → Tipos). */
+  async reorder(items: { id: string; orden: number }[]): Promise<void> {
+    await axios.patch("/contratos/reorder", { items });
+    invalidateRefCache(CLAVE_CACHE_TIPOS_CONTRATO);
   }
 
   async create(payload: ContratoInput): Promise<ContratoItem> {

@@ -85,6 +85,8 @@ export interface IContrato extends Document {
      * `services/plantillasCustomSistema.ts`) y no se pueden eliminar.
      */
     delSistema?: boolean;
+    /** Orden manual (Configuración → Contratos → Ordenar). Es el orden en que se ofrecen en todos los selectores. */
+    orden?: number;
     createdAt: Date;
     updatedAt: Date;
 }

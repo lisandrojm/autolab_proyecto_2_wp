@@ -21,6 +21,8 @@ const contratoSchema = new Schema({
     },
     isActive: { type: Boolean, default: true },
     delSistema: { type: Boolean, default: false },
+    // 0 = sin ordenar todavía: va después de los ordenados, por nombre (ver el GET).
+    orden: { type: Number, default: 0 },
 }, {
     timestamps: true,
     collection: "contratos",
