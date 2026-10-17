@@ -3505,7 +3505,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             </button>
           </div>
         }
-        size="xl"
+        // 95vw: con la columna Contrato la tabla ya no entra en 6xl y aparecía un scroll horizontal.
+        size="95"
       >
         <div className="space-y-4 max-h-[85vh] flex flex-col">
           <div className="flex flex-col gap-3 shrink-0">
