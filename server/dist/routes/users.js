@@ -791,7 +791,7 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
           la página que no tienen contrato acá: una consulta, y nada para el resto.
         */
         const sinContratoAca = teamTable ? idsPagina.filter((id) => !contratoQueRige?.get(String(id))) : [];
-        const contratoEnOtroProyecto = sinContratoAca.length > 0 ? await contratosQueRigenDeLasPersonas(sinContratoAca, hoyArgentina(), ["nombre_contrato", "nombre_proyecto"]) : new Map();
+        const contratoEnOtroProyecto = sinContratoAca.length > 0 ? await contratosQueRigenDeLasPersonas(sinContratoAca, hoyArgentina(), ["nombre_contrato", "nombre_proyecto", "nombre_estado_empleado"]) : new Map();
         const solicitudesPorUsuario = new Map();
         if (idsPagina.length > 0) {
             pendientes.forEach((s) => {

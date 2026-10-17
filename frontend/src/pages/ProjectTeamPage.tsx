@@ -146,7 +146,11 @@ const ContratoDeOtroProyecto: React.FC<{ contrato: { nombre_contrato?: string | 
       <span>
         <span className="text-gray-400">Baja:</span> {contrato.fecha_baja_contrato ? formatContractDate(contrato.fecha_baja_contrato) : '—'}
       </span>
-      <span className="text-[10px] italic text-gray-400">En otro proyecto{contrato.nombre_proyecto ? `: ${contrato.nombre_proyecto}` : ''}</span>
+      {/* Un badge, no una nota en cursiva: tiene que saltar a la vista que este contrato NO es de este proyecto. */}
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-300/60 dark:border-amber-700/60" title={`Contrato de otro proyecto${contrato.nombre_proyecto ? `: ${contrato.nombre_proyecto}` : ''}. No pertenece a este equipo.`}>
+        <FontAwesomeIcon icon={faBriefcase} className="h-2.5 w-2.5" />
+        De otro proyecto{contrato.nombre_proyecto ? `: ${contrato.nombre_proyecto}` : ''}
+      </span>
     </div>
   );
 };
@@ -3328,7 +3332,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           )}
         </td>
         {/* Estado del contrato (Pedido servicios, Disponible, ...) — distinto del estado del usuario. */}
-        <td className="px-4 py-3">{activeContract?.nombre_estado_empleado ? <EstadoBadge name={activeContract.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}</td>
+        <td className="px-4 py-3">{activeContract?.nombre_estado_empleado ? <EstadoBadge name={activeContract.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : (user as any).contratoEnOtroProyecto?.nombre_estado_empleado ? <span className="flex flex-col gap-0.5 items-start" title="Estado de su contrato en otro proyecto"><EstadoBadge name={(user as any).contratoEnOtroProyecto.nombre_estado_empleado} className="text-[10px] whitespace-nowrap opacity-80" /><span className="text-[9px] uppercase font-bold text-amber-600 dark:text-amber-400">de otro proyecto</span></span> : <span className="text-xs text-gray-400">—</span>}</td>
         {/* Estado impositivo (Alta ARCA / Alta Servicios): según el Tipo de Contrato, no el estado actual. */}
         <td className="px-4 py-3">
           {(() => {
