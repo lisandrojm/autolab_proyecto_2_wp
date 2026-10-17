@@ -793,6 +793,32 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
         */
         const sinContratoAca = teamTable ? idsPagina.filter((id) => !contratoQueRige?.get(String(id))) : [];
         const contratoEnOtroProyecto = sinContratoAca.length > 0 ? await contratosQueRigenDeLasPersonas(sinContratoAca, hoyArgentina(), ["nombre_contrato", "nombre_proyecto", "nombre_estado_empleado"]) : new Map();
+        /*
+          DE QUÉ PROYECTO ES EL CONTRATO (modo tabla). Un contrato que entró con «Agregar con contrato
+          vigente» es una copia del que la persona tiene en otro proyecto, y la tabla lo dice con un badge
+          «Contrato de: X». Los copiados desde el 17/10/2026 lo traen guardado (`origenContrato`); los
+          anteriores no, así que para ellos se deduce: el mismo contrato (misma alta y mismo tipo) en otro
+          proyecto, cargado antes que éste. Una consulta por página, sólo para los que tienen contrato acá
+          y no traen el origen.
+        */
+        if (teamTable && contratoQueRige) {
+            const sinOrigen = idsPagina.filter((id) => { const r = contratoQueRige.get(String(id)); return r && !r.origenContrato; });
+            if (sinOrigen.length > 0) {
+                const vinculos = await UserProject.find({ userId: { $in: sinOrigen }, projectId: { $ne: new Types.ObjectId(String(req.query.projectId)) } })
+                    .select("userId nombre_proyecto contracts.fecha_alta_contrato contracts.nombre_contrato contracts.fecha_carga")
+                    .lean();
+                for (const v of vinculos) {
+                    const rige = contratoQueRige.get(String(v.userId));
+                    if (!rige || rige.origenContrato)
+                        continue;
+                    const alta = fechaISO(rige.fecha_alta_contrato);
+                    const cargaAca = String(rige.fecha_carga || "");
+                    const gemelo = (v.contracts || []).find((c) => fechaISO(c.fecha_alta_contrato) === alta && String(c.nombre_contrato || "") === String(rige.nombre_contrato || "") && (!cargaAca || String(c.fecha_carga || "") < cargaAca));
+                    if (gemelo)
+                        rige.origenContrato = { nombre_proyecto: v.nombre_proyecto || "", proyecto_id: null, fecha_alta_contrato: alta, inferido: true };
+                }
+            }
+        }
         const solicitudesPorUsuario = new Map();
         if (idsPagina.length > 0) {
             pendientes.forEach((s) => {
