@@ -72,6 +72,8 @@ export async function correrTandas(o) {
         let aceptando = null;
         let r = null;
         let error;
+        /** Lo que el motor adjuntó a un error (`e.evidencia`, `e.textoArca`): va al log igual que en un rechazo. */
+        let evidenciaDelError = {};
         try {
             r = await motor.presentar({
                 texto: lote.map((i) => i.registro).join("\n"),
@@ -90,6 +92,8 @@ export async function correrTandas(o) {
         catch (e) {
             error = String(e?.message || e);
             corte = { motivo: aceptando ? "error_despues_de_presentar" : e?.detenido ? "detenida" : "error", mensaje: error };
+            const ev = e?.evidencia || {};
+            evidenciaDelError = { textoArca: e?.textoArca, dialogos: ev.dialogos, html: ev.html, textoNuevo: ev.textoNuevo, enRojo: ev.enRojo };
         }
         const porCuil = new Map((r?.porPersona || []).map((p) => [String(p.cuil), p]));
         const presentadas = aceptando || [];
@@ -122,7 +126,17 @@ export async function correrTandas(o) {
             // Si no: nunca llegó al «Aceptar» (la tanda falló antes). Sigue pendiente y sin marca.
         }
         const fin = new Date();
-        const hecha = { n, cuils, inicio, fin, duracionMs: fin.getTime() - inicio.getTime(), resultado: error ? "fallo" : r?.resultado || "indeterminado", error };
+        const hecha = {
+            n,
+            cuils,
+            inicio,
+            fin,
+            duracionMs: fin.getTime() - inicio.getTime(),
+            resultado: error ? "fallo" : r?.resultado || "indeterminado",
+            error,
+            // La evidencia: del resultado si lo hubo, del error si no. Sólo los campos que vinieron.
+            ...Object.fromEntries(Object.entries({ textoArca: r?.textoArca ?? evidenciaDelError.textoArca, dialogos: r?.dialogos ?? evidenciaDelError.dialogos, html: r?.html ?? evidenciaDelError.html, textoNuevo: r?.textoNuevo ?? evidenciaDelError.textoNuevo, enRojo: r?.enRojo ?? evidenciaDelError.enRojo }).filter(([, v]) => v !== undefined && v !== null && !(Array.isArray(v) && v.length === 0))),
+        };
         tandas.push(hecha);
         emitir({ tipo: "tanda", n, de: Math.max(totalTandas, n), cuils, estado: "terminada", resultado: hecha.resultado, duracionMs: hecha.duracionMs });
         if (!enSeco)

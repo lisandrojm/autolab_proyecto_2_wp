@@ -33,7 +33,7 @@
  * depende de `frontend/node_modules`, que no está en el VPS.
  */
 import { readFile } from "node:fs/promises";
-import { esperarEstado } from "./arca-postback.mjs";
+import { esperarEstado, ESPERA_POSTBACK_MS } from "./arca-postback.mjs";
 import { aceptarSelectorDeCuit } from "./validar-obras-sociales.mjs";
 
 export const PREFIJO = "ctl00_ContentPlaceHolder1_";
@@ -801,6 +801,61 @@ export async function consultarAltaPorCuil({ page, cuil, fechaInicio }) {
  * Devuelve `{ resultado, porPersona }` con `resultado` en `aceptada` | `rechazada` | `seco` |
  * `indeterminado`, y cada persona en `alta` | `rechazada` | `devuelta` | `indeterminado`.
  */
+/**
+ * Los renglones del body que NO estaban antes del click: ahí es donde ARCA pinta el motivo de un
+ * rechazo. Puro. Acotado para que la evidencia quepa en el log.
+ */
+export function textoNuevoDesde(textoAntes, textoDespues, max = 20_000) {
+  const limpio = (t) => String(t || "").replace(/\s+/g, " ").trim();
+  const previos = new Set(String(textoAntes || "").split("\n").map(limpio).filter(Boolean));
+  const nuevos = new Set();
+  for (const l of String(textoDespues || "").split("\n")) {
+    const t = limpio(l);
+    if (t && !previos.has(t)) nuevos.add(t);
+  }
+  return [...nuevos].join("\n").slice(0, max);
+}
+
+const textoDelBody = (page) => page.evaluate(() => document.body?.innerText || "").catch(() => "");
+
+/**
+ * ESPERAR A QUE EL «ACEPTAR» DEL PEGADO HAGA ALGO DE VERDAD.
+ *
+ * El postback del pegado es AJAX / Server.Transfer: no dispara ningún evento de carga (ver
+ * `arca-postback.mjs`). Esperar «a estar en altas o archivo_altas» resolvía en el primer sondeo
+ * —la pantalla YA era archivo_altas— y el motor leía la pantalla vieja unos milisegundos después del
+ * click: con ARCA lento (las 14 h) no veía ni el pase a la grilla ni el motivo del rechazo, y daba la
+ * tanda por rechazada «sin motivo» aunque ARCA la hubiera aceptado. Acá se espera, con el timeout
+ * entero del postback, hasta que pase alguna de estas tres cosas: la pantalla dejó de ser el pegado,
+ * apareció un diálogo, o el texto del body cambió respecto del de antes del click. Y después se
+ * espera a que se estabilice en altas o archivo_altas (en el Server.Transfer pasa por «otra»).
+ *
+ * Devuelve `{ cambio, pantalla }`. `cambio: false` = se agotó el tiempo y no pasó NADA: quien
+ * llama no debe dar eso por rechazo (quizá se aceptó tarde): tiene que cortar con error.
+ */
+export async function esperarResultadoDelPegado(page, { estado, dialogosAntes, textoAntes, ms = ESPERA_POSTBACK_MS, cadaMs } = {}) {
+  const hayDialogo = () => (estado?.dialogos?.length || 0) > (dialogosAntes || 0);
+  const cambio = await esperarEstado(
+    async () => (await pantallaActual(page)) !== "archivo_altas" || hayDialogo() || (await textoDelBody(page)) !== textoAntes,
+    { ms, cadaMs, que: "que ARCA conteste el Aceptar del pegado", log },
+  );
+  if (!cambio) return { cambio: false, pantalla: await pantallaActual(page) };
+  // Se estabiliza: durante el Server.Transfer la pantalla puede ser «otra» un instante.
+  await esperarEstado(async () => ["altas", "archivo_altas"].includes(await pantallaActual(page)), { ms, cadaMs, que: "que la pantalla se asiente después del pegado", log });
+  return { cambio: true, pantalla: await pantallaActual(page) };
+}
+
+/** La evidencia de lo que devolvió ARCA después del click: va al log de la tanda y a los errores. */
+async function evidenciaDelPegado(page, { estado, dialogosAntes, textoAntes }) {
+  const textoDespues = await textoDelBody(page);
+  return {
+    html: await htmlAnonimo(page),
+    dialogos: (estado?.dialogos || []).slice(dialogosAntes || 0),
+    enRojo: await textosDeError(page).catch(() => []),
+    textoNuevo: textoNuevoDesde(textoAntes, textoDespues),
+  };
+}
+
 export async function altasMasivas({ page, empresaCuit, texto, cuils, enSeco = true, tope = TOPE_PEGADO, yaAdentro = false, onProgreso = () => {}, antesDeAceptar = async () => {}, señal = { cortada: false } }) {
   const estado = { aceptarDialogo: false, dialogos: [] };
   const soltar = manejarDialogos(page, estado, onProgreso);
@@ -852,10 +907,20 @@ export async function altasMasivas({ page, empresaCuit, texto, cuils, enSeco = t
       const textoAntes = await page.evaluate(() => document.body?.innerText || "").catch(() => "");
       const antes = [...(await textosDeError(page)), ...textoAntes.split("\n")];
       await apretar(page, "aceptar_pegado");
-      await esperarPantalla(page, ["altas", "archivo_altas"], "resultado del pegado");
-      if ((await pantallaActual(page)) !== "archivo_altas") break;
+      const { cambio, pantalla } = await esperarResultadoDelPegado(page, { estado, dialogosAntes, textoAntes });
+      if (!cambio) {
+        // Sin NINGÚN cambio en todo el tiempo del postback no se sabe qué hizo ARCA: puede haber
+        // aceptado tarde y dejado las filas en la grilla. Eso no es un rechazo: es un error que corta.
+        const evidencia = await evidenciaDelPegado(page, { estado, dialogosAntes, textoAntes });
+        throw Object.assign(new Error(`ARCA no contestó el «Aceptar» del pegado en ${Math.round(ESPERA_POSTBACK_MS / 1000)} s: no se sabe si lo aceptó. No se marcó rechazo. Revisá la grilla de Registrar Nuevas Altas en ARCA antes de volver a presentar.`), { evidencia, textoArca: evidencia.textoNuevo.slice(0, 600) || undefined });
+      }
+      if (pantalla === "altas") break;
+      if (pantalla !== "archivo_altas") {
+        const evidencia = await evidenciaDelPegado(page, { estado, dialogosAntes, textoAntes });
+        throw Object.assign(new Error(`Después del «Aceptar» del pegado la pantalla quedó en «${pantalla}», que no es la grilla ni el pegado. No se confirmó nada.`), { evidencia, textoArca: evidencia.textoNuevo.slice(0, 600) || undefined });
+      }
       // La pantalla ENTERA, no los 4000 caracteres de `leerPantalla`: el motivo suele estar abajo del cuadro.
-      const textoEntero = await page.evaluate(() => document.body?.innerText || "").catch(() => "");
+      const textoEntero = await textoDelBody(page);
       const msg = motivoDelRechazo({ dialogos: estado.dialogos.slice(dialogosAntes), enRojo: await textosDeError(page), texto: textoEntero, antes });
       const i = registroRechazadoDelPegado(msg, registros);
       const fuera = i >= 0 ? [registros[i]] : registros;
@@ -863,7 +928,8 @@ export async function altasMasivas({ page, empresaCuit, texto, cuils, enSeco = t
       registros = i >= 0 ? registros.filter((_, j) => j !== i) : [];
       if (registros.length === 0) {
         for (const p of rechazadas) onProgreso({ tipo: "persona", ...p });
-        return { resultado: "rechazada", porPersona: rechazadas, textoArca: msg, dialogos: estado.dialogos };
+        const evidencia = await evidenciaDelPegado(page, { estado, dialogosAntes, textoAntes });
+        return { resultado: "rechazada", porPersona: rechazadas, textoArca: msg, ...evidencia, dialogos: estado.dialogos };
       }
       await area.fill(registros.join("\n"));
     }
@@ -883,7 +949,8 @@ export async function altasMasivas({ page, empresaCuit, texto, cuils, enSeco = t
     const aPresentar = quedan.filter((c) => enGrilla.includes(c));
     if (aPresentar.length === 0) {
       for (const p of rechazadas) onProgreso({ tipo: "persona", ...p });
-      return { resultado: "rechazada", porPersona: rechazadas, dialogos: estado.dialogos };
+      // Ninguna pasó a la grilla: la evidencia es la pantalla tal como quedó.
+      return { resultado: "rechazada", porPersona: rechazadas, textoArca: rechazadas.map((p) => p.motivo).filter(Boolean).join(" · ").slice(0, 600) || undefined, html: await htmlAnonimo(page), enRojo: await textosDeError(page).catch(() => []), textoNuevo: pantallaPegado.join("\n").slice(0, 20_000), dialogos: estado.dialogos };
     }
 
     cortar(señal, "registrar las altas");

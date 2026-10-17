@@ -52,6 +52,16 @@ export interface TandaHecha {
   /** `aceptada` | `rechazada` | `seco` | `indeterminado` | `fallo`. */
   resultado: string;
   error?: string;
+  /*
+    LA EVIDENCIA DE LO QUE DEVOLVIÓ ARCA en esta tanda (rechazo o fallo): el motivo que se leyó, los
+    diálogos, el HTML anonimizado de la pantalla y los renglones nuevos del body. Antes el camino por
+    tandas lo descartaba y el registro decía «ARCA no aceptó el texto pegado» sin más.
+  */
+  textoArca?: string;
+  dialogos?: string[];
+  html?: string;
+  textoNuevo?: string;
+  enRojo?: string[];
 }
 
 export type MotivoCorte = "detenida" | "error" | "error_despues_de_presentar" | "dialogo" | "rechazos_seguidos";
@@ -62,6 +72,12 @@ export interface MotorTandas {
   presentar(o: { texto: string; cuils: string[]; tope: number; antesDeAceptar: (cuils: string[]) => Promise<void> }): Promise<{
     resultado: string;
     porPersona?: Array<{ cuil: string; estado: string; motivo?: string; cat?: string }>;
+    /** La evidencia de ARCA (ver `TandaHecha`). El motor la manda en los rechazos; en los errores viaja en `e.evidencia`. */
+    textoArca?: string;
+    dialogos?: string[];
+    html?: string;
+    textoNuevo?: string;
+    enRojo?: string[];
   }>;
   /** `encontrada` es `true` o `null`: nunca `false` (ver `altaEnConsulta` en el motor). */
   consultar(o: { cuil: string; fechaInicio: string }): Promise<{ encontrada: true | null; cat?: string }>;
@@ -176,6 +192,8 @@ export async function correrTandas(o: {
     let aceptando: string[] | null = null;
     let r: Awaited<ReturnType<MotorTandas["presentar"]>> | null = null;
     let error: string | undefined;
+    /** Lo que el motor adjuntó a un error (`e.evidencia`, `e.textoArca`): va al log igual que en un rechazo. */
+    let evidenciaDelError: { textoArca?: string; dialogos?: string[]; html?: string; textoNuevo?: string; enRojo?: string[] } = {};
     try {
       r = await motor.presentar({
         texto: lote.map((i) => i.registro).join("\n"),
@@ -192,6 +210,8 @@ export async function correrTandas(o: {
     } catch (e: any) {
       error = String(e?.message || e);
       corte = { motivo: aceptando ? "error_despues_de_presentar" : e?.detenido ? "detenida" : "error", mensaje: error };
+      const ev = e?.evidencia || {};
+      evidenciaDelError = { textoArca: e?.textoArca, dialogos: ev.dialogos, html: ev.html, textoNuevo: ev.textoNuevo, enRojo: ev.enRojo };
     }
 
     const porCuil = new Map((r?.porPersona || []).map((p) => [String(p.cuil), p]));
@@ -222,7 +242,17 @@ export async function correrTandas(o: {
     }
 
     const fin = new Date();
-    const hecha: TandaHecha = { n, cuils, inicio, fin, duracionMs: fin.getTime() - inicio.getTime(), resultado: error ? "fallo" : r?.resultado || "indeterminado", error };
+    const hecha: TandaHecha = {
+      n,
+      cuils,
+      inicio,
+      fin,
+      duracionMs: fin.getTime() - inicio.getTime(),
+      resultado: error ? "fallo" : r?.resultado || "indeterminado",
+      error,
+      // La evidencia: del resultado si lo hubo, del error si no. Sólo los campos que vinieron.
+      ...Object.fromEntries(Object.entries({ textoArca: r?.textoArca ?? evidenciaDelError.textoArca, dialogos: r?.dialogos ?? evidenciaDelError.dialogos, html: r?.html ?? evidenciaDelError.html, textoNuevo: r?.textoNuevo ?? evidenciaDelError.textoNuevo, enRojo: r?.enRojo ?? evidenciaDelError.enRojo }).filter(([, v]) => v !== undefined && v !== null && !(Array.isArray(v) && v.length === 0))),
+    };
     tandas.push(hecha);
     emitir({ tipo: "tanda", n, de: Math.max(totalTandas, n), cuils, estado: "terminada", resultado: hecha.resultado, duracionMs: hecha.duracionMs });
     if (!enSeco) await guardar.tanda(hecha, [...porContrato.values()]);

@@ -7,7 +7,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
-import { BOTONES, POR_RELEVAR, PREFIJO, TOPE_PEGADO, altaEnConsulta, boton, elegirEnResultadoDeConsulta, fechaEnTexto, motivoDelRechazo, pantallaAltas, registroRechazadoDelPegado, topeDelPegado } from "./altas-arca.mjs";
+import { BOTONES, POR_RELEVAR, PREFIJO, TOPE_PEGADO, altaEnConsulta, boton, elegirEnResultadoDeConsulta, esperarResultadoDelPegado, fechaEnTexto, motivoDelRechazo, pantallaAltas, registroRechazadoDelPegado, textoNuevoDesde, topeDelPegado } from "./altas-arca.mjs";
 
 // Con fin de línea normalizado: en un checkout de Windows (autocrlf) el archivo llega con CRLF, y los
 // tests que recortan la fuente por un marcador con salto de línea no lo encontraban.
@@ -334,4 +334,71 @@ test("motivoDelRechazo: sin rojo, el renglón de la pantalla que explica el rech
 
 test("motivoDelRechazo: si ARCA no dijo nada nuevo, se aclara que no mostró el motivo", () => {
   assert.match(motivoDelRechazo({ texto: "Ingreso masivo de datos", antes: ["Ingreso masivo de datos"] }), /no mostró el motivo/);
+});
+
+// ------------------------------------------------------------------ la espera del pegado
+/*
+  UNA PÁGINA QUE CAMBIA CON EL TIEMPO. `evaluate` contesta según qué pide la función: la pantalla
+  (acción + ids) o el texto del body. `escenario(t)` dice cómo está ARCA a los t ms del click.
+*/
+const paginaQueCambia = (escenario) => {
+  const t0 = Date.now();
+  return {
+    evaluate: async (fn) => {
+      const ahora = escenario(Date.now() - t0);
+      const src = String(fn);
+      // Qué pide cada función del motor: la pantalla (leerPantalla), los textos en rojo, el HTML o el body.
+      if (/body \*/.test(src)) return [];
+      if (/cloneNode/.test(src)) return "";
+      if (!/aspnetForm/.test(src) && /innerText/.test(src)) return ahora.texto;
+      const accion = { altas: "./Altas.aspx", archivo_altas: "./ArchivoAltas.aspx" }[ahora.pantalla] || "./Otra.aspx";
+      const ids = { altas: [PREFIJO + "btnArchivoAltas"], archivo_altas: [PREFIJO + "txtRegistrosAltas"] }[ahora.pantalla] || [];
+      return { accion, ids, texto: ahora.texto.slice(0, 4000) };
+    },
+  };
+};
+const PEGADO = "Ingreso masivo de datos\nPegue los registros\nAceptar  Cancelar";
+
+test("pegado aceptado LENTO: la pantalla pasa a la grilla recién después de un rato, y no se da por rechazo", async () => {
+  const page = paginaQueCambia((t) => (t < 300 ? { pantalla: "archivo_altas", texto: PEGADO } : { pantalla: "altas", texto: "Registrar Nuevas Altas" }));
+  const r = await esperarResultadoDelPegado(page, { estado: { dialogos: [] }, dialogosAntes: 0, textoAntes: PEGADO, ms: 3000, cadaMs: 20 });
+  assert.deepEqual(r, { cambio: true, pantalla: "altas" });
+});
+
+test("rechazo LENTO: el motivo aparece después de un rato y se lee entero, no el fallback", async () => {
+  const conError = `${PEGADO}\nEl CUIL 27440427834 ya posee una relación laboral activa.`;
+  const page = paginaQueCambia((t) => ({ pantalla: "archivo_altas", texto: t < 300 ? PEGADO : conError }));
+  const r = await esperarResultadoDelPegado(page, { estado: { dialogos: [] }, dialogosAntes: 0, textoAntes: PEGADO, ms: 3000, cadaMs: 20 });
+  assert.deepEqual(r, { cambio: true, pantalla: "archivo_altas" });
+  const nuevo = textoNuevoDesde(PEGADO, conError);
+  assert.equal(nuevo, "El CUIL 27440427834 ya posee una relación laboral activa.");
+  assert.equal(motivoDelRechazo({ texto: conError, antes: PEGADO.split("\n") }), "El CUIL 27440427834 ya posee una relación laboral activa.");
+});
+
+test("un diálogo nuevo también cuenta como respuesta de ARCA", async () => {
+  const estado = { dialogos: [] };
+  setTimeout(() => estado.dialogos.push("El CUIL ya tiene un alta activa"), 150);
+  const page = paginaQueCambia(() => ({ pantalla: "archivo_altas", texto: PEGADO }));
+  const r = await esperarResultadoDelPegado(page, { estado, dialogosAntes: 0, textoAntes: PEGADO, ms: 3000, cadaMs: 20 });
+  assert.equal(r.cambio, true);
+});
+
+test("si no pasa NADA en todo el tiempo, se informa cambio=false (y quien llama corta con error, no marca rechazo)", async () => {
+  const page = paginaQueCambia(() => ({ pantalla: "archivo_altas", texto: PEGADO }));
+  const r = await esperarResultadoDelPegado(page, { estado: { dialogos: [] }, dialogosAntes: 0, textoAntes: PEGADO, ms: 250, cadaMs: 20 });
+  assert.deepEqual(r, { cambio: false, pantalla: "archivo_altas" });
+  // Y en el motor, ese caso tira en vez de devolver «rechazada».
+  const am = cuerpo("altasMasivas");
+  assert.match(am, /if \(!cambio\) \{[\s\S]*?throw Object\.assign\(new Error\(`ARCA no contestó el «Aceptar» del pegado/);
+});
+
+test("el Server.Transfer que pasa por «otra» un instante no confunde la espera", async () => {
+  const page = paginaQueCambia((t) => (t < 100 ? { pantalla: "archivo_altas", texto: PEGADO } : t < 250 ? { pantalla: "otra", texto: "" } : { pantalla: "altas", texto: "Registrar Nuevas Altas" }));
+  const r = await esperarResultadoDelPegado(page, { estado: { dialogos: [] }, dialogosAntes: 0, textoAntes: PEGADO, ms: 3000, cadaMs: 20 });
+  assert.deepEqual(r, { cambio: true, pantalla: "altas" });
+});
+
+test("textoNuevoDesde: sólo los renglones nuevos, sin los que ya estaban", () => {
+  assert.equal(textoNuevoDesde("a\nb", "a\nb\nc\n  c  \nd"), "c\nd");
+  assert.equal(textoNuevoDesde("a", "a"), "");
 });

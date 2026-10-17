@@ -65,6 +65,10 @@ interface Fila {
   porConsulta?: boolean;
   registro?: string;
   constancia?: CorridaAltasGuardada['contratos'][number]['constancia'];
+  /** La corrida de la que viene la fila, para pedir la pantalla de ARCA de su tanda. */
+  logId: string;
+  /** Qué devolvió ARCA en la tanda de esta persona (sólo en logs que lo guardan). */
+  tandaDetalle?: NonNullable<CorridaAltasGuardada['tandasDetalle']>[number];
 }
 
 /** Dónde quedó la constancia de alta de una persona: es lo que dice la columna «Constancia». */
@@ -103,9 +107,61 @@ export function filasDelHistorial(corridas: CorridaAltasGuardada[]): Fila[] {
       porConsulta: p.porConsulta,
       registro: p.registro,
       constancia: p.constancia,
+      logId: c._id,
+      tandaDetalle: p.tanda != null ? (c.tandasDetalle || []).find((t) => t.n === p.tanda) : undefined,
     })),
   );
 }
+
+/** «Qué devolvió ARCA» en la tanda de una persona: motivo o error, diálogos, y la pantalla si se guardó. */
+const RespuestaDeArca: React.FC<{ f: Fila }> = ({ f }) => {
+  const t = f.tandaDetalle;
+  const [abriendo, setAbriendo] = useState(false);
+  if (!t) return null;
+  const abrirHtml = async () => {
+    setAbriendo(true);
+    try {
+      const html = await projectsAPI.htmlTandaAltasArca(f.logId, t.n);
+      const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+      window.open(url, '_blank', 'noopener');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e: any) {
+      sweetAlert.error('No se pudo abrir la pantalla', e?.response?.data?.error || e?.message || '');
+    } finally {
+      setAbriendo(false);
+    }
+  };
+  const nada = !t.textoArca && !t.error && !(t.dialogos || []).length && !t.textoNuevo && !t.conHtml;
+  return (
+    <div className="mt-3 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-2 text-[11px]">
+      <p className="font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+        Qué devolvió ARCA · tanda {t.n} · {t.resultado}
+        {t.duracionMs ? ` · ${Math.round(t.duracionMs / 1000)} s` : ''}
+      </p>
+      {nada ? (
+        <p className="text-gray-500">ARCA no mostró nada en esta tanda (o la corrida es anterior a que se guardara la evidencia).</p>
+      ) : (
+        <div className="space-y-1">
+          {t.textoArca && <p><span className="text-gray-500">Motivo:</span> <span className="text-red-700 dark:text-red-400">{t.textoArca}</span></p>}
+          {t.error && <p><span className="text-gray-500">Error:</span> <span className="text-red-700 dark:text-red-400">{t.error}</span></p>}
+          {(t.dialogos || []).length > 0 && <p><span className="text-gray-500">Diálogos:</span> {(t.dialogos || []).join(' · ')}</p>}
+          {t.textoNuevo && (
+            <details>
+              <summary className="cursor-pointer text-gray-500">Lo que apareció en pantalla después del «Aceptar»</summary>
+              <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap font-mono text-[10px] text-gray-700 dark:text-gray-300">{t.textoNuevo}</pre>
+            </details>
+          )}
+          {t.conHtml && (
+            <button type="button" onClick={() => void abrirHtml()} disabled={abriendo} className="inline-flex items-center gap-1.5 mt-1 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50">
+              <FontAwesomeIcon icon={abriendo ? faSpinner : faDownload} spin={abriendo} className="h-3 w-3" />
+              Ver la pantalla de ARCA
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId }) => {
   const [corridas, setCorridas] = useState<CorridaAltasGuardada[] | null>(null);
@@ -347,6 +403,7 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
                             ) : (
                               <p className="text-gray-500 dark:text-gray-400">Esta corrida es anterior a que se guardara el registro enviado: queda el resultado, no el detalle.</p>
                             )}
+                            <RespuestaDeArca f={f} />
                           </td>
                         </tr>
                       )}

@@ -3417,7 +3417,8 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
     const logs: any[] = await ArcaAltasLog.find(filtro)
       .sort({ createdAt: -1 })
       .limit(200)
-      .select("createdAt usuarioId automatica empresaId empresaCuit empresaRazonSocial enSeco resultado motivoCorte error contratos tandas duracionMs")
+      // De `tandas`, los subcampos y NO `tandas.html`: pesa hasta 200 KB por tanda y se baja aparte (ver más abajo).
+      .select("createdAt usuarioId automatica empresaId empresaCuit empresaRazonSocial enSeco resultado motivoCorte error contratos duracionMs tandas.n tandas.resultado tandas.error tandas.textoArca tandas.dialogos tandas.duracionMs tandas.cuils tandas.textoNuevo tandas.enRojo")
       .populate("usuarioId", "firstName lastName")
       .lean();
     /*
@@ -3428,6 +3429,14 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
     const idsUp = [...new Set(logs.flatMap((l) => (l.contratos || []).map((c: any) => String(c.userProjectId || ""))).filter((id) => Types.ObjectId.isValid(id)))];
     const ups: any[] = idsUp.length > 0 ? await UserProject.find({ _id: { $in: idsUp } }).select("contracts.altaConstancia contracts.altaEnviadaAFirmarEl").lean() : [];
     const upPorId = new Map(ups.map((u) => [String(u._id), u]));
+    // ¿Qué tandas tienen HTML guardado? Se pregunta sin traerlo: sólo si existe, por log y número de tanda.
+    const conHtml: any[] = logs.length > 0 ? await ArcaAltasLog.aggregate([
+      { $match: { _id: { $in: logs.map((l) => l._id) } } },
+      { $project: { tandas: { $filter: { input: { $ifNull: ["$tandas", []] }, as: "t", cond: { $gt: [{ $strLenCP: { $ifNull: ["$$t.html", ""] } }, 0] } } } } },
+      { $project: { ns: "$tandas.n" } },
+    ]) : [];
+    const htmlPorTanda = new Map<string, boolean>();
+    for (const d of conHtml) for (const n of d.ns || []) htmlPorTanda.set(`${String(d._id)}:${n}`, true);
     const constanciaDe = (c: any) => {
       const k = upPorId.get(String(c.userProjectId || ""))?.contracts?.[c.contractIndex]?.altaConstancia;
       // `null` (y no ausente) = se miró y todavía no está: la pantalla distingue eso de un servidor viejo que no lo informa.
@@ -3451,12 +3460,34 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
         error: l.error,
         duracionMs: l.duracionMs,
         tandas: (l.tandas || []).length,
+        // Qué devolvió ARCA en cada tanda. `conHtml`: hay una pantalla guardada para bajar (no viaja acá).
+        tandasDetalle: (l.tandas || []).map((t: any) => ({ n: t.n, resultado: t.resultado, error: t.error, textoArca: t.textoArca, dialogos: t.dialogos || [], textoNuevo: t.textoNuevo, enRojo: t.enRojo || [], duracionMs: t.duracionMs, conHtml: !!htmlPorTanda.get(`${String(l._id)}:${t.n}`) })),
         contratos: (l.contratos || []).map((c: any) => ({ cuil: c.cuil, nombre: c.nombre, resultado: c.resultado, motivo: c.motivo, tanda: c.tanda, cat: c.cat, porConsulta: c.porConsulta, registro: c.registro, constancia: constanciaDe(c) ?? null })),
       })),
     );
   } catch (error: any) {
     console.error("Historial de altas ARCA error:", error);
     res.status(500).json({ error: "No se pudo leer el registro de altas." });
+  }
+});
+
+/**
+ * GET /contratos/altas-arca/historial/:logId/tandas/:n/html — la pantalla de ARCA (HTML anonimizado:
+ * sin CUIL/CUIT ni VIEWSTATE) tal como quedó en esa tanda. Aparte del listado porque pesa.
+ */
+router.get("/contratos/altas-arca/historial/:logId/tandas/:n/html", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { logId, n } = req.params;
+    if (!Types.ObjectId.isValid(logId) || !Number.isInteger(Number(n))) { res.status(400).json({ error: "Pedido inválido." }); return; }
+    const log: any = await ArcaAltasLog.findOne({ _id: logId, tenantId: req.tenantObjectId }).select("tandas.n tandas.html").lean();
+    const tanda = (log?.tandas || []).find((t: any) => Number(t.n) === Number(n));
+    if (!tanda?.html) { res.status(404).json({ error: "Esa tanda no tiene la pantalla de ARCA guardada." }); return; }
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Content-Disposition", `inline; filename="arca-tanda-${n}.html"`);
+    res.send(tanda.html);
+  } catch (error: any) {
+    console.error("HTML de tanda error:", error);
+    res.status(500).json({ error: "No se pudo leer la pantalla de esa tanda." });
   }
 });
 

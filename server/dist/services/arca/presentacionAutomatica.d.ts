@@ -23,6 +23,12 @@ export interface CandidatoAlta {
     presentable: boolean;
     /** La baja ya pasó: la automática no lo toma (y no cuenta como omitido de una corrida), pero se puede forzar a mano. */
     terminado: boolean;
+    /**
+     * ARCA ya lo rechazó con un motivo que no cambia por insistir («ya posee una relación laboral
+     * activa»): el texto de ese rechazo. La automática no lo vuelve a presentar; queda listado para que
+     * alguien lo revise, y se puede forzar a mano. Ver `rechazoDefinitivo.ts`.
+     */
+    rechazoDefinitivo: string;
     /** Por qué no, si no se puede. */
     motivo: string;
     /** El registro de 85, si está completo. */

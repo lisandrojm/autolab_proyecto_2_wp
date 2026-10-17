@@ -24,7 +24,21 @@ export interface IArcaAltasLog extends Document {
   enSeco: boolean;
   contratos: Array<{ userProjectId: Types.ObjectId; contractIndex: number; cuil: string; nombre: string; /** El registro de 85 tal cual se mandó a ARCA. */ registro?: string; resultado: string; motivo?: string; tanda?: number; cat?: string; porConsulta?: boolean }>;
   /** Altas Masivas por tandas: cada tanda con sus tiempos y su resultado. */
-  tandas?: Array<{ n: number; cuils: string[]; inicio: Date; fin: Date; duracionMs: number; resultado: string; error?: string }>;
+  tandas?: Array<{
+    n: number;
+    cuils: string[];
+    inicio: Date;
+    fin: Date;
+    duracionMs: number;
+    resultado: string;
+    error?: string;
+    /** Lo que devolvió ARCA en esa tanda (rechazo o fallo): motivo, diálogos, HTML anonimizado, renglones nuevos, textos en rojo. */
+    textoArca?: string;
+    dialogos?: string[];
+    html?: string;
+    textoNuevo?: string;
+    enRojo?: string[];
+  }>;
   /** El tope del pegado que decía la pantalla, y el que se usó (el menor entre ese y la constante). */
   topeEnPantalla?: number;
   topeUsado?: number;
@@ -60,7 +74,7 @@ const schema = new Schema<IArcaAltasLog>(
     empresaRazonSocial: String,
     enSeco: { type: Boolean, default: true },
     contratos: [{ _id: false, userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" }, contractIndex: Number, cuil: String, nombre: String, registro: String, resultado: String, motivo: String, tanda: Number, cat: String, porConsulta: Boolean }],
-    tandas: [{ _id: false, n: Number, cuils: [String], inicio: Date, fin: Date, duracionMs: Number, resultado: String, error: String }],
+    tandas: [{ _id: false, n: Number, cuils: [String], inicio: Date, fin: Date, duracionMs: Number, resultado: String, error: String, textoArca: String, dialogos: [String], html: String, textoNuevo: String, enRojo: [String] }],
     topeEnPantalla: Number,
     topeUsado: Number,
     motivoCorte: String,

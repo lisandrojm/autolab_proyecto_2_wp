@@ -157,7 +157,7 @@ export const PresentacionesArcaPage: React.FC = () => {
     const antes = estado && c.fechaAlta > estado.hoy;
     const r = await sweetAlert.confirm(
       `Presentar ahora a ${c.nombre}`,
-      `${antes ? `Todavía no es el día de la presentación: su alta es el ${fechaCorta(c.fechaAlta)}. ` : ""}${c.terminado ? `El contrato ya terminó (baja el ${fechaCorta(c.fechaBaja)}): se declara una relación que ya pasó. ` : ""}Se presenta ya en ARCA, a nombre de ${c.empresa?.razonSocial || "su empleadora"}. No se deshace.`,
+      `${antes ? `Todavía no es el día de la presentación: su alta es el ${fechaCorta(c.fechaAlta)}. ` : ""}${c.terminado ? `El contrato ya terminó (baja el ${fechaCorta(c.fechaBaja)}): se declara una relación que ya pasó. ` : ""}${c.rechazoDefinitivo ? `ARCA ya la rechazó («${c.rechazoDefinitivo}»): si nada cambió en ARCA, va a rechazarla de nuevo. ` : ""}Se presenta ya en ARCA, a nombre de ${c.empresa?.razonSocial || "su empleadora"}. No se deshace.`,
       "Sí, presentar",
       "Cancelar",
     );
@@ -215,7 +215,7 @@ export const PresentacionesArcaPage: React.FC = () => {
       <td className="px-4 py-3">
         {esVencida ? (
           <span className="text-xs font-semibold text-red-600 dark:text-red-400">
-            {c.terminado ? `Ya terminó (baja el ${fechaCorta(c.fechaBaja)}): la automática no la toma; se puede forzar` : "Más de 30 días de atraso: no entra en la automática"}
+            {c.rechazoDefinitivo ? `ARCA ya la rechazó: ${c.rechazoDefinitivo} La automática no insiste; revisala o forzala` : c.terminado ? `Ya terminó (baja el ${fechaCorta(c.fechaBaja)}): la automática no la toma; se puede forzar` : "Más de 30 días de atraso: no entra en la automática"}
           </span>
         ) : (
           <div className="space-y-1">

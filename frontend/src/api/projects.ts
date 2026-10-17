@@ -930,6 +930,12 @@ class ProjectsAPI {
     return data;
   }
 
+  /** La pantalla de ARCA (HTML anonimizado) tal como quedó en una tanda, para verla en una pestaña. */
+  async htmlTandaAltasArca(logId: string, n: number): Promise<string> {
+    const { data } = await axios.get(`/contratos/altas-arca/historial/${logId}/tandas/${n}/html`, { headers: this.getHeaders(), responseType: "text" });
+    return String(data);
+  }
+
   /** Corta la corrida, solo hasta el paso anterior al envío. Después el servidor contesta 409. */
   async detenerAltasArca(): Promise<{ detenida: boolean; motivo?: string }> {
     const { data } = await axios.post(`/contratos/altas-arca/corrida/detener`, {}, { headers: this.getHeaders(), validateStatus: (s) => s === 200 || s === 409 });
@@ -1046,6 +1052,11 @@ export interface CorridaAltasGuardada {
   error?: string;
   duracionMs?: number;
   tandas: number;
+  /**
+   * Qué devolvió ARCA en cada tanda (rechazo o fallo). Ausente en logs anteriores al 17/10/2026 y en
+   * servidores viejos. `conHtml`: hay una pantalla guardada, se baja con `htmlTandaAltasArca`.
+   */
+  tandasDetalle?: Array<{ n: number; resultado: string; error?: string; textoArca?: string; dialogos?: string[]; textoNuevo?: string; enRojo?: string[]; duracionMs?: number; conHtml: boolean }>;
   contratos: Array<{
     cuil: string;
     nombre: string;
@@ -1106,6 +1117,8 @@ export interface AltaPendienteArca {
   presentable: boolean;
   /** La baja ya pasó: no tiene sentido dar el alta. */
   terminado?: boolean;
+  /** ARCA ya lo rechazó con un motivo del padrón («ya posee una relación laboral activa»): la automática no insiste; se puede forzar. */
+  rechazoDefinitivo?: string;
   motivo: string;
 }
 

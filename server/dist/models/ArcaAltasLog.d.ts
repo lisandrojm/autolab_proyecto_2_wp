@@ -42,6 +42,12 @@ export interface IArcaAltasLog extends Document {
         duracionMs: number;
         resultado: string;
         error?: string;
+        /** Lo que devolvió ARCA en esa tanda (rechazo o fallo): motivo, diálogos, HTML anonimizado, renglones nuevos, textos en rojo. */
+        textoArca?: string;
+        dialogos?: string[];
+        html?: string;
+        textoNuevo?: string;
+        enRojo?: string[];
     }>;
     /** El tope del pegado que decía la pantalla, y el que se usó (el menor entre ese y la constante). */
     topeEnPantalla?: number;

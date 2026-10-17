@@ -46,6 +46,11 @@ export interface TandaHecha {
     /** `aceptada` | `rechazada` | `seco` | `indeterminado` | `fallo`. */
     resultado: string;
     error?: string;
+    textoArca?: string;
+    dialogos?: string[];
+    html?: string;
+    textoNuevo?: string;
+    enRojo?: string[];
 }
 export type MotivoCorte = "detenida" | "error" | "error_despues_de_presentar" | "dialogo" | "rechazos_seguidos";
 export interface MotorTandas {
@@ -64,6 +69,12 @@ export interface MotorTandas {
             motivo?: string;
             cat?: string;
         }>;
+        /** La evidencia de ARCA (ver `TandaHecha`). El motor la manda en los rechazos; en los errores viaja en `e.evidencia`. */
+        textoArca?: string;
+        dialogos?: string[];
+        html?: string;
+        textoNuevo?: string;
+        enRojo?: string[];
     }>;
     /** `encontrada` es `true` o `null`: nunca `false` (ver `altaEnConsulta` en el motor). */
     consultar(o: {
