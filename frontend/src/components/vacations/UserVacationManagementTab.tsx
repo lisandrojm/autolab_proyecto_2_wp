@@ -30,6 +30,10 @@ interface UserVacationBalance {
   email: string;
   hireDate: string | null;
   seniority: string;
+  /** Las empleadoras para las que trabajó («FZERO S.R.L | GRINI S.R.L.»). */
+  empresas?: string[];
+  /** La cuenta por cada empleadora (pestaña «Por empresa»): antigüedad en esa empresa, días por ley y las vacaciones tomadas estando contratado por ella. */
+  porEmpresa?: Array<{ cuit: string; nombre: string; fuente: "arca" | "contratos"; dias: number; texto: string; tieneRelacionAbierta: boolean; totalAnnual: number; taken: number; pending: number; available: number }>;
   /** De dónde salió la antigüedad y cómo se llegó a los días por ley (ver el modal de la celda). */
   antiguedad?: {
     fuente: "arca" | "contratos" | "ingreso" | "ninguna";
@@ -123,6 +127,62 @@ const COLORES_COLUMNA = {
 const claseCampo = (color: keyof typeof COLORES_COLUMNA, editado: boolean) =>
   `w-20 px-2 py-1 text-center border rounded text-sm font-semibold focus:ring-1 ${COLORES_COLUMNA[color].campo} ${editado ? `${COLORES_COLUMNA[color].editado} font-bold` : ""}`;
 
+/** Una fila por persona y empleadora: antigüedad en esa empresa, días por ley y vacaciones tomadas con ella. Sólo lectura. */
+const TablaPorEmpresa: React.FC<{ balances: UserVacationBalance[]; formatDate: (d: string | null) => string }> = ({ balances, formatDate }) => {
+  const th = (extra = '') => `px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 ${extra}`;
+  const num = (v: number, color: string) => <span className={`inline-flex min-w-[2.5rem] justify-center px-2 py-1 rounded border font-bold text-sm ${color}`}>{v}</span>;
+  type FilaEmpresa = { b: UserVacationBalance; e: NonNullable<UserVacationBalance['porEmpresa']>[number] | null };
+  const filas: FilaEmpresa[] = balances.flatMap((b): FilaEmpresa[] => (b.porEmpresa && b.porEmpresa.length > 0 ? b.porEmpresa.map((e) => ({ b, e })) : [{ b, e: null }]));
+  return (
+    <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 mb-6 min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-10.5rem)]">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 relative">
+        <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10 shadow-sm">
+          <tr>
+            <th className={th()}>Empresa</th>
+            <th className={th()}>Usuario</th>
+            <th className={th()}>Antigüedad en la empresa</th>
+            <th className={th('text-center text-violet-600 dark:text-violet-400 w-24')}>Total Anual (ley)</th>
+            <th className={th('text-center text-red-600 dark:text-red-400 w-24')}>Tomados (Gozados)</th>
+            <th className={th('text-center text-amber-600 dark:text-amber-400 w-24')}>Pendientes</th>
+            <th className={th('text-center text-emerald-600 dark:text-emerald-400 w-24')}>Disponibles</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          {filas.length === 0 ? (
+            <tr>
+              <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">No hay personas en esta página.</td>
+            </tr>
+          ) : (
+            filas.map(({ b, e }, i) => {
+              const primera = i === 0 || filas[i - 1].b.userId !== b.userId;
+              return (
+                <tr key={`${b.userId}-${e?.cuit || e?.nombre || 'sin'}`} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${primera ? 'border-t-2 border-gray-200 dark:border-gray-600' : ''}`}>
+                  <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                    {e ? e.nombre : <span className="text-gray-400 font-normal">Sin empresa</span>}
+                    {e && e.fuente === 'arca' && <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="Según las relaciones laborales registradas en ARCA">ARCA</span>}
+                    {e && e.tieneRelacionAbierta && <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">activa</span>}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className={`text-sm ${primera ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                      {b.firstName} {b.lastName}
+                    </div>
+                    {primera && <div className="text-xs text-gray-500">{b.email} · ingreso {formatDate(b.hireDate)}</div>}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{e ? `${e.texto} (${e.dias.toLocaleString('es-AR')} días)` : '—'}</td>
+                  <td className="px-4 py-3 text-center">{num(e?.totalAnnual ?? 0, 'border-violet-300 text-violet-700 dark:border-violet-700 dark:text-violet-300')}</td>
+                  <td className="px-4 py-3 text-center">{num(e?.taken ?? 0, 'border-red-300 text-red-700 dark:border-red-700 dark:text-red-300')}</td>
+                  <td className="px-4 py-3 text-center">{num(e?.pending ?? 0, 'border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300')}</td>
+                  <td className="px-4 py-3 text-center">{num(e?.available ?? 0, 'border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-300')}</td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 export const UserVacationManagementTab: React.FC = () => {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
@@ -147,6 +207,8 @@ export const UserVacationManagementTab: React.FC = () => {
   const [editedExtras, setEditedExtras] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const [openInfo, setOpenInfo] = useState(false);
+  /** «Acumulado» (una fila por persona, todas sus empresas juntas) o «Por empresa» (una fila por persona y empresa). */
+  const [vista, setVista] = useState<'acumulado' | 'porEmpresa'>('acumulado');
   const [openInfoExtra, setOpenInfoExtra] = useState(false);
   /** La persona cuya cuenta de antigüedad se está mirando. */
   const [antiguedadDe, setAntiguedadDe] = useState<UserVacationBalance | null>(null);
@@ -537,10 +599,29 @@ export const UserVacationManagementTab: React.FC = () => {
         `min-h` porque el cálculo puede dar muy poco en una pantalla baja, y una tabla de tres filas no
         se puede usar. Cuando el mínimo y el máximo se cruzan, gana el mínimo.
       */}
+      {/*
+        DOS VISTAS DE LA MISMA CUENTA (pedido del 17/10/2026). «Acumulado» es la de siempre: una fila por
+        persona con todas sus empleadoras juntas (y, al inicio, cuáles son). «Por empresa» abre esa fila
+        en una por empleadora —antigüedad en ESA empresa, sus días por ley y las vacaciones tomadas con
+        ella— para poder compararlas. La por empresa es de lectura: lo que se edita es el acumulado.
+      */}
+      <div className="flex items-center gap-1 border-b border-gray-200 dark:border-gray-700 mb-4">
+        {([['acumulado', 'Acumulado'], ['porEmpresa', 'Por empresa']] as const).map(([k, rotulo]) => (
+          <button key={k} type="button" onClick={() => setVista(k)} className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${vista === k ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}>
+            {rotulo}
+          </button>
+        ))}
+        <span className="ml-auto text-[11px] text-gray-500 dark:text-gray-400 pb-1">{vista === 'acumulado' ? 'Todas las empresas juntas; editable.' : 'Una fila por empresa; sólo lectura.'}</span>
+      </div>
+
+      {vista === 'porEmpresa' ? (
+        <TablaPorEmpresa balances={balancesDeLaPagina} formatDate={formatDate} />
+      ) : (
       <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 mb-6 min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-10.5rem)]">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 relative">
           <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10 shadow-sm">
             <tr>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Empresa/s</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Usuario</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Ingreso / Antigüedad</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Rol Empresa</th>
@@ -578,6 +659,21 @@ export const UserVacationManagementTab: React.FC = () => {
 
                 return (
                   <tr key={balance.userId} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${isModified ? "bg-amber-50/10 dark:bg-amber-900/5" : ""}`}>
+                    {/* Las empleadoras para las que trabajó, separadas por «|»; el detalle de cada una está en «Por empresa». */}
+                    <td className="px-6 py-4 text-xs text-gray-700 dark:text-gray-300 max-w-[220px]">
+                      {balance.empresas && balance.empresas.length > 0 ? (
+                        <span className="flex flex-wrap gap-x-1">
+                          {balance.empresas.map((e, i) => (
+                            <span key={e} className="whitespace-nowrap">
+                              {i > 0 && <span className="text-gray-400 mr-1">|</span>}
+                              {e}
+                            </span>
+                          ))}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500">—</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -699,8 +795,11 @@ export const UserVacationManagementTab: React.FC = () => {
         </table>
       </div>
 
+      )}
+
       <Paginador total={filteredBalances.length} pagina={paginaActual} onCambiar={setPagina} entidadPlural="personas" />
 
+      {vista === 'acumulado' && (
       <div className="flex justify-end gap-3 py-4 border-t border-gray-100 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800">
         <button
           onClick={handleSaveAll}
@@ -720,6 +819,7 @@ export const UserVacationManagementTab: React.FC = () => {
           )}
         </button>
       </div>
+      )}
 
       <InfoModal isOpen={openInfo} onClose={() => setOpenInfo(false)} title="Gestión de Vacaciones por Usuario" size="md">
         <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
@@ -744,6 +844,14 @@ export const UserVacationManagementTab: React.FC = () => {
                 <span className="font-semibold text-blue-600 dark:text-blue-400">Días Extra</span>: el beneficio de la compañía. Se guarda en la persona, no en el año.
               </li>
             </ul>
+          </div>
+          <div>
+            <p className="font-semibold mb-2">Acumulado y Por empresa</p>
+            <p>
+              <strong>Acumulado</strong> es una fila por persona con todas sus empleadoras juntas (la columna «Empresa/s» dice cuáles) y es lo que se edita. <strong>Por empresa</strong> abre esa fila en
+              una por empleadora: la antigüedad en esa empresa, sus días por ley y las vacaciones tomadas estando contratado por ella (una vacación es de la empresa del contrato que regía el día que
+              empezó). Los días extra, el beneficio y el arrastre son de la persona: están sólo en el acumulado.
+            </p>
           </div>
           <div>
             <p className="font-semibold mb-2">La antigüedad</p>
