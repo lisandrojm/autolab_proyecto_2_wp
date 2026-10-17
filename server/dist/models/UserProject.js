@@ -121,6 +121,10 @@ const contractSchema = new Schema({
     contenidoCustomEditadoEl: { type: Date },
     solicitudId: { type: Schema.Types.ObjectId, ref: "User" },
     origen: { type: String, enum: ["agregar_miembro"] },
+    origenContrato: {
+        type: new Schema({ nombre_proyecto: { type: String }, proyecto_id: { type: Number }, fecha_alta_contrato: { type: String } }, { _id: false }),
+        default: undefined,
+    },
     areaShiftAssignments: [
         {
             areaId: { type: Schema.Types.ObjectId, ref: "Area" },

@@ -489,6 +489,7 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
     const CAMPOS_CONTRATO_TABLA = [
       "solicitudId",
       "origen",
+      "origenContrato",
       "fecha_carga",
       "tipo_contrato_id",
       "nombre_estado_empleado",

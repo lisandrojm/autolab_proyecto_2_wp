@@ -43,6 +43,8 @@ export interface TenantRef {
 export interface Contract {
   fecha_alta_contrato: string;
   fecha_baja_contrato: string;
+  /** De qué proyecto vino, si entró con «Agregar con contrato vigente» (copia del contrato de ese proyecto). */
+  origenContrato?: { nombre_proyecto?: string; proyecto_id?: number | null; fecha_alta_contrato?: string } | null;
   /** Sólo en `lastContract` de la tabla de equipo: qué decir sobre su renovación (ver `estadoDeRenovacion` en el server). */
   renovacion?: "renovar" | "en_proceso" | "renovado" | null;
   nombre_proyecto: string;

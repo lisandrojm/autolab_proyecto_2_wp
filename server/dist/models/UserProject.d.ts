@@ -305,6 +305,15 @@ interface IContract {
      * los agregados a mano antes de esa fecha) no lo tienen. Los de Solicitudes se reconocen por `solicitudId`.
      */
     origen?: "agregar_miembro";
+    /**
+     * De qué proyecto vino, cuando la persona entró con «Agregar con contrato vigente»: el contrato es una
+     * copia del que tiene en ese otro proyecto. La tabla de equipo lo muestra como «Contrato de: X».
+     */
+    origenContrato?: {
+        nombre_proyecto?: string;
+        proyecto_id?: number | null;
+        fecha_alta_contrato?: string;
+    } | null;
     sinCuitValidacion?: {
         /** Documentación de respaldo cargada. Hace falta al menos una para poder marcar `validado`. */
         documentos: {

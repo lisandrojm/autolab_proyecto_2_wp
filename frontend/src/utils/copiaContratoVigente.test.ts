@@ -58,6 +58,9 @@ describe("la copia de un contrato vigente para otro proyecto", () => {
     assert.equal(copia.shiftId, "");
     assert.deepEqual(copia.areaShiftAssignments, []);
   });
+  it("recuerda de qué proyecto vino", () => {
+    assert.deepEqual(copia.origenContrato, { nombre_proyecto: "99_PRODUCTORA", proyecto_id: 99, fecha_alta_contrato: "2023-06-01" });
+  });
   it("no toca el original", () => {
     assert.equal(VIGENTE.areaId, "area1");
   });

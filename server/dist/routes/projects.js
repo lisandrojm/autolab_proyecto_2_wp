@@ -1900,6 +1900,8 @@ const CAMPOS_FIRMA_DIGITAL = [
     "firmaContratoUrl", "firmaContratoNombre", "firmaReleases", "firmaEmpresaContratoId", "firmaEmpresaReleaseId",
     "firmaGeneradoAt", "firmaReleasesGeneradoAt", "firmaEnviadaAt",
     "contenidoCustomContrato", "contenidoCustomReleases", "contenidoCustomEditadoPor", "contenidoCustomEditadoEl",
+    // De qué proyecto vino el contrato (si entró con «Agregar con contrato vigente»): editarlo no lo borra.
+    "origenContrato",
 ];
 /** "2026-03-16" (o un Date) → "16/03/2026", sin pasar por el huso. */
 const fechaDDMMAAAA = (v) => {

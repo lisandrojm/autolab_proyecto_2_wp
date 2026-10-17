@@ -134,6 +134,18 @@ function formatContractDate(d?: string): string {
  * el que rige hoy en cualquier lado o, si no hay vigente, el más reciente. Va rotulado con su proyecto
  * para que no se lea como un contrato de este equipo.
  */
+/** El contrato entró con «Agregar con contrato vigente»: es una copia del de otro proyecto, y se dice de cuál. */
+const BadgeContratoDe: React.FC<{ contrato: { origenContrato?: { nombre_proyecto?: string } | null } | null | undefined }> = ({ contrato }) => {
+  const nombre = contrato?.origenContrato?.nombre_proyecto;
+  if (!nombre) return null;
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-300/60 dark:border-amber-700/60" title={`Entró con el contrato vigente que tiene en ${nombre}: este contrato es una copia de aquel.`}>
+      <FontAwesomeIcon icon={faBriefcase} className="h-2.5 w-2.5" />
+      Contrato de: {nombre}
+    </span>
+  );
+};
+
 const ContratoDeOtroProyecto: React.FC<{ contrato: { nombre_contrato?: string | null; nombre_proyecto?: string | null; fecha_alta_contrato?: string; fecha_baja_contrato?: string }; conNombre?: boolean }> = ({ contrato, conNombre = false }) => {
   const vigente = esContratoVigente(contrato as any);
   return (
@@ -3048,6 +3060,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   <span className="text-gray-400">Baja:</span> {activeContract.fecha_baja_contrato ? formatContractDate(activeContract.fecha_baja_contrato) : '—'}
                 </span>
               </div>
+              <BadgeContratoDe contrato={activeContract as any} />
             </div>
           ) : (user as any).contratoEnOtroProyecto ? (
             <ContratoDeOtroProyecto contrato={(user as any).contratoEnOtroProyecto} />
@@ -3325,9 +3338,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           {!activeContract && (user as any).contratoEnOtroProyecto ? (
             <ContratoDeOtroProyecto contrato={(user as any).contratoEnOtroProyecto} conNombre />
           ) : (
-            <span className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300" title="Ver contratos para descargar">
-              <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
-              {activeContract?.nombre_contrato || '-'}
+            <span className="flex flex-col gap-1 items-start text-xs text-gray-700 dark:text-gray-300" title="Ver contratos para descargar">
+              <span className="flex items-center gap-1.5">
+                <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
+                {activeContract?.nombre_contrato || '-'}
+              </span>
+              <BadgeContratoDe contrato={activeContract as any} />
             </span>
           )}
         </td>

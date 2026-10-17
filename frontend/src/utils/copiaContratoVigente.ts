@@ -59,5 +59,11 @@ export function copiaParaOtroProyecto<T extends Record<string, unknown>>(contrat
   copia.areaId = "";
   copia.shiftId = "";
   copia.areaShiftAssignments = [];
+  // De dónde vino: la tabla de equipo lo muestra como «Contrato de: X» para que no se lea como un contrato nacido acá.
+  copia.origenContrato = {
+    nombre_proyecto: String(contrato.nombre_proyecto || ""),
+    proyecto_id: typeof contrato.proyecto_id === "number" ? contrato.proyecto_id : Number(contrato.proyecto_id) || null,
+    fecha_alta_contrato: String(contrato.fecha_alta_contrato || ""),
+  };
   return copia;
 }
