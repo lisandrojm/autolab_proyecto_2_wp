@@ -37,6 +37,7 @@ import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/E
 import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
 import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
 import { copiaParaOtroProyecto } from '../utils/copiaContratoVigente';
+import { useColorDeEstado } from '../components/EstadoSelect';
 import { contratoFrameAPI, ContratoFrameItem, plantillaEsDeContrato, plantillaActivaParaFiltrar } from '../api/contratosFrame';
 import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoDePlantilla, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from '../utils/tramiteImpositivo';
 import { TipoContratoSelect } from '../components/contratos/TipoContratoSelect';
@@ -1083,6 +1084,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const esServicios = !!wizardData.contrato_id && tramiteSinConvenioNiCategoria(tramitePorContrato.get(wizardData.contrato_id));
   // Pedido de servicios: lleva convenio y categoría, pero sólo se ven los netos (ver `soloNeto` en `ImportesDelContrato`).
   const soloNetoWizard = !!wizardData.contrato_id && tramitePorContrato.get(wizardData.contrato_id) === 'constancia_cuit';
+  // El estado impositivo del tipo (p. ej. «Pedido de Servicios»): el aviso de valor de referencia y los (*) van de su color.
+  const nombreEstadoWizard = allEstados.find((e) => String(e.data?.id) === String(wizardData.estado_id))?.name || 'Pedido de Servicios';
+  const colorReferenciaWizard = useColorDeEstado(soloNetoWizard ? nombreEstadoWizard : undefined) || '#f59e0b';
+  const marcaReferencia = soloNetoWizard ? (
+    <span className="ml-1 font-black normal-case tracking-normal" style={{ color: colorReferenciaWizard }} title="Valor de referencia">
+      (*)
+    </span>
+  ) : null;
 
   /*
     EN UN CONTRATO NUEVO, EL IMPORTE POR JORNADA LO PROPONE LA ESCALA, como en la solicitud del móvil.
@@ -4950,17 +4959,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   Lo que se guarda sigue siendo el sueldo por jornada.
                 */}
                 <div className="md:col-span-2 space-y-4 pt-6 border-t border-gray-100 dark:border-gray-700">
-                  <ImportesDelContrato conservarJornadaExterna className="grid grid-cols-1 md:grid-cols-2 gap-4" valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ''} onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))} mesesEq={mesesEqWizard} indeterminado={indeterminadoWizard} jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0} jornadasDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.cantidadJornadas) || null} diasPorSemanaDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.diasPorSemana) || null} proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id)))} diasSemana={diasSemanaWizard} soloNeto={soloNetoWizard} resumenTotal={resumenDelTotalWizard} bloqueado={!esServicios && !wizardData.categoria_sat_id} textoBloqueado="Se habilita al elegir la categoría: el importe sale de su escala." claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1" claseCampo="input-field w-full" claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300" claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1" />
+                  <ImportesDelContrato conservarJornadaExterna className="grid grid-cols-1 md:grid-cols-2 gap-4" valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ''} onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))} mesesEq={mesesEqWizard} indeterminado={indeterminadoWizard} jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0} jornadasDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.cantidadJornadas) || null} diasPorSemanaDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.diasPorSemana) || null} proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id)))} diasSemana={diasSemanaWizard} soloNeto={soloNetoWizard} estadoReferencia={nombreEstadoWizard} resumenTotal={resumenDelTotalWizard} bloqueado={!esServicios && !wizardData.categoria_sat_id} textoBloqueado="Se habilita al elegir la categoría: el importe sale de su escala." claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1" claseCampo="input-field w-full" claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300" claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1" />
 
                   {/* Lo que se deriva de la categoría y de las jornadas: se muestra, no se carga. */}
                   <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano</label>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo en mano{marcaReferencia}</label>
                     <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_mano} readOnly />
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
                       Sueldo en mano texto <span className="text-red-500">*</span>
+                      {marcaReferencia}
                     </label>
                     <input type="text" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" placeholder="Ej: Cincuenta mil pesos" value={wizardData.sueldo_mano_texto} readOnly />
                   </div>
@@ -4980,7 +4990,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   {/* Pedido de servicios: sólo el sueldo neto, como valor de referencia de la categoría. */}
                   {!esServicios && soloNetoWizard && (
                     <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo neto</label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Sueldo neto{marcaReferencia}</label>
                       <input type="number" className="input-field w-full bg-gray-50 dark:bg-gray-900/50 cursor-not-allowed" value={wizardData.sueldo_neto} readOnly />
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Es un valor de referencia: el sueldo neto de la escala de la categoría asignada, del sindicato y convenio elegidos.</p>
                     </div>

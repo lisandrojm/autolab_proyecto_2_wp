@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { anclaDesdeJornada, AnclaImporte, derivarImportes, mesesParaImportes } from "../../utils/jornadas";
 import { CampoImporte } from "./CampoImporte";
+import { EstadoBadge, useColorDeEstado } from "../EstadoSelect";
 
 /*
   LOS IMPORTES DEL CONTRATO: jornada, semana, mensual y total.
@@ -105,6 +106,12 @@ interface Props {
    */
   soloNeto?: boolean;
   /**
+   * EL ESTADO IMPOSITIVO DEL TIPO («Pedido de Servicios»), para el aviso de «valor de referencia» que
+   * encabeza los importes con `soloNeto`: el aviso y los (*) de cada importe van del color del badge de
+   * ese estado, así se leen como parte de lo mismo.
+   */
+  estadoReferencia?: string;
+  /**
    * DE DÓNDE SALE EL TOTAL, en letra chica debajo del campo (pedido del 09/10/2026): el período, el área
    * y turno, los días y la cuenta jornada × jornadas. Cada pantalla pasa los textos que tiene; los que
    * faltan no se dibujan. La cuenta la arma el componente con sus propios números.
@@ -125,7 +132,7 @@ export interface ResumenTotal {
 
 const pesosAR = (n: number) => n.toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mesesDelPeriodo, jornadas, jornadasDelTipo, proporcionNeto, diasPorSemanaDelTipo, diasSemana: diasMarcados, indeterminado = false, soloNeto: soloNetoPedido = false, bloqueado = false, textoBloqueado, ayudaJornada, className = "", claseEtiqueta, claseCampo, claseCampoTotal, claseAyuda, icono, adornoCampo, infoEnRotulo, conservarJornadaExterna = false, resumenTotal }: Props) {
+export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mesesDelPeriodo, jornadas, jornadasDelTipo, proporcionNeto, diasPorSemanaDelTipo, diasSemana: diasMarcados, indeterminado = false, soloNeto: soloNetoPedido = false, bloqueado = false, textoBloqueado, ayudaJornada, className = "", claseEtiqueta, claseCampo, claseCampoTotal, claseAyuda, icono, adornoCampo, infoEnRotulo, conservarJornadaExterna = false, resumenTotal, estadoReferencia }: Props) {
   // Los meses que dura el contrato PARA LOS IMPORTES: con jornadas en el tipo, jornadas ÷ esas jornadas.
   const mesesEq = mesesParaImportes(mesesDelPeriodo, jornadas, jornadasDelTipo);
   // La semana del contrato: los días por semana del tipo, si los tiene; si no, los días marcados.
@@ -138,6 +145,26 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
   */
   const netoSobreBruto = Number(proporcionNeto) > 0 ? Number(proporcionNeto) : null;
   const soloNeto = soloNetoPedido && !!netoSobreBruto;
+  /*
+    TODOS SON VALORES DE REFERENCIA (pedido del 17/10/2026). En un Pedido de servicios los importes salen
+    de la escala de la categoría del rol y de la valoración del proyecto, no de un sueldo pactado: un
+    aviso arriba lo dice una vez, y cada importe lleva un (*) del mismo color para que no haya que
+    leer la ayuda de cada campo para enterarse.
+  */
+  const colorReferencia = useColorDeEstado(soloNeto ? estadoReferencia : undefined) || "#f59e0b";
+  const marca = soloNeto ? (
+    <span className="ml-1 font-black normal-case tracking-normal" style={{ color: colorReferencia }} title="Valor de referencia">
+      (*)
+    </span>
+  ) : null;
+  const avisoReferencia = soloNeto ? (
+    <div className="md:col-span-2 rounded-lg px-3 py-2 text-xs flex items-start gap-2" style={{ color: colorReferencia, border: `1px solid ${colorReferencia}`, background: `color-mix(in srgb, ${colorReferencia} 12%, transparent)` }}>
+      {estadoReferencia && <EstadoBadge name={estadoReferencia} className="shrink-0" />}
+      <span className="leading-snug">
+        <span className="font-black">(*)</span> Todos los importes son un <span className="font-black uppercase">valor de referencia</span> de acuerdo a la categoría del rol asignado y la valoración del proyecto.
+      </span>
+    </div>
+  ) : null;
   // En pantalla: el total siempre en neto; con `soloNeto`, todos.
   const vista = (unidad: UnidadImporte) => (netoSobreBruto && (soloNeto || unidad === "total") ? netoSobreBruto : 1);
   const [ancla, setAncla] = useState<AnclaImporte | null>(null);
@@ -268,6 +295,7 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
       <label className={claseEtiqueta}>
         {icono}
         {rotulo}
+        {marca}
         {infoEnRotulo?.(rotulo, ayuda)}
       </label>
       {subRotulo(unidad)}
@@ -370,6 +398,7 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
     <div className={className}>
       {soloNeto ? (
         <>
+          {avisoReferencia}
           {campo("jornada", "Importe por jornada neto", sinJornadas, ayuda(sinJornadas ? TEXTO_SIN_JORNADAS : "Si lo cambiás, se recalculan los demás."), claseCampo)}
           {campo("semana", "Importe por semana neto", sinJornadas || diasSemana <= 0, ayuda(sinJornadas ? TEXTO_SIN_JORNADAS : diasSemana > 0 ? `Jornada × ${diasSemana} ${diasSemana === 1 ? "día" : "días"} por semana.` : "Marcá los días que trabaja para calcularlo."), claseCampo)}
           {campo("mes", "Importe mensual neto", mesesEq <= 0 || sinJornadas, ayuda(mesesEq > 0 && !sinJornadas ? (Number(jornadasDelTipo) > 0 ? `Jornada × ${jornadasDelTipo} jornadas por mes del tipo de contrato.` : "Se prorratea según los días hábiles de cada mes del período.") : TEXTO_SIN_JORNADAS), claseCampoTotal)}

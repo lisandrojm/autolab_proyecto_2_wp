@@ -129,6 +129,26 @@ export const colorTextoBadge = (hex: string, isDark: boolean): string => {
 };
 
 /**
+ * El color de texto con el que `EstadoBadge` dibuja ese estado, para pintar OTRA cosa del mismo color
+ * (un aviso, un asterisco) y que se lea como parte del mismo estado. `undefined` si el estado no está
+ * en el ABM o no se pasó nombre.
+ */
+export function useColorDeEstado(name?: string): string | undefined {
+  const estados = useEstadoCatalogStore((s) => s.estados);
+  const ensureLoaded = useEstadoCatalogStore((s) => s.ensureLoaded);
+  const theme = useThemeStore((s) => s.theme);
+  useEffect(() => {
+    ensureLoaded();
+  }, [ensureLoaded]);
+  return useMemo(() => {
+    if (!name) return undefined;
+    const configurado = estados.find((e) => claveEstado(e.name) === claveEstado(name));
+    const color = configurado?.data?.color || (configurado ? estadoColorPorDefecto(configurado.name) : undefined);
+    return color ? colorTextoBadge(color, theme === "dark") : undefined;
+  }, [estados, name, theme]);
+}
+
+/**
  * Badge de estado del contrato. Si el estado está configurado en el ABM (Configuración → Estados)
  * usa su color y su nombre dentro del contrato; si no, cae en los estilos por defecto.
  */
