@@ -169,7 +169,7 @@ const ContratoDeOtroProyecto: React.FC<{ contrato: { nombre_contrato?: string | 
       {/* Un badge, no una nota en cursiva: tiene que saltar a la vista que este contrato NO es de este proyecto. */}
       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-300/60 dark:border-amber-700/60" title={`Contrato de otro proyecto${contrato.nombre_proyecto ? `: ${contrato.nombre_proyecto}` : ''}. No pertenece a este equipo.`}>
         <FontAwesomeIcon icon={faBriefcase} className="h-2.5 w-2.5" />
-        De otro proyecto{contrato.nombre_proyecto ? `: ${contrato.nombre_proyecto}` : ''}
+        {contrato.nombre_proyecto || 'Otro proyecto'}
       </span>
     </div>
   );
