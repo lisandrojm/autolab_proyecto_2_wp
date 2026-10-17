@@ -38,9 +38,9 @@ import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
 import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
 import { copiaParaOtroProyecto } from '../utils/copiaContratoVigente';
 import { useColorDeEstado } from '../components/EstadoSelect';
+import { CampoTipoContrato, ModalTipoContrato } from '../components/contratos/ModalTipoContrato';
 import { contratoFrameAPI, ContratoFrameItem, plantillaEsDeContrato, plantillaActivaParaFiltrar } from '../api/contratosFrame';
 import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoDePlantilla, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from '../utils/tramiteImpositivo';
-import { TipoContratoSelect } from '../components/contratos/TipoContratoSelect';
 // «Coordinador» pasó a ser un permiso (cargar novedades), no el nombre de un rol. Ver ese módulo.
 import { coordinaAreas, PROJECT_COORDINATOR } from '../utils/permisosMobile';
 import { contratosAPI, ContratoItem, tiposDeContratoActivos } from '../api/contratos';
@@ -396,6 +396,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   */
   const [filtroTramite, setFiltroTramite] = useState<TipoImpositivo | ''>('');
   const [filtroTramiteOpen, setFiltroTramiteOpen] = useState(false);
+  const [tipoContratoOpen, setTipoContratoOpen] = useState(false);
   const [wizardData, setWizardData] = useState({
     // Step 1: Contrato
     rol_frame_id: '',
@@ -2330,11 +2331,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       Fuera de una aprobación no hay solicitud y queda el contrato anterior, que es un hecho consumado.
       Si no hay ninguno, queda sin filtrar: no se inventa una vía.
     */
-    const metaParaTramite: any = (solicitud?.metadata as any) || (user.metadata as any) || {};
-    const tramiteDelContrato = tipoImpositivoDeContrato(initialContratoId, contratoFrames, allEstados);
-    const tramitePedido = solicitud && metaParaTramite.contratoId ? tipoImpositivoDeContrato(String(metaParaTramite.contratoId), contratoFrames, allEstados) : null;
-    const tramiteDeclarado = esTipoImpositivo(metaParaTramite.tipoImpositivo) ? (metaParaTramite.tipoImpositivo as TipoImpositivo) : null;
-    setFiltroTramite(tramitePedido || (solicitud ? tramiteDeclarado || tramiteDelContrato : tramiteDelContrato || tramiteDeclarado) || '');
+    /*
+      YA NO SE PRE-FILTRA (pedido del 17/10/2026). Arrancar con el filtro del trámite puesto escondía la
+      mitad de los tipos de contrato y había que descubrir la X del badge para verlos todos. La lista
+      arranca completa; el filtro por trámite sigue estando, a mano, dentro de la ventana de elegir.
+    */
+    setFiltroTramite('');
 
     /*
       LO QUE PIDIÓ QUIEN CARGÓ LA SOLICITUD MANDA.
@@ -4431,12 +4433,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     mismo badge de Contratos, para que se lea como lo mismo. Ver
                     `components/contratos/TipoContratoSelect.tsx`.
                   */}
-                  <TipoContratoSelect
-                    options={contratosFiltradosPorTramite}
-                    value={wizardData.contrato_id}
+                  <CampoTipoContrato contratos={contratosFiltradosPorTramite} contratoId={wizardData.contrato_id} estados={allEstados} tramitePorContrato={tramitePorContrato} onAbrir={() => setTipoContratoOpen(true)} />
+                  <ModalTipoContrato
+                    abierto={tipoContratoOpen}
+                    onCerrar={() => setTipoContratoOpen(false)}
+                    contratos={tiposDeContratoActivos(contratos, wizardData.contrato_id)}
+                    contratoId={wizardData.contrato_id}
                     estados={allEstados}
                     tramitePorContrato={tramitePorContrato}
-                    onChange={(contratoId) => {
+                    filtro={filtroTramite}
+                    onFiltro={setFiltroTramite}
+                    impositivos={impositivosDelAbm}
+                    onElegir={(contratoId) => {
                       const contrato = contratos.find((c) => c._id === contratoId);
                       // Plantilla(s) de este Contrato: si hay una sola, se resuelve sola; si hay
                       // varias, la elige el select de abajo; si no hay ninguna, queda pendiente.
