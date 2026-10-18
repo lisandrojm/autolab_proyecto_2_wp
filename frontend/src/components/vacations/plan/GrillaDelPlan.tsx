@@ -175,7 +175,8 @@ const FilaGrupo: React.FC<{
   return (
     <div className="space-y-1.5">
       {mostrarArea && <p className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">{grupo.areaNombre}</p>}
-      {mostrarTurno && <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 pl-2">{grupo.shiftNombre}</p>}
+      {/* El turno en naranja (pedido del 18/10/2026): con el área en azul y el rol en negro, la jerarquía se lee de un vistazo. */}
+      {mostrarTurno && <p className="text-xs font-bold uppercase tracking-wide text-orange-600 dark:text-orange-400 pl-2">{grupo.shiftNombre}</p>}
       <div className="flex items-start gap-2 pl-4">
         <button
           ref={setNodeRef}
