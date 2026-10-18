@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBolt, faClock, faTriangleExclamation, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
+import { faBolt, faClock, faTriangleExclamation, faCircleCheck, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Link } from "react-router-dom";
@@ -156,6 +156,58 @@ export const PresentacionesArcaPage: React.FC = () => {
     }
   };
 
+  /*
+    FORZAR EN MASA (pedido del 18/10/2026): se tildan filas (o todas las presentables de una tabla) y un
+    solo botón las presenta; el server arma una corrida por empleadora, en fila, y acá se sigue como una
+    sola. Las que no se pueden presentar no se tildan y, si igual llegan, vuelven como «omitidas».
+  */
+  const claveDe = (c: AltaPendienteArca) => `${c.userProjectId}:${c.contractIndex}`;
+  const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
+  const [forzandoMasivo, setForzandoMasivo] = useState(false);
+  const alternarSeleccion = (c: AltaPendienteArca) =>
+    setSeleccion((prev) => {
+      const s = new Set(prev);
+      if (s.has(claveDe(c))) s.delete(claveDe(c));
+      else s.add(claveDe(c));
+      return s;
+    });
+  const alternarTodas = (lista: AltaPendienteArca[]) =>
+    setSeleccion((prev) => {
+      const s = new Set(prev);
+      const presentables = lista.filter((c) => c.presentable);
+      const todasMarcadas = presentables.length > 0 && presentables.every((c) => s.has(claveDe(c)));
+      for (const c of presentables) {
+        if (todasMarcadas) s.delete(claveDe(c));
+        else s.add(claveDe(c));
+      }
+      return s;
+    });
+  const seleccionadas = useMemo(() => (estado?.contratos || []).filter((c) => seleccion.has(claveDe(c)) && c.presentable), [estado, seleccion]);
+  const forzarSeleccionadas = async () => {
+    if (seleccionadas.length === 0) return;
+    const empresas = [...new Set(seleccionadas.map((c) => c.empresa?.razonSocial || "su empleadora"))];
+    const avisos = [seleccionadas.some((c) => c.terminado) ? "Algunas ya terminaron (la baja pasó)." : "", seleccionadas.some((c) => c.rechazoDefinitivo || c.agotado) ? "Algunas ya fueron rechazadas por ARCA: si nada cambió, van a rechazarse de nuevo." : ""].filter(Boolean).join(" ");
+    const r = await sweetAlert.confirm(
+      `Presentar ahora ${seleccionadas.length} alta${seleccionadas.length === 1 ? "" : "s"}`,
+      `Se presentan ya en ARCA, a nombre de ${empresas.join(" y ")} (${empresas.length === 1 ? "una corrida" : `${empresas.length} corridas, una por empleadora, en fila`}). ${avisos} No se deshace.`,
+      "Sí, presentar",
+      "Cancelar",
+    );
+    if (!r.isConfirmed) return;
+    setForzandoMasivo(true);
+    try {
+      const res = await projectsAPI.forzarPresentacionArcaMasiva(seleccionadas.map((c) => ({ userProjectId: c.userProjectId, contractIndex: c.contractIndex })));
+      setSeleccion(new Set());
+      setCorridaAbierta(true);
+      if (res.omitidas.length > 0) sweetAlert.warning(`${res.omitidas.length} no se presentan`, res.omitidas.map((o) => `${o.nombre}: ${o.motivo}`).join(" · "));
+    } catch (err: any) {
+      const d = err?.response?.data;
+      sweetAlert.error("No se presentaron", [d?.error || err?.message, ...(Array.isArray(d?.omitidas) ? d.omitidas.map((o: any) => `${o.nombre}: ${o.motivo}`) : [])].filter(Boolean).join(" · "));
+    } finally {
+      setForzandoMasivo(false);
+    }
+  };
+
   const forzar = async (c: AltaPendienteArca) => {
     const antes = estado && c.fechaAlta > estado.hoy;
     const r = await sweetAlert.confirm(
@@ -186,7 +238,10 @@ export const PresentacionesArcaPage: React.FC = () => {
   const th = "px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 text-left";
 
   const fila = (c: AltaPendienteArca, esVencida: boolean) => (
-    <tr key={`${c.userProjectId}-${c.contractIndex}`} className="border-t border-gray-100 dark:border-gray-800 align-top">
+    <tr key={`${c.userProjectId}-${c.contractIndex}`} className={`border-t border-gray-100 dark:border-gray-800 align-top ${seleccion.has(claveDe(c)) ? "bg-amber-50/60 dark:bg-amber-900/10" : ""}`}>
+      <td className="px-3 py-3 w-8">
+        <input type="checkbox" className="rounded border-gray-300 text-amber-600 focus:ring-amber-500 disabled:opacity-30" checked={seleccion.has(claveDe(c))} disabled={!c.presentable} onChange={() => alternarSeleccion(c)} title={c.presentable ? "Tildar para forzar en masa" : c.motivo} />
+      </td>
       <td className="px-4 py-3">
         <p className="text-sm font-semibold text-gray-900 dark:text-white">{c.nombre}</p>
         <p className="text-xs font-mono text-gray-500">{fmtCuil(c.cuil)}</p>
@@ -264,6 +319,9 @@ export const PresentacionesArcaPage: React.FC = () => {
       <table className="min-w-full">
         <thead>
           <tr>
+            <th className={`${th} w-8`}>
+              <input type="checkbox" className="rounded border-gray-300 text-amber-600 focus:ring-amber-500" checked={lista.some((c) => c.presentable) && lista.filter((c) => c.presentable).every((c) => seleccion.has(claveDe(c)))} disabled={!lista.some((c) => c.presentable)} onChange={() => alternarTodas(lista)} title="Tildar todas las que se pueden presentar" />
+            </th>
             <th className={th}>Persona</th>
             <th className={th}>Proyecto</th>
             <th className={th}>Empresa</th>
@@ -490,6 +548,23 @@ export const PresentacionesArcaPage: React.FC = () => {
                   </ul>
                 </div>
               )}
+            </div>
+          )}
+
+          {seleccionadas.length > 0 && (
+            <div className="sticky top-[var(--wp-sticky-top,144px)] z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-4 py-2.5 shadow-sm">
+              <p className="text-sm text-amber-900 dark:text-amber-100">
+                <strong>{seleccionadas.length}</strong> alta{seleccionadas.length === 1 ? "" : "s"} tildada{seleccionadas.length === 1 ? "" : "s"} · {[...new Set(seleccionadas.map((c) => c.empresa?.razonSocial || ""))].filter(Boolean).join(", ")}
+              </p>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setSeleccion(new Set())} className="text-xs font-semibold text-amber-800 dark:text-amber-200 hover:underline">
+                  Destildar
+                </button>
+                <button type="button" onClick={forzarSeleccionadas} disabled={forzandoMasivo} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 whitespace-nowrap">
+                  <FontAwesomeIcon icon={forzandoMasivo ? faSpinner : faBolt} spin={forzandoMasivo} className="h-3 w-3" />
+                  Forzar presentación de {seleccionadas.length}
+                </button>
+              </div>
             </div>
           )}
 

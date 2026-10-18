@@ -24,7 +24,7 @@ import { agruparContratosPorDocumento, partirClaveDocumento } from "../utils/agr
 import { arrancarCorrida, corridaColgada, corridaDe, destrabarCorridaColgada, detenerCorrida } from "../services/arca/corridaServidor.js";
 import { arrancarCorridaAltas, corridaAltasDe, detenerCorridaAltas, enSecoForzado } from "../services/arca/corridaAltas.js";
 import { valoracionesDeCategoria } from "../compartido/valoracionesDeCategoria.js";
-import { candidatosDeAlta } from "../services/arca/presentacionAutomatica.js";
+import { candidatosDeAlta, presentarCandidatos } from "../services/arca/presentacionAutomatica.js";
 import { claveAreaTurnoDelMiembro } from "../utils/areaTurno.js";
 import { DIAS_ATRAS_PENDIENTES, MAX_INTENTOS_AUTOMATICOS, configDe, sumarDias, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { Tenant } from "../models/Tenant.js";
@@ -3314,9 +3314,48 @@ router.put("/contratos/altas-arca/automatica", requireTenant, authenticateToken,
   }
 });
 
-/** POST /contratos/altas-arca/automatica/forzar — presenta YA una sola alta, sin esperar su día. */
+/**
+ * POST /contratos/altas-arca/automatica/forzar — presenta YA, sin esperar su día: una sola alta
+ * (`userProjectId` + `contractIndex`) o varias (`items: [{userProjectId, contractIndex}]`, pedido del
+ * 18/10/2026: tildar y forzar en masa). Con varias, se arma una corrida por empleadora y van en fila
+ * (`presentarCandidatos`, el mismo camino que la automática), en segundo plano: la respuesta vuelve
+ * enseguida y la pantalla sigue la corrida como siempre. Las que no se pueden presentar se devuelven
+ * en `omitidas` con su motivo; las demás salen igual.
+ */
 router.post("/contratos/altas-arca/automatica/forzar", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
+    if (Array.isArray(req.body?.items)) {
+      const pedidas = (req.body.items as any[])
+        .map((i) => ({ userProjectId: String(i?.userProjectId || ""), contractIndex: Number(i?.contractIndex) }))
+        .filter((i) => Types.ObjectId.isValid(i.userProjectId) && Number.isInteger(i.contractIndex) && i.contractIndex >= 0);
+      if (pedidas.length === 0) {
+        res.status(400).json({ error: "No hay contratos para presentar." });
+        return;
+      }
+      if (quienTiene(String(req.tenantObjectId))) {
+        res.status(409).json({ error: "Hay otra corrida de ARCA en curso: esperá a que termine." });
+        return;
+      }
+      // Los mismos candidatos que ve la pantalla (misma ventana): de ahí se toman los pedidos.
+      const hoy = hoyArgentina();
+      const todos = await candidatosDeAlta(req.tenantObjectId as Types.ObjectId, { desde: sumarDias(hoy, -DIAS_ATRAS_PENDIENTES) });
+      const porClave = new Map(todos.map((c) => [`${c.userProjectId}:${c.contractIndex}`, c]));
+      const elegidos = pedidas.map((p) => porClave.get(`${p.userProjectId}:${p.contractIndex}`)).filter((c): c is NonNullable<typeof c> => !!c);
+      const presentables = elegidos.filter((c) => c.presentable && !!c.registro && !!c.empresa);
+      const omitidas = [
+        ...pedidas.filter((p) => !porClave.has(`${p.userProjectId}:${p.contractIndex}`)).map((p) => ({ nombre: p.userProjectId, motivo: "No es un alta temprana pendiente de este cliente." })),
+        ...elegidos.filter((c) => !(c.presentable && !!c.registro && !!c.empresa)).map((c) => ({ nombre: c.nombre, motivo: c.motivo || "No se puede presentar." })),
+      ];
+      if (presentables.length === 0) {
+        res.status(400).json({ error: "Ninguna de las seleccionadas se puede presentar.", omitidas });
+        return;
+      }
+      const empresas = [...new Set(presentables.map((c) => c.empresa!.razonSocial))];
+      // En segundo plano: una corrida por empleadora, en fila. La pantalla las sigue con el estado de la corrida.
+      void presentarCandidatos({ tenantId: String(req.tenantObjectId), tenantObjectId: req.tenantObjectId, usuarioId: req.user?.userId, candidatos: presentables, automatica: false }).catch((e) => console.error("[altas-arca] forzar masivo:", e));
+      res.json({ arrancada: true, total: presentables.length, empresas, omitidas, enSeco: enSecoForzado() });
+      return;
+    }
     const userProjectId = String(req.body?.userProjectId || "");
     const contractIndex = Number(req.body?.contractIndex);
     if (!Types.ObjectId.isValid(userProjectId) || !Number.isInteger(contractIndex) || contractIndex < 0) {
