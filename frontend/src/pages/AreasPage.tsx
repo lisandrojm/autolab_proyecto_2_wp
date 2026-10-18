@@ -29,19 +29,17 @@ interface AreaFormData {
 
 const nombreDeRol = (rf: RoleFrameItem) => String((rf as any).name || rf.data?.rol?.nombre || '').trim() || '(sin nombre)';
 
-/** Los roles de un área como badges; en tarjetas y tabla se cortan a unos pocos, en la vista van todos. */
-const RolesDelArea: React.FC<{ ids: string[]; nombres: Map<string, string>; todos?: boolean }> = ({ ids, nombres, todos = false }) => {
-  if (ids.length === 0) return <span className="text-xs text-gray-400 dark:text-gray-500">Sin roles empresa</span>;
-  const MAX = todos ? ids.length : 4;
+/** Los roles de un área como badges, con el mismo aspecto que las categorías en las tarjetas de Roles Empresa; todos a la vista. */
+const RolesDelArea: React.FC<{ ids: string[]; nombres: Map<string, string> }> = ({ ids, nombres }) => {
+  if (ids.length === 0) return <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500">Sin roles empresa</span>;
   return (
     <div className="flex flex-wrap gap-1">
-      {ids.slice(0, MAX).map((id) => (
-        <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800">
+      {ids.map((id) => (
+        <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
           <FontAwesomeIcon icon={faUserTie} className="h-2.5 w-2.5" />
           {nombres.get(String(id)) || 'Rol'}
         </span>
       ))}
-      {ids.length > MAX && <span className="text-[11px] text-gray-500 self-center">+{ids.length - MAX}</span>}
     </div>
   );
 };
@@ -332,7 +330,7 @@ export const AreasPage: React.FC = () => {
             </div>
             <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Roles empresa ({(viewArea.rolesFrame || []).length})</h4>
-              <RolesDelArea ids={viewArea.rolesFrame || []} nombres={nombreRolPorId} todos />
+              <RolesDelArea ids={viewArea.rolesFrame || []} nombres={nombreRolPorId} />
             </div>
             <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Detalles</h4>
@@ -494,7 +492,12 @@ export const AreasPage: React.FC = () => {
                     footer={
                       canManage
                         ? {
-                            leftContent: <span className="text-xs text-gray-500 dark:text-gray-500">{area.createdAt ? new Date(area.createdAt).toLocaleDateString() : ''}</span>,
+                            leftContent: (
+                              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500">
+                                <FontAwesomeIcon icon={faUserTie} />
+                                <span>{(area.rolesFrame || []).length} Roles empresa</span>
+                              </div>
+                            ),
                             actions: [
                               {
                                 icon: faEdit,
