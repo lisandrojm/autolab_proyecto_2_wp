@@ -276,6 +276,7 @@ async function correr(o) {
                         altaDocumentoUrl: guardado.url,
                         altaDocumentoNombre: `Constancia de alta ${p.cuil}.pdf`,
                         exigirConstancia: true,
+                        origen: { modo: o.automatica ? "automatica" : "descarga", usuarioId: o.usuarioId || null },
                     });
                     if ("problemas" in res) {
                         fs.promises.unlink(guardado.ruta).catch(() => { });

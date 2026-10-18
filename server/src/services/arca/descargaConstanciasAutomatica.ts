@@ -70,7 +70,7 @@ export const forzadoDe = (tenantId: string): ForzadoEnCurso | undefined => forza
  * y van en fila, en segundo plano, con el mismo cuidado que la automática (ver arriba). Devuelve
  * enseguida; el avance se sigue con `forzadoDe` y con el estado de la descarga en curso.
  */
-export async function forzarDescargaConstancias(tenantId: string, tenantObjectId: Types.ObjectId, tenantCarpeta: string, items: Array<{ userProjectId: string; contractIndex: number }>): Promise<{ total: number; empresas: string[]; omitidas: number }> {
+export async function forzarDescargaConstancias(tenantId: string, tenantObjectId: Types.ObjectId, tenantCarpeta: string, items: Array<{ userProjectId: string; contractIndex: number }>, usuarioId?: string | null): Promise<{ total: number; empresas: string[]; omitidas: number }> {
   if (!(await credencialesDe(tenantId))) throw new Error("Faltan las credenciales de ARCA. Cargalas en Configuración → ARCA → Conexión.");
   const enCurso = forzados.get(tenantId);
   if (enCurso && !enCurso.terminado) throw new Error("Ya hay una descarga forzada en curso: esperá a que termine.");
@@ -97,7 +97,7 @@ export async function forzarDescargaConstancias(tenantId: string, tenantObjectId
           continue;
         }
         try {
-          await arrancarDescargaConstancias({ tenantId, tenantObjectId, tenantCarpeta, empresaId: g.empresaId, soloItems: g.items });
+          await arrancarDescargaConstancias({ tenantId, tenantObjectId, tenantCarpeta, empresaId: g.empresaId, soloItems: g.items, usuarioId });
           const fin = Date.now() + ESPERA_MAX_MS;
           while (Date.now() < fin) {
             const d = descargaConstanciasDe(tenantId);
@@ -152,7 +152,7 @@ export async function correrDescargaConstanciasDelDia(tenantId: string, tenantOb
       continue;
     }
     try {
-      const r = await arrancarDescargaConstancias({ tenantId, tenantObjectId, tenantCarpeta, empresaId: String(e._id), maximo: MAX_POR_EMPLEADORA });
+      const r = await arrancarDescargaConstancias({ tenantId, tenantObjectId, tenantCarpeta, empresaId: String(e._id), maximo: MAX_POR_EMPLEADORA, automatica: true });
       fila.pedidas = r.total;
       const fin = Date.now() + ESPERA_MAX_MS;
       while (Date.now() < fin) {

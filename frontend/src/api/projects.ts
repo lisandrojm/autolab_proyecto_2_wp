@@ -1095,7 +1095,7 @@ export interface CorridaAltasGuardada {
      * La constancia de alta ya validada y por dónde siguió. `null` = todavía no se bajó. Ausente = el
      * servidor que contestó es anterior a este dato y no lo informa (no significa que falte).
      */
-    constancia?: { destino: "outbox" | "no_firmar" | "sin_subir"; archivadaEn?: string; validadaEl?: string; clave?: string } | null;
+    constancia?: { destino: "outbox" | "no_firmar" | "sin_subir"; archivadaEn?: string; validadaEl?: string; clave?: string; /** Cómo llegó: `automatica`, `descarga` (alguien la bajó desde ARCA) o `subida` (a mano); vacío en las anteriores al 18/10/2026. */ origen?: "automatica" | "descarga" | "subida" | ""; por?: string } | null;
     /**
      * Esta fila no fue «presentada», pero el contrato se presentó después en OTRA corrida (forzada a
      * mano o la automática del día siguiente): cuándo y quién. `null` = sigue sin presentarse. Ausente =

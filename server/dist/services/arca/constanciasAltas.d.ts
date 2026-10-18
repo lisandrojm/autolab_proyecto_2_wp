@@ -71,6 +71,9 @@ export declare function arrancarDescargaConstancias(o: {
         userProjectId: string;
         contractIndex: number;
     }>;
+    /** Quién la pidió; la descarga automática no tiene persona (`automatica: true`). Queda en cada constancia. */
+    usuarioId?: string | null;
+    automatica?: boolean;
 }): Promise<{
     total: number;
     pendientes: number;

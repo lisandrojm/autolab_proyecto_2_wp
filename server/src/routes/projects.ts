@@ -3498,11 +3498,16 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
     ]) : [];
     const htmlPorTanda = new Map<string, boolean>();
     for (const d of conHtml) for (const n of d.ns || []) htmlPorTanda.set(`${String(d._id)}:${n}`, true);
+    // Quién trajo cada constancia (bajada desde ARCA o subida a mano): los nombres, una sola consulta.
+    const idsPor = [...new Set(ups.flatMap((u) => (u.contracts || []).map((c: any) => String(c?.altaConstancia?.porUsuarioId || ""))).filter((id) => Types.ObjectId.isValid(id)))];
+    const porUsuarios: any[] = idsPor.length > 0 ? await User.find({ _id: { $in: idsPor } }).select("firstName lastName").lean() : [];
+    const nombrePor = new Map(porUsuarios.map((u) => [String(u._id), `${u.firstName || ""} ${u.lastName || ""}`.trim()]));
     const constanciaDe = (c: any) => {
       const k = upPorId.get(String(c.userProjectId || ""))?.contracts?.[c.contractIndex]?.altaConstancia;
       // `null` (y no ausente) = se miró y todavía no está: la pantalla distingue eso de un servidor viejo que no lo informa.
       if (!k?.validadaEl) return undefined;
-      return { destino: !k.archivadaEn ? "sin_subir" : k.vaAFirma ? "outbox" : "no_firmar", archivadaEn: k.archivadaEn, validadaEl: k.validadaEl, clave: k.clave };
+      // `origen`/`por`: cómo llegó (automática, bajada desde ARCA, subida a mano) y quién; las anteriores al 18/10/2026 no lo tienen.
+      return { destino: !k.archivadaEn ? "sin_subir" : k.vaAFirma ? "outbox" : "no_firmar", archivadaEn: k.archivadaEn, validadaEl: k.validadaEl, clave: k.clave, origen: k.origen || "", por: k.porUsuarioId ? nombrePor.get(String(k.porUsuarioId)) || "" : "" };
     };
     res.json(
       logs.map((l) => ({
@@ -3559,7 +3564,7 @@ router.get("/contratos/altas-arca/historial/:logId/tandas/:n/html", requireTenan
  */
 router.post("/contratos/altas-arca/constancias", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const r = await arrancarDescargaConstancias({ tenantId: String(req.tenantObjectId), tenantObjectId: req.tenantObjectId, tenantCarpeta: req.tenantId || "unknown_tenant", empresaId: String(req.body?.empresaId || "") });
+    const r = await arrancarDescargaConstancias({ tenantId: String(req.tenantObjectId), tenantObjectId: req.tenantObjectId, tenantCarpeta: req.tenantId || "unknown_tenant", empresaId: String(req.body?.empresaId || ""), usuarioId: req.user?.userId });
     res.json({ arrancada: true, ...r });
   } catch (error: any) {
     if (error instanceof CandadoArcaOcupado) {
@@ -3619,7 +3624,7 @@ router.post("/contratos/altas-arca/constancias/forzar", requireTenant, authentic
       res.status(400).json({ error: "No hay constancias para bajar." });
       return;
     }
-    const r = await forzarDescargaConstancias(String(req.tenantObjectId), req.tenantObjectId as Types.ObjectId, req.tenantId || "unknown_tenant", items);
+    const r = await forzarDescargaConstancias(String(req.tenantObjectId), req.tenantObjectId as Types.ObjectId, req.tenantId || "unknown_tenant", items, req.user?.userId);
     res.json({ arrancada: true, ...r });
   } catch (error: any) {
     if (error instanceof CandadoArcaOcupado) {
@@ -4131,6 +4136,8 @@ router.patch(
         buffer: await fs.promises.readFile(req.file.path),
         altaDocumentoUrl: `/storage/${tenantId}/${userId}/contratos/${req.file.filename}`,
         altaDocumentoNombre: req.file.originalname,
+        // Subida a mano: queda quién la subió (en el registro se distingue de la bajada desde ARCA y de la automática).
+        origen: { modo: "subida", usuarioId: req.user?.userId },
       });
       if ("problemas" in r) {
         fs.promises.unlink(req.file.path).catch(() => {});

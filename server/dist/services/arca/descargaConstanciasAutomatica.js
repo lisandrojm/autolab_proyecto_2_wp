@@ -40,7 +40,7 @@ export const forzadoDe = (tenantId) => forzados.get(tenantId);
  * y van en fila, en segundo plano, con el mismo cuidado que la automática (ver arriba). Devuelve
  * enseguida; el avance se sigue con `forzadoDe` y con el estado de la descarga en curso.
  */
-export async function forzarDescargaConstancias(tenantId, tenantObjectId, tenantCarpeta, items) {
+export async function forzarDescargaConstancias(tenantId, tenantObjectId, tenantCarpeta, items, usuarioId) {
     if (!(await credencialesDe(tenantId)))
         throw new Error("Faltan las credenciales de ARCA. Cargalas en Configuración → ARCA → Conexión.");
     const enCurso = forzados.get(tenantId);
@@ -72,7 +72,7 @@ export async function forzarDescargaConstancias(tenantId, tenantObjectId, tenant
                     continue;
                 }
                 try {
-                    await arrancarDescargaConstancias({ tenantId, tenantObjectId, tenantCarpeta, empresaId: g.empresaId, soloItems: g.items });
+                    await arrancarDescargaConstancias({ tenantId, tenantObjectId, tenantCarpeta, empresaId: g.empresaId, soloItems: g.items, usuarioId });
                     const fin = Date.now() + ESPERA_MAX_MS;
                     while (Date.now() < fin) {
                         const d = descargaConstanciasDe(tenantId);
@@ -132,7 +132,7 @@ export async function correrDescargaConstanciasDelDia(tenantId, tenantObjectId, 
             continue;
         }
         try {
-            const r = await arrancarDescargaConstancias({ tenantId, tenantObjectId, tenantCarpeta, empresaId: String(e._id), maximo: MAX_POR_EMPLEADORA });
+            const r = await arrancarDescargaConstancias({ tenantId, tenantObjectId, tenantCarpeta, empresaId: String(e._id), maximo: MAX_POR_EMPLEADORA, automatica: true });
             fila.pedidas = r.total;
             const fin = Date.now() + ESPERA_MAX_MS;
             while (Date.now() < fin) {

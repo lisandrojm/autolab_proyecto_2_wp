@@ -52,7 +52,7 @@ export declare const forzadoDe: (tenantId: string) => ForzadoEnCurso | undefined
 export declare function forzarDescargaConstancias(tenantId: string, tenantObjectId: Types.ObjectId, tenantCarpeta: string, items: Array<{
     userProjectId: string;
     contractIndex: number;
-}>): Promise<{
+}>, usuarioId?: string | null): Promise<{
     total: number;
     empresas: string[];
     omitidas: number;

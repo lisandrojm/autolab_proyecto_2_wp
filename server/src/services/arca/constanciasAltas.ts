@@ -161,6 +161,9 @@ export async function arrancarDescargaConstancias(o: {
   maximo?: number;
   /** Sólo estos contratos (forzar una o varias personas); sin lista, todos los pendientes de la empleadora. */
   soloItems?: Array<{ userProjectId: string; contractIndex: number }>;
+  /** Quién la pidió; la descarga automática no tiene persona (`automatica: true`). Queda en cada constancia. */
+  usuarioId?: string | null;
+  automatica?: boolean;
 }): Promise<{ total: number; pendientes: number }> {
   const { tenantId, tenantObjectId } = o;
   // El candado ANTES de cualquier await, como en las altas: dos clicks no arrancan dos corridas.
@@ -194,7 +197,7 @@ export async function arrancarDescargaConstancias(o: {
   }
 }
 
-async function correr(o: { d: DescargaConstancias; pendientes: Pendiente[]; cuit: string; cred: NonNullable<Awaited<ReturnType<typeof credencialesDe>>>; tenantId: string; tenantObjectId: any; tenantCarpeta: string }) {
+async function correr(o: { d: DescargaConstancias; pendientes: Pendiente[]; cuit: string; cred: NonNullable<Awaited<ReturnType<typeof credencialesDe>>>; tenantId: string; tenantObjectId: any; tenantCarpeta: string; usuarioId?: string | null; automatica?: boolean }) {
   const { d, pendientes, tenantId, tenantObjectId } = o;
   const emitir = (e: EventoConstancias) => d.eventos.push(e);
   let sesion: Awaited<ReturnType<typeof abrirSesionArca>> | null = null;
@@ -326,6 +329,7 @@ async function correr(o: { d: DescargaConstancias; pendientes: Pendiente[]; cuit
             altaDocumentoUrl: guardado.url,
             altaDocumentoNombre: `Constancia de alta ${p.cuil}.pdf`,
             exigirConstancia: true,
+            origen: { modo: o.automatica ? "automatica" : "descarga", usuarioId: o.usuarioId || null },
           });
           if ("problemas" in res) {
             fs.promises.unlink(guardado.ruta).catch(() => {});

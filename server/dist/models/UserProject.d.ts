@@ -252,8 +252,12 @@ interface IContract {
         nroTramite?: string;
         validadaEl?: Date;
         vaAFirma?: boolean;
-        archivadaEn?: string; /** El nombre con el que se subió a Dropbox. */
+        archivadaEn?: string;
+        /** El nombre con el que se subió a Dropbox. */
         enviadaComo?: string;
+        /** Cómo llegó (18/10/2026): la bajó la descarga automática, la bajó alguien desde ARCA, o alguien subió el PDF a mano. */
+        origen?: "automatica" | "descarga" | "subida";
+        porUsuarioId?: Types.ObjectId;
     };
     /** Cuándo salió el alta a firmar. Con esto puesto ningún envío la vuelve a mandar. */
     altaEnviadaAFirmarEl?: Date;

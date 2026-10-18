@@ -55,6 +55,11 @@ export declare function registrarAltaDeContrato(o: {
     altaDocumentoNombre: string;
     /** La descarga desde ARCA solo trae constancias de alta temprana: se valida siempre. */
     exigirConstancia?: boolean;
+    /** Cómo llegó la constancia y quién la trajo (la automática no tiene persona). Se guarda en `altaConstancia`. */
+    origen?: {
+        modo: "automatica" | "descarga" | "subida";
+        usuarioId?: string | null;
+    };
 }): Promise<ResultadoAlta>;
 /** Guarda en el storage local un PDF que no llegó por formulario (la descarga desde ARCA). Devuelve su URL. */
 export declare function guardarPdfDeAlta(o: {

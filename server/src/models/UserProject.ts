@@ -252,7 +252,18 @@ interface IContract {
    * por dónde siguió: `archivadaEn` es el path de Dropbox donde quedó —el Outbox si `vaAFirma`, o
    * «Alta temprana de Arca/No firmar»—. Solo existe si la constancia pasó la validación contra el contrato.
    */
-  altaConstancia?: { clave?: string; nroTramite?: string; validadaEl?: Date; vaAFirma?: boolean; archivadaEn?: string; /** El nombre con el que se subió a Dropbox. */ enviadaComo?: string };
+  altaConstancia?: {
+    clave?: string;
+    nroTramite?: string;
+    validadaEl?: Date;
+    vaAFirma?: boolean;
+    archivadaEn?: string;
+    /** El nombre con el que se subió a Dropbox. */
+    enviadaComo?: string;
+    /** Cómo llegó (18/10/2026): la bajó la descarga automática, la bajó alguien desde ARCA, o alguien subió el PDF a mano. */
+    origen?: "automatica" | "descarga" | "subida";
+    porUsuarioId?: Types.ObjectId;
+  };
   /** Cuándo salió el alta a firmar. Con esto puesto ningún envío la vuelve a mandar. */
   altaEnviadaAFirmarEl?: Date;
   // Datos leídos del PDF de la Constancia de CUIT de ARCA al subirlo (el PDF en sí va en
@@ -448,7 +459,7 @@ const contractSchema = new Schema<IContract>(
     },
     altaDocumentoUrl: { type: String },
     altaDocumentoNombre: { type: String },
-    altaConstancia: { type: new Schema({ clave: String, nroTramite: String, validadaEl: Date, vaAFirma: Boolean, archivadaEn: String, enviadaComo: String }, { _id: false }) },
+    altaConstancia: { type: new Schema({ clave: String, nroTramite: String, validadaEl: Date, vaAFirma: Boolean, archivadaEn: String, enviadaComo: String, origen: { type: String, enum: ["automatica", "descarga", "subida"] }, porUsuarioId: { type: Schema.Types.ObjectId, ref: "User" } }, { _id: false }) },
     altaEnviadaAFirmarEl: { type: Date },
     constanciaVigenciaDesde: { type: String },
     constanciaVigenciaHasta: { type: String },

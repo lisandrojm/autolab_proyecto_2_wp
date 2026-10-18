@@ -67,6 +67,8 @@ export async function registrarAltaDeContrato(o: {
   altaDocumentoNombre: string;
   /** La descarga desde ARCA solo trae constancias de alta temprana: se valida siempre. */
   exigirConstancia?: boolean;
+  /** Cómo llegó la constancia y quién la trajo (la automática no tiene persona). Se guarda en `altaConstancia`. */
+  origen?: { modo: "automatica" | "descarga" | "subida"; usuarioId?: string | null };
 }): Promise<ResultadoAlta> {
   const { up, idx, userId, tenantObjectId } = o;
   const contratoActual: any = (up.contracts[idx] as any).toObject();
@@ -112,7 +114,16 @@ export async function registrarAltaDeContrato(o: {
       console.error("Alta temprana: no se pudo subir a Dropbox:", e?.message || e);
       ruteo.aviso = "No se pudo subir el alta a Dropbox. Quedó cargada en el contrato: volvé a cargarla para reintentar.";
     }
-    altaConstancia = { clave: constancia.clave || undefined, nroTramite: constancia.nroTramite || undefined, validadaEl: new Date(), vaAFirma: ruteo.vaAFirma, archivadaEn: ruteo.archivadaEn, enviadaComo };
+    altaConstancia = {
+      clave: constancia.clave || undefined,
+      nroTramite: constancia.nroTramite || undefined,
+      validadaEl: new Date(),
+      vaAFirma: ruteo.vaAFirma,
+      archivadaEn: ruteo.archivadaEn,
+      enviadaComo,
+      origen: o.origen?.modo,
+      porUsuarioId: o.origen?.usuarioId && Types.ObjectId.isValid(String(o.origen.usuarioId)) ? new Types.ObjectId(String(o.origen.usuarioId)) : undefined,
+    };
   }
 
   const conAlta: any = { ...(up.contracts[idx] as any).toObject(), altaDocumentoUrl: o.altaDocumentoUrl, altaDocumentoNombre: o.altaDocumentoNombre };

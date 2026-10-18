@@ -85,7 +85,7 @@ const contractSchema = new Schema({
     },
     altaDocumentoUrl: { type: String },
     altaDocumentoNombre: { type: String },
-    altaConstancia: { type: new Schema({ clave: String, nroTramite: String, validadaEl: Date, vaAFirma: Boolean, archivadaEn: String, enviadaComo: String }, { _id: false }) },
+    altaConstancia: { type: new Schema({ clave: String, nroTramite: String, validadaEl: Date, vaAFirma: Boolean, archivadaEn: String, enviadaComo: String, origen: { type: String, enum: ["automatica", "descarga", "subida"] }, porUsuarioId: { type: Schema.Types.ObjectId, ref: "User" } }, { _id: false }) },
     altaEnviadaAFirmarEl: { type: Date },
     constanciaVigenciaDesde: { type: String },
     constanciaVigenciaHasta: { type: String },
