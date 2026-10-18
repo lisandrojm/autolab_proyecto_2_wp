@@ -1943,6 +1943,15 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     if (!areaTurnoElegido) {
       setIntentoEnviar(true);
       document.getElementById("bloque-area-turno")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Si no hay área que ofrecer porque el rol no está en ninguna del proyecto, se dice qué pedir y a quién (pedido del 18/10/2026).
+      if (sinAreaParaElRol) {
+        const roles = rolesElegidos.map((rf) => `«${rf.name}»`).join(" / ") || "elegido";
+        const areasDelRol = areasConRoles.filter((a) => (a.rolesFrame || []).some((id) => formData.roleFrameIds.includes(String(id)))).map((a) => a.name);
+        sweetAlert.warning(
+          "No se puede enviar: sin área y turno",
+          `El rol ${roles} no está en ninguna área y turno de este proyecto. Hablá con un administrador para que agregue ese rol a un área del proyecto, o para que agregue al proyecto ${areasDelRol.length > 0 ? `el área que lo tiene (${areasDelRol.join(", ")})` : "un área que lo tenga"}.`,
+        );
+      }
       return;
     }
     /*
