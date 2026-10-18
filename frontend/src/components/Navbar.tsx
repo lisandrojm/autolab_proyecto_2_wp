@@ -158,7 +158,7 @@ const USUARIOS_PATHS_GENERAL = [USUARIOS_PATH, '/areas', '/shifts', '/roles-empr
  * «Clientes»: acá el orden es el dato —dice qué va antes y qué después—, y alfabético quedaría
  * Contratos, Documentos, Solicitudes, que es el ciclo contado al revés.
  */
-const CONTRATACION_PATHS = ['/admin/solicitudes', '/admin/contracts', '/admin/renovaciones', '/admin/validacion-obras-sociales', '/admin/presentaciones-arca', '/documents', '/admin/plantillas-equipo', '/admin/contratos-sin-dias'];
+const CONTRATACION_PATHS = ['/admin/solicitudes', '/admin/contracts', '/admin/renovaciones', '/admin/validacion-obras-sociales', '/admin/presentaciones-arca', '/admin/descargas-arca', '/documents', '/admin/plantillas-equipo', '/admin/contratos-sin-dias'];
 /** «Sin días» no es una etapa del ciclo sino una tarea de limpieza: va última y separada por una raya. */
 const CONTRATACION_APARTE = '/admin/contratos-sin-dias';
 /**
@@ -448,6 +448,7 @@ export const MobileNavbar: React.FC = () => {
       if (puedeAbrir('/admin/renovaciones')) base.push({ permiso: 'admin_contracts:view', path: '/admin/renovaciones', icon: faRotateRight, label: 'Renovaciones', scope: 'global' });
       // Las altas que se presentan solas a las 14 h del día de alta, con su cuenta regresiva.
       if (puedeAbrir('/admin/presentaciones-arca')) base.push({ permiso: 'admin_contracts:view', path: '/admin/presentaciones-arca', icon: faClock, label: 'A.R.C.A Altas Automáticas', scope: 'global' });
+      if (puedeAbrir('/admin/descargas-arca')) base.push({ permiso: 'admin_contracts:view', path: '/admin/descargas-arca', icon: faFileArrowDown, label: 'A.R.C.A Descargas Automáticas', scope: 'global' });
       // Las obras sociales que esperan validarse solas, con el estado de cada una.
       if (puedeAbrir('/admin/validacion-obras-sociales')) base.push({ permiso: 'admin_contracts:view', path: '/admin/validacion-obras-sociales', icon: faShieldHeart, label: 'O.S Validación Automática', scope: 'global' });
       // Las plantillas GENERALES de equipo (puestos por rol): cada supervisor las copia en el móvil.

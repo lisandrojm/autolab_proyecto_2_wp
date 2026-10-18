@@ -886,6 +886,17 @@ class ProjectsAPI {
   }
 
   /** Altas Automáticas: estado, horario configurado y las altas pendientes con su cuenta regresiva. `soloConfig` ahorra los candidatos. */
+  /** «A.R.C.A Descargas Automáticas»: las que esperan su constancia, la próxima descarga y lo que corre ahora. */
+  async descargasArca(): Promise<EstadoDescargasArca> {
+    const { data } = await axios.get(`/contratos/altas-arca/constancias/pendientes`, { headers: this.getHeaders() });
+    return data;
+  }
+  /** Baja YA las constancias pedidas: una corrida por empleadora, en fila. */
+  async forzarDescargasArca(items: Array<{ userProjectId: string; contractIndex: number }>): Promise<{ arrancada: boolean; total: number; empresas: string[]; omitidas: number }> {
+    const { data } = await axios.post(`/contratos/altas-arca/constancias/forzar`, { items }, { headers: this.getHeaders() });
+    invalidateRefCache("contracts-overview:");
+    return data;
+  }
   /** Descarga automática de constancias (ver `descargaConstanciasAutomatica.ts` en el server). */
   async descargaConstanciasAutomatica(): Promise<EstadoDescargaConstancias> {
     const { data } = await axios.get(`/contratos/altas-arca/constancias/automatica`, { headers: this.getHeaders() });
@@ -1182,6 +1193,28 @@ export interface EstadoDescargaConstancias {
     empresas: Array<{ empresa: string; pendientes: number; pedidas: number; listas: number; error?: string }>;
     error?: string;
   };
+}
+
+/** Un alta presentada que espera su constancia (pantalla «A.R.C.A Descargas Automáticas»). */
+export interface PendienteDeConstancia {
+  userProjectId: string;
+  contractIndex: number;
+  userId: string;
+  nombre: string;
+  cuil: string;
+  fechaAlta: string;
+  presentadaEl: string;
+  empresa: { _id: string; razonSocial: string };
+}
+
+export interface EstadoDescargasArca extends EstadoDescargaConstancias {
+  /** ISO de la próxima descarga automática; null si está apagada. */
+  proximaCorrida: string | null;
+  pendientes: PendienteDeConstancia[];
+  /** La descarga de UNA empleadora que corre ahora (o la última), con sus eventos. */
+  descarga: null | { empresaId: string; empresaRazonSocial: string; total: number; corriendo: boolean; arrancadaEl: string; eventos: Array<Record<string, any> & { tipo: string }> };
+  /** El forzado en masa (varias empleadoras en fila), si lo hay. */
+  forzado: null | { arrancadoEl: string; total: number; empresas: string[]; empresaActual: string; terminadas: number; listas: number; terminado: boolean; errores: string[] };
 }
 
 export interface EstadoPresentacionAutomatica {

@@ -46,7 +46,7 @@ interface DescargaConstancias {
   arrancadaEl: Date;
 }
 
-interface Pendiente {
+export interface Pendiente {
   userProjectId: string;
   contractIndex: number;
   userId: string;
@@ -54,6 +54,10 @@ interface Pendiente {
   nombre: string;
   /** ddmmaaaa, como lo muestra ARCA sin las barras. */
   fechaInicio: string;
+  /** "YYYY-MM-DD" del alta y cuándo se presentó en ARCA (para la pantalla de Descargas Automáticas). */
+  fechaAlta: string;
+  presentadaEl: string;
+  empresaId: string;
 }
 
 /** Una por tenant, en memoria, como las demás corridas de ARCA. */
@@ -100,13 +104,37 @@ export async function pendientesDeConstancia(tenantObjectId: any, empresaId: str
         cuil,
         nombre: `${u?.firstName || ""} ${u?.lastName || ""}`.trim(),
         fechaInicio: `${m[3]}${m[2]}${m[1]}`,
+        fechaAlta: `${m[1]}-${m[2]}-${m[3]}`,
+        presentadaEl: c.altaArcaPresentada?.fecha ? new Date(c.altaArcaPresentada.fecha).toISOString() : "",
+        empresaId,
       });
     });
   }
   return out;
 }
 
-export async function arrancarDescargaConstancias(o: { tenantId: string; tenantObjectId: any; tenantCarpeta: string; empresaId: string; /** Tope de personas en esta corrida (la automática lo usa); sin tope, todas. */ maximo?: number }): Promise<{ total: number; pendientes: number }> {
+/** Los pendientes de constancia de TODAS las empleadoras con CUIT, con la razón social de cada una. */
+export async function pendientesDeConstanciaTodas(tenantObjectId: any): Promise<Array<Pendiente & { empresaRazonSocial: string }>> {
+  const empresas: any[] = await Company.find({}).select("razonSocial cuit").lean();
+  const out: Array<Pendiente & { empresaRazonSocial: string }> = [];
+  for (const e of empresas) {
+    if (digitos(e.cuit).length !== 11) continue;
+    const lista = await pendientesDeConstancia(tenantObjectId, String(e._id));
+    for (const p of lista) out.push({ ...p, empresaRazonSocial: String(e.razonSocial || "") });
+  }
+  return out;
+}
+
+export async function arrancarDescargaConstancias(o: {
+  tenantId: string;
+  tenantObjectId: any;
+  tenantCarpeta: string;
+  empresaId: string;
+  /** Tope de personas en esta corrida (la automática lo usa); sin tope, todas. */
+  maximo?: number;
+  /** Sólo estos contratos (forzar una o varias personas); sin lista, todos los pendientes de la empleadora. */
+  soloItems?: Array<{ userProjectId: string; contractIndex: number }>;
+}): Promise<{ total: number; pendientes: number }> {
   const { tenantId, tenantObjectId } = o;
   // El candado ANTES de cualquier await, como en las altas: dos clicks no arrancan dos corridas.
   tomarCandado(tenantId, "constancias");
@@ -116,8 +144,10 @@ export async function arrancarDescargaConstancias(o: { tenantId: string; tenantO
     if (!empresa || cuit.length !== 11) throw new Error("Elegí la pestaña de UNA empresa con CUIT: las constancias se bajan logueado como esa empleadora.");
     const todas = await pendientesDeConstancia(tenantObjectId, o.empresaId);
     if (todas.length === 0) throw new Error("No hay altas presentadas de esa empleadora esperando su constancia.");
-    // Con tope (la descarga automática): las primeras N; el resto queda para la próxima corrida.
-    const pendientes = o.maximo && o.maximo > 0 ? todas.slice(0, o.maximo) : todas;
+    // Sólo las pedidas (forzar), y con tope (la automática): las primeras N; el resto queda para la próxima corrida.
+    const pedidas = o.soloItems ? todas.filter((p) => o.soloItems!.some((i) => i.userProjectId === p.userProjectId && Number(i.contractIndex) === p.contractIndex)) : todas;
+    if (pedidas.length === 0) throw new Error("Las altas pedidas ya tienen su constancia o no son de esa empleadora.");
+    const pendientes = o.maximo && o.maximo > 0 ? pedidas.slice(0, o.maximo) : pedidas;
     const cred = await credencialesDe(tenantId);
     if (!cred) throw new Error("Faltan las credenciales de ARCA. Cargalas en Configuración → ARCA → Conexión.");
     const d: DescargaConstancias = {

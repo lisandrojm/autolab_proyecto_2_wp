@@ -25,7 +25,8 @@ import { arrancarCorrida, corridaColgada, corridaDe, destrabarCorridaColgada, de
 import { arrancarCorridaAltas, corridaAltasDe, detenerCorridaAltas, enSecoForzado } from "../services/arca/corridaAltas.js";
 import { valoracionesDeCategoria } from "../compartido/valoracionesDeCategoria.js";
 import { candidatosDeAlta, presentarCandidatos } from "../services/arca/presentacionAutomatica.js";
-import { MAX_POR_EMPLEADORA } from "../services/arca/descargaConstanciasAutomatica.js";
+import { MAX_POR_EMPLEADORA, forzarDescargaConstancias, forzadoDe, proximaDescarga } from "../services/arca/descargaConstanciasAutomatica.js";
+import { pendientesDeConstanciaTodas } from "../services/arca/constanciasAltas.js";
 import { claveAreaTurnoDelMiembro } from "../utils/areaTurno.js";
 import { DIAS_ATRAS_PENDIENTES, MAX_INTENTOS_AUTOMATICOS, configDe, sumarDias, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { Tenant } from "../models/Tenant.js";
@@ -3405,6 +3406,61 @@ router.post("/contratos/altas-arca/constancias", requireTenant, authenticateToke
   DESCARGA AUTOMÁTICA DE CONSTANCIAS (ver `services/arca/descargaConstanciasAutomatica.ts`): el interruptor y
   el horario, por tenant, como los de la presentación automática. Mismo permiso que la conexión de ARCA.
 */
+/**
+ * GET /contratos/altas-arca/constancias/pendientes — la pantalla «A.R.C.A Descargas Automáticas»: todas las
+ * altas presentadas que esperan su constancia (todas las empleadoras), cuándo es la próxima descarga
+ * automática, la última corrida y lo que se está forzando ahora.
+ */
+router.get("/contratos/altas-arca/constancias/pendientes", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const t = await Tenant.findById(req.tenantObjectId).select("integrations.arcaSimplificacion.descargaConstancias").lean();
+        const dc = t?.integrations?.arcaSimplificacion?.descargaConstancias || {};
+        const cfg = configDe({ hora: dc.hora ?? 15, minuto: dc.minuto ?? 0 });
+        const hoy = hoyArgentina();
+        const ahora = new Date();
+        const pendientes = await pendientesDeConstanciaTodas(req.tenantObjectId);
+        const d = descargaConstanciasDe(String(req.tenantObjectId));
+        const f = forzadoDe(String(req.tenantObjectId));
+        res.json({
+            activa: !!dc.activa,
+            config: { hora: cfg.hora, minuto: cfg.minuto },
+            ahora: ahora.toISOString(),
+            hoy,
+            proximaCorrida: proximaDescarga(cfg, !!dc.activa, dc.ultimoDia, ahora, hoy),
+            ultimaCorrida: dc.ultimaCorrida || null,
+            maxPorEmpleadora: MAX_POR_EMPLEADORA,
+            pendientes: pendientes.map((p) => ({ userProjectId: p.userProjectId, contractIndex: p.contractIndex, userId: p.userId, nombre: p.nombre, cuil: p.cuil, fechaAlta: p.fechaAlta, presentadaEl: p.presentadaEl, empresa: { _id: p.empresaId, razonSocial: p.empresaRazonSocial } })),
+            // La descarga de UNA empleadora que corre ahora (forzada o automática), con sus eventos; y el forzado en masa, si lo hay.
+            descarga: d ? { empresaId: d.empresaId, empresaRazonSocial: d.empresaRazonSocial, total: d.total, corriendo: !d.terminada, arrancadaEl: d.arrancadaEl, eventos: d.eventos } : null,
+            forzado: f ? { ...f } : null,
+        });
+    }
+    catch (error) {
+        console.error("Pendientes de constancia error:", error);
+        res.status(500).json({ error: String(error?.message || "Internal server error") });
+    }
+});
+/** POST /contratos/altas-arca/constancias/forzar — baja YA las constancias pedidas (`items[]`), una corrida por empleadora, en fila. */
+router.post("/contratos/altas-arca/constancias/forzar", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const items = (Array.isArray(req.body?.items) ? req.body.items : [])
+            .map((i) => ({ userProjectId: String(i?.userProjectId || ""), contractIndex: Number(i?.contractIndex) }))
+            .filter((i) => Types.ObjectId.isValid(i.userProjectId) && Number.isInteger(i.contractIndex) && i.contractIndex >= 0);
+        if (items.length === 0) {
+            res.status(400).json({ error: "No hay constancias para bajar." });
+            return;
+        }
+        const r = await forzarDescargaConstancias(String(req.tenantObjectId), req.tenantObjectId, req.tenantId || "unknown_tenant", items);
+        res.json({ arrancada: true, ...r });
+    }
+    catch (error) {
+        if (error instanceof CandadoArcaOcupado) {
+            res.status(409).json({ error: error.message, ocupadaPor: error.tipo });
+            return;
+        }
+        res.status(400).json({ error: String(error?.message || error) });
+    }
+});
 router.get("/contratos/altas-arca/constancias/automatica", requireTenant, authenticateToken, requirePermission(["admin_contracts:view", "config_afip:view"]), async (req, res) => {
     try {
         const t = await Tenant.findById(req.tenantObjectId).select("integrations.arcaSimplificacion.descargaConstancias").lean();

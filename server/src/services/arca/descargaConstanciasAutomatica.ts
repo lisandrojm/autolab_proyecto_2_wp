@@ -3,6 +3,7 @@ import { Company } from "../../models/Company.js";
 import { arrancarDescargaConstancias, descargaConstanciasDe, pendientesDeConstancia } from "./constanciasAltas.js";
 import { quienTiene } from "./candadoArca.js";
 import { credencialesDe } from "./navegador.js";
+import { type ConfigAltasAutomaticas, momentoDeCorrida, sumarDias } from "./horarioAltasAutomaticas.js";
 
 /**
  * DESCARGA AUTOMÁTICA DE LAS CONSTANCIAS DE ALTA TEMPRANA (pedido del 18/10/2026). Una vez por día, a la
@@ -36,6 +37,89 @@ export interface ResumenDescargaConstancias {
   dia: string;
   empresas: ResumenEmpresaConstancias[];
   error?: string;
+}
+
+/**
+ * La PRÓXIMA descarga automática: la de hoy si su hora no pasó y hoy todavía no corrió; si no, la de
+ * mañana. ISO. `null` si está apagada.
+ */
+export function proximaDescarga(cfg: Pick<ConfigAltasAutomaticas, "hora" | "minuto">, activa: boolean, ultimoDia: string | undefined, ahora: Date, hoy: string): string | null {
+  if (!activa) return null;
+  const c = { ...cfg, diasAntes: 0 };
+  const deHoy = momentoDeCorrida(hoy, c);
+  if (deHoy.getTime() > ahora.getTime() && ultimoDia !== hoy) return deHoy.toISOString();
+  return momentoDeCorrida(sumarDias(hoy, 1), c).toISOString();
+}
+
+/** Lo que está forzándose ahora (varias empleadoras en fila), para que la pantalla lo cuente. */
+export interface ForzadoEnCurso {
+  arrancadoEl: Date;
+  total: number;
+  empresas: string[];
+  empresaActual: string;
+  terminadas: number;
+  listas: number;
+  terminado: boolean;
+  errores: string[];
+}
+const forzados = new Map<string, ForzadoEnCurso>();
+export const forzadoDe = (tenantId: string): ForzadoEnCurso | undefined => forzados.get(tenantId);
+
+/**
+ * FORZAR LA DESCARGA de algunas (o todas) las pendientes, sin esperar la hora: se agrupan por empleadora
+ * y van en fila, en segundo plano, con el mismo cuidado que la automática (ver arriba). Devuelve
+ * enseguida; el avance se sigue con `forzadoDe` y con el estado de la descarga en curso.
+ */
+export async function forzarDescargaConstancias(tenantId: string, tenantObjectId: Types.ObjectId, tenantCarpeta: string, items: Array<{ userProjectId: string; contractIndex: number }>): Promise<{ total: number; empresas: string[]; omitidas: number }> {
+  if (!(await credencialesDe(tenantId))) throw new Error("Faltan las credenciales de ARCA. Cargalas en Configuración → ARCA → Conexión.");
+  const enCurso = forzados.get(tenantId);
+  if (enCurso && !enCurso.terminado) throw new Error("Ya hay una descarga forzada en curso: esperá a que termine.");
+  const empresas: any[] = await Company.find({}).select("razonSocial cuit").lean();
+  const grupos: Array<{ empresaId: string; razonSocial: string; items: Array<{ userProjectId: string; contractIndex: number }> }> = [];
+  let total = 0;
+  for (const e of empresas) {
+    if (String(e.cuit || "").replace(/\D/g, "").length !== 11) continue;
+    const pendientes = await pendientesDeConstancia(tenantObjectId, String(e._id));
+    const propios = pendientes.filter((p) => items.some((i) => i.userProjectId === p.userProjectId && Number(i.contractIndex) === p.contractIndex));
+    if (propios.length === 0) continue;
+    grupos.push({ empresaId: String(e._id), razonSocial: String(e.razonSocial || ""), items: propios.map((p) => ({ userProjectId: p.userProjectId, contractIndex: p.contractIndex })) });
+    total += propios.length;
+  }
+  if (total === 0) throw new Error("Ninguna de las seleccionadas espera su constancia.");
+  const estado: ForzadoEnCurso = { arrancadoEl: new Date(), total, empresas: grupos.map((g) => g.razonSocial), empresaActual: "", terminadas: 0, listas: 0, terminado: false, errores: [] };
+  forzados.set(tenantId, estado);
+  void (async () => {
+    try {
+      for (const g of grupos) {
+        estado.empresaActual = g.razonSocial;
+        if (!(await esperarCandadoLibre(tenantId, 30 * 60_000))) {
+          estado.errores.push(`${g.razonSocial}: había otra corrida de ARCA en curso y no terminó en 30 minutos.`);
+          continue;
+        }
+        try {
+          await arrancarDescargaConstancias({ tenantId, tenantObjectId, tenantCarpeta, empresaId: g.empresaId, soloItems: g.items });
+          const fin = Date.now() + ESPERA_MAX_MS;
+          while (Date.now() < fin) {
+            const d = descargaConstanciasDe(tenantId);
+            if (!d || d.terminada) break;
+            await esperar(4000);
+          }
+          const d = descargaConstanciasDe(tenantId);
+          const ev: any = (d?.eventos || []).find((x: any) => x.tipo === "fin");
+          const fallo: any = (d?.eventos || []).find((x: any) => x.tipo === "fallo");
+          estado.listas += Number(ev?.listas || 0);
+          if (fallo) estado.errores.push(`${g.razonSocial}: ${fallo.mensaje}`);
+        } catch (err: any) {
+          estado.errores.push(`${g.razonSocial}: ${String(err?.message || err)}`);
+        }
+        estado.terminadas++;
+      }
+    } finally {
+      estado.terminado = true;
+      estado.empresaActual = "";
+    }
+  })();
+  return { total, empresas: estado.empresas, omitidas: items.length - total };
 }
 
 async function esperarCandadoLibre(tenantId: string, ms: number): Promise<boolean> {

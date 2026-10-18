@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { projectsAPI, horaTexto, anticipacionTexto, type AltaPendienteArca, type EstadoPresentacionAutomatica, type CorridaAltasGuardada } from "../api/projects";
 import { BotonOrden, useOrdenTabla } from "../components/ui/OrdenTabla";
 import { CorridaAltasArca } from "../components/contratos/CorridaAltasArca";
+import { CuentaRegresiva } from "../components/ui/CuentaRegresiva";
 import { sweetAlert } from "../utils/sweetAlert";
 
 /*
@@ -21,34 +22,7 @@ const fmtCuil = (c: string) => (c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2,
 /** La fecha argentina de un instante ISO ("DD/MM/AAAA"): la corrida de las 22 h ya es «mañana» en UTC. */
 const fechaArgentina = (iso: string) => fechaCorta(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date(iso)));
 
-/** Días, horas y minutos que faltan; null si ya pasó. */
-const faltan = (destinoMs: number, ahoraMs: number): { d: number; h: number; m: number } | null => {
-  const ms = destinoMs - ahoraMs;
-  if (ms <= 0) return null;
-  const min = Math.floor(ms / 60_000);
-  return { d: Math.floor(min / 1440), h: Math.floor((min % 1440) / 60), m: min % 60 };
-};
-
-const CuentaRegresiva: React.FC<{ destino: string; ahora: number; grande?: boolean }> = ({ destino, ahora, grande }) => {
-  const r = faltan(new Date(destino).getTime(), ahora);
-  if (!r) return null;
-  const caja = grande ? "min-w-[64px] px-3 py-2" : "min-w-[42px] px-2 py-1";
-  const num = grande ? "text-2xl" : "text-sm";
-  return (
-    <div className="flex items-stretch gap-1.5" aria-label={`Faltan ${r.d} días, ${r.h} horas y ${r.m} minutos`}>
-      {[
-        [r.d, r.d === 1 ? "día" : "días"],
-        [r.h, r.h === 1 ? "hora" : "horas"],
-        [r.m, r.m === 1 ? "minuto" : "minutos"],
-      ].map(([n, et]) => (
-        <div key={String(et)} className={`${caja} rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 text-center`}>
-          <div className={`${num} font-bold tabular-nums text-blue-700 dark:text-blue-300 leading-tight`}>{n}</div>
-          <div className="text-[10px] uppercase tracking-wide text-blue-500 dark:text-blue-400">{et}</div>
-        </div>
-      ))}
-    </div>
-  );
-};
+// La cuenta regresiva vive en `components/ui/CuentaRegresiva.tsx`: la comparte con «A.R.C.A Descargas Automáticas».
 
 export const PresentacionesArcaPage: React.FC = () => {
   const [estado, setEstado] = useState<EstadoPresentacionAutomatica | null>(null);

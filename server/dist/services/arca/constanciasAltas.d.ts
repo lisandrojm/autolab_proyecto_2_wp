@@ -39,7 +39,7 @@ interface DescargaConstancias {
     terminada: boolean;
     arrancadaEl: Date;
 }
-interface Pendiente {
+export interface Pendiente {
     userProjectId: string;
     contractIndex: number;
     userId: string;
@@ -47,16 +47,30 @@ interface Pendiente {
     nombre: string;
     /** ddmmaaaa, como lo muestra ARCA sin las barras. */
     fechaInicio: string;
+    /** "YYYY-MM-DD" del alta y cuándo se presentó en ARCA (para la pantalla de Descargas Automáticas). */
+    fechaAlta: string;
+    presentadaEl: string;
+    empresaId: string;
 }
 export declare const descargaConstanciasDe: (tenantId: string) => DescargaConstancias | undefined;
 /** Los contratos de esa empleadora presentados en ARCA que todavía no tienen su constancia validada. */
 export declare function pendientesDeConstancia(tenantObjectId: any, empresaId: string): Promise<Pendiente[]>;
+/** Los pendientes de constancia de TODAS las empleadoras con CUIT, con la razón social de cada una. */
+export declare function pendientesDeConstanciaTodas(tenantObjectId: any): Promise<Array<Pendiente & {
+    empresaRazonSocial: string;
+}>>;
 export declare function arrancarDescargaConstancias(o: {
     tenantId: string;
     tenantObjectId: any;
     tenantCarpeta: string;
-    empresaId: string; /** Tope de personas en esta corrida (la automática lo usa); sin tope, todas. */
+    empresaId: string;
+    /** Tope de personas en esta corrida (la automática lo usa); sin tope, todas. */
     maximo?: number;
+    /** Sólo estos contratos (forzar una o varias personas); sin lista, todos los pendientes de la empleadora. */
+    soloItems?: Array<{
+        userProjectId: string;
+        contractIndex: number;
+    }>;
 }): Promise<{
     total: number;
     pendientes: number;

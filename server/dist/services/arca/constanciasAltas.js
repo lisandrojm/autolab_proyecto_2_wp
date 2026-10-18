@@ -54,8 +54,24 @@ export async function pendientesDeConstancia(tenantObjectId, empresaId) {
                 cuil,
                 nombre: `${u?.firstName || ""} ${u?.lastName || ""}`.trim(),
                 fechaInicio: `${m[3]}${m[2]}${m[1]}`,
+                fechaAlta: `${m[1]}-${m[2]}-${m[3]}`,
+                presentadaEl: c.altaArcaPresentada?.fecha ? new Date(c.altaArcaPresentada.fecha).toISOString() : "",
+                empresaId,
             });
         });
+    }
+    return out;
+}
+/** Los pendientes de constancia de TODAS las empleadoras con CUIT, con la razón social de cada una. */
+export async function pendientesDeConstanciaTodas(tenantObjectId) {
+    const empresas = await Company.find({}).select("razonSocial cuit").lean();
+    const out = [];
+    for (const e of empresas) {
+        if (digitos(e.cuit).length !== 11)
+            continue;
+        const lista = await pendientesDeConstancia(tenantObjectId, String(e._id));
+        for (const p of lista)
+            out.push({ ...p, empresaRazonSocial: String(e.razonSocial || "") });
     }
     return out;
 }
@@ -71,8 +87,11 @@ export async function arrancarDescargaConstancias(o) {
         const todas = await pendientesDeConstancia(tenantObjectId, o.empresaId);
         if (todas.length === 0)
             throw new Error("No hay altas presentadas de esa empleadora esperando su constancia.");
-        // Con tope (la descarga automática): las primeras N; el resto queda para la próxima corrida.
-        const pendientes = o.maximo && o.maximo > 0 ? todas.slice(0, o.maximo) : todas;
+        // Sólo las pedidas (forzar), y con tope (la automática): las primeras N; el resto queda para la próxima corrida.
+        const pedidas = o.soloItems ? todas.filter((p) => o.soloItems.some((i) => i.userProjectId === p.userProjectId && Number(i.contractIndex) === p.contractIndex)) : todas;
+        if (pedidas.length === 0)
+            throw new Error("Las altas pedidas ya tienen su constancia o no son de esa empleadora.");
+        const pendientes = o.maximo && o.maximo > 0 ? pedidas.slice(0, o.maximo) : pedidas;
         const cred = await credencialesDe(tenantId);
         if (!cred)
             throw new Error("Faltan las credenciales de ARCA. Cargalas en Configuración → ARCA → Conexión.");
