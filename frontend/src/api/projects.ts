@@ -1071,6 +1071,12 @@ export interface CorridaAltasGuardada {
      * servidor que contestó es anterior a este dato y no lo informa (no significa que falte).
      */
     constancia?: { destino: "outbox" | "no_firmar" | "sin_subir"; archivadaEn?: string; validadaEl?: string; clave?: string } | null;
+    /**
+     * Esta fila no fue «presentada», pero el contrato se presentó después en OTRA corrida (forzada a
+     * mano o la automática del día siguiente): cuándo y quién. `null` = sigue sin presentarse. Ausente =
+     * servidor anterior al 18/10/2026.
+     */
+    presentadaDespues?: { fecha: string; logId: string; automatica: boolean; usuario: string; via: string } | null;
   }>;
 }
 

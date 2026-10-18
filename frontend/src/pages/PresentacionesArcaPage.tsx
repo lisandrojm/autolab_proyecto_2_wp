@@ -66,6 +66,8 @@ export const PresentacionesArcaPage: React.FC = () => {
   const [buscar, setBuscar] = useState("");
   // Por defecto, sólo lo que salió solo: es lo que se viene a confirmar («¿se presentó?»). Las manuales y forzadas se ven destildando.
   const [soloAutomaticas, setSoloAutomaticas] = useState(true);
+  // Las rechazadas que después salieron (forzadas o en la cola del día siguiente) se ven con su aclaración; este filtro las saca de la vista.
+  const [ocultarResueltas, setOcultarResueltas] = useState(false);
   const cargarRegistro = useCallback(async () => {
     try {
       setCorridas(await projectsAPI.historialAltasArca());
@@ -89,11 +91,12 @@ export const PresentacionesArcaPage: React.FC = () => {
         motivo: x.motivo || "",
         quien: k.usuario || "—",
         constancia: x.constancia,
+        presentadaDespues: x.presentadaDespues || null,
       })),
-    );
+    ).filter((r) => !ocultarResueltas || !r.presentadaDespues);
     const q = buscar.trim().toLowerCase();
     return q ? filas.filter((r) => r.nombre.toLowerCase().includes(q) || r.cuil.includes(q.replace(/\D/g, "")) || r.empresa.toLowerCase().includes(q)) : filas;
-  }, [corridas, buscar, soloAutomaticas]);
+  }, [corridas, buscar, soloAutomaticas, ocultarResueltas]);
   const { ordenados: presentadasOrdenadas, orden: ordenRegistro, alternar: alternarRegistro } = useOrdenTabla(
     presentadas,
     { fecha: (r) => r.fecha, persona: (r) => r.nombre, empresa: (r) => r.empresa, resultado: (r) => r.resultado, quien: (r) => r.quien },
@@ -372,6 +375,10 @@ export const PresentacionesArcaPage: React.FC = () => {
                   <input type="checkbox" checked={soloAutomaticas} onChange={(e) => setSoloAutomaticas(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                   Solo las automáticas
                 </label>
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none" title="Saca de la lista las rechazadas o inciertas cuyo contrato ya se presentó después (forzado o en la cola del día siguiente)">
+                  <input type="checkbox" checked={ocultarResueltas} onChange={(e) => setOcultarResueltas(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  Ocultar las que después se presentaron
+                </label>
                 <button type="button" onClick={() => void cargarRegistro()} className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold">
                   Actualizar
                 </button>
@@ -431,6 +438,16 @@ export const PresentacionesArcaPage: React.FC = () => {
                             <td className="px-4 py-3 text-xs max-w-[280px]">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${res.clase}`}>{res.texto}</span>
                               {r.motivo && <p className="mt-1 text-gray-500">{r.motivo}</p>}
+                              {/* No salió en esta corrida, pero el contrato se presentó después: cuándo y quién. */}
+                              {r.presentadaDespues && (
+                                <p className="mt-1 font-semibold text-green-700 dark:text-green-400 flex items-start gap-1">
+                                  <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3 mt-0.5 shrink-0" />
+                                  <span>
+                                    Presentada después: {new Date(r.presentadaDespues.fecha).toLocaleDateString("es-AR")} {new Date(r.presentadaDespues.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                                    {r.presentadaDespues.automatica ? " · en la corrida automática" : r.presentadaDespues.usuario ? ` · a mano por ${r.presentadaDespues.usuario}` : r.presentadaDespues.via === "carga_masiva" ? " · por Carga Masiva" : ""}
+                                  </span>
+                                </p>
+                              )}
                             </td>
                             <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                               {r.constancia === undefined ? "—" : r.constancia === null ? "Sin bajar" : CONSTANCIA[r.constancia.destino] || r.constancia.destino}

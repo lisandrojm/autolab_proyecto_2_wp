@@ -3429,8 +3429,38 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
       Se piden solo esos dos campos; el orden de `contracts` se conserva, así el índice sigue valiendo.
     */
     const idsUp = [...new Set(logs.flatMap((l) => (l.contratos || []).map((c: any) => String(c.userProjectId || ""))).filter((id) => Types.ObjectId.isValid(id)))];
-    const ups: any[] = idsUp.length > 0 ? await UserProject.find({ _id: { $in: idsUp } }).select("contracts.altaConstancia contracts.altaEnviadaAFirmarEl").lean() : [];
+    const ups: any[] = idsUp.length > 0 ? await UserProject.find({ _id: { $in: idsUp } }).select("contracts.altaConstancia contracts.altaEnviadaAFirmarEl contracts.altaArcaPresentada").lean() : [];
     const upPorId = new Map(ups.map((u) => [String(u._id), u]));
+    /*
+      «PRESENTADA DESPUÉS» (pedido del 18/10/2026). Una fila rechazada de una corrida vieja queda rechazada
+      para siempre en el registro, aunque el contrato haya salido después: forzado a mano o en la corrida
+      automática del día siguiente. La marca actual del contrato (`altaArcaPresentada`) dice si hoy está
+      presentado y en qué corrida (`logId`); si esa corrida no es ésta, la fila lo informa. Quién la
+      presentó se busca entre las corridas ya cargadas y, si quedó fuera de las 200, se lee aparte.
+    */
+    const estaPresentada = (a: any) => !!a && (a.resultado === "presentada" || (a.resultado === "indeterminado" && a.porConsulta === true));
+    const logPorId = new Map<string, any>(logs.map((l) => [String(l._id), l]));
+    const idsLogsFaltantes = new Set<string>();
+    for (const l of logs) {
+      for (const c of l.contratos || []) {
+        if (c.resultado === "presentada") continue;
+        const a = upPorId.get(String(c.userProjectId || ""))?.contracts?.[c.contractIndex]?.altaArcaPresentada;
+        if (estaPresentada(a) && a.logId && String(a.logId) !== String(l._id) && !logPorId.has(String(a.logId))) idsLogsFaltantes.add(String(a.logId));
+      }
+    }
+    if (idsLogsFaltantes.size > 0) {
+      const otros: any[] = await ArcaAltasLog.find({ _id: { $in: [...idsLogsFaltantes] }, tenantId: req.tenantObjectId }).select("automatica usuarioId createdAt").populate("usuarioId", "firstName lastName").lean();
+      for (const o of otros) logPorId.set(String(o._id), o);
+    }
+    const quienDe = (l: any) => (l?.automatica ? "Automática" : l?.usuarioId ? `${l.usuarioId.firstName || ""} ${l.usuarioId.lastName || ""}`.trim() : "");
+    const presentadaDespuesDe = (c: any, logId: string) => {
+      if (c.resultado === "presentada") return null;
+      const a = upPorId.get(String(c.userProjectId || ""))?.contracts?.[c.contractIndex]?.altaArcaPresentada;
+      if (!estaPresentada(a) || String(a.logId || "") === logId) return null;
+      const otro = a.logId ? logPorId.get(String(a.logId)) : null;
+      // Sin `logId` (carga masiva vieja) se informa igual que se presentó, sin decir quién.
+      return { fecha: a.fecha, logId: a.logId ? String(a.logId) : "", automatica: !!otro?.automatica, usuario: quienDe(otro), via: a.via || "" };
+    };
     // ¿Qué tandas tienen HTML guardado? Se pregunta sin traerlo: sólo si existe, por log y número de tanda.
     const conHtml: any[] = logs.length > 0 ? await ArcaAltasLog.aggregate([
       { $match: { _id: { $in: logs.map((l) => l._id) } } },
@@ -3464,7 +3494,7 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
         tandas: (l.tandas || []).length,
         // Qué devolvió ARCA en cada tanda. `conHtml`: hay una pantalla guardada para bajar (no viaja acá).
         tandasDetalle: (l.tandas || []).map((t: any) => ({ n: t.n, resultado: t.resultado, error: t.error, textoArca: t.textoArca, dialogos: t.dialogos || [], textoNuevo: t.textoNuevo, enRojo: t.enRojo || [], duracionMs: t.duracionMs, conHtml: !!htmlPorTanda.get(`${String(l._id)}:${t.n}`) })),
-        contratos: (l.contratos || []).map((c: any) => ({ cuil: c.cuil, nombre: c.nombre, resultado: c.resultado, motivo: c.motivo, tanda: c.tanda, cat: c.cat, porConsulta: c.porConsulta, registro: c.registro, constancia: constanciaDe(c) ?? null })),
+        contratos: (l.contratos || []).map((c: any) => ({ cuil: c.cuil, nombre: c.nombre, resultado: c.resultado, motivo: c.motivo, tanda: c.tanda, cat: c.cat, porConsulta: c.porConsulta, registro: c.registro, constancia: constanciaDe(c) ?? null, presentadaDespues: presentadaDespuesDe(c, String(l._id)) })),
       })),
     );
   } catch (error: any) {
