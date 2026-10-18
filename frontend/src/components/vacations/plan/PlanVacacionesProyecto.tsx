@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faSpinner, faPaperPlane, faCheckDouble, faRotate, faPen, faBan, faTableCells, faTimeline, faTriangleExclamation, faCircleInfo, faChevronDown, faChevronUp, faTrash } from "@fortawesome/free-solid-svg-icons";
-import { planVacacionesAPI, errorDe, type PlanVacaciones, type ItemDelPlan, type ClaveDeGrupo } from "../../../api/planVacaciones";
+import { planVacacionesAPI, errorDe, type PlanVacaciones, type ItemDelPlan, type ClaveDeGrupo, type GrupoDelPlan } from "../../../api/planVacaciones";
 import { sweetAlert } from "../../../utils/sweetAlert";
 import { LoadingSpinner } from "../../ui/LoadingSpinner";
 import { TEXTO_ESTADO_PLAN } from "@compartido/planVacaciones/estado";
@@ -9,6 +9,7 @@ import { fechaCorta } from "@compartido/planVacaciones/fechas";
 import { GrillaDelPlan, type AccionesGrilla } from "./GrillaDelPlan";
 import { LineaDeTiempoDelPlan } from "./LineaDeTiempoDelPlan";
 import { ModalNuevoPlan } from "./ModalNuevoPlan";
+import { ModalReemplazoMensual } from "./ModalReemplazoMensual";
 import { CLASE_ESTADO_PLAN, mesCorto } from "./estilos";
 
 interface Props {
@@ -30,6 +31,7 @@ export const PlanVacacionesProyecto: React.FC<Props> = ({ planId, onVolver, onCa
   const [vista, setVista] = useState<"grilla" | "linea">("grilla");
   const [verAvisos, setVerAvisos] = useState(false);
   const [editando, setEditando] = useState(false);
+  const [reemplazoPara, setReemplazoPara] = useState<{ grupo: GrupoDelPlan; mes: string } | null>(null);
 
   const cargar = useCallback(async () => {
     try {
@@ -95,6 +97,12 @@ export const PlanVacacionesProyecto: React.FC<Props> = ({ planId, onVolver, onCa
         const r = await sweetAlert.confirm(esAprobado ? "Cancelar el bloque y su solicitud" : "Retirar el bloque", esAprobado ? "La solicitud de vacaciones ya creada queda cancelada (si todavía no está firmada ni entregada) y los días vuelven al saldo." : "El bloque vuelve a «propuesto» y deja de esperar al coordinador.", esAprobado ? "Sí, cancelar" : "Sí, retirar");
         if (!r.isConfirmed) return;
         await accion(() => planVacacionesAPI.cancelarItem(planId, item._id, { reabrir: !esAprobado }), "No se pudo cancelar");
+      },
+      reemplazo: (grupo, mes) => setReemplazoPara({ grupo, mes }),
+      cancelarReemplazo: async (reemplazoId) => {
+        const r = await sweetAlert.confirm("Cancelar el reemplazo", "La solicitud de contratación del reemplazo queda cancelada (si todavía está pendiente).", "Sí, cancelar");
+        if (!r.isConfirmed) return;
+        await accion(() => planVacacionesAPI.cancelarReemplazo(planId, reemplazoId), "No se pudo cancelar el reemplazo");
       },
     }),
     [accion, planId],
@@ -251,6 +259,7 @@ export const PlanVacacionesProyecto: React.FC<Props> = ({ planId, onVolver, onCa
       {vista === "grilla" ? <GrillaDelPlan plan={plan} acciones={acciones} ocupado={ocupado} /> : <LineaDeTiempoDelPlan plan={plan} />}
 
       <ModalNuevoPlan isOpen={editando} onClose={() => setEditando(false)} plan={plan} onListo={(p) => setPlan(p)} />
+      {reemplazoPara && <ModalReemplazoMensual isOpen plan={plan} grupo={reemplazoPara.grupo} mes={reemplazoPara.mes} onClose={() => setReemplazoPara(null)} onListo={(p) => setPlan(p)} />}
     </div>
   );
 };

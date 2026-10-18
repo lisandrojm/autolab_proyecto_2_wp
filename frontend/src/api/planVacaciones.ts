@@ -115,6 +115,7 @@ export interface PlanVacaciones {
   avisos: Aviso[];
   cobertura: Record<string, Record<string, CoberturaDeCelda>>;
   permisos: { puedeEditar: boolean; puedeAprobar: boolean; esCoordinador: boolean };
+  reemplazo?: { solicitudId: string; reemplazoId: string; avisos: string[] };
   /** Extras de la última acción. */
   reparto?: { bloques: number; salteados: Array<{ userId: string; nombre: string; motivo: string }> };
   resultado?: { aprobados: number; fallidos: Array<{ itemId: string; nombre: string; motivo: string }> };
@@ -146,6 +147,25 @@ export interface EquipoParaPlan {
   areas: Array<{ _id: string; name: string }>;
   shifts: Array<{ _id: string; name: string; startTime: string; endTime: string }>;
   sinGrupo: Array<{ userId: string; nombre: string }>;
+}
+
+/** Lo que se manda para pedir (o previsualizar) el reemplazo mensual de un rol en un mes. */
+export interface PedidoReemplazo extends ClaveDeGrupo {
+  mes: string;
+  userId: string;
+  contratoId: string;
+  nombreContrato?: string;
+  tipoImpositivo?: string;
+  categoriaSatId?: string;
+  dailyRate?: number;
+  motivoReemplazoId?: string;
+  comentarios?: string;
+}
+
+export interface PreviewReemplazo {
+  cubreA: Array<{ userId: string; nombre: string; desde: string; hasta: string }>;
+  avisos: string[];
+  resumen: { persona: string; nombreContrato: string; desde: string; hasta: string; jornadas: number; dailyRate: number; importes: { jornada: number | null; semana: number | null; mensual: number | null; total: number | null }; esServicios: boolean; motivo: string | null };
 }
 
 export interface ClaveDeGrupo {
@@ -223,6 +243,18 @@ class PlanVacacionesAPI {
   }
   async aprobarTodo(planId: string): Promise<PlanVacaciones> {
     const { data } = await axios.post(`${BASE}/${planId}/aprobar-todo`, {});
+    return data;
+  }
+  async previewReemplazo(planId: string, body: PedidoReemplazo): Promise<PreviewReemplazo> {
+    const { data } = await axios.post(`${BASE}/${planId}/reemplazos/preview`, body);
+    return data;
+  }
+  async crearReemplazo(planId: string, body: PedidoReemplazo): Promise<PlanVacaciones> {
+    const { data } = await axios.post(`${BASE}/${planId}/reemplazos`, body);
+    return data;
+  }
+  async cancelarReemplazo(planId: string, reemplazoId: string, motivo?: string): Promise<PlanVacaciones> {
+    const { data } = await axios.delete(`${BASE}/${planId}/reemplazos/${reemplazoId}`, { data: { motivo } });
     return data;
   }
   async cancelarItem(planId: string, itemId: string, body: { motivo?: string; reabrir?: boolean } = {}): Promise<PlanVacaciones> {

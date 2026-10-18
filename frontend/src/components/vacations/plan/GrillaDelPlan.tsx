@@ -28,6 +28,7 @@ export interface AccionesGrilla {
   rechazar: (itemId: string) => Promise<void>;
   cancelar: (item: ItemDelPlan) => Promise<void>;
   reemplazo?: (grupo: GrupoDelPlan, mes: string) => void;
+  cancelarReemplazo?: (reemplazoId: string) => Promise<void>;
 }
 
 interface Props {
@@ -265,9 +266,20 @@ const CeldaMes: React.FC<{
               </p>
               <div className="flex items-center gap-2">
                 {reemplazo ? (
-                  <span className="text-[10px] font-semibold text-violet-700 dark:text-violet-300 inline-flex items-center gap-1" title={`Reemplazo mensual: ${miembroDe.get(reemplazo.userId)?.nombre || "persona"} · ${reemplazo.nombreContrato}`}>
+                  <span className="text-[10px] font-semibold text-violet-700 dark:text-violet-300 inline-flex items-center gap-1" title={`Reemplazo mensual: ${reemplazo.nombreContrato} · ${fechaCorta(reemplazo.desde)}–${fechaCorta(reemplazo.hasta)}`}>
                     <FontAwesomeIcon icon={faFileLines} className="h-2.5 w-2.5" />
-                    Reemplazo {reemplazo.estado === "solicitado" ? "pedido" : "propuesto"}
+                    {reemplazo.solicitudId ? (
+                      <Link to={`/projects/${plan.projectId}/team?tab=solicitudes`} className="hover:underline">
+                        Reemplazo pedido
+                      </Link>
+                    ) : (
+                      "Reemplazo propuesto"
+                    )}
+                    {puedeEditar && acciones.cancelarReemplazo && (
+                      <button type="button" disabled={ocupado} onClick={() => void acciones.cancelarReemplazo!(reemplazo._id)} title="Cancelar el reemplazo (y su solicitud si sigue pendiente)" className="text-gray-400 hover:text-red-600 disabled:opacity-40">
+                        <FontAwesomeIcon icon={faBan} className="h-2.5 w-2.5" />
+                      </button>
+                    )}
                   </span>
                 ) : (
                   puedeEditar &&

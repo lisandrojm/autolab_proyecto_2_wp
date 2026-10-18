@@ -25,6 +25,7 @@ import {
   rechazarItem,
   refrescarEquipo,
 } from "../services/vacaciones/planVacaciones.js";
+import { armarReemplazoMensual, crearReemplazoMensual, cancelarReemplazoMensual } from "../services/vacaciones/reemplazoMensual.js";
 
 /*
   PLAN DE VACACIONES POR PROYECTO, `/api/v1/planes-vacaciones`. Todo en `services/vacaciones/planVacaciones.ts`;
@@ -225,6 +226,37 @@ planVacacionesRoutes.post(
     const { plan, acceso } = await planCon(req, "aprobar");
     const r = await aprobarTodo(tid(req), String(req.tenantId), plan, req.user!.userId);
     return respuesta(req, plan, acceso, { resultado: r });
+  }),
+);
+
+/*
+  REEMPLAZO MENSUAL de un rol en un mes (ver `services/vacaciones/reemplazoMensual.ts`): `preview` arma la
+  solicitud sin guardar nada (para mostrar jornadas, importe y avisos); el POST la crea y la vincula al plan.
+*/
+planVacacionesRoutes.post(
+  "/:id/reemplazos/preview",
+  manejar(async (req) => {
+    const { plan } = await planCon(req, "editar");
+    const r = await armarReemplazoMensual(tid(req), plan, req.body || {});
+    return { cubreA: r.cubreA, avisos: r.avisos, resumen: r.resumen };
+  }),
+);
+
+planVacacionesRoutes.post(
+  "/:id/reemplazos",
+  manejar(async (req) => {
+    const { plan, acceso } = await planCon(req, "editar");
+    const r = await crearReemplazoMensual(tid(req), req.user!.userId, plan, req.body || {});
+    return respuesta(req, plan, acceso, { reemplazo: r });
+  }),
+);
+
+planVacacionesRoutes.delete(
+  "/:id/reemplazos/:rid",
+  manejar(async (req) => {
+    const { plan, acceso } = await planCon(req, "editar");
+    await cancelarReemplazoMensual(tid(req), req.user!.userId, plan, String(req.params.rid), req.body?.motivo ?? (req.query.motivo as string | undefined));
+    return respuesta(req, plan, acceso);
   }),
 );
 
