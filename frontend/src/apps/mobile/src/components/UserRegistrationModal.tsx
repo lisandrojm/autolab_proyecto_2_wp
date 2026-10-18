@@ -7,7 +7,7 @@ import { BloqueReemplazo } from "./contratacion/BloqueReemplazo";
 import { CampoComentarios } from "./contratacion/CampoComentarios";
 import { AyudaImportes, PROPS_IMPORTES_MOVIL } from "./contratacion/AyudaImportes";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faBriefcase, faClock, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faBriefcase, faClock, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { AvisoSuperposicion, usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo, semanaDelTipoDeContrato } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
@@ -17,6 +17,8 @@ import { armarPayloadDeSolicitud } from "@compartido/solicitudDeContratacion";
 import { valoracionParaRoles } from "@compartido/valoracionPorRol";
 import { AvisosSuperposicion } from "../../../../components/solicitudes/AvisosSuperposicion";
 import { roleFrameAPI, RoleFrameItem } from "../../../../api/roleFrames";
+import { areasAPI, Area } from "../../../../api/areas";
+import { cachedFetch } from "../../../../utils/refCache";
 import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat";
 // La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
 import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, codigosDeConveniosDelProyecto, conveniosOfrecidos, importePorJornadaDeCategoria, proporcionNetoDeCategoria } from "../../../../utils/seleccionConvenioCategoria";
@@ -132,6 +134,21 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
    */
   const [catalogosCargados, setCatalogosCargados] = useState(false);
   const [roleFrames, setRoleFrames] = useState<RoleFrameItem[]>([]);
+  /*
+    LOS ROLES EMPRESA SE ACOTAN A LAS ÁREAS DEL PROYECTO (pedido del 18/10/2026). Cada área dice qué
+    roles trabajan en ella (Admin › Usuarios › Áreas); el proyecto tiene sus áreas y turnos. Al pedir
+    un contrato se ofrecen sólo los roles de esas áreas: un Iluminador no aparece en un proyecto que
+    no tiene área Técnica, y quien contrata no tiene que buscar entre 86 oficios. Si el proyecto no
+    tiene áreas con roles asignados, se ofrecen todos (no hay con qué acotar) y el ⓘ lo dice.
+  */
+  const [areasConRoles, setAreasConRoles] = useState<Area[]>([]);
+  const [infoRolesOpen, setInfoRolesOpen] = useState(false);
+  useEffect(() => {
+    if (!isOpen) return;
+    cachedFetch("areas:all", () => areasAPI.listAll())
+      .then(setAreasConRoles)
+      .catch(() => setAreasConRoles([]));
+  }, [isOpen]);
   const [categoriasSat, setCategoriasSat] = useState<CategoriaSatItem[]>([]);
   const [proyectosActivos, setProjects] = useState<Project[]>([]);
 
@@ -966,7 +983,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   useEffect(() => {
     const id = proyectoElegido?._id;
     setAreasDelProyecto(null);
-    if (!id || coordinaEnElProyecto) return;
+    // Siempre, también para quien coordina (que elige sólo entre sus áreas): las áreas del proyecto acotan los roles.
+    if (!id) return;
     let cancelado = false;
     projectsAPI
       .getProject(id, { team: "ids" })
@@ -978,7 +996,19 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     return () => {
       cancelado = true;
     };
-  }, [proyectoElegido?._id, coordinaEnElProyecto]);
+  }, [proyectoElegido?._id]);
+
+  /** Las áreas del proyecto (una vez cada una) con los roles empresa que trabajan en ellas. */
+  const areasDelProyectoConRoles = useMemo(() => {
+    const ids = [...new Set((areasDelProyecto || []).map((o) => o.areaId))];
+    return ids.map((id) => {
+      const a = areasConRoles.find((x) => x._id === id);
+      return { areaId: id, nombre: a?.name || (areasDelProyecto || []).find((o) => o.areaId === id)?.areaNombre || "Área", rolesFrame: (a?.rolesFrame || []).map(String) };
+    });
+  }, [areasDelProyecto, areasConRoles]);
+  /** Los roles que se ofrecen: la unión de los de las áreas del proyecto. Vacío = no hay con qué acotar. */
+  const rolesDeLasAreasDelProyecto = useMemo(() => new Set(areasDelProyectoConRoles.flatMap((a) => a.rolesFrame)), [areasDelProyectoConRoles]);
+  const rolesAcotadosPorArea = !!proyectoElegido && rolesDeLasAreasDelProyecto.size > 0;
 
   /** Lo que se puede elegir. `null` = todavía cargando las áreas del proyecto. */
   const opcionesDelProyecto: OpcionAreaTurno[] | null = coordinaEnElProyecto ? coordinacionesEnProyecto : areasDelProyecto;
@@ -1362,11 +1392,13 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
    * suyos que sumarle uno nuevo.
    */
   const rolesDisponibles = useMemo(() => {
-    const base = rolSearchTerm.trim() ? roleFrames.filter((rf) => fuzzyMatch(rf.name, rolSearchTerm)) : roleFrames;
+    // Sólo los roles de las áreas del proyecto (ver `rolesAcotadosPorArea`); los ya elegidos se dejan ver para poder quitarlos.
+    const delProyecto = rolesAcotadosPorArea ? roleFrames.filter((rf) => rolesDeLasAreasDelProyecto.has(rf._id) || formData.roleFrameIds.includes(rf._id)) : roleFrames;
+    const base = rolSearchTerm.trim() ? delProyecto.filter((rf) => fuzzyMatch(rf.name, rolSearchTerm)) : delProyecto;
     if (rolesDelUsuario.length === 0) return base;
     const suyos = base.filter((rf) => rolesDelUsuario.includes(rf._id));
     return [...suyos, ...base.filter((rf) => !rolesDelUsuario.includes(rf._id))];
-  }, [roleFrames, rolesDelUsuario, rolSearchTerm]);
+  }, [roleFrames, rolesDelUsuario, rolSearchTerm, rolesAcotadosPorArea, rolesDeLasAreasDelProyecto, formData.roleFrameIds]);
 
   /** Los elegidos que la persona NO tenía en su ficha: se le suman al guardar. */
   const rolesNuevosParaLaFicha = useMemo(() => (selectedUser ? formData.roleFrameIds.filter((id) => !rolesDelUsuario.includes(id)) : []), [selectedUser, formData.roleFrameIds, rolesDelUsuario]);
@@ -2297,6 +2329,12 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                 <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
                 Rol/es Empresa*
               </label>
+              {/* Por qué la lista no trae todos los oficios: sólo los de las áreas del proyecto. */}
+              {proyectoElegido && (
+                <button type="button" onClick={() => setInfoRolesOpen(true)} title="Qué roles se ofrecen y por qué" className="text-blue-500 hover:text-blue-600 shrink-0">
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                </button>
+              )}
               {/* Siempre, aunque la persona tenga un solo oficio: cambiarlo o sumarle otro es
                   justamente lo que hace falta poder hacer al contratarla. */}
               {rolesElegidos.length > 0 && (
@@ -3085,6 +3123,18 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           <div className="space-y-3">
             {/* Se dice qué va a pasar antes de que pase: el oficio nuevo queda en la ficha de la
                 persona, no sólo en esta solicitud. */}
+            {proyectoElegido && (
+              <button type="button" onClick={() => setInfoRolesOpen(true)} className="w-full text-left rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[11px] text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300 flex items-start gap-2">
+                <FontAwesomeIcon icon={faCircleInfo} className="mt-0.5 shrink-0" />
+                <span>
+                  {rolesAcotadosPorArea
+                    ? `Sólo los roles de las áreas del proyecto (${areasDelProyectoConRoles.filter((a) => a.rolesFrame.length > 0).map((a) => a.nombre).join(", ")}). Tocá para ver cómo sumar otros.`
+                    : areasDelProyecto === null
+                      ? "Buscando las áreas del proyecto…"
+                      : "El proyecto no tiene áreas con roles asignados: se muestran todos. Tocá para ver cómo acotarlos."}
+                </span>
+              </button>
+            )}
             {rolesNuevosParaLaFicha.length > 0 && <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">Los marcados como «nuevo» se le van a agregar a la ficha de la persona, así la próxima vez ya figuran entre los suyos.</p>}
             {rolesElegidos.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
@@ -3140,6 +3190,43 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                 })
               )}
             </div>
+          </div>
+        </Modal>
+
+        {/* Qué roles se ofrecen y por qué: las áreas del proyecto y sus roles, y cómo sumar otro. */}
+        <Modal isOpen={infoRolesOpen} onClose={() => setInfoRolesOpen(false)} title="Roles empresa que se ofrecen" subtitle={proyectoElegido ? etiquetaProyecto(proyectoElegido) : undefined} size="md" zIndex={95} footer={<div className="flex justify-end"><button type="button" onClick={() => setInfoRolesOpen(false)} className="bg-blue-500 text-white px-6 py-2 rounded-lg font-bold text-sm">Entendido</button></div>}>
+          <div className="space-y-3 text-sm text-slate-700 dark:text-slate-200">
+            {rolesAcotadosPorArea ? (
+              <>
+                <p>
+                  En este proyecto se ofrecen <strong>sólo los roles empresa de las áreas que tiene asociadas</strong>. Es para no mezclar oficios con áreas y turnos donde nunca trabajarían.
+                </p>
+                <ul className="space-y-1.5">
+                  {areasDelProyectoConRoles.map((a) => (
+                    <li key={a.areaId} className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2">
+                      <p className="font-semibold text-slate-800 dark:text-slate-100">
+                        {a.nombre} <span className="font-normal text-slate-400">({a.rolesFrame.length} {a.rolesFrame.length === 1 ? "rol" : "roles"})</span>
+                      </p>
+                      {a.rolesFrame.length > 0 ? (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{a.rolesFrame.map((id) => roleFrames.find((rf) => rf._id === id)?.name || "").filter(Boolean).sort((x, y) => x.localeCompare(y, "es")).join(" · ")}</p>
+                      ) : (
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5">Esta área no tiene roles asignados todavía.</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  ¿Falta un rol? Dos caminos: <strong>dar de alta en el proyecto el área</strong> donde trabaja ese rol (Proyecto › Áreas y turnos), o <strong>agregar el rol a una de estas áreas</strong> (Admin › Usuarios › Áreas › Editar).
+                </p>
+              </>
+            ) : (
+              <>
+                <p>
+                  Este proyecto {areasDelProyecto && areasDelProyecto.length > 0 ? "tiene áreas, pero ninguna tiene roles empresa asignados" : "no tiene áreas asociadas"}, así que se muestran <strong>todos</strong> los roles empresa.
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Para acotar la lista: asociá al proyecto las áreas donde trabaja su gente (Proyecto › Áreas y turnos) y asignale a cada área sus roles (Admin › Usuarios › Áreas › Editar).</p>
+              </>
+            )}
           </div>
         </Modal>
 
