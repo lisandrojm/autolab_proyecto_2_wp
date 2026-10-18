@@ -82,6 +82,13 @@ const tenantSchema = new Schema({
             validacionAutomaticaObrasSociales: {
                 activa: { type: Boolean, default: true },
             },
+            descargaConstancias: {
+                activa: { type: Boolean, default: false },
+                hora: { type: Number },
+                minuto: { type: Number },
+                ultimoDia: { type: String },
+                ultimaCorrida: { type: Schema.Types.Mixed },
+            },
             presentacionAutomatica: {
                 activa: { type: Boolean, default: false },
                 // Declarados a propósito: el esquema es `strict`, y un `$set` sobre un camino que no está

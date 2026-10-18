@@ -55,8 +55,10 @@ export declare function arrancarDescargaConstancias(o: {
     tenantId: string;
     tenantObjectId: any;
     tenantCarpeta: string;
-    empresaId: string;
+    empresaId: string; /** Tope de personas en esta corrida (la automática lo usa); sin tope, todas. */
+    maximo?: number;
 }): Promise<{
     total: number;
+    pendientes: number;
 }>;
 export {};

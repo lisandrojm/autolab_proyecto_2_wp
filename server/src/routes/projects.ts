@@ -25,6 +25,7 @@ import { arrancarCorrida, corridaColgada, corridaDe, destrabarCorridaColgada, de
 import { arrancarCorridaAltas, corridaAltasDe, detenerCorridaAltas, enSecoForzado } from "../services/arca/corridaAltas.js";
 import { valoracionesDeCategoria } from "../compartido/valoracionesDeCategoria.js";
 import { candidatosDeAlta, presentarCandidatos } from "../services/arca/presentacionAutomatica.js";
+import { MAX_POR_EMPLEADORA } from "../services/arca/descargaConstanciasAutomatica.js";
 import { claveAreaTurnoDelMiembro } from "../utils/areaTurno.js";
 import { DIAS_ATRAS_PENDIENTES, MAX_INTENTOS_AUTOMATICOS, configDe, sumarDias, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { Tenant } from "../models/Tenant.js";
@@ -3569,6 +3570,46 @@ router.post("/contratos/altas-arca/constancias", requireTenant, authenticateToke
 });
 
 /** GET /contratos/altas-arca/constancias?empresaId=… — cuántas esperan su constancia y el avance de la descarga. */
+/*
+  DESCARGA AUTOMÁTICA DE CONSTANCIAS (ver `services/arca/descargaConstanciasAutomatica.ts`): el interruptor y
+  el horario, por tenant, como los de la presentación automática. Mismo permiso que la conexión de ARCA.
+*/
+router.get("/contratos/altas-arca/constancias/automatica", requireTenant, authenticateToken, requirePermission(["admin_contracts:view", "config_afip:view"]), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const t: any = await Tenant.findById(req.tenantObjectId).select("integrations.arcaSimplificacion.descargaConstancias").lean();
+    const dc = t?.integrations?.arcaSimplificacion?.descargaConstancias || {};
+    const cfg = configDe({ hora: dc.hora ?? 15, minuto: dc.minuto ?? 0 });
+    res.json({ activa: !!dc.activa, config: { hora: cfg.hora, minuto: cfg.minuto }, ahora: new Date().toISOString(), hoy: hoyArgentina(), ultimaCorrida: dc.ultimaCorrida || null, maxPorEmpleadora: MAX_POR_EMPLEADORA });
+  } catch (error: any) {
+    console.error("Get descarga constancias automatica error:", error);
+    res.status(500).json({ error: String(error?.message || "Internal server error") });
+  }
+});
+
+router.put("/contratos/altas-arca/constancias/automatica", requireTenant, authenticateToken, requirePermission(["admin_contracts:view", "config_afip:view"]), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const v = validarConfig({ hora: req.body?.hora, minuto: req.body?.minuto });
+    if (v.ok === false) {
+      res.status(400).json({ error: v.error });
+      return;
+    }
+    const base = "integrations.arcaSimplificacion.descargaConstancias";
+    const set: Record<string, unknown> = {};
+    for (const [k, val] of Object.entries(v.cambios)) set[`${base}.${k}`] = val;
+    if (req.body?.activa !== undefined) set[`${base}.activa`] = req.body.activa === true;
+    const t: any = await Tenant.findById(req.tenantObjectId).select(base).lean();
+    const dc = t?.integrations?.arcaSimplificacion?.descargaConstancias || {};
+    const cfg = configDe({ hora: dc.hora ?? 15, minuto: dc.minuto ?? 0, ...v.cambios });
+    // Prendida DESPUÉS de la hora, arranca mañana: prender un interruptor no tiene que entrar a ARCA en el acto.
+    if (req.body?.activa === true && !dc.activa && yaPasoLaHora(cfg)) set[`${base}.ultimoDia`] = hoyArgentina();
+    if (Object.keys(set).length > 0) await Tenant.updateOne({ _id: req.tenantObjectId }, { $set: set });
+    res.json({ activa: req.body?.activa !== undefined ? req.body.activa === true : !!dc.activa, config: { hora: cfg.hora, minuto: cfg.minuto } });
+  } catch (error: any) {
+    console.error("Put descarga constancias automatica error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/contratos/altas-arca/constancias", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const d = descargaConstanciasDe(String(req.tenantObjectId));

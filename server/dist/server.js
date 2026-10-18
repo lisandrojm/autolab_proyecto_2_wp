@@ -29,6 +29,7 @@ import { initParitariasScheduler } from "./services/paritariasCronService.js";
 import { initCentrosCostoScheduler } from "./services/centrosCostoCronService.js";
 import { initDropboxSignMailScheduler } from "./services/dropboxSignMailService.js";
 import { initPresentacionAutomaticaScheduler } from "./services/presentacionAutomaticaCronService.js";
+import { initDescargaConstanciasScheduler } from "./services/descargaConstanciasCronService.js";
 import { initBarridoObrasSocialesScheduler } from "./services/barridoObrasSocialesCronService.js";
 import { initSincronizacionRelacionesScheduler } from "./services/arca/sincronizacionRelacionesCronService.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
@@ -424,6 +425,13 @@ connectDB()
         }
         catch (error) {
             console.error("❌ Failed to initialize presentacion-automatica scheduler:", error);
+        }
+        // Descarga automática de las constancias de alta temprana, una vez por día (sólo tenants que la activaron).
+        try {
+            initDescargaConstanciasScheduler();
+        }
+        catch (error) {
+            console.error("❌ Failed to initialize descarga-constancias scheduler:", error);
         }
         // Barrido de obras sociales sin validar: la red de seguridad de la cola (cada 10 min, por tenant).
         try {

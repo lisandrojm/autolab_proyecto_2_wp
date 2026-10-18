@@ -28,6 +28,7 @@ import { RenovacionesPage } from "./pages/RenovacionesPage";
 import { PresentacionesArcaPage } from "./pages/PresentacionesArcaPage";
 import { ValidacionObrasSocialesPage } from "./pages/ValidacionObrasSocialesPage";
 import { ArcaAltasAutomaticasConfigPage } from "./pages/ArcaAltasAutomaticasConfigPage";
+import { ArcaDescargaConstanciasConfigPage } from "./pages/ArcaDescargaConstanciasConfigPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
 import { ContratosSinDiasPage } from "./pages/ContratosSinDiasPage";
 import { PlantillasGeneralesPage } from "./pages/PlantillasGeneralesPage";
@@ -719,6 +720,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ArcaAltasAutomaticasConfigPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/arca/descarga-constancias"
+                element={
+                  <ProtectedRoute>
+                    <ArcaDescargaConstanciasConfigPage />
                   </ProtectedRoute>
                 }
               />

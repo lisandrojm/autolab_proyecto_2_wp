@@ -68,9 +68,11 @@ export async function arrancarDescargaConstancias(o) {
         const cuit = digitos(empresa?.cuit);
         if (!empresa || cuit.length !== 11)
             throw new Error("Elegí la pestaña de UNA empresa con CUIT: las constancias se bajan logueado como esa empleadora.");
-        const pendientes = await pendientesDeConstancia(tenantObjectId, o.empresaId);
-        if (pendientes.length === 0)
+        const todas = await pendientesDeConstancia(tenantObjectId, o.empresaId);
+        if (todas.length === 0)
             throw new Error("No hay altas presentadas de esa empleadora esperando su constancia.");
+        // Con tope (la descarga automática): las primeras N; el resto queda para la próxima corrida.
+        const pendientes = o.maximo && o.maximo > 0 ? todas.slice(0, o.maximo) : todas;
         const cred = await credencialesDe(tenantId);
         if (!cred)
             throw new Error("Faltan las credenciales de ARCA. Cargalas en Configuración → ARCA → Conexión.");
@@ -84,7 +86,7 @@ export async function arrancarDescargaConstancias(o) {
         };
         descargas.set(tenantId, d);
         void correr({ d, pendientes, cuit, cred, ...o });
-        return { total: pendientes.length };
+        return { total: pendientes.length, pendientes: todas.length };
     }
     catch (e) {
         soltarCandado(tenantId, "constancias");

@@ -6,7 +6,7 @@ import { EmpresaSelector } from './EmpresaSelector';
 import { EmpresaContextMenu } from './EmpresaContextMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faEarthAmericas, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature, faToggleOn, faRankingStar, faCalendarXmark, faRotateRight } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faEarthAmericas, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature, faToggleOn, faRankingStar, faCalendarXmark, faRotateRight, faFileArrowDown } from '@fortawesome/free-solid-svg-icons';
 import { usePermisoInactivo } from '../stores/permisosInactivosStore';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
@@ -113,7 +113,9 @@ const ARCA_COMO_FUNCIONA_PATH = '/arca/como-funciona';
 const ARCA_GUIA_OS_PATH = '/arca/guia-obras-sociales';
 /** El horario de las Altas Automáticas (a qué hora y con cuánta anticipación se presentan solas). */
 const ARCA_ALTAS_AUTO_PATH = '/arca/altas-automaticas';
-const ARCA_PATHS = [...ARCA_NOMENCLADOR_PATHS, ARCA_CONEXION_PATH, ARCA_CONEXION_OS_PATH, ARCA_COMO_FUNCIONA_PATH, ARCA_GUIA_OS_PATH, ARCA_ALTAS_AUTO_PATH];
+/** El horario de la descarga automática de constancias de alta temprana (va debajo de Altas Automáticas). */
+const ARCA_CONSTANCIAS_AUTO_PATH = '/arca/descarga-constancias';
+const ARCA_PATHS = [...ARCA_NOMENCLADOR_PATHS, ARCA_CONEXION_PATH, ARCA_CONEXION_OS_PATH, ARCA_COMO_FUNCIONA_PATH, ARCA_GUIA_OS_PATH, ARCA_ALTAS_AUTO_PATH, ARCA_CONSTANCIAS_AUTO_PATH];
 
 /** ABM de Empresas. La ficha de cada una cuelga del mismo grupo: ver `empresasGroup`. */
 const EMPRESAS_PATH = '/empresas';
@@ -526,6 +528,7 @@ export const MobileNavbar: React.FC = () => {
       if (puedeAbrir(ARCA_GUIA_OS_PATH)) base.push({ permiso: 'config_afip:view', path: ARCA_GUIA_OS_PATH, icon: faShieldHeart, label: 'Validar obras sociales', scope: 'global' });
       // Mismo permiso que la conexión: configura cuándo el servidor presenta solo, con esa conexión.
       if (puedeAbrir(ARCA_ALTAS_AUTO_PATH)) base.push({ permiso: 'config_afip:view', path: ARCA_ALTAS_AUTO_PATH, icon: faClock, label: 'Altas Automáticas', scope: 'global' });
+      if (puedeAbrir(ARCA_CONSTANCIAS_AUTO_PATH)) base.push({ permiso: 'config_afip:view', path: ARCA_CONSTANCIAS_AUTO_PATH, icon: faFileArrowDown, label: 'Descarga de constancias', scope: 'global' });
       // Tablas oficiales del organismo: comparten un solo permiso porque son el mismo tipo de
       // nomenclador (se siembran desde ARCA y casi no se editan), no tres módulos distintos.
       if (puedeAbrir('/arca/sucursales')) base.push({ permiso: 'config_arca_sucursales:view', path: '/arca/sucursales', icon: faLocationDot, label: 'Domicilios de Explotación', scope: 'global' });
@@ -696,7 +699,7 @@ export const MobileNavbar: React.FC = () => {
       una cuarta lista a mano se desincroniza en cuanto alguien agregue una pantalla al módulo, y el
       síntoma sería un ítem que desaparece del menú sin que nada avise.
     */
-    const arcaOtros = ARCA_PATHS.filter((ruta) => !ARCA_NOMENCLADOR_PATHS.includes(ruta) && !ARCA_CONEXION_PATHS.includes(ruta) && ruta !== ARCA_ALTAS_AUTO_PATH)
+    const arcaOtros = ARCA_PATHS.filter((ruta) => !ARCA_NOMENCLADOR_PATHS.includes(ruta) && !ARCA_CONEXION_PATHS.includes(ruta) && ruta !== ARCA_ALTAS_AUTO_PATH && ruta !== ARCA_CONSTANCIAS_AUTO_PATH)
       .map(itemArca)
       .filter(Boolean) as any[];
     // El subgrupo «Conexión» entra en el orden por su propio rótulo, como un hermano más.
@@ -708,6 +711,9 @@ export const MobileNavbar: React.FC = () => {
     // del orden alfabético que la dejaría primera: es lo que el módulo hace solo, después de lo que se configura.
     const altasAutomaticas = itemArca(ARCA_ALTAS_AUTO_PATH);
     if (altasAutomaticas) arcaResto.push(altasAutomaticas);
+    // Y debajo, la descarga automática de constancias: lo que el módulo hace solo después de presentar.
+    const descargaConstancias = itemArca(ARCA_CONSTANCIAS_AUTO_PATH);
+    if (descargaConstancias) arcaResto.push(descargaConstancias);
     const arcaChildren: any[] = [
       ...(arcaNomencladores.length > 0 ? [{ path: '#arca-nomencladores', sectionKey: 'nomencladores', section: 'Nomencladores de ARCA', hint: 'Universales: se importan una vez y valen para todos los CUIT.' }] : []),
       ...arcaNomencladores,

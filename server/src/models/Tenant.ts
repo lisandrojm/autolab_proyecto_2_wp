@@ -155,6 +155,17 @@ export interface ITenant extends Document {
        */
       /** Validar la obra social sola al crear el contrato (cola + barrido). Prendida por defecto; se apaga en Configuración → ARCA → Conexión. */
       validacionAutomaticaObrasSociales?: { activa?: boolean };
+      /**
+       * DESCARGA AUTOMÁTICA DE CONSTANCIAS de alta temprana, una vez por día a la hora configurada
+       * (ver `descargaConstanciasAutomatica.ts`). Apagada por defecto. Sólo lee en ARCA.
+       */
+      descargaConstancias?: {
+        activa?: boolean;
+        hora?: number;
+        minuto?: number;
+        ultimoDia?: string;
+        ultimaCorrida?: any;
+      };
       presentacionAutomatica?: {
         activa?: boolean;
         /** A qué hora corre (Argentina) y cuántos días de anticipación. Ver `horarioAltasAutomaticas.ts`. */
@@ -345,6 +356,13 @@ const tenantSchema = new Schema<ITenant>(
         ultimoError: { type: String },
         validacionAutomaticaObrasSociales: {
           activa: { type: Boolean, default: true },
+        },
+        descargaConstancias: {
+          activa: { type: Boolean, default: false },
+          hora: { type: Number },
+          minuto: { type: Number },
+          ultimoDia: { type: String },
+          ultimaCorrida: { type: Schema.Types.Mixed },
         },
         presentacionAutomatica: {
           activa: { type: Boolean, default: false },

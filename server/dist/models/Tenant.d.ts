@@ -156,6 +156,17 @@ export interface ITenant extends Document {
             validacionAutomaticaObrasSociales?: {
                 activa?: boolean;
             };
+            /**
+             * DESCARGA AUTOMÁTICA DE CONSTANCIAS de alta temprana, una vez por día a la hora configurada
+             * (ver `descargaConstanciasAutomatica.ts`). Apagada por defecto. Sólo lee en ARCA.
+             */
+            descargaConstancias?: {
+                activa?: boolean;
+                hora?: number;
+                minuto?: number;
+                ultimoDia?: string;
+                ultimaCorrida?: any;
+            };
             presentacionAutomatica?: {
                 activa?: boolean;
                 /** A qué hora corre (Argentina) y cuántos días de anticipación. Ver `horarioAltasAutomaticas.ts`. */

@@ -886,6 +886,15 @@ class ProjectsAPI {
   }
 
   /** Altas Automáticas: estado, horario configurado y las altas pendientes con su cuenta regresiva. `soloConfig` ahorra los candidatos. */
+  /** Descarga automática de constancias (ver `descargaConstanciasAutomatica.ts` en el server). */
+  async descargaConstanciasAutomatica(): Promise<EstadoDescargaConstancias> {
+    const { data } = await axios.get(`/contratos/altas-arca/constancias/automatica`, { headers: this.getHeaders() });
+    return data;
+  }
+  async setDescargaConstanciasAutomatica(cambios: Partial<{ activa: boolean } & ConfigDescargaConstancias>): Promise<{ activa: boolean; config: ConfigDescargaConstancias }> {
+    const { data } = await axios.put(`/contratos/altas-arca/constancias/automatica`, cambios, { headers: this.getHeaders() });
+    return data;
+  }
   async presentacionAutomatica(opts: { soloConfig?: boolean } = {}): Promise<EstadoPresentacionAutomatica> {
     const { data } = await axios.get(`/contratos/altas-arca/automatica${opts.soloConfig ? "?soloConfig=true" : ""}`, { headers: this.getHeaders() });
     return data;
@@ -1149,10 +1158,31 @@ export interface ConfigAltasAutomaticas {
 }
 
 /** "14:00". */
-export const horaTexto = (c?: ConfigAltasAutomaticas | null): string => (c ? `${String(c.hora).padStart(2, "0")}:${String(c.minuto).padStart(2, "0")}` : "14:00");
+export const horaTexto = (c?: { hora: number; minuto: number } | null): string => (c ? `${String(c.hora).padStart(2, "0")}:${String(c.minuto).padStart(2, "0")}` : "14:00");
 
 /** «el mismo día del alta» / «hasta 2 días antes del alta». */
 export const anticipacionTexto = (c?: ConfigAltasAutomaticas | null): string => (!c || c.diasAntes === 0 ? "el mismo día del alta" : c.diasAntes === 1 ? "hasta 1 día antes del alta" : `hasta ${c.diasAntes} días antes del alta`);
+
+/** El horario de la descarga automática de constancias. */
+export interface ConfigDescargaConstancias {
+  hora: number;
+  minuto: number;
+}
+
+export interface EstadoDescargaConstancias {
+  activa: boolean;
+  config: ConfigDescargaConstancias;
+  ahora: string;
+  hoy: string;
+  /** Tope de constancias por empleadora y por corrida. */
+  maxPorEmpleadora: number;
+  ultimaCorrida: null | {
+    fecha: string;
+    dia: string;
+    empresas: Array<{ empresa: string; pendientes: number; pedidas: number; listas: number; error?: string }>;
+    error?: string;
+  };
+}
 
 export interface EstadoPresentacionAutomatica {
   activa: boolean;

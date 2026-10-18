@@ -119,6 +119,7 @@ export const REGLAS_RUTAS: ReglaRuta[] = [
   { path: "/arca/como-funciona", permisos: ["config_afip:view"] },
   { path: "/arca/guia-obras-sociales", permisos: ["config_afip:view"] },
   { path: "/arca/altas-automaticas", permisos: ["config_afip:view"] },
+  { path: "/arca/descarga-constancias", permisos: ["config_afip:view"] },
   { path: "/arca/sucursales", permisos: ["config_arca_sucursales:view"] },
   { path: "/arca/actividades", permisos: ["config_arca_sucursales:view"] },
   { path: "/arca/modalidades-contratacion", permisos: ["config_arca_tablas:view"] },
