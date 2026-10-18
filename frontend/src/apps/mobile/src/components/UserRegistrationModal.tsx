@@ -1020,9 +1020,15 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     entonces la lista estaba deshabilitada. Ahora se elige el área y el turno —que es el dato que quien
     pide el alta tiene— y el horario queda puesto con el del turno, modificable abajo.
 
-    Así que acá no se filtra nada: se ofrecen todos los turnos que le corresponden a la persona.
+    Lo único que acota es el ROL (pedido del 18/10/2026): con un rol elegido se ofrecen sólo las áreas
+    del proyecto donde ese rol trabaja (según `Area.rolesFrame`). Si ninguna lo tiene, no se ofrece
+    ninguna y se dice por qué: el área de ese rol no está dada de alta en el proyecto.
   */
-  const opcionesAreaTurno: OpcionAreaTurno[] | null = opcionesDelProyecto;
+  const rolesDelAreaDe = (areaId: string) => areasDelProyectoConRoles.find((a) => a.areaId === areaId)?.rolesFrame || [];
+  const filtraPorRol = rolesAcotadosPorArea && formData.roleFrameIds.length > 0;
+  const opcionesAreaTurno: OpcionAreaTurno[] | null = opcionesDelProyecto && filtraPorRol ? opcionesDelProyecto.filter((o) => rolesDelAreaDe(o.areaId).some((id) => formData.roleFrameIds.includes(id))) : opcionesDelProyecto;
+  /** Había áreas en el proyecto, pero ninguna tiene el rol elegido: no se ofrece ninguna y se explica. */
+  const sinAreaParaElRol = filtraPorRol && (opcionesDelProyecto || []).length > 0 && (opcionesAreaTurno || []).length === 0;
 
   /** Por área, con sus turnos en el orden del día: con muchas combinaciones, una lista plana no se lee. */
   const areasAgrupadas = useMemo(() => {
@@ -2577,6 +2583,18 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             </label>
             {opcionesAreaTurno === null ? (
               <p className="text-xs text-slate-400">Cargando las áreas y turnos del proyecto…</p>
+            ) : sinAreaParaElRol ? (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300 space-y-1">
+                <p className="font-semibold">
+                  El rol {rolesElegidos.map((rf) => `«${rf.name}»`).join(" / ")} de este colaborador no está en ninguna área y turno del proyecto.
+                </p>
+                <p>
+                  Hay que dar de alta en el proyecto el área donde trabaja ese rol ({(() => {
+                    const areasDelRol = areasConRoles.filter((a) => (a.rolesFrame || []).some((id) => formData.roleFrameIds.includes(String(id)))).map((a) => a.name);
+                    return areasDelRol.length > 0 ? `hoy el rol está en ${areasDelRol.join(", ")}` : "el rol no está asignado a ningún área todavía";
+                  })()}), o agregar el rol a una de las áreas del proyecto desde Admin › Usuarios › Áreas. Hasta entonces la solicitud no se puede enviar.
+                </p>
+              </div>
             ) : opcionesAreaTurno.length === 0 ? (
               <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">Este proyecto no tiene áreas y turnos configurados. Avisale a administración: la solicitud no se puede enviar sin el área y el turno de la persona.</p>
             ) : opcionesAreaTurno.length === 1 ? (
@@ -2596,7 +2614,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             ) : (
               <>
                 <p className="text-[11px] text-slate-400">
-                  {coordinaEnElProyecto ? "Las áreas y turnos que supervisás en este proyecto." : "Elegí en qué área y turno va a trabajar."} El horario de entrada y salida se completa con el del turno; abajo lo podés modificar.
+                  {coordinaEnElProyecto ? "Las áreas y turnos que supervisás en este proyecto." : filtraPorRol ? "Sólo las áreas del proyecto donde trabaja el rol elegido." : "Elegí en qué área y turno va a trabajar."} El horario de entrada y salida se completa con el del turno; abajo lo podés modificar.
                 </p>
                 <div className="space-y-2">
                   {areasAgrupadas.map((area) => (
