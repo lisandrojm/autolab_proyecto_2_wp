@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBolt, faClock, faTriangleExclamation, faCircleCheck, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faBolt, faClock, faTriangleExclamation, faCircleCheck, faSpinner, faSearch, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Link } from "react-router-dom";
@@ -210,13 +210,18 @@ export const PresentacionesArcaPage: React.FC = () => {
     }
   };
 
+  // Buscador de pendientes (pedido del 18/10/2026): por nombre, CUIL (con o sin guiones), empresa o proyecto. Filtra las dos tablas.
+  const [buscarPendientes, setBuscarPendientes] = useState("");
   const { proximas, vencidas } = useMemo(() => {
-    const lista = estado?.contratos || [];
+    const q = buscarPendientes.trim().toLowerCase();
+    const qDigitos = q.replace(/D/g, "");
+    const coincide = (c: AltaPendienteArca) => !q || c.nombre.toLowerCase().includes(q) || (qDigitos.length > 0 && c.cuil.includes(qDigitos)) || (c.empresa?.razonSocial || "").toLowerCase().includes(q) || c.proyecto.toLowerCase().includes(q);
+    const lista = (estado?.contratos || []).filter(coincide);
     // Fuera de la automática: el servidor no les encontró una próxima corrida (más de 30 días de
     // atraso). Las atrasadas de menos entran solas en la corrida siguiente y van en «Próximas».
     const vencida = (c: AltaPendienteArca) => !c.momento;
     return { proximas: lista.filter((c) => !vencida(c)), vencidas: lista.filter(vencida) };
-  }, [estado]);
+  }, [estado, buscarPendientes]);
 
   const th = "px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 text-left";
 
@@ -575,8 +580,19 @@ export const PresentacionesArcaPage: React.FC = () => {
           )}
 
           <section className="space-y-2">
-            <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">Próximas ({proximas.length})</h2>
-            {proximas.length === 0 ? <p className="text-sm text-gray-500">No hay altas por presentar en los próximos días.</p> : tabla(proximas, false)}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">Próximas ({proximas.length})</h2>
+              <div className="relative w-full sm:w-80">
+                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-3.5 w-3.5" />
+                <input value={buscarPendientes} onChange={(e) => setBuscarPendientes(e.target.value)} placeholder="Buscar por nombre, CUIL, empresa o proyecto…" className="input-field text-sm pl-9 w-full" />
+                {buscarPendientes && (
+                  <button type="button" onClick={() => setBuscarPendientes("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" title="Limpiar">
+                    <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+            {proximas.length === 0 ? <p className="text-sm text-gray-500">{buscarPendientes ? `Ninguna pendiente coincide con «${buscarPendientes}».` : "No hay altas por presentar en los próximos días."}</p> : tabla(proximas, false)}
           </section>
 
           {vencidas.length > 0 && (
