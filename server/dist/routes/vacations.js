@@ -499,6 +499,7 @@ router.get("/users-balance", async (req, res) => {
                     userId: 1,
                     nombre_rol_frame: 1,
                     rol_frame_id: 1,
+                    nombre_proyecto: 1,
                     contracts: {
                         $map: {
                             input: { $ifNull: ["$contracts", []] },
@@ -508,8 +509,9 @@ router.get("/users-balance", async (req, res) => {
                                 fecha_baja_contrato: "$$c.fecha_baja_contrato",
                                 nombre_rol_frame: "$$c.nombre_rol_frame",
                                 // La empleadora del contrato: con ella se discriminan las vacaciones y la antigüedad por empresa.
-                                empresaContratoId: "$$c.empresaContratoId",
-                                nombre_empresa_contrato: "$$c.nombre_empresa_contrato",
+                                empresaContratoId: "$c.empresaContratoId",
+                                nombre_empresa_contrato: "$c.nombre_empresa_contrato",
+                                nombre_contrato: "$c.nombre_contrato",
                             },
                         },
                     },
@@ -809,10 +811,16 @@ router.get("/users-balance", async (req, res) => {
                 }
             }
             const calculatedAvailable = Math.max(0, calculatedTotalAnnual - calculatedTaken - calculatedPending);
-            /*
-              POR EMPRESA: antigüedad, días por ley y vacaciones de ESA empleadora (ver arriba).
-            */
             const porEmpresa = [];
+            /** Los contratos de WeProdu de la persona con esa empleadora (por id de empresa), para el detalle. */
+            const contratosDeEmpresa = (empresaId) => {
+                const out = [];
+                for (const v of misVinculos)
+                    for (const ct of v.contracts || [])
+                        if (String(ct.empresaContratoId || "") === empresaId)
+                            out.push({ tipo: String(ct.nombre_contrato || ""), alta: ct.fecha_alta_contrato ? new Date(ct.fecha_alta_contrato).toISOString().slice(0, 10) : "", baja: ct.fecha_baja_contrato ? new Date(ct.fecha_baja_contrato).toISOString().slice(0, 10) : "", proyecto: String(v.nombre_proyecto || "") });
+                return out.sort((a, b) => b.alta.localeCompare(a.alta));
+            };
             {
                 const vacPorClave = new Map();
                 for (const v of userVacations) {
@@ -833,7 +841,7 @@ router.get("/users-balance", async (req, res) => {
                         const hasta = f.tieneRelacionAbierta ? yearEndDeProyeccion : f.ultimaFecha && new Date(f.ultimaFecha) > new Date() ? new Date(Math.min(new Date(f.ultimaFecha).getTime(), yearEndDeProyeccion.getTime())) : null;
                         const ley = diasPorLeyDe(f.diasTrabajados, hasta);
                         const vac = vacPorClave.get(f.empleadoraCuit) || vacPorClave.get(emp?.id || "") || { taken: 0, pending: 0 };
-                        porEmpresa.push({ cuit: f.empleadoraCuit, nombre: emp?.nombre || f.empleadoraCuit, fuente: "arca", dias: f.diasTrabajados, texto: textoAntiguedad(f.diasTrabajados), tieneRelacionAbierta: !!f.tieneRelacionAbierta, totalAnnual: ley, taken: vac.taken, pending: vac.pending, available: Math.max(0, ley - vac.taken - vac.pending) });
+                        porEmpresa.push({ cuit: f.empleadoraCuit, nombre: emp?.nombre || f.empleadoraCuit, fuente: "arca", dias: f.diasTrabajados, texto: textoAntiguedad(f.diasTrabajados), tieneRelacionAbierta: !!f.tieneRelacionAbierta, totalAnnual: ley, taken: vac.taken, pending: vac.pending, available: Math.max(0, ley - vac.taken - vac.pending), contratos: emp ? contratosDeEmpresa(emp.id) : [] });
                     }
                 }
                 else {
@@ -859,7 +867,7 @@ router.get("/users-balance", async (req, res) => {
                         const emp = empresaPorId.get(id);
                         const ley = diasPorLeyDe(e.dias, e.abierta && user.metadata?.activo !== false ? yearEndDeProyeccion : null);
                         const vac = vacPorClave.get(emp?.cuit || id) || vacPorClave.get(id) || { taken: 0, pending: 0 };
-                        porEmpresa.push({ cuit: emp?.cuit || "", nombre: e.nombre, fuente: "contratos", dias: e.dias, texto: textoAntiguedad(e.dias), tieneRelacionAbierta: e.abierta, totalAnnual: ley, taken: vac.taken, pending: vac.pending, available: Math.max(0, ley - vac.taken - vac.pending) });
+                        porEmpresa.push({ cuit: emp?.cuit || "", nombre: e.nombre, fuente: "contratos", dias: e.dias, texto: textoAntiguedad(e.dias), tieneRelacionAbierta: e.abierta, totalAnnual: ley, taken: vac.taken, pending: vac.pending, available: Math.max(0, ley - vac.taken - vac.pending), contratos: contratosDeEmpresa(id) });
                     }
                 }
                 // Vacaciones que ningún contrato cubre: se ven igual, como «Sin empresa», para que la suma cierre.
@@ -881,6 +889,7 @@ router.get("/users-balance", async (req, res) => {
                 lastName: user.lastName || "",
                 email: user.email,
                 hireDate: user.hireDate ? user.hireDate.toISOString().split("T")[0] : null,
+                cuil: cuilDe(user),
                 seniority: seniorityText,
                 // Las empleadoras para las que trabajó («FZERO S.R.L | GRINI S.R.L.») y la cuenta por cada una (pestaña «Por empresa»).
                 empresas,

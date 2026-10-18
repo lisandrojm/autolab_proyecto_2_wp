@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSave, faCalendarAlt, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSave, faCalendarAlt, faCircleInfo, faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { BotonOrden, useOrdenTabla, type Orden } from "../ui/OrdenTabla";
+import { companiesAPI, CLAVE_CACHE_EMPRESAS } from "../../api/companies";
+import { cachedFetch } from "../../utils/refCache";
+import { arcaRelacionesAPI, type RelacionLaboral } from "../../api/arcaRelaciones";
 import { vacationsAPI } from "../../api/vacations";
 import { usersAPI } from "../../api/users";
 import { InfoModal } from "../ui/InfoModal";
@@ -30,10 +34,12 @@ interface UserVacationBalance {
   email: string;
   hireDate: string | null;
   seniority: string;
+  /** El CUIL de la persona: con él se piden a ARCA sus relaciones con cada empleadora (detalle por empresa). */
+  cuil?: string;
   /** Las empleadoras para las que trabajó («FZERO S.R.L | GRINI S.R.L.»). */
   empresas?: string[];
   /** La cuenta por cada empleadora (pestaña «Por empresa»): antigüedad en esa empresa, días por ley y las vacaciones tomadas estando contratado por ella. */
-  porEmpresa?: Array<{ cuit: string; nombre: string; fuente: "arca" | "contratos"; dias: number; texto: string; tieneRelacionAbierta: boolean; totalAnnual: number; taken: number; pending: number; available: number }>;
+  porEmpresa?: Array<{ cuit: string; nombre: string; fuente: "arca" | "contratos"; dias: number; texto: string; tieneRelacionAbierta: boolean; totalAnnual: number; taken: number; pending: number; available: number; contratos?: Array<{ tipo: string; alta: string; baja: string; proyecto: string }> }>;
   /** De dónde salió la antigüedad y cómo se llegó a los días por ley (ver el modal de la celda). */
   antiguedad?: {
     fuente: "arca" | "contratos" | "ingreso" | "ninguna";
@@ -127,53 +133,138 @@ const COLORES_COLUMNA = {
 const claseCampo = (color: keyof typeof COLORES_COLUMNA, editado: boolean) =>
   `w-20 px-2 py-1 text-center border rounded text-sm font-semibold focus:ring-1 ${COLORES_COLUMNA[color].campo} ${editado ? `${COLORES_COLUMNA[color].editado} font-bold` : ""}`;
 
-/** Una fila por persona y empleadora: antigüedad en esa empresa, días por ley y vacaciones tomadas con ella. Sólo lectura. */
-const TablaPorEmpresa: React.FC<{ balances: UserVacationBalance[]; formatDate: (d: string | null) => string }> = ({ balances, formatDate }) => {
+type FilaEmpresa = { b: UserVacationBalance; e: NonNullable<UserVacationBalance['porEmpresa']>[number] | null };
+const fechaCorta = (iso?: string | null) => (iso && /^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '—');
+
+/**
+ * EL DETALLE DE LOS CONTRATOS de una persona con una empleadora: lo que ARCA tiene registrado (se pide
+ * al abrir la fila, por CUIL, y se filtra por el CUIT de la empresa) y lo que hay cargado en WeProdu.
+ */
+const DetalleContratosEmpresa: React.FC<{ fila: FilaEmpresa }> = ({ fila }) => {
+  const { b, e } = fila;
+  const [arca, setArca] = useState<RelacionLaboral[] | 'cargando' | 'error'>(b.cuil && e?.cuit ? 'cargando' : []);
+  useEffect(() => {
+    if (!b.cuil || !e?.cuit) return;
+    let vivo = true;
+    arcaRelacionesAPI.relacionesDe(b.cuil).then((r) => vivo && setArca(r.filter((x) => x.empleadoraCuit === e.cuit))).catch(() => vivo && setArca('error'));
+    return () => { vivo = false; };
+  }, [b.cuil, e?.cuit]);
+  const th = 'px-3 py-1.5 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400';
+  const td = 'px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300';
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 px-4 py-3 bg-gray-50 dark:bg-gray-900/40 text-xs">
+      <div>
+        <p className="font-bold uppercase tracking-wider text-[10px] text-emerald-700 dark:text-emerald-400 mb-1">Contratos en ARCA{e?.nombre ? ` · ${e.nombre}` : ''}</p>
+        {arca === 'cargando' ? (
+          <p className="text-gray-500"><FontAwesomeIcon icon={faSpinner} spin /> Cargando…</p>
+        ) : arca === 'error' ? (
+          <p className="text-red-600">No se pudieron leer las relaciones de ARCA.</p>
+        ) : arca.length === 0 ? (
+          <p className="text-gray-500">{b.cuil ? 'ARCA no tiene relaciones de esta persona con esta empleadora.' : 'La persona no tiene CUIL cargado.'}</p>
+        ) : (
+          <table className="min-w-full">
+            <thead><tr><th className={th}>Inicio</th><th className={th}>Fin</th><th className={th}>Modalidad</th><th className={th}>Puesto</th><th className={th}>Baja</th></tr></thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {arca.map((r) => (
+                <tr key={r._id}>
+                  <td className={`${td} whitespace-nowrap`}>{fechaCorta(r.fechaInicio)}</td>
+                  <td className={`${td} whitespace-nowrap`}>{r.fechaFin ? fechaCorta(r.fechaFin) : <span className="text-green-600 font-semibold">abierta</span>}</td>
+                  <td className={td}>{r.modalidadContrato}</td>
+                  <td className={td}>{r.puestoDesempenado}</td>
+                  <td className={td}>{r.situacionBaja || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      <div>
+        <p className="font-bold uppercase tracking-wider text-[10px] text-blue-700 dark:text-blue-400 mb-1">Contratos en WeProdu</p>
+        {!e?.contratos || e.contratos.length === 0 ? (
+          <p className="text-gray-500">Sin contratos cargados en WeProdu con esta empleadora.</p>
+        ) : (
+          <table className="min-w-full">
+            <thead><tr><th className={th}>Tipo</th><th className={th}>Alta</th><th className={th}>Baja</th><th className={th}>Proyecto</th></tr></thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {e.contratos.map((ct, i) => (
+                <tr key={i}>
+                  <td className={td}>{ct.tipo || '—'}</td>
+                  <td className={`${td} whitespace-nowrap`}>{fechaCorta(ct.alta)}</td>
+                  <td className={`${td} whitespace-nowrap`}>{ct.baja ? fechaCorta(ct.baja) : '—'}</td>
+                  <td className={td}>{ct.proyecto || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Una fila por persona y empleadora: antigüedad en esa empresa, días por ley y vacaciones tomadas con
+ * ella. Sólo lectura, ordenable por cualquier columna (como un datatables), y cada fila se despliega
+ * con el detalle de los contratos.
+ */
+const TablaPorEmpresa: React.FC<{ filas: FilaEmpresa[]; orden: Orden | null; onAlternar: (columna: string) => void; formatDate: (d: string | null) => string }> = ({ filas, orden, onAlternar, formatDate }) => {
+  const [abierta, setAbierta] = useState<string | null>(null);
   const th = (extra = '') => `px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 ${extra}`;
   const num = (v: number, color: string) => <span className={`inline-flex min-w-[2.5rem] justify-center px-2 py-1 rounded border font-bold text-sm ${color}`}>{v}</span>;
-  type FilaEmpresa = { b: UserVacationBalance; e: NonNullable<UserVacationBalance['porEmpresa']>[number] | null };
-  const filas: FilaEmpresa[] = balances.flatMap((b): FilaEmpresa[] => (b.porEmpresa && b.porEmpresa.length > 0 ? b.porEmpresa.map((e) => ({ b, e })) : [{ b, e: null }]));
+  const claveDe = (f: FilaEmpresa) => `${f.b.userId}-${f.e?.cuit || f.e?.nombre || 'sin'}`;
   return (
     <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 mb-6 min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-10.5rem)]">
       <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 relative">
         <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10 shadow-sm">
           <tr>
-            <th className={th()}>Empresa</th>
-            <th className={th()}>Usuario</th>
-            <th className={th()}>Antigüedad en la empresa</th>
-            <th className={th('text-center text-violet-600 dark:text-violet-400 w-24')}>Total Anual (ley)</th>
-            <th className={th('text-center text-red-600 dark:text-red-400 w-24')}>Tomados (Gozados)</th>
-            <th className={th('text-center text-amber-600 dark:text-amber-400 w-24')}>Pendientes</th>
-            <th className={th('text-center text-emerald-600 dark:text-emerald-400 w-24')}>Disponibles</th>
+            <th className={th()}><BotonOrden columna="empresa" orden={orden} onAlternar={onAlternar}>Empresa</BotonOrden></th>
+            <th className={th()}><BotonOrden columna="usuario" orden={orden} onAlternar={onAlternar}>Usuario</BotonOrden></th>
+            <th className={th()}><BotonOrden columna="antiguedad" orden={orden} onAlternar={onAlternar}>Antigüedad en la empresa</BotonOrden></th>
+            <th className={th('text-center text-violet-600 dark:text-violet-400 w-24')}><BotonOrden columna="total" orden={orden} onAlternar={onAlternar}>Total Anual (ley)</BotonOrden></th>
+            <th className={th('text-center text-red-600 dark:text-red-400 w-24')}><BotonOrden columna="tomados" orden={orden} onAlternar={onAlternar}>Tomados (Gozados)</BotonOrden></th>
+            <th className={th('text-center text-amber-600 dark:text-amber-400 w-24')}><BotonOrden columna="pendientes" orden={orden} onAlternar={onAlternar}>Pendientes</BotonOrden></th>
+            <th className={th('text-center text-emerald-600 dark:text-emerald-400 w-24')}><BotonOrden columna="disponibles" orden={orden} onAlternar={onAlternar}>Disponibles</BotonOrden></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
           {filas.length === 0 ? (
             <tr>
-              <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">No hay personas en esta página.</td>
+              <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">No hay filas para mostrar.</td>
             </tr>
           ) : (
-            filas.map(({ b, e }, i) => {
-              const primera = i === 0 || filas[i - 1].b.userId !== b.userId;
+            filas.map((fila) => {
+              const { b, e } = fila;
+              const clave = claveDe(fila);
+              const desplegada = abierta === clave;
               return (
-                <tr key={`${b.userId}-${e?.cuit || e?.nombre || 'sin'}`} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${primera ? 'border-t-2 border-gray-200 dark:border-gray-600' : ''}`}>
-                  <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                    {e ? e.nombre : <span className="text-gray-400 font-normal">Sin empresa</span>}
-                    {e && e.fuente === 'arca' && <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="Según las relaciones laborales registradas en ARCA">ARCA</span>}
-                    {e && e.tieneRelacionAbierta && <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">activa</span>}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className={`text-sm ${primera ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
-                      {b.firstName} {b.lastName}
-                    </div>
-                    {primera && <div className="text-xs text-gray-500">{b.email} · ingreso {formatDate(b.hireDate)}</div>}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{e ? `${e.texto} (${e.dias.toLocaleString('es-AR')} días)` : '—'}</td>
-                  <td className="px-4 py-3 text-center">{num(e?.totalAnnual ?? 0, 'border-violet-300 text-violet-700 dark:border-violet-700 dark:text-violet-300')}</td>
-                  <td className="px-4 py-3 text-center">{num(e?.taken ?? 0, 'border-red-300 text-red-700 dark:border-red-700 dark:text-red-300')}</td>
-                  <td className="px-4 py-3 text-center">{num(e?.pending ?? 0, 'border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300')}</td>
-                  <td className="px-4 py-3 text-center">{num(e?.available ?? 0, 'border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-300')}</td>
-                </tr>
+                <React.Fragment key={clave}>
+                  <tr onClick={() => setAbierta(desplegada ? null : clave)} title="Ver los contratos con esta empresa" className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer">
+                    <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                      <FontAwesomeIcon icon={desplegada ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400 mr-2" />
+                      {e ? e.nombre : <span className="text-gray-400 font-normal">Sin empresa</span>}
+                      {e && e.fuente === 'arca' && <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="Según las relaciones laborales registradas en ARCA">ARCA</span>}
+                      {e && e.tieneRelacionAbierta && <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">activa</span>}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {b.firstName} {b.lastName}
+                      </div>
+                      <div className="text-xs text-gray-500">{b.email} · ingreso {formatDate(b.hireDate)}</div>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{e ? `${e.texto} (${e.dias.toLocaleString('es-AR')} días)` : '—'}</td>
+                    <td className="px-4 py-3 text-center">{num(e?.totalAnnual ?? 0, 'border-violet-300 text-violet-700 dark:border-violet-700 dark:text-violet-300')}</td>
+                    <td className="px-4 py-3 text-center">{num(e?.taken ?? 0, 'border-red-300 text-red-700 dark:border-red-700 dark:text-red-300')}</td>
+                    <td className="px-4 py-3 text-center">{num(e?.pending ?? 0, 'border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300')}</td>
+                    <td className="px-4 py-3 text-center">{num(e?.available ?? 0, 'border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-300')}</td>
+                  </tr>
+                  {desplegada && (
+                    <tr>
+                      <td colSpan={7} className="p-0">
+                        <DetalleContratosEmpresa fila={fila} />
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               );
             })
           )}
@@ -207,8 +298,17 @@ export const UserVacationManagementTab: React.FC = () => {
   const [editedExtras, setEditedExtras] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const [openInfo, setOpenInfo] = useState(false);
-  /** «Acumulado» (una fila por persona, todas sus empresas juntas) o «Por empresa» (una fila por persona y empresa). */
-  const [vista, setVista] = useState<'acumulado' | 'porEmpresa'>('acumulado');
+  /**
+   * «acumulado» (una fila por persona, todas sus empresas juntas), «todas» (una fila por persona y
+   * empresa) o «cuit:<cuit>» (sólo esa empresa). Las pestañas de empresas salen del catálogo de Empresas.
+   */
+  const [vista, setVista] = useState<string>('acumulado');
+  const [empresasTabs, setEmpresasTabs] = useState<Array<{ cuit: string; nombre: string }>>([]);
+  useEffect(() => {
+    cachedFetch(CLAVE_CACHE_EMPRESAS, () => companiesAPI.list())
+      .then((lista) => setEmpresasTabs(lista.map((e) => ({ cuit: String(e.cuit || '').replace(/\D/g, ''), nombre: e.razonSocial })).filter((e) => e.cuit.length === 11).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))))
+      .catch(() => setEmpresasTabs([]));
+  }, []);
   const [openInfoExtra, setOpenInfoExtra] = useState(false);
   /** La persona cuya cuenta de antigüedad se está mirando. */
   const [antiguedadDe, setAntiguedadDe] = useState<UserVacationBalance | null>(null);
@@ -474,6 +574,41 @@ export const UserVacationManagementTab: React.FC = () => {
     }
   };
 
+  /*
+    ORDEN COMO UN DATATABLES: cualquier encabezado ordena ascendente, descendente o quita el orden
+    (`BotonOrden`). Se ordena el total filtrado y recién después se corta la página, igual que el filtro.
+  */
+  const ordenAcumulado = useOrdenTabla(filteredBalances, {
+    empresas: (b: UserVacationBalance) => (b.empresas || []).join(' | '),
+    usuario: (b: UserVacationBalance) => `${b.lastName || ''} ${b.firstName || ''}`.trim(),
+    ingreso: (b: UserVacationBalance) => b.hireDate || '',
+    antiguedad: (b: UserVacationBalance) => b.antiguedad?.dias ?? 0,
+    rol: (b: UserVacationBalance) => getActiveRoleFrame(b),
+    contrato: (b: UserVacationBalance) => contratoQueRige(b)?.nombre_contrato || '',
+    total: (b: UserVacationBalance) => b.display.totalAnnual,
+    tomados: (b: UserVacationBalance) => b.display.taken,
+    pendientes: (b: UserVacationBalance) => b.display.pending,
+    disponibles: (b: UserVacationBalance) => b.display.available,
+    extra: (b: UserVacationBalance) => b.extraVacationDays ?? 0,
+  });
+  // Las filas por empresa: todas, o sólo las de la empresa de la pestaña (quien no trabajó para ella no aparece).
+  const cuitDeLaVista = vista.startsWith('cuit:') ? vista.slice(5) : '';
+  const filasEmpresa = useMemo<FilaEmpresa[]>(
+    () => filteredBalances.flatMap((b): FilaEmpresa[] => (b.porEmpresa && b.porEmpresa.length > 0 ? b.porEmpresa.map((e) => ({ b, e })) : cuitDeLaVista ? [] : [{ b, e: null }])).filter(({ e }) => !cuitDeLaVista || e?.cuit === cuitDeLaVista),
+    [filteredBalances, cuitDeLaVista],
+  );
+  const ordenEmpresa = useOrdenTabla(filasEmpresa, {
+    empresa: (f: FilaEmpresa) => f.e?.nombre || '',
+    usuario: (f: FilaEmpresa) => `${f.b.lastName || ''} ${f.b.firstName || ''}`.trim(),
+    antiguedad: (f: FilaEmpresa) => f.e?.dias ?? 0,
+    total: (f: FilaEmpresa) => f.e?.totalAnnual ?? 0,
+    tomados: (f: FilaEmpresa) => f.e?.taken ?? 0,
+    pendientes: (f: FilaEmpresa) => f.e?.pending ?? 0,
+    disponibles: (f: FilaEmpresa) => f.e?.available ?? 0,
+  });
+  // Cambiar de pestaña vuelve a la primera página: la cuenta de filas es otra.
+  useEffect(() => { setPagina(1); }, [vista]);
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "N/A";
     try {
@@ -500,9 +635,12 @@ export const UserVacationManagementTab: React.FC = () => {
     La página se acota acá y no en el `setPagina`: si un filtro deja menos páginas que la que se estaba
     mirando, esto la trae a la última que existe en vez de dibujar una tabla vacía.
   */
-  const totalPaginas = Math.max(1, Math.ceil(filteredBalances.length / POR_PAGINA));
+  const esPorEmpresa = vista !== 'acumulado';
+  const totalItems = esPorEmpresa ? ordenEmpresa.ordenados.length : ordenAcumulado.ordenados.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalItems / POR_PAGINA));
   const paginaActual = Math.min(pagina, totalPaginas);
-  const balancesDeLaPagina = filteredBalances.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
+  const balancesDeLaPagina = ordenAcumulado.ordenados.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
+  const filasEmpresaDeLaPagina = ordenEmpresa.ordenados.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -606,33 +744,33 @@ export const UserVacationManagementTab: React.FC = () => {
         ella— para poder compararlas. La por empresa es de lectura: lo que se edita es el acumulado.
       */}
       <div className="flex items-center gap-1 border-b border-gray-200 dark:border-gray-700 mb-4">
-        {([['acumulado', 'Acumulado'], ['porEmpresa', 'Por empresa']] as const).map(([k, rotulo]) => (
-          <button key={k} type="button" onClick={() => setVista(k)} className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${vista === k ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}>
+        {[['acumulado', 'Acumulado'], ['todas', 'Todas'], ...empresasTabs.map((e) => [`cuit:${e.cuit}`, e.nombre])].map(([k, rotulo]) => (
+          <button key={k} type="button" onClick={() => setVista(k)} className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${vista === k ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}>
             {rotulo}
           </button>
         ))}
-        <span className="ml-auto text-[11px] text-gray-500 dark:text-gray-400 pb-1">{vista === 'acumulado' ? 'Todas las empresas juntas; editable.' : 'Una fila por empresa; sólo lectura.'}</span>
+        <span className="ml-auto text-[11px] text-gray-500 dark:text-gray-400 pb-1 whitespace-nowrap">{vista === 'acumulado' ? 'Todas las empresas juntas; editable.' : 'Una fila por persona y empresa; sólo lectura. Click en una fila para ver sus contratos.'}</span>
       </div>
 
-      {vista === 'porEmpresa' ? (
-        <TablaPorEmpresa balances={balancesDeLaPagina} formatDate={formatDate} />
+      {esPorEmpresa ? (
+        <TablaPorEmpresa filas={filasEmpresaDeLaPagina} orden={ordenEmpresa.orden} onAlternar={ordenEmpresa.alternar} formatDate={formatDate} />
       ) : (
       <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 mb-6 min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-10.5rem)]">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 relative">
           <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10 shadow-sm">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Empresa/s</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Usuario</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Ingreso / Antigüedad</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Rol Empresa</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Contrato</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-violet-600 dark:text-violet-400">Total Anual</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-red-600 dark:text-red-400">Tomados (Gozados)</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-amber-600 dark:text-amber-400">Pendientes</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-emerald-600 dark:text-emerald-400">Disponibles</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="empresas" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Empresa/s</BotonOrden></th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="usuario" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Usuario</BotonOrden></th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><span className="inline-flex items-center gap-2"><BotonOrden columna="ingreso" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Ingreso</BotonOrden><span className="text-gray-300">/</span><BotonOrden columna="antiguedad" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Antigüedad</BotonOrden></span></th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="rol" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Rol Empresa</BotonOrden></th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="contrato" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Contrato</BotonOrden></th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-violet-600 dark:text-violet-400"><BotonOrden columna="total" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Total Anual</BotonOrden></th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-red-600 dark:text-red-400"><BotonOrden columna="tomados" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Tomados (Gozados)</BotonOrden></th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-amber-600 dark:text-amber-400"><BotonOrden columna="pendientes" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Pendientes</BotonOrden></th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-emerald-600 dark:text-emerald-400"><BotonOrden columna="disponibles" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Disponibles</BotonOrden></th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900">
                 <span className="inline-flex items-center gap-1.5">
-                  Días Extra
+                  <BotonOrden columna="extra" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Días Extra</BotonOrden>
                   <button
                     type="button"
                     onClick={() => setOpenInfoExtra(true)}
@@ -797,7 +935,7 @@ export const UserVacationManagementTab: React.FC = () => {
 
       )}
 
-      <Paginador total={filteredBalances.length} pagina={paginaActual} onCambiar={setPagina} entidadPlural="personas" />
+      <Paginador total={totalItems} pagina={paginaActual} onCambiar={setPagina} entidadPlural={esPorEmpresa ? 'filas' : 'personas'} />
 
       {vista === 'acumulado' && (
       <div className="flex justify-end gap-3 py-4 border-t border-gray-100 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800">
