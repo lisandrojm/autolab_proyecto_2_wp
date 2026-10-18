@@ -70,7 +70,8 @@ export default {
          * izquierdo del contenido (`PageLayout`, `MiPerfilPage`): si se tocan por separado, el
          * contenido se solapa con el menú. Eran 16rem (256px) y los ítems quedaban amontonados.
          */
-        sidebar: "17.25rem",
+        // 18.1rem (18/10/2026): con 17.25 los rótulos largos del menú («A.R.C.A Descargas Automáticas») se cortaban.
+        sidebar: "18.1rem",
       },
       animation: {
         "fade-in": "fadeIn 0.5s ease-in-out",

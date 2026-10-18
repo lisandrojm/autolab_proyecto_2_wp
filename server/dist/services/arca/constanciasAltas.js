@@ -64,14 +64,41 @@ export async function pendientesDeConstancia(tenantObjectId, empresaId) {
 }
 /** Los pendientes de constancia de TODAS las empleadoras con CUIT, con la razón social de cada una. */
 export async function pendientesDeConstanciaTodas(tenantObjectId) {
-    const empresas = await Company.find({}).select("razonSocial cuit").lean();
+    // UNA consulta para todas las empleadoras: por empresa del catálogo eran N recorridas de users_&_projects y la pantalla tardaba.
+    const [empresas, proyectos] = await Promise.all([Company.find({}).select("razonSocial cuit").lean(), Project.find({ tenantId: tenantObjectId }).select("_id").lean()]);
+    const empresaPorId = new Map(empresas.filter((e) => digitos(e.cuit).length === 11).map((e) => [String(e._id), String(e.razonSocial || "")]));
+    const ups = await UserProject.find({
+        projectId: { $in: proyectos.map((p) => p._id) },
+        contracts: { $elemMatch: { "altaArcaPresentada.resultado": "presentada" } },
+    })
+        .select("userId contracts.empresaContratoId contracts.altaArcaPresentada contracts.altaConstancia contracts.fecha_alta_contrato")
+        .lean();
+    const usuarios = await User.find({ _id: { $in: ups.map((u) => u.userId) }, tenantId: tenantObjectId }).select("firstName lastName metadata.cuit").lean();
+    const porId = new Map(usuarios.map((u) => [String(u._id), u]));
     const out = [];
-    for (const e of empresas) {
-        if (digitos(e.cuit).length !== 11)
-            continue;
-        const lista = await pendientesDeConstancia(tenantObjectId, String(e._id));
-        for (const p of lista)
-            out.push({ ...p, empresaRazonSocial: String(e.razonSocial || "") });
+    for (const up of ups) {
+        (up.contracts || []).forEach((c, i) => {
+            const empresaId = String(c.empresaContratoId || "");
+            if (!empresaPorId.has(empresaId) || c.altaArcaPresentada?.resultado !== "presentada" || c.altaConstancia?.validadaEl)
+                return;
+            const u = porId.get(String(up.userId));
+            const cuil = digitos(u?.metadata?.cuit);
+            const m = /^(d{4})-(d{2})-(d{2})/.exec(String(c.fecha_alta_contrato || ""));
+            if (cuil.length !== 11 || !m)
+                return;
+            out.push({
+                userProjectId: String(up._id),
+                contractIndex: i,
+                userId: String(up.userId),
+                cuil,
+                nombre: `${u?.firstName || ""} ${u?.lastName || ""}`.trim(),
+                fechaInicio: `${m[3]}${m[2]}${m[1]}`,
+                fechaAlta: `${m[1]}-${m[2]}-${m[3]}`,
+                presentadaEl: c.altaArcaPresentada?.fecha ? new Date(c.altaArcaPresentada.fecha).toISOString() : "",
+                empresaId,
+                empresaRazonSocial: empresaPorId.get(empresaId) || "",
+            });
+        });
     }
     return out;
 }
