@@ -97,11 +97,17 @@ export const GrillaDelPlan: React.FC<Props> = ({ plan, acciones, ocupado }) => {
 
   return (
     <DndContext sensors={sensors} onDragStart={(e) => setArrastrando(String(e.active.id))} onDragEnd={onDragEnd} onDragCancel={() => setArrastrando(null)}>
-      <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      {/*
+        LA TABLA SCROLLEA ADENTRO DE SU CAJA, con el encabezado (Área › Turno › Rol y los meses) pegado arriba.
+        Mismo patrón que Gestión por Usuario: la caja mide lo que queda debajo de la parte fija de la pantalla
+        (`--wp-sticky-top`, que publica PageLayout) y el `<thead>` es sticky dentro de ella; un sticky contra la
+        página no serviría porque el `overflow-x` del scroll horizontal lo anula.
+      */}
+      <div className="overflow-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 max-h-[calc(100svh-var(--wp-sticky-top,220px)-1.5rem)]">
         <table className="min-w-full border-separate border-spacing-0">
-          <thead>
+          <thead className="sticky top-0 z-20">
             <tr>
-              <th className={`${th} sticky left-0 z-10 min-w-[280px] max-w-[320px]`}>Área › Turno › Rol</th>
+              <th className={`${th} sticky left-0 z-30 min-w-[280px] max-w-[320px]`}>Área › Turno › Rol</th>
               {plan.meses.map((mes) => (
                 <th key={mes} className={`${th} min-w-[240px]`}>
                   {mesCorto(mes)}
