@@ -1,0 +1,56 @@
+/* Plan de vacaciones por proyecto: la línea de tiempo (sobre los estilos del calendario de Vacaciones). */
+.plan-timeline {
+  min-height: 320px;
+}
+.plan-timeline .vis-labelset .vis-label {
+  padding: 4px 8px;
+  min-width: 220px;
+}
+.plan-grupo {
+  font-size: 12px;
+  line-height: 1.25;
+}
+.plan-grupo span {
+  color: #6b7280;
+}
+.plan-timeline .vis-item.plan-item {
+  font-size: 12px;
+  border-radius: 6px;
+  border-width: 1px;
+  padding: 2px 6px;
+}
+.plan-propuesto {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #374151;
+}
+.plan-enviado {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #92400e;
+}
+.plan-aprobado {
+  background: #dcfce7;
+  border-color: #22c55e;
+  color: #166534;
+}
+.plan-rechazado {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+.plan-reemplazo {
+  background: #ede9fe;
+  border-color: #8b5cf6;
+  color: #5b21b6;
+}
+.plan-leyenda {
+  border: 1px solid;
+}
+.dark .plan-timeline .vis-labelset .vis-label,
+.dark .plan-timeline .vis-time-axis .vis-text {
+  color: #d1d5db;
+}
+.dark .plan-grupo span {
+  color: #9ca3af;
+}

@@ -10,6 +10,7 @@ import { companiesAPI, Company } from '../api/companies';
 import { PageLayout } from '../components/ui/PageLayout';
 import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { UserVacationManagementTab } from '../components/vacations/UserVacationManagementTab';
+import { PlanesPorProyectoTab } from '../components/vacations/plan/PlanesPorProyectoTab';
 import { Modal } from '../components/ui/Modal';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { CardItemGeneric } from '../components/ui/CardItemGeneric';
@@ -64,7 +65,9 @@ export const VacationsPage: React.FC = () => {
    * Vacaciones, saldos adentro de Configuración— y para responder "¿le quedan días?" había que saltar
    * de un lado al otro. Acá conviven.
    */
-  const [activeTab, setActiveTab] = useState<'solicitudes' | 'gestion'>('solicitudes');
+  // La tercera pestaña, «Plan por proyecto», se abre directo desde la URL (`?tab=plan&planId=…`: es adonde lleva el aviso al coordinador).
+  const tabInicial = new URLSearchParams(window.location.search).get('tab');
+  const [activeTab, setActiveTab] = useState<'solicitudes' | 'gestion' | 'plan'>(tabInicial === 'plan' ? 'plan' : tabInicial === 'gestion' ? 'gestion' : 'solicitudes');
   const [mockVacations, setMockVacations] = useState<VacationRequestMock[]>([]);
   const [selectedVacation, setSelectedVacation] = useState<VacationRequestMock | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -859,6 +862,9 @@ export const VacationsPage: React.FC = () => {
             <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'gestion' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('gestion')}>
               Gestión por Usuario
             </button>
+            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'plan' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('plan')}>
+              Plan por proyecto
+            </button>
           </div>
 
           {/* Los filtros van en el modal de «Filtros», igual que en Usuarios y Pedidos. El sentinela
@@ -908,7 +914,9 @@ export const VacationsPage: React.FC = () => {
         </div>
       }
     >
-      {activeTab === 'gestion' ? (
+      {activeTab === 'plan' ? (
+        <PlanesPorProyectoTab />
+      ) : activeTab === 'gestion' ? (
         <UserVacationManagementTab />
       ) : (
         <div className="space-y-6">
