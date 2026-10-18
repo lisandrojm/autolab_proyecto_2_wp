@@ -160,6 +160,12 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
   const [estado, setEstado] = useState<EstadoCorridaAltas | null>(null);
   const [confirmado, setConfirmado] = useState(false);
   const [arrancando, setArrancando] = useState(false);
+  /*
+    ABIERTO ANTES DE QUE LA CORRIDA EXISTA (el forzado en masa arranca las corridas en segundo plano, una
+    por empleadora): se espera un rato a que aparezca, en vez de mostrar un modal vacío. Si en ~40 s no
+    hay nada, se dice.
+  */
+  const [esperandoArranque, setEsperandoArranque] = useState(false);
   const [error, setError] = useState<{ mensaje: string; detalle?: Array<string | { etiqueta: string; campo: string; esperado: string; recibido: string }> } | null>(null);
   const [enSecoPedido, setEnSecoPedido] = useState(false);
   const [ultimoCambio, setUltimoCambio] = useState(Date.now());
@@ -222,13 +228,34 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
     if (!isOpen) return;
     setError(null);
     setConfirmado(false);
+    let espera: number | null = null;
     consultar().then((r) => {
       if (r?.corriendo) {
         setConfirmado(true);
         seguir();
+      } else if (!lote) {
+        let intentos = 0;
+        setEsperandoArranque(true);
+        espera = window.setInterval(async () => {
+          const x = await consultar();
+          if (x?.corriendo) {
+            if (espera) window.clearInterval(espera);
+            setEsperandoArranque(false);
+            setConfirmado(true);
+            seguir();
+          } else if (++intentos >= 20) {
+            if (espera) window.clearInterval(espera);
+            setEsperandoArranque(false);
+          }
+        }, 2000);
       }
     });
-    return parar;
+    return () => {
+      if (espera) window.clearInterval(espera);
+      setEsperandoArranque(false);
+      parar();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, consultar, seguir]);
 
   const presentar = async () => {
@@ -340,6 +367,18 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
             <strong>En seco:</strong> llega hasta justo antes de presentar y no envía nada.
             {modo === 'carga_masiva' ? ' Deja la novedad creada en ARCA, sin enviar.' : ' Recorre todas las tandas: en cada una pega el texto pero no lo pasa a la grilla.'}
           </div>
+        )}
+
+        {!confirmado && !corriendo && !lote && (
+          <p className="text-sm text-gray-600 dark:text-gray-300 inline-flex items-center gap-2">
+            {esperandoArranque ? (
+              <>
+                <FontAwesomeIcon icon={faSpinner} spin className="text-blue-500" /> Arrancando la corrida en ARCA…
+              </>
+            ) : (
+              <>No hay ninguna corrida en curso. Si forzaste varias, el resultado de cada empleadora queda en la pantalla de Altas Automáticas.</>
+            )}
+          </p>
         )}
 
         {/* ── Confirmación ── */}

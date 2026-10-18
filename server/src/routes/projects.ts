@@ -24,7 +24,7 @@ import { agruparContratosPorDocumento, partirClaveDocumento } from "../utils/agr
 import { arrancarCorrida, corridaColgada, corridaDe, destrabarCorridaColgada, detenerCorrida } from "../services/arca/corridaServidor.js";
 import { arrancarCorridaAltas, corridaAltasDe, detenerCorridaAltas, enSecoForzado } from "../services/arca/corridaAltas.js";
 import { valoracionesDeCategoria } from "../compartido/valoracionesDeCategoria.js";
-import { candidatosDeAlta, presentarCandidatos } from "../services/arca/presentacionAutomatica.js";
+import { candidatosDeAlta, presentarCandidatos, forzadoAltasDe, registrarForzadoAltas } from "../services/arca/presentacionAutomatica.js";
 import { MAX_POR_EMPLEADORA, forzarDescargaConstancias, forzadoDe, proximaDescarga } from "../services/arca/descargaConstanciasAutomatica.js";
 import { pendientesDeConstanciaTodas } from "../services/arca/constanciasAltas.js";
 import { claveAreaTurnoDelMiembro } from "../utils/areaTurno.js";
@@ -3275,6 +3275,8 @@ router.get("/contratos/altas-arca/automatica", requireTenant, authenticateToken,
       enSeco: enSecoForzado(),
       // Cuántas veces insiste la automática con una rechazada antes de dejarla marcada.
       maxIntentos: MAX_INTENTOS_AUTOMATICOS,
+      // El forzado en masa («Forzar presentación de N»), si lo hubo: cómo va o cómo terminó cada corrida.
+      forzado: forzadoAltasDe(String(req.tenantObjectId)) || null,
       // El registro no viaja: la pantalla no lo necesita y el servidor lo vuelve a armar al presentar.
       contratos: candidatos.map(({ registro: _registro, ...c }) => c),
     });
@@ -3353,9 +3355,42 @@ router.post("/contratos/altas-arca/automatica/forzar", requireTenant, authentica
         return;
       }
       const empresas = [...new Set(presentables.map((c) => c.empresa!.razonSocial))];
-      // En segundo plano: una corrida por empleadora, en fila. La pantalla las sigue con el estado de la corrida.
-      void presentarCandidatos({ tenantId: String(req.tenantObjectId), tenantObjectId: req.tenantObjectId, usuarioId: req.user?.userId, candidatos: presentables, automatica: false }).catch((e) => console.error("[altas-arca] forzar masivo:", e));
-      res.json({ arrancada: true, total: presentables.length, empresas, omitidas, enSeco: enSecoForzado() });
+      const previo = forzadoAltasDe(String(req.tenantObjectId));
+      if (previo && !previo.terminado) {
+        res.status(409).json({ error: "Ya hay un forzado en masa en curso: esperá a que termine." });
+        return;
+      }
+      /*
+        EN SEGUNDO PLANO, PERO NO A CIEGAS: una corrida por empleadora (y por vuelta, si una persona tiene
+        dos contratos), en fila. La respuesta espera a que la PRIMERA arranque —si no, la pantalla abría
+        el modal antes de que existiera la corrida y quedaba en blanco— y el resto se sigue en
+        `forzado` del GET /automatica (corrida por corrida, con sus errores).
+      */
+      const estado = registrarForzadoAltas(String(req.tenantObjectId), { arrancadoEl: new Date(), total: presentables.length, empresas, resultados: [], omitidas, terminado: false });
+      const arranque = new Promise<{ arranco: boolean; error?: string }>((resolver) => {
+        const t = setTimeout(() => resolver({ arranco: false, error: "La corrida no arrancó en 90 segundos (¿ARCA ocupada?). Se sigue intentando en segundo plano." }), 90_000);
+        presentarCandidatos({
+          tenantId: String(req.tenantObjectId),
+          tenantObjectId: req.tenantObjectId,
+          usuarioId: req.user?.userId,
+          candidatos: presentables,
+          automatica: false,
+          onArranque: (r) => {
+            clearTimeout(t);
+            resolver(r);
+          },
+          acumular: (r) => estado.resultados.push(r),
+        })
+          .catch((e) => {
+            console.error("[altas-arca] forzar masivo:", e);
+            estado.resultados.push({ empresa: "—", enviados: 0, error: String(e?.message || e) });
+          })
+          .finally(() => {
+            estado.terminado = true;
+          });
+      });
+      const primera = await arranque;
+      res.json({ arrancada: primera.arranco, error: primera.arranco ? undefined : primera.error, total: presentables.length, empresas, omitidas, enSeco: enSecoForzado() });
       return;
     }
     const userProjectId = String(req.body?.userProjectId || "");

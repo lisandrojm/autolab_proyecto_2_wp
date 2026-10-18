@@ -919,7 +919,7 @@ class ProjectsAPI {
 
   /** Presenta YA una sola alta, sin esperar su día. El servidor arma el registro; después se sigue la corrida con `estadoAltasArca`. */
   /** Fuerza varias de una vez: una corrida por empleadora, en fila. `omitidas` = las que no se pudieron presentar y por qué. */
-  async forzarPresentacionArcaMasiva(items: Array<{ userProjectId: string; contractIndex: number }>): Promise<{ arrancada: boolean; total: number; empresas: string[]; omitidas: Array<{ nombre: string; motivo: string }>; enSeco: boolean }> {
+  async forzarPresentacionArcaMasiva(items: Array<{ userProjectId: string; contractIndex: number }>): Promise<{ arrancada: boolean; error?: string; total: number; empresas: string[]; omitidas: Array<{ nombre: string; motivo: string }>; enSeco: boolean }> {
     const { data } = await axios.post(`/contratos/altas-arca/automatica/forzar`, { items }, { headers: this.getHeaders() });
     return data;
   }
@@ -1227,6 +1227,8 @@ export interface EstadoPresentacionAutomatica {
   enSeco: boolean;
   /** Cuántas veces insiste la automática con una rechazada antes de dejarla marcada (3). */
   maxIntentos?: number;
+  /** El último «Forzar presentación de N»: una corrida por empleadora (y por vuelta), con cómo terminó cada una. */
+  forzado?: null | { arrancadoEl: string; total: number; empresas: string[]; resultados: Array<{ empresa: string; enviados: number; enSeco?: boolean; error?: string }>; omitidas: Array<{ nombre: string; motivo: string }>; terminado: boolean };
   ultimaCorrida: null | {
     fecha: string;
     dia: string;

@@ -70,7 +70,28 @@ export declare function presentarCandidatos(o: {
     usuarioId?: string;
     candidatos: CandidatoAlta[];
     automatica: boolean;
+    /** Avisa cuando la primera corrida arrancó (o falló al arrancar): el forzado en masa responde recién ahí, para que la pantalla ya la vea. */
+    onArranque?: (r: {
+        arranco: boolean;
+        error?: string;
+    }) => void;
+    /** Se va completando corrida por corrida (el forzado en masa lo expone a la pantalla). */
+    acumular?: (r: ResultadoEmpresa) => void;
 }): Promise<ResultadoEmpresa[]>;
+/** El forzado en masa de un tenant («Forzar presentación de N»): qué se pidió, qué corrida va y cómo terminó cada una. */
+export interface ForzadoAltasEnCurso {
+    arrancadoEl: Date;
+    total: number;
+    empresas: string[];
+    resultados: ResultadoEmpresa[];
+    omitidas: Array<{
+        nombre: string;
+        motivo: string;
+    }>;
+    terminado: boolean;
+}
+export declare const forzadoAltasDe: (tenantId: string) => ForzadoAltasEnCurso | undefined;
+export declare function registrarForzadoAltas(tenantId: string, f: ForzadoAltasEnCurso): ForzadoAltasEnCurso;
 /** La corrida del día de UN tenant: las altas de hoy (y de los próximos días, según la anticipación). Devuelve el resumen que se guarda. */
 export declare function correrPresentacionDelDia(tenantId: string, tenantObjectId: Types.ObjectId, cfg: ConfigAltasAutomaticas): Promise<{
     fecha: string;

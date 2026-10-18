@@ -135,6 +135,13 @@ export const PresentacionesArcaPage: React.FC = () => {
     solo botón las presenta; el server arma una corrida por empleadora, en fila, y acá se sigue como una
     sola. Las que no se pueden presentar no se tildan y, si igual llegan, vuelven como «omitidas».
   */
+  // Mientras el forzado en masa sigue, la pantalla se refresca sola: las corridas van saliendo una por una.
+  const forzadoEnCurso = !!estado?.forzado && !estado.forzado.terminado;
+  useEffect(() => {
+    if (!forzadoEnCurso) return;
+    const t = setInterval(() => void cargar(), 5000);
+    return () => clearInterval(t);
+  }, [forzadoEnCurso, cargar]);
   const claveDe = (c: AltaPendienteArca) => `${c.userProjectId}:${c.contractIndex}`;
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [forzandoMasivo, setForzandoMasivo] = useState(false);
@@ -172,8 +179,10 @@ export const PresentacionesArcaPage: React.FC = () => {
     try {
       const res = await projectsAPI.forzarPresentacionArcaMasiva(seleccionadas.map((c) => ({ userProjectId: c.userProjectId, contractIndex: c.contractIndex })));
       setSeleccion(new Set());
-      setCorridaAbierta(true);
+      if (res.arrancada) setCorridaAbierta(true);
+      else sweetAlert.error("La corrida no arrancó", res.error || "ARCA no respondió. Mirá el detalle abajo.");
       if (res.omitidas.length > 0) sweetAlert.warning(`${res.omitidas.length} no se presentan`, res.omitidas.map((o) => `${o.nombre}: ${o.motivo}`).join(" · "));
+      void cargar();
     } catch (err: any) {
       const d = err?.response?.data;
       sweetAlert.error("No se presentaron", [d?.error || err?.message, ...(Array.isArray(d?.omitidas) ? d.omitidas.map((o: any) => `${o.nombre}: ${o.motivo}`) : [])].filter(Boolean).join(" · "));
@@ -522,6 +531,28 @@ export const PresentacionesArcaPage: React.FC = () => {
                     ))}
                   </ul>
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* El último forzado en masa: una corrida por empleadora (y por vuelta si alguien tenía dos contratos), con cómo terminó cada una. */}
+          {estado?.forzado && (
+            <div className={`rounded-xl border px-5 py-4 space-y-1.5 ${estado.forzado.terminado ? "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800" : "border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20"}`}>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white inline-flex items-center gap-2">
+                {!estado.forzado.terminado && <FontAwesomeIcon icon={faSpinner} spin className="text-amber-600" />}
+                Forzado en masa {new Date(estado.forzado.arrancadoEl).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} h · {estado.forzado.total} alta(s) · {estado.forzado.empresas.join(", ")}
+                {estado.forzado.terminado ? " · terminado" : ` · ${estado.forzado.resultados.length} de ${estado.forzado.empresas.length} corrida(s) listas`}
+              </p>
+              {estado.forzado.resultados.map((r, i) => (
+                <p key={i} className={`text-xs ${r.error ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-300"}`}>
+                  {r.empresa}: {r.error ? r.error : `${r.enviados} enviada(s) a ARCA${r.enSeco ? " (en seco)" : ""}`}
+                </p>
+              ))}
+              {estado.forzado.omitidas.length > 0 && <p className="text-xs text-amber-700 dark:text-amber-400">Sin presentar: {estado.forzado.omitidas.map((o) => `${o.nombre} (${o.motivo})`).join(" · ")}</p>}
+              {!estado.forzado.terminado && (
+                <button type="button" onClick={() => setCorridaAbierta(true)} className="text-xs font-semibold text-blue-600 hover:underline">
+                  Ver la corrida en curso
+                </button>
               )}
             </div>
           )}

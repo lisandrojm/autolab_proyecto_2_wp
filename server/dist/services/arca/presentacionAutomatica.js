@@ -330,35 +330,76 @@ export async function presentarCandidatos(o) {
         grupos.set(c.empresa._id, g);
     }
     const resultados = [];
+    let avisado = false;
+    const avisar = (r) => {
+        if (avisado)
+            return;
+        avisado = true;
+        o.onArranque?.(r);
+    };
+    const sumar = (r) => {
+        resultados.push(r);
+        o.acumular?.(r);
+    };
     for (const [empresaId, items] of grupos) {
         const razonSocial = items[0].empresa?.razonSocial || empresaId;
-        const libre = await esperarQue(() => !quienTiene(o.tenantId), 30 * 60_000);
-        if (!libre) {
-            resultados.push({ empresa: razonSocial, enviados: 0, error: "Había otra corrida de ARCA en curso y no terminó en 30 minutos." });
-            continue;
+        /*
+          UNA PERSONA POR CORRIDA. Un lote con el mismo CUIL dos veces (dos contratos de la misma persona con
+          la misma empleadora) lo rechaza `validarLoteAltas` entero («El lote repite personas»), y así se caía
+          la corrida automática completa de esa empleadora. Se parte en VUELTAS: la primera lleva un contrato
+          por persona, la segunda el siguiente de quienes tenían dos, y así; cada vuelta es una corrida.
+        */
+        const vueltas = [];
+        for (const c of items) {
+            let v = vueltas.find((x) => !x.some((y) => y.cuil === c.cuil));
+            if (!v) {
+                v = [];
+                vueltas.push(v);
+            }
+            v.push(c);
         }
-        try {
-            const r = await arrancarCorridaAltas({
-                tenantId: o.tenantId,
-                tenantObjectId: o.tenantObjectId,
-                usuarioId: o.usuarioId,
-                modo: "altas_masivas",
-                empresaId,
-                items: items.map((c) => ({ userProjectId: c.userProjectId, contractIndex: c.contractIndex, registro: c.registro })),
-                automatica: o.automatica,
-            });
-            await esperarQue(() => {
-                const c = corridaAltasDe(o.tenantId);
-                return !c || c.terminada;
-            }, 90 * 60_000);
-            resultados.push({ empresa: razonSocial, enviados: r.total, enSeco: r.enSeco });
-        }
-        catch (e) {
-            const detalle = Array.isArray(e?.detalle) && e.detalle.length > 0 ? ` ${e.detalle.map((d) => (typeof d === "string" ? d : `${d.etiqueta}: ${d.campo}`)).join(" · ")}` : "";
-            resultados.push({ empresa: razonSocial, enviados: 0, error: `${e?.message || e}${detalle}` });
+        for (const [n, lote] of vueltas.entries()) {
+            const etiqueta = vueltas.length > 1 ? `${razonSocial} (vuelta ${n + 1} de ${vueltas.length})` : razonSocial;
+            const libre = await esperarQue(() => !quienTiene(o.tenantId), 30 * 60_000);
+            if (!libre) {
+                const r = { empresa: etiqueta, enviados: 0, error: "Había otra corrida de ARCA en curso y no terminó en 30 minutos." };
+                sumar(r);
+                avisar({ arranco: false, error: r.error });
+                continue;
+            }
+            try {
+                const r = await arrancarCorridaAltas({
+                    tenantId: o.tenantId,
+                    tenantObjectId: o.tenantObjectId,
+                    usuarioId: o.usuarioId,
+                    modo: "altas_masivas",
+                    empresaId,
+                    items: lote.map((c) => ({ userProjectId: c.userProjectId, contractIndex: c.contractIndex, registro: c.registro })),
+                    automatica: o.automatica,
+                });
+                avisar({ arranco: true });
+                await esperarQue(() => {
+                    const c = corridaAltasDe(o.tenantId);
+                    return !c || c.terminada;
+                }, 90 * 60_000);
+                sumar({ empresa: etiqueta, enviados: r.total, enSeco: r.enSeco });
+            }
+            catch (e) {
+                const detalle = Array.isArray(e?.detalle) && e.detalle.length > 0 ? ` ${e.detalle.map((d) => (typeof d === "string" ? d : `${d.etiqueta}: ${d.campo}`)).join(" · ")}` : "";
+                const r = { empresa: etiqueta, enviados: 0, error: `${e?.message || e}${detalle}` };
+                sumar(r);
+                avisar({ arranco: false, error: r.error });
+            }
         }
     }
+    avisar({ arranco: false, error: "No había nada para presentar." });
     return resultados;
+}
+const forzados = new Map();
+export const forzadoAltasDe = (tenantId) => forzados.get(tenantId);
+export function registrarForzadoAltas(tenantId, f) {
+    forzados.set(tenantId, f);
+    return f;
 }
 /** La corrida del día de UN tenant: las altas de hoy (y de los próximos días, según la anticipación). Devuelve el resumen que se guarda. */
 export async function correrPresentacionDelDia(tenantId, tenantObjectId, cfg) {
