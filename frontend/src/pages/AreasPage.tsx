@@ -477,7 +477,8 @@ export const AreasPage: React.FC = () => {
       ) : (
         <>
           {viewMode === 'cards' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mx-0.5 lg:mx-0">
+              {/* Dos columnas en escritorio (pedido del 18/10/2026): con los roles empresa como badges, tres tarjetas no entran. */}
               {filteredAreas.map((area) => {
                 return (
                   <Card
