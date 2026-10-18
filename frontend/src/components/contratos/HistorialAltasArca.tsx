@@ -269,7 +269,7 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Registro de Altas Masivas en ARCA (URGENTE)" size="xl" zIndex={80}>
+    <Modal isOpen={isOpen} onClose={onClose} title="Registro de Altas Masivas en ARCA" size="xl" zIndex={80}>
       <div className="space-y-3 text-sm text-gray-700 dark:text-gray-200">
         <div className="flex flex-wrap items-center gap-3">
           <input value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por nombre, CUIL o empleadora…" className="flex-1 min-w-[220px] px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm" />
@@ -371,11 +371,9 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
                                 {DESTINO[f.constancia.destino]?.texto || f.constancia.destino}
                               </span>
                               {/* Quién la trajo: la descarga automática, alguien desde ARCA, o alguien que subió el PDF. */}
-                              {f.constancia.origen && (
-                                <span className="block text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
-                                  {f.constancia.origen === 'automatica' ? 'Bajada automática' : f.constancia.origen === 'descarga' ? `Bajada por ${f.constancia.por || 'un usuario'}` : `Subida por ${f.constancia.por || 'un usuario'}`}
-                                </span>
-                              )}
+                              <span className="block text-[10px] text-gray-500 dark:text-gray-400 mt-0.5" title={f.constancia.origen ? undefined : 'Bajada antes de que se guardara el origen (18/10/2026): no se sabe si fue automática o de un usuario.'}>
+                                {f.constancia.origen === 'automatica' ? 'Bajada automática' : f.constancia.origen === 'descarga' ? `Bajada por ${f.constancia.por || 'un usuario'}` : f.constancia.origen === 'subida' ? `Subida por ${f.constancia.por || 'un usuario'}` : 'Origen sin registrar'}
+                              </span>
                             </>
                           ) : f.constancia === undefined ? (
                             // El servidor no mandó el dato (versión anterior): no se afirma que falte.
