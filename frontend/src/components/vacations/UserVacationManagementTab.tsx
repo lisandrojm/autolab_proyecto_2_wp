@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faSave, faCalendarAlt, faCircleInfo, faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faSave, faCalendarAlt, faCircleInfo, faChevronDown, faChevronRight, faFileContract } from "@fortawesome/free-solid-svg-icons";
 import { BotonOrden, useOrdenTabla, type Orden } from "../ui/OrdenTabla";
 import { companiesAPI, CLAVE_CACHE_EMPRESAS } from "../../api/companies";
 import { cachedFetch } from "../../utils/refCache";
-import { arcaRelacionesAPI, type RelacionLaboral } from "../../api/arcaRelaciones";
+import { arcaRelacionesAPI, type RelacionResumida } from "../../api/arcaRelaciones";
 import { vacationsAPI } from "../../api/vacations";
 import { usersAPI } from "../../api/users";
 import { InfoModal } from "../ui/InfoModal";
@@ -140,15 +140,8 @@ const fechaCorta = (iso?: string | null) => (iso && /^\d{4}-\d{2}-\d{2}/.test(is
  * EL DETALLE DE LOS CONTRATOS de una persona con una empleadora: lo que ARCA tiene registrado (se pide
  * al abrir la fila, por CUIL, y se filtra por el CUIT de la empresa) y lo que hay cargado en WeProdu.
  */
-const DetalleContratosEmpresa: React.FC<{ fila: FilaEmpresa }> = ({ fila }) => {
+const DetalleContratosEmpresa: React.FC<{ fila: FilaEmpresa; arca: RelacionResumida[] | 'cargando' | 'error' }> = ({ fila, arca }) => {
   const { b, e } = fila;
-  const [arca, setArca] = useState<RelacionLaboral[] | 'cargando' | 'error'>(b.cuil && e?.cuit ? 'cargando' : []);
-  useEffect(() => {
-    if (!b.cuil || !e?.cuit) return;
-    let vivo = true;
-    arcaRelacionesAPI.relacionesDe(b.cuil).then((r) => vivo && setArca(r.filter((x) => x.empleadoraCuit === e.cuit))).catch(() => vivo && setArca('error'));
-    return () => { vivo = false; };
-  }, [b.cuil, e?.cuit]);
   const th = 'px-3 py-1.5 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400';
   const td = 'px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300';
   return (
@@ -163,15 +156,14 @@ const DetalleContratosEmpresa: React.FC<{ fila: FilaEmpresa }> = ({ fila }) => {
           <p className="text-gray-500">{b.cuil ? 'ARCA no tiene relaciones de esta persona con esta empleadora.' : 'La persona no tiene CUIL cargado.'}</p>
         ) : (
           <table className="min-w-full">
-            <thead><tr><th className={th}>Inicio</th><th className={th}>Fin</th><th className={th}>Modalidad</th><th className={th}>Puesto</th><th className={th}>Baja</th></tr></thead>
+            <thead><tr><th className={th}>Inicio</th><th className={th}>Fin</th><th className={th}>Modalidad</th><th className={th}>Puesto</th></tr></thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {arca.map((r) => (
-                <tr key={r._id}>
+              {arca.map((r, i) => (
+                <tr key={`${r.fechaInicio}-${i}`}>
                   <td className={`${td} whitespace-nowrap`}>{fechaCorta(r.fechaInicio)}</td>
                   <td className={`${td} whitespace-nowrap`}>{r.fechaFin ? fechaCorta(r.fechaFin) : <span className="text-green-600 font-semibold">abierta</span>}</td>
                   <td className={td}>{r.modalidadContrato}</td>
                   <td className={td}>{r.puestoDesempenado}</td>
-                  <td className={td}>{r.situacionBaja || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -209,6 +201,37 @@ const DetalleContratosEmpresa: React.FC<{ fila: FilaEmpresa }> = ({ fila }) => {
  */
 const TablaPorEmpresa: React.FC<{ filas: FilaEmpresa[]; orden: Orden | null; onAlternar: (columna: string) => void; formatDate: (d: string | null) => string }> = ({ filas, orden, onAlternar, formatDate }) => {
   const [abierta, setAbierta] = useState<string | null>(null);
+  /*
+    LOS CONTRATOS DE ARCA DE TODA LA PÁGINA, EN UNA LLAMADA (`POST /arca/relaciones/personas`), por CUIL.
+    La columna «Contratos» los lista por fila (los de esa empleadora) y el detalle desplegado los repite
+    con más datos. Se piden por página y no por persona: eran una request por fila.
+  */
+  const [relPorCuil, setRelPorCuil] = useState<Record<string, RelacionResumida[]>>({});
+  const [cargandoRel, setCargandoRel] = useState(false);
+  const [errorRel, setErrorRel] = useState(false);
+  const cuilsDeLaPagina = useMemo(() => [...new Set(filas.map((f) => f.b.cuil || '').filter((x) => x.length === 11))], [filas]);
+  const clavePagina = cuilsDeLaPagina.join(',');
+  useEffect(() => {
+    const faltan = cuilsDeLaPagina.filter((x) => !(x in relPorCuil));
+    if (faltan.length === 0) return;
+    let vivo = true;
+    setCargandoRel(true);
+    setErrorRel(false);
+    arcaRelacionesAPI
+      .relacionesDePersonas(faltan)
+      .then((r) => { if (vivo) setRelPorCuil((prev) => ({ ...prev, ...Object.fromEntries(faltan.map((x) => [x, r.relaciones[x] || []])) })); })
+      .catch(() => vivo && setErrorRel(true))
+      .finally(() => vivo && setCargandoRel(false));
+    return () => { vivo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clavePagina]);
+  const relacionesDe = (f: FilaEmpresa): RelacionResumida[] | 'cargando' | 'error' => {
+    if (!f.b.cuil || !f.e?.cuit) return [];
+    if (errorRel && !(f.b.cuil in relPorCuil)) return 'error';
+    const lista = relPorCuil[f.b.cuil];
+    if (!lista) return cargandoRel ? 'cargando' : [];
+    return lista.filter((r) => r.empleadoraCuit === f.e!.cuit);
+  };
   const th = (extra = '') => `px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 ${extra}`;
   const num = (v: number, color: string) => <span className={`inline-flex min-w-[2.5rem] justify-center px-2 py-1 rounded border font-bold text-sm ${color}`}>{v}</span>;
   const claveDe = (f: FilaEmpresa) => `${f.b.userId}-${f.e?.cuit || f.e?.nombre || 'sin'}`;
@@ -220,6 +243,7 @@ const TablaPorEmpresa: React.FC<{ filas: FilaEmpresa[]; orden: Orden | null; onA
             <th className={th()}><BotonOrden columna="empresa" orden={orden} onAlternar={onAlternar}>Empresa</BotonOrden></th>
             <th className={th()}><BotonOrden columna="usuario" orden={orden} onAlternar={onAlternar}>Usuario</BotonOrden></th>
             <th className={th()}><BotonOrden columna="antiguedad" orden={orden} onAlternar={onAlternar}>Antigüedad en la empresa</BotonOrden></th>
+            <th className={th()}><span className="inline-flex items-center gap-1.5"><FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500" />Contratos</span></th>
             <th className={th('text-center text-violet-600 dark:text-violet-400 w-24')}><BotonOrden columna="total" orden={orden} onAlternar={onAlternar}>Total Anual (ley)</BotonOrden></th>
             <th className={th('text-center text-red-600 dark:text-red-400 w-24')}><BotonOrden columna="tomados" orden={orden} onAlternar={onAlternar}>Tomados (Gozados)</BotonOrden></th>
             <th className={th('text-center text-amber-600 dark:text-amber-400 w-24')}><BotonOrden columna="pendientes" orden={orden} onAlternar={onAlternar}>Pendientes</BotonOrden></th>
@@ -229,7 +253,7 @@ const TablaPorEmpresa: React.FC<{ filas: FilaEmpresa[]; orden: Orden | null; onA
         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
           {filas.length === 0 ? (
             <tr>
-              <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">No hay filas para mostrar.</td>
+              <td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-500">No hay filas para mostrar.</td>
             </tr>
           ) : (
             filas.map((fila) => {
@@ -252,6 +276,30 @@ const TablaPorEmpresa: React.FC<{ filas: FilaEmpresa[]; orden: Orden | null; onA
                       <div className="text-xs text-gray-500">{b.email} · ingreso {formatDate(b.hireDate)}</div>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{e ? `${e.texto} (${e.dias.toLocaleString('es-AR')} días)` : '—'}</td>
+                    {/* Todos los contratos de ARCA con esta empleadora, del más nuevo al más viejo. */}
+                    <td className="px-4 py-3 text-xs text-gray-700 dark:text-gray-300 align-top">
+                      {(() => {
+                        const rel = relacionesDe(fila);
+                        if (rel === 'cargando') return <span className="text-gray-400"><FontAwesomeIcon icon={faSpinner} spin /> Cargando…</span>;
+                        if (rel === 'error') return <span className="text-red-600">No se pudieron leer.</span>;
+                        if (!b.cuil) return <span className="text-gray-400">Sin CUIL</span>;
+                        if (rel.length === 0) return <span className="text-gray-400">—</span>;
+                        const MAX = 6;
+                        return (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">{rel.length} {rel.length === 1 ? 'contrato' : 'contratos'}</span>
+                            {rel.slice(0, MAX).map((r, i) => (
+                              <span key={`${r.fechaInicio}-${i}`} className="whitespace-nowrap">
+                                <FontAwesomeIcon icon={faFileContract} className="h-2.5 w-2.5 text-gray-400 mr-1" />
+                                {fechaCorta(r.fechaInicio)} → {r.fechaFin ? fechaCorta(r.fechaFin) : <span className="text-green-600 font-semibold">abierta</span>}
+                                {r.modalidadContrato && <span className="text-gray-500"> · {r.modalidadContrato.length > 38 ? `${r.modalidadContrato.slice(0, 38)}…` : r.modalidadContrato}</span>}
+                              </span>
+                            ))}
+                            {rel.length > MAX && <span className="text-[11px] text-gray-500">+{rel.length - MAX} más · click en la fila para verlos todos</span>}
+                          </div>
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-3 text-center">{num(e?.totalAnnual ?? 0, 'border-violet-300 text-violet-700 dark:border-violet-700 dark:text-violet-300')}</td>
                     <td className="px-4 py-3 text-center">{num(e?.taken ?? 0, 'border-red-300 text-red-700 dark:border-red-700 dark:text-red-300')}</td>
                     <td className="px-4 py-3 text-center">{num(e?.pending ?? 0, 'border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300')}</td>
@@ -259,8 +307,8 @@ const TablaPorEmpresa: React.FC<{ filas: FilaEmpresa[]; orden: Orden | null; onA
                   </tr>
                   {desplegada && (
                     <tr>
-                      <td colSpan={7} className="p-0">
-                        <DetalleContratosEmpresa fila={fila} />
+                      <td colSpan={8} className="p-0">
+                        <DetalleContratosEmpresa fila={fila} arca={relacionesDe(fila)} />
                       </td>
                     </tr>
                   )}
