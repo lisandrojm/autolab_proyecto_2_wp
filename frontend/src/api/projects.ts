@@ -1102,6 +1102,8 @@ export interface CorridaAltasGuardada {
      * servidor anterior al 18/10/2026.
      */
     presentadaDespues?: { fecha: string; logId: string; automatica: boolean; usuario: string; via: string } | null;
+    /** El desde/hasta del contrato ("YYYY-MM-DD"; baja vacía = indeterminado). Distingue dos altas de la misma persona con la misma empleadora. */
+    contrato?: { alta: string; baja: string } | null;
   }>;
 }
 

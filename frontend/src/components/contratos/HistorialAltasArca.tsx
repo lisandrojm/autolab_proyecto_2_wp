@@ -65,6 +65,8 @@ interface Fila {
   porConsulta?: boolean;
   registro?: string;
   constancia?: CorridaAltasGuardada['contratos'][number]['constancia'];
+  /** El desde/hasta del contrato del alta (distingue dos altas de la misma persona con la misma empleadora). */
+  contrato?: { alta: string; baja: string } | null;
   /** La corrida de la que viene la fila, para pedir la pantalla de ARCA de su tanda. */
   logId: string;
   /** Qué devolvió ARCA en la tanda de esta persona (sólo en logs que lo guardan). */
@@ -88,6 +90,7 @@ const VISTA: Record<string, { texto: string; icon: typeof faCircle; clase: strin
 const vista = (r: string) => VISTA[r] || { texto: r, icon: faCircle, clase: 'text-gray-400' };
 const fmtCuit = (c: string) => (c && c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}` : c);
 const fmtFecha = (iso: string) => new Date(iso).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const fechaCortaIso = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : iso || '—');
 
 /** Las corridas, aplanadas a una fila por persona. Puro. */
 export function filasDelHistorial(corridas: CorridaAltasGuardada[]): Fila[] {
@@ -107,6 +110,7 @@ export function filasDelHistorial(corridas: CorridaAltasGuardada[]): Fila[] {
       porConsulta: p.porConsulta,
       registro: p.registro,
       constancia: p.constancia,
+      contrato: p.contrato || null,
       logId: c._id,
       tandaDetalle: p.tanda != null ? (c.tandasDetalle || []).find((t) => t.n === p.tanda) : undefined,
     })),
@@ -256,8 +260,8 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
 
   const bajar = () => {
     const celda = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const lineas = [['Fecha', 'Empleadora', 'Presentó', 'Tanda', 'CUIL', 'Nombre', 'Resultado', 'Constancia', 'C.A.T.', 'Motivo', 'Registro enviado']].concat(
-      filas.map((f) => [fmtFecha(f.fecha), f.empresa, f.usuario, f.tanda ? String(f.tanda) : '', f.cuil, f.nombre, vista(f.resultado).texto, f.constancia ? DESTINO[f.constancia.destino]?.texto || f.constancia.destino : '', f.constancia?.clave || f.cat || '', f.motivo || '', f.registro || '']),
+    const lineas = [['Fecha', 'Empleadora', 'Presentó', 'Tanda', 'CUIL', 'Nombre', 'Contrato', 'Resultado', 'Constancia', 'C.A.T.', 'Motivo', 'Registro enviado']].concat(
+      filas.map((f) => [fmtFecha(f.fecha), f.empresa, f.usuario, f.tanda ? String(f.tanda) : '', f.cuil, f.nombre, f.contrato ? `${fechaCortaIso(f.contrato.alta)} → ${f.contrato.baja ? fechaCortaIso(f.contrato.baja) : 'indeterminado'}` : '', vista(f.resultado).texto, f.constancia ? DESTINO[f.constancia.destino]?.texto || f.constancia.destino : '', f.constancia?.clave || f.cat || '', f.motivo || '', f.registro || '']),
     );
     // Con BOM: sin él Excel abre los acentos rotos.
     const url = URL.createObjectURL(new Blob(['﻿' + lineas.map((l) => l.map(celda).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' }));
@@ -352,7 +356,15 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
                     <React.Fragment key={f.clave}>
                       <tr onClick={() => setAbierta(abierta === f.clave ? null : f.clave)} title="Ver el registro que se mandó a ARCA" className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60">
                         <td className="px-3 py-1.5 whitespace-nowrap text-gray-600 dark:text-gray-400">{fmtFecha(f.fecha)}</td>
-                        <td className="px-3 py-1.5 font-semibold text-gray-900 dark:text-gray-100">{f.nombre}</td>
+                        <td className="px-3 py-1.5 font-semibold text-gray-900 dark:text-gray-100">
+                          {f.nombre}
+                          {/* El contrato al que corresponde el alta: con dos altas de la misma persona y empleadora, es lo que las distingue. */}
+                          {f.contrato && (
+                            <span className="block font-normal text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                              {fechaCortaIso(f.contrato.alta)} → {f.contrato.baja ? fechaCortaIso(f.contrato.baja) : 'indeterminado'}
+                            </span>
+                          )}
+                        </td>
                         <td className="px-3 py-1.5 font-mono">{fmtCuit(f.cuil)}</td>
                         <td className="px-3 py-1.5 text-gray-600 dark:text-gray-400">{f.empresa}</td>
                         <td className="px-3 py-1.5">

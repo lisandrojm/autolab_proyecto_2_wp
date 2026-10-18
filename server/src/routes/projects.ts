@@ -3458,7 +3458,7 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
       Se piden solo esos dos campos; el orden de `contracts` se conserva, así el índice sigue valiendo.
     */
     const idsUp = [...new Set(logs.flatMap((l) => (l.contratos || []).map((c: any) => String(c.userProjectId || ""))).filter((id) => Types.ObjectId.isValid(id)))];
-    const ups: any[] = idsUp.length > 0 ? await UserProject.find({ _id: { $in: idsUp } }).select("contracts.altaConstancia contracts.altaEnviadaAFirmarEl contracts.altaArcaPresentada").lean() : [];
+    const ups: any[] = idsUp.length > 0 ? await UserProject.find({ _id: { $in: idsUp } }).select("contracts.altaConstancia contracts.altaEnviadaAFirmarEl contracts.altaArcaPresentada contracts.fecha_alta_contrato contracts.fecha_baja_contrato").lean() : [];
     const upPorId = new Map(ups.map((u) => [String(u._id), u]));
     /*
       «PRESENTADA DESPUÉS» (pedido del 18/10/2026). Una fila rechazada de una corrida vieja queda rechazada
@@ -3528,7 +3528,12 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
         tandas: (l.tandas || []).length,
         // Qué devolvió ARCA en cada tanda. `conHtml`: hay una pantalla guardada para bajar (no viaja acá).
         tandasDetalle: (l.tandas || []).map((t: any) => ({ n: t.n, resultado: t.resultado, error: t.error, textoArca: t.textoArca, dialogos: t.dialogos || [], textoNuevo: t.textoNuevo, enRojo: t.enRojo || [], duracionMs: t.duracionMs, conHtml: !!htmlPorTanda.get(`${String(l._id)}:${t.n}`) })),
-        contratos: (l.contratos || []).map((c: any) => ({ cuil: c.cuil, nombre: c.nombre, resultado: c.resultado, motivo: c.motivo, tanda: c.tanda, cat: c.cat, porConsulta: c.porConsulta, registro: c.registro, constancia: constanciaDe(c) ?? null, presentadaDespues: presentadaDespuesDe(c, String(l._id)) })),
+        contratos: (l.contratos || []).map((c: any) => {
+          // El desde/hasta del contrato: una misma persona puede tener varias altas con la misma empleadora y es lo que las distingue.
+          const k = upPorId.get(String(c.userProjectId || ""))?.contracts?.[c.contractIndex];
+          const iso = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : "");
+          return { cuil: c.cuil, nombre: c.nombre, resultado: c.resultado, motivo: c.motivo, tanda: c.tanda, cat: c.cat, porConsulta: c.porConsulta, registro: c.registro, constancia: constanciaDe(c) ?? null, presentadaDespues: presentadaDespuesDe(c, String(l._id)), contrato: k ? { alta: iso(k.fecha_alta_contrato), baja: iso(k.fecha_baja_contrato) } : null };
+        }),
       })),
     );
   } catch (error: any) {
