@@ -33,9 +33,15 @@ export const NOVEDAD_SOLICITUD_RECHAZADA = "solicitud_rechazada";
 */
 export const NOVEDAD_SOLICITUD_CANCELADA = "solicitud_cancelada";
 export const NOVEDAD_SOLICITUD_REABIERTA = "solicitud_reabierta";
+/*
+  EL PLAN DE VACACIONES POR PROYECTO avisa dos veces: al coordinador cuando le llegan bloques para
+  aprobar (`enviado`), y al planificador cuando el coordinador aprueba o rechaza uno (`resuelto`).
+*/
+export const NOVEDAD_PLAN_VACACIONES_ENVIADO = "plan_vacaciones_enviado";
+export const NOVEDAD_PLAN_VACACIONES_RESUELTO = "plan_vacaciones_resuelto";
 
 /** Los tipos que la app cuenta por tarjeta. Agregar uno acá sin tocar la app lo deja sin contar. */
-export const TIPOS_NOVEDAD = [NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA];
+export const TIPOS_NOVEDAD = [NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA, NOVEDAD_PLAN_VACACIONES_ENVIADO, NOVEDAD_PLAN_VACACIONES_RESUELTO];
 
 const idValido = (x: unknown) => !!x && Types.ObjectId.isValid(String(x));
 

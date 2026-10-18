@@ -25,6 +25,7 @@ import { arrancarCorrida, corridaColgada, corridaDe, destrabarCorridaColgada, de
 import { arrancarCorridaAltas, corridaAltasDe, detenerCorridaAltas, enSecoForzado } from "../services/arca/corridaAltas.js";
 import { valoracionesDeCategoria } from "../compartido/valoracionesDeCategoria.js";
 import { candidatosDeAlta } from "../services/arca/presentacionAutomatica.js";
+import { claveAreaTurnoDelMiembro } from "../utils/areaTurno.js";
 import { DIAS_ATRAS_PENDIENTES, MAX_INTENTOS_AUTOMATICOS, configDe, sumarDias, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { Tenant } from "../models/Tenant.js";
 import { LoteAltasError } from "../services/arca/validarLoteAltas.js";
@@ -1154,22 +1155,7 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
         res.status(500).json({ error: "Internal server error" });
     }
 });
-// Área/turno de un miembro en el proyecto, con la misma precedencia que usa la UI:
-// `project.teamConfig` y, si ahí no está, las asignaciones de su último contrato.
-function claveAreaTurnoDelMiembro(assignments) {
-    const keys = new Set();
-    for (const asa of assignments || []) {
-        const areaId = asa?.areaId?._id || asa?.areaId;
-        if (!areaId)
-            continue;
-        for (const sid of asa?.shiftIds || []) {
-            const shiftId = sid?._id || sid;
-            if (shiftId)
-                keys.add(`${areaId}::${shiftId}`);
-        }
-    }
-    return keys;
-}
+// Área/turno de un miembro en el proyecto: ver `utils/areaTurno.ts` (la comparte el plan de vacaciones).
 // GET /projects/:projectId/area-shift-counts
 // Cuántas personas del equipo pertenecen a cada combinación exacta de área + turno.
 // Solo cuentan los miembros ACTIVOS con su último contrato VIGENTE (sin fecha de baja o con
