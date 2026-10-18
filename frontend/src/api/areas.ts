@@ -1,4 +1,5 @@
 import axios from "./axiosConfig";
+import { rolesFrameDe } from "../utils/areasRoles";
 
 export interface TenantRef {
   _id: string;
@@ -67,6 +68,9 @@ function normalizeArea(raw: any): Area {
     name: raw.name,
     description: raw.description,
     isSystem: !!raw.isSystem,
+    // Los roles empresa del área (ver `utils/areasRoles.ts`). `undefined` si el server no mandó el campo:
+    // el formulario no lo pisa con un array vacío.
+    rolesFrame: rolesFrameDe(raw),
     vacationConfig: raw.vacationConfig,
 
     createdAt: raw.createdAt,

@@ -14,6 +14,7 @@ import { faEdit, faTrash, faPlus, faShieldHalved, faLayerGroup, faUserTie, faUse
 import { Modal } from '../components/ui/Modal';
 import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
 import { cachedFetch } from '../utils/refCache';
+import { payloadDeArea } from '../utils/areasRoles';
 import { useNavigate } from 'react-router-dom';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { fechaDeCalendario } from '../utils/fechas';
@@ -184,7 +185,8 @@ export const AreasPage: React.FC = () => {
     e.preventDefault();
     try {
       if (editingArea) {
-        await areasAPI.update(editingArea._id, formData);
+        // `payloadDeArea`: si el área no vino con `rolesFrame` (server viejo), no se manda y no se borra nada.
+        await areasAPI.update(editingArea._id, payloadDeArea(formData, editingArea));
         sweetAlert.success('Área actualizada', 'Los cambios se han guardado correctamente');
       } else {
         await areasAPI.create(formData);
@@ -446,12 +448,19 @@ export const AreasPage: React.FC = () => {
               .filter((rf) => !busquedaRol.trim() || fuzzyMatch(nombreDeRol(rf), busquedaRol.trim().toLowerCase()))
               .map((rf) => {
                 const marcado = formData.rolesFrame.includes(rf._id);
-                const sinArea = (rolesSinArea || []).some((r) => r._id === rf._id);
+                // «Sin área» se calcula con las áreas que ya están cargadas (sin contar la que se edita): así
+                // deja de mostrarse apenas se tilda, sin esperar a guardar ni a releer el server.
+                const enOtraArea = areas.some((a) => a._id !== editingArea?._id && (a.rolesFrame || []).includes(rf._id));
+                const sinArea = !enOtraArea;
                 return (
                   <label key={rf._id} className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50">
                     <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={marcado} onChange={() => setFormData((prev) => ({ ...prev, rolesFrame: marcado ? prev.rolesFrame.filter((x) => x !== rf._id) : [...prev.rolesFrame, rf._id] }))} />
                     <span className="text-gray-800 dark:text-gray-100 flex-1">{nombreDeRol(rf)}</span>
-                    {sinArea && !marcado && <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">sin área</span>}
+                    {sinArea && !marcado && (
+                      <span className="ml-2 shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800" title="Este rol no está en ninguna otra área">
+                        {' '}sin área{' '}
+                      </span>
+                    )}
                   </label>
                 );
               })}
