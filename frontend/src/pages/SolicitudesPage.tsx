@@ -737,8 +737,15 @@ export const SolicitudesPage: React.FC = () => {
             <ProjectTeamPage
               soloAprobacion={{
                 ...aprobando,
-                onCerrar: () => setAprobando(null),
+                // Cerrar sin aprobar también recarga: si la aprobación pasó por otro camino, la lista no queda vieja.
+                onCerrar: () => {
+                  setAprobando(null);
+                  cargar(page);
+                },
                 onAprobada: () => {
+                  // La fila pasa a «aprobada» en el acto y después se recarga del server (el estado ya está guardado).
+                  const id = aprobando.solicitudId;
+                  setRows((prev) => prev.map((r: any) => (r._id === id ? { ...r, estado: "aprobada" } : r)));
                   setAprobando(null);
                   cargar(page);
                 },

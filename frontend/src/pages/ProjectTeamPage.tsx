@@ -2741,6 +2741,23 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       const nombre = selectedUserForWizard.metadata?.fullName || selectedUserForWizard.firstName || 'El usuario';
       sweetAlert.success(renovando ? 'Contrato renovado' : wasApproving ? 'Solicitud Aprobada' : isExistingMember ? 'Miembro Actualizado' : 'Miembro Agregado', renovando ? `${nombre} tiene un contrato nuevo; el vencido quedó en su historial. Ya está en Contratos › Trámite impositivo para gestionarlo.` : `${nombre} ha sido ${wasApproving ? 'aprobado e incorporado al equipo' : isExistingMember ? 'actualizado' : 'incorporado al equipo'}.`);
 
+      /*
+        MODO «SÓLO APROBACIÓN» (abierto desde Solicitudes): el alta ya está guardada y la solicitud ya
+        figura aprobada en el server. Se avisa YA a quien abrió el modal —que recarga su lista— y no se
+        pasa por los refrescos de la pantalla del equipo (equipo, pestañas, contador), que acá no se
+        ven y, si uno tardaba o fallaba, dejaban la lista de Solicitudes con el estado viejo.
+      */
+      if (soloAprobacion) {
+        setApprovingSolicitudId(null);
+        setRenovando(false);
+        setSelectedUserForWizard(null);
+        setRolFrameAgregado(null);
+        setRolFrameBusqueda('');
+        setShowAddModal(false);
+        soloAprobacion.onAprobada();
+        return;
+      }
+
       // Refresh Data
       const updatedProject = await projectsAPI.getProject(project._id, { team: 'ids' });
       setProject(updatedProject);
@@ -2766,8 +2783,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       setRolFrameAgregado(null);
       setRolFrameBusqueda('');
       setShowAddModal(false);
-      // Modo «sólo aprobación»: la solicitud quedó aprobada (o su contrato corregido) y quien abrió el modal recarga su lista.
-      soloAprobacion?.onAprobada();
+      // (En modo «sólo aprobación» se avisó más arriba y se salió antes de los refrescos.)
     } catch (error: any) {
       console.error('Assign member error:', error);
       let errorMsg = 'Internal server error during assignment';
