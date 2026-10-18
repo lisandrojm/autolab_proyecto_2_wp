@@ -10,7 +10,10 @@ import { Card } from '../components/ui/Card';
 import { sweetAlert } from '../utils/sweetAlert';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faTrash, faPlus, faShieldHalved, faLayerGroup, faUserTie, faUserGraduate, faUserGear, faTable, faGrip, faClock, faUserShield, faLock } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faTrash, faPlus, faShieldHalved, faLayerGroup, faUserTie, faUserGraduate, faUserGear, faTable, faGrip, faClock, faUserShield, faLock, faTimes, faSearch, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import { Modal } from '../components/ui/Modal';
+import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
+import { cachedFetch } from '../utils/refCache';
 import { useNavigate } from 'react-router-dom';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { fechaDeCalendario } from '../utils/fechas';
@@ -20,7 +23,28 @@ import { fechaDeCalendario } from '../utils/fechas';
 interface AreaFormData {
   name: string;
   description: string;
+  /** Los roles empresa que trabajan en el área (ids de RoleFrame). */
+  rolesFrame: string[];
 }
+
+const nombreDeRol = (rf: RoleFrameItem) => String((rf as any).name || rf.data?.rol?.nombre || '').trim() || '(sin nombre)';
+
+/** Los roles de un área como badges; en tarjetas y tabla se cortan a unos pocos, en la vista van todos. */
+const RolesDelArea: React.FC<{ ids: string[]; nombres: Map<string, string>; todos?: boolean }> = ({ ids, nombres, todos = false }) => {
+  if (ids.length === 0) return <span className="text-xs text-gray-400 dark:text-gray-500">Sin roles empresa</span>;
+  const MAX = todos ? ids.length : 4;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {ids.slice(0, MAX).map((id) => (
+        <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800">
+          <FontAwesomeIcon icon={faUserTie} className="h-2.5 w-2.5" />
+          {nombres.get(String(id)) || 'Rol'}
+        </span>
+      ))}
+      {ids.length > MAX && <span className="text-[11px] text-gray-500 self-center">+{ids.length - MAX}</span>}
+    </div>
+  );
+};
 
 export const AreasPage: React.FC = () => {
   const navigate = useNavigate();
@@ -41,7 +65,32 @@ export const AreasPage: React.FC = () => {
   const [formData, setFormData] = useState<AreaFormData>({
     name: '',
     description: '',
+    rolesFrame: [],
   });
+  /*
+    ROLES EMPRESA POR ÁREA (pedido del 18/10/2026). Cada área dice qué roles trabajan en ella (un rol puede
+    estar en varias); lo que no puede pasar es que un rol no esté en ninguna: la app va a ofrecer, al pedir
+    un contrato, sólo las áreas donde existe ese rol, y un rol sin área no se podría ubicar. Por eso el
+    aviso de arriba lista los que faltan.
+  */
+  const [roleFrames, setRoleFrames] = useState<RoleFrameItem[]>([]);
+  const [rolesSinArea, setRolesSinArea] = useState<Array<{ _id: string; name: string }> | null>(null);
+  const [selectorRolesOpen, setSelectorRolesOpen] = useState(false);
+  const [busquedaRol, setBusquedaRol] = useState('');
+  const nombreRolPorId = React.useMemo(() => new Map(roleFrames.map((rf) => [rf._id, nombreDeRol(rf)])), [roleFrames]);
+  const cargarRolesSinArea = async () => {
+    try {
+      setRolesSinArea((await areasAPI.rolesSinArea()).roles);
+    } catch {
+      setRolesSinArea(null);
+    }
+  };
+  useEffect(() => {
+    cachedFetch('roleFrames:all', () => roleFrameAPI.list())
+      .then((r) => setRoleFrames([...r].sort((a, b) => nombreDeRol(a).localeCompare(nombreDeRol(b), 'es'))))
+      .catch(() => setRoleFrames([]));
+    void cargarRolesSinArea();
+  }, []);
 
   const [viewOpen, setViewOpen] = useState(false);
   const [viewArea, setViewArea] = useState<Area | null>(null);
@@ -103,6 +152,7 @@ export const AreasPage: React.FC = () => {
     setFormData({
       name: '',
       description: '',
+      rolesFrame: [],
     });
     setShowModal(true);
   };
@@ -112,6 +162,7 @@ export const AreasPage: React.FC = () => {
     setFormData({
       name: area.name,
       description: area.description || '',
+      rolesFrame: (area.rolesFrame || []).map(String),
     });
     setShowModal(true);
   };
@@ -143,6 +194,7 @@ export const AreasPage: React.FC = () => {
       }
       closeModal();
       fetchAreas();
+      void cargarRolesSinArea();
     } catch (error: any) {
       const message = error.response?.data?.error || 'Error al guardar el área';
       sweetAlert.error('Error', message);
@@ -154,6 +206,7 @@ export const AreasPage: React.FC = () => {
     if (result.isConfirmed) {
       try {
         await areasAPI.remove(area._id);
+        void cargarRolesSinArea();
         sweetAlert.success('Área eliminada', 'El área ha sido eliminada correctamente');
         fetchAreas();
       } catch (error: any) {
@@ -165,7 +218,7 @@ export const AreasPage: React.FC = () => {
 
   const filteredAreas = areas.filter((a) => {
     const q = searchTerm.trim().toLowerCase();
-    const matchesSearch = q.length === 0 || fuzzyMatch(a.name, q) || fuzzyMatch(a.description || '', q);
+    const matchesSearch = q.length === 0 || fuzzyMatch(a.name, q) || fuzzyMatch(a.description || '', q) || (a.rolesFrame || []).some((id) => fuzzyMatch(nombreRolPorId.get(String(id)) || '', q));
 
     let matchesDate = true;
     if (startDate || endDate) {
@@ -278,6 +331,10 @@ export const AreasPage: React.FC = () => {
               <p className="text-sm text-gray-700 dark:text-gray-300">{viewArea.description || '—'}</p>
             </div>
             <div>
+              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Roles empresa ({(viewArea.rolesFrame || []).length})</h4>
+              <RolesDelArea ids={viewArea.rolesFrame || []} nombres={nombreRolPorId} todos />
+            </div>
+            <div>
               <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Detalles</h4>
               <p className="text-xs text-gray-500">Creado el: {viewArea.createdAt ? new Date(viewArea.createdAt).toLocaleDateString() : '-'}</p>
             </div>
@@ -318,6 +375,39 @@ export const AreasPage: React.FC = () => {
                 <textarea value={formData.description} onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))} rows={3} className="input-field resize-none" placeholder="Descripción del área" />
               </div>
 
+              {/* Los roles empresa del área: igual que las categorías de un rol empresa, lo elegido arriba y un «+» que abre la ventana. */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Roles empresa {formData.rolesFrame.length > 0 ? <span className="font-normal text-gray-500 dark:text-gray-400">({formData.rolesFrame.length})</span> : null}
+                  </label>
+                  {formData.rolesFrame.length > 0 && (
+                    <button type="button" onClick={() => setSelectorRolesOpen(true)} aria-label="Agregar o quitar roles empresa" className="inline-flex items-center justify-center px-1.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                      <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+                {formData.rolesFrame.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {formData.rolesFrame.map((id) => (
+                      <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800">
+                        <FontAwesomeIcon icon={faUserTie} className="h-2.5 w-2.5" />
+                        {nombreRolPorId.get(id) || 'Rol'}
+                        <button type="button" onClick={() => setFormData((prev) => ({ ...prev, rolesFrame: prev.rolesFrame.filter((x) => x !== id) }))} title="Quitar" className="ml-0.5 rounded hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
+                          <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {formData.rolesFrame.length === 0 && (
+                  <button type="button" onClick={() => setSelectorRolesOpen(true)} className="input-field text-left flex items-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 transition-colors">
+                    <span className="text-gray-400 dark:text-gray-500">Elegí los roles empresa que trabajan en esta área…</span>
+                  </button>
+                )}
+                <p className="text-[11px] text-gray-500 mt-1">Un rol puede estar en varias áreas. Al pedir un contrato desde la app se ofrecen sólo las áreas donde existe el rol.</p>
+              </div>
+
               {editingArea?.isSystem && (
                 <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 rounded-lg flex items-start gap-3">
                   <FontAwesomeIcon icon={faShieldHalved} className="text-amber-600 dark:text-amber-500 mt-0.5" />
@@ -332,6 +422,46 @@ export const AreasPage: React.FC = () => {
         ),
       }}
     >
+      {/* Todo rol empresa tiene que estar en al menos un área: los que faltan, a la vista. */}
+      {rolesSinArea && rolesSinArea.length > 0 && (
+        <div className="mb-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-200 flex items-start gap-3">
+          <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5 shrink-0" />
+          <div>
+            <p className="font-semibold">
+              {rolesSinArea.length} rol{rolesSinArea.length === 1 ? '' : 'es'} empresa sin área: {rolesSinArea.map((r) => r.name).join(', ')}.
+            </p>
+            <p className="text-xs mt-0.5">Cada rol tiene que estar en al menos un área: si no, al pedir un contrato desde la app no hay área ni turno donde ubicarlo. Editá el área que corresponda y agregalo.</p>
+          </div>
+        </div>
+      )}
+      {rolesSinArea && rolesSinArea.length === 0 && roleFrames.length > 0 && <p className="mb-4 text-xs text-green-700 dark:text-green-400">Todos los roles empresa ({roleFrames.length}) están en al menos un área.</p>}
+
+      {/* La ventana para elegir los roles del área: buscador y tildes; el orden es alfabético. */}
+      <Modal isOpen={selectorRolesOpen} onClose={() => setSelectorRolesOpen(false)} title="Roles empresa del área" subtitle="Tildá los roles que trabajan en esta área. Un rol puede estar en varias." size="md" zIndex={200} footer={<div className="flex justify-end"><button type="button" onClick={() => setSelectorRolesOpen(false)} className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">Listo ({formData.rolesFrame.length})</button></div>}>
+        <div className="space-y-2">
+          <div className="relative">
+            <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-3.5 w-3.5" />
+            <input className="input-field pl-9 text-sm" placeholder="Buscar rol…" value={busquedaRol} onChange={(e) => setBusquedaRol(e.target.value)} autoFocus />
+          </div>
+          <div className="max-h-80 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800">
+            {roleFrames
+              .filter((rf) => !busquedaRol.trim() || fuzzyMatch(nombreDeRol(rf), busquedaRol.trim().toLowerCase()))
+              .map((rf) => {
+                const marcado = formData.rolesFrame.includes(rf._id);
+                const sinArea = (rolesSinArea || []).some((r) => r._id === rf._id);
+                return (
+                  <label key={rf._id} className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={marcado} onChange={() => setFormData((prev) => ({ ...prev, rolesFrame: marcado ? prev.rolesFrame.filter((x) => x !== rf._id) : [...prev.rolesFrame, rf._id] }))} />
+                    <span className="text-gray-800 dark:text-gray-100 flex-1">{nombreDeRol(rf)}</span>
+                    {sinArea && !marcado && <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">sin área</span>}
+                  </label>
+                );
+              })}
+            {roleFrames.length === 0 && <p className="px-3 py-3 text-xs text-gray-500">No hay roles empresa cargados.</p>}
+          </div>
+        </div>
+      </Modal>
+
       {/* Loading state */}
       {loading ? (
         <div className="flex justify-center items-center py-20">
@@ -402,7 +532,9 @@ export const AreasPage: React.FC = () => {
                           }
                         : undefined
                     }
-                  />
+                  >
+                    <RolesDelArea ids={area.rolesFrame || []} nombres={nombreRolPorId} />
+                  </Card>
                 );
               })}
               {canManage && (
@@ -425,6 +557,7 @@ export const AreasPage: React.FC = () => {
                     <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                       <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
                       <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Roles empresa</th>
                       <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creado</th>
                       {canManage && <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
                     </tr>
@@ -447,6 +580,9 @@ export const AreasPage: React.FC = () => {
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{area.description || '—'}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <RolesDelArea ids={area.rolesFrame || []} nombres={nombreRolPorId} />
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-sm text-gray-600 dark:text-gray-400">{area.createdAt ? new Date(area.createdAt).toLocaleDateString() : '—'}</span>

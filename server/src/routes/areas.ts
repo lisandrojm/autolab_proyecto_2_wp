@@ -9,12 +9,19 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { toObjectIdOrNull } from "../utils/mongoIds.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
+import { RoleFrame } from "../models/RoleFrame.js";
+import { Types } from "mongoose";
 
 const router = Router();
 
 const createAreaSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().optional(),
+  // Los roles empresa del área (ids de RoleFrame). Se limpian repetidos e inválidos.
+  rolesFrame: z
+    .array(z.string())
+    .optional()
+    .transform((ids) => (ids ? [...new Set(ids.filter((id) => Types.ObjectId.isValid(id)))] : ids)),
   vacationConfig: z
     .object({
       useGlobalConfig: z.boolean(),
@@ -26,6 +33,23 @@ const createAreaSchema = z.object({
 });
 
 const updateAreaSchema = createAreaSchema.partial();
+
+/**
+ * GET /areas/roles-sin-area — los roles empresa que NO están en ninguna área del tenant. La pantalla
+ * de Áreas lo muestra como pendiente: un rol sin área es un rol que la app no va a poder ubicar en
+ * ningún área/turno al pedir un contrato. Lectura abierta a cualquier usuario del tenant.
+ */
+router.get("/roles-sin-area", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const [areas, roles] = await Promise.all([Area.find({ tenantId: req.tenantObjectId }).select("rolesFrame").lean(), RoleFrame.find().select("name").sort({ name: 1 }).lean()]);
+    const conArea = new Set(areas.flatMap((a: any) => (a.rolesFrame || []).map(String)));
+    const sinArea = (roles as any[]).filter((r) => !conArea.has(String(r._id))).map((r) => ({ _id: String(r._id), name: r.name || "" }));
+    res.json({ roles: sinArea, total: sinArea.length, totalRoles: roles.length });
+  } catch (error) {
+    console.error("Roles sin área error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // GET /areas/count - Contar areas
 // Lectura abierta a cualquier usuario autenticado del tenant (igual que el resto de los catálogos

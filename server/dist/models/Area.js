@@ -4,6 +4,7 @@ const areaSchema = new Schema({
     name: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
     isSystem: { type: Boolean, default: false },
+    rolesFrame: [{ type: Schema.Types.ObjectId, ref: "RoleFrame" }],
     vacationConfig: {
         useGlobalConfig: { type: Boolean, default: true },
         permiteFraccionadas: { type: Boolean, default: true },
@@ -12,4 +13,5 @@ const areaSchema = new Schema({
     },
 }, { timestamps: true });
 areaSchema.index({ tenantId: 1, name: 1 }, { unique: true });
+areaSchema.index({ tenantId: 1, rolesFrame: 1 });
 export const Area = mongoose.model("Area", areaSchema);

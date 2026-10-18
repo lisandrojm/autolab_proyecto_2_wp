@@ -13,6 +13,8 @@ export interface Area {
   name: string;
   description?: string;
   isSystem?: boolean;
+  /** Los roles empresa (ids de RoleFrame) que trabajan en el área. Ver `rolesSinArea`. */
+  rolesFrame?: string[];
   vacationConfig?: {
 
     useGlobalConfig: boolean;
@@ -27,6 +29,7 @@ export interface Area {
 export interface AreaFormData {
   name: string;
   description?: string;
+  rolesFrame?: string[];
   vacationConfig?: {
     useGlobalConfig: boolean;
     permiteFraccionadas: boolean;
@@ -86,6 +89,11 @@ export const areasAPI = {
     return (response.data.areas || []).map(normalizeArea);
   },
 
+  /** Los roles empresa que todavía no están en ninguna área: cada uno tiene que estar en al menos una. */
+  rolesSinArea: async (): Promise<{ roles: Array<{ _id: string; name: string }>; total: number; totalRoles: number }> => {
+    const { data } = await axios.get("/areas/roles-sin-area");
+    return data;
+  },
   count: async (): Promise<{ count: number }> => {
     const response = await axios.get("/areas/count");
     return response.data;
