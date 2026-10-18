@@ -411,8 +411,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
             <div className="flex items-center justify-between gap-2">
               <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate">{displayName}</h4>
               <div className="flex shrink-0 items-center gap-1">
-                {/* Sin mirar todavía. Se marca leída al abrirla, o todas desde el banner. */}
-                {novedades.esNuevo(user._id) && <span className="rounded bg-orange-100 px-2 py-0.5 text-[10px] font-bold uppercase text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">Nueva</span>}
+                {/* Sin tag «Nueva» (pedido del 18/10/2026): lo que importa es el estado (aprobada/rechazada); lo no leído lo cuenta el banner y se marca al abrir. */}
                 {/* Renueva un contrato que vencía: no es un ingreso nuevo. */}
                 {meta.esRenovacion && <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>}
                 {/* Ya se corrigió después de un rechazo: la que está esperando es la corregida. */}
