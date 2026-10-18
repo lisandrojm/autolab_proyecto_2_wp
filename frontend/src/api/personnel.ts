@@ -129,6 +129,9 @@ export const NOVEDAD_SOLICITUD_APROBADA = "solicitud_aprobada";
 export const NOVEDAD_SOLICITUD_RECHAZADA = "solicitud_rechazada";
 export const NOVEDAD_SOLICITUD_CANCELADA = "solicitud_cancelada";
 export const NOVEDAD_SOLICITUD_REABIERTA = "solicitud_reabierta";
+/** El plan de vacaciones por proyecto: bloques que esperan al coordinador, y su respuesta al planificador (ver el server). */
+export const NOVEDAD_PLAN_VACACIONES_ENVIADO = "plan_vacaciones_enviado";
+export const NOVEDAD_PLAN_VACACIONES_RESUELTO = "plan_vacaciones_resuelto";
 
 /**
  * Todo lo que se cuenta en la tarjeta Contratación: la solicitud que entra y cada decisión posterior.

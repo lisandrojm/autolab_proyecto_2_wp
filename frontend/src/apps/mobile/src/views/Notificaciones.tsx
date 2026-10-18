@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faCheckDouble, faEnvelope, faEnvelopeOpen, faLink, faUserPlus, faCircleCheck, faCircleXmark, faBan, faRotateLeft } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faCheckDouble, faEnvelope, faEnvelopeOpen, faLink, faUserPlus, faCircleCheck, faCircleXmark, faBan, faRotateLeft, faUmbrellaBeach } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import SectionHeader from "../components/SectionHeader";
 import { useNotifications } from "../hooks/useNotifications";
-import { NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA, NOVEDAD_SOLICITUD_RECHAZADA } from "../../../../api/personnel";
+import { NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA, NOVEDAD_SOLICITUD_RECHAZADA, NOVEDAD_PLAN_VACACIONES_ENVIADO, NOVEDAD_PLAN_VACACIONES_RESUELTO } from "../../../../api/personnel";
 import { ViewType } from "../types";
 
 /*
@@ -27,6 +27,9 @@ const NOVEDADES: Record<string, { icono: IconDefinition; vista?: ViewType }> = {
   [NOVEDAD_SOLICITUD_RECHAZADA]: { icono: faCircleXmark, vista: "user_history" },
   [NOVEDAD_SOLICITUD_CANCELADA]: { icono: faBan, vista: "user_history" },
   [NOVEDAD_SOLICITUD_REABIERTA]: { icono: faRotateLeft, vista: "user_history" },
+  // El plan de vacaciones se aprueba desde la web (Proyecto › Equipo › Vacaciones): el aviso se muestra, no navega.
+  [NOVEDAD_PLAN_VACACIONES_ENVIADO]: { icono: faUmbrellaBeach },
+  [NOVEDAD_PLAN_VACACIONES_RESUELTO]: { icono: faUmbrellaBeach },
 };
 
 const cuando = (iso: string) => {
