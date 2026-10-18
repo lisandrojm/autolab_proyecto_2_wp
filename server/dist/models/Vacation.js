@@ -42,6 +42,10 @@ const vacationSchema = new Schema({
     signedAt: { type: Date },
     signedBy: { type: Schema.Types.ObjectId, ref: "User" },
     pdfPreAprobacionUrl: { type: String },
+    origen: { type: String, enum: ["solicitud", "plan"], default: "solicitud" },
+    planVacacionesId: { type: Schema.Types.ObjectId, ref: "PlanVacaciones" },
+    projectId: { type: Schema.Types.ObjectId, ref: "Project" },
+    periodoSaldo: { type: Number },
     rules: {
         type: {
             diasAnuales: { type: Number, required: true },
@@ -76,6 +80,7 @@ vacationSchema.index({ tenantId: 1, userId: 1, status: 1 });
 vacationSchema.index({ tenantId: 1, status: 1, createdAt: -1 });
 vacationSchema.index({ tenantId: 1, startDate: 1, endDate: 1 });
 vacationSchema.index({ tenantId: 1, vacationNumber: 1 }, { unique: true });
+vacationSchema.index({ tenantId: 1, planVacacionesId: 1 }, { sparse: true });
 vacationSchema.pre("validate", async function (next) {
     if (!this.isNew || this.vacationNumber) {
         return next();

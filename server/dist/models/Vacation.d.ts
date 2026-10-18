@@ -51,6 +51,18 @@ export interface IVacation extends Document {
     signedBy?: Types.ObjectId;
     pdfPreAprobacionUrl?: string;
     rules?: VacationRules;
+    /**
+     * DE DÓNDE SALIÓ. `solicitud` (la persona la pidió desde la app) o `plan` (la creó el plan de
+     * vacaciones por proyecto al aprobarla el coordinador; `planVacacionesId` y `projectId` dicen cuál).
+     */
+    origen?: "solicitud" | "plan";
+    planVacacionesId?: Types.ObjectId;
+    projectId?: Types.ObjectId;
+    /**
+     * DE QUÉ AÑO DESCUENTA. Sin este campo, del año en que empieza. El plan lo fija al año de saldo de la
+     * temporada: un bloque de enero de 2027 planificado en la temporada 2026/27 descuenta de 2026.
+     */
+    periodoSaldo?: number;
     createdAt: Date;
     updatedAt: Date;
 }

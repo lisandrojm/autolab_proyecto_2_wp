@@ -54,6 +54,12 @@ export interface VacationRequest {
   signedAt?: string;
   signedBy?: string;
   pdfPreAprobacionUrl?: string;
+  /** `plan` = la creó el plan de vacaciones por proyecto (ver `planVacacionesId`/`projectId`); si no, la pidió la persona. */
+  origen?: "solicitud" | "plan";
+  planVacacionesId?: string;
+  projectId?: string;
+  /** De qué año descuenta (el plan lo fija al año de saldo de la temporada); sin él, el año en que empieza. */
+  periodoSaldo?: number;
   createdAt: string;
   updatedAt: string;
 }
