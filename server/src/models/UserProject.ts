@@ -239,6 +239,10 @@ interface IContract {
     cat?: string;
     /** El alta se confirmó leyendo Relaciones Laborales → Consultas, no por el resultado de la presentación. */
     porConsulta?: boolean;
+    /** Rechazos de corridas AUTOMÁTICAS acumulados (ver `MAX_INTENTOS_AUTOMATICOS`): a los 3 la automática no insiste más. */
+    intentos?: number;
+    /** Cuándo fue el primero de esos rechazos. */
+    primerIntentoEl?: Date;
   };
   // Documento de "Alta" (AFIP o Servicios, según el Estado impositivo vinculado a la Plantilla).
   altaDocumentoUrl?: string;
@@ -435,6 +439,8 @@ const contractSchema = new Schema<IContract>(
           tanda: { type: Number },
           cat: { type: String },
           porConsulta: { type: Boolean },
+          intentos: { type: Number },
+          primerIntentoEl: { type: Date },
         },
         { _id: false },
       ),

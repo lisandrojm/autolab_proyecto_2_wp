@@ -252,11 +252,30 @@ async function correrPorTandas(o) {
     const marcar = async (i, campos) => {
         await UserProject.updateOne({ _id: i.userProjectId }, { $set: { [`contracts.${i.contractIndex}.altaArcaPresentada`]: { via: "altas_masivas", fecha: new Date(), logId: log?._id, ...campos } } });
     };
+    /*
+      LOS INTENTOS PREVIOS DE CADA CONTRATO, leídos ANTES de tocar nada: `marcar` reescribe el subdocumento
+      `altaArcaPresentada` entero (también al poner «presentando»), y el contador de rechazos de la
+      automática se perdería. Se lee una vez por corrida, sólo ese subcampo de cada contrato.
+      Ver `MAX_INTENTOS_AUTOMATICOS` en `horarioAltasAutomaticas.ts`.
+    */
+    const previoDe = new Map();
+    {
+        const ids = [...new Set(lote.items.map((i) => i.userProjectId))];
+        const ups = ids.length > 0 ? await UserProject.find({ _id: { $in: ids } }).select("contracts.altaArcaPresentada").lean() : [];
+        for (const u of ups) {
+            (u.contracts || []).forEach((c, idx) => {
+                const a = c?.altaArcaPresentada;
+                if (a?.intentos)
+                    previoDe.set(`${u._id}:${idx}`, { intentos: Number(a.intentos) || 0, primerIntentoEl: a.primerIntentoEl });
+            });
+        }
+    }
+    const conteoPrevio = (i) => previoDe.get(`${i.userProjectId}:${i.contractIndex}`);
     // Sin `catch` a propósito: si no se puede dejar el rastro, la tanda NO se presenta (ver `correrTandas`).
     const guardar = {
         presentando: async (items, tanda) => {
             for (const i of items)
-                await marcar(i, { resultado: "presentando", tanda });
+                await marcar(i, { resultado: "presentando", tanda, ...(conteoPrevio(i) || {}) });
         },
         resultado: async (x) => {
             if (x.estado === "pendiente") {
@@ -266,7 +285,10 @@ async function correrPorTandas(o) {
                 return;
             }
             const res = x.estado === "registrada" ? "presentada" : x.estado === "rechazada" ? "fallida" : "indeterminado";
-            await marcar(x.item, { resultado: res, tanda: x.tanda, motivo: x.motivo, cat: x.cat, porConsulta: x.porConsulta || undefined });
+            // Un rechazo de la AUTOMÁTICA suma un intento; el de una presentación a mano (forzada o manual) conserva lo que había.
+            const previo = conteoPrevio(x.item);
+            const conteo = res === "fallida" && corrida.automatica ? { intentos: (previo?.intentos || 0) + 1, primerIntentoEl: previo?.primerIntentoEl || new Date() } : res === "fallida" ? previo : undefined;
+            await marcar(x.item, { resultado: res, tanda: x.tanda, motivo: x.motivo, cat: x.cat, porConsulta: x.porConsulta || undefined, ...(conteo || {}) });
         },
         tanda: async (t, resultados) => {
             if (!log)

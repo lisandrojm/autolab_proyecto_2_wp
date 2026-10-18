@@ -29,6 +29,12 @@ export interface CandidatoAlta {
      * alguien lo revise, y se puede forzar a mano. Ver `rechazoDefinitivo.ts`.
      */
     rechazoDefinitivo: string;
+    /** Cuántas veces la automática ya la presentó y ARCA la rechazó (ver `MAX_INTENTOS_AUTOMATICOS`). */
+    intentos: number;
+    /** ISO del primero de esos rechazos; vacío si no hubo. */
+    primerIntentoEl: string;
+    /** Llegó al tope de intentos: la automática no insiste más; se puede forzar. */
+    agotado: boolean;
     /** Por qué no, si no se puede. */
     motivo: string;
     /** El registro de 85, si está completo. */

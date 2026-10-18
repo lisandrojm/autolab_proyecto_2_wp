@@ -100,6 +100,46 @@ export const ventanaDeLaCorrida = (hoy: string, cfg: ConfigAltasAutomaticas): { 
  * mañana; nunca antes de `fechaAlta - diasAntes`. Null sólo si el alta es más vieja que
  * `DIAS_ATRAS_PENDIENTES`: ahí la automática ya no la toma y se fuerza a mano.
  */
+/**
+ * CUÁNTAS VECES INSISTE LA AUTOMÁTICA CON UNA RECHAZADA (pedido del 18/10/2026). Una rechazada vuelve a
+ * entrar en la corrida del día siguiente —el dato pudo corregirse, o ARCA pudo fallar—, pero no para
+ * siempre: al tercer rechazo deja de presentarse sola y queda marcada para que alguien la revise o la
+ * fuerce. Cuentan sólo los rechazos de corridas automáticas: forzarla a mano no gasta intentos. Los
+ * rechazos definitivos del padrón (`rechazoDefinitivo.ts`) no llegan ni al segundo intento.
+ */
+export const MAX_INTENTOS_AUTOMATICOS = 3;
+export const agotoLosIntentos = (intentos: unknown): boolean => Number(intentos || 0) >= MAX_INTENTOS_AUTOMATICOS;
+
+/** Lo que mira la corrida de un candidato para decidir si entra solo o queda omitido con un motivo. */
+export interface CandidatoParaCorrida {
+  presentable: boolean;
+  terminado: boolean;
+  rechazoDefinitivo: string;
+  agotado: boolean;
+  intentos: number;
+  /** ISO del primer rechazo de la automática; vacío si no hubo. */
+  primerIntentoEl: string;
+  motivo: string;
+}
+
+/** Entra solo en la corrida: completo, con la relación todavía en curso, y sin un rechazo que no vale la pena repetir. */
+export const entraEnLaCorrida = (c: CandidatoParaCorrida): boolean => c.presentable && !c.terminado && !c.rechazoDefinitivo && !c.agotado;
+
+/**
+ * Por qué NO entró, para la lista «Sin presentar» de la corrida. `null` = no se lista: los terminados
+ * (baja pasada) no son «sin presentar» de esta corrida y ya se ven aparte en la pantalla.
+ */
+export function motivoDeOmision(c: CandidatoParaCorrida): string | null {
+  if (c.terminado) return null;
+  if (c.rechazoDefinitivo) return `ARCA ya lo rechazó: ${c.rechazoDefinitivo} No se vuelve a presentar solo; revisalo o forzalo.`;
+  if (c.agotado) {
+    const desde = /^\d{4}-\d{2}-\d{2}/.test(c.primerIntentoEl) ? ` (la primera vez el ${c.primerIntentoEl.slice(8, 10)}/${c.primerIntentoEl.slice(5, 7)})` : "";
+    return `ARCA la rechazó ${c.intentos} veces${desde}: la automática no insiste más; revisala o forzala.`;
+  }
+  if (!c.presentable) return c.motivo;
+  return null;
+}
+
 export function proximaCorridaPara(fechaAlta: string, cfg: ConfigAltasAutomaticas, ahora: Date, hoy: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaAlta)) return null;
   if (fechaAlta < sumarDias(hoy, -DIAS_ATRAS_PENDIENTES)) return null;

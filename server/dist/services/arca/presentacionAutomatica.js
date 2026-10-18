@@ -22,7 +22,7 @@ import { altaQueSePisa, altasPresentadasDe, textoAltaQueSePisa } from "./altasVi
 import { arrancarCorridaAltas, corridaAltasDe } from "./corridaAltas.js";
 import { quienTiene } from "./candadoArca.js";
 import { esRechazoDefinitivo } from "./rechazoDefinitivo.js";
-import { CONFIG_POR_DEFECTO, proximaCorridaPara, ventanaDeLaCorrida, yaTermino } from "./horarioAltasAutomaticas.js";
+import { CONFIG_POR_DEFECTO, agotoLosIntentos, entraEnLaCorrida, motivoDeOmision, proximaCorridaPara, ventanaDeLaCorrida, yaTermino } from "./horarioAltasAutomaticas.js";
 /**
  * PRESENTACIÓN AUTOMÁTICA DE LAS ALTAS EN ARCA: cada día, a la hora configurada (14:00 argentinas por
  * defecto), se presentan las altas tempranas que empiezan ese día —o en los próximos N días, si se
@@ -35,6 +35,11 @@ import { CONFIG_POR_DEFECTO, proximaCorridaPara, ventanaDeLaCorrida, yaTermino }
  *
  * Sólo contratos creados en WeProdu (Solicitudes o «Agregar miembro»): los importados no se gestionan
  * desde Contratos y no se presentan solos.
+ *
+ * LAS RECHAZADAS VUELVEN AL DÍA SIGUIENTE, HASTA TRES VECES (pedido del 18/10/2026). Un contrato con
+ * `altaArcaPresentada.resultado === "fallida"` sigue siendo un pendiente y entra en la próxima corrida
+ * (la ventana de atrasadas lo alcanza); cada rechazo de la automática suma `intentos`, y al llegar a
+ * `MAX_INTENTOS_AUTOMATICOS` queda `agotado`: se lista con ese motivo y sólo sale forzándolo a mano.
  */
 /**
  * Los catálogos de ARCA tal como los recibe la pantalla (pasados por JSON: ids como texto).
@@ -235,6 +240,10 @@ export async function candidatosDeAlta(tenantObjectId, opts = {}) {
         const terminado = yaTermino(fechaBaja, hoy);
         // Rechazado por ARCA con un motivo del padrón: el registro se arma igual (se puede forzar), pero la automática no insiste.
         const rechazoDefinitivo = c.altaArcaPresentada?.resultado === "fallida" && esRechazoDefinitivo(c.altaArcaPresentada?.motivo) ? String(c.altaArcaPresentada.motivo) : "";
+        // Rechazada N veces por la automática: a la tercera deja de insistir (ver `MAX_INTENTOS_AUTOMATICOS`).
+        const intentos = c.altaArcaPresentada?.resultado === "fallida" ? Number(c.altaArcaPresentada?.intentos || 0) : 0;
+        const primerIntentoEl = intentos > 0 && c.altaArcaPresentada?.primerIntentoEl ? new Date(c.altaArcaPresentada.primerIntentoEl).toISOString() : "";
+        const agotado = agotoLosIntentos(intentos);
         if (c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida")
             motivo = "Ya se presentó en ARCA.";
         else if (row.sinCuit)
@@ -279,10 +288,13 @@ export async function candidatosDeAlta(tenantObjectId, opts = {}) {
             fechaAlta,
             fechaBaja,
             empresa: empresa ? { _id: String(empresa._id), razonSocial: String(empresa.razonSocial || "") } : null,
-            momento: terminado || rechazoDefinitivo ? "" : proximaCorridaPara(fechaAlta, cfg, ahora, hoy)?.toISOString() || "",
+            momento: terminado || rechazoDefinitivo || agotado ? "" : proximaCorridaPara(fechaAlta, cfg, ahora, hoy)?.toISOString() || "",
             presentable: !motivo && !!registro,
             terminado,
             rechazoDefinitivo,
+            intentos,
+            primerIntentoEl,
+            agotado,
             motivo,
             registro: motivo ? null : registro,
         });
@@ -353,15 +365,15 @@ export async function correrPresentacionDelDia(tenantId, tenantObjectId, cfg) {
     const hoy = hoyArgentina();
     const { desde, hasta } = ventanaDeLaCorrida(hoy, cfg);
     const candidatos = await candidatosDeAlta(tenantObjectId, { desde, hasta, cfg });
-    // Los terminados no entran solos: un alta de una relación que ya pasó se fuerza a mano, con intención.
-    // Tampoco los que ARCA ya rechazó por un motivo del padrón: volver a presentarlos cada día daba el mismo rechazo.
-    const empresas = await presentarCandidatos({ tenantId, tenantObjectId, candidatos: candidatos.filter((c) => !c.terminado && !c.rechazoDefinitivo), automatica: true });
-    return {
-        fecha: new Date().toISOString(),
-        dia: hoy,
-        empresas,
-        // Los terminados no son «sin presentar» de esta corrida: no entran y ya se ven aparte en la pantalla.
-        // Los rechazados por ARCA sí se listan como omitidos, con el motivo de ARCA: es lo que alguien tiene que revisar.
-        omitidos: candidatos.filter((c) => (!c.presentable || !!c.rechazoDefinitivo) && !c.terminado).map((c) => ({ nombre: c.nombre, cuil: c.cuil, empresa: c.empresa?.razonSocial || "", motivo: c.rechazoDefinitivo ? `ARCA ya lo rechazó: ${c.rechazoDefinitivo} No se vuelve a presentar solo; revisalo o forzalo.` : c.motivo })),
-    };
+    // Quién entra solo y quién queda omitido lo decide `horarioAltasAutomaticas.ts` (`entraEnLaCorrida` /
+    // `motivoDeOmision`): afuera quedan los terminados (una relación que ya pasó se fuerza a mano, con
+    // intención), los rechazos definitivos del padrón y las que ya agotaron sus intentos.
+    const empresas = await presentarCandidatos({ tenantId, tenantObjectId, candidatos: candidatos.filter(entraEnLaCorrida), automatica: true });
+    const omitidos = [];
+    for (const c of candidatos) {
+        const motivo = motivoDeOmision(c);
+        if (motivo)
+            omitidos.push({ nombre: c.nombre, cuil: c.cuil, empresa: c.empresa?.razonSocial || "", motivo });
+    }
+    return { fecha: new Date().toISOString(), dia: hoy, empresas, omitidos };
 }

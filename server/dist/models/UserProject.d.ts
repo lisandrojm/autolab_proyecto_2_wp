@@ -235,6 +235,10 @@ interface IContract {
         cat?: string;
         /** El alta se confirmó leyendo Relaciones Laborales → Consultas, no por el resultado de la presentación. */
         porConsulta?: boolean;
+        /** Rechazos de corridas AUTOMÁTICAS acumulados (ver `MAX_INTENTOS_AUTOMATICOS`): a los 3 la automática no insiste más. */
+        intentos?: number;
+        /** Cuándo fue el primero de esos rechazos. */
+        primerIntentoEl?: Date;
     };
     altaDocumentoUrl?: string;
     altaDocumentoNombre?: string;

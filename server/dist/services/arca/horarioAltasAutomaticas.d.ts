@@ -61,4 +61,31 @@ export declare const ventanaDeLaCorrida: (hoy: string, cfg: ConfigAltasAutomatic
  * mañana; nunca antes de `fechaAlta - diasAntes`. Null sólo si el alta es más vieja que
  * `DIAS_ATRAS_PENDIENTES`: ahí la automática ya no la toma y se fuerza a mano.
  */
+/**
+ * CUÁNTAS VECES INSISTE LA AUTOMÁTICA CON UNA RECHAZADA (pedido del 18/10/2026). Una rechazada vuelve a
+ * entrar en la corrida del día siguiente —el dato pudo corregirse, o ARCA pudo fallar—, pero no para
+ * siempre: al tercer rechazo deja de presentarse sola y queda marcada para que alguien la revise o la
+ * fuerce. Cuentan sólo los rechazos de corridas automáticas: forzarla a mano no gasta intentos. Los
+ * rechazos definitivos del padrón (`rechazoDefinitivo.ts`) no llegan ni al segundo intento.
+ */
+export declare const MAX_INTENTOS_AUTOMATICOS = 3;
+export declare const agotoLosIntentos: (intentos: unknown) => boolean;
+/** Lo que mira la corrida de un candidato para decidir si entra solo o queda omitido con un motivo. */
+export interface CandidatoParaCorrida {
+    presentable: boolean;
+    terminado: boolean;
+    rechazoDefinitivo: string;
+    agotado: boolean;
+    intentos: number;
+    /** ISO del primer rechazo de la automática; vacío si no hubo. */
+    primerIntentoEl: string;
+    motivo: string;
+}
+/** Entra solo en la corrida: completo, con la relación todavía en curso, y sin un rechazo que no vale la pena repetir. */
+export declare const entraEnLaCorrida: (c: CandidatoParaCorrida) => boolean;
+/**
+ * Por qué NO entró, para la lista «Sin presentar» de la corrida. `null` = no se lista: los terminados
+ * (baja pasada) no son «sin presentar» de esta corrida y ya se ven aparte en la pantalla.
+ */
+export declare function motivoDeOmision(c: CandidatoParaCorrida): string | null;
 export declare function proximaCorridaPara(fechaAlta: string, cfg: ConfigAltasAutomaticas, ahora: Date, hoy: string): Date | null;

@@ -157,7 +157,7 @@ export const PresentacionesArcaPage: React.FC = () => {
     const antes = estado && c.fechaAlta > estado.hoy;
     const r = await sweetAlert.confirm(
       `Presentar ahora a ${c.nombre}`,
-      `${antes ? `Todavía no es el día de la presentación: su alta es el ${fechaCorta(c.fechaAlta)}. ` : ""}${c.terminado ? `El contrato ya terminó (baja el ${fechaCorta(c.fechaBaja)}): se declara una relación que ya pasó. ` : ""}${c.rechazoDefinitivo ? `ARCA ya la rechazó («${c.rechazoDefinitivo}»): si nada cambió en ARCA, va a rechazarla de nuevo. ` : ""}Se presenta ya en ARCA, a nombre de ${c.empresa?.razonSocial || "su empleadora"}. No se deshace.`,
+      `${antes ? `Todavía no es el día de la presentación: su alta es el ${fechaCorta(c.fechaAlta)}. ` : ""}${c.terminado ? `El contrato ya terminó (baja el ${fechaCorta(c.fechaBaja)}): se declara una relación que ya pasó. ` : ""}${c.rechazoDefinitivo ? `ARCA ya la rechazó («${c.rechazoDefinitivo}»): si nada cambió en ARCA, va a rechazarla de nuevo. ` : c.agotado ? `La automática ya la presentó ${c.intentos} veces y ARCA la rechazó todas: revisá el motivo antes de insistir. ` : ""}Se presenta ya en ARCA, a nombre de ${c.empresa?.razonSocial || "su empleadora"}. No se deshace.`,
       "Sí, presentar",
       "Cancelar",
     );
@@ -215,7 +215,13 @@ export const PresentacionesArcaPage: React.FC = () => {
       <td className="px-4 py-3">
         {esVencida ? (
           <span className="text-xs font-semibold text-red-600 dark:text-red-400">
-            {c.rechazoDefinitivo ? `ARCA ya la rechazó: ${c.rechazoDefinitivo} La automática no insiste; revisala o forzala` : c.terminado ? `Ya terminó (baja el ${fechaCorta(c.fechaBaja)}): la automática no la toma; se puede forzar` : "Más de 30 días de atraso: no entra en la automática"}
+            {c.rechazoDefinitivo
+              ? `ARCA ya la rechazó: ${c.rechazoDefinitivo} La automática no insiste; revisala o forzala`
+              : c.agotado
+                ? `ARCA la rechazó ${c.intentos} veces${c.primerIntentoEl ? ` (la primera el ${fechaArgentina(c.primerIntentoEl)})` : ""}: la automática no insiste más; revisala o forzala`
+                : c.terminado
+                  ? `Ya terminó (baja el ${fechaCorta(c.fechaBaja)}): la automática no la toma; se puede forzar`
+                  : "Más de 30 días de atraso: no entra en la automática"}
           </span>
         ) : (
           <div className="space-y-1">
@@ -224,8 +230,13 @@ export const PresentacionesArcaPage: React.FC = () => {
               {new Date(c.momento).getTime() <= ahoraServidor ? "En la corrida en curso" : `${fechaArgentina(c.momento)} a las ${horaTexto(estado?.config)}`}
               {!estado?.activa ? " (si está activada)" : ""}
             </p>
-            {estado && c.fechaAlta < estado.hoy && (
-              <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Atrasada: su alta fue el {fechaCorta(c.fechaAlta)}. Entra en la próxima corrida.</p>
+            {/* Rechazada por ARCA en una corrida anterior: vuelve a entrar, hasta el tope de intentos. */}
+            {(c.intentos || 0) > 0 ? (
+              <p className="text-[11px] font-semibold text-red-600 dark:text-red-400">
+                Rechazada {c.intentos} de {estado?.maxIntentos || 3}: se vuelve a presentar en la próxima corrida.
+              </p>
+            ) : (
+              estado && c.fechaAlta < estado.hoy && <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Atrasada: su alta fue el {fechaCorta(c.fechaAlta)}. Entra en la próxima corrida.</p>
             )}
           </div>
         )}
@@ -291,6 +302,11 @@ export const PresentacionesArcaPage: React.FC = () => {
             <p>
               Las atrasadas también entran: si una corrida falló, o el contrato se cargó después de su fecha de inicio, el alta se presenta en la corrida siguiente y en todas las que vengan hasta
               que salga. Solo las de más de 30 días quedan fuera, para forzar a mano.
+            </p>
+            <p>
+              <strong>Una rechazada vuelve al día siguiente, hasta {estado?.maxIntentos || 3} veces.</strong> Si ARCA la rechaza en una corrida automática, entra de nuevo en la siguiente (el dato
+              pudo corregirse). Al tercer rechazo la automática deja de insistir y queda en «Fuera de la automática», para revisarla o forzarla. Los rechazos que no cambian por insistir («ya posee
+              una relación laboral activa») no se repiten ni una vez.
             </p>
             <p>
               <strong>Si la baja ya pasó, la automática no la presenta.</strong> Un contrato cuya fecha de baja es anterior a hoy ya terminó entero. Queda en «Fuera de la automática» con ese
@@ -469,7 +485,7 @@ export const PresentacionesArcaPage: React.FC = () => {
             <section className="space-y-2">
               <h2 className="text-sm font-bold uppercase tracking-wide text-red-600 dark:text-red-400">Fuera de la automática ({vencidas.length})</h2>
               <p className="text-xs text-gray-500">
-                La automática no las toma: su contrato ya terminó (la baja es anterior a hoy), o su alta fue hace más de 30 días. Las dos se pueden presentar igual con «Forzar», si hace falta
+                La automática no las toma: su contrato ya terminó (la baja es anterior a hoy), su alta fue hace más de 30 días, o ARCA ya la rechazó {estado?.maxIntentos || 3} veces. Todas se pueden presentar igual con «Forzar», si hace falta
                 declarar una relación que ya pasó.
               </p>
               {tabla(vencidas, true)}

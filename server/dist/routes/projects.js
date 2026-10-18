@@ -25,7 +25,7 @@ import { arrancarCorrida, corridaColgada, corridaDe, destrabarCorridaColgada, de
 import { arrancarCorridaAltas, corridaAltasDe, detenerCorridaAltas, enSecoForzado } from "../services/arca/corridaAltas.js";
 import { valoracionesDeCategoria } from "../compartido/valoracionesDeCategoria.js";
 import { candidatosDeAlta } from "../services/arca/presentacionAutomatica.js";
-import { DIAS_ATRAS_PENDIENTES, configDe, sumarDias, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
+import { DIAS_ATRAS_PENDIENTES, MAX_INTENTOS_AUTOMATICOS, configDe, sumarDias, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { Tenant } from "../models/Tenant.js";
 import { LoteAltasError } from "../services/arca/validarLoteAltas.js";
 import { CandadoArcaOcupado, quienTiene } from "../services/arca/candadoArca.js";
@@ -3101,6 +3101,8 @@ router.get("/contratos/altas-arca/automatica", requireTenant, authenticateToken,
             hoy,
             ultimaCorrida: pa.ultimaCorrida || null,
             enSeco: enSecoForzado(),
+            // Cuántas veces insiste la automática con una rechazada antes de dejarla marcada.
+            maxIntentos: MAX_INTENTOS_AUTOMATICOS,
             // El registro no viaja: la pantalla no lo necesita y el servidor lo vuelve a armar al presentar.
             contratos: candidatos.map(({ registro: _registro, ...c }) => c),
         });

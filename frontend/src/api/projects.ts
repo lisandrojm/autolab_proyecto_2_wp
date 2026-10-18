@@ -1119,6 +1119,12 @@ export interface AltaPendienteArca {
   terminado?: boolean;
   /** ARCA ya lo rechazó con un motivo del padrón («ya posee una relación laboral activa»): la automática no insiste; se puede forzar. */
   rechazoDefinitivo?: string;
+  /** Cuántas veces la automática ya la presentó y ARCA la rechazó. Ausente en servidores anteriores al 18/10/2026. */
+  intentos?: number;
+  /** ISO del primero de esos rechazos; vacío si no hubo. */
+  primerIntentoEl?: string;
+  /** Llegó al tope de intentos (`maxIntentos` del estado): la automática no insiste más; se puede forzar. */
+  agotado?: boolean;
   motivo: string;
 }
 
@@ -1143,6 +1149,8 @@ export interface EstadoPresentacionAutomatica {
   ahora: string;
   hoy: string;
   enSeco: boolean;
+  /** Cuántas veces insiste la automática con una rechazada antes de dejarla marcada (3). */
+  maxIntentos?: number;
   ultimaCorrida: null | {
     fecha: string;
     dia: string;

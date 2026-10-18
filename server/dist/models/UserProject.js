@@ -78,6 +78,8 @@ const contractSchema = new Schema({
             tanda: { type: Number },
             cat: { type: String },
             porConsulta: { type: Boolean },
+            intentos: { type: Number },
+            primerIntentoEl: { type: Date },
         }, { _id: false }),
         default: undefined,
     },
