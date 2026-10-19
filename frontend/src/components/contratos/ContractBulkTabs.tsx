@@ -3207,11 +3207,11 @@ const calcularEnviable = (record: ContractOverviewRow, contratoFrames: ContratoF
 /**
  * LO QUE LE FALTA A UNA FILA PARA PODER ENVIARSE, y si se puede generar sin preguntar nada.
  *
- * «Seleccionar todo» marca también las filas que todavía no tienen el contrato o el release generados
- * (pedido del 19/10/2026): al «Enviar a firmar» se genera primero lo que falte, con la empresa que la
- * fila ya tiene (o la única del proyecto), y después se envía. Lo que no se puede generar sin una
- * decisión —el proyecto tiene varias empresas y la fila no eligió, un contrato custom sin texto, una
- * plantilla vacía— queda afuera y se informa con su motivo.
+ * «Seleccionar todo» marca también las filas que todavía no tienen el contrato o el release generados,
+ * y «Generar contratos» / «Generar releases» los generan en lote, de todas las páginas (pedido del
+ * 19/10/2026), con la empresa que la fila ya tiene (o la única del proyecto). Lo que no se puede generar
+ * sin una decisión —el proyecto tiene varias empresas y la fila no eligió, un contrato custom sin texto,
+ * una plantilla vacía— queda afuera y se informa con su motivo.
  */
 interface PendienteDeFila {
   /** La fila tiene algo que mandar a firma (contrato, release o alta). Sin esto no se puede marcar. */
@@ -3223,7 +3223,10 @@ interface PendienteDeFila {
   /** Con qué empresa generar (`undefined` = la que elija el server: la primera del proyecto). */
   empresaContrato?: string;
   empresaRelease?: string;
-  /** Por qué no se puede generar solo. Vacío = se puede. */
+  /** Por qué no se puede generar solo el contrato / el release. Vacío = se puede (o no hace falta). */
+  motivoContrato: string;
+  motivoRelease: string;
+  /** Los dos juntos, para el título de la casilla. */
   motivo: string;
 }
 
@@ -3243,15 +3246,16 @@ const pendienteDeFila = (record: ContractOverviewRow, contratoFrames: ContratoFr
   const faltaRelease = releasesAplicables.length > 0 && !releasesGenerados(record, releasesAplicables);
   const empC = empresaParaGenerar(record.empresaContratoId, record.contratoEmpresas);
   const empR = empresaParaGenerar(record.empresaReleaseId, record.releaseEmpresas);
-  let motivo = '';
+  let motivoContrato = '';
   if (faltaContrato) {
-    if (!template) motivo = 'No tiene plantilla de contrato';
-    else if (template.esCustom && !textoCustomUsable(record.contenidoCustomContrato)) motivo = 'Contrato custom sin texto escrito';
-    else if (!template.esCustom && !templateHasContent(template)) motivo = 'La plantilla del contrato no tiene contenido';
-    else if (empC.falta) motivo = 'Falta elegir la empresa del contrato';
+    if (!template) motivoContrato = 'No tiene plantilla de contrato';
+    else if (template.esCustom && !textoCustomUsable(record.contenidoCustomContrato)) motivoContrato = 'Contrato custom sin texto escrito';
+    else if (!template.esCustom && !templateHasContent(template)) motivoContrato = 'La plantilla del contrato no tiene contenido';
+    else if (empC.falta) motivoContrato = 'Falta elegir la empresa del contrato';
   }
-  if (!motivo && faltaRelease && empR.falta) motivo = 'Falta elegir la empresa del release';
-  return { algoAplica, template, releasesAplicables, faltaContrato, faltaRelease, empresaContrato: empC.id, empresaRelease: empR.id, motivo };
+  const motivoRelease = faltaRelease && empR.falta ? 'Falta elegir la empresa del release' : '';
+  const motivo = [motivoContrato, motivoRelease].filter(Boolean).join(' · ');
+  return { algoAplica, template, releasesAplicables, faltaContrato, faltaRelease, empresaContrato: empC.id, empresaRelease: empR.id, motivoContrato, motivoRelease, motivo };
 };
 
 /**
@@ -3913,71 +3917,88 @@ export const ContractBulkFirmaTab: React.FC<{
       return n;
     });
   const seleccionados = useMemo(() => seleccionables.filter((r) => selected.has(rowKey(r))), [seleccionables, selected]);
-  // Igual criterio que "Generar TXT (ARCA)": sin selección, se manda todo lo filtrado (comodidad).
-  const fuenteEnvio = seleccionados.length > 0 ? seleccionados : enviables;
+  /*
+    LAS TRES ACCIONES EN LOTE: «Generar contratos», «Generar releases» y «Enviar a firmar». Las tres
+    trabajan sobre lo seleccionado —de TODAS las páginas— o, sin selección, sobre todo lo filtrado
+    (mismo criterio que «Generar TXT (ARCA)»). Cada una toma de eso lo que le corresponde: los
+    contratos sin generar, los releases sin generar, las filas con todo generado.
+  */
+  const base = seleccionados.length > 0 ? seleccionados : seleccionables;
+  const enviablesSet = useMemo(() => new Set(enviables.map(rowKey)), [enviables]);
+  const fuenteEnvio = base.filter((r) => enviablesSet.has(rowKey(r)));
+  const penDe = (r: ContractOverviewRow) => pendientePorFila.get(rowKey(r))!;
+  const contratosPorGenerar = base.filter((r) => penDe(r)?.faltaContrato);
+  const releasesPorGenerar = base.filter((r) => penDe(r)?.faltaRelease);
+  const [generandoLote, setGenerandoLote] = useState<null | 'contratos' | 'releases'>(null);
+
+  const listaDeMotivos = (filas: { nombre: string; motivo: string }[]) => `${filas.slice(0, 3).map((o) => `${o.nombre} (${o.motivo})`).join(' · ')}${filas.length > 3 ? ` y ${filas.length - 3} más` : ''}`;
+
+  /** Genera en lote, de a tres a la vez (cada PDF lo arma un navegador en el server). */
+  const generarEnLote = async (que: 'contratos' | 'releases') => {
+    const candidatas = que === 'contratos' ? contratosPorGenerar : releasesPorGenerar;
+    const motivoDe = (r: ContractOverviewRow) => (que === 'contratos' ? penDe(r).motivoContrato : penDe(r).motivoRelease);
+    const aGenerar = candidatas.filter((r) => !motivoDe(r));
+    const afuera = candidatas.filter((r) => motivoDe(r)).map((r) => ({ nombre: r.userName, motivo: motivoDe(r) }));
+    const nombre = que === 'contratos' ? 'contrato' : 'release';
+    if (aGenerar.length === 0) {
+      sweetAlert.error(`No hay ${nombre}s para generar`, afuera.length ? `Ninguno se puede generar solo: ${listaDeMotivos(afuera)}.` : `Las filas elegidas ya tienen el ${nombre} generado.`);
+      return;
+    }
+    const confirm = await sweetAlert.confirm(
+      `Generar ${nombre}s`,
+      `Se van a generar ${aGenerar.length} ${nombre}(s)${seleccionados.length > 0 ? ' de las filas seleccionadas' : ' de todo el listado filtrado'}.${afuera.length ? ` ${afuera.length} quedan afuera: ${listaDeMotivos(afuera)}.` : ''} ¿Continuar?`,
+      'Sí, generar',
+      'Cancelar',
+    );
+    if (!confirm.isConfirmed) return;
+    setGenerandoLote(que);
+    const errores: { nombre: string; motivo: string }[] = [];
+    let hechas = 0;
+    let bien = 0;
+    sweetAlert.loading(`Generando ${nombre}s…`, `0 de ${aGenerar.length}`);
+    const cola = [...aGenerar];
+    const una = async (r: ContractOverviewRow) => {
+      const pen = penDe(r);
+      const tramite = { projectId: r.projectId, userId: r.userId, contractIndex: r.contractIndex };
+      try {
+        if (que === 'contratos') {
+          await firmaDigitalAPI.generarContrato({ ...tramite, contratoTemplateId: pen.template!._id, empresaContratoId: pen.empresaContrato, tramite: tipoDelRow(r) });
+        } else {
+          // Un grupo generado a medias (se le sumó un release después) se rehace entero.
+          if ((r.firmaReleases || []).length > 0) await firmaDigitalAPI.eliminarRelease(tramite);
+          await firmaDigitalAPI.generarRelease({ ...tramite, releaseIds: pen.releasesAplicables.map((x) => x._id), empresaReleaseId: pen.empresaRelease, tramite: tipoDelRow(r) });
+        }
+        bien += 1;
+      } catch (e: any) {
+        errores.push({ nombre: r.userName, motivo: e?.response?.data?.error || 'No se pudo generar' });
+      } finally {
+        hechas += 1;
+        sweetAlert.loading(`Generando ${nombre}s…`, `${hechas} de ${aGenerar.length}`);
+      }
+    };
+    try {
+      await Promise.all(Array.from({ length: Math.min(3, cola.length) }, async () => {
+        while (cola.length) await una(cola.shift()!);
+      }));
+      const noSalieron = [...afuera, ...errores];
+      if (errores.length) sweetAlert.error(`${bien} ${nombre}(s) generado(s)`, `${errores.length} fallaron: ${listaDeMotivos(errores)}.`);
+      else if (noSalieron.length) sweetAlert.error(`${bien} ${nombre}(s) generado(s)`, `Quedaron afuera: ${listaDeMotivos(noSalieron)}.`);
+      else sweetAlert.success('Listo', `${bien} ${nombre}(s) generado(s). Revisalos en el PDF antes de enviar a firmar.`);
+    } finally {
+      setGenerandoLote(null);
+      load(true);
+    }
+  };
 
   const handleEnviar = async () => {
     if (fuenteEnvio.length === 0) return;
-    const enviablesSet = new Set(enviables.map(rowKey));
-    const listas = fuenteEnvio.filter((r) => enviablesSet.has(rowKey(r)));
-    const aGenerar = fuenteEnvio.filter((r) => !enviablesSet.has(rowKey(r)) && !pendientePorFila.get(rowKey(r))?.motivo);
-    const omitidas: { nombre: string; motivo: string }[] = fuenteEnvio
-      .filter((r) => !enviablesSet.has(rowKey(r)) && pendientePorFila.get(rowKey(r))?.motivo)
-      .map((r) => ({ nombre: r.userName, motivo: pendientePorFila.get(rowKey(r))!.motivo }));
-    if (listas.length + aGenerar.length === 0) {
-      sweetAlert.error('Nada para enviar', `Ninguna de las filas elegidas se puede generar sola: ${omitidas.slice(0, 3).map((o) => `${o.nombre} (${o.motivo})`).join(' · ')}${omitidas.length > 3 ? '…' : ''}`);
-      return;
-    }
-    const partes = [
-      listas.length ? `${listas.length} ya tienen los documentos generados` : '',
-      aGenerar.length ? `a ${aGenerar.length} se les generan ahora el contrato y/o el release que falten` : '',
-      omitidas.length ? `${omitidas.length} no se pueden generar solas y quedan afuera (${omitidas.slice(0, 3).map((o) => `${o.nombre}: ${o.motivo}`).join(' · ')}${omitidas.length > 3 ? '…' : ''})` : '',
-    ].filter(Boolean);
-    const confirm = await sweetAlert.confirm('Enviar a firmar', `${partes.join('; ')}. Después se suben a la carpeta "Outbox" de Dropbox para que Dropbox Sign los importe. ¿Continuar?`, 'Sí, enviar', 'Cancelar');
+    const sinGenerar = base.length - fuenteEnvio.length;
+    const confirm = await sweetAlert.confirm('Enviar a firmar', `Se van a subir los documentos de ${fuenteEnvio.length} contrato(s) a la carpeta "Outbox" de Dropbox para que Dropbox Sign los importe.${sinGenerar > 0 && seleccionados.length > 0 ? ` ${sinGenerar} de las seleccionadas no se envían: todavía les falta generar el contrato o el release.` : ''} ¿Continuar?`, 'Sí, enviar', 'Cancelar');
     if (!confirm.isConfirmed) return;
     setEnviando(true);
     try {
-      /*
-        PRIMERO SE GENERA LO QUE FALTA, de a tres a la vez: cada PDF lo arma un navegador en el server y
-        de a uno serían minutos. Si una fila falla, queda afuera del envío con su error; las demás siguen.
-      */
-      const generadas: ContractOverviewRow[] = [];
-      let hechas = 0;
-      const generarFila = async (r: ContractOverviewRow) => {
-        const pen = pendientePorFila.get(rowKey(r))!;
-        const tramite = { projectId: r.projectId, userId: r.userId, contractIndex: r.contractIndex };
-        try {
-          if (pen.faltaContrato && pen.template) {
-            await firmaDigitalAPI.generarContrato({ ...tramite, contratoTemplateId: pen.template._id, empresaContratoId: pen.empresaContrato, tramite: tipoDelRow(r) });
-          }
-          if (pen.faltaRelease) {
-            // Un grupo generado a medias (se le sumó un release después) se rehace entero.
-            if ((r.firmaReleases || []).length > 0) await firmaDigitalAPI.eliminarRelease(tramite);
-            await firmaDigitalAPI.generarRelease({ ...tramite, releaseIds: pen.releasesAplicables.map((x) => x._id), empresaReleaseId: pen.empresaRelease, tramite: tipoDelRow(r) });
-          }
-          generadas.push(r);
-        } catch (e: any) {
-          omitidas.push({ nombre: r.userName, motivo: e?.response?.data?.error || 'No se pudo generar' });
-        } finally {
-          hechas += 1;
-          sweetAlert.loading('Generando documentos…', `${hechas} de ${aGenerar.length}`);
-        }
-      };
-      if (aGenerar.length > 0) {
-        sweetAlert.loading('Generando documentos…', `0 de ${aGenerar.length}`);
-        const cola = [...aGenerar];
-        await Promise.all(Array.from({ length: Math.min(3, cola.length) }, async () => {
-          while (cola.length) await generarFila(cola.shift()!);
-        }));
-      }
-      const fuente = [...listas, ...generadas];
-      if (fuente.length === 0) {
-        sweetAlert.error('No se envió nada', `No se pudo generar ninguno: ${omitidas.slice(0, 3).map((o) => `${o.nombre} (${o.motivo})`).join(' · ')}`);
-        load(true);
-        return;
-      }
-      sweetAlert.loading('Enviando a firmar…', `${fuente.length} contrato(s)`);
-      const targets = fuente.map((r) => ({
+      sweetAlert.loading('Enviando a firmar…', `${fuenteEnvio.length} contrato(s)`);
+      const targets = fuenteEnvio.map((r) => ({
         projectId: r.projectId,
         userId: r.userId,
         contractIndex: r.contractIndex,
@@ -3988,17 +4009,14 @@ export const ContractBulkFirmaTab: React.FC<{
       }));
       const res = await firmaDigitalAPI.enviar(targets);
       const fallidos = res.resultados.filter((x) => !x.ok);
-      const afuera = omitidas.length ? ` ${omitidas.length} quedaron afuera: ${omitidas.slice(0, 3).map((o) => `${o.nombre} (${o.motivo})`).join(' · ')}${omitidas.length > 3 ? '…' : ''}` : '';
       if (fallidos.length > 0) {
         sweetAlert.error(
           'Algunos envíos fallaron',
           `${res.enviados} enviado(s) correctamente. ${fallidos.length} fallaron: ${fallidos
             .map((f) => f.error)
             .slice(0, 3)
-            .join(' · ')}.${afuera}`,
+            .join(' · ')}`,
         );
-      } else if (omitidas.length > 0) {
-        sweetAlert.error('Enviado, con filas afuera', `${res.enviados} contrato(s) enviado(s) a firmar.${afuera}`);
       } else {
         sweetAlert.success('Enviado', `${res.enviados} contrato(s) enviado(s) a firmar.`);
       }
@@ -4048,7 +4066,16 @@ export const ContractBulkFirmaTab: React.FC<{
         </div>
         <div className="flex items-center gap-3">
           {seleccionados.length > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{seleccionados.length} seleccionado(s)</span>}
-          <button onClick={handleEnviar} disabled={enviando || fuenteEnvio.length === 0 || !config?.outboxCarpeta} title={seleccionados.length > 0 ? 'Enviar a firmar los contratos seleccionados' : 'Enviar a firmar todos los contratos generados del listado (o marcá algunos con el check)'} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
+          {/* Generar en lote: de lo seleccionado (todas las páginas) o, sin selección, de todo lo filtrado. */}
+          <button onClick={() => generarEnLote('contratos')} disabled={!!generandoLote || enviando || contratosPorGenerar.length === 0} title={seleccionados.length > 0 ? 'Generar el contrato de las filas seleccionadas que no lo tienen' : 'Generar el contrato de todas las filas del listado que no lo tienen (o marcá algunas con el check)'} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-blue-600 text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-300 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
+            <FontAwesomeIcon icon={generandoLote === 'contratos' ? faSpinner : faFileSignature} spin={generandoLote === 'contratos'} className="h-4 w-4" />
+            Generar contratos{contratosPorGenerar.length > 0 ? ` (${contratosPorGenerar.length})` : ''}
+          </button>
+          <button onClick={() => generarEnLote('releases')} disabled={!!generandoLote || enviando || releasesPorGenerar.length === 0} title={seleccionados.length > 0 ? 'Generar los releases de las filas seleccionadas que no los tienen' : 'Generar los releases de todas las filas del listado que no los tienen (o marcá algunas con el check)'} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-blue-600 text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-300 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
+            <FontAwesomeIcon icon={generandoLote === 'releases' ? faSpinner : faFileSignature} spin={generandoLote === 'releases'} className="h-4 w-4" />
+            Generar releases{releasesPorGenerar.length > 0 ? ` (${releasesPorGenerar.length})` : ''}
+          </button>
+          <button onClick={handleEnviar} disabled={!!generandoLote || enviando || fuenteEnvio.length === 0 || !config?.outboxCarpeta} title={seleccionados.length > 0 ? 'Enviar a firmar las filas seleccionadas que tienen todo generado' : 'Enviar a firmar todas las filas del listado que tienen todo generado (o marcá algunas con el check)'} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0">
             <FontAwesomeIcon icon={enviando ? faSpinner : faPaperPlane} spin={enviando} className="h-4 w-4" />
             Enviar a firmar{fuenteEnvio.length > 0 ? ` (${fuenteEnvio.length})` : ''}
           </button>
@@ -4100,7 +4127,7 @@ export const ContractBulkFirmaTab: React.FC<{
               <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
                 <tr className="border-b border-gray-100 dark:border-gray-800">
                   <th className={`sticky left-0 z-[15] px-4 py-3 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK}`}>
-                    <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={seleccionables.length === 0} title="Seleccionar todos (lo que falte generar se genera al enviar)" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
+                    <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={seleccionables.length === 0} title="Seleccionar todas las filas sin enviar, de todas las páginas" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                   </th>
                   <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_ACCIONES}`}>Acciones</th>
                   {/* «Fecha de creación» y «Usuario», fijas con Acciones: ver `FIRMA_ANCHO_ACCIONES`. */}
@@ -4165,7 +4192,7 @@ export const ContractBulkFirmaTab: React.FC<{
                   return (
                     <tr key={rowKey(r)} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
                       <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
-                        <input type="checkbox" checked={selected.has(rowKey(r))} disabled={r.firmaEnviadaAt ? true : !pendientePorFila.get(rowKey(r))?.algoAplica} onChange={() => toggleSel(rowKey(r))} title={r.firmaEnviadaAt ? 'Ya se envió a firmar' : enviable ? 'Incluir en el envío a firmar' : pendientePorFila.get(rowKey(r))?.motivo ? `No se puede generar solo: ${pendientePorFila.get(rowKey(r))!.motivo}` : 'Incluir: el contrato y/o el release que falten se generan al enviar'} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
+                        <input type="checkbox" checked={selected.has(rowKey(r))} disabled={r.firmaEnviadaAt ? true : !pendientePorFila.get(rowKey(r))?.algoAplica} onChange={() => toggleSel(rowKey(r))} title={r.firmaEnviadaAt ? 'Ya se envió a firmar' : enviable ? 'Incluir en el envío a firmar' : pendientePorFila.get(rowKey(r))?.motivo ? `No se puede generar solo: ${pendientePorFila.get(rowKey(r))!.motivo}` : 'Seleccionar: el contrato y/o el release que falten se generan con «Generar contratos» / «Generar releases»'} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                       </td>
                       <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_ACCIONES} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
                         <FirmaEnviarCell record={r} contratoAplica={contratoAplica} releasesAplicables={releasesFila} altaAplica={altaVaAFirma(r, template, tipo)} tipoImpositivo={tipo} onEnviado={(patch) => aplicarCambio(r, patch)} />
