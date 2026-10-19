@@ -298,27 +298,29 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                       <FontAwesomeIcon icon={faLocationDot} className="h-2.5 w-2.5" />
                       {sedeId ? nombreSede(sedeId) : sedePrincipal ? `${nombreSede(sedePrincipal)} · principal` : "Todas las sedes"}
                     </span>
+                    {/* «+» al lado de la sede, en azul (es agregar): suma otra sede al área, con su propio supervisor. */}
+                    {sedesParaSumar(area._id).length > 0 && (
+                      <select
+                        value=""
+                        disabled={isSaving}
+                        onChange={(e) => {
+                          if (e.target.value === "") return;
+                          sumarSede(area._id, e.target.value === "principal" ? null : sedeDe(e.target.value));
+                        }}
+                        className="ml-1.5 mt-1 h-5 w-5 appearance-none rounded-full bg-blue-600 text-center text-xs font-bold leading-5 text-white hover:bg-blue-700 cursor-pointer align-middle"
+                        style={{ textAlignLast: "center" }}
+                        title="Agregar otra sede a esta área, con su propio supervisor"
+                        aria-label="Agregar sede"
+                      >
+                        <option value="">+</option>
+                        {sedesParaSumar(area._id).map((sd) => (
+                          <option key={sd ?? "principal"} value={sd ?? "principal"} className="text-left">
+                            {sd ? nombreSede(sd) : sedePrincipal ? `${nombreSede(sedePrincipal)} · principal` : "Todas las sedes"}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
-                  {/* Sumar otra sede al área, en el primer bloque de esa área. */}
-                  {groupedCombinations.findIndex((g) => g.area._id === area._id) === idx && sedesParaSumar(area._id).length > 0 && (
-                    <select
-                      value=""
-                      disabled={isSaving}
-                      onChange={(e) => {
-                        if (e.target.value === "") return;
-                        sumarSede(area._id, e.target.value === "principal" ? null : sedeDe(e.target.value));
-                      }}
-                      className="ml-auto text-[11px] font-semibold rounded-full border border-dashed border-orange-300 dark:border-orange-700 px-3 py-1 bg-transparent text-orange-600 dark:text-orange-400 cursor-pointer"
-                      title="Sumar otra sede a esta área, con su propio supervisor"
-                    >
-                      <option value="">+ Sede</option>
-                      {sedesParaSumar(area._id).map((sd) => (
-                        <option key={sd ?? "principal"} value={sd ?? "principal"}>
-                          {sd ? nombreSede(sd) : sedePrincipal ? `${nombreSede(sedePrincipal)} · principal` : "Todas las sedes"}
-                        </option>
-                      ))}
-                    </select>
-                  )}
                 </div>
 
                 {/* Table for Shifts under this Area */}
