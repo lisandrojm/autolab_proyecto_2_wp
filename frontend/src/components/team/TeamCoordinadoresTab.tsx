@@ -13,7 +13,7 @@ import { claveAreaTurno, claveFilaArea, partirClaveAreaTurno, sedeDe } from "@co
 import { coordinaAreas, permisosDeRoles, PROJECT_SUPERVISOR } from "../../utils/permisosMobile";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSave, faUserTie, faInfoCircle, faTable } from "@fortawesome/free-solid-svg-icons";
+import { faSave, faUserTie, faInfoCircle, faTable, faLocationDot } from "@fortawesome/free-solid-svg-icons";
 
 interface TeamCoordinadoresTabProps {
   projectId: string;
@@ -199,7 +199,47 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
     }
   };
 
-  const sedePrincipal = sedesDelForm(project?.metadata)[0] || null;
+  const sedesProyecto = sedesDelForm(project?.metadata);
+  const sedePrincipal = sedesProyecto[0] || null;
+
+  /** Las sedes que se le pueden sumar a un área: la principal (fila sin sede) si no la tiene, y las otras del proyecto sin fila. */
+  const sedesParaSumar = (areaId: string): Array<number | null> => {
+    const usadas = new Set((project?.areasConfig || []).filter((ac: any) => String(typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === areaId).map((ac: any) => sedeDe(ac.sedeId)));
+    const tienePrincipal = usadas.has(null) || (sedePrincipal != null && usadas.has(sedePrincipal));
+    return [...(tienePrincipal ? [] : [null]), ...sedesProyecto.filter((id) => id !== sedePrincipal && !usadas.has(id))];
+  };
+
+  /*
+    SUMAR UNA SEDE A UN ÁREA DESDE ACÁ (pedido del 18/10/2026), sin ir a Editar Proyecto: agrega la
+    fila área + sede a «Configuración por Área» con los mismos turnos del área, y aparece su bloque
+    para elegirle supervisor. Se guardan también los supervisores que estén elegidos y sin guardar:
+    al releer el proyecto se perderían.
+  */
+  const sumarSede = async (areaId: string, sedeId: number | null) => {
+    const filas = (project?.areasConfig || []).map((ac: any) => ({
+      areaId: String(typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId),
+      shiftIds: (ac.shiftIds || []).map((x: any) => String(typeof x === "object" ? x?._id : x)),
+      ...(sedeDe(ac.sedeId) ? { sedeId: sedeDe(ac.sedeId)! } : {}),
+    }));
+    const ultimo = filas.map((f) => f.areaId).lastIndexOf(areaId);
+    if (ultimo < 0) return;
+    filas.splice(ultimo + 1, 0, { areaId, shiftIds: [...filas[ultimo].shiftIds], ...(sedeId ? { sedeId } : {}) });
+    const coordinatorAssignments = Object.entries(assignments).map(([key, userId]) => {
+      const { areaId: a, shiftId, sedeId: sd } = partirClaveAreaTurno(key);
+      return { areaId: a, shiftId, userId, ...(sd ? { sedeId: sd } : {}) };
+    });
+    try {
+      setIsSaving(true);
+      await projectsAPI.updateProject(projectId, { areasConfig: filas as any, coordinatorAssignments });
+      sweetAlert.success("Sede agregada", "Elegí el supervisor de la nueva sede y guardá.");
+      onUpdated();
+    } catch (err) {
+      console.error(err);
+      sweetAlert.error("Error", "No se pudo agregar la sede al área.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
   const nombreSede = (id: number) => {
     const sd = sedesCatalogo.find((x) => Number(x.data?.id) === id);
     return String(sd?.data?.nombre || sd?.name || `Sede ${id}`);
@@ -251,17 +291,34 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                   <div className="w-6 h-6 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                     <FontAwesomeIcon icon={faTable} className="text-xs" />
                   </div>
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-widest">
-                    {area.name}
-                    {/* La sede de la fila: la misma área puede tener un supervisor por sede. */}
-                    {sedeId ? (
-                      <span className="ml-2 normal-case text-orange-500">· {nombreSede(sedeId)}</span>
-                    ) : (
-                      // La fila sin sede es la de la sede principal: se aclara cuando el área tiene otras sedes.
-                      groupedCombinations.some((g) => g.area._id === area._id && g.sedeId) &&
-                      sedePrincipal && <span className="ml-2 normal-case text-orange-500">· {nombreSede(sedePrincipal)} (principal)</span>
-                    )}
-                  </h3>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-widest">{area.name}</h3>
+                    {/* La sede del bloque, siempre (también la principal sola): cada sede de un área tiene su supervisor. */}
+                    <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300">
+                      <FontAwesomeIcon icon={faLocationDot} className="h-2.5 w-2.5" />
+                      {sedeId ? nombreSede(sedeId) : sedePrincipal ? `${nombreSede(sedePrincipal)} · principal` : "Todas las sedes"}
+                    </span>
+                  </div>
+                  {/* Sumar otra sede al área, en el primer bloque de esa área. */}
+                  {groupedCombinations.findIndex((g) => g.area._id === area._id) === idx && sedesParaSumar(area._id).length > 0 && (
+                    <select
+                      value=""
+                      disabled={isSaving}
+                      onChange={(e) => {
+                        if (e.target.value === "") return;
+                        sumarSede(area._id, e.target.value === "principal" ? null : sedeDe(e.target.value));
+                      }}
+                      className="ml-auto text-[11px] font-semibold rounded-full border border-dashed border-orange-300 dark:border-orange-700 px-3 py-1 bg-transparent text-orange-600 dark:text-orange-400 cursor-pointer"
+                      title="Sumar otra sede a esta área, con su propio supervisor"
+                    >
+                      <option value="">+ Sede</option>
+                      {sedesParaSumar(area._id).map((sd) => (
+                        <option key={sd ?? "principal"} value={sd ?? "principal"}>
+                          {sd ? nombreSede(sd) : sedePrincipal ? `${nombreSede(sedePrincipal)} · principal` : "Todas las sedes"}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 {/* Table for Shifts under this Area */}
