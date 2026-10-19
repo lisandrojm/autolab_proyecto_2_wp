@@ -175,8 +175,10 @@ export interface AreaShiftMember {
   shiftIds: string[];
   /** Todas sus combinaciones "areaId::shiftId[::s<sede>]" en el proyecto, sin importar el área consultada. */
   claves?: string[];
-  /** La sede (`data.id`) del contrato que rige, o null. */
+  /** La sede (`data.id`) del contrato que rige, o null. Sólo informativa: la fila sale de la asignación. */
   sedeContrato?: number | null;
+  /** Áreas (ids) donde está asignada pero FALTA ELEGIR SEDE (el área tiene varias sedes y no está en ninguna). */
+  pendientesSede?: string[];
   nombreContrato: string;
   estadoContrato: string;
   fechaAlta: string;
@@ -602,6 +604,12 @@ class ProjectsAPI {
    * Lo usa el tab de jerarquía al arrastrar. No reescribe `teamConfig` entero —así dos personas pueden
    * acomodar el mismo equipo sin pisarse— y no toca contratos.
    */
+  /** Ubica en una sede, en lote, a gente de un área (sólo `teamConfig`, nunca contratos). Devuelve cuántos cambió. */
+  async ponerSedeEnArea(projectId: string, body: { areaId: string; sedeId: number; userIds: string[] }): Promise<number> {
+    const resp = await axios.patch(`/projects/${projectId}/team-config/sede-de-area`, body, { headers: this.getHeaders() });
+    return Number(resp.data?.cambiadas || 0);
+  }
+
   async asignarAreasDeMiembro(projectId: string, userId: string, areaShiftAssignments: { areaId: string; shiftIds: string[]; sedeId?: number | null }[]): Promise<void> {
     await axios.patch(`/projects/${projectId}/team-config/${userId}/areas`, { areaShiftAssignments }, { headers: this.getHeaders() });
   }

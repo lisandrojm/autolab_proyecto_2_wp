@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { claveAreaTurno, clavesDelMiembro } from "../compartido/areaTurno.js";
+import { claveAreaTurno, clavesDelMiembro, sedePrincipalDe } from "../compartido/areaTurno.js";
 import { z } from "zod";
 import { Types } from "mongoose";
 import { User } from "../models/User.js";
@@ -71,7 +71,7 @@ const router = Router();
 */
 const estadoCanonico = claveEstado;
 async function resolveProjectTeamFilterIds(projectId, filtros) {
-    const project = await Project.findById(projectId).select("teamConfig coordinatorAssignments areasConfig").lean();
+    const project = await Project.findById(projectId).select("teamConfig coordinatorAssignments areasConfig metadata.sedeIds metadata.sedeId").lean();
     if (!project)
         return [];
     /*
@@ -130,7 +130,7 @@ async function resolveProjectTeamFilterIds(projectId, filtros) {
         if (filtros.areaTurno) {
             // Área/turno del miembro: teamConfig + lo que coordina (si es coordinador).
             // Claves con la sede de la fila (área × turno × sede, ver `compartido/areaTurno.ts`); sin sedes por área, como siempre.
-            const keys = clavesDelMiembro(configByUser.get(String(member._id))?.areaShiftAssignments || [], { areasConfig: project.areasConfig, sedeContrato: contratoActivo?.sede_id });
+            const keys = clavesDelMiembro(configByUser.get(String(member._id))?.areaShiftAssignments || [], { areasConfig: project.areasConfig, sedePrincipal: sedePrincipalDe(project.metadata) });
             if (esCoordinador(member)) {
                 for (const asm of project.coordinatorAssignments || []) {
                     if (String(asm?.userId) !== String(member._id))

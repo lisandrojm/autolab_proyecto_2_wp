@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import { claveAreaTurno, clavesDelMiembro } from "../compartido/areaTurno.js";
+import { claveAreaTurno, clavesDelMiembro, sedePrincipalDe } from "../compartido/areaTurno.js";
 import UserProject from "../models/UserProject.js";
 import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
@@ -148,17 +148,19 @@ async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: 
   // 1. De qué proyectos: los que supervisa (enteros) y los que coordina (sus áreas/turnos). En paralelo.
   const [{ proyectos: supervisados }, conCoordinacion] = await Promise.all([
     alcanceDeResponsable(tenant, String(userId)),
-    Project.find({ tenantId: tenant, "coordinatorAssignments.userId": yo }).select("_id coordinatorAssignments areasConfig").lean() as Promise<any[]>,
+    Project.find({ tenantId: tenant, "coordinatorAssignments.userId": yo }).select("_id coordinatorAssignments areasConfig metadata.sedeIds metadata.sedeId").lean() as Promise<any[]>,
   ]);
   const supervisa = new Set(supervisados.map(String));
   // Lo que coordina, con la sede de cada fila: el supervisor de «Edición · Libertador» no ve los contratos de «Edición · Huidobro».
   const coordina = new Map<string, Set<string>>();
   const areasDe = new Map<string, any[]>();
+  const principalDe = new Map<string, number | null>();
   for (const p of conCoordinacion) {
     const combos = new Set<string>();
     for (const a of p.coordinatorAssignments || []) if (String(a.userId) === String(userId)) combos.add(claveAreaTurno(a));
     coordina.set(String(p._id), combos);
     areasDe.set(String(p._id), p.areasConfig || []);
+    principalDe.set(String(p._id), sedePrincipalDe(p.metadata));
   }
   const projectIds = [...new Set([...supervisa, ...coordina.keys()])];
   if (projectIds.length === 0) return [];
@@ -199,7 +201,7 @@ async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: 
       if (contratos.some((o) => o !== c && fechaISO(o.fecha_alta_contrato) > baja)) continue;
       if (!supervisa.has(pid)) {
         const mios = coordina.get(pid);
-        const suyos = [...clavesDelMiembro(combosDeContrato(c), { areasConfig: areasDe.get(pid), sedeContrato: c.sede_id })];
+        const suyos = [...clavesDelMiembro(combosDeContrato(c), { areasConfig: areasDe.get(pid), sedePrincipal: principalDe.get(pid) })];
         if (!mios || !suyos.some((k) => mios.has(k))) continue;
       }
       candidatos.push({ up, c, alta, baja, pid, indice });

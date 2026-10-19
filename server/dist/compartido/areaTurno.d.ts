@@ -48,18 +48,45 @@ export interface FilaAreaConfig {
     sedeId?: unknown;
 }
 /**
- * EN QUÉ SEDE DE ESTA ÁREA CAE UNA PERSONA. La asignación misma manda si trae `sedeId`. Si no, la sede
- * de su contrato, siempre que el proyecto tenga esa área en esa sede. Si no la tiene: la fila sin sede
- * si existe; si el área está en una sola fila, esa; si no, null (sin sede).
+ * EN QUÉ FILA (SEDE) DE ESTA ÁREA ESTÁ UNA PERSONA. Explícito, sin adivinar (pedido del 18/10/2026):
+ * antes se deducía de la sede del contrato, y la gente terminaba en la principal sin que nadie lo
+ * decidiera. Devuelve:
+ *   · número  → la fila con esa sede;
+ *   · null    → la fila sin sede (la de la sede principal, la de siempre);
+ *   · undefined → NO ESTÁ EN NINGUNA: el área tiene varias sedes y la persona no tiene una que exista
+ *                 ahí. Se muestra como «falta elegir sede» para ubicarla a mano.
+ *
+ *   1. El área no está en `areasConfig`: la sede de la asignación, o sin sede (como siempre).
+ *   2. El área tiene UNA sola fila: esa, tenga o no sede la asignación. Un proyecto que no usa sedes
+ *      por área no cambia nada.
+ *   3. Varias filas: la de la sede de la asignación; la sede principal cae en la fila sin sede; sin
+ *      sede, o con una sede que el área no tiene → undefined.
  */
-export declare function sedeEnArea(areasConfig: FilaAreaConfig[] | undefined, areaId: unknown, sedeAsignada: unknown, sedeContrato: unknown): number | null;
-/**
- * Las claves de un miembro (una por combinación, sin repetir). Con `ctx` (el `areasConfig` del proyecto
- * y la sede de su contrato) las combinaciones llevan la sede que les toca; sin `ctx`, como siempre.
- */
-export declare function clavesDelMiembro(assignments: any[] | undefined, ctx?: {
+export declare function sedeEnArea(areasConfig: FilaAreaConfig[] | undefined, areaId: unknown, sedeAsignada: unknown, sedePrincipal?: unknown): number | null | undefined;
+export interface ContextoDeSede {
     areasConfig?: FilaAreaConfig[];
-    sedeContrato?: unknown;
-}): Set<string>;
+    /** La sede principal del proyecto (`metadata.sedeIds[0]` o `metadata.sedeId`): la de la fila sin sede. */
+    sedePrincipal?: unknown;
+}
+/**
+ * Las claves de un miembro (una por combinación, sin repetir). Con `ctx` cada combinación lleva la
+ * fila donde está (`sedeEnArea`); las que no están en ninguna (falta elegir sede) no dan clave: ver
+ * `pendientesDeSede`. Sin `ctx`, la sede de la asignación tal cual.
+ */
+export declare function clavesDelMiembro(assignments: any[] | undefined, ctx?: ContextoDeSede): Set<string>;
+/** Las áreas (ids) donde el miembro tiene asignación pero FALTA ELEGIR SEDE (el área tiene varias y no está en ninguna). */
+export declare function pendientesDeSede(assignments: any[] | undefined, ctx: ContextoDeSede): string[];
+/** La sede principal de un proyecto a partir de su `metadata` (la primera de `sedeIds`, o la única `sedeId`). */
+export declare function sedePrincipalDe(metadata: any): number | null;
+/**
+ * Las filas de un área: cuántas sedes tiene en el proyecto. Con más de una, quien elige la fila sin
+ * sede tiene que guardar la principal explícita (si no, quedaría «falta elegir sede»).
+ */
+export declare const filasDelArea: (areasConfig: FilaAreaConfig[] | undefined, areaId: unknown) => number;
+/**
+ * La `sedeId` que hay que GUARDAR en una asignación a la fila `sedeFila` de un área: la de la fila;
+ * para la fila sin sede de un área con varias sedes, la principal; si el área tiene una sola fila, nada.
+ */
+export declare function sedeParaGuardar(areasConfig: FilaAreaConfig[] | undefined, areaId: unknown, sedeFila: unknown, sedePrincipal: unknown): number | undefined;
 /** «Edición · Libertador» (o sólo «Edición» sin sede). */
 export declare const etiquetaArea: (areaNombre: string, sedeNombre?: string | null) => string;

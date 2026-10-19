@@ -59,38 +59,87 @@ export interface FilaAreaConfig {
 }
 
 /**
- * EN QUÉ SEDE DE ESTA ÁREA CAE UNA PERSONA. La asignación misma manda si trae `sedeId`. Si no, la sede
- * de su contrato, siempre que el proyecto tenga esa área en esa sede. Si no la tiene: la fila sin sede
- * si existe; si el área está en una sola fila, esa; si no, null (sin sede).
+ * EN QUÉ FILA (SEDE) DE ESTA ÁREA ESTÁ UNA PERSONA. Explícito, sin adivinar (pedido del 18/10/2026):
+ * antes se deducía de la sede del contrato, y la gente terminaba en la principal sin que nadie lo
+ * decidiera. Devuelve:
+ *   · número  → la fila con esa sede;
+ *   · null    → la fila sin sede (la de la sede principal, la de siempre);
+ *   · undefined → NO ESTÁ EN NINGUNA: el área tiene varias sedes y la persona no tiene una que exista
+ *                 ahí. Se muestra como «falta elegir sede» para ubicarla a mano.
+ *
+ *   1. El área no está en `areasConfig`: la sede de la asignación, o sin sede (como siempre).
+ *   2. El área tiene UNA sola fila: esa, tenga o no sede la asignación. Un proyecto que no usa sedes
+ *      por área no cambia nada.
+ *   3. Varias filas: la de la sede de la asignación; la sede principal cae en la fila sin sede; sin
+ *      sede, o con una sede que el área no tiene → undefined.
  */
-export function sedeEnArea(areasConfig: FilaAreaConfig[] | undefined, areaId: unknown, sedeAsignada: unknown, sedeContrato: unknown): number | null {
+export function sedeEnArea(areasConfig: FilaAreaConfig[] | undefined, areaId: unknown, sedeAsignada: unknown, sedePrincipal?: unknown): number | null | undefined {
   const propia = sedeDe(sedeAsignada);
-  if (propia) return propia;
   const filas = (areasConfig || []).filter((f) => idDe(f.areaId) === idDe(areaId));
-  if (filas.length === 0) return null;
-  const contrato = sedeDe(sedeContrato);
-  if (contrato && filas.some((f) => sedeDe(f.sedeId) === contrato)) return contrato;
-  if (filas.some((f) => !sedeDe(f.sedeId))) return null;
+  if (filas.length === 0) return propia;
   if (filas.length === 1) return sedeDe(filas[0].sedeId);
-  return null;
+  if (propia && filas.some((f) => sedeDe(f.sedeId) === propia)) return propia;
+  if (propia && propia === sedeDe(sedePrincipal) && filas.some((f) => !sedeDe(f.sedeId))) return null;
+  return undefined;
+}
+
+export interface ContextoDeSede {
+  areasConfig?: FilaAreaConfig[];
+  /** La sede principal del proyecto (`metadata.sedeIds[0]` o `metadata.sedeId`): la de la fila sin sede. */
+  sedePrincipal?: unknown;
 }
 
 /**
- * Las claves de un miembro (una por combinación, sin repetir). Con `ctx` (el `areasConfig` del proyecto
- * y la sede de su contrato) las combinaciones llevan la sede que les toca; sin `ctx`, como siempre.
+ * Las claves de un miembro (una por combinación, sin repetir). Con `ctx` cada combinación lleva la
+ * fila donde está (`sedeEnArea`); las que no están en ninguna (falta elegir sede) no dan clave: ver
+ * `pendientesDeSede`. Sin `ctx`, la sede de la asignación tal cual.
  */
-export function clavesDelMiembro(assignments: any[] | undefined, ctx?: { areasConfig?: FilaAreaConfig[]; sedeContrato?: unknown }): Set<string> {
+export function clavesDelMiembro(assignments: any[] | undefined, ctx?: ContextoDeSede): Set<string> {
   const keys = new Set<string>();
   for (const asa of assignments || []) {
     const areaId = idDe(asa?.areaId);
     if (!areaId) continue;
-    const sede = ctx ? sedeEnArea(ctx.areasConfig, areaId, asa?.sedeId, ctx.sedeContrato) : sedeDe(asa?.sedeId);
+    const sede = ctx ? sedeEnArea(ctx.areasConfig, areaId, asa?.sedeId, ctx.sedePrincipal) : sedeDe(asa?.sedeId);
+    if (sede === undefined) continue;
     for (const sid of asa?.shiftIds || []) {
       const shiftId = idDe(sid);
       if (shiftId) keys.add(claveAreaTurno({ areaId, shiftId, sedeId: sede }));
     }
   }
   return keys;
+}
+
+/** Las áreas (ids) donde el miembro tiene asignación pero FALTA ELEGIR SEDE (el área tiene varias y no está en ninguna). */
+export function pendientesDeSede(assignments: any[] | undefined, ctx: ContextoDeSede): string[] {
+  const res = new Set<string>();
+  for (const asa of assignments || []) {
+    const areaId = idDe(asa?.areaId);
+    if (areaId && (asa?.shiftIds || []).length > 0 && sedeEnArea(ctx.areasConfig, areaId, asa?.sedeId, ctx.sedePrincipal) === undefined) res.add(areaId);
+  }
+  return [...res];
+}
+
+/** La sede principal de un proyecto a partir de su `metadata` (la primera de `sedeIds`, o la única `sedeId`). */
+export function sedePrincipalDe(metadata: any): number | null {
+  const varias = Array.isArray(metadata?.sedeIds) ? metadata.sedeIds.map(sedeDe).filter((x: number | null): x is number => x != null) : [];
+  return varias[0] ?? sedeDe(metadata?.sedeId);
+}
+
+/**
+ * Las filas de un área: cuántas sedes tiene en el proyecto. Con más de una, quien elige la fila sin
+ * sede tiene que guardar la principal explícita (si no, quedaría «falta elegir sede»).
+ */
+export const filasDelArea = (areasConfig: FilaAreaConfig[] | undefined, areaId: unknown): number => (areasConfig || []).filter((f) => idDe(f.areaId) === idDe(areaId)).length;
+
+/**
+ * La `sedeId` que hay que GUARDAR en una asignación a la fila `sedeFila` de un área: la de la fila;
+ * para la fila sin sede de un área con varias sedes, la principal; si el área tiene una sola fila, nada.
+ */
+export function sedeParaGuardar(areasConfig: FilaAreaConfig[] | undefined, areaId: unknown, sedeFila: unknown, sedePrincipal: unknown): number | undefined {
+  const sede = sedeDe(sedeFila);
+  if (sede) return sede;
+  if (filasDelArea(areasConfig, areaId) > 1) return sedeDe(sedePrincipal) ?? undefined;
+  return undefined;
 }
 
 /** «Edición · Libertador» (o sólo «Edición» sin sede). */

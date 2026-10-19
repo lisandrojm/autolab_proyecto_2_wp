@@ -10,7 +10,7 @@ import { Shift } from "../../api/shifts";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { coordinaAreas } from "../../utils/permisosMobile";
 import { claveOrdenTurno, etiquetaDeTurno, textoDeDias } from "../../utils/jerarquiaTurnos";
-import { claveAreaTurno, claveFilaArea, clavesDelMiembro, partirClaveAreaTurno, sedeDe } from "@compartido/areaTurno";
+import { claveAreaTurno, claveFilaArea, clavesDelMiembro, partirClaveAreaTurno, sedeDe, sedeParaGuardar, sedePrincipalDe } from "@compartido/areaTurno";
 import { cachedFetch } from "../../utils/refCache";
 import { infoAPI } from "../../api/info";
 import { sedesDelForm } from "../../utils/sedesProyecto";
@@ -274,7 +274,7 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
     const clavesDe = new Map<string, Set<string>>(
       teamMembers.map((u) => [
         String(u._id),
-        clavesDelMiembro(asignacionesDe(String(u._id)) as any[], { areasConfig: (project.areasConfig || []) as any[], sedeContrato: estadoGeneral?.get(String(u._id))?.sedeContrato }),
+        clavesDelMiembro(asignacionesDe(String(u._id)) as any[], { areasConfig: (project.areasConfig || []) as any[], sedePrincipal: sedePrincipalDe(project.metadata) }),
       ]),
     );
     const nombreSede = (id: number | null) => {
@@ -391,8 +391,45 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
       for (const u of c.colaboradores) ubicados.add(String(u._id));
     }
     if (supervisor) ubicados.add(String(supervisor._id));
-    return teamMembers.filter((u) => !ubicados.has(String(u._id)));
-  }, [columnas, teamMembers, supervisor]);
+    // Quien tiene área pero le falta la sede va en su propio bloque (abajo), no acá.
+    return teamMembers.filter((u) => !ubicados.has(String(u._id)) && !(estadoGeneral?.get(String(u._id))?.pendientesSede || []).length);
+  }, [columnas, teamMembers, supervisor, estadoGeneral]);
+
+  /*
+    FALTA ELEGIR SEDE (área × sede explícita, 18/10/2026): gente asignada a un área que está en varias
+    sedes, sin una sede elegida. No se la ubica sola en ninguna: se la arrastra a la columna de su sede
+    o se pasa a todos juntos con «Pasar todos a…».
+  */
+  const faltaSede = useMemo(() => {
+    if (!estadoGeneral) return [];
+    const porArea = new Map<string, User[]>();
+    for (const u of teamMembers) {
+      for (const areaId of estadoGeneral.get(String(u._id))?.pendientesSede || []) porArea.set(areaId, [...(porArea.get(areaId) || []), u]);
+    }
+    return [...porArea.entries()].map(([areaId, personas]) => {
+      const sedePrincipal = sedePrincipalDe(project.metadata);
+      // Las sedes de esa área, con la sede que se guarda para cada una (la principal para la fila sin sede).
+      const opciones = bloques
+        .filter((b) => b.areaId === areaId)
+        .map((b) => ({ guardar: sedeParaGuardar(project.areasConfig as any, areaId, b.sedeId, sedePrincipal), nombre: b.sedeNombre || "Principal" }))
+        .filter((o): o is { guardar: number; nombre: string } => !!o.guardar);
+      return { areaId, areaNombre: bloques.find((b) => b.areaId === areaId)?.areaNombre || allAreas.find((a) => String(a._id) === areaId)?.name || "Área", personas, opciones };
+    });
+  }, [estadoGeneral, teamMembers, bloques, project, allAreas]);
+
+  const pasarTodos = async (areaId: string, sedeId: number, personas: User[], nombreSede: string) => {
+    const r = await sweetAlert.confirm(`¿Pasar ${personas.length} persona${personas.length === 1 ? "" : "s"} a ${nombreSede}?`, "Se les guarda esa sede en el área. No toca contratos.", "Sí, pasarlas");
+    if (!r.isConfirmed) return;
+    try {
+      setGuardando(true);
+      await projectsAPI.ponerSedeEnArea(project._id, { areaId, sedeId, userIds: personas.map((u) => String(u._id)) });
+      onRefresh();
+    } catch (error: any) {
+      sweetAlert.error("No se pudo", error?.response?.data?.error || "Probá de nuevo en un momento.");
+    } finally {
+      setGuardando(false);
+    }
+  };
 
   /** Una zona sólo acepta lo que corresponde: soltar donde no va se marca antes, no se revierte después. */
   const zonaAcepta = (zonaId: string): boolean => {
@@ -467,7 +504,8 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
       } else {
         // La zona es la clave de la columna: en una fila con sede, la asignación se lleva esa sede.
         const { areaId, shiftId, sedeId } = partirClaveAreaTurno(zona);
-        await projectsAPI.asignarAreasDeMiembro(project._id, String(persona._id), [{ areaId, shiftIds: [shiftId], ...(sedeId ? { sedeId } : {}) }]);
+        const guardar = sedeParaGuardar(project.areasConfig as any, areaId, sedeId, sedePrincipalDe(project.metadata));
+        await projectsAPI.asignarAreasDeMiembro(project._id, String(persona._id), [{ areaId, shiftIds: [shiftId], ...(guardar ? { sedeId: guardar } : {}) }]);
       }
 
       onRefresh();
@@ -709,6 +747,41 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
             </div>
           );
         })}
+
+        {faltaSede.map((g) => (
+          <div key={`falta-sede-${g.areaId}`} className="rounded-xl border border-dashed border-red-300 bg-red-50/40 p-3 dark:border-red-900/70 dark:bg-red-950/10">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400">
+                {g.areaNombre} · falta elegir sede ({g.personas.length})
+              </span>
+              {g.opciones.length > 0 && (
+                <select
+                  value=""
+                  disabled={guardando}
+                  onChange={(e) => {
+                    const o = g.opciones.find((x) => String(x.guardar) === e.target.value);
+                    if (o) pasarTodos(g.areaId, o.guardar, g.personas, o.nombre);
+                  }}
+                  className="ml-auto rounded-full border border-blue-300 bg-blue-600 px-3 py-1 text-[11px] font-semibold text-white"
+                  title="Guardarles a todos esta sede en el área"
+                >
+                  <option value="">Pasar todos a…</option>
+                  {g.opciones.map((o) => (
+                    <option key={o.guardar} value={o.guardar}>
+                      {o.nombre}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <p className="mt-1 text-[11px] text-red-700/80 dark:text-red-300/80">El área está en varias sedes y estas personas no tienen una elegida. Arrastralas a la columna de su sede o pasalas todas juntas.</p>
+            <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
+              {g.personas.map((u) => (
+                <TarjetaPersona key={u._id} user={u} arrastrable idArrastre={`${u._id}::falta-sede::${g.areaId}`} estado={estadoGeneral?.get(String(u._id))} />
+              ))}
+            </div>
+          </div>
+        ))}
 
         <ZonaSoltar id="sin-asignar" activa>
           {/* Cerrado sigue aceptando que le suelten a alguien: le saca el área, como abierto. */}

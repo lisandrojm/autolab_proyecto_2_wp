@@ -16,7 +16,7 @@ import { semanaDelTipoDeContrato } from "../../compartido/diasDeTrabajo.js";
 import { derivarImportes, importePorJornada, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, mesesParaImportes, periodoDeCalculo, type Importes } from "../../compartido/jornadas.js";
 import { rangoDelMesEnVentana, fechaCorta, nombreDeMes } from "../../compartido/planVacaciones/fechas.js";
 import { ErrorPlan, claveDeGrupo } from "./planVacaciones.js";
-import { sedeDe } from "../../compartido/areaTurno.js";
+import { sedeDe, sedeParaGuardar } from "../../compartido/areaTurno.js";
 
 /**
  * EL REEMPLAZO MENSUAL DE UN ROL (pedido del 17/10/2026): en vez de cubrir cada quincena con un
@@ -85,7 +85,7 @@ export async function armarReemplazoMensual(tenantObjectId: Types.ObjectId, plan
     User.findOne({ _id: pedido.userId, tenantId: tenantObjectId }).select("firstName lastName email metadata.fullName metadata.activo metadata.isSolicitud metadata.id projectIds").lean(),
     Contrato.findById(pedido.contratoId).select("name data").lean(),
     Shift.findById(pedido.shiftId).select("name days startTime endTime").lean(),
-    Project.findOne({ _id: plan.projectId, tenantId: tenantObjectId }).select("name metadata.sedeId metadata.sedeIds").lean(),
+    Project.findOne({ _id: plan.projectId, tenantId: tenantObjectId }).select("name metadata.sedeId metadata.sedeIds areasConfig").lean(),
     RequestConfig.find({ tenantId: tenantObjectId, isActive: true }).select("name").lean(),
     User.findById(cubreA[0].userId).select("metadata.id").lean(),
   ]);
@@ -176,7 +176,8 @@ export async function armarReemplazoMensual(tenantObjectId: Types.ObjectId, plan
     tipoImpositivo: tipoImpositivo || undefined,
     contratoId: String(pedido.contratoId),
     nombreContrato,
-    areaShiftAssignments: [{ areaId: grupo.areaId, shiftIds: [grupo.shiftId], ...(sedeDelGrupo ? { sedeId: sedeDelGrupo } : {}) }],
+    // La sede explícita de la asignación (la principal, si el grupo es la fila sin sede de un área con varias sedes).
+    areaShiftAssignments: [{ areaId: grupo.areaId, shiftIds: [grupo.shiftId], ...(sedeParaGuardar(project?.areasConfig, grupo.areaId, sedeDelGrupo, sedePrincipal) ? { sedeId: sedeParaGuardar(project?.areasConfig, grupo.areaId, sedeDelGrupo, sedePrincipal) } : {}) }],
   };
   if (!grupo.rolFrameId) avisos.push("El grupo no tiene rol empresa resuelto: la solicitud sale sin rol (completalo al aprobar).");
 

@@ -3,7 +3,7 @@ import { valoracionesDeCategoria } from '@compartido/valoracionesDeCategoria';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from '../api/axiosConfig';
 import { projectsAPI, Project, AreaShiftMembersResponse } from '../api/projects';
-import { claveAreaTurno, claveFilaArea, sedeDe, sedeEnArea } from '@compartido/areaTurno';
+import { claveAreaTurno, claveFilaArea, sedeDe, sedeEnArea, sedeParaGuardar, sedePrincipalDe } from '@compartido/areaTurno';
 import { usersAPI, User, Contract } from '../api/users';
 import { useAuthStore } from '../stores/authStore';
 import { sweetAlert } from '../utils/sweetAlert';
@@ -448,7 +448,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     puestoDesempenado: '',
     observaciones: '',
     // `sedeId`: la de la fila de «Configuración por Área» elegida, si el proyecto tiene esa área por sede.
-    areaShiftAssignments: [] as { areaId: string; shiftIds: string[]; sedeId?: number | null }[],
+    // `sedeId` = la sede de la FILA elegida (ausente = la fila sin sede, la principal). Al guardar se
+    // convierte con `sedeParaGuardar`. `pendienteSede`: la asignación cargada no está en ninguna fila
+    // (el área tiene varias sedes y no tiene una elegida): hay que elegirla. No se envía.
+    areaShiftAssignments: [] as { areaId: string; shiftIds: string[]; sedeId?: number | null; pendienteSede?: boolean }[],
   });
 
   // UI States
@@ -553,7 +556,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     cada persona sale de su contrato, y un contrato en Huidobro con el área de Libertador la dejaría en
     la fila equivocada. El select queda fijo mientras esa sea la elección.
   */
-  const sedeFijadaPorArea = sedeDe(wizardData.areaShiftAssignments[0]?.sedeId);
+  const sedePrincipalProyecto = sedePrincipalDe(project?.metadata);
+  const eleccionActual = wizardData.areaShiftAssignments[0];
+  const sedeFijadaPorArea = eleccionActual && !eleccionActual.pendienteSede ? sedeParaGuardar(project?.areasConfig as any, eleccionActual.areaId, eleccionActual.sedeId, sedePrincipalProyecto) ?? null : null;
   // Si el área elegida es de otra sede que la cargada (p. ej. el área sólo existe en Libertador), manda el área:
   // si no, el select bloqueado mostraría una sede y el contrato se guardaría con otra.
   useEffect(() => {
@@ -2284,15 +2289,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     if (areasDeLaSolicitud.length > 0) existingAssignments = areasDeLaSolicitud;
 
     // Map existing assignments to the wizard format, ensuring we use string IDs
-    const sedeParaUbicar = Number((solicitud?.metadata as any)?.sedeId) > 0 ? Number((solicitud!.metadata as any).sedeId) : initialSedeId;
     const areaShiftAssignments = (existingAssignments || []).map((a: any) => {
       const areaId = String(a.areaId?._id || a.areaId || '');
-      // La fila área + sede donde cae (sin sedes por área, null: como siempre).
-      const sedeId = sedeEnArea(project?.areasConfig as any, areaId, a.sedeId, sedeParaUbicar);
+      // La fila área + sede donde está, explícita (ver `sedeEnArea`): sin sede elegida en un área con varias, queda pendiente.
+      const sedeId = sedeEnArea(project?.areasConfig as any, areaId, a.sedeId, sedePrincipalDe(project?.metadata));
       return {
         areaId,
         shiftIds: (a.shiftIds || []).map((s: any) => String(s?._id || s)),
         ...(sedeId ? { sedeId } : {}),
+        ...(sedeId === undefined ? { pendienteSede: true } : {}),
       };
     });
 
@@ -2630,6 +2635,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     if (!diasSueltos && !wizardData.fecha_alta_contrato) faltan.push('Fecha alta contrato');
     if (contratoSel && !diasSueltos && !contratoSel.data.esTiempoIndeterminado && !wizardData.fecha_baja_contrato) faltan.push('Fecha baja contrato');
     if (!wizardData.areaShiftAssignments || wizardData.areaShiftAssignments.length === 0) faltan.push('Área y turno');
+    else if (wizardData.areaShiftAssignments.some((a) => a.pendienteSede)) faltan.push('La sede del área (elegí el turno en la sede donde trabaja)');
     if (!wizardData.hora_inicio || !wizardData.hora_fin) faltan.push('Horario (entrada y salida)');
     if (horarioExcedidoWizard) faltan.push(`Horario dentro de las ${limiteHorasWizard} h por jornada del contrato`);
     if (erroresJornadasWizard.jornadas) faltan.push('Cantidad de jornadas');
@@ -2723,7 +2729,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           fechas_trabajadas: porDiasSueltosWizard ? wizardData.fechas_trabajadas : [],
           areaId: primaryAreaId,
           shiftId: primaryShiftId,
-          areaShiftAssignments: wizardData.areaShiftAssignments,
+          areaShiftAssignments: wizardData.areaShiftAssignments.map(({ pendienteSede, sedeId, ...a }) => {
+            const guardar = sedeParaGuardar(project.areasConfig as any, a.areaId, sedeId, sedePrincipalDe(project.metadata));
+            return { ...a, ...(guardar ? { sedeId: guardar } : {}) };
+          }),
           externalEmployeeId: (selectedUserForWizard.metadata as any)?.id,
           externalProjectId: (project.metadata as any)?.id || project.externalId,
           sede_id: Number(wizardData.sede_id),
@@ -2901,7 +2910,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
   // Áreas/turnos de un miembro en el proyecto: misma fuente que usa el wizard al abrirse (teamConfig y,
   // si ahí no está, el último contrato del miembro).
-  const getMemberAssignments = (memberId: string): { areaId: string; shiftIds: string[]; sedeId: number | null }[] => {
+  const getMemberAssignments = (memberId: string): { areaId: string; shiftIds: string[]; sedeId: number | null | undefined }[] => {
     const config = teamConfig.find((c) => String(c.userId) === String(memberId));
     const member = teamMembers.find((m) => String(m._id) === String(memberId));
     const lastContract = member ? getActiveContract(member) : null;
@@ -2912,8 +2921,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       return {
         areaId,
         shiftIds: (a.shiftIds || []).map((s: any) => String(s?._id || s)),
-        // La fila área + sede donde está (su asignación, o la sede de su contrato si el área está en esa sede).
-        sedeId: sedeEnArea(project?.areasConfig as any, areaId, a.sedeId, lastContract?.sede_id),
+        // La fila área + sede donde está, explícita (undefined = falta elegir sede: no se hereda).
+        sedeId: sedeEnArea(project?.areasConfig as any, areaId, a.sedeId, sedePrincipalDe(project?.metadata)),
       };
     });
   };
@@ -2964,6 +2973,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     */
     const sedeHeredada = assignments[0].sedeId;
     const heredadas = [{ areaId: assignments[0].areaId, shiftIds: assignments[0].shiftIds.slice(0, 1), ...(sedeHeredada ? { sedeId: sedeHeredada } : {}) }];
+    const sedeContratoHeredada = sedeParaGuardar(project?.areasConfig as any, assignments[0].areaId, sedeHeredada, sedePrincipalProyecto);
 
     const detalle = heredadas
       .map((a) => {
@@ -2974,7 +2984,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       .join(' + ');
 
     // Un área con sede fija también la sede del contrato (la sede de la persona sale de ahí).
-    setWizardData((prev) => ({ ...prev, areaShiftAssignments: heredadas, ...(sedeHeredada ? { sede_id: String(sedeHeredada) } : {}) }));
+    setWizardData((prev) => ({ ...prev, areaShiftAssignments: heredadas, ...(sedeContratoHeredada ? { sede_id: String(sedeContratoHeredada) } : {}) }));
     setAreaExpandida(undefined); // que se abra el área heredada, y no la que estuviera abierta
     setHerenciaReemplazo({ ok: true, replacedName, detalle });
   };
@@ -3180,9 +3190,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             const isCoord = checkIsCoordinator(user);
 
             // Build area data list
-            let areaData: { id: string; name: string; sede?: string }[] = [];
+            let areaData: { id: string; name: string; sede?: string; faltaSede?: boolean }[] = [];
             // La sede en que cae en esa área (sólo si el proyecto tiene esa área por sede): se muestra «Edición · Libertador».
-            const sedeDeLaFila = (asa: any, aId: any) => nombreDeSedeId(sedeEnArea(project?.areasConfig as any, aId, asa?.sedeId, activeContract?.sede_id));
+            const filaDe = (asa: any, aId: any) => sedeEnArea(project?.areasConfig as any, aId, asa?.sedeId, sedePrincipalDe(project?.metadata));
+            const sedeDeLaFila = (asa: any, aId: any) => nombreDeSedeId(filaDe(asa, aId) ?? null);
 
             // 1. Priority: Detailed project team configuration (areaShiftAssignments)
             const config = teamConfig.find((c) => String(c.userId) === String(user._id));
@@ -3191,9 +3202,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                 .map((asa: any) => {
                   const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
                   const aName = typeof asa.areaId === 'object' ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId) || String(a.data?.id) === String(aId))?.name;
-                  return aName ? { id: String(aId), name: aName, sede: sedeDeLaFila(asa, aId) } : null;
+                  return aName ? { id: String(aId), name: aName, sede: sedeDeLaFila(asa, aId), faltaSede: filaDe(asa, aId) === undefined } : null;
                 })
-                .filter(Boolean) as { id: string; name: string; sede?: string }[];
+                .filter(Boolean) as { id: string; name: string; sede?: string; faltaSede?: boolean }[];
             }
 
             // 1b. Alternative: Check last contract in projects metadata (backup source)
@@ -3202,9 +3213,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                 .map((asa: any) => {
                   const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
                   const aName = typeof asa.areaId === 'object' ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
-                  return aName ? { id: String(aId), name: aName, sede: sedeDeLaFila(asa, aId) } : null;
+                  return aName ? { id: String(aId), name: aName, sede: sedeDeLaFila(asa, aId), faltaSede: filaDe(asa, aId) === undefined } : null;
                 })
-                .filter(Boolean) as { id: string; name: string; sede?: string }[];
+                .filter(Boolean) as { id: string; name: string; sede?: string; faltaSede?: boolean }[];
             }
             // 2. Secondary: If coordinator and no detailed config, check coordinatorAssignments
             if (areaData.length === 0 && isCoord && project?.coordinatorAssignments) {
@@ -3242,6 +3253,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         <span className="text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
                           {ad.name}
                           {ad.sede && <span className="normal-case tracking-normal text-orange-500"> · {ad.sede}</span>}
+                          {/* El área tiene varias sedes y esta persona no tiene una elegida: se ubica desde Jerarquía. */}
+                          {ad.faltaSede && <span className="normal-case tracking-normal text-red-500"> · falta sede</span>}
                         </span>
                         <button
                           type="button"
@@ -4754,7 +4767,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         const shiftsForArea = allShifts.filter((s) => shiftIdsForArea.includes(String(s._id))).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
                         // Current assignment for this area
-                        const currentAssignment = wizardData.areaShiftAssignments.find((a) => a.areaId === aId && sedeDe(a.sedeId) === sedeFila);
+                        const currentAssignment = wizardData.areaShiftAssignments.find((a) => !a.pendienteSede && a.areaId === aId && sedeDe(a.sedeId) === sedeFila);
                         const selectedShiftIds = currentAssignment?.shiftIds || [];
                         const isAreaActive = selectedShiftIds.length > 0;
                         const estaAbierta = areaAbierta === filaKey;
@@ -4814,8 +4827,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                                             ...prev,
                                             // Elegir uno reemplaza lo que hubiera; volver a tocarlo lo deja sin área.
                                             areaShiftAssignments: isSelected ? [] : [{ areaId: aId, shiftIds: [String(shift._id)], ...(sedeFila ? { sedeId: sedeFila } : {}) }],
-                                            // Un área de una sede fija la sede del contrato (ver `sedeFijadaPorArea`).
-                                            ...(!isSelected && sedeFila ? { sede_id: String(sedeFila) } : {}),
+                                            // La sede de la fila fija la del contrato (la principal, si es la fila sin sede de un área con varias). Ver `sedeFijadaPorArea`.
+                                            ...(!isSelected && sedeParaGuardar(project?.areasConfig as any, aId, sedeFila, sedePrincipalProyecto) ? { sede_id: String(sedeParaGuardar(project?.areasConfig as any, aId, sedeFila, sedePrincipalProyecto)) } : {}),
                                             /*
                                               ELEGIR UN TURNO COMPLETA EL HORARIO DEL CONTRATO con el de ese turno.
 
@@ -4870,7 +4883,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         a.shiftIds.map((sid) => {
                           const areaNombre = allAreas.find((ar) => String(ar._id) === String(a.areaId))?.name || a.areaId;
                           const turnoNombre = allShifts.find((sh) => String(sh._id) === String(sid))?.name || sid;
-                          const sedeNombre = nombreDeSedeId(sedeDe(a.sedeId));
+                          const sedeNombre = a.pendienteSede ? 'falta elegir sede' : nombreDeSedeId(sedeDe(a.sedeId));
                           const texto = sedeNombre ? `${areaNombre} · ${sedeNombre} · ${turnoNombre}` : `${areaNombre} · ${turnoNombre}`;
                           return (
                             <span key={`${a.areaId}-${sid}`} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">

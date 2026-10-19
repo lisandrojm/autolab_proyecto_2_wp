@@ -8,8 +8,8 @@ import { clavesDelMiembro, partirClaveAreaTurno } from "../compartido/areaTurno.
  */
 /**
  * Claves de un miembro, una por combinación. Sin `ctx`: "areaId::shiftId" como siempre (más la sede si
- * la asignación la trae). Con `ctx` (el `areasConfig` del proyecto y la sede del contrato): cada
- * combinación lleva la sede de la fila donde cae la persona.
+ * la asignación la trae). Con `ctx` (el `areasConfig` y la sede principal del proyecto): cada
+ * combinación lleva la fila donde está la persona; las que «faltan elegir sede» no dan clave.
  */
 export function claveAreaTurnoDelMiembro(assignments, ctx) {
     return clavesDelMiembro(assignments, ctx);

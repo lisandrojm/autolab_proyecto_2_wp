@@ -28,7 +28,8 @@ import { candidatosDeAlta, presentarCandidatos, forzadoAltasDe, registrarForzado
 import { MAX_POR_EMPLEADORA, forzarDescargaConstancias, forzadoDe, proximaDescarga } from "../services/arca/descargaConstanciasAutomatica.js";
 import { pendientesDeConstanciaTodas } from "../services/arca/constanciasAltas.js";
 import { claveAreaTurnoDelMiembro } from "../utils/areaTurno.js";
-import { partirClaveAreaTurno, sedeDe } from "../compartido/areaTurno.js";
+import { partirClaveAreaTurno, sedeDe, sedePrincipalDe, pendientesDeSede, idDe as idDeArea } from "../compartido/areaTurno.js";
+import { ponerSedeEnArea } from "../services/sedeDeArea.js";
 import { DIAS_ATRAS_PENDIENTES, MAX_INTENTOS_AUTOMATICOS, configDe, sumarDias, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { Tenant } from "../models/Tenant.js";
 import { LoteAltasError } from "../services/arca/validarLoteAltas.js";
@@ -1253,7 +1254,7 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
   try {
     const { projectId } = req.params;
 
-    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("teamConfig areasConfig").lean();
+    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("teamConfig areasConfig metadata.sedeIds metadata.sedeId").lean();
     if (!project) {
       res.status(404).json({ error: "Project not found" });
       return;
@@ -1280,9 +1281,9 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
       let assignments: any[] = configByUser.get(String(member._id))?.areaShiftAssignments || [];
       if (assignments.length === 0) assignments = contratoActivo.areaShiftAssignments || [];
 
-      // Un miembro cuenta UNA vez por combinación, aunque la tenga repetida en sus asignaciones. Con la sede
-      // de la fila donde cae (la de su asignación, o la de su contrato si el área está en esa sede).
-      for (const key of claveAreaTurnoDelMiembro(assignments, { areasConfig: (project as any).areasConfig, sedeContrato: contratoActivo.sede_id })) {
+      // Un miembro cuenta UNA vez por combinación, aunque la tenga repetida en sus asignaciones. Con la fila
+      // (sede) donde está, explícita: quien «falta elegir sede» no suma en ninguna (ver `sedeEnArea`).
+      for (const key of claveAreaTurnoDelMiembro(assignments, { areasConfig: (project as any).areasConfig, sedePrincipal: sedePrincipalDe((project as any).metadata) })) {
         counts[key] = (counts[key] || 0) + 1;
         (userIds[key] = userIds[key] || []).push(String(member._id));
       }
@@ -1327,7 +1328,7 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
         ? [String(shiftId)]
         : [];
 
-    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("teamConfig areasConfig").lean();
+    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("teamConfig areasConfig metadata.sedeIds metadata.sedeId").lean();
     if (!project) {
       res.status(404).json({ error: "Project not found" });
       return;
@@ -1347,7 +1348,8 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
 
       let assignments: any[] = configByUser.get(String(member._id))?.areaShiftAssignments || [];
       if (assignments.length === 0) assignments = contratoActivo?.areaShiftAssignments || [];
-      const keys = claveAreaTurnoDelMiembro(assignments, { areasConfig: (project as any).areasConfig, sedeContrato: contratoActivo?.sede_id });
+      const ctxSede = { areasConfig: (project as any).areasConfig, sedePrincipal: sedePrincipalDe((project as any).metadata) };
+      const keys = claveAreaTurnoDelMiembro(assignments, ctxSede);
 
       // Turnos que la persona tiene en esta fila (área + sede), acotados a los pedidos (los que coordina quien abre el detalle).
       const turnosDelMiembro = [...keys].map(partirClaveAreaTurno).filter((k) => k.areaId === String(areaId) && k.sedeId === sedePedida).map((k) => k.shiftId);
@@ -1373,8 +1375,10 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
         estadoContrato: contratoActivo?.nombre_estado_empleado || "",
         fechaAlta: contratoActivo?.fecha_alta_contrato || "",
         fechaBaja: contratoActivo?.fecha_baja_contrato || "",
-        // La sede del contrato que rige: con ella la Jerarquía ubica a cada uno en su fila área + sede.
+        // La sede del contrato que rige (sólo informativa: la fila sale de la asignación, ver `sedeEnArea`).
         sedeContrato: sedeDe(contratoActivo?.sede_id),
+        // Áreas donde la persona está asignada pero FALTA ELEGIR SEDE (el área tiene varias): la Jerarquía las muestra aparte.
+        pendientesSede: pendientesDeSede(assignments, ctxSede),
       });
     }
 
@@ -1450,6 +1454,9 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
     // El margen de antes: si cambia, la valoración vuelve al cálculo automático (ver abajo).
     const margenAntes = currentProject.margen ?? null;
 
+    // Las filas de áreas de antes: para ver qué áreas pasan de una sede a varias (ver más abajo).
+    const areasAntes: any[] = JSON.parse(JSON.stringify(currentProject.areasConfig || []));
+
     // Apply updates to currentProject
     Object.assign(currentProject, updateData);
 
@@ -1487,6 +1494,33 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
         currentProject.metadata.sedeIds = pedidas.sedeIds;
       }
       if (updateData.metadata.centroCostoId !== undefined) currentProject.metadata.centroCostoId = updateData.metadata.centroCostoId;
+    }
+
+    /*
+      UN ÁREA QUE PASA DE UNA SEDE A VARIAS NO DEJA A NADIE COLGADO (área × sede explícita, 18/10/2026).
+      Con una sola fila, todos los del área están ahí aunque su asignación no diga sede. Al sumarle otra
+      sede, quien no tenga sede elegida quedaría «falta elegir sede». Se le estampa la sede de la fila
+      que ya existía (la principal, si era la fila sin sede): es dejarlo donde estaba, no adivinar.
+    */
+    if (Array.isArray((updateData as any).areasConfig)) {
+      const filasPorArea = (filas: any[]) => {
+        const m = new Map<string, any[]>();
+        for (const f of filas || []) {
+          const k = idDeArea(f.areaId);
+          m.set(k, [...(m.get(k) || []), f]);
+        }
+        return m;
+      };
+      const antes = filasPorArea(areasAntes);
+      const despues = filasPorArea((currentProject.areasConfig as any[]) || []);
+      const principal = sedePrincipalDe(currentProject.metadata);
+      for (const [areaId, filas] of despues) {
+        const previas = antes.get(areaId) || [];
+        if (previas.length !== 1 || filas.length < 2) continue;
+        const sedeQueTenian = sedeDe(previas[0].sedeId) ?? principal;
+        if (!sedeQueTenian) continue;
+        await ponerSedeEnArea(req.tenantObjectId!, currentProject, areaId, sedeQueTenian, { soloSinSede: true });
+      }
     }
 
     /*
@@ -1651,6 +1685,34 @@ router.patch("/projects/:projectId/team-config/:userId/areas", requireTenant, au
       return;
     }
     console.error("Assign areas error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/*
+  PATCH /projects/:projectId/team-config/sede-de-area — UBICAR EN UNA SEDE, en lote, a la gente de un
+  área (área × sede explícita, 18/10/2026). Lo usa «Pasar todos a…» de la Jerarquía para los que les
+  falta elegir sede. Escribe sólo `teamConfig` (ver `services/sedeDeArea.ts`), nunca contratos.
+*/
+const sedeDeAreaSchema = z.object({
+  areaId: z.string().refine((v) => Types.ObjectId.isValid(v)),
+  sedeId: z.coerce.number().int().positive(),
+  userIds: z.array(z.string()).min(1).max(2000),
+});
+router.patch("/projects/:projectId/team-config/sede-de-area", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { areaId, sedeId, userIds } = sedeDeAreaSchema.parse(req.body);
+    const project = await Project.findOne({ _id: req.params.projectId, tenantId: req.tenantObjectId });
+    if (!project) return res.status(404).json({ error: "Project not found" });
+    const cambiadas = await ponerSedeEnArea(req.tenantObjectId!, project, areaId, sedeId, { userIds });
+    if (cambiadas > 0) await project.save();
+    res.json({ cambiadas });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid data", details: error.errors });
+      return;
+    }
+    console.error("Sede de área error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

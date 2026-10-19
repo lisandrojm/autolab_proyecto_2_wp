@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { claveFilaArea, sedeDe } from "@compartido/areaTurno";
+import { claveFilaArea, sedeDe, sedePrincipalDe } from "@compartido/areaTurno";
 import { valoracionesDeCategoria } from "@compartido/valoracionesDeCategoria";
 import { Modal } from "./Modal";
 import { CampoTipoContrato, ModalTipoContrato } from "./contratacion/SelectorTipoContrato";
@@ -1054,16 +1054,27 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   }, [opcionesAreaTurno, catalogoSedes, proyectoElegido]);
 
   /** La combinación elegida, si es una de las ofrecidas. Sin esto la solicitud no se envía. */
+  /*
+    ÁREA × SEDE EXPLÍCITA (18/10/2026): la asignación guarda la sede de la fila; para la fila sin sede de
+    un área que está en varias sedes, guarda la principal del proyecto (si no, quedaría «falta elegir
+    sede»). Con una sola fila no se guarda sede, como siempre.
+  */
+  const sedePrincipalProyecto = sedePrincipalDe((proyectoElegido as any)?.metadata);
+  const areaEnVariasSedes = (areaId: string) => [...(areasDelProyecto || []), ...(opcionesAreaTurno || [])].some((x) => x.areaId === areaId && x.sedeId);
+  const sedeAGuardar = (o: { areaId: string; sedeId: number | null }): number | null => o.sedeId ?? (areaEnVariasSedes(o.areaId) ? sedePrincipalProyecto : null);
   const coincideLaSede = (a: { sedeId?: number | null }, o: OpcionAreaTurno) => {
     const sedeA = sedeDe(a.sedeId);
-    if (sedeA !== null) return sedeA === o.sedeId;
-    return o.sedeId === null || o.sedeId === Number(formData.sedeId);
+    if (sedeA === o.sedeId) return true;
+    // La principal guardada explícita es la fila sin sede.
+    return o.sedeId === null && sedeA !== null && sedeA === sedePrincipalProyecto;
   };
   const areaTurnoElegido = (opcionesAreaTurno || []).find((o) => formData.areaShiftAssignments.some((a) => a.areaId === o.areaId && a.shiftIds.includes(o.shiftId) && coincideLaSede(a, o))) || null;
   /** Un área de una sede fija la sede de la solicitud: la sede de la persona sale de su contrato. */
-  const sedeFijadaPorArea = areaTurnoElegido?.sedeId ?? null;
-  const elegirAreaTurno = (o: OpcionAreaTurno) =>
-    setFormData((prev) => ({ ...prev, areaShiftAssignments: [{ areaId: o.areaId, shiftIds: [o.shiftId], ...(o.sedeId ? { sedeId: o.sedeId } : {}) }], ...(o.sedeId ? { sedeId: String(o.sedeId) } : {}) }));
+  const sedeFijadaPorArea = areaTurnoElegido ? sedeAGuardar(areaTurnoElegido) : null;
+  const elegirAreaTurno = (o: OpcionAreaTurno) => {
+    const guardar = sedeAGuardar(o);
+    setFormData((prev) => ({ ...prev, areaShiftAssignments: [{ areaId: o.areaId, shiftIds: [o.shiftId], ...(guardar ? { sedeId: guardar } : {}) }], ...(guardar ? { sedeId: String(guardar) } : {}) }));
+  };
 
   /*
     LAS ÁREAS SE COLAPSAN.
@@ -1104,7 +1115,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   useEffect(() => {
     if (!opcionesAreaTurno) return;
     if (opcionesAreaTurno.length === 1) {
-      const { areaId, shiftId, sedeId } = opcionesAreaTurno[0];
+      const { areaId, shiftId } = opcionesAreaTurno[0];
+      const sedeId = sedeAGuardar(opcionesAreaTurno[0]);
       setFormData((p) =>
         p.areaShiftAssignments.length === 1 && p.areaShiftAssignments[0].areaId === areaId && p.areaShiftAssignments[0].shiftIds.includes(shiftId) && sedeDe(p.areaShiftAssignments[0].sedeId) === sedeId
           ? p

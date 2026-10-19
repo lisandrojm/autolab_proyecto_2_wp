@@ -12,7 +12,7 @@ import { Notification } from "../../models/Notification.js";
 import { hoyArgentina, esContratoVigente, fechaISO } from "../../utils/contratoVigencia.js";
 import { contratosQueRigenDelProyecto } from "../../utils/contratosQueRigen.js";
 import { claveAreaTurnoDelMiembro, asignacionesDelMiembro, partirClave } from "../../utils/areaTurno.js";
-import { claveAreaTurno, claveFilaArea, sedeDe } from "../../compartido/areaTurno.js";
+import { claveAreaTurno, claveFilaArea, sedeDe, sedePrincipalDe } from "../../compartido/areaTurno.js";
 import { Info } from "../../models/Info.js";
 import { saldosDeVacaciones } from "./saldos.js";
 import { crearVacacionParaPersona, preAprobarVacacion, adjustBalanceOnRequestChange, ErrorVacacion } from "./crearVacacion.js";
@@ -51,7 +51,7 @@ export const claveDeGrupo = (g) => `${claveAreaTurno(g)}::${g.rolFrameId ? Strin
  * disponibles del año de saldo según la MISMA cuenta de «Gestión por Usuario» (`saldosDeVacaciones`).
  */
 export async function equipoParaPlan(tenantObjectId, tenantId, projectId, anioDeSaldo) {
-    const project = await Project.findOne({ _id: projectId, tenantId: tenantObjectId }).select("name teamConfig areasConfig turnos").lean();
+    const project = await Project.findOne({ _id: projectId, tenantId: tenantObjectId }).select("name teamConfig areasConfig turnos metadata.sedeIds metadata.sedeId").lean();
     if (!project)
         throw new ErrorPlan("Proyecto no encontrado.", 404);
     const hoy = hoyArgentina();
@@ -68,8 +68,8 @@ export async function equipoParaPlan(tenantObjectId, tenantId, projectId, anioDe
         const contrato = contratoDe.get(String(m._id));
         if (!contrato || !esContratoVigente(contrato, hoy))
             continue;
-        // Con la sede de su fila: la de su asignación, o la de su contrato si el área está en esa sede.
-        const claves = [...claveAreaTurnoDelMiembro(asignacionesDelMiembro(configByUser.get(String(m._id)), contrato), { areasConfig: project.areasConfig, sedeContrato: contrato.sede_id })];
+        // Con la fila (sede) donde está, explícita; quien «falta elegir sede» queda sin grupo hasta que se lo ubique.
+        const claves = [...claveAreaTurnoDelMiembro(asignacionesDelMiembro(configByUser.get(String(m._id)), contrato), { areasConfig: project.areasConfig, sedePrincipal: sedePrincipalDe(project.metadata) })];
         if (claves.length === 0) {
             sinGrupo.push({ userId: String(m._id), nombre: nombreDe(m) });
             continue;

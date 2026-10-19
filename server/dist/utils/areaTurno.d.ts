@@ -1,4 +1,4 @@
-import { type FilaAreaConfig } from "../compartido/areaTurno.js";
+import { type ContextoDeSede } from "../compartido/areaTurno.js";
 /**
  * ÁREA Y TURNO DE UN MIEMBRO EN UN PROYECTO, con la misma precedencia que usa la UI: lo que diga
  * `project.teamConfig` para esa persona y, si ahí no hay nada, las asignaciones de su contrato que
@@ -8,13 +8,10 @@ import { type FilaAreaConfig } from "../compartido/areaTurno.js";
  */
 /**
  * Claves de un miembro, una por combinación. Sin `ctx`: "areaId::shiftId" como siempre (más la sede si
- * la asignación la trae). Con `ctx` (el `areasConfig` del proyecto y la sede del contrato): cada
- * combinación lleva la sede de la fila donde cae la persona.
+ * la asignación la trae). Con `ctx` (el `areasConfig` y la sede principal del proyecto): cada
+ * combinación lleva la fila donde está la persona; las que «faltan elegir sede» no dan clave.
  */
-export declare function claveAreaTurnoDelMiembro(assignments: any[], ctx?: {
-    areasConfig?: FilaAreaConfig[];
-    sedeContrato?: unknown;
-}): Set<string>;
+export declare function claveAreaTurnoDelMiembro(assignments: any[], ctx?: ContextoDeSede): Set<string>;
 /** Las asignaciones que valen para el miembro: `teamConfig` primero, el contrato después. */
 export declare function asignacionesDelMiembro(configDelMiembro: any, contrato: any): any[];
 /** Separa una clave "areaId::shiftId[::s<sede>]". */
