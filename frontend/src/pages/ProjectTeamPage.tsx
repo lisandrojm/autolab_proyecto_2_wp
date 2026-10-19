@@ -554,6 +554,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     la fila equivocada. El select queda fijo mientras esa sea la elección.
   */
   const sedeFijadaPorArea = sedeDe(wizardData.areaShiftAssignments[0]?.sedeId);
+  // Si el área elegida es de otra sede que la cargada (p. ej. el área sólo existe en Libertador), manda el área:
+  // si no, el select bloqueado mostraría una sede y el contrato se guardaría con otra.
+  useEffect(() => {
+    if (sedeFijadaPorArea && wizardData.sede_id !== String(sedeFijadaPorArea)) setWizardData((prev) => ({ ...prev, sede_id: String(sedeFijadaPorArea) }));
+  }, [sedeFijadaPorArea, wizardData.sede_id]);
   const empresaDeLaSede = useRef<string>('');
   useEffect(() => {
     if (!selectedUserForWizard) {
