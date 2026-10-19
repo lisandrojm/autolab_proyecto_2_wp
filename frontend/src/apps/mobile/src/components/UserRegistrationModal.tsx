@@ -1023,6 +1023,18 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   /** Los roles que se ofrecen: la unión de los de esas áreas. Vacío = no hay con qué acotar. */
   const rolesDeLasAreasDelProyecto = useMemo(() => new Set(areasParaRoles.flatMap((a) => a.rolesFrame)), [areasParaRoles]);
   const rolesAcotadosPorArea = !!proyectoElegido && rolesDeLasAreasDelProyecto.size > 0;
+  /*
+    Al supervisor no le queda elegido un rol de un área que no supervisa: el que viene precargado de la
+    ficha de la persona (o de un proyecto anterior) se saca, y se elige entre los de sus áreas. Sólo
+    cuando ya llegaron las áreas del proyecto, para no vaciarlo durante la carga.
+  */
+  useEffect(() => {
+    if (!coordinaEnElProyecto || !rolesAcotadosPorArea || areasDelProyecto === null) return;
+    setFormData((p) => {
+      const quedan = p.roleFrameIds.filter((id) => rolesDeLasAreasDelProyecto.has(id));
+      return quedan.length === p.roleFrameIds.length ? p : { ...p, roleFrameIds: quedan };
+    });
+  }, [coordinaEnElProyecto, rolesAcotadosPorArea, rolesDeLasAreasDelProyecto, areasDelProyecto, formData.roleFrameIds]);
 
   /** Lo que se puede elegir. `null` = todavía cargando las áreas del proyecto. */
   const opcionesDelProyecto: OpcionAreaTurno[] | null = coordinaEnElProyecto ? coordinacionesEnProyecto : areasDelProyecto;
@@ -1453,12 +1465,13 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
    */
   const rolesDisponibles = useMemo(() => {
     // Sólo los roles de las áreas del proyecto (ver `rolesAcotadosPorArea`); los ya elegidos se dejan ver para poder quitarlos.
-    const delProyecto = rolesAcotadosPorArea ? roleFrames.filter((rf) => rolesDeLasAreasDelProyecto.has(rf._id) || formData.roleFrameIds.includes(rf._id)) : roleFrames;
+    // Al supervisor, sólo los de sus áreas, sin excepción (ver `areasParaRoles`).
+    const delProyecto = rolesAcotadosPorArea ? roleFrames.filter((rf) => rolesDeLasAreasDelProyecto.has(rf._id) || (!coordinaEnElProyecto && formData.roleFrameIds.includes(rf._id))) : roleFrames;
     const base = rolSearchTerm.trim() ? delProyecto.filter((rf) => fuzzyMatch(rf.name, rolSearchTerm)) : delProyecto;
     if (rolesDelUsuario.length === 0) return base;
     const suyos = base.filter((rf) => rolesDelUsuario.includes(rf._id));
     return [...suyos, ...base.filter((rf) => !rolesDelUsuario.includes(rf._id))];
-  }, [roleFrames, rolesDelUsuario, rolSearchTerm, rolesAcotadosPorArea, rolesDeLasAreasDelProyecto, formData.roleFrameIds]);
+  }, [roleFrames, rolesDelUsuario, rolSearchTerm, rolesAcotadosPorArea, rolesDeLasAreasDelProyecto, formData.roleFrameIds, coordinaEnElProyecto]);
 
   /** Los elegidos que la persona NO tenía en su ficha: se le suman al guardar. */
   const rolesNuevosParaLaFicha = useMemo(() => (selectedUser ? formData.roleFrameIds.filter((id) => !rolesDelUsuario.includes(id)) : []), [selectedUser, formData.roleFrameIds, rolesDelUsuario]);
