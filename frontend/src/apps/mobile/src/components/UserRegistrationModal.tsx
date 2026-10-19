@@ -1041,13 +1041,17 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     const porArea = new Map<string, { areaId: string; filaKey: string; sedeId: number | null; nombre: string; turnos: OpcionAreaTurno[] }>();
     for (const o of opcionesAreaTurno || []) {
       const filaKey = claveFilaArea(o);
-      const area = porArea.get(filaKey) || { areaId: o.areaId, filaKey, sedeId: o.sedeId, nombre: o.sedeId ? `${o.areaNombre} · ${nombreDeSede(o.sedeId)}` : o.areaNombre, turnos: [] };
+      // Sin sede es la fila de la sede principal: se aclara si la misma área también se ofrece en otra sede.
+      const principal = Number((proyectoElegido as any)?.metadata?.sedeIds?.[0] || (proyectoElegido as any)?.metadata?.sedeId) || null;
+      const otraSede = !o.sedeId && (opcionesAreaTurno || []).some((x) => x.areaId === o.areaId && x.sedeId);
+      const nombre = o.sedeId ? `${o.areaNombre} · ${nombreDeSede(o.sedeId)}` : otraSede && principal ? `${o.areaNombre} · ${nombreDeSede(principal)} (principal)` : o.areaNombre;
+      const area = porArea.get(filaKey) || { areaId: o.areaId, filaKey, sedeId: o.sedeId, nombre, turnos: [] };
       if (!area.turnos.some((t) => t.shiftId === o.shiftId)) area.turnos.push(o);
       porArea.set(filaKey, area);
     }
     return [...porArea.values()].map((a) => ({ ...a, turnos: a.turnos.sort((x, y) => x.orden.localeCompare(y.orden)) })).sort((a, b) => a.nombre.localeCompare(b.nombre));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opcionesAreaTurno, catalogoSedes]);
+  }, [opcionesAreaTurno, catalogoSedes, proyectoElegido]);
 
   /** La combinación elegida, si es una de las ofrecidas. Sin esto la solicitud no se envía. */
   const coincideLaSede = (a: { sedeId?: number | null }, o: OpcionAreaTurno) => {

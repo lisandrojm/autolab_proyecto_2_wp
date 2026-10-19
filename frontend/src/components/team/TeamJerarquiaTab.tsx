@@ -13,6 +13,7 @@ import { claveOrdenTurno, etiquetaDeTurno, textoDeDias } from "../../utils/jerar
 import { claveAreaTurno, claveFilaArea, clavesDelMiembro, partirClaveAreaTurno, sedeDe } from "@compartido/areaTurno";
 import { cachedFetch } from "../../utils/refCache";
 import { infoAPI } from "../../api/info";
+import { sedesDelForm } from "../../utils/sedesProyecto";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -323,7 +324,12 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
         areaId,
         filaClave: claveFilaArea({ areaId, sedeId }),
         sedeId,
-        sedeNombre: nombreSede(sedeId),
+        // La fila sin sede es la de la sede principal: se aclara cuando el área también está en otras sedes.
+        sedeNombre: sedeId
+          ? nombreSede(sedeId)
+          : (project.areasConfig || []).some((x: any) => idDe(x.areaId) === areaId && sedeDe(x.sedeId)) && sedesDelForm(project.metadata)[0]
+            ? `${nombreSede(sedesDelForm(project.metadata)[0])} (principal)`
+            : "",
         areaNombre: nombreArea.get(areaId) || (typeof ac.areaId === "object" ? (ac.areaId as any)?.name : "") || "Área",
         diasComunes: distintos.size === 1 ? turnos[0].dias : "",
         turnos,

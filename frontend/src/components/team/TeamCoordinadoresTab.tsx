@@ -7,6 +7,7 @@ import { Area, areasAPI } from "../../api/areas";
 import { Shift, shiftsAPI } from "../../api/shifts";
 import { cachedFetch } from "../../utils/refCache";
 import { infoAPI } from "../../api/info";
+import { sedesDelForm } from "../../utils/sedesProyecto";
 import { claveAreaTurno, claveFilaArea, partirClaveAreaTurno, sedeDe } from "@compartido/areaTurno";
 // Coordinar un turno requiere poder cargar sus novedades, que es un permiso. Ver ese módulo.
 import { coordinaAreas, permisosDeRoles, PROJECT_SUPERVISOR } from "../../utils/permisosMobile";
@@ -198,6 +199,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
     }
   };
 
+  const sedePrincipal = sedesDelForm(project?.metadata)[0] || null;
   const nombreSede = (id: number) => {
     const sd = sedesCatalogo.find((x) => Number(x.data?.id) === id);
     return String(sd?.data?.nombre || sd?.name || `Sede ${id}`);
@@ -252,7 +254,13 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                   <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-widest">
                     {area.name}
                     {/* La sede de la fila: la misma área puede tener un supervisor por sede. */}
-                    {sedeId && <span className="ml-2 normal-case text-orange-500">· {nombreSede(sedeId)}</span>}
+                    {sedeId ? (
+                      <span className="ml-2 normal-case text-orange-500">· {nombreSede(sedeId)}</span>
+                    ) : (
+                      // La fila sin sede es la de la sede principal: se aclara cuando el área tiene otras sedes.
+                      groupedCombinations.some((g) => g.area._id === area._id && g.sedeId) &&
+                      sedePrincipal && <span className="ml-2 normal-case text-orange-500">· {nombreSede(sedePrincipal)} (principal)</span>
+                    )}
                   </h3>
                 </div>
 

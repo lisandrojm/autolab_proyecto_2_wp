@@ -4738,7 +4738,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         const aId = typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId;
                         const sedeFila = sedeDe(ac.sedeId);
                         const filaKey = claveFilaArea({ areaId: aId, sedeId: sedeFila });
-                        const sedeNombreFila = nombreDeSedeId(sedeFila);
+                        // Sin sede es la fila de la sede principal: se aclara si el área también está en otras sedes.
+                        const principalDelProyecto = Number((project?.metadata as any)?.sedeIds?.[0] || (project?.metadata as any)?.sedeId) || null;
+                        const sedeNombreFila = sedeFila
+                          ? nombreDeSedeId(sedeFila)
+                          : (project?.areasConfig || []).some((x: any) => String(typeof x.areaId === "object" ? x.areaId?._id : x.areaId) === String(aId) && sedeDe(x.sedeId)) && principalDelProyecto
+                            ? `${nombreDeSedeId(principalDelProyecto)} (principal)`
+                            : "";
                         const areaObj = allAreas.find((a) => a._id === aId);
                         const aName = typeof ac.areaId === 'object' ? ac.areaId?.name : areaObj?.name;
                         const isCoordinadorArea = areaObj?.isSystem;
