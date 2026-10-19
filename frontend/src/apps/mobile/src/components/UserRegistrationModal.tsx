@@ -1052,9 +1052,27 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   */
   const rolesDelAreaDe = (areaId: string) => areasDelProyectoConRoles.find((a) => a.areaId === areaId)?.rolesFrame || [];
   const filtraPorRol = rolesAcotadosPorArea && formData.roleFrameIds.length > 0;
-  const opcionesAreaTurno: OpcionAreaTurno[] | null = opcionesDelProyecto && filtraPorRol ? opcionesDelProyecto.filter((o) => rolesDelAreaDe(o.areaId).some((id) => formData.roleFrameIds.includes(id))) : opcionesDelProyecto;
-  /** Había áreas en el proyecto, pero ninguna tiene el rol elegido: no se ofrece ninguna y se explica. */
-  const sinAreaParaElRol = filtraPorRol && (opcionesDelProyecto || []).length > 0 && (opcionesAreaTurno || []).length === 0;
+  /*
+    LA SEDE FILTRA LAS ÁREAS (pedido del 19/10/2026): con La corte elegida se ofrecen sólo las áreas que
+    están en La corte. La fila sin sede es la de la sede principal. Sin sedes en el proyecto no se filtra.
+  */
+  const principalDelProyecto = sedePrincipalDe((proyectoElegido as any)?.metadata);
+  const sedeDeLaOpcion = (o: OpcionAreaTurno) => o.sedeId ?? principalDelProyecto;
+  const sedeElegidaNum = Number(formData.sedeId) || null;
+  const opcionesPorSede: OpcionAreaTurno[] | null = opcionesDelProyecto && sedeElegidaNum && principalDelProyecto ? opcionesDelProyecto.filter((o) => sedeDeLaOpcion(o) === sedeElegidaNum) : opcionesDelProyecto;
+  /** Al supervisor, sólo las sedes donde supervisa algo: en otra no tendría áreas para cargar. */
+  const sedesDelSupervisor = useMemo(() => (coordinaEnElProyecto ? new Set(coordinacionesEnProyecto.map((o) => o.sedeId ?? principalDelProyecto).filter((x): x is number => x != null)) : null), [coordinaEnElProyecto, coordinacionesEnProyecto, principalDelProyecto]);
+  const opcionesSedeVisibles = sedesDelSupervisor && sedesDelSupervisor.size > 0 ? opcionesSede.filter((o) => sedesDelSupervisor.has(o.id)) : opcionesSede;
+  useEffect(() => {
+    if (!sedesDelSupervisor || sedesDelSupervisor.size === 0 || opcionesSedeVisibles.length === 0) return;
+    if (!opcionesSedeVisibles.some((o) => String(o.id) === formData.sedeId)) setFormData((p) => ({ ...p, sedeId: String(opcionesSedeVisibles[0].id) }));
+  }, [sedesDelSupervisor, opcionesSedeVisibles, formData.sedeId]);
+
+  const opcionesAreaTurno: OpcionAreaTurno[] | null = opcionesPorSede && filtraPorRol ? opcionesPorSede.filter((o) => rolesDelAreaDe(o.areaId).some((id) => formData.roleFrameIds.includes(id))) : opcionesPorSede;
+  /** Había áreas en esa sede, pero ninguna tiene el rol elegido: no se ofrece ninguna y se explica. */
+  const sinAreaParaElRol = filtraPorRol && (opcionesPorSede || []).length > 0 && (opcionesAreaTurno || []).length === 0;
+  /** La sede elegida no tiene áreas en el proyecto (las hay en otras sedes). */
+  const sinAreasEnLaSede = (opcionesDelProyecto || []).length > 0 && (opcionesPorSede || []).length === 0;
   /*
     El rol SÍ está en un área del proyecto, pero quien pide no la supervisa: un supervisor sólo pide
     para sus áreas (ver `coordinacionesEnProyecto`). Antes el aviso decía que el rol no estaba en
@@ -1099,7 +1117,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   };
   const areaTurnoElegido = (opcionesAreaTurno || []).find((o) => formData.areaShiftAssignments.some((a) => a.areaId === o.areaId && a.shiftIds.includes(o.shiftId) && coincideLaSede(a, o))) || null;
   /** Un área de una sede fija la sede de la solicitud: la sede de la persona sale de su contrato. */
-  const sedeFijadaPorArea = areaTurnoElegido ? sedeAGuardar(areaTurnoElegido) : null;
+  // La sede ya no la fija el área: se elige primero y filtra las áreas (ver `opcionesPorSede`).
+  const sedeFijadaPorArea: number | null = null;
   const elegirAreaTurno = (o: OpcionAreaTurno) => {
     const guardar = sedeAGuardar(o);
     setFormData((prev) => ({ ...prev, areaShiftAssignments: [{ areaId: o.areaId, shiftIds: [o.shiftId], ...(guardar ? { sedeId: guardar } : {}) }], ...(guardar ? { sedeId: String(guardar) } : {}) }));
@@ -2507,17 +2526,19 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                 {nombreDeSede(sedeFijadaPorArea)}
                 <span className="ml-2 text-[11px] font-normal text-slate-400">(la fija el área)</span>
               </p>
-            ) : opcionesSede.length === 1 ? (
-              <p className="h-12 flex items-center px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white">{opcionesSede[0].nombre}</p>
+            ) : opcionesSedeVisibles.length === 1 ? (
+              <p className="h-12 flex items-center px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white">{opcionesSedeVisibles[0].nombre}</p>
             ) : (
               <select name="sedeId" value={formData.sedeId} onChange={handleChange} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white appearance-none">
-                {opcionesSede.map((o) => (
+                {opcionesSedeVisibles.map((o) => (
                   <option key={o.id} value={String(o.id)}>
                     {o.nombre}
                   </option>
                 ))}
               </select>
             )}
+            {/* Qué hace la sede: acota las áreas de abajo. Al supervisor, además, sólo sus sedes. */}
+            <p className="text-[11px] text-slate-400">{sedesDelSupervisor ? "Sólo las sedes donde supervisás un área. Las áreas de abajo son las de esta sede." : "Las áreas y turnos de abajo son los de esta sede."}</p>
           </div>
         )}
 
@@ -2687,6 +2708,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                   })()}), o agregar el rol a una de las áreas del proyecto desde Admin › Usuarios › Áreas. Hasta entonces la solicitud no se puede enviar.
                 </p>
               </div>
+            ) : sinAreasEnLaSede ? (
+              <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                {sedesDelSupervisor ? "En esta sede no supervisás ningún área." : "Esta sede no tiene áreas y turnos en el proyecto."} Elegí otra sede arriba.
+              </p>
             ) : opcionesAreaTurno.length === 0 ? (
               <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">Este proyecto no tiene áreas y turnos configurados. Avisale a administración: la solicitud no se puede enviar sin el área y el turno de la persona.</p>
             ) : opcionesAreaTurno.length === 1 ? (
