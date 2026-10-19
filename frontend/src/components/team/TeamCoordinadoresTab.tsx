@@ -6,6 +6,8 @@ import { User } from "../../api/users";
 import { Area, areasAPI } from "../../api/areas";
 import { Shift, shiftsAPI } from "../../api/shifts";
 import { cachedFetch } from "../../utils/refCache";
+import { infoAPI } from "../../api/info";
+import { claveAreaTurno, claveFilaArea, partirClaveAreaTurno, sedeDe } from "@compartido/areaTurno";
 // Coordinar un turno requiere poder cargar sus novedades, que es un permiso. Ver ese módulo.
 import { coordinaAreas, permisosDeRoles, PROJECT_SUPERVISOR } from "../../utils/permisosMobile";
 import { sweetAlert } from "../../utils/sweetAlert";
@@ -31,20 +33,23 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
   const [autoShown, setAutoShown] = useState(false);
 
   
-  // local copy of coordinator assignments
-  // { areaId_shiftId: userId }
+  // Copia local de los supervisores: { claveAreaTurno (área::turno[::s<sede>]) → userId }.
   const [assignments, setAssignments] = useState<Record<string, string>>({});
+  // El catálogo de sedes, para el título «Edición · Libertador» de las filas con sede.
+  const [sedesCatalogo, setSedesCatalogo] = useState<Array<{ name?: string; data?: any }>>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchAuxData = async () => {
       try {
-        const [areasList, shiftsList] = await Promise.all([
+        const [areasList, shiftsList, sedesList] = await Promise.all([
           cachedFetch("areas:all", () => areasAPI.listAll()),
           cachedFetch("shifts:all", () => shiftsAPI.getAll()),
+          cachedFetch("info:sede", () => infoAPI.listByType("sede")).catch(() => []),
         ]);
         setAreas(areasList);
         setShifts(shiftsList);
+        setSedesCatalogo(sedesList as any[]);
       } catch (err) {
         console.error("Error fetching areas/shifts for coordinadores tab:", err);
       } finally {
@@ -58,11 +63,9 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
     if (project?.coordinatorAssignments) {
       const currentMap: Record<string, string> = {};
       project.coordinatorAssignments.forEach(asm => {
-        const aId = typeof asm.areaId === "object" ? asm.areaId._id : asm.areaId;
-        const sId = typeof asm.shiftId === "object" ? asm.shiftId._id : asm.shiftId;
         const uId = typeof asm.userId === "object" ? asm.userId._id : asm.userId;
-        if (aId && sId && uId) {
-          currentMap[`${aId}_${sId}`] = uId;
+        if (asm.areaId && asm.shiftId && uId) {
+          currentMap[claveAreaTurno(asm)] = uId;
         }
       });
       setAssignments(currentMap);
@@ -74,7 +77,8 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
   const groupedCombinations = React.useMemo(() => {
     if (!project?.areasConfig) return [];
     
-    const groups: { area: Area, shifts: Shift[] }[] = [];
+    // Una entrada por FILA de `areasConfig` (área + sede): la misma área puede estar una vez por sede.
+    const groups: { area: Area, sedeId: number | null, shifts: Shift[] }[] = [];
     
     project.areasConfig.forEach(config => {
       const aId = typeof config.areaId === "object" ? config.areaId._id : config.areaId;
@@ -88,7 +92,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
       if (matchedShifts.length > 0) {
-        groups.push({ area, shifts: matchedShifts });
+        groups.push({ area, sedeId: sedeDe((config as any).sedeId), shifts: matchedShifts });
       }
     });
 
@@ -97,10 +101,10 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
 
   // Expand into combinations for validation counting
   const configuredCombinations = React.useMemo(() => {
-    const combos: { area: Area, shift: Shift }[] = [];
+    const combos: { area: Area, sedeId: number | null, shift: Shift }[] = [];
     groupedCombinations.forEach(group => {
       group.shifts.forEach(shift => {
-        combos.push({ area: group.area, shift });
+        combos.push({ area: group.area, sedeId: group.sedeId, shift });
       });
     });
     return combos;
@@ -134,8 +138,8 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
     let unassignedCount = 0;
     const userCoverage: Record<string, string[]> = {}; // userId => array of "areaId_shiftId"
     
-    configuredCombinations.forEach(({ area, shift }) => {
-      const key = `${area._id}_${shift._id}`;
+    configuredCombinations.forEach(({ area, sedeId, shift }) => {
+      const key = claveAreaTurno({ areaId: area._id, shiftId: shift._id, sedeId });
       const uid = assignments[key];
       if (!uid) {
         unassignedCount++;
@@ -156,10 +160,9 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
     };
   }, [assignments, configuredCombinations]);
 
-  const handleAssignmentChange = (areaId: string, shiftId: string, userId: string) => {
+  const handleAssignmentChange = (key: string, userId: string) => {
     setAssignments(prev => {
       const next = { ...prev };
-      const key = `${areaId}_${shiftId}`;
       if (!userId) {
         delete next[key];
       } else {
@@ -173,10 +176,13 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
 
     try {
       setIsSaving(true);
-      const newAssignments = Object.entries(assignments).map(([key, userId]) => {
-        const [areaId, shiftId] = key.split("_");
-        return { areaId, shiftId, userId };
-      });
+      // Cada clave lleva su sede ("área::turno::s<sede>"): se reenvía para que no se pierda al guardar.
+      // Se mandan todas, como antes (también las de filas que ya no están): no se borra nada de rebote.
+      const newAssignments = Object.entries(assignments)
+        .map(([key, userId]) => {
+          const { areaId, shiftId, sedeId } = partirClaveAreaTurno(key);
+          return { areaId, shiftId, userId, ...(sedeId ? { sedeId } : {}) };
+        });
 
       await projectsAPI.updateProject(projectId, {
         coordinatorAssignments: newAssignments
@@ -190,6 +196,11 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const nombreSede = (id: number) => {
+    const sd = sedesCatalogo.find((x) => Number(x.data?.id) === id);
+    return String(sd?.data?.nombre || sd?.name || `Sede ${id}`);
   };
 
   if (loading) {
@@ -231,14 +242,18 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
       ) : (
         <div className="space-y-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {groupedCombinations.map(({ area, shifts }, idx) => (
-              <div key={area._id} className={idx > 0 ? "border-t-[8px] border-gray-100 dark:border-gray-900" : ""}>
+            {groupedCombinations.map(({ area, sedeId, shifts }, idx) => (
+              <div key={`${claveFilaArea({ areaId: area._id, sedeId })}-${idx}`} className={idx > 0 ? "border-t-[8px] border-gray-100 dark:border-gray-900" : ""}>
                 {/* Area Header Row */}
                 <div className="bg-gray-50 dark:bg-gray-800/80 px-6 py-4 flex items-center gap-3 border-b border-gray-200 dark:border-gray-700">
                   <div className="w-6 h-6 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                     <FontAwesomeIcon icon={faTable} className="text-xs" />
                   </div>
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-widest">{area.name}</h3>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-widest">
+                    {area.name}
+                    {/* La sede de la fila: la misma área puede tener un supervisor por sede. */}
+                    {sedeId && <span className="ml-2 normal-case text-orange-500">· {nombreSede(sedeId)}</span>}
+                  </h3>
                 </div>
 
                 {/* Table for Shifts under this Area */}
@@ -261,7 +276,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                       {shifts.map(shift => {
-                        const key = `${area._id}_${shift._id}`;
+                        const key = claveAreaTurno({ areaId: area._id, shiftId: shift._id, sedeId });
                         const currentUserId = assignments[key] || "";
                         
                         return (
@@ -278,7 +293,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                                   <select
                                     className={`input-field w-full text-sm font-medium ${!currentUserId ? "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950" : ""}`}
                                     value={currentUserId}
-                                    onChange={(e) => handleAssignmentChange(area._id, shift._id, e.target.value)}
+                                    onChange={(e) => handleAssignmentChange(key, e.target.value)}
                                   >
                                     <option value="">Sin supervisor</option>
                                     {eligibleCoordinators.map((u) => (
