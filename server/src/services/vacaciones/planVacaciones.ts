@@ -159,8 +159,9 @@ async function gruposDe(tenantObjectId: Types.ObjectId, project: any, equipo: IM
   const [areasDoc, shiftsDoc, sedesDoc] = await Promise.all([
     areaIds.length ? Area.find({ _id: { $in: areaIds } }).select("name").lean() : [],
     shiftIds.length ? Shift.find({ _id: { $in: shiftIds } }).select("name order startTime endTime").lean() : [],
-    // Los nombres de las sedes de las filas con sede (sin sedes por área no se consulta nada).
-    sedeIds.length ? Info.find({ tenantId: tenantObjectId, type: "sede", "data.id": { $in: sedeIds } }).select("name data.id data.nombre").lean() : [],
+    // Los nombres de las sedes de las filas con sede (sin sedes por área no se consulta nada). El catálogo
+    // de sedes (`Info` type "sede") es global, sin tenantId: igual que en `routes/projects.ts`.
+    sedeIds.length ? Info.find({ type: "sede", "data.id": { $in: sedeIds } }).select("name data.id data.nombre").lean() : [],
   ]);
   const nombreSede = new Map<number, string>((sedesDoc as any[]).map((x) => [Number(x.data?.id), String(x.data?.nombre || x.name || "")]));
   const areaPorId = new Map((areasDoc as any[]).map((a) => [String(a._id), a]));

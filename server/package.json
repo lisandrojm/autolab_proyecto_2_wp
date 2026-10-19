@@ -35,6 +35,8 @@
     "limpiar:alcance": "dotenv -e .env.production -v APLICAR=true -- tsx src/scripts/limpiarAlcancePuesto.ts",
     "fix:reemplazo-areas:dry": "dotenv -e .env.production -v DRY=true -- tsx src/scripts/backfillReplacementAreaShifts.ts",
     "fix:reemplazo-areas": "dotenv -e .env.production -- tsx src/scripts/backfillReplacementAreaShifts.ts",
+    "sede:asignaciones:dry": "dotenv -e .env.production -v DRY=true -- tsx src/scripts/sedeEnAsignaciones.ts",
+    "sede:asignaciones": "dotenv -e .env.production -- tsx src/scripts/sedeEnAsignaciones.ts",
     "empresas:obras-sociales:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/migrarObrasSocialesPorEmpresa.ts",
     "empresas:obras-sociales": "dotenv -e .env.production -- tsx src/scripts/migrarObrasSocialesPorEmpresa.ts",
     "obra-social:a-contratos:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/migrarObraSocialAContratos.ts",
