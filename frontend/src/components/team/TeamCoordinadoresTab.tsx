@@ -276,7 +276,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                               <div className="flex items-center gap-3">
                                 <div className="flex-1 w-full max-w-[260px]">
                                   <select
-                                    className={`input-field w-full text-sm font-medium ${!currentUserId ? "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20" : ""}`}
+                                    className={`input-field w-full text-sm font-medium ${!currentUserId ? "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950" : ""}`}
                                     value={currentUserId}
                                     onChange={(e) => handleAssignmentChange(area._id, shift._id, e.target.value)}
                                   >
