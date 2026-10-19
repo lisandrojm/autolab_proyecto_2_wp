@@ -9,10 +9,14 @@ export declare class ErrorPlan extends Error {
     extra?: unknown;
     constructor(message: string, status?: number, extra?: unknown);
 }
-/** La clave de un grupo área × turno × rol (el rol por `_id`, o por nombre si el contrato no lo tiene resuelto). */
+/**
+ * La clave de un grupo área × turno (× sede) × rol (el rol por `_id`, o por nombre si el contrato no lo
+ * tiene resuelto). Sin sede es "area::turno::rol", igual que siempre; con sede, "area::turno::s12::rol".
+ */
 export declare const claveDeGrupo: (g: {
     areaId: any;
     shiftId: any;
+    sedeId?: any;
     rolFrameId?: any;
     nombreRol?: string;
 }) => string;
@@ -22,6 +26,9 @@ export interface GrupoDelPlan {
     areaNombre: string;
     shiftId: string;
     shiftNombre: string;
+    /** La sede de la fila (área × turno × sede), o null. */
+    sedeId: number | null;
+    sedeNombre: string;
     rolFrameId: string | null;
     nombreRol: string;
     userIds: string[];

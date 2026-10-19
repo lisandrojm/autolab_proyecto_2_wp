@@ -15,6 +15,8 @@ import { type EstadoItem, type EstadoPlan } from "../compartido/planVacaciones/e
 export interface IGrupoDelMiembro {
     areaId: Types.ObjectId;
     shiftId: Types.ObjectId;
+    /** La sede de la fila área × turno × sede (ver `compartido/areaTurno.ts`); sin sede = todas. */
+    sedeId?: number | null;
     /** `_id` del RoleFrame; null si el contrato no declara rol. */
     rolFrameId: Types.ObjectId | null;
     nombreRol: string;
@@ -38,6 +40,8 @@ export interface IItemDelPlan {
     userId: Types.ObjectId;
     areaId: Types.ObjectId;
     shiftId: Types.ObjectId;
+    /** La sede de la fila área × turno × sede (ver `compartido/areaTurno.ts`); sin sede = todas. */
+    sedeId?: number | null;
     rolFrameId: Types.ObjectId | null;
     nombreRol: string;
     /** "YYYY-MM" del mes al que se asignó. */
@@ -62,6 +66,8 @@ export interface IReemplazoDelPlan {
     _id: Types.ObjectId;
     areaId: Types.ObjectId;
     shiftId: Types.ObjectId;
+    /** La sede de la fila área × turno × sede (ver `compartido/areaTurno.ts`); sin sede = todas. */
+    sedeId?: number | null;
     rolFrameId: Types.ObjectId | null;
     nombreRol: string;
     mes: string;

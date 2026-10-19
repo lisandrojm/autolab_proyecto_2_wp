@@ -8,6 +8,7 @@ import { TEXTO_ESTADO_ITEM, esEditable } from "@compartido/planVacaciones/estado
 import { fechaCorta, diasEntre } from "@compartido/planVacaciones/fechas";
 import { repartirMes } from "@compartido/planVacaciones/repartirMes";
 import { CLASE_ESTADO_ITEM, mesCorto } from "./estilos";
+import { claveAreaTurno, claveFilaArea } from "@compartido/areaTurno";
 
 /**
  * LA GRILLA DEL PLAN: filas = grupos (área › turno › rol), columnas = los meses de la ventana.
@@ -37,8 +38,9 @@ interface Props {
   ocupado: boolean;
 }
 
-const claveDe = (g: ClaveDeGrupo) => `${g.areaId}::${g.shiftId}::${g.rolFrameId ? g.rolFrameId : `nombre:${g.nombreRol || ""}`}`;
-const grupoDeItem = (i: ItemDelPlan): ClaveDeGrupo => ({ areaId: i.areaId, shiftId: i.shiftId, rolFrameId: i.rolFrameId, nombreRol: i.nombreRol });
+// La misma clave que `claveDeGrupo` del server: área × turno (× sede) × rol.
+const claveDe = (g: ClaveDeGrupo) => `${claveAreaTurno(g)}::${g.rolFrameId ? g.rolFrameId : `nombre:${g.nombreRol || ""}`}`;
+const grupoDeItem = (i: ItemDelPlan): ClaveDeGrupo => ({ areaId: i.areaId, shiftId: i.shiftId, sedeId: i.sedeId, rolFrameId: i.rolFrameId, nombreRol: i.nombreRol });
 
 export const GrillaDelPlan: React.FC<Props> = ({ plan, acciones, ocupado }) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -125,7 +127,8 @@ export const GrillaDelPlan: React.FC<Props> = ({ plan, acciones, ocupado }) => {
             )}
             {plan.grupos.map((g, idx) => {
               const anterior = plan.grupos[idx - 1];
-              const nuevaArea = !anterior || anterior.areaId !== g.areaId;
+              // Un área en dos sedes son dos bloques («Edición · Huidobro», «Edición · Libertador»).
+              const nuevaArea = !anterior || claveFilaArea(anterior) !== claveFilaArea(g);
               const nuevoTurno = nuevaArea || anterior.shiftId !== g.shiftId;
               return (
                 <tr key={g.clave} className={nuevaArea ? "border-t-4" : ""}>
@@ -180,7 +183,12 @@ const FilaGrupo: React.FC<{
   const sinAsignar = grupo.userIds.filter((u) => !mesDePersona.has(u));
   return (
     <div className="space-y-1.5">
-      {mostrarArea && <p className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">{grupo.areaNombre}</p>}
+      {mostrarArea && (
+        <p className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+          {grupo.areaNombre}
+          {grupo.sedeNombre && <span className="normal-case tracking-normal"> · {grupo.sedeNombre}</span>}
+        </p>
+      )}
       {/* El turno en naranja (pedido del 18/10/2026): con el área en azul y el rol en negro, la jerarquía se lee de un vistazo. */}
       {mostrarTurno && <p className="text-xs font-bold uppercase tracking-wide text-orange-600 dark:text-orange-400 pl-2">{grupo.shiftNombre}</p>}
       <div className="flex items-start gap-2 pl-4">

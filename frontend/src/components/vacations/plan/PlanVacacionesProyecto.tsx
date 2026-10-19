@@ -69,14 +69,14 @@ export const PlanVacacionesProyecto: React.FC<Props> = ({ planId, onVolver, onCa
   const acciones: AccionesGrilla = useMemo(
     () => ({
       asignarMes: async (grupo: ClaveDeGrupo, mes: string) => {
-        const r = await accion(() => planVacacionesAPI.asignarMes(planId, { areaId: grupo.areaId, shiftId: grupo.shiftId, rolFrameId: grupo.rolFrameId, nombreRol: grupo.nombreRol, mes }), "No se pudo repartir el mes");
+        const r = await accion(() => planVacacionesAPI.asignarMes(planId, { areaId: grupo.areaId, shiftId: grupo.shiftId, sedeId: grupo.sedeId, rolFrameId: grupo.rolFrameId, nombreRol: grupo.nombreRol, mes }), "No se pudo repartir el mes");
         if (r?.reparto && r.reparto.salteados.length > 0) sweetAlert.info("Algunas personas no entraron", r.reparto.salteados.map((s) => `${s.nombre}: ${s.motivo}`).join(" · "), 4000);
       },
       quitarAsignacion: async (grupo, mes) => {
-        await accion(() => planVacacionesAPI.quitarAsignacion(planId, { areaId: grupo.areaId, shiftId: grupo.shiftId, rolFrameId: grupo.rolFrameId, nombreRol: grupo.nombreRol, mes }));
+        await accion(() => planVacacionesAPI.quitarAsignacion(planId, { areaId: grupo.areaId, shiftId: grupo.shiftId, sedeId: grupo.sedeId, rolFrameId: grupo.rolFrameId, nombreRol: grupo.nombreRol, mes }));
       },
       crearItem: async (grupo, userId, desde, hasta) => {
-        await accion(() => planVacacionesAPI.crearItem(planId, { areaId: grupo.areaId, shiftId: grupo.shiftId, rolFrameId: grupo.rolFrameId, nombreRol: grupo.nombreRol, userId, desde, hasta }), "No se pudo armar el bloque");
+        await accion(() => planVacacionesAPI.crearItem(planId, { areaId: grupo.areaId, shiftId: grupo.shiftId, sedeId: grupo.sedeId, rolFrameId: grupo.rolFrameId, nombreRol: grupo.nombreRol, userId, desde, hasta }), "No se pudo armar el bloque");
       },
       actualizarItem: async (itemId, desde, hasta) => {
         await accion(() => planVacacionesAPI.actualizarItem(planId, itemId, { desde, hasta }), "No se pudieron cambiar las fechas");

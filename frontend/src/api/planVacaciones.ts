@@ -13,6 +13,8 @@ export type { Aviso, EstadoItem, EstadoPlan };
 export interface GrupoDelMiembro {
   areaId: string;
   shiftId: string;
+  /** La sede de la fila área × turno × sede, o null/ausente = todas las sedes. */
+  sedeId?: number | null;
   rolFrameId: string | null;
   nombreRol: string;
 }
@@ -35,6 +37,8 @@ export interface ItemDelPlan {
   userId: string;
   areaId: string;
   shiftId: string;
+  /** La sede de la fila área × turno × sede, o null/ausente = todas las sedes. */
+  sedeId?: number | null;
   rolFrameId: string | null;
   nombreRol: string;
   mes: string;
@@ -56,6 +60,8 @@ export interface ReemplazoDelPlan {
   _id: string;
   areaId: string;
   shiftId: string;
+  /** La sede de la fila área × turno × sede, o null/ausente = todas las sedes. */
+  sedeId?: number | null;
   rolFrameId: string | null;
   nombreRol: string;
   mes: string;
@@ -76,6 +82,9 @@ export interface GrupoDelPlan {
   areaNombre: string;
   shiftId: string;
   shiftNombre: string;
+  sedeId?: number | null;
+  /** «Libertador»; vacío sin sede. */
+  sedeNombre?: string;
   rolFrameId: string | null;
   nombreRol: string;
   userIds: string[];
@@ -171,6 +180,8 @@ export interface PreviewReemplazo {
 export interface ClaveDeGrupo {
   areaId: string;
   shiftId: string;
+  /** La sede de la fila área × turno × sede, o null/ausente = todas las sedes. */
+  sedeId?: number | null;
   rolFrameId: string | null;
   nombreRol?: string;
 }

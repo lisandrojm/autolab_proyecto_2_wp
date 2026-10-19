@@ -17,6 +17,8 @@ import { ESTADOS_ITEM, ESTADOS_PLAN, type EstadoItem, type EstadoPlan } from "..
 export interface IGrupoDelMiembro {
   areaId: Types.ObjectId;
   shiftId: Types.ObjectId;
+  /** La sede de la fila área × turno × sede (ver `compartido/areaTurno.ts`); sin sede = todas. */
+  sedeId?: number | null;
   /** `_id` del RoleFrame; null si el contrato no declara rol. */
   rolFrameId: Types.ObjectId | null;
   nombreRol: string;
@@ -42,6 +44,8 @@ export interface IItemDelPlan {
   userId: Types.ObjectId;
   areaId: Types.ObjectId;
   shiftId: Types.ObjectId;
+  /** La sede de la fila área × turno × sede (ver `compartido/areaTurno.ts`); sin sede = todas. */
+  sedeId?: number | null;
   rolFrameId: Types.ObjectId | null;
   nombreRol: string;
   /** "YYYY-MM" del mes al que se asignó. */
@@ -67,6 +71,8 @@ export interface IReemplazoDelPlan {
   _id: Types.ObjectId;
   areaId: Types.ObjectId;
   shiftId: Types.ObjectId;
+  /** La sede de la fila área × turno × sede (ver `compartido/areaTurno.ts`); sin sede = todas. */
+  sedeId?: number | null;
   rolFrameId: Types.ObjectId | null;
   nombreRol: string;
   mes: string;
@@ -111,6 +117,7 @@ const grupoSchema = new Schema<IGrupoDelMiembro>(
   {
     areaId: { type: Schema.Types.ObjectId, ref: "Area", required: true },
     shiftId: { type: Schema.Types.ObjectId, ref: "Shift", required: true },
+    sedeId: { type: Number, default: undefined },
     rolFrameId: { type: Schema.Types.ObjectId, ref: "RoleFrame", default: null },
     nombreRol: { type: String, default: "" },
   },
@@ -138,6 +145,7 @@ const itemSchema = new Schema<IItemDelPlan>(
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     areaId: { type: Schema.Types.ObjectId, ref: "Area", required: true },
     shiftId: { type: Schema.Types.ObjectId, ref: "Shift", required: true },
+    sedeId: { type: Number, default: undefined },
     rolFrameId: { type: Schema.Types.ObjectId, ref: "RoleFrame", default: null },
     nombreRol: { type: String, default: "" },
     mes: { type: String, required: true },
@@ -163,6 +171,7 @@ const reemplazoSchema = new Schema<IReemplazoDelPlan>(
   {
     areaId: { type: Schema.Types.ObjectId, ref: "Area", required: true },
     shiftId: { type: Schema.Types.ObjectId, ref: "Shift", required: true },
+    sedeId: { type: Number, default: undefined },
     rolFrameId: { type: Schema.Types.ObjectId, ref: "RoleFrame", default: null },
     nombreRol: { type: String, default: "" },
     mes: { type: String, required: true },

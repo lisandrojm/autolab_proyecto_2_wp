@@ -16,6 +16,7 @@ import { semanaDelTipoDeContrato } from "../../compartido/diasDeTrabajo.js";
 import { derivarImportes, importePorJornada, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, mesesParaImportes, periodoDeCalculo, type Importes } from "../../compartido/jornadas.js";
 import { rangoDelMesEnVentana, fechaCorta, nombreDeMes } from "../../compartido/planVacaciones/fechas.js";
 import { ErrorPlan, claveDeGrupo } from "./planVacaciones.js";
+import { sedeDe } from "../../compartido/areaTurno.js";
 
 /**
  * EL REEMPLAZO MENSUAL DE UN ROL (pedido del 17/10/2026): en vez de cubrir cada quincena con un
@@ -32,6 +33,8 @@ import { ErrorPlan, claveDeGrupo } from "./planVacaciones.js";
 export interface PedidoReemplazo {
   areaId: string;
   shiftId: string;
+  /** La sede del grupo (fila área × turno × sede), si la tiene. */
+  sedeId?: number | null;
   rolFrameId: string | null;
   nombreRol?: string;
   mes: string;
@@ -65,7 +68,8 @@ export async function armarReemplazoMensual(tenantObjectId: Types.ObjectId, plan
   if (!idValido(pedido?.contratoId)) throw new ErrorPlan("Elegí el tipo de contrato del reemplazo.");
   const rango = rangoDelMesEnVentana(pedido.mes, plan.ventanaDesde, plan.ventanaHasta);
   if (!rango) throw new ErrorPlan("Ese mes está fuera de la ventana del plan.");
-  const grupo = { areaId: String(pedido.areaId), shiftId: String(pedido.shiftId), rolFrameId: idValido(pedido.rolFrameId) ? String(pedido.rolFrameId) : null, nombreRol: String(pedido.nombreRol || "") };
+  const sedeDelGrupo = sedeDe(pedido.sedeId);
+  const grupo = { areaId: String(pedido.areaId), shiftId: String(pedido.shiftId), ...(sedeDelGrupo ? { sedeId: sedeDelGrupo } : {}), rolFrameId: idValido(pedido.rolFrameId) ? String(pedido.rolFrameId) : null, nombreRol: String(pedido.nombreRol || "") };
   const clave = claveDeGrupo(grupo);
   const equipo = plan.equipo as IMiembroDelPlan[];
   const miembroDe = new Map(equipo.map((m) => [String(m.userId), m]));
@@ -160,7 +164,8 @@ export async function armarReemplazoMensual(tenantObjectId: Types.ObjectId, plan
     inTime,
     outTime,
     empresaContratoId: primero?.empresaContratoId ? String(primero.empresaContratoId) : undefined,
-    sedeId: sedePrincipal,
+    // Un grupo de una sede («Edición · Libertador») pide el reemplazo en esa sede; si no, la principal del proyecto.
+    sedeId: sedeDelGrupo || sedePrincipal,
     convenioId: !esServicios && idValido(pedido.convenioId) ? String(pedido.convenioId) : undefined,
     dailyRate,
     isReplacement: true,
@@ -171,7 +176,7 @@ export async function armarReemplazoMensual(tenantObjectId: Types.ObjectId, plan
     tipoImpositivo: tipoImpositivo || undefined,
     contratoId: String(pedido.contratoId),
     nombreContrato,
-    areaShiftAssignments: [{ areaId: grupo.areaId, shiftIds: [grupo.shiftId] }],
+    areaShiftAssignments: [{ areaId: grupo.areaId, shiftIds: [grupo.shiftId], ...(sedeDelGrupo ? { sedeId: sedeDelGrupo } : {}) }],
   };
   if (!grupo.rolFrameId) avisos.push("El grupo no tiene rol empresa resuelto: la solicitud sale sin rol (completalo al aprobar).");
 
@@ -195,7 +200,7 @@ export async function armarReemplazoMensual(tenantObjectId: Types.ObjectId, plan
 /** Crea la Solicitud de contratación y la deja vinculada al plan. Un solo reemplazo pedido por grupo y mes. */
 export async function crearReemplazoMensual(tenantObjectId: Types.ObjectId, creadorId: string, plan: IPlanVacaciones, pedido: PedidoReemplazo): Promise<{ solicitudId: string; reemplazoId: string; avisos: string[] }> {
   if (plan.estado === "cancelado") throw new ErrorPlan("El plan está cancelado.", 409);
-  const clave = claveDeGrupo({ areaId: pedido.areaId, shiftId: pedido.shiftId, rolFrameId: idValido(pedido.rolFrameId) ? pedido.rolFrameId : null, nombreRol: pedido.nombreRol });
+  const clave = claveDeGrupo({ areaId: pedido.areaId, shiftId: pedido.shiftId, sedeId: pedido.sedeId, rolFrameId: idValido(pedido.rolFrameId) ? pedido.rolFrameId : null, nombreRol: pedido.nombreRol });
   if ((plan.reemplazos as any[]).some((r) => r.estado === "solicitado" && r.mes === pedido.mes && claveDeGrupo(r) === clave)) {
     throw new ErrorPlan("Ese rol ya tiene un reemplazo pedido para ese mes: cancelalo antes de pedir otro.", 409);
   }
@@ -215,6 +220,7 @@ export async function crearReemplazoMensual(tenantObjectId: Types.ObjectId, crea
     _id: reemplazoId,
     areaId: oid(pedido.areaId),
     shiftId: oid(pedido.shiftId),
+    ...(sedeDe(pedido.sedeId) ? { sedeId: sedeDe(pedido.sedeId) } : {}),
     rolFrameId: idValido(pedido.rolFrameId) ? oid(pedido.rolFrameId) : null,
     nombreRol: String(pedido.nombreRol || ""),
     mes: pedido.mes,

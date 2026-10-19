@@ -7,6 +7,7 @@ import "../../../styles/planVacaciones.css";
 import type { PlanVacaciones } from "../../../api/planVacaciones";
 import { TEXTO_ESTADO_ITEM } from "@compartido/planVacaciones/estado";
 import { sumarDias, fechaCorta } from "@compartido/planVacaciones/fechas";
+import { claveAreaTurno } from "@compartido/areaTurno";
 
 /**
  * EL PLAN EN UNA LÍNEA DE TIEMPO (vis-timeline, la misma librería del calendario de Vacaciones), con un
@@ -20,8 +21,9 @@ export const LineaDeTiempoDelPlan: React.FC<{ plan: PlanVacaciones }> = ({ plan 
   useEffect(() => {
     if (!ref.current) return;
     const nombreDe = new Map(plan.equipo.map((m) => [m.userId, m.nombre]));
-    const claveDe = (g: { areaId: string; shiftId: string; rolFrameId: string | null; nombreRol: string }) => `${g.areaId}::${g.shiftId}::${g.rolFrameId ? g.rolFrameId : `nombre:${g.nombreRol || ""}`}`;
-    const grupos = new DataSet(plan.grupos.map((g, i) => ({ id: g.clave, content: `<div class="plan-grupo"><b>${g.areaNombre}</b> › ${g.shiftNombre}<br/><span>${g.nombreRol} (${g.userIds.length})</span></div>`, order: i })));
+    // La misma clave que `claveDeGrupo` del server: área × turno (× sede) × rol.
+    const claveDe = (g: { areaId: string; shiftId: string; sedeId?: number | null; rolFrameId: string | null; nombreRol: string }) => `${claveAreaTurno(g)}::${g.rolFrameId ? g.rolFrameId : `nombre:${g.nombreRol || ""}`}`;
+    const grupos = new DataSet(plan.grupos.map((g, i) => ({ id: g.clave, content: `<div class="plan-grupo"><b>${g.areaNombre}${g.sedeNombre ? ` · ${g.sedeNombre}` : ""}</b> › ${g.shiftNombre}<br/><span>${g.nombreRol} (${g.userIds.length})</span></div>`, order: i })));
     const items = new DataSet([
       ...plan.items
         .filter((i) => i.estado !== "cancelado")

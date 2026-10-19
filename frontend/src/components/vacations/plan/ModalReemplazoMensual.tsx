@@ -91,7 +91,7 @@ export const ModalReemplazoMensual: React.FC<Props> = ({ isOpen, onClose, plan, 
   const esServicios = !!contratoId && tramiteSinConvenioNiCategoria(tramitePorContrato.get(contratoId));
   const contratosParaElegir = useMemo(() => contratos.filter((c) => (c as any).isActive !== false && (!filtroTramite || tramitePorContrato.get(c._id) === filtroTramite || c._id === contratoId)), [contratos, filtroTramite, tramitePorContrato, contratoId]);
 
-  const cubiertos = useMemo(() => plan.items.filter((i) => i.mes === mes && i.estado !== "cancelado" && i.estado !== "rechazado" && i.areaId === grupo.areaId && i.shiftId === grupo.shiftId && (i.rolFrameId || null) === (grupo.rolFrameId || null) && (i.rolFrameId || i.nombreRol === grupo.nombreRol)), [plan.items, mes, grupo]);
+  const cubiertos = useMemo(() => plan.items.filter((i) => i.mes === mes && i.estado !== "cancelado" && i.estado !== "rechazado" && i.areaId === grupo.areaId && i.shiftId === grupo.shiftId && (i.sedeId || null) === (grupo.sedeId || null) && (i.rolFrameId || null) === (grupo.rolFrameId || null) && (i.rolFrameId || i.nombreRol === grupo.nombreRol)), [plan.items, mes, grupo]);
   const nombreMiembro = (id: string) => plan.equipo.find((m) => m.userId === id)?.nombre || "Persona";
 
   const candidatos = useMemo(() => {
@@ -107,6 +107,8 @@ export const ModalReemplazoMensual: React.FC<Props> = ({ isOpen, onClose, plan, 
   const pedido = (): PedidoReemplazo => ({
     areaId: grupo.areaId,
     shiftId: grupo.shiftId,
+    // La sede del grupo: el reemplazo se pide en esa sede (ver `reemplazoMensual.ts`).
+    ...(grupo.sedeId ? { sedeId: grupo.sedeId } : {}),
     rolFrameId: grupo.rolFrameId,
     nombreRol: grupo.nombreRol,
     mes,
@@ -156,7 +158,7 @@ export const ModalReemplazoMensual: React.FC<Props> = ({ isOpen, onClose, plan, 
       isOpen={isOpen}
       onClose={onClose}
       title={`Reemplazo mensual · ${grupo.nombreRol} · ${mesCorto(mes)}`}
-      subtitle={`${grupo.areaNombre} › ${grupo.shiftNombre}. Una persona por el mes entero en vez de jornaleros por quincena.`}
+      subtitle={`${grupo.areaNombre}${grupo.sedeNombre ? ` · ${grupo.sedeNombre}` : ""} › ${grupo.shiftNombre}. Una persona por el mes entero en vez de jornaleros por quincena.`}
       size="lg"
       zIndex={60}
       footer={

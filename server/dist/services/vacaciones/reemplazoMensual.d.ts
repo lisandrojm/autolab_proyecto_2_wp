@@ -16,6 +16,8 @@ import { type Importes } from "../../compartido/jornadas.js";
 export interface PedidoReemplazo {
     areaId: string;
     shiftId: string;
+    /** La sede del grupo (fila área × turno × sede), si la tiene. */
+    sedeId?: number | null;
     rolFrameId: string | null;
     nombreRol?: string;
     mes: string;

@@ -15,6 +15,7 @@ import { semanaDelTipoDeContrato } from "../../compartido/diasDeTrabajo.js";
 import { derivarImportes, importePorJornada, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, mesesParaImportes, periodoDeCalculo } from "../../compartido/jornadas.js";
 import { rangoDelMesEnVentana, fechaCorta, nombreDeMes } from "../../compartido/planVacaciones/fechas.js";
 import { ErrorPlan, claveDeGrupo } from "./planVacaciones.js";
+import { sedeDe } from "../../compartido/areaTurno.js";
 const oid = (v) => new Types.ObjectId(String(v));
 const idValido = (v) => !!v && Types.ObjectId.isValid(String(v));
 const vivo = (i) => i.estado !== "cancelado" && i.estado !== "rechazado";
@@ -30,7 +31,8 @@ export async function armarReemplazoMensual(tenantObjectId, plan, pedido) {
     const rango = rangoDelMesEnVentana(pedido.mes, plan.ventanaDesde, plan.ventanaHasta);
     if (!rango)
         throw new ErrorPlan("Ese mes está fuera de la ventana del plan.");
-    const grupo = { areaId: String(pedido.areaId), shiftId: String(pedido.shiftId), rolFrameId: idValido(pedido.rolFrameId) ? String(pedido.rolFrameId) : null, nombreRol: String(pedido.nombreRol || "") };
+    const sedeDelGrupo = sedeDe(pedido.sedeId);
+    const grupo = { areaId: String(pedido.areaId), shiftId: String(pedido.shiftId), ...(sedeDelGrupo ? { sedeId: sedeDelGrupo } : {}), rolFrameId: idValido(pedido.rolFrameId) ? String(pedido.rolFrameId) : null, nombreRol: String(pedido.nombreRol || "") };
     const clave = claveDeGrupo(grupo);
     const equipo = plan.equipo;
     const miembroDe = new Map(equipo.map((m) => [String(m.userId), m]));
@@ -126,7 +128,8 @@ export async function armarReemplazoMensual(tenantObjectId, plan, pedido) {
         inTime,
         outTime,
         empresaContratoId: primero?.empresaContratoId ? String(primero.empresaContratoId) : undefined,
-        sedeId: sedePrincipal,
+        // Un grupo de una sede («Edición · Libertador») pide el reemplazo en esa sede; si no, la principal del proyecto.
+        sedeId: sedeDelGrupo || sedePrincipal,
         convenioId: !esServicios && idValido(pedido.convenioId) ? String(pedido.convenioId) : undefined,
         dailyRate,
         isReplacement: true,
@@ -137,7 +140,7 @@ export async function armarReemplazoMensual(tenantObjectId, plan, pedido) {
         tipoImpositivo: tipoImpositivo || undefined,
         contratoId: String(pedido.contratoId),
         nombreContrato,
-        areaShiftAssignments: [{ areaId: grupo.areaId, shiftIds: [grupo.shiftId] }],
+        areaShiftAssignments: [{ areaId: grupo.areaId, shiftIds: [grupo.shiftId], ...(sedeDelGrupo ? { sedeId: sedeDelGrupo } : {}) }],
     };
     if (!grupo.rolFrameId)
         avisos.push("El grupo no tiene rol empresa resuelto: la solicitud sale sin rol (completalo al aprobar).");
@@ -162,7 +165,7 @@ export async function armarReemplazoMensual(tenantObjectId, plan, pedido) {
 export async function crearReemplazoMensual(tenantObjectId, creadorId, plan, pedido) {
     if (plan.estado === "cancelado")
         throw new ErrorPlan("El plan está cancelado.", 409);
-    const clave = claveDeGrupo({ areaId: pedido.areaId, shiftId: pedido.shiftId, rolFrameId: idValido(pedido.rolFrameId) ? pedido.rolFrameId : null, nombreRol: pedido.nombreRol });
+    const clave = claveDeGrupo({ areaId: pedido.areaId, shiftId: pedido.shiftId, sedeId: pedido.sedeId, rolFrameId: idValido(pedido.rolFrameId) ? pedido.rolFrameId : null, nombreRol: pedido.nombreRol });
     if (plan.reemplazos.some((r) => r.estado === "solicitado" && r.mes === pedido.mes && claveDeGrupo(r) === clave)) {
         throw new ErrorPlan("Ese rol ya tiene un reemplazo pedido para ese mes: cancelalo antes de pedir otro.", 409);
     }
@@ -182,6 +185,7 @@ export async function crearReemplazoMensual(tenantObjectId, creadorId, plan, ped
         _id: reemplazoId,
         areaId: oid(pedido.areaId),
         shiftId: oid(pedido.shiftId),
+        ...(sedeDe(pedido.sedeId) ? { sedeId: sedeDe(pedido.sedeId) } : {}),
         rolFrameId: idValido(pedido.rolFrameId) ? oid(pedido.rolFrameId) : null,
         nombreRol: String(pedido.nombreRol || ""),
         mes: pedido.mes,

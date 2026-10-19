@@ -12,6 +12,8 @@ import { Notification } from "../../models/Notification.js";
 import { hoyArgentina, esContratoVigente, fechaISO } from "../../utils/contratoVigencia.js";
 import { contratosQueRigenDelProyecto } from "../../utils/contratosQueRigen.js";
 import { claveAreaTurnoDelMiembro, asignacionesDelMiembro, partirClave } from "../../utils/areaTurno.js";
+import { claveAreaTurno, claveFilaArea, sedeDe } from "../../compartido/areaTurno.js";
+import { Info } from "../../models/Info.js";
 import { saldosDeVacaciones } from "./saldos.js";
 import { crearVacacionParaPersona, preAprobarVacacion, adjustBalanceOnRequestChange, ErrorVacacion } from "./crearVacacion.js";
 import { violaSolapamiento, type VacacionVirtual } from "./solapamiento.js";
@@ -41,8 +43,12 @@ const oid = (v: unknown) => new Types.ObjectId(String(v));
 const idValido = (v: unknown) => !!v && Types.ObjectId.isValid(String(v));
 const nombreDe = (u: any) => `${u?.firstName || ""} ${u?.lastName || ""}`.trim() || u?.metadata?.fullName || u?.email || "(sin nombre)";
 
-/** La clave de un grupo área × turno × rol (el rol por `_id`, o por nombre si el contrato no lo tiene resuelto). */
-export const claveDeGrupo = (g: { areaId: any; shiftId: any; rolFrameId?: any; nombreRol?: string }): string => `${g.areaId}::${g.shiftId}::${g.rolFrameId ? String(g.rolFrameId) : `nombre:${g.nombreRol || ""}`}`;
+/**
+ * La clave de un grupo área × turno (× sede) × rol (el rol por `_id`, o por nombre si el contrato no lo
+ * tiene resuelto). Sin sede es "area::turno::rol", igual que siempre; con sede, "area::turno::s12::rol".
+ */
+export const claveDeGrupo = (g: { areaId: any; shiftId: any; sedeId?: any; rolFrameId?: any; nombreRol?: string }): string =>
+  `${claveAreaTurno(g)}::${g.rolFrameId ? String(g.rolFrameId) : `nombre:${g.nombreRol || ""}`}`;
 
 export interface GrupoDelPlan {
   clave: string;
@@ -50,6 +56,9 @@ export interface GrupoDelPlan {
   areaNombre: string;
   shiftId: string;
   shiftNombre: string;
+  /** La sede de la fila (área × turno × sede), o null. */
+  sedeId: number | null;
+  sedeNombre: string;
   rolFrameId: string | null;
   nombreRol: string;
   userIds: string[];
@@ -89,7 +98,8 @@ export async function equipoParaPlan(tenantObjectId: Types.ObjectId, tenantId: s
   for (const m of members as any[]) {
     const contrato = contratoDe.get(String(m._id));
     if (!contrato || !esContratoVigente(contrato, hoy)) continue;
-    const claves = [...claveAreaTurnoDelMiembro(asignacionesDelMiembro(configByUser.get(String(m._id)), contrato))];
+    // Con la sede de su fila: la de su asignación, o la de su contrato si el área está en esa sede.
+    const claves = [...claveAreaTurnoDelMiembro(asignacionesDelMiembro(configByUser.get(String(m._id)), contrato), { areasConfig: project.areasConfig, sedeContrato: contrato.sede_id })];
     if (claves.length === 0) {
       sinGrupo.push({ userId: String(m._id), nombre: nombreDe(m) });
       continue;
@@ -124,8 +134,8 @@ export async function equipoParaPlan(tenantObjectId: Types.ObjectId, tenantId: s
       userId: c.user._id,
       nombre: nombreDe(c.user),
       grupos: c.claves.map((k) => {
-        const { areaId, shiftId } = partirClave(k);
-        return { areaId: oid(areaId), shiftId: oid(shiftId), rolFrameId: rf ? oid(rf._id) : null, nombreRol: rf?.name || c.nombreRol };
+        const { areaId, shiftId, sedeId } = partirClave(k);
+        return { areaId: oid(areaId), shiftId: oid(shiftId), ...(sedeId ? { sedeId } : {}), rolFrameId: rf ? oid(rf._id) : null, nombreRol: rf?.name || c.nombreRol };
       }),
       diasDisponibles: Number(s?.display?.available ?? 0),
       diasTotales: Number(s?.display?.totalAnnual ?? 0),
@@ -145,13 +155,24 @@ export async function equipoParaPlan(tenantObjectId: Types.ObjectId, tenantId: s
 async function gruposDe(tenantObjectId: Types.ObjectId, project: any, equipo: IMiembroDelPlan[]): Promise<Pick<EquipoParaPlan, "grupos" | "areas" | "shifts">> {
   const areaIds = [...new Set(equipo.flatMap((m) => m.grupos.map((g) => String(g.areaId))))];
   const shiftIds = [...new Set(equipo.flatMap((m) => m.grupos.map((g) => String(g.shiftId))))];
-  const [areasDoc, shiftsDoc] = await Promise.all([
+  const sedeIds = [...new Set(equipo.flatMap((m) => m.grupos.map((g) => sedeDe(g.sedeId)).filter((x): x is number => x != null)))];
+  const [areasDoc, shiftsDoc, sedesDoc] = await Promise.all([
     areaIds.length ? Area.find({ _id: { $in: areaIds } }).select("name").lean() : [],
     shiftIds.length ? Shift.find({ _id: { $in: shiftIds } }).select("name order startTime endTime").lean() : [],
+    // Los nombres de las sedes de las filas con sede (sin sedes por área no se consulta nada).
+    sedeIds.length ? Info.find({ tenantId: tenantObjectId, type: "sede", "data.id": { $in: sedeIds } }).select("name data.id data.nombre").lean() : [],
   ]);
+  const nombreSede = new Map<number, string>((sedesDoc as any[]).map((x) => [Number(x.data?.id), String(x.data?.nombre || x.name || "")]));
   const areaPorId = new Map((areasDoc as any[]).map((a) => [String(a._id), a]));
   const shiftPorId = new Map((shiftsDoc as any[]).map((s) => [String(s._id), s]));
-  const ordenArea = new Map<string, number>((project.areasConfig || []).map((a: any, i: number) => [String(a.areaId?._id || a.areaId), i]));
+  // El orden de las filas de `areasConfig` (área + sede); una fila con sede que ya no está cae en la de su área.
+  const ordenArea = new Map<string, number>();
+  (project.areasConfig || []).forEach((a: any, i: number) => {
+    const fila = claveFilaArea({ areaId: a.areaId?._id || a.areaId, sedeId: a.sedeId });
+    if (!ordenArea.has(fila)) ordenArea.set(fila, i);
+    const soloArea = String(a.areaId?._id || a.areaId);
+    if (!ordenArea.has(soloArea)) ordenArea.set(soloArea, i);
+  });
   const porClave = new Map<string, GrupoDelPlan>();
   for (const m of equipo) {
     for (const g of m.grupos) {
@@ -163,6 +184,8 @@ async function gruposDe(tenantObjectId: Types.ObjectId, project: any, equipo: IM
           areaNombre: areaPorId.get(String(g.areaId))?.name || "Área",
           shiftId: String(g.shiftId),
           shiftNombre: shiftPorId.get(String(g.shiftId))?.name || "Turno",
+          sedeId: sedeDe(g.sedeId),
+          sedeNombre: sedeDe(g.sedeId) ? nombreSede.get(sedeDe(g.sedeId)!) || `Sede ${sedeDe(g.sedeId)}` : "",
           rolFrameId: g.rolFrameId ? String(g.rolFrameId) : null,
           nombreRol: g.nombreRol,
           userIds: [],
@@ -173,10 +196,11 @@ async function gruposDe(tenantObjectId: Types.ObjectId, project: any, equipo: IM
     }
   }
   const grupos = [...porClave.values()].sort((a, b) => {
-    const oa = ordenArea.get(a.areaId) ?? 999;
-    const ob = ordenArea.get(b.areaId) ?? 999;
+    const oa = ordenArea.get(claveFilaArea(a)) ?? ordenArea.get(a.areaId) ?? 999;
+    const ob = ordenArea.get(claveFilaArea(b)) ?? ordenArea.get(b.areaId) ?? 999;
     if (oa !== ob) return oa - ob;
     if (a.areaNombre !== b.areaNombre) return a.areaNombre.localeCompare(b.areaNombre, "es");
+    if (a.sedeNombre !== b.sedeNombre) return a.sedeNombre.localeCompare(b.sedeNombre, "es");
     const sa = Number(shiftPorId.get(a.shiftId)?.order ?? 0);
     const sb = Number(shiftPorId.get(b.shiftId)?.order ?? 0);
     if (sa !== sb) return sa - sb;
@@ -426,7 +450,8 @@ const miembroDe = (plan: IPlanVacaciones, userId: string): IMiembroDelPlan | und
 const grupoDeBody = (body: any) => {
   if (!idValido(body?.areaId) || !idValido(body?.shiftId)) throw new ErrorPlan("Falta el área o el turno del grupo.");
   const rolFrameId = idValido(body?.rolFrameId) ? String(body.rolFrameId) : null;
-  return { areaId: String(body.areaId), shiftId: String(body.shiftId), rolFrameId, nombreRol: String(body?.nombreRol || "") };
+  const sedeId = sedeDe(body?.sedeId);
+  return { areaId: String(body.areaId), shiftId: String(body.shiftId), ...(sedeId ? { sedeId } : {}), rolFrameId, nombreRol: String(body?.nombreRol || "") };
 };
 
 const validarMes = (mes: unknown, plan: IPlanVacaciones): string => {
@@ -484,6 +509,7 @@ export async function asignarMes(plan: IPlanVacaciones, body: any): Promise<{ bl
       userId: oid(b.userId),
       areaId: oid(g.areaId),
       shiftId: oid(g.shiftId),
+      ...(g.sedeId ? { sedeId: g.sedeId } : {}),
       rolFrameId: g.rolFrameId ? oid(g.rolFrameId) : null,
       nombreRol,
       mes,
@@ -540,6 +566,7 @@ export async function crearItem(plan: IPlanVacaciones, body: any): Promise<strin
     userId: m.userId,
     areaId: oid(g.areaId),
     shiftId: oid(g.shiftId),
+    ...(g.sedeId ? { sedeId: g.sedeId } : {}),
     rolFrameId: grupo.rolFrameId,
     nombreRol: grupo.nombreRol,
     mes: mesDe(body.desde),

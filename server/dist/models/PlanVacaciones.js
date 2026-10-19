@@ -3,6 +3,7 @@ import { ESTADOS_ITEM, ESTADOS_PLAN } from "../compartido/planVacaciones/estado.
 const grupoSchema = new Schema({
     areaId: { type: Schema.Types.ObjectId, ref: "Area", required: true },
     shiftId: { type: Schema.Types.ObjectId, ref: "Shift", required: true },
+    sedeId: { type: Number, default: undefined },
     rolFrameId: { type: Schema.Types.ObjectId, ref: "RoleFrame", default: null },
     nombreRol: { type: String, default: "" },
 }, { _id: false });
@@ -22,6 +23,7 @@ const itemSchema = new Schema({
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     areaId: { type: Schema.Types.ObjectId, ref: "Area", required: true },
     shiftId: { type: Schema.Types.ObjectId, ref: "Shift", required: true },
+    sedeId: { type: Number, default: undefined },
     rolFrameId: { type: Schema.Types.ObjectId, ref: "RoleFrame", default: null },
     nombreRol: { type: String, default: "" },
     mes: { type: String, required: true },
@@ -43,6 +45,7 @@ const itemSchema = new Schema({
 const reemplazoSchema = new Schema({
     areaId: { type: Schema.Types.ObjectId, ref: "Area", required: true },
     shiftId: { type: Schema.Types.ObjectId, ref: "Shift", required: true },
+    sedeId: { type: Number, default: undefined },
     rolFrameId: { type: Schema.Types.ObjectId, ref: "RoleFrame", default: null },
     nombreRol: { type: String, default: "" },
     mes: { type: String, required: true },
