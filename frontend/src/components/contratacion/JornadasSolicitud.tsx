@@ -91,7 +91,7 @@ export function JornadasSolicitud({ desde, hasta, rotativos, calculadas, dias = 
           <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{calculadas ?? "—"}</span>
           <input type="hidden" name="workdaysCount" value={valor} readOnly />
         </div>
-        <p className="text-[11px] text-slate-400">Base 30 del tipo de contrato «{fijadasPorTipo}»: un mes completo vale sus jornadas y un tramo de mes, sus días corridos. No dependen de los días marcados.</p>
+        <p className="text-[11px] text-slate-400">Las fija el tipo de contrato «{fijadasPorTipo}»: un mes completo vale sus jornadas. Un tramo de mes vale los días que trabaja en él (nunca más que el mes completo).</p>
       </div>
     );
   }

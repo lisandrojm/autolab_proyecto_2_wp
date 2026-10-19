@@ -66,9 +66,12 @@ export declare const jornadasDelCalendario: (desde: string | undefined, hasta: s
  * SALVO QUE EL TIPO DE CONTRATO LAS FIJE EN BASE 30 (pedido del 10/10/2026): un contrato por período
  * se liquida como un mensualizado. Su «Cantidad de jornadas» (30 en un plazo fijo) es lo que vale un
  * MES COMPLETO, tenga 28 o 31 días y se trabaje 5 o 6 días por semana; los días por semana sólo dicen
- * qué días del calendario se trabaja. Un tramo de mes (entra o termina a mitad de mes) vale sus DÍAS
- * CORRIDOS, francos incluidos: del 1 al 15 son 15 jornadas, no 11 hábiles. Con un tipo que no sea de
- * 30 (Servicios: 22), el tramo se lleva en proporción: días corridos × 22 ÷ 30.
+ * qué días del calendario se trabaja. Un tramo de mes (entra o termina a mitad de mes) vale LOS DÍAS
+ * QUE TRABAJA en él (pedido del 19/10/2026, para todos los tipos por período): los días de la semana
+ * marcados que caen en el tramo, con tope en lo que vale el mes completo. Del 1 al 15, de lunes a
+ * viernes, son 11. Antes valía sus días corridos en un tipo de 30 (15) y, en uno de 22, la proporción
+ * días corridos × 22 ÷ 30: un pedido del 19 al 20, lunes y martes, daba 1 jornada. Sin días marcados
+ * (rotativos) no hay de dónde contarlos y sigue la proporción.
  *
  * Con días SUELTOS («Jornada») no: cada día marcado es un jornal, y la «Cantidad de jornadas» del tipo
  * (22) es sólo el divisor del sueldo mensual para sacar el valor del jornal.
@@ -76,7 +79,7 @@ export declare const jornadasDelCalendario: (desde: string | undefined, hasta: s
  * Es la misma base de `importePorJornada` (escala ÷ jornadas del tipo) y de `mesesParaImportes`: con
  * un mes completo el mensual es jornada × 30 y el total, lo mismo.
  */
-export declare const jornadasFijadasPorElTipo: (jornadasDelTipo: unknown, porDiasSueltos: boolean, desde?: string, hasta?: string) => number | null;
+export declare const jornadasFijadasPorElTipo: (jornadasDelTipo: unknown, porDiasSueltos: boolean, desde?: string, hasta?: string, dias?: number[]) => number | null;
 export declare const jornadasCalculadasDelPedido: (p: {
     porDiasSueltos: boolean;
     fechas: string[];

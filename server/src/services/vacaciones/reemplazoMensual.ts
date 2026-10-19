@@ -114,7 +114,7 @@ export async function armarReemplazoMensual(tenantObjectId: Types.ObjectId, plan
   const diasPorSemana = semana?.diasPorSemana || diasSemana.length;
   const periodo = periodoDeCalculo(rango.desde, rango.hasta, false);
   const calculadas = jornadasCalculadasDelPedido({ porDiasSueltos: false, fechas: [], rotativos: false, desde: periodo.desde, hasta: periodo.hasta, dias: diasSemana, jornadasDelTipo: data.cantidadJornadas });
-  const jornadas = jornadasFijadasPorElTipo(data.cantidadJornadas, false, periodo.desde, periodo.hasta) ?? calculadas ?? 0;
+  const jornadas = jornadasFijadasPorElTipo(data.cantidadJornadas, false, periodo.desde, periodo.hasta, diasSemana) ?? calculadas ?? 0;
 
   // Lo que se paga por jornada: lo que diga el pedido; si no, la escala de la categoría.
   const categoriaSatId = esServicios ? "" : idValido(pedido.categoriaSatId) ? String(pedido.categoriaSatId) : "";
