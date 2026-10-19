@@ -214,7 +214,7 @@ export interface IUserMetadata {
   tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
   contratoId?: Types.ObjectId;
   nombre_contrato?: string;
-  areaShiftAssignments?: { areaId?: Types.ObjectId; shiftIds?: Types.ObjectId[] }[];
+  areaShiftAssignments?: { areaId?: Types.ObjectId; shiftIds?: Types.ObjectId[]; sedeId?: number }[];
   empresaContratoId?: Types.ObjectId;
   /** La sede pedida (`data.id` del Info `sede`): al aprobar pasa al `sede_id` del contrato. */
   sedeId?: number;
@@ -449,6 +449,7 @@ const userSchema = new Schema<IUser>(
           _id: false,
           areaId: { type: Schema.Types.ObjectId, ref: "Area" },
           shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift" }],
+          sedeId: { type: Number },
         },
       ],
       empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },

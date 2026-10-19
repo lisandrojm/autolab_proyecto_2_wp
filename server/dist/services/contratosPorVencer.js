@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { claveAreaTurno, clavesDelMiembro } from "../compartido/areaTurno.js";
 import UserProject from "../models/UserProject.js";
 import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
@@ -38,14 +39,14 @@ export const variantesDMY = (desde, dias) => {
 /** Las combinaciones área/turno de un contrato. */
 const combosDeContrato = (c) => {
     const desdeAsignaciones = (c.areaShiftAssignments || [])
-        .map((a) => ({ areaId: idDe(a.areaId), shiftIds: (a.shiftIds || []).map(idDe).filter(Boolean) }))
+        .map((a) => ({ areaId: idDe(a.areaId), shiftIds: (a.shiftIds || []).map(idDe).filter(Boolean), sedeId: a.sedeId }))
         .filter((a) => a.areaId && a.shiftIds.length > 0);
     if (desdeAsignaciones.length > 0)
         return desdeAsignaciones;
     return idDe(c.areaId) && idDe(c.shiftId) ? [{ areaId: idDe(c.areaId), shiftIds: [idDe(c.shiftId)] }] : [];
 };
 // Lo que se lee de cada contrato. Los contratos cargan documentación y firmas: traerlos enteros pesa.
-const CAMPOS_CONTRATO = ["fecha_alta_contrato", "fecha_baja_contrato", "nombre_contrato", "nombre_rol_frame", "rol_frame_id", "nombre_area", "nombre_turno", "areaId", "shiftId", "areaShiftAssignments", "hora_inicio", "hora_fin", "sueldo_jornada", "dias_por_semana", "dias_semana", "dias_rotativos", "empresaContratoId"];
+const CAMPOS_CONTRATO = ["fecha_alta_contrato", "fecha_baja_contrato", "nombre_contrato", "nombre_rol_frame", "rol_frame_id", "nombre_area", "nombre_turno", "areaId", "shiftId", "areaShiftAssignments", "hora_inicio", "hora_fin", "sueldo_jornada", "dias_por_semana", "dias_semana", "dias_rotativos", "empresaContratoId", "sede_id"];
 /*
   CACHÉ CORTA, POR PERSONA.
 
@@ -85,16 +86,19 @@ async function calcular(tenantId, userId, hoy, dias, vencidos = false) {
     // 1. De qué proyectos: los que supervisa (enteros) y los que coordina (sus áreas/turnos). En paralelo.
     const [{ proyectos: supervisados }, conCoordinacion] = await Promise.all([
         alcanceDeResponsable(tenant, String(userId)),
-        Project.find({ tenantId: tenant, "coordinatorAssignments.userId": yo }).select("_id coordinatorAssignments").lean(),
+        Project.find({ tenantId: tenant, "coordinatorAssignments.userId": yo }).select("_id coordinatorAssignments areasConfig").lean(),
     ]);
     const supervisa = new Set(supervisados.map(String));
+    // Lo que coordina, con la sede de cada fila: el supervisor de «Edición · Libertador» no ve los contratos de «Edición · Huidobro».
     const coordina = new Map();
+    const areasDe = new Map();
     for (const p of conCoordinacion) {
         const combos = new Set();
         for (const a of p.coordinatorAssignments || [])
             if (String(a.userId) === String(userId))
-                combos.add(`${a.areaId}::${a.shiftId}`);
+                combos.add(claveAreaTurno(a));
         coordina.set(String(p._id), combos);
+        areasDe.set(String(p._id), p.areasConfig || []);
     }
     const projectIds = [...new Set([...supervisa, ...coordina.keys()])];
     if (projectIds.length === 0)
@@ -138,7 +142,7 @@ async function calcular(tenantId, userId, hoy, dias, vencidos = false) {
                 continue;
             if (!supervisa.has(pid)) {
                 const mios = coordina.get(pid);
-                const suyos = combosDeContrato(c).flatMap((a) => a.shiftIds.map((s) => `${a.areaId}::${s}`));
+                const suyos = [...clavesDelMiembro(combosDeContrato(c), { areasConfig: areasDe.get(pid), sedeContrato: c.sede_id })];
                 if (!mios || !suyos.some((k) => mios.has(k)))
                     continue;
             }

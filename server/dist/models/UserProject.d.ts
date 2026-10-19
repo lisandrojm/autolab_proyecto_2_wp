@@ -292,6 +292,8 @@ interface IContract {
     areaShiftAssignments?: {
         areaId: Types.ObjectId | string;
         shiftIds: (Types.ObjectId | string)[];
+        /** La sede de esa fila del proyecto, si la tiene (ver `compartido/areaTurno.ts`). */
+        sedeId?: number;
     }[];
     /**
      * Flujo "Sin CUIT" (personas extranjeras que todavía no tienen CUIT/CUIL argentino). El trámite de

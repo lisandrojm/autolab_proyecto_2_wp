@@ -203,6 +203,7 @@ export interface IUserMetadata {
     areaShiftAssignments?: {
         areaId?: Types.ObjectId;
         shiftIds?: Types.ObjectId[];
+        sedeId?: number;
     }[];
     empresaContratoId?: Types.ObjectId;
     /** La sede pedida (`data.id` del Info `sede`): al aprobar pasa al `sede_id` del contrato. */

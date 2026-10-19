@@ -47,6 +47,7 @@ const projectSchema = new Schema({
                 {
                     areaId: { type: Schema.Types.ObjectId, ref: "Area" },
                     shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift" }],
+                    sedeId: { type: Number },
                 },
             ],
         },
@@ -113,6 +114,8 @@ const projectSchema = new Schema({
         {
             areaId: { type: Schema.Types.ObjectId, ref: "Area", required: true },
             shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift", required: true }],
+            // La sede de esta fila (`data.id` del Info «sede»). Sin sede = todas las sedes (ver `compartido/areaTurno.ts`).
+            sedeId: { type: Number },
         },
     ],
     coordinatorAssignments: [
@@ -120,6 +123,8 @@ const projectSchema = new Schema({
             areaId: { type: Schema.Types.ObjectId, ref: "Area", required: true },
             shiftId: { type: Schema.Types.ObjectId, ref: "Shift", required: true },
             userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+            // La sede de esta fila (`data.id` del Info «sede»). Sin sede = todas las sedes (ver `compartido/areaTurno.ts`).
+            sedeId: { type: Number },
         },
     ],
 }, { timestamps: true });

@@ -54,7 +54,8 @@ export interface DatosSolicitud {
   tipoImpositivo?: string;
   contratoId?: string;
   nombreContrato?: string;
-  areaShiftAssignments: { areaId: string; shiftIds: string[] }[];
+  /** `sedeId` opcional: la sede de esa fila del proyecto (ver `areaTurno.ts`). */
+  areaShiftAssignments: { areaId: string; shiftIds: string[]; sedeId?: number }[];
   esRenovacion?: boolean;
   renovacionDe?: { userProjectId: string; fechaBajaContrato: string };
 }

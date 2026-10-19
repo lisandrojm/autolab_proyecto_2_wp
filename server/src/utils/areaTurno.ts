@@ -1,21 +1,20 @@
+import { clavesDelMiembro, partirClaveAreaTurno, type FilaAreaConfig } from "../compartido/areaTurno.js";
+
 /**
  * ÁREA Y TURNO DE UN MIEMBRO EN UN PROYECTO, con la misma precedencia que usa la UI: lo que diga
  * `project.teamConfig` para esa persona y, si ahí no hay nada, las asignaciones de su contrato que
  * rige. Lo usan la Jerarquía, los conteos por área/turno y el plan de vacaciones por proyecto.
+ *
+ * La clave y la regla de la sede viven en `compartido/areaTurno.ts` (área × turno × sede, 18/10/2026).
  */
 
-/** Claves "areaId::shiftId" de un miembro, una por combinación (aunque la tenga repetida). */
-export function claveAreaTurnoDelMiembro(assignments: any[]): Set<string> {
-  const keys = new Set<string>();
-  for (const asa of assignments || []) {
-    const areaId = asa?.areaId?._id || asa?.areaId;
-    if (!areaId) continue;
-    for (const sid of asa?.shiftIds || []) {
-      const shiftId = sid?._id || sid;
-      if (shiftId) keys.add(`${areaId}::${shiftId}`);
-    }
-  }
-  return keys;
+/**
+ * Claves de un miembro, una por combinación. Sin `ctx`: "areaId::shiftId" como siempre (más la sede si
+ * la asignación la trae). Con `ctx` (el `areasConfig` del proyecto y la sede del contrato): cada
+ * combinación lleva la sede de la fila donde cae la persona.
+ */
+export function claveAreaTurnoDelMiembro(assignments: any[], ctx?: { areasConfig?: FilaAreaConfig[]; sedeContrato?: unknown }): Set<string> {
+  return clavesDelMiembro(assignments, ctx);
 }
 
 /** Las asignaciones que valen para el miembro: `teamConfig` primero, el contrato después. */
@@ -25,8 +24,7 @@ export function asignacionesDelMiembro(configDelMiembro: any, contrato: any): an
   return contrato?.areaShiftAssignments || [];
 }
 
-/** Separa una clave "areaId::shiftId". */
-export function partirClave(clave: string): { areaId: string; shiftId: string } {
-  const [areaId, shiftId] = clave.split("::");
-  return { areaId: areaId || "", shiftId: shiftId || "" };
+/** Separa una clave "areaId::shiftId[::s<sede>]". */
+export function partirClave(clave: string): { areaId: string; shiftId: string; sedeId: number | null } {
+  return partirClaveAreaTurno(clave);
 }

@@ -309,6 +309,8 @@ interface IContract {
   areaShiftAssignments?: {
     areaId: Types.ObjectId | string;
     shiftIds: (Types.ObjectId | string)[];
+    /** La sede de esa fila del proyecto, si la tiene (ver `compartido/areaTurno.ts`). */
+    sedeId?: number;
   }[];
   /**
    * Flujo "Sin CUIT" (personas extranjeras que todavía no tienen CUIT/CUIL argentino). El trámite de
@@ -505,6 +507,7 @@ const contractSchema = new Schema<IContract>(
       {
         areaId: { type: Schema.Types.ObjectId, ref: "Area" },
         shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift" }],
+        sedeId: { type: Number },
       },
     ],
     sinCuitValidacion: {

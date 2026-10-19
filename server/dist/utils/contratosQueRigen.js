@@ -54,7 +54,8 @@ export const fechaISOExpr = (campo) => ({
  * entrada si la persona no tiene vínculo con el proyecto.
  */
 /** Lo que devuelve siempre: lo que miran los contadores y la Jerarquía. */
-const CAMPOS_BASE = ["fecha_alta_contrato", "fecha_baja_contrato", "nombre_estado_empleado", "nombre_contrato", "areaShiftAssignments"];
+// `sede_id`: la sede del contrato decide en qué fila «área · sede» cae la persona (ver `compartido/areaTurno.ts`).
+const CAMPOS_BASE = ["fecha_alta_contrato", "fecha_baja_contrato", "nombre_estado_empleado", "nombre_contrato", "areaShiftAssignments", "sede_id"];
 /**
  * `camposExtra`: campos del contrato que además hacen falta. La tabla de Gestionar Equipo pide una
  * docena —tipo, reemplazo, horario, jornadas, empresas— porque los muestra en sus columnas. Se piden

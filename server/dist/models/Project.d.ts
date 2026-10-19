@@ -148,6 +148,7 @@ export interface IProject extends Document {
         areaShiftAssignments?: {
             areaId: Types.ObjectId;
             shiftIds: Types.ObjectId[];
+            sedeId?: number;
         }[];
     }[];
     favorite?: boolean;
@@ -173,14 +174,20 @@ export interface IProject extends Document {
     metadata?: IProjectMetadata;
     workSchedule?: IWorkSchedule;
     turnos: Types.ObjectId[];
+    /**
+     * Las áreas del proyecto con sus turnos. `sedeId` OPCIONAL (18/10/2026): la misma área puede estar
+     * una vez por sede, con un supervisor por sede. Sin sede, la fila vale para todas (ver `compartido/areaTurno.ts`).
+     */
     areasConfig?: {
         areaId: Types.ObjectId;
         shiftIds: Types.ObjectId[];
+        sedeId?: number;
     }[];
     coordinatorAssignments?: {
         areaId: Types.ObjectId;
         shiftId: Types.ObjectId;
         userId: Types.ObjectId;
+        sedeId?: number;
     }[];
 }
 export declare const Project: Model<IProject>;

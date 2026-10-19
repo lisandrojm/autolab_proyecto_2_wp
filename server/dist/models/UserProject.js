@@ -131,6 +131,7 @@ const contractSchema = new Schema({
         {
             areaId: { type: Schema.Types.ObjectId, ref: "Area" },
             shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift" }],
+            sedeId: { type: Number },
         },
     ],
     sinCuitValidacion: {

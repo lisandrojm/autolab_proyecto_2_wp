@@ -53,9 +53,11 @@ export interface DatosSolicitud {
     tipoImpositivo?: string;
     contratoId?: string;
     nombreContrato?: string;
+    /** `sedeId` opcional: la sede de esa fila del proyecto (ver `areaTurno.ts`). */
     areaShiftAssignments: {
         areaId: string;
         shiftIds: string[];
+        sedeId?: number;
     }[];
     esRenovacion?: boolean;
     renovacionDe?: {
@@ -113,6 +115,7 @@ export declare function armarPayloadDeSolicitud(d: DatosSolicitud, opciones?: Op
         areaShiftAssignments: {
             areaId: string;
             shiftIds: string[];
+            sedeId?: number;
         }[];
         esRenovacion: true;
         renovacionDe: {

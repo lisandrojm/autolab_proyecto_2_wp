@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { claveAreaTurno, clavesDelMiembro } from "../compartido/areaTurno.js";
 import { z } from "zod";
 import { Types } from "mongoose";
 import { User } from "../models/User.js";
@@ -70,7 +71,7 @@ const router = Router();
 */
 const estadoCanonico = claveEstado;
 async function resolveProjectTeamFilterIds(projectId, filtros) {
-    const project = await Project.findById(projectId).select("teamConfig coordinatorAssignments").lean();
+    const project = await Project.findById(projectId).select("teamConfig coordinatorAssignments areasConfig").lean();
     if (!project)
         return [];
     /*
@@ -128,25 +129,14 @@ async function resolveProjectTeamFilterIds(projectId, filtros) {
             continue;
         if (filtros.areaTurno) {
             // Área/turno del miembro: teamConfig + lo que coordina (si es coordinador).
-            const keys = new Set();
-            for (const asa of configByUser.get(String(member._id))?.areaShiftAssignments || []) {
-                const areaId = asa?.areaId?._id || asa?.areaId;
-                if (!areaId)
-                    continue;
-                for (const sid of asa?.shiftIds || []) {
-                    const shiftId = sid?._id || sid;
-                    if (shiftId)
-                        keys.add(`${areaId}::${shiftId}`);
-                }
-            }
+            // Claves con la sede de la fila (área × turno × sede, ver `compartido/areaTurno.ts`); sin sedes por área, como siempre.
+            const keys = clavesDelMiembro(configByUser.get(String(member._id))?.areaShiftAssignments || [], { areasConfig: project.areasConfig, sedeContrato: contratoActivo?.sede_id });
             if (esCoordinador(member)) {
                 for (const asm of project.coordinatorAssignments || []) {
                     if (String(asm?.userId) !== String(member._id))
                         continue;
-                    const areaId = asm?.areaId?._id || asm?.areaId;
-                    const shiftId = asm?.shiftId?._id || asm?.shiftId;
-                    if (areaId && shiftId)
-                        keys.add(`${areaId}::${shiftId}`);
+                    if (asm?.areaId && asm?.shiftId)
+                        keys.add(claveAreaTurno(asm));
                 }
             }
             if (filtros.areaTurno === "__none__") {

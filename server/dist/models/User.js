@@ -118,6 +118,7 @@ const userSchema = new Schema({
                 _id: false,
                 areaId: { type: Schema.Types.ObjectId, ref: "Area" },
                 shiftIds: [{ type: Schema.Types.ObjectId, ref: "Shift" }],
+                sedeId: { type: Number },
             },
         ],
         empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
