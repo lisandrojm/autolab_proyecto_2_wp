@@ -528,7 +528,8 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
         // `valoracionId`/`valoracionManual`: la solicitud del móvil FILTRA las categorías por la valoración del
         // proyecto y muestra su tag. Sin estos dos campos ese filtro no se aplicaba nunca —se ofrecían todas las
         // categorías, de cualquier nivel— y el tag decía «sin valorar» en un proyecto que sí lo estaba.
-        .select("name status clientId contratoEmpresas convenioIds coordinatorAssignments metadata.responsableId metadata.sedeId metadata.sedeIds valoracionId valoracionManual valoracionesPorRol")
+        // `metadata.centroCosto*`: la solicitud muestra el centro de costo de cada proyecto al elegirlo (19/10/2026).
+        .select("name status clientId contratoEmpresas convenioIds coordinatorAssignments metadata.responsableId metadata.sedeId metadata.sedeIds metadata.centroCostoId metadata.centroCostoEmpresaTangoId valoracionId valoracionManual valoracionesPorRol")
         .populate("clientId", "name")
         .populate("coordinatorAssignments.areaId", "name")
         .populate("coordinatorAssignments.shiftId", "name startTime endTime order days")
@@ -547,6 +548,9 @@ router.get("/projects", requireTenant, authenticateToken, requireAnyRole, async 
       for (const p of proyectos) {
         p.coordinatorAssignments = (p.coordinatorAssignments || []).filter((a: any) => String(typeof a.userId === "object" ? a.userId?._id : a.userId) === yo);
       }
+
+      // El centro de costo, resuelto como en el listado normal: una consulta para todos.
+      await resolverCentroCostoDeProyectos(proyectos);
 
       res.json({
         projects: proyectos,

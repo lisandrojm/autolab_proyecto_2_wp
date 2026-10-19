@@ -52,6 +52,7 @@ import { MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, PROJECT_SUPERVISOR } from "..
 import { plantillasEquipoAPI } from "../../../../api/plantillasEquipo";
 import Swal from "sweetalert2";
 import { copiarMiLinkDeRegistro } from "../utils/portapapeles";
+import { nombreCentroCosto } from "../../../../utils/centroCosto";
 
 
 /**
@@ -127,6 +128,18 @@ interface UserRegistrationModalProps {
    */
   renovacion?: { plantilla: any; userProjectId: string; fechaBajaContrato: string } | null;
 }
+
+
+/** El centro de costo del proyecto, como badge (el mismo color que en la ficha del proyecto). Sin centro, nada. */
+const BadgeCentroCosto = ({ proyecto }: { proyecto: any }) => {
+  const cc = nombreCentroCosto(proyecto);
+  if (!cc) return null;
+  return (
+    <span title={`Centro de costo ${cc}`} className="shrink-0 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400">
+      CC {cc}
+    </span>
+  );
+};
 
 export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ isOpen, onClose, onSuccess, editingUser, renovacion }) => {
   const { profile } = useProfile();
@@ -1386,9 +1399,13 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, proyectoDelAlta, replacedSearchTerm, selectedUser?._id]);
 
-  // Auto-select project if only one exists or when projects list changes
+  /*
+    PROYECTO POR DEFECTO SÓLO SI HAY UNO (pedido del 19/10/2026). Con varios se elegía el primero de la
+    lista sin que nadie lo decidiera, y la solicitud salía para un proyecto que el coordinador no miró.
+    Ahora, con más de uno, el campo dice «Seleccionar proyecto» y abre la ventana para elegirlo.
+  */
   useEffect(() => {
-    if (projects.length > 0 && formData.projectIds.length === 0) {
+    if (projects.length === 1 && formData.projectIds.length === 0) {
       setFormData((prev) => ({ ...prev, projectIds: [projects[0]._id] }));
     }
   }, [projects, formData.projectIds.length]);
@@ -2323,16 +2340,26 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             <div className="flex items-center justify-center py-4 text-slate-500 italic text-sm">No hay proyectos disponibles</div>
           ) : (
             <div className="flex items-center gap-2">
+              {!proyectoElegido ? (
+                // Varios proyectos y ninguno elegido: el campo entero abre la ventana para elegirlo.
+                <button type="button" onClick={() => setProyectoModalOpen(true)} className="flex flex-1 items-center gap-3 rounded-lg border border-dashed border-blue-300 bg-white p-3 text-left transition-colors hover:bg-blue-50 dark:border-blue-700 dark:bg-slate-900 dark:hover:bg-blue-900/20">
+                  <FontAwesomeIcon icon={faBriefcase} className="text-[10px] text-blue-500" />
+                  <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">Seleccionar proyecto</span>
+                  <span className="ml-auto text-[11px] text-slate-400">{projects.length} disponibles</span>
+                </button>
+              ) : (
               <div className="flex flex-1 items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-left dark:border-blue-700 dark:bg-blue-900/20">
                 <FontAwesomeIcon icon={faBriefcase} className="text-[10px] text-blue-500" />
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-400">{proyectoElegido ? etiquetaProyecto(proyectoElegido) : "Elegí un proyecto"}</span>
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-400">{etiquetaProyecto(proyectoElegido)}</span>
+                <BadgeCentroCosto proyecto={proyectoElegido} />
                 {/* LA VALORACIÓN DEL PROYECTO, ACÁ ARRIBA.
                     Es la que decide qué categorías corresponden —el selector de abajo filtra por ella y avisa
                     cuando la elegida difiere—, así que tenerla a la vista desde el principio evita elegir una
                     categoría y recién ahí enterarse de contra qué se la está comparando. */}
-                {proyectoElegido && <ChipValoracionDelProyecto project={proyectoElegido} valoraciones={valoraciones} mostrarSinValorar className="ml-auto shrink-0" />}
+                <ChipValoracionDelProyecto project={proyectoElegido} valoraciones={valoraciones} mostrarSinValorar className="ml-auto shrink-0" />
               </div>
-              {projects.length > 1 && (
+              )}
+              {projects.length > 1 && proyectoElegido && (
                 <button type="button" onClick={() => setProyectoModalOpen(true)} className="shrink-0 rounded-lg border border-slate-300 px-3 py-3 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800">
                   Cambiar
                 </button>
@@ -3482,6 +3509,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                   {/* Redondo: es una opción entre varias, no una casilla que se suma. */}
                   <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{isSelected && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</div>
                   <span className="text-sm font-medium">{etiquetaProyecto(p)}</span>
+                  <BadgeCentroCosto proyecto={p} />
                   {/* El nivel de cada proyecto al elegir, no después: es lo que va a definir qué categorías se
                       ofrecen para esta contratación. */}
                   <ChipValoracionDelProyecto project={p} valoraciones={valoraciones} mostrarSinValorar className="ml-auto shrink-0" />
