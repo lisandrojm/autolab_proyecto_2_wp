@@ -1282,6 +1282,8 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
                 estadoContrato: contratoActivo?.nombre_estado_empleado || "",
                 fechaAlta: contratoActivo?.fecha_alta_contrato || "",
                 fechaBaja: contratoActivo?.fecha_baja_contrato || "",
+                // La sede del contrato que rige: con ella la Jerarquía ubica a cada uno en su fila área + sede.
+                sedeContrato: sedeDe(contratoActivo?.sede_id),
             });
         }
         rows.sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, "es", { sensitivity: "base" }));

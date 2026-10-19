@@ -3,6 +3,7 @@ import { valoracionesDeCategoria } from '@compartido/valoracionesDeCategoria';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from '../api/axiosConfig';
 import { projectsAPI, Project, AreaShiftMembersResponse } from '../api/projects';
+import { claveAreaTurno, claveFilaArea, sedeDe, sedeEnArea } from '@compartido/areaTurno';
 import { usersAPI, User, Contract } from '../api/users';
 import { useAuthStore } from '../stores/authStore';
 import { sweetAlert } from '../utils/sweetAlert';
@@ -970,7 +971,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const projectMap = useMemo(() => new Map(allProjects.map((p) => [p._id, p])), [allProjects]);
   const clientMap = useMemo(() => new Map(allClients.map((c) => [c._id, c])), [allClients]);
 
-  // Combinaciones Área · Turno configuradas en el proyecto (para el filtro).
+  /** El nombre de una sede por su `data.id`, o "" sin sede: el sufijo de «Edición · Libertador». */
+  const nombreDeSedeId = (id: number | null | undefined): string => (id ? allSedes.find((x) => Number(x.data?.id) === Number(id))?.name || `Sede ${id}` : '');
+
+  // Combinaciones Área · Turno configuradas en el proyecto (para el filtro). Una fila con sede da su
+  // propia opción («Edición · Libertador · Mañana»), con la misma clave que usa el server para filtrar.
   const areaTurnoOptions = useMemo(() => {
     const opts: { value: string; label: string }[] = [];
     const seen = new Set<string>();
@@ -982,14 +987,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         const sId = typeof sid === 'object' ? sid?._id : sid;
         const sName = typeof sid === 'object' ? sid?.name : allShifts.find((s) => String(s._id) === String(sId))?.name;
         if (!sId || !sName) return;
-        const key = `${aId}::${sId}`;
+        const sedeId = sedeDe(ac.sedeId);
+        const key = claveAreaTurno({ areaId: aId, shiftId: sId, sedeId });
         if (seen.has(key)) return;
         seen.add(key);
-        opts.push({ value: key, label: `${aName} · ${sName}` });
+        opts.push({ value: key, label: sedeId ? `${aName} · ${nombreDeSedeId(sedeId)} · ${sName}` : `${aName} · ${sName}` });
       });
     });
     return opts;
-  }, [project, allAreas, allShifts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project, allAreas, allShifts, allSedes]);
 
   // Estados de contrato para filtrar: el catálogo (Info "estados") más los que aparezcan en los contratos
   // cargados, por si alguno quedó con un estado que ya no está en el catálogo.
@@ -1811,16 +1818,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
   // Personas ACTIVAS y con contrato VIGENTE asignadas a ese área + turno exacto (incluye al
   // coordinador si él también pertenece a esa combinación). Lo calcula el server sobre el equipo completo.
-  const getAreaShiftPeopleCount = (areaId: string, shiftId: string): number => areaShiftCounts[`${areaId}::${shiftId}`] || 0;
+  const getAreaShiftPeopleCount = (areaId: string, shiftId: string, sedeId?: number | null): number => areaShiftCounts[claveAreaTurno({ areaId, shiftId, sedeId })] || 0;
 
   /**
    * Total del área sumando esos turnos, contando a cada persona UNA sola vez: alguien asignado a
    * dos turnos de la misma área es una persona, no dos.
    */
-  const getAreaPeopleCount = (areaId: string, shiftIds: string[]): number => {
+  const getAreaPeopleCount = (areaId: string, shiftIds: string[], sedeId?: number | null): number => {
     const unicos = new Set<string>();
     for (const shiftId of shiftIds) {
-      for (const userId of areaShiftUserIds[`${areaId}::${shiftId}`] || []) unicos.add(userId);
+      for (const userId of areaShiftUserIds[claveAreaTurno({ areaId, shiftId, sedeId })] || []) unicos.add(userId);
     }
     return unicos.size;
   };
@@ -1828,13 +1835,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   // Detalle de quiénes están en ese área + turno (todo el equipo, no solo la página cargada).
   // Con `shift` en null se listan los turnos de `shiftsDelArea`, que son los que coordina esa
   // persona: el modal del área no muestra turnos del área que el coordinador no tiene asignados.
-  const handleOpenAreaShiftDetail = async (areaId: string, areaName: string, shift: any | null, shiftsDelArea?: any[]) => {
+  const handleOpenAreaShiftDetail = async (areaId: string, areaName: string, shift: any | null, shiftsDelArea?: any[], sedeId?: number | null) => {
     if (!projectId) return;
     setViewingAreaShift({ areaId, areaName, shift, shifts: shiftsDelArea });
     setAreaShiftMembers(null);
     setLoadingAreaShiftMembers(true);
     try {
-      setAreaShiftMembers(await projectsAPI.getAreaShiftMembers(projectId, areaId, shift ? String(shift._id) : undefined, shift ? undefined : (shiftsDelArea || []).map((s) => String(s._id))));
+      // `sedeId`: la fila área + sede (sin sede, la fila «todas las sedes», como siempre).
+      setAreaShiftMembers(await projectsAPI.getAreaShiftMembers(projectId, areaId, shift ? String(shift._id) : undefined, shift ? undefined : (shiftsDelArea || []).map((s) => String(s._id)), sedeId));
     } catch (e) {
       console.error('Error fetching area/shift members:', e);
       sweetAlert.error('Error', 'No se pudo cargar el detalle del área/turno.');
@@ -1845,13 +1853,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   };
 
   // Get coordinated shifts for a user assigned to an area
-  const getCoordinatedShifts = (user: User, areaId: string) => {
+  // `sedeId` (opcional): sólo los turnos que supervisa en esa fila área + sede. Sin pasarlo, todos los del área.
+  const getCoordinatedShifts = (user: User, areaId: string, sedeId?: number | null) => {
     let shifts: any[] = [];
     if (!user) return shifts;
     if (project?.coordinatorAssignments) {
       const myCoordAsgn = project.coordinatorAssignments.filter((asm) => {
         const uid = typeof asm.userId === 'object' ? (asm.userId as any)?._id : asm.userId;
         const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
+        if (sedeId !== undefined && sedeDe(asm.sedeId) !== sedeId) return false;
         return String(uid) === String(user._id) && String(aid) === String(areaId);
       });
       myCoordAsgn.forEach((asm) => {
@@ -3145,7 +3155,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             const isCoord = checkIsCoordinator(user);
 
             // Build area data list
-            let areaData: { id: string; name: string }[] = [];
+            let areaData: { id: string; name: string; sede?: string }[] = [];
+            // La sede en que cae en esa área (sólo si el proyecto tiene esa área por sede): se muestra «Edición · Libertador».
+            const sedeDeLaFila = (asa: any, aId: any) => nombreDeSedeId(sedeEnArea(project?.areasConfig as any, aId, asa?.sedeId, activeContract?.sede_id));
 
             // 1. Priority: Detailed project team configuration (areaShiftAssignments)
             const config = teamConfig.find((c) => String(c.userId) === String(user._id));
@@ -3154,9 +3166,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                 .map((asa: any) => {
                   const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
                   const aName = typeof asa.areaId === 'object' ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId) || String(a.data?.id) === String(aId))?.name;
-                  return aName ? { id: String(aId), name: aName } : null;
+                  return aName ? { id: String(aId), name: aName, sede: sedeDeLaFila(asa, aId) } : null;
                 })
-                .filter(Boolean) as { id: string; name: string }[];
+                .filter(Boolean) as { id: string; name: string; sede?: string }[];
             }
 
             // 1b. Alternative: Check last contract in projects metadata (backup source)
@@ -3165,9 +3177,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                 .map((asa: any) => {
                   const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
                   const aName = typeof asa.areaId === 'object' ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
-                  return aName ? { id: String(aId), name: aName } : null;
+                  return aName ? { id: String(aId), name: aName, sede: sedeDeLaFila(asa, aId) } : null;
                 })
-                .filter(Boolean) as { id: string; name: string }[];
+                .filter(Boolean) as { id: string; name: string; sede?: string }[];
             }
             // 2. Secondary: If coordinator and no detailed config, check coordinatorAssignments
             if (areaData.length === 0 && isCoord && project?.coordinatorAssignments) {
@@ -3202,7 +3214,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   return (
                     <div key={i} className="flex flex-col gap-1">
                       <div className="group relative flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 pl-2 pr-1 py-1 rounded-lg border border-blue-100 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-600 transition-all w-fit">
-                        <span className="text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{ad.name}</span>
+                        <span className="text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+                          {ad.name}
+                          {ad.sede && <span className="normal-case tracking-normal text-orange-500"> · {ad.sede}</span>}
+                        </span>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -3241,12 +3256,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
             if (myCoordinatedAssignments.length === 0) return <span className="text-xs text-gray-400">—</span>;
 
-            const coordAreaDataMap = new Map<string, { id: string; name: string }>();
+            // Una entrada por fila área + sede: quien supervisa Edición en dos sedes ve dos chips, cada uno con su número.
+            const coordAreaDataMap = new Map<string, { id: string; name: string; sedeId: number | null }>();
             myCoordinatedAssignments.forEach((asm) => {
               const aid = typeof asm.areaId === 'object' ? (asm.areaId as any)?._id : asm.areaId;
               const aName = typeof asm.areaId === 'object' ? (asm.areaId as any)?.name : allAreas.find((a) => String(a._id) === String(aid))?.name;
               if (aid && aName) {
-                coordAreaDataMap.set(String(aid), { id: String(aid), name: aName });
+                const sedeId = sedeDe(asm.sedeId);
+                coordAreaDataMap.set(claveFilaArea({ areaId: String(aid), sedeId }), { id: String(aid), name: sedeId ? `${aName} · ${nombreDeSedeId(sedeId)}` : aName, sedeId });
               }
             });
 
@@ -3255,12 +3272,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             return (
               <div className="flex flex-wrap items-center gap-1.5">
                 {coordAreaData.map((ad, i) => {
-                  const shifts = getCoordinatedShifts(user, ad.id);
+                  const shifts = getCoordinatedShifts(user, ad.id, ad.sedeId);
                   // Total del área: personas distintas entre todos sus horarios (sin repetir a
                   // quien esté asignado a más de uno).
                   const totalArea = getAreaPeopleCount(
                     ad.id,
                     shifts.map((s) => String(s._id)),
+                    ad.sedeId,
                   );
                   return (
                     <div key={i} className="flex flex-col gap-1">
@@ -3269,7 +3287,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleOpenAreaShiftDetail(ad.id, ad.name, null, shifts);
+                            handleOpenAreaShiftDetail(ad.id, ad.name, null, shifts, ad.sedeId);
                           }}
                           className="text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap hover:text-amber-900 dark:hover:text-amber-200 transition-colors cursor-pointer"
                           title={`Ver las personas de ${ad.name} en los horarios que supervisa: ${totalArea} activa${totalArea === 1 ? '' : 's'} con contrato vigente (cada persona una sola vez)`}
@@ -3291,14 +3309,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       {shifts.length > 0 && (
                         <div className="flex flex-col gap-1 mt-0.5 pl-0.5">
                           {shifts.map((s, idx) => {
-                            const coordinados = getAreaShiftPeopleCount(ad.id, String(s._id));
+                            const coordinados = getAreaShiftPeopleCount(ad.id, String(s._id), ad.sedeId);
                             return (
                               <button
                                 key={idx}
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleOpenAreaShiftDetail(ad.id, ad.name, s);
+                                  handleOpenAreaShiftDetail(ad.id, ad.name, s, undefined, ad.sedeId);
                                 }}
                                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50/50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100/50 dark:border-amber-900/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:border-amber-300 dark:hover:border-amber-700 transition-colors whitespace-nowrap w-fit cursor-pointer"
                                 title={`Ver las ${coordinados} persona${coordinados === 1 ? '' : 's'} activa${coordinados === 1 ? '' : 's'} con contrato vigente en ${ad.name} / ${s.name}`}
@@ -3336,7 +3354,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               if (!uid || !aid) continue;
               const nombreArea = (typeof asm.areaId === 'object' ? asm.areaId?.name : '') || allAreas.find((a) => String(a._id) === String(aid))?.name || 'Área';
               if (!areasPorCoordinador.has(String(uid))) areasPorCoordinador.set(String(uid), new Map());
-              areasPorCoordinador.get(String(uid))!.set(String(aid), nombreArea);
+              const sedeAsm = sedeDe(asm.sedeId);
+              areasPorCoordinador.get(String(uid))!.set(claveFilaArea({ areaId: String(aid), sedeId: sedeAsm }), sedeAsm ? `${nombreArea} · ${nombreDeSedeId(sedeAsm)}` : nombreArea);
             }
             if (areasPorCoordinador.size === 0) return <span className="text-xs italic text-gray-400">Sin supervisores</span>;
 

@@ -173,8 +173,10 @@ export interface AreaShiftMember {
   cuenta: boolean;
   /** Turnos que la persona tiene en el área consultada. */
   shiftIds: string[];
-  /** Todas sus combinaciones "areaId::shiftId" en el proyecto, sin importar el área consultada. */
+  /** Todas sus combinaciones "areaId::shiftId[::s<sede>]" en el proyecto, sin importar el área consultada. */
   claves?: string[];
+  /** La sede (`data.id`) del contrato que rige, o null. */
+  sedeContrato?: number | null;
   nombreContrato: string;
   estadoContrato: string;
   fechaAlta: string;
@@ -509,8 +511,10 @@ class ProjectsAPI {
    * Con `shiftIds` se acota a esos horarios (los que coordina esa persona); sin ninguno de los dos,
    * devuelve el área completa.
    */
-  async getAreaShiftMembers(projectId: string, areaId: string, shiftId?: string, shiftIds?: string[]): Promise<AreaShiftMembersResponse> {
+  async getAreaShiftMembers(projectId: string, areaId: string, shiftId?: string, shiftIds?: string[], sedeId?: number | null): Promise<AreaShiftMembersResponse> {
     const sp = new URLSearchParams({ areaId });
+    // La fila con sede (área × turno × sede): sin sede, la fila «todas las sedes» como siempre.
+    if (sedeId) sp.append("sedeId", String(sedeId));
     if (shiftId) sp.append("shiftId", shiftId);
     else if (shiftIds?.length) sp.append("shiftIds", shiftIds.join(","));
     const resp = await axios.get(`/projects/${projectId}/area-shift-members?${sp.toString()}`, {

@@ -10,6 +10,9 @@ import { Shift } from "../../api/shifts";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { coordinaAreas } from "../../utils/permisosMobile";
 import { claveOrdenTurno, etiquetaDeTurno, textoDeDias } from "../../utils/jerarquiaTurnos";
+import { claveAreaTurno, claveFilaArea, clavesDelMiembro, partirClaveAreaTurno, sedeDe } from "@compartido/areaTurno";
+import { cachedFetch } from "../../utils/refCache";
+import { infoAPI } from "../../api/info";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -43,11 +46,13 @@ interface Props {
   onRefresh: () => void;
 }
 
-/** Una columna: un turno de un área. Es la unidad que coordina una persona. */
+/** Una columna: un turno de un área (en una sede, si la fila la tiene). Es la unidad que coordina una persona. */
 interface Columna {
+  /** `claveAreaTurno`: "areaId::shiftId", o "areaId::shiftId::s<sede>" en una fila con sede. */
   clave: string;
   areaId: string;
   shiftId: string;
+  sedeId: number | null;
   turnoNombre: string;
   horario: string;
   /** Los días del turno, ya en texto. Se muestran en el área cuando todos sus turnos coinciden. */
@@ -60,7 +65,11 @@ interface Columna {
 /** Un área con sus turnos: así se agrupa la pantalla. */
 interface Bloque {
   areaId: string;
+  /** La fila de `areasConfig` (área + sede): la misma área puede aparecer una vez por sede. */
+  filaClave: string;
+  sedeId: number | null;
   areaNombre: string;
+  sedeNombre: string;
   /** Vacío cuando los turnos del área no trabajan los mismos días: ahí cada uno los dice por su cuenta. */
   diasComunes: string;
   turnos: Columna[];
@@ -202,6 +211,36 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
 
   const porId = useMemo(() => new Map(teamMembers.map((u) => [String(u._id), u])), [teamMembers]);
 
+  /** El nombre de cada sede, para el título «Edición · Libertador» de las filas con sede. */
+  const [sedesCatalogo, setSedesCatalogo] = useState<Array<{ name?: string; data?: any }>>([]);
+  useEffect(() => {
+    cachedFetch("info:sede", () => infoAPI.listByType("sede"))
+      .then((l) => setSedesCatalogo(l as any[]))
+      .catch(() => {
+        /* sin catálogo: la fila dice «Sede N» */
+      });
+  }, []);
+
+  /*
+    El estado de TODO el equipo (ver más abajo cómo se usa). Se pide acá, antes de armar los bloques,
+    porque trae la sede del contrato de cada uno: con ella se decide en qué fila área + sede cae.
+  */
+  const [estadoGeneral, setEstadoGeneral] = useState<Map<string, AreaShiftMember> | null>(null);
+  useEffect(() => {
+    let cancelado = false;
+    projectsAPI
+      .getProjectMembersStatus(project._id)
+      .then((members) => {
+        if (!cancelado) setEstadoGeneral(new Map(members.map((m) => [String(m._id), m])));
+      })
+      .catch(() => {
+        /* sin detalle: las tarjetas se muestran sin estado, como antes */
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [project._id, project.areasConfig, project.teamConfig, project.coordinatorAssignments]);
+
   /**
    * El supervisor del proyecto.
    *
@@ -230,22 +269,37 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
     const turnoPorId = new Map(allShifts.map((s) => [String(s._id), s]));
 
     const asignacionesDe = (userId: string) => (project.teamConfig || []).find((c: any) => idDe(c.userId) === userId)?.areaShiftAssignments || [];
+    // Las claves de cada persona con su sede (la de su asignación, o la de su contrato si el área está en esa sede).
+    const clavesDe = new Map<string, Set<string>>(
+      teamMembers.map((u) => [
+        String(u._id),
+        clavesDelMiembro(asignacionesDe(String(u._id)) as any[], { areasConfig: (project.areasConfig || []) as any[], sedeContrato: estadoGeneral?.get(String(u._id))?.sedeContrato }),
+      ]),
+    );
+    const nombreSede = (id: number | null) => {
+      if (!id) return "";
+      const sd = sedesCatalogo.find((x) => Number(x.data?.id) === id);
+      return String(sd?.data?.nombre || sd?.name || `Sede ${id}`);
+    };
 
     const res: Bloque[] = [];
     for (const ac of project.areasConfig || []) {
       const areaId = idDe(ac.areaId);
+      const sedeId = sedeDe((ac as any).sedeId);
       const turnos: Columna[] = [];
 
       for (const s of ac.shiftIds || []) {
         const shiftId = idDe(s);
         const turno = turnoPorId.get(shiftId);
         const nombreCrudo = turno?.name || (typeof s === "object" ? (s as any)?.name : "") || "Turno";
-        const coordAsig = (project.coordinatorAssignments || []).find((a: any) => idDe(a.areaId) === areaId && idDe(a.shiftId) === shiftId);
+        const clave = claveAreaTurno({ areaId, shiftId, sedeId });
+        const coordAsig = (project.coordinatorAssignments || []).find((a: any) => claveAreaTurno(a) === clave);
 
         turnos.push({
-          clave: areaId + "::" + shiftId,
+          clave,
           areaId,
           shiftId,
+          sedeId,
           turnoNombre: etiquetaDeTurno(nombreCrudo),
           horario: turno?.startTime && turno?.endTime ? turno.startTime + " a " + turno.endTime : "",
           dias: textoDeDias(turno?.days),
@@ -254,7 +308,7 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
           coordinador: coordAsig ? porId.get(idDe(coordAsig.userId)) || null : null,
           colaboradores: teamMembers.filter((u) => {
             if (coordAsig && idDe(coordAsig.userId) === String(u._id)) return false;
-            return (asignacionesDe(String(u._id)) as any[]).some((a) => idDe(a.areaId) === areaId && (a.shiftIds || []).some((x: any) => idDe(x) === shiftId));
+            return clavesDe.get(String(u._id))?.has(clave) || false;
           }),
         });
       }
@@ -267,14 +321,17 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
       const distintos = new Set(turnos.map((t) => t.dias));
       res.push({
         areaId,
+        filaClave: claveFilaArea({ areaId, sedeId }),
+        sedeId,
+        sedeNombre: nombreSede(sedeId),
         areaNombre: nombreArea.get(areaId) || (typeof ac.areaId === "object" ? (ac.areaId as any)?.name : "") || "Área",
         diasComunes: distintos.size === 1 ? turnos[0].dias : "",
         turnos,
       });
     }
 
-    return res.sort((a, b) => a.areaNombre.localeCompare(b.areaNombre));
-  }, [project, allAreas, allShifts, teamMembers, porId]);
+    return res.sort((a, b) => a.areaNombre.localeCompare(b.areaNombre) || a.sedeNombre.localeCompare(b.sedeNombre));
+  }, [project, allAreas, allShifts, teamMembers, porId, estadoGeneral, sedesCatalogo]);
 
   /**
    * El estado de TODO el equipo, en una sola llamada: quién suma y quién no (activo y con contrato
@@ -286,23 +343,8 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
    * eran ~10 MB para mostrar unos colores. Se vuelve a pedir después de cada movimiento. `null`
    * mientras no llegó: ahí las tarjetas se muestran sin estado.
    */
-  const [estadoGeneral, setEstadoGeneral] = useState<Map<string, AreaShiftMember> | null>(null);
-  useEffect(() => {
-    let cancelado = false;
-    projectsAPI
-      .getProjectMembersStatus(project._id)
-      .then((members) => {
-        if (!cancelado) setEstadoGeneral(new Map(members.map((m) => [String(m._id), m])));
-      })
-      .catch(() => {
-        /* sin detalle: las tarjetas se muestran sin estado, como antes */
-      });
-    return () => {
-      cancelado = true;
-    };
-  }, [project._id, project.areasConfig, project.teamConfig, project.coordinatorAssignments]);
 
-  /** Las personas de cada turno ("areaId::shiftId"), armado una vez por respuesta y no por columna. */
+  /** Las personas de cada turno ("areaId::shiftId[::s<sede>]"), armado una vez por respuesta y no por columna. */
   const personasPorTurno = useMemo(() => {
     if (!estadoGeneral) return null;
     const m = new Map<string, AreaShiftMember[]>();
@@ -393,29 +435,33 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
               areaId: idDe(a.areaId),
               shiftId: idDe(a.shiftId),
               userId: idDe(a.userId),
+              ...(sedeDe(a.sedeId) ? { sedeId: sedeDe(a.sedeId)! } : {}),
             })),
         });
       }
 
       if (zona.startsWith("coord::")) {
-        // A cargo de un área: se reemplaza al coordinador de esa combinación área+turno.
-        const [, areaId, shiftId] = zona.split("::");
-        const otras = (project.coordinatorAssignments || []).filter((a: any) => !(idDe(a.areaId) === areaId && idDe(a.shiftId) === shiftId));
+        // A cargo de un área: se reemplaza al coordinador de esa combinación área + turno (+ sede).
+        const clave = zona.slice("coord::".length);
+        const { areaId, shiftId, sedeId } = partirClaveAreaTurno(clave);
+        const otras = (project.coordinatorAssignments || []).filter((a: any) => claveAreaTurno(a) !== clave);
         await projectsAPI.updateProject(project._id, {
           coordinatorAssignments: [
             ...otras.map((a: any) => ({
               areaId: idDe(a.areaId),
               shiftId: idDe(a.shiftId),
               userId: idDe(a.userId),
+              ...(sedeDe(a.sedeId) ? { sedeId: sedeDe(a.sedeId)! } : {}),
             })),
-            { areaId, shiftId, userId: String(persona._id) },
+            { areaId, shiftId, userId: String(persona._id), ...(sedeId ? { sedeId } : {}) },
           ],
         });
       } else if (zona === "sin-asignar") {
         await projectsAPI.asignarAreasDeMiembro(project._id, String(persona._id), []);
       } else {
-        const [areaId, shiftId] = zona.split("::");
-        await projectsAPI.asignarAreasDeMiembro(project._id, String(persona._id), [{ areaId, shiftIds: [shiftId] }]);
+        // La zona es la clave de la columna: en una fila con sede, la asignación se lleva esa sede.
+        const { areaId, shiftId, sedeId } = partirClaveAreaTurno(zona);
+        await projectsAPI.asignarAreasDeMiembro(project._id, String(persona._id), [{ areaId, shiftIds: [shiftId], ...(sedeId ? { sedeId } : {}) }]);
       }
 
       onRefresh();
@@ -456,7 +502,7 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
         <div className="flex items-center justify-end gap-2 text-xs font-semibold">
           <button
             type="button"
-            onClick={() => setAbiertos(new Set([...bloques.map((b) => "area::" + b.areaId), ...columnas.map((c) => c.clave), "sin-asignar"]))}
+            onClick={() => setAbiertos(new Set([...bloques.map((b) => "area::" + b.filaClave), ...columnas.map((c) => c.clave), "sin-asignar"]))}
             className="text-blue-600 hover:underline dark:text-blue-400"
           >
             Expandir todo
@@ -469,18 +515,22 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
 
         {/* Un bloque por área. Dentro, sus turnos en orden de horario. */}
         {bloques.map((b) => {
-          const areaAbierta = abiertos.has("area::" + b.areaId);
+          const areaAbierta = abiertos.has("area::" + b.filaClave);
           return (
-            <div key={b.areaId} className="rounded-xl border border-gray-200 bg-gray-50/50 p-3 dark:border-gray-700 dark:bg-gray-900/30">
+            <div key={b.filaClave} className="rounded-xl border border-gray-200 bg-gray-50/50 p-3 dark:border-gray-700 dark:bg-gray-900/30">
               <button
                 type="button"
-                onClick={() => alternar("area::" + b.areaId)}
+                onClick={() => alternar("area::" + b.filaClave)}
                 aria-expanded={areaAbierta}
                 className={`flex w-full flex-wrap items-center gap-2 text-left ${areaAbierta ? "mb-3 border-b border-gray-200 pb-2 dark:border-gray-700" : ""}`}
               >
                 <FontAwesomeIcon icon={areaAbierta ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400" />
                 <FontAwesomeIcon icon={faLayerGroup} className="h-3.5 w-3.5 text-blue-500" />
-                <span className="text-sm font-bold uppercase tracking-wide text-gray-800 dark:text-gray-100">{b.areaNombre}</span>
+                <span className="text-sm font-bold uppercase tracking-wide text-gray-800 dark:text-gray-100">
+                  {b.areaNombre}
+                  {/* La sede de la fila: la misma área puede estar una vez por sede, con su propio supervisor. */}
+                  {b.sedeNombre && <span className="ml-1.5 normal-case text-orange-500">· {b.sedeNombre}</span>}
+                </span>
                 {b.diasComunes && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{b.diasComunes}</span>}
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
                   {b.turnos.length} {b.turnos.length === 1 ? "turno" : "turnos"}
@@ -587,7 +637,7 @@ export const TeamJerarquiaTab: React.FC<Props> = ({ project, teamMembers, allAre
                         {encabezado}
 
                         {/* El lugar del coordinador. Sólo acepta a quien puede tener un área a cargo. */}
-                        <ZonaSoltar id={`coord::${c.areaId}::${c.shiftId}`} activa={zonaAcepta(`coord::${c.areaId}::${c.shiftId}`)}>
+                        <ZonaSoltar id={`coord::${c.clave}`} activa={zonaAcepta(`coord::${c.clave}`)}>
                           <p className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">
                             <FontAwesomeIcon icon={faUserTie} />
                             Supervisor
