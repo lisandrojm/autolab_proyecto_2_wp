@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { altaQueSePisa, aplicarBajasDeArca, type AltaPresentada } from "./altasVigentes.js";
-import { CONFIG_POR_DEFECTO, configDe, minutosArgentina, momentoDeCorrida, proximaCorridaPara, validarConfig, ventanaDeLaCorrida, yaTermino } from "./horarioAltasAutomaticas.js";
+import { CONFIG_POR_DEFECTO, configDe, minutosArgentina, momentoDeCorrida, proximaCorridaPara, validarConfig, yaTermino } from "./horarioAltasAutomaticas.js";
 
 const presentada = (o: Partial<AltaPresentada> = {}): AltaPresentada => ({ userId: "u1", userProjectId: "up1", contractIndex: 0, empresaId: "e1", alta: "2026-10-10", baja: "2026-10-12", ...o });
 const contrato = (o: Partial<{ userId: string; userProjectId: string; contractIndex: number; empresaId: string; alta: string; baja: string }> = {}) => ({
@@ -45,7 +45,7 @@ describe("el horario de la automática", () => {
   const cfg = CONFIG_POR_DEFECTO;
   it("por defecto, las 14:00 de la fecha de alta, hora argentina (UTC-3)", () => {
     assert.equal(momentoDeCorrida("2026-10-12", cfg).toISOString(), "2026-10-12T17:00:00.000Z");
-    assert.equal(momentoDeCorrida("2026-10-12", { hora: 9, minuto: 30, diasAntes: 0 }).toISOString(), "2026-10-12T12:30:00.000Z");
+    assert.equal(momentoDeCorrida("2026-10-12", { hora: 9, minuto: 30 }).toISOString(), "2026-10-12T12:30:00.000Z");
   });
   it("la hora argentina no depende de la zona del servidor", () => {
     assert.equal(minutosArgentina(new Date("2026-10-12T17:00:00Z")), 14 * 60);
@@ -53,8 +53,8 @@ describe("el horario de la automática", () => {
     assert.equal(minutosArgentina(new Date("2026-10-13T03:00:00Z")), 0);
   });
   it("lo guardado se completa con los defaults y se descarta lo inválido", () => {
-    assert.deepEqual(configDe(undefined), { hora: 14, minuto: 0, diasAntes: 0 });
-    assert.deepEqual(configDe({ hora: 9, minuto: 75, diasAntes: 2 }), { hora: 9, minuto: 0, diasAntes: 2 });
+    assert.deepEqual(configDe(undefined), CONFIG_POR_DEFECTO);
+    assert.deepEqual(configDe({ hora: 9, minuto: 75, diasAntes: 2 }), { ...CONFIG_POR_DEFECTO, hora: 9, minuto: 0, diasAntes: 2 });
   });
   it("al guardar, cada campo se valida y el que falta no se toca", () => {
     assert.deepEqual(validarConfig({ hora: 10 }), { ok: true, cambios: { hora: 10 } });
@@ -62,11 +62,6 @@ describe("el horario de la automática", () => {
     assert.equal(validarConfig({ diasAntes: -1 }).ok, false);
     assert.deepEqual(validarConfig({}), { ok: true, cambios: {} });
   });
-  it("la corrida toma las atrasadas de hasta 30 días y, con anticipación, los días que vienen", () => {
-    assert.deepEqual(ventanaDeLaCorrida("2026-10-10", cfg), { desde: "2026-09-10", hasta: "2026-10-10" });
-    assert.deepEqual(ventanaDeLaCorrida("2026-10-30", { ...cfg, diasAntes: 2 }), { desde: "2026-09-30", hasta: "2026-11-01" });
-  });
-
   describe("la próxima corrida que presenta un alta", () => {
     const hoy = "2026-10-10";
     const manana = new Date("2026-10-10T12:00:00-03:00"); // 12:00, antes de la corrida
@@ -93,14 +88,14 @@ describe("el horario de la automática", () => {
       assert.equal(proximaCorridaPara("2026-10-09", cfg, manana, hoy)?.toISOString(), "2026-10-10T17:00:00.000Z");
       assert.equal(proximaCorridaPara("2026-10-01", cfg, tarde, hoy)?.toISOString(), "2026-10-11T17:00:00.000Z");
     });
-    it("un contrato cuya baja ya pasó no se da de alta; sin baja o con baja de hoy en adelante, sí", () => {
+    it("terminado = baja anterior a hoy (informativo: igual entra en la automática)", () => {
       assert.equal(yaTermino("2026-10-09", hoy), true);
       assert.equal(yaTermino("2026-10-10", hoy), false);
       assert.equal(yaTermino("2026-10-15", hoy), false);
       assert.equal(yaTermino("", hoy), false);
     });
-    it("más vieja que 30 días, la automática ya no la toma: se fuerza a mano", () => {
-      assert.equal(proximaCorridaPara("2026-09-01", cfg, manana, hoy), null);
+    it("más vieja que 30 días también entra en la próxima corrida", () => {
+      assert.equal(proximaCorridaPara("2026-09-01", cfg, manana, hoy)?.toISOString(), "2026-10-10T17:00:00.000Z");
     });
   });
 });

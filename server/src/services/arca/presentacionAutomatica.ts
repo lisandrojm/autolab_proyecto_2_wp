@@ -22,12 +22,13 @@ import { altaQueSePisa, altasPresentadasDe, textoAltaQueSePisa } from "./altasVi
 import { arrancarCorridaAltas, corridaAltasDe } from "./corridaAltas.js";
 import { quienTiene } from "./candadoArca.js";
 import { esRechazoDefinitivo } from "./rechazoDefinitivo.js";
-import { ConfigAltasAutomaticas, CONFIG_POR_DEFECTO, agotoLosIntentos, entraEnLaCorrida, motivoDeOmision, proximaCorridaPara, ventanaDeLaCorrida, yaTermino } from "./horarioAltasAutomaticas.js";
+import { ConfigAltasAutomaticas, CONFIG_POR_DEFECTO, entraEnLaCorrida, esDelDia, hastaDeLaCorrida, motivoDeOmision, proximaCorridaPara, rechazadaHoy, yaTermino } from "./horarioAltasAutomaticas.js";
 
 /**
  * PRESENTACIÓN AUTOMÁTICA DE LAS ALTAS EN ARCA: cada día, a la hora configurada (14:00 argentinas por
  * defecto), se presentan las altas tempranas que empiezan ese día —o en los próximos N días, si se
- * configuró anticipación; ver `horarioAltasAutomaticas.ts`—. Si nadie hace nada, cada alta sale sola.
+ * configuró anticipación— y después la cola de atrasadas; en modo frecuente, la cola corre además cada
+ * N minutos. Ver `horarioAltasAutomaticas.ts`. Si nadie hace nada, cada alta sale sola.
  * Lo que no está completo no se presenta y queda con su motivo en «A.R.C.A Altas Automáticas».
  *
  * EL REGISTRO LO ARMA EL MISMO CÓDIGO QUE LA PANTALLA (`compartido/arca`), con los mismos catálogos que
@@ -37,10 +38,10 @@ import { ConfigAltasAutomaticas, CONFIG_POR_DEFECTO, agotoLosIntentos, entraEnLa
  * Sólo contratos creados en WeProdu (Solicitudes o «Agregar miembro»): los importados no se gestionan
  * desde Contratos y no se presentan solos.
  *
- * LAS RECHAZADAS VUELVEN AL DÍA SIGUIENTE, HASTA TRES VECES (pedido del 18/10/2026). Un contrato con
- * `altaArcaPresentada.resultado === "fallida"` sigue siendo un pendiente y entra en la próxima corrida
- * (la ventana de atrasadas lo alcanza); cada rechazo de la automática suma `intentos`, y al llegar a
- * `MAX_INTENTOS_AUTOMATICOS` queda `agotado`: se lista con ese motivo y sólo sale forzándolo a mano.
+ * NADA QUEDA FUERA DE LA AUTOMÁTICA (pedido del 19/10/2026): terminados, atrasados de cualquier fecha y
+ * rechazados (las veces que sea, o con un rechazo del padrón) siguen en la cola hasta que salgan. Un
+ * contrato con `altaArcaPresentada.resultado === "fallida"` sigue siendo un pendiente; rechazado hoy,
+ * vuelve a intentarse mañana. `intentos` se sigue contando, sólo para mostrarlo.
  */
 
 
@@ -98,24 +99,23 @@ export interface CandidatoAlta {
   fechaAlta: string;
   fechaBaja: string;
   empresa: { _id: string; razonSocial: string } | null;
-  /** La próxima corrida automática que lo presenta, ISO. Vacío = más vieja que el límite de atrasadas: se fuerza a mano. */
+  /** La próxima corrida automática que lo presenta, ISO. */
   momento: string;
   /** Se puede presentar tal como está. */
   presentable: boolean;
-  /** La baja ya pasó: la automática no lo toma (y no cuenta como omitido de una corrida), pero se puede forzar a mano. */
+  /** La baja ya pasó. Informativo: igual entra en la automática. */
   terminado: boolean;
   /**
-   * ARCA ya lo rechazó con un motivo que no cambia por insistir («ya posee una relación laboral
-   * activa»): el texto de ese rechazo. La automática no lo vuelve a presentar; queda listado para que
-   * alguien lo revise, y se puede forzar a mano. Ver `rechazoDefinitivo.ts`.
+   * ARCA ya lo rechazó con un motivo del padrón («ya posee una relación laboral activa»): el texto de ese
+   * rechazo, para que alguien lo revise. Informativo: sigue en la cola. Ver `rechazoDefinitivo.ts`.
    */
   rechazoDefinitivo: string;
-  /** Cuántas veces la automática ya la presentó y ARCA la rechazó (ver `MAX_INTENTOS_AUTOMATICOS`). */
+  /** Cuántas veces la automática ya la presentó y ARCA la rechazó. */
   intentos: number;
   /** ISO del primero de esos rechazos; vacío si no hubo. */
   primerIntentoEl: string;
-  /** Llegó al tope de intentos: la automática no insiste más; se puede forzar. */
-  agotado: boolean;
+  /** ISO del último rechazo; vacío si no está rechazada. Rechazada hoy, se reintenta mañana. */
+  rechazadaEl: string;
   /** Por qué no, si no se puede. */
   motivo: string;
   /** El registro de 85, si está completo. */
@@ -128,7 +128,7 @@ export interface CandidatoAlta {
  */
 export async function candidatosDeAlta(
   tenantObjectId: Types.ObjectId,
-  opts: { desde?: string; hasta?: string; soloContrato?: { userProjectId: string; contractIndex: number }; cfg?: ConfigAltasAutomaticas } = {},
+  opts: { desde?: string; hasta?: string; soloContrato?: { userProjectId: string; contractIndex: number }; cfg?: ConfigAltasAutomaticas; ultimaCola?: string } = {},
 ): Promise<CandidatoAlta[]> {
   const cfg = opts.cfg || CONFIG_POR_DEFECTO;
   const ahora = new Date();
@@ -171,6 +171,8 @@ export async function candidatosDeAlta(
     : {
         $and: [
           { $or: [{ $gt: ["$$e.c.solicitudId", null] }, { $eq: ["$$e.c.origen", "agregar_miembro"] }] },
+          // Sin piso de fecha, lo ya presentado se descarta acá y no viaja: sólo sin presentar o rechazadas.
+          { $or: [{ $eq: [{ $ifNull: ["$$e.c.altaArcaPresentada", null] }, null] }, { $eq: ["$$e.c.altaArcaPresentada.resultado", "fallida"] }] },
           ...(opts.desde ? [{ $gte: [altaISO, opts.desde] }] : []),
           ...(opts.hasta ? [{ $lte: [altaISO, opts.hasta] }] : []),
         ],
@@ -277,15 +279,13 @@ export async function candidatosDeAlta(
 
     let motivo = "";
     let registro: string | null = null;
-    // Terminado (baja pasada): sigue armándose el registro, porque se puede FORZAR a mano (pedido del
-    // 12/10/2026); lo que no hace es entrar solo en la corrida (ver `correrPresentacionDelDia`).
+    // Terminado, rechazado por el padrón o rechazado varias veces: todo informativo, todos siguen en la cola.
     const terminado = yaTermino(fechaBaja, hoy);
-    // Rechazado por ARCA con un motivo del padrón: el registro se arma igual (se puede forzar), pero la automática no insiste.
-    const rechazoDefinitivo = c.altaArcaPresentada?.resultado === "fallida" && esRechazoDefinitivo(c.altaArcaPresentada?.motivo) ? String(c.altaArcaPresentada.motivo) : "";
-    // Rechazada N veces por la automática: a la tercera deja de insistir (ver `MAX_INTENTOS_AUTOMATICOS`).
-    const intentos = c.altaArcaPresentada?.resultado === "fallida" ? Number(c.altaArcaPresentada?.intentos || 0) : 0;
+    const fallida = c.altaArcaPresentada?.resultado === "fallida";
+    const rechazoDefinitivo = fallida && esRechazoDefinitivo(c.altaArcaPresentada?.motivo) ? String(c.altaArcaPresentada.motivo) : "";
+    const intentos = fallida ? Number(c.altaArcaPresentada?.intentos || 0) : 0;
     const primerIntentoEl = intentos > 0 && c.altaArcaPresentada?.primerIntentoEl ? new Date(c.altaArcaPresentada.primerIntentoEl).toISOString() : "";
-    const agotado = agotoLosIntentos(intentos);
+    const rechazadaEl = fallida && c.altaArcaPresentada?.fecha && !Number.isNaN(new Date(c.altaArcaPresentada.fecha).getTime()) ? new Date(c.altaArcaPresentada.fecha).toISOString() : "";
     if (c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") motivo = "Ya se presentó en ARCA.";
     else if (row.sinCuit) motivo = "No tiene CUIT/CUIL: va por el circuito «Sin CUIT», no por ARCA.";
     else if (!empresaId || !empresa) motivo = "Falta elegir la Empresa Contrato.";
@@ -323,13 +323,13 @@ export async function candidatosDeAlta(
       fechaAlta,
       fechaBaja,
       empresa: empresa ? { _id: String(empresa._id), razonSocial: String(empresa.razonSocial || "") } : null,
-      momento: terminado || rechazoDefinitivo || agotado ? "" : proximaCorridaPara(fechaAlta, cfg, ahora, hoy)?.toISOString() || "",
+      momento: proximaCorridaPara(fechaAlta, cfg, ahora, hoy, { ultimaCola: opts.ultimaCola, rechazadaHoy: rechazadaHoy({ rechazadaEl }, hoy) })?.toISOString() || "",
       presentable: !motivo && !!registro,
       terminado,
       rechazoDefinitivo,
       intentos,
       primerIntentoEl,
-      agotado,
+      rechazadaEl,
       motivo,
       registro: motivo ? null : registro,
     });
@@ -372,6 +372,10 @@ export async function presentarCandidatos(o: {
   onArranque?: (r: { arranco: boolean; error?: string }) => void;
   /** Se va completando corrida por corrida (el forzado en masa lo expone a la pantalla). */
   acumular?: (r: ResultadoEmpresa) => void;
+  /** Se suma al nombre de cada corrida en el resumen («atrasadas»). */
+  rotulo?: string;
+  /** Se mira antes de cada lote: true = no arrancar más corridas (la cola le deja el paso a la corrida del día). */
+  debeCortar?: () => boolean;
 }): Promise<ResultadoEmpresa[]> {
   const grupos = new Map<string, CandidatoAlta[]>();
   for (const c of o.candidatos) {
@@ -409,7 +413,11 @@ export async function presentarCandidatos(o: {
       v.push(c);
     }
     for (const [n, lote] of vueltas.entries()) {
-      const etiqueta = vueltas.length > 1 ? `${razonSocial} (vuelta ${n + 1} de ${vueltas.length})` : razonSocial;
+      if (o.debeCortar?.()) {
+        avisar({ arranco: false, error: "Se cortó para dejarle el paso a la corrida del día." });
+        return resultados;
+      }
+      const etiqueta = `${vueltas.length > 1 ? `${razonSocial} (vuelta ${n + 1} de ${vueltas.length})` : razonSocial}${o.rotulo ? ` · ${o.rotulo}` : ""}`;
       const libre = await esperarQue(() => !quienTiene(o.tenantId), 30 * 60_000);
       if (!libre) {
         const r = { empresa: etiqueta, enviados: 0, error: "Había otra corrida de ARCA en curso y no terminó en 30 minutos." };
@@ -461,19 +469,37 @@ export function registrarForzadoAltas(tenantId: string, f: ForzadoAltasEnCurso):
   return f;
 }
 
-/** La corrida del día de UN tenant: las altas de hoy (y de los próximos días, según la anticipación). Devuelve el resumen que se guarda. */
-export async function correrPresentacionDelDia(tenantId: string, tenantObjectId: Types.ObjectId, cfg: ConfigAltasAutomaticas) {
+/**
+ * Una corrida automática de UN tenant. Devuelve el resumen que se guarda.
+ *   · "dia": la de la hora fija. PRIMERO las altas de su día (fecha de alta de hoy en adelante, hasta la
+ *     anticipación), en corridas propias; DESPUÉS, en otras corridas, la cola de atrasadas. Así una falla
+ *     de la cola no atrasa las del día.
+ *   · "cola": modo frecuente, entre corrida y corrida del día: sólo lo que ya tuvo su turno. Corta entre
+ *     lotes si llega la hora del día (`debeCortar`).
+ */
+export async function correrPresentacionAutomatica(
+  tenantId: string,
+  tenantObjectId: Types.ObjectId,
+  cfg: ConfigAltasAutomaticas,
+  tipo: "dia" | "cola",
+  o: { debeCortar?: () => boolean } = {},
+) {
   const hoy = hoyArgentina();
-  const { desde, hasta } = ventanaDeLaCorrida(hoy, cfg);
-  const candidatos = await candidatosDeAlta(tenantObjectId, { desde, hasta, cfg });
-  // Quién entra solo y quién queda omitido lo decide `horarioAltasAutomaticas.ts` (`entraEnLaCorrida` /
-  // `motivoDeOmision`): afuera quedan los terminados (una relación que ya pasó se fuerza a mano, con
-  // intención), los rechazos definitivos del padrón y las que ya agotaron sus intentos.
-  const empresas = await presentarCandidatos({ tenantId, tenantObjectId, candidatos: candidatos.filter(entraEnLaCorrida), automatica: true });
+  const candidatos = await candidatosDeAlta(tenantObjectId, { hasta: hastaDeLaCorrida(hoy, cfg, tipo), cfg });
+  const entran = candidatos.filter((c) => entraEnLaCorrida(c, hoy));
+  const empresas: ResultadoEmpresa[] = [];
+  if (tipo === "dia") {
+    const delDia = entran.filter((c) => esDelDia(c.fechaAlta, hoy));
+    const atrasadas = entran.filter((c) => !esDelDia(c.fechaAlta, hoy));
+    empresas.push(...(await presentarCandidatos({ tenantId, tenantObjectId, candidatos: delDia, automatica: true })));
+    empresas.push(...(await presentarCandidatos({ tenantId, tenantObjectId, candidatos: atrasadas, automatica: true, rotulo: "atrasadas" })));
+  } else {
+    empresas.push(...(await presentarCandidatos({ tenantId, tenantObjectId, candidatos: entran, automatica: true, debeCortar: o.debeCortar })));
+  }
   const omitidos: Array<{ nombre: string; cuil: string; empresa: string; motivo: string }> = [];
   for (const c of candidatos) {
-    const motivo = motivoDeOmision(c);
+    const motivo = motivoDeOmision(c, hoy);
     if (motivo) omitidos.push({ nombre: c.nombre, cuil: c.cuil, empresa: c.empresa?.razonSocial || "", motivo });
   }
-  return { fecha: new Date().toISOString(), dia: hoy, empresas, omitidos };
+  return { fecha: new Date().toISOString(), dia: hoy, tipo, empresas, omitidos };
 }

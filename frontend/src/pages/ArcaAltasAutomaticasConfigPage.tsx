@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { faClock } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
-import { projectsAPI, horaTexto, anticipacionTexto, type ConfigAltasAutomaticas } from "../api/projects";
+import { projectsAPI, horaTexto, horarioTexto, frecuenciaTexto, type ConfigAltasAutomaticas } from "../api/projects";
 import { sweetAlert } from "../utils/sweetAlert";
 
 /*
@@ -14,6 +14,10 @@ import { sweetAlert } from "../utils/sweetAlert";
   LA ANTICIPACIÓN ES UNA VENTANA, no «exactamente N días antes»: con 2 días, la corrida de hoy presenta
   las altas de hoy, mañana y pasado. Así un contrato cargado tarde sale igual en la primera corrida que
   lo alcanza (ver `horarioAltasAutomaticas.ts` en el server).
+
+  DOS MODOS (pedido del 19/10/2026): «una vez por día» (sólo la corrida de la hora fija) o «frecuente»
+  (además, la cola de pendientes cada N minutos). En los dos, a la hora fija las altas de ese día van
+  primero y en corridas propias, para que una falla de las atrasadas no las atrase.
 */
 
 const HORAS = Array.from({ length: 24 }, (_, i) => i);
@@ -30,6 +34,8 @@ const DIAS_ANTES: Array<{ valor: number; texto: string }> = [
   { valor: 30, texto: "30 días antes" },
 ];
 
+const FRECUENCIAS = [15, 30, 60, 120, 180, 240, 360];
+
 const rotulo = "block text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1";
 
 export const ArcaAltasAutomaticasConfigPage: React.FC = () => {
@@ -38,21 +44,25 @@ export const ArcaAltasAutomaticasConfigPage: React.FC = () => {
   const [guardando, setGuardando] = useState(false);
   const [activa, setActiva] = useState(false);
   const [guardada, setGuardada] = useState<ConfigAltasAutomaticas | null>(null);
-  const [form, setForm] = useState<ConfigAltasAutomaticas>({ hora: 14, minuto: 0, diasAntes: 0 });
+  const [form, setForm] = useState<ConfigAltasAutomaticas>({ hora: 14, minuto: 0, diasAntes: 0, modo: "diaria", cadaMinutos: 60 });
+  const [frecuencias, setFrecuencias] = useState<number[]>(FRECUENCIAS);
 
   useEffect(() => {
     projectsAPI
       .presentacionAutomatica({ soloConfig: true })
       .then((e) => {
         setActiva(e.activa);
-        setGuardada(e.config);
-        setForm(e.config);
+        // Un servidor anterior no manda modo ni frecuencia: se completa con los de siempre.
+        const cfg: ConfigAltasAutomaticas = { ...e.config, modo: e.config.modo || "diaria", cadaMinutos: e.config.cadaMinutos || 60 };
+        setGuardada(cfg);
+        setForm(cfg);
+        if (Array.isArray(e.frecuencias) && e.frecuencias.length > 0) setFrecuencias(e.frecuencias);
       })
       .catch((err: any) => sweetAlert.error("No se pudo cargar", err?.response?.data?.error || err?.message || ""))
       .finally(() => setCargando(false));
   }, []);
 
-  const hayCambios = !!guardada && (guardada.hora !== form.hora || guardada.minuto !== form.minuto || guardada.diasAntes !== form.diasAntes);
+  const hayCambios = !!guardada && (guardada.hora !== form.hora || guardada.minuto !== form.minuto || guardada.diasAntes !== form.diasAntes || guardada.modo !== form.modo || guardada.cadaMinutos !== form.cadaMinutos);
   // Si el minuto guardado no es múltiplo de 5 (se guardó por otro camino), el select igual lo ofrece.
   const minutos = MINUTOS.includes(form.minuto) ? MINUTOS : [...MINUTOS, form.minuto].sort((a, b) => a - b);
   const diasAntes = DIAS_ANTES.some((d) => d.valor === form.diasAntes) ? DIAS_ANTES : [...DIAS_ANTES, { valor: form.diasAntes, texto: `${form.diasAntes} días antes` }].sort((a, b) => a.valor - b.valor);
@@ -63,7 +73,7 @@ export const ArcaAltasAutomaticasConfigPage: React.FC = () => {
       const r = await projectsAPI.setPresentacionAutomatica(form);
       setGuardada(r.config);
       setForm(r.config);
-      sweetAlert.success("Horario guardado", `Todos los días a las ${horaTexto(r.config)}, ${anticipacionTexto(r.config)}.`);
+      sweetAlert.success("Horario guardado", `${horarioTexto(r.config).replace(/^t/, "T")}.`);
     } catch (err: any) {
       sweetAlert.error("No se pudo guardar", err?.response?.data?.error || err?.message || "");
     } finally {
@@ -75,7 +85,7 @@ export const ArcaAltasAutomaticasConfigPage: React.FC = () => {
     if (valor) {
       const r = await sweetAlert.confirm(
         "Activar las Altas Automáticas",
-        `Todos los días a las ${horaTexto(guardada)} se van a presentar en ARCA, sin que nadie apriete nada, las altas completas (${anticipacionTexto(guardada)}). No se deshace.`,
+        `Se van a presentar en ARCA, sin que nadie apriete nada, las altas completas: ${horarioTexto(guardada)}. No se deshace.`,
         "Sí, activar",
         "Cancelar",
       );
@@ -95,7 +105,7 @@ export const ArcaAltasAutomaticasConfigPage: React.FC = () => {
   return (
     <PageLayout
       title="ARCA | Altas Automáticas"
-      subtitle="A qué hora y con cuánta anticipación se presentan solas las altas tempranas"
+      subtitle="A qué hora, con cuánta anticipación y con qué frecuencia se presentan solas las altas tempranas"
       faIcon={{ icon: faClock }}
       infoModal={{
         isOpen: info,
@@ -104,7 +114,11 @@ export const ArcaAltasAutomaticasConfigPage: React.FC = () => {
         title: "Cómo se decide cuándo sale cada alta",
         content: (
           <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-            <p>El servidor corre una vez por día a la hora elegida (hora argentina) y presenta en ARCA las altas tempranas completas que todavía no se presentaron.</p>
+            <p>Todos los días a la hora elegida (hora argentina) corre la corrida del día: presenta primero, en corridas propias, las altas de ese día, y después las pendientes atrasadas. Así una falla con las atrasadas no atrasa las del día.</p>
+            <p>
+              <strong>Una vez por día</strong>: sólo esa corrida. <strong>Frecuente</strong>: además, cada tanto (15 minutos a 6 horas) corre la cola de pendientes: lo que ya tuvo su turno y no salió. Si
+              llega la hora del día mientras la cola corre, la cola corta y le deja el paso.
+            </p>
             <p>
               <strong>El mismo día del alta</strong>: la corrida de cada día toma sólo las altas que empiezan ese día.
             </p>
@@ -113,10 +127,9 @@ export const ArcaAltasAutomaticasConfigPage: React.FC = () => {
               primera corrida que lo alcanza, y a más tardar en la de su propio día.
             </p>
             <p>
-              Las atrasadas también entran: un alta cuya fecha ya pasó, porque la corrida falló o porque el contrato se cargó después de su inicio, se presenta en la corrida siguiente y en todas las
-              que vengan hasta que salga. Solo las de más de 30 días quedan para forzar a mano desde «A.R.C.A Altas Automáticas».
+              Nada queda fuera: las atrasadas de cualquier fecha, los contratos cuya baja ya pasó y las rechazadas por ARCA siguen en la cola hasta que salgan. Una rechazada se vuelve a intentar
+              recién al día siguiente, para no insistir con lo mismo cada pocos minutos.
             </p>
-            <p>Un contrato cuya baja ya pasó no entra en la automática: la relación ya terminó entera. Queda a la vista con ese motivo y se puede forzar a mano.</p>
             <p>Si se activa después de la hora, empieza al día siguiente.</p>
           </div>
         ),
@@ -145,6 +158,25 @@ export const ArcaAltasAutomaticasConfigPage: React.FC = () => {
 
           <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-5">
             <h2 className="text-sm font-bold text-gray-900 dark:text-white">Horario</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(
+                [
+                  ["diaria", "Una vez por día", "Sólo a la hora elegida."],
+                  ["frecuente", "Frecuente", "A la hora elegida, las del día primero; y la cola de pendientes cada tanto."],
+                ] as const
+              ).map(([valor, titulo, texto]) => (
+                <label
+                  key={valor}
+                  className={`cursor-pointer rounded-lg border px-3 py-2.5 ${form.modo === valor ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}
+                >
+                  <span className="flex items-center gap-2">
+                    <input type="radio" name="modo" checked={form.modo === valor} onChange={() => setForm({ ...form, modo: valor })} className="text-blue-600 focus:ring-blue-500" />
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">{titulo}</span>
+                  </span>
+                  <span className="block mt-1 ml-6 text-xs text-gray-500">{texto}</span>
+                </label>
+              ))}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className={rotulo}>Hora</label>
@@ -177,18 +209,38 @@ export const ArcaAltasAutomaticasConfigPage: React.FC = () => {
                 </select>
               </div>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-gray-900/40 px-3 py-2">
-              Todos los días a las <strong>{horaTexto(form)}</strong> (hora argentina) se presentan las altas completas{" "}
-              {form.diasAntes === 0 ? (
-                <>
-                  que empiezan <strong>ese mismo día</strong>.
-                </>
-              ) : (
-                <>
-                  que empiezan ese día o en los <strong>próximos {form.diasAntes} día{form.diasAntes === 1 ? "" : "s"}</strong>.
-                </>
+            {form.modo === "frecuente" && (
+              <div className="sm:w-1/3">
+                <label className={rotulo}>Pendientes, cada</label>
+                <select value={form.cadaMinutos} onChange={(e) => setForm({ ...form, cadaMinutos: Number(e.target.value) })} className="input-field w-full text-sm">
+                  {frecuencias.map((m) => (
+                    <option key={m} value={m}>
+                      {frecuenciaTexto(m).replace(/^cada /, "")}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="text-sm text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-gray-900/40 px-3 py-2 space-y-1">
+              <p>
+                Todos los días a las <strong>{horaTexto(form)}</strong> (hora argentina) se presentan primero las altas completas{" "}
+                {form.diasAntes === 0 ? (
+                  <>
+                    que empiezan <strong>ese mismo día</strong>
+                  </>
+                ) : (
+                  <>
+                    que empiezan ese día o en los <strong>próximos {form.diasAntes} día{form.diasAntes === 1 ? "" : "s"}</strong>
+                  </>
+                )}
+                , y después las pendientes atrasadas.
+              </p>
+              {form.modo === "frecuente" && (
+                <p>
+                  Además, <strong>{frecuenciaTexto(form.cadaMinutos)}</strong> se presentan las pendientes que ya tuvieron su turno y no salieron (atrasadas, rechazadas, cargadas tarde).
+                </p>
               )}
-            </p>
+            </div>
             <div className="flex items-center gap-3">
               <button type="button" onClick={guardar} disabled={!hayCambios || guardando} className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed">
                 {guardando ? "Guardando…" : "Guardar horario"}

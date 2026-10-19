@@ -4,7 +4,7 @@ import { faBolt, faClock, faTriangleExclamation, faCircleCheck, faSpinner, faSea
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Link } from "react-router-dom";
-import { projectsAPI, horaTexto, anticipacionTexto, type AltaPendienteArca, type EstadoPresentacionAutomatica, type CorridaAltasGuardada } from "../api/projects";
+import { projectsAPI, horaTexto, horarioTexto, frecuenciaTexto, type AltaPendienteArca, type ResumenCorridaAutomatica, type EstadoPresentacionAutomatica, type CorridaAltasGuardada } from "../api/projects";
 import { BotonOrden, useOrdenTabla } from "../components/ui/OrdenTabla";
 import { CorridaAltasArca } from "../components/contratos/CorridaAltasArca";
 import { CuentaRegresiva } from "../components/ui/CuentaRegresiva";
@@ -12,14 +12,17 @@ import { sweetAlert } from "../utils/sweetAlert";
 
 /*
   A.R.C.A ALTAS AUTOMÁTICAS: cada alta temprana se presenta sola a la hora configurada (14:00 argentinas
-  por defecto) del día de su alta, o con la anticipación configurada (Configuración → ARCA → Altas Automáticas). Acá se ve qué va a salir y cuándo —con la cuenta regresiva de cada una—, qué no
-  va a salir y por qué, y se puede forzar una para presentarla ya. La corrida la hace el servidor
+  por defecto) del día de su alta, o con la anticipación configurada (Configuración → ARCA → Altas Automáticas). Acá se ve qué va a salir y cuándo —con la cuenta regresiva de cada una—, qué todavía
+  no puede salir y por qué, y se puede forzar una para presentarla ya. Nada queda fuera de la
+  automática (pedido del 19/10/2026): terminadas, atrasadas y rechazadas siguen en la cola. La corrida la hace el servidor
   (`services/arca/presentacionAutomatica.ts`); esta pantalla sólo la muestra y la prende o apaga.
 */
 
 const fechaCorta = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : iso || "—");
 const fmtCuil = (c: string) => (c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}` : c);
 /** La fecha argentina de un instante ISO ("DD/MM/AAAA"): la corrida de las 22 h ya es «mañana» en UTC. */
+/** La hora argentina de un instante ISO ("HH:MM"): en modo frecuente cada alta tiene la suya. */
+const horaArgentina = (iso: string) => new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso));
 const fechaArgentina = (iso: string) => fechaCorta(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date(iso)));
 
 // La cuenta regresiva vive en `components/ui/CuentaRegresiva.tsx`: la comparte con «A.R.C.A Descargas Automáticas».
@@ -113,7 +116,7 @@ export const PresentacionesArcaPage: React.FC = () => {
     if (activa) {
       const r = await sweetAlert.confirm(
         "Activar la presentación automática",
-        `Todos los días a las ${horaTexto(estado?.config)} se van a presentar en ARCA, sin que nadie apriete nada, las altas completas que empiezan ${anticipacionTexto(estado?.config) === "el mismo día del alta" ? "ese día" : "en los próximos días (" + anticipacionTexto(estado?.config) + ")"}. No se deshace.`,
+        `Se van a presentar en ARCA, sin que nadie apriete nada, las altas completas: ${horarioTexto(estado?.config)}. No se deshace.`,
         "Sí, activar",
         "Cancelar",
       );
@@ -167,7 +170,7 @@ export const PresentacionesArcaPage: React.FC = () => {
   const forzarSeleccionadas = async () => {
     if (seleccionadas.length === 0) return;
     const empresas = [...new Set(seleccionadas.map((c) => c.empresa?.razonSocial || "su empleadora"))];
-    const avisos = [seleccionadas.some((c) => c.terminado) ? "Algunas ya terminaron (la baja pasó)." : "", seleccionadas.some((c) => c.rechazoDefinitivo || c.agotado) ? "Algunas ya fueron rechazadas por ARCA: si nada cambió, van a rechazarse de nuevo." : ""].filter(Boolean).join(" ");
+    const avisos = [seleccionadas.some((c) => c.terminado) ? "Algunas ya terminaron (la baja pasó)." : "", seleccionadas.some((c) => c.rechazoDefinitivo || (c.intentos || 0) > 0) ? "Algunas ya fueron rechazadas por ARCA: si nada cambió, van a rechazarse de nuevo." : ""].filter(Boolean).join(" ");
     const r = await sweetAlert.confirm(
       `Presentar ahora ${seleccionadas.length} alta${seleccionadas.length === 1 ? "" : "s"}`,
       `Se presentan ya en ARCA, a nombre de ${empresas.join(" y ")} (${empresas.length === 1 ? "una corrida" : `${empresas.length} corridas, una por empleadora, en fila`}). ${avisos} No se deshace.`,
@@ -195,7 +198,7 @@ export const PresentacionesArcaPage: React.FC = () => {
     const antes = estado && c.fechaAlta > estado.hoy;
     const r = await sweetAlert.confirm(
       `Presentar ahora a ${c.nombre}`,
-      `${antes ? `Todavía no es el día de la presentación: su alta es el ${fechaCorta(c.fechaAlta)}. ` : ""}${c.terminado ? `El contrato ya terminó (baja el ${fechaCorta(c.fechaBaja)}): se declara una relación que ya pasó. ` : ""}${c.rechazoDefinitivo ? `ARCA ya la rechazó («${c.rechazoDefinitivo}»): si nada cambió en ARCA, va a rechazarla de nuevo. ` : c.agotado ? `La automática ya la presentó ${c.intentos} veces y ARCA la rechazó todas: revisá el motivo antes de insistir. ` : ""}Se presenta ya en ARCA, a nombre de ${c.empresa?.razonSocial || "su empleadora"}. No se deshace.`,
+      `${antes ? `Todavía no es el día de la presentación: su alta es el ${fechaCorta(c.fechaAlta)}. ` : ""}${c.terminado ? `El contrato ya terminó (baja el ${fechaCorta(c.fechaBaja)}): se declara una relación que ya pasó. ` : ""}${c.rechazoDefinitivo ? `ARCA ya la rechazó («${c.rechazoDefinitivo}»): si nada cambió en ARCA, va a rechazarla de nuevo. ` : (c.intentos || 0) > 0 ? `ARCA ya la rechazó ${c.intentos} vez/veces: revisá el motivo antes de insistir. ` : ""}Se presenta ya en ARCA, a nombre de ${c.empresa?.razonSocial || "su empleadora"}. No se deshace.`,
       "Sí, presentar",
       "Cancelar",
     );
@@ -212,20 +215,17 @@ export const PresentacionesArcaPage: React.FC = () => {
 
   // Buscador de pendientes (pedido del 18/10/2026): por nombre, CUIL (con o sin guiones), empresa o proyecto. Filtra las dos tablas.
   const [buscarPendientes, setBuscarPendientes] = useState("");
-  const { proximas, vencidas } = useMemo(() => {
+  const proximas = useMemo(() => {
     const q = buscarPendientes.trim().toLowerCase();
     const qDigitos = q.replace(/D/g, "");
     const coincide = (c: AltaPendienteArca) => !q || c.nombre.toLowerCase().includes(q) || (qDigitos.length > 0 && c.cuil.includes(qDigitos)) || (c.empresa?.razonSocial || "").toLowerCase().includes(q) || c.proyecto.toLowerCase().includes(q);
-    const lista = (estado?.contratos || []).filter(coincide);
-    // Fuera de la automática: el servidor no les encontró una próxima corrida (más de 30 días de
-    // atraso). Las atrasadas de menos entran solas en la corrida siguiente y van en «Próximas».
-    const vencida = (c: AltaPendienteArca) => !c.momento;
-    return { proximas: lista.filter((c) => !vencida(c)), vencidas: lista.filter(vencida) };
+    // Todas en una sola lista: ya no hay «Fuera de la automática».
+    return (estado?.contratos || []).filter(coincide);
   }, [estado, buscarPendientes]);
 
   const th = "px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 text-left";
 
-  const fila = (c: AltaPendienteArca, esVencida: boolean) => (
+  const fila = (c: AltaPendienteArca) => (
     <tr key={`${c.userProjectId}-${c.contractIndex}`} className={`border-t border-gray-100 dark:border-gray-800 align-top ${seleccion.has(claveDe(c)) ? "bg-amber-50/60 dark:bg-amber-900/10" : ""}`}>
       <td className="px-3 py-3 w-8">
         <input type="checkbox" className="rounded border-gray-300 text-amber-600 focus:ring-amber-500 disabled:opacity-30" checked={seleccion.has(claveDe(c))} disabled={!c.presentable} onChange={() => alternarSeleccion(c)} title={c.presentable ? "Tildar para forzar en masa" : c.motivo} />
@@ -259,32 +259,25 @@ export const PresentacionesArcaPage: React.FC = () => {
         )}
       </td>
       <td className="px-4 py-3">
-        {esVencida ? (
-          <span className="text-xs font-semibold text-red-600 dark:text-red-400">
-            {c.rechazoDefinitivo
-              ? `ARCA ya la rechazó: ${c.rechazoDefinitivo} La automática no insiste; revisala o forzala`
-              : c.agotado
-                ? `ARCA la rechazó ${c.intentos} veces${c.primerIntentoEl ? ` (la primera el ${fechaArgentina(c.primerIntentoEl)})` : ""}: la automática no insiste más; revisala o forzala`
-                : c.terminado
-                  ? `Ya terminó (baja el ${fechaCorta(c.fechaBaja)}): la automática no la toma; se puede forzar`
-                  : "Más de 30 días de atraso: no entra en la automática"}
-          </span>
-        ) : (
+        {c.momento ? (
           <div className="space-y-1">
             <CuentaRegresiva destino={c.momento} ahora={ahoraServidor} />
             <p className="text-[11px] text-gray-500">
-              {new Date(c.momento).getTime() <= ahoraServidor ? "En la corrida en curso" : `${fechaArgentina(c.momento)} a las ${horaTexto(estado?.config)}`}
+              {new Date(c.momento).getTime() <= ahoraServidor ? "En la corrida en curso" : `${fechaArgentina(c.momento)} a las ${horaArgentina(c.momento)}`}
               {!estado?.activa ? " (si está activada)" : ""}
             </p>
-            {/* Rechazada por ARCA en una corrida anterior: vuelve a entrar, hasta el tope de intentos. */}
-            {(c.intentos || 0) > 0 ? (
+            {/* Rechazada por ARCA: sigue en la cola; si fue hoy, vuelve a intentarse mañana. */}
+            {(c.intentos || 0) > 0 || c.rechazoDefinitivo ? (
               <p className="text-[11px] font-semibold text-red-600 dark:text-red-400">
-                Rechazada {c.intentos} de {estado?.maxIntentos || 3}: se vuelve a presentar en la próxima corrida.
+                {c.rechazoDefinitivo ? `ARCA la rechazó: ${c.rechazoDefinitivo}` : `Rechazada ${c.intentos} vez/veces${c.primerIntentoEl ? ` (la primera el ${fechaArgentina(c.primerIntentoEl)})` : ""}.`} Sigue en la cola.
               </p>
             ) : (
-              estado && c.fechaAlta < estado.hoy && <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Atrasada: su alta fue el {fechaCorta(c.fechaAlta)}. Entra en la próxima corrida.</p>
+              estado && c.fechaAlta < estado.hoy && <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Atrasada: su alta fue el {fechaCorta(c.fechaAlta)}. Va en la cola.</p>
             )}
+            {c.terminado && <p className="text-[11px] text-gray-500">Ya terminó (baja el {fechaCorta(c.fechaBaja)}): se declara igual.</p>}
           </div>
+        ) : (
+          <span className="text-xs text-gray-500">Sin fecha de alta válida</span>
         )}
       </td>
       <td className="px-4 py-3 text-right">
@@ -302,7 +295,7 @@ export const PresentacionesArcaPage: React.FC = () => {
     </tr>
   );
 
-  const tabla = (lista: AltaPendienteArca[], esVencida: boolean) => (
+  const tabla = (lista: AltaPendienteArca[]) => (
     <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
       <table className="min-w-full">
         <thead>
@@ -315,21 +308,46 @@ export const PresentacionesArcaPage: React.FC = () => {
             <th className={th}>Empresa</th>
             <th className={th}>Contrato</th>
             <th className={th}>Estado</th>
-            <th className={th}>{esVencida ? "Presentación" : "Se presenta en"}</th>
+            <th className={th}>Se presenta en</th>
             <th className={`${th} text-right`}>Acción</th>
           </tr>
         </thead>
-        <tbody>{lista.map((c) => fila(c, esVencida))}</tbody>
+        <tbody>{lista.map((c) => fila(c))}</tbody>
       </table>
     </div>
   );
 
   const u = estado?.ultimaCorrida;
+  // Lo que hizo una corrida (la del día o una pasada de la cola): por empresa, y lo que no salió con su motivo.
+  const tarjetaCorrida = (titulo: string, r: ResumenCorridaAutomatica | null, vacia: string) => (
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-2">
+      <p className="text-sm font-semibold text-gray-900 dark:text-white">{titulo}</p>
+      {r?.error && <p className="text-xs text-red-600 dark:text-red-400">{r.error}</p>}
+      {r && r.empresas.length === 0 && !r.error && <p className="text-xs text-gray-500">{vacia}</p>}
+      {r?.empresas.map((e, i) => (
+        <p key={`${e.empresa}-${i}`} className={`text-xs ${e.error ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-300"}`}>
+          {e.empresa}: {e.error ? e.error : `${e.enviados} enviada(s) a ARCA${e.enSeco ? " (en seco)" : ""}`}
+        </p>
+      ))}
+      {r && r.omitidos.length > 0 && (
+        <div className="text-xs text-amber-700 dark:text-amber-400">
+          <p className="font-semibold">Sin presentar ({r.omitidos.length}):</p>
+          <ul className="list-disc ml-5">
+            {r.omitidos.map((o, i) => (
+              <li key={`${o.cuil}-${i}`}>
+                {o.nombre}: {o.motivo}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <PageLayout
       title="A.R.C.A Altas Automáticas"
-      subtitle={`Cada alta temprana se presenta sola en ARCA a las ${horaTexto(estado?.config)}, ${anticipacionTexto(estado?.config)}.`}
+      subtitle={`Cada alta temprana se presenta sola en ARCA: ${horarioTexto(estado?.config)}.`}
       faIcon={{ icon: faClock }}
       itemCount={estado?.contratos.length ?? 0}
       infoModal={{
@@ -340,8 +358,9 @@ export const PresentacionesArcaPage: React.FC = () => {
         content: (
           <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
             <p>
-              Con la automática activada, todos los días a las {horaTexto(estado?.config)} (hora argentina) se presentan en ARCA las altas tempranas que empiezan ese día
-              {estado?.config.diasAntes ? ` o en los próximos ${estado.config.diasAntes} día(s)` : ""}. El horario y la anticipación se cambian en Configuración → ARCA → Altas Automáticas.
+              Con la automática activada, todos los días a las {horaTexto(estado?.config)} (hora argentina) se presentan en ARCA, primero y en corridas propias, las altas tempranas que empiezan ese día
+              {estado?.config.diasAntes ? ` o en los próximos ${estado.config.diasAntes} día(s)` : ""}; después, las pendientes atrasadas.
+              {estado?.config.modo === "frecuente" ? ` Además, ${frecuenciaTexto(estado.config.cadaMinutos)} corre la cola de pendientes.` : ""} El horario se cambia en Configuración → ARCA → Altas Automáticas.
             </p>
             <p>Entran los contratos creados en WeProdu (Solicitudes o «Agregar miembro») que están en Alta temprana de ARCA y tienen todos los datos completos. Los que no están completos no se presentan y figuran con su motivo.</p>
             <p>Una persona no tiene dos altas a la vez con la misma empleadora: si ya tiene una presentada que no terminó, la nueva espera.</p>
@@ -349,17 +368,8 @@ export const PresentacionesArcaPage: React.FC = () => {
               <strong>Forzar presentación</strong> presenta una ya, sin esperar su día. Lo que se presentó, a mano o solo, queda en el registro de «Alta Temprana A.R.C.A» de Contratos.
             </p>
             <p>
-              Las atrasadas también entran: si una corrida falló, o el contrato se cargó después de su fecha de inicio, el alta se presenta en la corrida siguiente y en todas las que vengan hasta
-              que salga. Solo las de más de 30 días quedan fuera, para forzar a mano.
-            </p>
-            <p>
-              <strong>Una rechazada vuelve al día siguiente, hasta {estado?.maxIntentos || 3} veces.</strong> Si ARCA la rechaza en una corrida automática, entra de nuevo en la siguiente (el dato
-              pudo corregirse). Al tercer rechazo la automática deja de insistir y queda en «Fuera de la automática», para revisarla o forzarla. Los rechazos que no cambian por insistir («ya posee
-              una relación laboral activa») no se repiten ni una vez.
-            </p>
-            <p>
-              <strong>Si la baja ya pasó, la automática no la presenta.</strong> Un contrato cuya fecha de baja es anterior a hoy ya terminó entero. Queda en «Fuera de la automática» con ese
-              motivo, y se puede forzar a mano si igual hace falta declararlo.
+              <strong>Nada queda fuera de la automática.</strong> Las atrasadas de cualquier fecha, los contratos cuya baja ya pasó y las rechazadas por ARCA siguen en la cola hasta que se
+              presenten. Una rechazada se vuelve a intentar recién al día siguiente, para no insistir con lo mismo cada pocos minutos.
             </p>
             <p>Si se activa después de las {horaTexto(estado?.config)}, empieza al día siguiente.</p>
           </div>
@@ -386,7 +396,7 @@ export const PresentacionesArcaPage: React.FC = () => {
           <div className="space-y-1">
             <p className="text-sm text-gray-600 dark:text-gray-300">
               <FontAwesomeIcon icon={faClock} className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
-              Todos los días a las <strong>{horaTexto(estado.config)}</strong>, {anticipacionTexto(estado.config)}.{" "}
+              {horarioTexto(estado.config).replace(/^t/, "T")}.{" "}
               <Link to="/arca/altas-automaticas" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold">
                 Cambiar horario
               </Link>
@@ -513,32 +523,13 @@ export const PresentacionesArcaPage: React.FC = () => {
 
           {tab === "pendientes" && (
             <>
-          {u && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-2">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                Última automática: {fechaCorta(u.dia)} · {new Date(u.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} h
-              </p>
-              {u.error && <p className="text-xs text-red-600 dark:text-red-400">{u.error}</p>}
-              {u.empresas.length === 0 && !u.error && <p className="text-xs text-gray-500">No había altas completas para presentar ese día.</p>}
-              {u.empresas.map((e) => (
-                <p key={e.empresa} className={`text-xs ${e.error ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-300"}`}>
-                  {e.empresa}: {e.error ? e.error : `${e.enviados} enviada(s) a ARCA${e.enSeco ? " (en seco)" : ""}`}
-                </p>
-              ))}
-              {u.omitidos.length > 0 && (
-                <div className="text-xs text-amber-700 dark:text-amber-400">
-                  <p className="font-semibold">Sin presentar ({u.omitidos.length}):</p>
-                  <ul className="list-disc ml-5">
-                    {u.omitidos.map((o, i) => (
-                      <li key={`${o.cuil}-${i}`}>
-                        {o.nombre}: {o.motivo}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
+          {u && tarjetaCorrida(`Última corrida del día: ${fechaCorta(u.dia)} · ${new Date(u.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} h`, u, "No había altas completas para presentar ese día.")}
+          {estado.config.modo === "frecuente" &&
+            tarjetaCorrida(
+              `Cola de pendientes (${frecuenciaTexto(estado.config.cadaMinutos)})${estado.ultimaCorridaCola ? ` · última: ${new Date(estado.ultimaCorridaCola.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} h` : ""}${estado.proximaCola ? ` · próxima: ${horaArgentina(estado.proximaCola)} h` : ""}`,
+              estado.ultimaCorridaCola || null,
+              "No había pendientes para presentar.",
+            )}
 
           {/* El último forzado en masa: una corrida por empleadora (y por vuelta si alguien tenía dos contratos), con cómo terminó cada una. */}
           {estado?.forzado && (
@@ -581,7 +572,7 @@ export const PresentacionesArcaPage: React.FC = () => {
 
           <section className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">Próximas ({proximas.length})</h2>
+              <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">En cola ({proximas.length})</h2>
               <div className="relative w-full sm:w-80">
                 <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-3.5 w-3.5" />
                 <input value={buscarPendientes} onChange={(e) => setBuscarPendientes(e.target.value)} placeholder="Buscar por nombre, CUIL, empresa o proyecto…" className="input-field text-sm pl-9 w-full" />
@@ -592,19 +583,9 @@ export const PresentacionesArcaPage: React.FC = () => {
                 )}
               </div>
             </div>
-            {proximas.length === 0 ? <p className="text-sm text-gray-500">{buscarPendientes ? `Ninguna pendiente coincide con «${buscarPendientes}».` : "No hay altas por presentar en los próximos días."}</p> : tabla(proximas, false)}
+            {proximas.length === 0 ? <p className="text-sm text-gray-500">{buscarPendientes ? `Ninguna pendiente coincide con «${buscarPendientes}».` : "No hay altas por presentar."}</p> : tabla(proximas)}
           </section>
 
-          {vencidas.length > 0 && (
-            <section className="space-y-2">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-red-600 dark:text-red-400">Fuera de la automática ({vencidas.length})</h2>
-              <p className="text-xs text-gray-500">
-                La automática no las toma: su contrato ya terminó (la baja es anterior a hoy), su alta fue hace más de 30 días, o ARCA ya la rechazó {estado?.maxIntentos || 3} veces. Todas se pueden presentar igual con «Forzar», si hace falta
-                declarar una relación que ya pasó.
-              </p>
-              {tabla(vencidas, true)}
-            </section>
-          )}
             </>
           )}
         </div>

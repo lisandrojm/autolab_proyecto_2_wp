@@ -200,7 +200,7 @@ router.put("/sync-config", requireTenant, authenticateToken, permiso, async (req
     const sr = t?.integrations?.arcaSimplificacion?.sincronizacionRelaciones || {};
     const cfg = configSyncDe({ ...sr, ...(set[`${BASE}.hora`] ? { hora: set[`${BASE}.hora`] } : {}), ...(set[`${BASE}.meses`] ? { meses: set[`${BASE}.meses`] } : {}), activa: req.body?.activa !== undefined ? req.body.activa === true : sr.activa });
     // Al prender después de la hora de hoy, hoy ya no corre: si se quiere ahora, está «Sincronizar ahora».
-    if (req.body?.activa === true && !sr.activa && yaPasoLaHora({ ...horaDe(cfg.hora), diasAntes: 0 })) set[`${BASE}.ultimoDia`] = hoyArgentina();
+    if (req.body?.activa === true && !sr.activa && yaPasoLaHora(horaDe(cfg.hora))) set[`${BASE}.ultimoDia`] = hoyArgentina();
     if (Object.keys(set).length > 0) await Tenant.updateOne({ _id: req.tenantObjectId }, { $set: set });
     res.json(cfg);
   } catch (e) {

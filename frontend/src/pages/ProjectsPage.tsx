@@ -3,6 +3,7 @@ import { useThemeStore } from '../stores/themeStore';
 import { badgesDeValoracion, ChipValoracionDelProyecto, idValoracionDe, useValoraciones } from '../components/proyectos/ChipValoracion';
 import { CampoValoracion, cambiosDeValoracion, valorInicialValoracion } from '../components/proyectos/CampoValoracion';
 import { ValoracionesPorRol } from '../components/proyectos/ValoracionesPorRol';
+import { BadgeCoordinador } from '../components/proyectos/BadgeCoordinador';
 import { RotuloConInfo } from '../components/proyectos/RotuloConInfo';
 import { nombreCentroCosto, idOpcional } from '../utils/centroCosto';
 import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto';
@@ -30,7 +31,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { sweetAlert } from '../utils/sweetAlert';
 import { emitProjectsChanged } from '../utils/navbarEvents';
-import { faBriefcase, faBuilding, faTable, faGrip, faPlus, faEdit, faTrash, faInfoCircle, faUserTie, faCalendarDay, faCalendarCheck, faUsers, faFileLines, faBell, faPiggyBank } from '@fortawesome/free-solid-svg-icons';
+import { faBriefcase, faBuilding, faTable, faGrip, faPlus, faEdit, faTrash, faInfoCircle, faCalendarDay, faCalendarCheck, faUsers, faFileLines, faBell, faPiggyBank } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import { getHelp, hasHelp } from '../data/help/helpContent';
@@ -569,6 +570,8 @@ export const ProjectsPage: React.FC = () => {
                     )}
                   </div>
                 )}
+                {/* Coordinador del proyecto, como badge (antes «Responsable» en texto, al pie). */}
+                <BadgeCoordinador project={project} className="mt-4" />
                 <div className="flex flex-col mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
                   <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
                     <FontAwesomeIcon icon={faUsers} className="h-3 w-3 text-gray-400" />
@@ -576,17 +579,6 @@ export const ProjectsPage: React.FC = () => {
                   </label>
                   <span className="text-sm font-semibold text-gray-900 dark:text-white">{project.metadataUserCount ?? 0}</span>
                 </div>
-                {project.metadataResolutions?.responsable && (
-                  <div className="flex flex-col mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex gap-1 items-center">
-                      <FontAwesomeIcon icon={faUserTie} className="h-3 w-3 text-gray-400" />
-                      Responsable
-                    </label>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-tight">
-                      {project.metadataResolutions.responsable.firstName} {project.metadataResolutions.responsable.lastName}
-                    </span>
-                  </div>
-                )}
                 {/* Empresas del Contrato / Release (misma UI que Información del Proyecto) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
                   <div className="flex flex-col gap-1">

@@ -61,7 +61,7 @@ async function tick() {
     const sr = t.integrations?.arcaSimplificacion?.sincronizacionRelaciones || {};
     if (sr.ultimoDia === hoy) continue;
     const cfg = configSyncDe(sr);
-    if (!yaPasoLaHora({ ...horaDe(cfg.hora), diasAntes: 0 })) continue;
+    if (!yaPasoLaHora(horaDe(cfg.hora))) continue;
     enCurso.add(id);
     void (async () => {
       try {

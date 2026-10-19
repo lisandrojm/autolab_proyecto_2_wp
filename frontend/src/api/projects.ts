@@ -1165,19 +1165,19 @@ export interface AltaPendienteArca {
   fechaAlta: string;
   fechaBaja: string;
   empresa: { _id: string; razonSocial: string } | null;
-  /** La próxima corrida automática que la presenta, ISO. Vacío = más vieja que el límite de atrasadas (30 días): se fuerza a mano. */
+  /** La próxima corrida automática que la presenta, ISO. Nada queda fuera de la automática (pedido del 19/10/2026). */
   momento: string;
   presentable: boolean;
-  /** La baja ya pasó: no tiene sentido dar el alta. */
+  /** La baja ya pasó. Informativo: igual entra en la automática. */
   terminado?: boolean;
-  /** ARCA ya lo rechazó con un motivo del padrón («ya posee una relación laboral activa»): la automática no insiste; se puede forzar. */
+  /** ARCA ya lo rechazó con un motivo del padrón («ya posee una relación laboral activa»). Informativo: sigue en la cola. */
   rechazoDefinitivo?: string;
-  /** Cuántas veces la automática ya la presentó y ARCA la rechazó. Ausente en servidores anteriores al 18/10/2026. */
+  /** Cuántas veces la automática ya la presentó y ARCA la rechazó. */
   intentos?: number;
   /** ISO del primero de esos rechazos; vacío si no hubo. */
   primerIntentoEl?: string;
-  /** Llegó al tope de intentos (`maxIntentos` del estado): la automática no insiste más; se puede forzar. */
-  agotado?: boolean;
+  /** ISO del último rechazo; vacío si no está rechazada. Rechazada hoy, se reintenta mañana. */
+  rechazadaEl?: string;
   motivo: string;
 }
 
@@ -1188,7 +1188,17 @@ export interface ConfigAltasAutomaticas {
   minuto: number;
   /** Con cuánta anticipación: 0 = el mismo día del alta; N = hasta N días antes. */
   diasAntes: number;
+  /** "diaria": sólo la corrida del día. "frecuente": además, la cola de pendientes cada `cadaMinutos`. */
+  modo: "diaria" | "frecuente";
+  cadaMinutos: number;
 }
+
+/** Todo el horario en una frase: «todos los días a las 14:00, el mismo día del alta; las pendientes, cada 30 minutos». */
+export const horarioTexto = (c?: ConfigAltasAutomaticas | null): string =>
+  `todos los días a las ${horaTexto(c)}, ${anticipacionTexto(c)}${c?.modo === "frecuente" ? `; las pendientes, ${frecuenciaTexto(c.cadaMinutos)}` : ""}`;
+
+/** «cada 30 minutos» / «cada 2 horas». */
+export const frecuenciaTexto = (min: number): string => (min < 60 ? `cada ${min} minutos` : min === 60 ? "cada 1 hora" : `cada ${min / 60} horas`);
 
 /** "14:00". */
 export const horaTexto = (c?: { hora: number; minuto: number } | null): string => (c ? `${String(c.hora).padStart(2, "0")}:${String(c.minuto).padStart(2, "0")}` : "14:00");
@@ -1239,9 +1249,20 @@ export interface EstadoDescargasArca extends EstadoDescargaConstancias {
   forzado: null | { arrancadoEl: string; total: number; empresas: string[]; empresaActual: string; terminadas: number; listas: number; terminado: boolean; errores: string[] };
 }
 
+export interface ResumenCorridaAutomatica {
+  fecha: string;
+  dia: string;
+  tipo?: "dia" | "cola";
+  empresas: Array<{ empresa: string; enviados: number; enSeco?: boolean; error?: string }>;
+  omitidos: Array<{ nombre: string; cuil: string; empresa: string; motivo: string }>;
+  error?: string;
+}
+
 export interface EstadoPresentacionAutomatica {
   activa: boolean;
   config: ConfigAltasAutomaticas;
+  /** Las frecuencias que acepta el servidor para la cola, en minutos. */
+  frecuencias?: number[];
   ahora: string;
   hoy: string;
   enSeco: boolean;
@@ -1249,13 +1270,10 @@ export interface EstadoPresentacionAutomatica {
   maxIntentos?: number;
   /** El último «Forzar presentación de N»: una corrida por empleadora (y por vuelta), con cómo terminó cada una. */
   forzado?: null | { arrancadoEl: string; total: number; empresas: string[]; resultados: Array<{ empresa: string; enviados: number; enSeco?: boolean; error?: string }>; omitidas: Array<{ nombre: string; motivo: string }>; terminado: boolean };
-  ultimaCorrida: null | {
-    fecha: string;
-    dia: string;
-    empresas: Array<{ empresa: string; enviados: number; enSeco?: boolean; error?: string }>;
-    omitidos: Array<{ nombre: string; cuil: string; empresa: string; motivo: string }>;
-    error?: string;
-  };
+  ultimaCorrida: null | ResumenCorridaAutomatica;
+  /** Modo frecuente: la última pasada de la cola y cuándo es la próxima (ISO). */
+  ultimaCorridaCola?: null | ResumenCorridaAutomatica;
+  proximaCola?: string | null;
   contratos: AltaPendienteArca[];
 }
 

@@ -20,6 +20,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { InfoModal } from '../components/ui/InfoModal';
 import { ConveniosDelProyecto, precargarConvenios } from '../components/proyectos/ConveniosDelProyecto';
 import { SedesDelProyecto } from '../components/proyectos/SedesDelProyecto';
+import { BadgeCoordinador } from '../components/proyectos/BadgeCoordinador';
 import { ConfiguracionPorArea, sedesDelProyectoConNombre, nombreDeSede } from '../components/proyectos/ConfiguracionPorArea';
 import { CompanyMultiSelect } from '../components/CompanyMultiSelect';
 import { sedesDelForm, nombresDeSedes, sedesParaElForm } from '../utils/sedesProyecto';
@@ -909,6 +910,9 @@ export const ClientProjectsPage: React.FC = () => {
                     );
                   })()}
                 </div>
+
+                {/* Coordinador del proyecto, debajo del centro de costo */}
+                <BadgeCoordinador project={project} className="mt-4" />
 
                 {/* Áreas Configuradas dentro del cuerpo de la card */}
                 {project.areasConfig && project.areasConfig.length > 0 && (
