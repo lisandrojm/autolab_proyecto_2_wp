@@ -30,7 +30,7 @@ import { pendientesDeConstanciaTodas } from "../services/arca/constanciasAltas.j
 import { claveAreaTurnoDelMiembro } from "../utils/areaTurno.js";
 import { partirClaveAreaTurno, sedeDe, sedePrincipalDe, pendientesDeSede, idDe as idDeArea } from "../compartido/areaTurno.js";
 import { ponerSedeEnArea } from "../services/sedeDeArea.js";
-import { DIAS_ATRAS_PENDIENTES, MAX_INTENTOS_AUTOMATICOS, configDe, sumarDias, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
+import { FRECUENCIAS_MINUTOS, MAX_INTENTOS_AUTOMATICOS, configDe, proximaDeLaCola, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { Tenant } from "../models/Tenant.js";
 import { LoteAltasError } from "../services/arca/validarLoteAltas.js";
 import { CandadoArcaOcupado, quienTiene } from "../services/arca/candadoArca.js";
@@ -3160,7 +3160,7 @@ router.post("/contratos/altas-arca/corrida", requireTenant, authenticateToken, r
   PRESENTACIONES AUTOMÁTICAS (ver `services/arca/presentacionAutomatica.ts`): la pantalla que muestra qué
   altas se van a presentar solas a las 14 h del día de alta, con su cuenta regresiva, y deja forzar una.
 */
-/** GET /contratos/altas-arca/automatica — estado de la automática y las altas pendientes (desde 30 días atrás). */
+/** GET /contratos/altas-arca/automatica — estado de la automática y TODAS las altas pendientes (sin límite de fecha). */
 router.get("/contratos/altas-arca/automatica", requireTenant, authenticateToken, requirePermission(["admin_contracts:view", "config_afip:view"]), async (req, res) => {
     try {
         const hoy = hoyArgentina();
@@ -3168,15 +3168,18 @@ router.get("/contratos/altas-arca/automatica", requireTenant, authenticateToken,
         const pa = t?.integrations?.arcaSimplificacion?.presentacionAutomatica || {};
         const cfg = configDe(pa);
         // La pantalla de configuración sólo quiere el horario: armar los candidatos (catálogos, registros) sobra.
-        const candidatos = req.query.soloConfig === "true" ? [] : await candidatosDeAlta(req.tenantObjectId, { desde: sumarDias(hoy, -DIAS_ATRAS_PENDIENTES), cfg });
+        const candidatos = req.query.soloConfig === "true" ? [] : await candidatosDeAlta(req.tenantObjectId, { cfg, ultimaCola: pa.ultimaCola });
         res.json({
             activa: !!pa.activa,
             config: cfg,
+            frecuencias: FRECUENCIAS_MINUTOS,
             ahora: new Date().toISOString(),
             hoy,
             ultimaCorrida: pa.ultimaCorrida || null,
+            ultimaCorridaCola: cfg.modo === "frecuente" ? pa.ultimaCorridaCola || null : null,
+            proximaCola: cfg.modo === "frecuente" && pa.activa ? proximaDeLaCola(cfg, pa.ultimaCola, new Date()).toISOString() : null,
             enSeco: enSecoForzado(),
-            // Cuántas veces insiste la automática con una rechazada antes de dejarla marcada.
+            // Ya no corta nada: todas siguen en la cola. Queda para servidores/pantallas que lo leían.
             maxIntentos: MAX_INTENTOS_AUTOMATICOS,
             // El forzado en masa («Forzar presentación de N»), si lo hubo: cómo va o cómo terminó cada corrida.
             forzado: forzadoAltasDe(String(req.tenantObjectId)) || null,
@@ -3191,7 +3194,7 @@ router.get("/contratos/altas-arca/automatica", requireTenant, authenticateToken,
 });
 /**
  * PUT /contratos/altas-arca/automatica — prende o apaga la automática y/o cambia su horario
- * (`hora`, `minuto`, `diasAntes`). Cada campo es opcional: se toca sólo lo que viene. Lo usan la página
+ * (`hora`, `minuto`, `diasAntes`, `modo`, `cadaMinutos`). Cada campo es opcional: se toca sólo lo que viene. Lo usan la página
  * de Altas Automáticas (el interruptor) y Configuración → ARCA → Altas Automáticas (el horario).
  */
 router.put("/contratos/altas-arca/automatica", requireTenant, authenticateToken, requirePermission(["admin_contracts:view", "config_afip:view"]), async (req, res) => {
@@ -3216,6 +3219,9 @@ router.put("/contratos/altas-arca/automatica", requireTenant, authenticateToken,
         */
         if (req.body?.activa === true && !pa.activa && yaPasoLaHora(cfg))
             set[`${base}.ultimoDia`] = hoyArgentina();
+        // Lo mismo con la cola: al prender (o al pasar a frecuente) la primera pasada es dentro de `cadaMinutos`, no ya.
+        if ((req.body?.activa === true && !pa.activa) || (v.cambios.modo === "frecuente" && pa.modo !== "frecuente"))
+            set[`${base}.ultimaCola`] = new Date().toISOString();
         if (Object.keys(set).length > 0)
             await Tenant.updateOne({ _id: req.tenantObjectId }, { $set: set });
         res.json({ activa: req.body?.activa !== undefined ? req.body.activa === true : !!pa.activa, config: cfg });
@@ -3248,8 +3254,7 @@ router.post("/contratos/altas-arca/automatica/forzar", requireTenant, authentica
                 return;
             }
             // Los mismos candidatos que ve la pantalla (misma ventana): de ahí se toman los pedidos.
-            const hoy = hoyArgentina();
-            const todos = await candidatosDeAlta(req.tenantObjectId, { desde: sumarDias(hoy, -DIAS_ATRAS_PENDIENTES) });
+            const todos = await candidatosDeAlta(req.tenantObjectId);
             const porClave = new Map(todos.map((c) => [`${c.userProjectId}:${c.contractIndex}`, c]));
             const elegidos = pedidas.map((p) => porClave.get(`${p.userProjectId}:${p.contractIndex}`)).filter((c) => !!c);
             const presentables = elegidos.filter((c) => c.presentable && !!c.registro && !!c.empresa);

@@ -96,8 +96,12 @@ const tenantSchema = new Schema({
                 hora: { type: Number },
                 minuto: { type: Number },
                 diasAntes: { type: Number },
+                modo: { type: String },
+                cadaMinutos: { type: Number },
                 ultimoDia: { type: String },
                 ultimaCorrida: { type: Schema.Types.Mixed },
+                ultimaCola: { type: String },
+                ultimaCorridaCola: { type: Schema.Types.Mixed },
             },
             sincronizacionRelaciones: {
                 activa: { type: Boolean, default: false },

@@ -17,24 +17,23 @@ export interface CandidatoAlta {
         _id: string;
         razonSocial: string;
     } | null;
-    /** La próxima corrida automática que lo presenta, ISO. Vacío = más vieja que el límite de atrasadas: se fuerza a mano. */
+    /** La próxima corrida automática que lo presenta, ISO. */
     momento: string;
     /** Se puede presentar tal como está. */
     presentable: boolean;
-    /** La baja ya pasó: la automática no lo toma (y no cuenta como omitido de una corrida), pero se puede forzar a mano. */
+    /** La baja ya pasó. Informativo: igual entra en la automática. */
     terminado: boolean;
     /**
-     * ARCA ya lo rechazó con un motivo que no cambia por insistir («ya posee una relación laboral
-     * activa»): el texto de ese rechazo. La automática no lo vuelve a presentar; queda listado para que
-     * alguien lo revise, y se puede forzar a mano. Ver `rechazoDefinitivo.ts`.
+     * ARCA ya lo rechazó con un motivo del padrón («ya posee una relación laboral activa»): el texto de ese
+     * rechazo, para que alguien lo revise. Informativo: sigue en la cola. Ver `rechazoDefinitivo.ts`.
      */
     rechazoDefinitivo: string;
-    /** Cuántas veces la automática ya la presentó y ARCA la rechazó (ver `MAX_INTENTOS_AUTOMATICOS`). */
+    /** Cuántas veces la automática ya la presentó y ARCA la rechazó. */
     intentos: number;
     /** ISO del primero de esos rechazos; vacío si no hubo. */
     primerIntentoEl: string;
-    /** Llegó al tope de intentos: la automática no insiste más; se puede forzar. */
-    agotado: boolean;
+    /** ISO del último rechazo; vacío si no está rechazada. Rechazada hoy, se reintenta mañana. */
+    rechazadaEl: string;
     /** Por qué no, si no se puede. */
     motivo: string;
     /** El registro de 85, si está completo. */
@@ -52,6 +51,7 @@ export declare function candidatosDeAlta(tenantObjectId: Types.ObjectId, opts?: 
         contractIndex: number;
     };
     cfg?: ConfigAltasAutomaticas;
+    ultimaCola?: string;
 }): Promise<CandidatoAlta[]>;
 export interface ResultadoEmpresa {
     empresa: string;
@@ -77,6 +77,10 @@ export declare function presentarCandidatos(o: {
     }) => void;
     /** Se va completando corrida por corrida (el forzado en masa lo expone a la pantalla). */
     acumular?: (r: ResultadoEmpresa) => void;
+    /** Se suma al nombre de cada corrida en el resumen («atrasadas»). */
+    rotulo?: string;
+    /** Se mira antes de cada lote: true = no arrancar más corridas (la cola le deja el paso a la corrida del día). */
+    debeCortar?: () => boolean;
 }): Promise<ResultadoEmpresa[]>;
 /** El forzado en masa de un tenant («Forzar presentación de N»): qué se pidió, qué corrida va y cómo terminó cada una. */
 export interface ForzadoAltasEnCurso {
@@ -92,10 +96,20 @@ export interface ForzadoAltasEnCurso {
 }
 export declare const forzadoAltasDe: (tenantId: string) => ForzadoAltasEnCurso | undefined;
 export declare function registrarForzadoAltas(tenantId: string, f: ForzadoAltasEnCurso): ForzadoAltasEnCurso;
-/** La corrida del día de UN tenant: las altas de hoy (y de los próximos días, según la anticipación). Devuelve el resumen que se guarda. */
-export declare function correrPresentacionDelDia(tenantId: string, tenantObjectId: Types.ObjectId, cfg: ConfigAltasAutomaticas): Promise<{
+/**
+ * Una corrida automática de UN tenant. Devuelve el resumen que se guarda.
+ *   · "dia": la de la hora fija. PRIMERO las altas de su día (fecha de alta de hoy en adelante, hasta la
+ *     anticipación), en corridas propias; DESPUÉS, en otras corridas, la cola de atrasadas. Así una falla
+ *     de la cola no atrasa las del día.
+ *   · "cola": modo frecuente, entre corrida y corrida del día: sólo lo que ya tuvo su turno. Corta entre
+ *     lotes si llega la hora del día (`debeCortar`).
+ */
+export declare function correrPresentacionAutomatica(tenantId: string, tenantObjectId: Types.ObjectId, cfg: ConfigAltasAutomaticas, tipo: "dia" | "cola", o?: {
+    debeCortar?: () => boolean;
+}): Promise<{
     fecha: string;
     dia: string;
+    tipo: "dia" | "cola";
     empresas: ResultadoEmpresa[];
     omitidos: {
         nombre: string;

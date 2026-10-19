@@ -169,14 +169,20 @@ export interface ITenant extends Document {
             };
             presentacionAutomatica?: {
                 activa?: boolean;
-                /** A qué hora corre (Argentina) y cuántos días de anticipación. Ver `horarioAltasAutomaticas.ts`. */
+                /** A qué hora corre (Argentina), cuántos días de anticipación y si la cola corre además cada N minutos. Ver `horarioAltasAutomaticas.ts`. */
                 hora?: number;
                 minuto?: number;
                 diasAntes?: number;
-                /** "YYYY-MM-DD" del último día que corrió: no se repite en el mismo día. */
+                modo?: "diaria" | "frecuente";
+                cadaMinutos?: number;
+                /** "YYYY-MM-DD" del último día que corrió la corrida del día: no se repite en el mismo día. */
                 ultimoDia?: string;
-                /** Qué hizo la última vez: por empresa, y lo que no se presentó con su motivo. */
+                /** Qué hizo la última corrida del día: por empresa, y lo que no se presentó con su motivo. */
                 ultimaCorrida?: any;
+                /** ISO de la última pasada de la cola (o de la corrida del día, que también la cuenta). */
+                ultimaCola?: string;
+                /** Qué hizo la última pasada de la cola (modo frecuente). */
+                ultimaCorridaCola?: any;
             };
             /**
              * SINCRONIZACIÓN DE RELACIONES LABORALES: una vez por día lee en ARCA los movimientos (altas y

@@ -60,7 +60,7 @@ async function tick() {
         if (sr.ultimoDia === hoy)
             continue;
         const cfg = configSyncDe(sr);
-        if (!yaPasoLaHora({ ...horaDe(cfg.hora), diasAntes: 0 }))
+        if (!yaPasoLaHora(horaDe(cfg.hora)))
             continue;
         enCurso.add(id);
         void (async () => {

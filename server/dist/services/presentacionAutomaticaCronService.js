@@ -1,32 +1,34 @@
 import { Tenant } from "../models/Tenant.js";
 import { hoyArgentina } from "../utils/contratoVigencia.js";
-import { correrPresentacionDelDia } from "./arca/presentacionAutomatica.js";
-import { configDe, horaTexto, yaPasoLaHora } from "./arca/horarioAltasAutomaticas.js";
+import { correrPresentacionAutomatica } from "./arca/presentacionAutomatica.js";
+import { configDe, horaTexto, leTocaALaCola, yaPasoLaHora } from "./arca/horarioAltasAutomaticas.js";
 /**
- * EL HORARIO DE LA PRESENTACIÓN AUTOMÁTICA: a la hora que configuró cada tenant (14:00 argentinas por
- * defecto), una vez por día, se presentan en ARCA las altas que empiezan ese día o en los días de
- * anticipación configurados (ver `arca/presentacionAutomatica.ts` y `arca/horarioAltasAutomaticas.ts`).
+ * EL HORARIO DE LA PRESENTACIÓN AUTOMÁTICA (ver `arca/presentacionAutomatica.ts` y
+ * `arca/horarioAltasAutomaticas.ts`):
+ *   · LA CORRIDA DEL DÍA: a la hora que configuró cada tenant (14:00 argentinas por defecto), una vez por
+ *     día. Presenta primero las altas de ese día y después la cola de atrasadas.
+ *   · LA COLA (modo frecuente): cada `cadaMinutos`, lo que ya tuvo su turno y no salió. Si la hora del
+ *     día llega mientras corre, corta entre lotes y la del día arranca en el tick siguiente.
  *
  * Mismo patrón que las otras tareas del servidor: un `setInterval` que mira la hora. La hora es la de
- * Argentina y no la del VPS (puede estar en UTC). Si el servidor estuvo caído a esa hora, corre apenas
- * vuelve, siempre que siga siendo el mismo día. Si se cambia la hora a una más tarde cuando la corrida
- * de hoy ya pasó, no vuelve a correr hoy.
+ * Argentina y no la del VPS (puede estar en UTC). Si el servidor estuvo caído a la hora del día, corre
+ * apenas vuelve, siempre que siga siendo el mismo día.
  *
- * El día se marca ANTES de presentar: si el proceso se cae a mitad de camino no se reintenta solo, y lo
- * que quedó sin presentar se ve en la pantalla con su botón «Forzar». Relanzar sería seguro igual
- * (`validarLoteAltas` saltea lo ya presentado), pero una corrida que falla siempre —sin credenciales,
- * por ejemplo— no tiene que golpear ARCA cada minuto.
+ * Cada corrida se marca ANTES de presentar (`ultimoDia` / `ultimaCola`), con un filtro que hace de
+ * candado entre procesos: una corrida que falla siempre —sin credenciales, por ejemplo— no golpea ARCA
+ * cada minuto, y la cola espera su frecuencia.
  *
  * Sólo los tenants que la prendieron (`integrations.arcaSimplificacion.presentacionAutomatica.activa`).
  */
 const TICK_MS = 60_000;
+const BASE = "integrations.arcaSimplificacion.presentacionAutomatica";
 const enCurso = new Set();
 async function tick() {
     const hoy = hoyArgentina();
     let tenants = [];
     try {
-        tenants = await Tenant.find({ "integrations.arcaSimplificacion.presentacionAutomatica.activa": true })
-            .select("_id integrations.arcaSimplificacion.presentacionAutomatica")
+        tenants = await Tenant.find({ [`${BASE}.activa`]: true })
+            .select(`_id ${BASE}`)
             .lean();
     }
     catch (e) {
@@ -38,26 +40,32 @@ async function tick() {
         if (enCurso.has(id))
             continue;
         const pa = t.integrations?.arcaSimplificacion?.presentacionAutomatica || {};
-        if (pa.ultimoDia === hoy)
-            continue;
         const cfg = configDe(pa);
-        if (!yaPasoLaHora(cfg))
+        const ahora = new Date();
+        const delDiaPendiente = pa.ultimoDia !== hoy;
+        const tipo = delDiaPendiente && yaPasoLaHora(cfg, ahora) ? "dia" : leTocaALaCola(cfg, pa.ultimaCola, ahora) ? "cola" : null;
+        if (!tipo)
             continue;
         enCurso.add(id);
         void (async () => {
+            const campoResumen = tipo === "dia" ? "ultimaCorrida" : "ultimaCorridaCola";
             try {
-                // Se marca el día primero, con un filtro que hace de candado entre procesos: si otro ya lo marcó, no corre.
-                const marcado = await Tenant.updateOne({ _id: t._id, "integrations.arcaSimplificacion.presentacionAutomatica.ultimoDia": { $ne: hoy } }, { $set: { "integrations.arcaSimplificacion.presentacionAutomatica.ultimoDia": hoy } });
+                // La del día también cuenta como pasada de la cola: la cola espera su frecuencia desde acá.
+                const marcado = tipo === "dia"
+                    ? await Tenant.updateOne({ _id: t._id, [`${BASE}.ultimoDia`]: { $ne: hoy } }, { $set: { [`${BASE}.ultimoDia`]: hoy, [`${BASE}.ultimaCola`]: ahora.toISOString() } })
+                    : await Tenant.updateOne({ _id: t._id, [`${BASE}.ultimaCola`]: pa.ultimaCola ?? { $exists: false } }, { $set: { [`${BASE}.ultimaCola`]: ahora.toISOString() } });
                 if (marcado.modifiedCount === 0)
                     return;
-                console.log(`[presentacion-automatica] ${id}: corrida de las ${horaTexto(cfg)} del ${hoy} (anticipación ${cfg.diasAntes} día/s)`);
-                const resumen = await correrPresentacionDelDia(id, t._id, cfg);
-                await Tenant.updateOne({ _id: t._id }, { $set: { "integrations.arcaSimplificacion.presentacionAutomatica.ultimaCorrida": resumen } });
-                console.log(`[presentacion-automatica] ${id}: ${resumen.empresas.map((e) => `${e.empresa} ${e.error ? `error: ${e.error}` : `${e.enviados} enviada(s)`}`).join(" · ") || "nada para presentar"}; ${resumen.omitidos.length} sin presentar`);
+                console.log(`[presentacion-automatica] ${id}: ${tipo === "dia" ? `corrida del día, ${horaTexto(cfg)} del ${hoy} (anticipación ${cfg.diasAntes} día/s)` : `cola (cada ${cfg.cadaMinutos} min)`}`);
+                // La cola le deja el paso a la del día: si llega su hora mientras corre, corta entre lotes.
+                const debeCortar = tipo === "cola" ? () => delDiaPendiente && yaPasoLaHora(cfg) : undefined;
+                const resumen = await correrPresentacionAutomatica(id, t._id, cfg, tipo, { debeCortar });
+                await Tenant.updateOne({ _id: t._id }, { $set: { [`${BASE}.${campoResumen}`]: resumen } });
+                console.log(`[presentacion-automatica] ${id} (${tipo}): ${resumen.empresas.map((e) => `${e.empresa} ${e.error ? `error: ${e.error}` : `${e.enviados} enviada(s)`}`).join(" · ") || "nada para presentar"}; ${resumen.omitidos.length} sin presentar`);
             }
             catch (e) {
-                console.error(`[presentacion-automatica] ${id}:`, e?.message || e);
-                await Tenant.updateOne({ _id: t._id }, { $set: { "integrations.arcaSimplificacion.presentacionAutomatica.ultimaCorrida": { fecha: new Date().toISOString(), dia: hoy, empresas: [], omitidos: [], error: String(e?.message || e) } } }).catch(() => { });
+                console.error(`[presentacion-automatica] ${id} (${tipo}):`, e?.message || e);
+                await Tenant.updateOne({ _id: t._id }, { $set: { [`${BASE}.${campoResumen}`]: { fecha: new Date().toISOString(), dia: hoy, tipo, empresas: [], omitidos: [], error: String(e?.message || e) } } }).catch(() => { });
             }
             finally {
                 enCurso.delete(id);
@@ -68,5 +76,5 @@ async function tick() {
 export function initPresentacionAutomaticaScheduler() {
     setTimeout(() => void tick(), 15_000);
     setInterval(() => void tick(), TICK_MS);
-    console.log("[presentacion-automatica] programada: todos los días a la hora configurada por cada tenant (Argentina), para los que la tengan activa");
+    console.log("[presentacion-automatica] programada: la corrida del día a la hora de cada tenant (Argentina) y, en modo frecuente, la cola cada N minutos");
 }
