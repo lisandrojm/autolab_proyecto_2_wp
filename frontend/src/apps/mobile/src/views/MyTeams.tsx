@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSitemap, faLayerGroup, faChevronDown, faChevronRight, faUserTie, faUserShield, faSearch, faXmark, faFileContract, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faSitemap, faLayerGroup, faChevronDown, faChevronRight, faUserTie, faUserShield, faSearch, faXmark, faFileContract, faCircleInfo, faLocationDot } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import SectionHeader from "../components/SectionHeader";
 import ContratoMiembroModal from "../components/ContratoMiembroModal";
@@ -12,7 +12,7 @@ import { areasAPI, Area } from "../../../../api/areas";
 import { shiftsAPI, Shift } from "../../../../api/shifts";
 import { claveOrdenTurno, etiquetaDeTurno, textoDeDias } from "../../../../utils/jerarquiaTurnos";
 import { infoAPI } from "../../../../api/info";
-import { claveAreaTurno, claveFilaArea, sedeDe } from "@compartido/areaTurno";
+import { claveAreaTurno, claveFilaArea, sedeDe, sedePrincipalDe } from "@compartido/areaTurno";
 
 interface MyTeamsProps {
   onNavigate: (view: ViewType) => void;
@@ -71,6 +71,8 @@ interface AreaACargo {
   areaId: string;
   /** La fila de «Configuración por Área» (área + sede): la misma área puede estar una vez por sede. */
   filaKey: string;
+  /** La sede de la fila, para el badge naranja debajo del área: «Libertador», o «La corte · principal» para la fila sin sede. */
+  sedeEtiqueta: string;
   nombre: string;
   /** Vacío cuando los turnos del área no trabajan los mismos días: ahí cada uno los dice por su cuenta. */
   diasComunes: string;
@@ -171,7 +173,9 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
             ({
               areaId: c.areaId,
               filaKey,
-              nombre: c.sedeId ? `${nombreBase} · ${nombreSede(c.sedeId)}` : nombreBase,
+              nombre: nombreBase,
+              // La sede va aparte, como badge: la fila sin sede es la de la sede principal del proyecto.
+              sedeEtiqueta: c.sedeId ? nombreSede(c.sedeId) : sedePrincipalDe(p.metadata) ? `${nombreSede(sedePrincipalDe(p.metadata))} · principal` : "",
               diasComunes: "",
               turnos: [],
             } as AreaACargo);
@@ -201,7 +205,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
             const distintos = new Set(ordenados.map((t) => t.dias));
             return { ...a, turnos: ordenados, diasComunes: distintos.size === 1 ? ordenados[0].dias : "" };
           })
-          .sort((a, b) => a.nombre.localeCompare(b.nombre));
+          .sort((a, b) => a.nombre.localeCompare(b.nombre) || a.sedeEtiqueta.localeCompare(b.sedeEtiqueta));
 
         // El supervisor ya viene resuelto en el listado de proyectos: no hace falta otra consulta.
         const resp: any = p.metadataResolutions?.responsable;
@@ -462,7 +466,16 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
                       >
                         <FontAwesomeIcon icon={areaAbierta ? faChevronDown : faChevronRight} className="h-3 w-3 text-slate-400" />
                         <FontAwesomeIcon icon={faLayerGroup} className="h-3.5 w-3.5 text-blue-500" />
-                        <span className="text-sm font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">{a.nombre}</span>
+                        <span className="flex flex-col items-start">
+                          <span className="text-sm font-black uppercase tracking-wide text-slate-900 dark:text-slate-100">{a.nombre}</span>
+                          {/* La sede, siempre (también la principal sola): cada sede de un área es su propio equipo. */}
+                          {a.sedeEtiqueta && (
+                            <span className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300">
+                              <FontAwesomeIcon icon={faLocationDot} className="h-2.5 w-2.5" />
+                              {a.sedeEtiqueta}
+                            </span>
+                          )}
+                        </span>
                         {a.diasComunes && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{a.diasComunes}</span>}
                         <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
                           {a.turnos.length} {a.turnos.length === 1 ? "turno" : "turnos"}
