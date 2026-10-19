@@ -13,7 +13,7 @@ import { claveAreaTurno, claveFilaArea, partirClaveAreaTurno, sedeDe } from "@co
 import { coordinaAreas, permisosDeRoles, PROJECT_SUPERVISOR } from "../../utils/permisosMobile";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSave, faUserTie, faInfoCircle, faTable, faLocationDot } from "@fortawesome/free-solid-svg-icons";
+import { faSave, faUserTie, faInfoCircle, faTable, faLocationDot, faXmark } from "@fortawesome/free-solid-svg-icons";
 
 interface TeamCoordinadoresTabProps {
   projectId: string;
@@ -39,6 +39,18 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
   // El catálogo de sedes, para el título «Edición · Libertador» de las filas con sede.
   const [sedesCatalogo, setSedesCatalogo] = useState<Array<{ name?: string; data?: any }>>([]);
   const [isSaving, setIsSaving] = useState(false);
+  /** En qué combinaciones (claveAreaTurno, con sede) está asignada cada persona del equipo: para no quitar una sede con gente. */
+  const [clavesDelEquipo, setClavesDelEquipo] = useState<Array<{ nombre: string; claves: string[] }> | null>(null);
+  useEffect(() => {
+    let cancelado = false;
+    projectsAPI
+      .getProjectMembersStatus(projectId)
+      .then((ms) => !cancelado && setClavesDelEquipo(ms.map((m) => ({ nombre: `${m.firstName || ""} ${m.lastName || ""}`.trim() || m.email, claves: m.claves || [] }))))
+      .catch(() => !cancelado && setClavesDelEquipo(null));
+    return () => {
+      cancelado = true;
+    };
+  }, [projectId, project?.areasConfig, project?.teamConfig]);
 
   useEffect(() => {
     const fetchAuxData = async () => {
@@ -215,12 +227,56 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
     para elegirle supervisor. Se guardan también los supervisores que estén elegidos y sin guardar:
     al releer el proyecto se perderían.
   */
-  const sumarSede = async (areaId: string, sedeId: number | null) => {
-    const filas = (project?.areasConfig || []).map((ac: any) => ({
+  /*
+    QUITAR UNA SEDE DE UN ÁREA, salvo que tenga gente asignada en alguno de sus turnos (pedido del
+    18/10/2026): esa gente quedaría sin su fila y caería en otra sin que nadie lo decida. Primero se la
+    mueve (Jerarquía o el wizard del miembro) y después se quita. Los supervisores de esa sede se
+    sueltan con ella. La última sede del área no se quita acá: eso es sacar el área del proyecto.
+  */
+  const quitarSede = async (areaId: string, sedeId: number | null, shiftIds: string[], etiqueta: string) => {
+    if (!clavesDelEquipo) {
+      sweetAlert.error("Todavía cargando", "Esperá un momento a que se cargue quién está en cada turno.");
+      return;
+    }
+    const clavesFila = new Set(shiftIds.map((shiftId) => claveAreaTurno({ areaId, shiftId, sedeId })));
+    const asignados = clavesDelEquipo.filter((m) => m.claves.some((k) => clavesFila.has(k)));
+    if (asignados.length > 0) {
+      const nombres = asignados.slice(0, 5).map((m) => m.nombre).join(", ") + (asignados.length > 5 ? ` y ${asignados.length - 5} más` : "");
+      sweetAlert.error("No se puede quitar la sede", `${etiqueta} tiene ${asignados.length} persona${asignados.length === 1 ? "" : "s"} asignada${asignados.length === 1 ? "" : "s"} (${nombres}). Movelas a otra área o sede desde Jerarquía y después quitala.`);
+      return;
+    }
+    const r = await sweetAlert.confirm(`¿Quitar ${etiqueta}?`, "Se saca esa sede del área y sus supervisores dejan de tenerla a cargo.", "Sí, quitar");
+    if (!r.isConfirmed) return;
+    const filas = filasDelProyecto().filter((f) => !(f.areaId === areaId && sedeDe((f as any).sedeId) === sedeId));
+    const coordinatorAssignments = Object.entries(assignments)
+      .filter(([key]) => !clavesFila.has(key))
+      .map(([key, userId]) => {
+        const { areaId: a, shiftId, sedeId: sd } = partirClaveAreaTurno(key);
+        return { areaId: a, shiftId, userId, ...(sd ? { sedeId: sd } : {}) };
+      });
+    try {
+      setIsSaving(true);
+      await projectsAPI.updateProject(projectId, { areasConfig: filas as any, coordinatorAssignments });
+      sweetAlert.success("Sede quitada", `${etiqueta} ya no está en el área.`);
+      onUpdated();
+    } catch (err) {
+      console.error(err);
+      sweetAlert.error("Error", "No se pudo quitar la sede del área.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  /** Las filas de «Configuración por Área» tal como se guardan (ids pelados, con su sede). */
+  const filasDelProyecto = () =>
+    (project?.areasConfig || []).map((ac: any) => ({
       areaId: String(typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId),
       shiftIds: (ac.shiftIds || []).map((x: any) => String(typeof x === "object" ? x?._id : x)),
       ...(sedeDe(ac.sedeId) ? { sedeId: sedeDe(ac.sedeId)! } : {}),
     }));
+
+  const sumarSede = async (areaId: string, sedeId: number | null) => {
+    const filas = filasDelProyecto();
     const ultimo = filas.map((f) => f.areaId).lastIndexOf(areaId);
     if (ultimo < 0) return;
     filas.splice(ultimo + 1, 0, { areaId, shiftIds: [...filas[ultimo].shiftIds], ...(sedeId ? { sedeId } : {}) });
@@ -297,6 +353,19 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                     <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300">
                       <FontAwesomeIcon icon={faLocationDot} className="h-2.5 w-2.5" />
                       {sedeId ? nombreSede(sedeId) : sedePrincipal ? `${nombreSede(sedePrincipal)} · principal` : "Todas las sedes"}
+                      {/* Quitar la sede: sólo si el área tiene otra (la última es sacar el área) y se frena si tiene gente. */}
+                      {(project?.areasConfig || []).filter((ac: any) => String(typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === area._id).length > 1 && (
+                        <button
+                          type="button"
+                          disabled={isSaving}
+                          onClick={() => quitarSede(area._id, sedeId, shifts.map((sh) => sh._id), `${area.name} · ${sedeId ? nombreSede(sedeId) : sedePrincipal ? nombreSede(sedePrincipal) + " (principal)" : "todas las sedes"}`)}
+                          className="ml-0.5 rounded-full p-0.5 hover:bg-orange-200 dark:hover:bg-orange-800/60"
+                          title="Quitar esta sede del área (sólo si no tiene gente asignada)"
+                          aria-label="Quitar sede"
+                        >
+                          <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                        </button>
+                      )}
                     </span>
                     {/* «+» al lado de la sede, en azul (es agregar): suma otra sede al área, con su propio supervisor. */}
                     {sedesParaSumar(area._id).length > 0 && (
