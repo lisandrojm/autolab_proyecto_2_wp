@@ -9,8 +9,10 @@ import { projectsAPI, Project } from "../../../../api/projects";
 import { areasAPI, Area } from "../../../../api/areas";
 import { shiftsAPI, Shift } from "../../../../api/shifts";
 import { vacationsAPI } from "../../../../api/vacations";
+import { infoAPI } from "../../../../api/info";
+import { claveFilaArea, sedeDe, sedePrincipalDe } from "@compartido/areaTurno";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUsers, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter, faExclamationTriangle, faUmbrellaBeach, faPen } from "@fortawesome/free-solid-svg-icons";
+import { faUsers, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter, faExclamationTriangle, faUmbrellaBeach, faPen, faLocationDot, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { useProfile } from "../hooks/useProfile";
 import { ViewType } from "../types";
 import SectionHeader from "../components/SectionHeader";
@@ -730,6 +732,31 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
    * livianas y la lista de gente llega mientras tanto.
    */
   const [isLoadingRoster, setIsLoadingRoster] = useState(true);
+  /** El catálogo de sedes, para el badge naranja con la sede de cada área (área × sede). */
+  const [catalogoSedes, setCatalogoSedes] = useState<Array<{ name?: string; data?: any }>>([]);
+  useEffect(() => {
+    infoAPI
+      .listByType("sede")
+      .then((l) => setCatalogoSedes(l as any[]))
+      .catch(() => {
+        /* sin catálogo: el badge dice «Sede N» */
+      });
+  }, []);
+  /** «Libertador», o «La corte · principal» para la fila sin sede (la de la sede principal del proyecto). */
+  const etiquetaSedeDeFila = (sedeId: unknown, metadata: any): string => {
+    const nombre = (id: number) => String(catalogoSedes.find((x) => Number(x.data?.id) === id)?.name || `Sede ${id}`);
+    const sede = sedeDe(sedeId);
+    if (sede) return nombre(sede);
+    const principal = sedePrincipalDe(metadata);
+    return principal ? `${nombre(principal)} · principal` : "";
+  };
+  const badgeSede = (texto: string, key?: string) =>
+    texto ? (
+      <span key={key} className="text-[10px] bg-orange-500/15 text-orange-300 px-2 py-0.5 rounded-full border border-orange-500/40 flex items-center gap-1 font-semibold">
+        <FontAwesomeIcon icon={faLocationDot} className="text-[8px]" />
+        {texto}
+      </span>
+    ) : null;
   const [isLoadingReports, setIsLoadingReports] = useState(true);
   /** Evita disparar loadData() dos veces en simultáneo (ej. doble-montaje en desarrollo): duplicar
    *  las 5 llamadas —una de ellas pesada— aumenta el riesgo de timeouts sin necesidad. */
@@ -3072,6 +3099,8 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                                   return ac?.areaId?.name || allAreas.find((a) => String(a._id) === String(selectedAreaId))?.name || "Área";
                                 })()}
                               </span>
+                              {/* La sede (o sedes) en que supervisa esa área, en naranja. */}
+                              {[...new Set((selectedProject.coordinatorAssignments || []).filter(isMyAssignment).filter((asm: any) => String(asm.areaId?._id || asm.areaId || "") === String(selectedAreaId)).map((asm: any) => etiquetaSedeDeFila(asm.sedeId, selectedProject.metadata)))].map((t) => badgeSede(t, t))}
                               {selectedShiftId ? (
                                 <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30 flex items-center gap-1 font-bold uppercase tracking-wider">
                                   <FontAwesomeIcon icon={faClock} className="text-[8px]" />
@@ -3122,16 +3151,18 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                               if (myAssignments.length === 0) return null;
 
                               /* Group by area */
-                              const groupedByArea = new Map<string, { areaName: string; shifts: { _id: string; name: string; order?: number }[] }>();
+                              // Por fila área + sede: «Libertador · La corte» y «Libertador · Libertador» son dos equipos.
+                              const groupedByArea = new Map<string, { areaName: string; sede: string; shifts: { _id: string; name: string; order?: number }[] }>();
                               myAssignments.forEach((asm: any) => {
-                                const aId = String(asm.areaId?._id || asm.areaId || "");
+                                const areaIdPelado = String(asm.areaId?._id || asm.areaId || "");
+                                const aId = claveFilaArea({ areaId: areaIdPelado, sedeId: asm.sedeId });
                                 const sId = String(asm.shiftId?._id || asm.shiftId || "");
                                 if (!groupedByArea.has(aId)) {
-                                  const projectArea = selectedProject.areasConfig?.find((ac) => String(ac.areaId?._id || ac.areaId || "") === aId)?.areaId;
-                                  const areaName = asm.areaId?.name || (typeof projectArea === "object" ? projectArea.name : undefined) || allAreas.find((a) => String(a._id) === aId)?.name || "Área";
-                                  groupedByArea.set(aId, { areaName, shifts: [] });
+                                  const projectArea = selectedProject.areasConfig?.find((ac) => String(ac.areaId?._id || ac.areaId || "") === areaIdPelado)?.areaId;
+                                  const areaName = asm.areaId?.name || (typeof projectArea === "object" ? projectArea.name : undefined) || allAreas.find((a) => String(a._id) === areaIdPelado)?.name || "Área";
+                                  groupedByArea.set(aId, { areaName, sede: etiquetaSedeDeFila(asm.sedeId, selectedProject.metadata), shifts: [] });
                                 }
-                                const areaConfig = selectedProject.areasConfig?.find((ac) => String(ac.areaId?._id || ac.areaId || "") === aId);
+                                const areaConfig = selectedProject.areasConfig?.find((ac) => String(ac.areaId?._id || ac.areaId || "") === areaIdPelado);
                                 const projectShift = areaConfig?.shiftIds?.find((s: any) => String(s?._id || s || "") === sId);
                                 const shift = asm.shiftId?.name ? asm.shiftId : (typeof projectShift === "object" ? projectShift : undefined) || allShifts.find((s) => String(s._id) === sId);
 
@@ -3142,12 +3173,14 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
 
                               return (
                                 <div className="space-y-1">
-                                  {Array.from(groupedByArea.entries()).map(([aId, { areaName, shifts }]) => (
+                                  {Array.from(groupedByArea.entries()).map(([aId, { areaName, sede, shifts }]) => (
                                     <div key={aId} className="flex flex-wrap items-center gap-1">
                                       <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30 flex items-center gap-1 font-bold uppercase tracking-wider">
                                         <FontAwesomeIcon icon={faLayerGroup} className="text-[8px]" />
                                         {areaName}
                                       </span>
+                                      {/* La sede de esa área, en naranja. */}
+                                      {badgeSede(sede)}
                                       {shifts
                                         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
                                         .map((s) => (
@@ -3175,9 +3208,17 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
                             {wizardIndex === -1 ? (
                               <div className="text-center p-4 bg-gray-50 dark:bg-blue-600/10 rounded border border-blue-600 dark:border-blue-600 mt-4">
                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Reporte Detallado de Asistencia</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
-                                  Deberás confirmar la asistencia de cada uno de los <strong>{projectEmployees.length}</strong> colaboradores asignados al proyecto.
-                                </p>
+                                {isLoadingRoster ? (
+                                  // Mientras llega la lista no se dice «0 colaboradores»: todavía no se sabe cuántos son.
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto flex items-center justify-center gap-2">
+                                    <FontAwesomeIcon icon={faSpinner} spin />
+                                    Cargando los colaboradores…
+                                  </p>
+                                ) : (
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
+                                    Deberás confirmar la asistencia de cada uno de los <strong>{projectEmployees.length}</strong> colaboradores asignados al proyecto.
+                                  </p>
+                                )}
                               </div>
                             ) : (
                               <>
