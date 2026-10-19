@@ -1033,6 +1033,13 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const opcionesAreaTurno: OpcionAreaTurno[] | null = opcionesDelProyecto && filtraPorRol ? opcionesDelProyecto.filter((o) => rolesDelAreaDe(o.areaId).some((id) => formData.roleFrameIds.includes(id))) : opcionesDelProyecto;
   /** Había áreas en el proyecto, pero ninguna tiene el rol elegido: no se ofrece ninguna y se explica. */
   const sinAreaParaElRol = filtraPorRol && (opcionesDelProyecto || []).length > 0 && (opcionesAreaTurno || []).length === 0;
+  /*
+    El rol SÍ está en un área del proyecto, pero quien pide no la supervisa: un supervisor sólo pide
+    para sus áreas (ver `coordinacionesEnProyecto`). Antes el aviso decía que el rol no estaba en
+    ninguna área del proyecto, que es falso y mandaba a tocar la configuración sin motivo.
+  */
+  const areasDelRolEnProyecto = areasDelProyectoConRoles.filter((a) => a.rolesFrame.some((id) => formData.roleFrameIds.includes(id))).map((a) => a.nombre);
+  const rolEnAreaQueNoSupervisa = sinAreaParaElRol && coordinaEnElProyecto && areasDelRolEnProyecto.length > 0;
 
   /** Por área, con sus turnos en el orden del día: con muchas combinaciones, una lista plana no se lee. */
   // Una entrada por fila área + sede: «Edición · Libertador» y «Edición · Huidobro» son dos, cada una con su supervisor.
@@ -1981,7 +1988,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       setIntentoEnviar(true);
       document.getElementById("bloque-area-turno")?.scrollIntoView({ behavior: "smooth", block: "center" });
       // Si no hay área que ofrecer porque el rol no está en ninguna del proyecto, se dice qué pedir y a quién (pedido del 18/10/2026).
-      if (sinAreaParaElRol) {
+      if (rolEnAreaQueNoSupervisa) {
+        const roles = rolesElegidos.map((rf) => `«${rf.name}»`).join(" / ") || "elegido";
+        sweetAlert.warning("No se puede enviar: no supervisás esa área", `El rol ${roles} trabaja en ${areasDelRolEnProyecto.join(", ")}, y en este proyecto vos supervisás otras áreas. La solicitud la tiene que pedir quien supervisa ${areasDelRolEnProyecto.join(", ")} o el coordinador del proyecto.`);
+      } else if (sinAreaParaElRol) {
         const roles = rolesElegidos.map((rf) => `«${rf.name}»`).join(" / ") || "elegido";
         const areasDelRol = areasConRoles.filter((a) => (a.rolesFrame || []).some((id) => formData.roleFrameIds.includes(String(id)))).map((a) => a.name);
         sweetAlert.warning(
@@ -2635,6 +2645,13 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             </label>
             {opcionesAreaTurno === null ? (
               <p className="text-xs text-slate-400">Cargando las áreas y turnos del proyecto…</p>
+            ) : rolEnAreaQueNoSupervisa ? (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300 space-y-1">
+                <p className="font-semibold">
+                  El rol {rolesElegidos.map((rf) => `«${rf.name}»`).join(" / ")} trabaja en {areasDelRolEnProyecto.join(", ")}, un área que vos no supervisás en este proyecto.
+                </p>
+                <p>Un supervisor pide altas sólo para sus áreas. Esta solicitud la tiene que pedir quien supervisa {areasDelRolEnProyecto.join(", ")} o el coordinador del proyecto.</p>
+              </div>
             ) : sinAreaParaElRol ? (
               <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300 space-y-1">
                 <p className="font-semibold">
