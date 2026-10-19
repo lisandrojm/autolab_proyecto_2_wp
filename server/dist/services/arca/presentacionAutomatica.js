@@ -189,7 +189,7 @@ export async function candidatosDeAlta(tenantObjectId, opts = {}) {
     const idsClientes = [...new Set(proyectos.map((p) => String(p.clientId || "")).filter((id) => Types.ObjectId.isValid(id)))];
     const clientes = await Client.find({ _id: { $in: idsClientes } }).select("name").lean();
     const clientePorId = new Map(clientes.map((c) => [String(c._id), c.name || ""]));
-    const presentadas = await altasPresentadasDe(proyectos.map((p) => p._id), userIds);
+    const presentadas = await altasPresentadasDe(proyectos.map((p) => p._id), userIds, tenantObjectId);
     const cat = await catalogosArca();
     const empresaPorId = new Map((cat.empresas || []).map((e) => [String(e._id), e]));
     const out = [];

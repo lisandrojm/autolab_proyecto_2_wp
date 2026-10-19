@@ -19,9 +19,31 @@ export interface AltaPresentada {
     empresaId: string;
     alta: string;
     baja: string;
+    /** La baja la puso ARCA (Relaciones Laborales sincronizadas), no el contrato de WeProdu. */
+    bajaSegunArca?: boolean;
 }
-/** Las altas ya presentadas de estas personas, en los proyectos del tenant. */
-export declare function altasPresentadasDe(proyectosDelTenant: Array<string | Types.ObjectId>, userIds: string[]): Promise<AltaPresentada[]>;
+/**
+ * Las altas ya presentadas de estas personas, en los proyectos del tenant. Con `tenantId`, además se
+ * cruzan con las Relaciones Laborales de ARCA (ver `aplicarBajasDeArca`).
+ */
+export declare function altasPresentadasDe(proyectosDelTenant: Array<string | Types.ObjectId>, userIds: string[], tenantId?: Types.ObjectId | string): Promise<AltaPresentada[]>;
+export interface RelacionArcaResumida {
+    cuil: string;
+    empleadoraCuit: string;
+    /** "YYYY-MM-DD" */
+    inicio: string;
+    /** "YYYY-MM-DD"; vacío = relación abierta en ARCA. */
+    fin: string;
+}
+/**
+ * LAS BAJAS LAS DICE ARCA (pedido del 18/10/2026). Un contrato de WeProdu puede no tener fecha de baja
+ * (tiempo indeterminado) aunque en ARCA la relación ya terminó (renuncia, fin de plazo): si se lo toma
+ * como vigente, bloquea altas nuevas que en ARCA son perfectamente posibles. Para cada alta presentada se
+ * busca en las Relaciones Laborales de ARCA la de la misma persona, misma empleadora y misma fecha de
+ * inicio; si ARCA tiene baja, manda la de ARCA (la más temprana de las dos). Sin relación en ARCA (todavía
+ * no sincronizada) queda lo de WeProdu. Puro.
+ */
+export declare function aplicarBajasDeArca(presentadas: AltaPresentada[], relaciones: RelacionArcaResumida[], cuilDe: (p: AltaPresentada) => string, cuitDe: (p: AltaPresentada) => string): AltaPresentada[];
 /**
  * El alta ya presentada que se superpone con este contrato, si hay. Dos períodos se pisan si cada uno
  * empieza antes de que termine el otro. El mismo contrato no cuenta (es el que se está presentando).

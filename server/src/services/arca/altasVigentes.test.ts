@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { altaQueSePisa, type AltaPresentada } from "./altasVigentes.js";
+import { altaQueSePisa, aplicarBajasDeArca, type AltaPresentada } from "./altasVigentes.js";
 import { CONFIG_POR_DEFECTO, configDe, minutosArgentina, momentoDeCorrida, proximaCorridaPara, validarConfig, ventanaDeLaCorrida, yaTermino } from "./horarioAltasAutomaticas.js";
 
 const presentada = (o: Partial<AltaPresentada> = {}): AltaPresentada => ({ userId: "u1", userProjectId: "up1", contractIndex: 0, empresaId: "e1", alta: "2026-10-10", baja: "2026-10-12", ...o });
@@ -102,5 +102,27 @@ describe("el horario de la automática", () => {
     it("más vieja que 30 días, la automática ya no la toma: se fuerza a mano", () => {
       assert.equal(proximaCorridaPara("2026-09-01", cfg, manana, hoy), null);
     });
+  });
+});
+
+describe("las bajas las dice ARCA", () => {
+  const p = (o: Partial<AltaPresentada> = {}): AltaPresentada => ({ userId: "u1", userProjectId: "up1", contractIndex: 0, empresaId: "e1", alta: "2023-06-01", baja: "", ...o });
+  const cuil = () => "27255114099";
+  const cuit = () => "30717068374";
+  it("un alta sin baja en WeProdu toma la baja que ARCA tiene registrada (Pereda: renuncia 30/06/2025)", () => {
+    const [r] = aplicarBajasDeArca([p()], [{ cuil: "27255114099", empleadoraCuit: "30717068374", inicio: "2023-06-01", fin: "2025-06-30" }], cuil, cuit);
+    assert.equal(r.baja, "2025-06-30");
+    assert.equal(r.bajaSegunArca, true);
+    // y con esa baja, un alta nueva de 2026 ya no se pisa
+    assert.equal(altaQueSePisa({ userId: "u1", userProjectId: "up1", contractIndex: 15, empresaId: "e1", alta: "2026-10-19", baja: "2026-10-19" }, [r]), null);
+  });
+  it("relación abierta en ARCA, o sin relación sincronizada: queda lo de WeProdu", () => {
+    assert.equal(aplicarBajasDeArca([p()], [{ cuil: "27255114099", empleadoraCuit: "30717068374", inicio: "2023-06-01", fin: "" }], cuil, cuit)[0].baja, "");
+    assert.equal(aplicarBajasDeArca([p()], [], cuil, cuit)[0].baja, "");
+  });
+  it("otra empleadora u otra fecha de inicio no cuentan; si WeProdu ya tiene una baja anterior, manda esa", () => {
+    assert.equal(aplicarBajasDeArca([p()], [{ cuil: "27255114099", empleadoraCuit: "30710295839", inicio: "2023-06-01", fin: "2025-06-30" }], cuil, cuit)[0].baja, "");
+    assert.equal(aplicarBajasDeArca([p()], [{ cuil: "27255114099", empleadoraCuit: "30717068374", inicio: "2023-06-02", fin: "2025-06-30" }], cuil, cuit)[0].baja, "");
+    assert.equal(aplicarBajasDeArca([p({ baja: "2024-01-31" })], [{ cuil: "27255114099", empleadoraCuit: "30717068374", inicio: "2023-06-01", fin: "2025-06-30" }], cuil, cuit)[0].baja, "2024-01-31");
   });
 });

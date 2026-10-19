@@ -72,7 +72,7 @@ export async function validarLoteAltas(o) {
     const userPorId = new Map(usuarios.map((u) => [String(u._id), u]));
     // Las altas que estas personas ya tienen presentadas: no se da otra que se superponga con la misma
     // empleadora (ver `altasVigentes.ts`).
-    const presentadasPrevias = await altasPresentadasDe([...proyectosDelTenant], ups.map((u) => String(u.userId)));
+    const presentadasPrevias = await altasPresentadasDe([...proyectosDelTenant], ups.map((u) => String(u.userId)), tenantObjectId);
     // ── Lo que hace falta para resolver lo esperado ─────────────────────────────────────────────────
     const [categorias, convenios, obrasSociales, estados, defaultsGlobales, sucursales, modalidadesC, modalidadesL, tipos] = await Promise.all([
         listarCategoriasCompat(),

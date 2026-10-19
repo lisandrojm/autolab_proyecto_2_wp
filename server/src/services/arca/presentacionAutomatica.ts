@@ -229,6 +229,7 @@ export async function candidatosDeAlta(
   const presentadas = await altasPresentadasDe(
     proyectos.map((p) => p._id),
     userIds,
+    tenantObjectId,
   );
   const cat = await catalogosArca();
   const empresaPorId = new Map(((cat.empresas || []) as any[]).map((e) => [String(e._id), e]));
