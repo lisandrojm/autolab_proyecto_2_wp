@@ -1010,8 +1010,18 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       return { areaId: id, nombre: a?.name || (areasDelProyecto || []).find((o) => o.areaId === id)?.areaNombre || "Área", rolesFrame: (a?.rolesFrame || []).map(String) };
     });
   }, [areasDelProyecto, areasConRoles]);
-  /** Los roles que se ofrecen: la unión de los de las áreas del proyecto. Vacío = no hay con qué acotar. */
-  const rolesDeLasAreasDelProyecto = useMemo(() => new Set(areasDelProyectoConRoles.flatMap((a) => a.rolesFrame)), [areasDelProyectoConRoles]);
+  /*
+    UN SUPERVISOR PIDE ALTAS SÓLO PARA SUS ÁREAS (pedido del 18/10/2026): los roles que se le ofrecen son
+    los de las áreas que supervisa en este proyecto, y se le avisa. El coordinador del proyecto (y quien
+    ve todo el proyecto, ver `veTodoElProyecto`) puede dar de alta a cualquiera: ve los de todas las áreas.
+  */
+  const areasParaRoles = useMemo(() => {
+    if (!coordinaEnElProyecto) return areasDelProyectoConRoles;
+    const mias = new Set(coordinacionesEnProyecto.map((o) => o.areaId));
+    return areasDelProyectoConRoles.filter((a) => mias.has(a.areaId));
+  }, [areasDelProyectoConRoles, coordinaEnElProyecto, coordinacionesEnProyecto]);
+  /** Los roles que se ofrecen: la unión de los de esas áreas. Vacío = no hay con qué acotar. */
+  const rolesDeLasAreasDelProyecto = useMemo(() => new Set(areasParaRoles.flatMap((a) => a.rolesFrame)), [areasParaRoles]);
   const rolesAcotadosPorArea = !!proyectoElegido && rolesDeLasAreasDelProyecto.size > 0;
 
   /** Lo que se puede elegir. `null` = todavía cargando las áreas del proyecto. */
@@ -3214,7 +3224,9 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               <button type="button" onClick={() => setInfoRolesOpen(true)} className="w-full text-left rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[11px] text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300 flex items-start gap-2">
                 <FontAwesomeIcon icon={faCircleInfo} className="mt-0.5 shrink-0" />
                 <span>
-                  {rolesAcotadosPorArea
+                  {rolesAcotadosPorArea && coordinaEnElProyecto
+                    ? `Como supervisor, sólo los roles de las áreas que supervisás (${areasParaRoles.filter((a) => a.rolesFrame.length > 0).map((a) => a.nombre).join(", ")}). Para otro rol, lo pide quien supervisa esa área o el coordinador del proyecto.`
+                    : rolesAcotadosPorArea
                     ? `Sólo los roles de las áreas del proyecto (${areasDelProyectoConRoles.filter((a) => a.rolesFrame.length > 0).map((a) => a.nombre).join(", ")}). Tocá para ver cómo sumar otros.`
                     : areasDelProyecto === null
                       ? "Buscando las áreas del proyecto…"
@@ -3285,11 +3297,17 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           <div className="space-y-3 text-sm text-slate-700 dark:text-slate-200">
             {rolesAcotadosPorArea ? (
               <>
-                <p>
-                  En este proyecto se ofrecen <strong>sólo los roles empresa de las áreas que tiene asociadas</strong>. Es para no mezclar oficios con áreas y turnos donde nunca trabajarían.
-                </p>
+                {coordinaEnElProyecto ? (
+                  <p>
+                    Como <strong>supervisor</strong>, pedís altas <strong>sólo para las áreas que supervisás</strong> en este proyecto, así que se ofrecen los roles de esas áreas. Para otro rol, la solicitud la pide quien supervisa esa área o el coordinador del proyecto.
+                  </p>
+                ) : (
+                  <p>
+                    En este proyecto se ofrecen <strong>sólo los roles empresa de las áreas que tiene asociadas</strong>. Es para no mezclar oficios con áreas y turnos donde nunca trabajarían.
+                  </p>
+                )}
                 <ul className="space-y-1.5">
-                  {areasDelProyectoConRoles.map((a) => (
+                  {areasParaRoles.map((a) => (
                     <li key={a.areaId} className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2">
                       <p className="font-semibold text-slate-800 dark:text-slate-100">
                         {a.nombre} <span className="font-normal text-slate-400">({a.rolesFrame.length} {a.rolesFrame.length === 1 ? "rol" : "roles"})</span>
