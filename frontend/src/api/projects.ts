@@ -125,17 +125,22 @@ export interface Project {
     areaShiftAssignments?: {
       areaId: string | any;
       shiftIds: (string | any)[];
+      /** La sede de la fila del proyecto (ver `compartido/areaTurno.ts`). */
+      sedeId?: number | null;
     }[];
   }[];
   turnos?: (string | any)[];
+  /** Las áreas con sus turnos; `sedeId` opcional: la misma área puede estar una vez por sede (ver `compartido/areaTurno.ts`). */
   areasConfig?: {
     areaId: string | any;
     shiftIds: string[] | any[];
+    sedeId?: number | null;
   }[];
   coordinatorAssignments?: {
     areaId: string | any;
     shiftId: string | any;
     userId: string | any;
+    sedeId?: number | null;
   }[];
   metadata?: any;
   metadataResolutions?: {
@@ -454,6 +459,7 @@ class ProjectsAPI {
       areasConfig?: {
         areaId: string;
         shiftIds: string[];
+        sedeId?: number | null;
       }[];
       /* Mandarla la deja FIJADA a mano. Sin ella nace automática: la del margen y, sin margen, la
          valoración por defecto (la resuelve el server). */
@@ -567,11 +573,13 @@ class ProjectsAPI {
       areasConfig?: {
         areaId: string;
         shiftIds: string[];
+        sedeId?: number | null;
       }[];
       coordinatorAssignments?: {
         areaId: string;
         shiftId: string;
         userId: string;
+        sedeId?: number | null;
       }[];
     },
   ): Promise<Project> {
@@ -590,7 +598,7 @@ class ProjectsAPI {
    * Lo usa el tab de jerarquía al arrastrar. No reescribe `teamConfig` entero —así dos personas pueden
    * acomodar el mismo equipo sin pisarse— y no toca contratos.
    */
-  async asignarAreasDeMiembro(projectId: string, userId: string, areaShiftAssignments: { areaId: string; shiftIds: string[] }[]): Promise<void> {
+  async asignarAreasDeMiembro(projectId: string, userId: string, areaShiftAssignments: { areaId: string; shiftIds: string[]; sedeId?: number | null }[]): Promise<void> {
     await axios.patch(`/projects/${projectId}/team-config/${userId}/areas`, { areaShiftAssignments }, { headers: this.getHeaders() });
   }
 

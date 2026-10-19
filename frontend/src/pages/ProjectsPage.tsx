@@ -23,13 +23,14 @@ import { Modal } from '../components/ui/Modal';
 import { InfoModal } from '../components/ui/InfoModal';
 import { ConveniosDelProyecto, precargarConvenios } from '../components/proyectos/ConveniosDelProyecto';
 import { SedesDelProyecto } from '../components/proyectos/SedesDelProyecto';
+import { ConfiguracionPorArea, sedesDelProyectoConNombre } from '../components/proyectos/ConfiguracionPorArea';
 import { CompanyMultiSelect } from '../components/CompanyMultiSelect';
 import { sedesDelForm, nombresDeSedes, sedesParaElForm } from '../utils/sedesProyecto';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { sweetAlert } from '../utils/sweetAlert';
 import { emitProjectsChanged } from '../utils/navbarEvents';
-import { faBriefcase, faBuilding, faTable, faGrip, faPlus, faLayerGroup, faEdit, faTrash, faInfoCircle, faUserTie, faCalendarDay, faCalendarCheck, faUsers, faFileLines, faBell, faPiggyBank } from '@fortawesome/free-solid-svg-icons';
+import { faBriefcase, faBuilding, faTable, faGrip, faPlus, faEdit, faTrash, faInfoCircle, faUserTie, faCalendarDay, faCalendarCheck, faUsers, faFileLines, faBell, faPiggyBank } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import { getHelp, hasHelp } from '../data/help/helpContent';
@@ -70,9 +71,6 @@ export const ProjectsPage: React.FC = () => {
   const [availableCoordinators, setAvailableCoordinators] = useState<any[]>([]);
   const [availableShifts, setAvailableShifts] = useState<Shift[]>([]);
   const [availableAreas, setAvailableAreas] = useState<Area[]>([]);
-  const [selectedAreaId, setSelectedAreaId] = useState('');
-  const [isAddingArea, setIsAddingArea] = useState(false);
-  const [configuringAreaId, setConfiguringAreaId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -85,7 +83,7 @@ export const ProjectsPage: React.FC = () => {
     margen: '',
     valoracionesPorRol: [] as Array<{ rolFrameId: number; contratoId?: string | null; valoracionId: string }>,
     releaseEmpresas: [] as string[],
-    areasConfig: [] as { areaId: string; shiftIds: string[] }[],
+    areasConfig: [] as { areaId: string; shiftIds: string[]; sedeId?: number | null }[],
     metadata: {
       centroCostoId: undefined as number | undefined,
       // La empresa de Tango del centro: el id solo es ambiguo entre empresas (ver `SelectorCentroCosto`).
@@ -224,9 +222,6 @@ export const ProjectsPage: React.FC = () => {
     setModalMode('create');
     setEditingProject(null);
     setSelectedClientIdLocal('');
-    setSelectedAreaId('');
-    setIsAddingArea(false);
-    setConfiguringAreaId(null);
     setValoracionElegida('');
     setFormData({
       name: '',
@@ -273,6 +268,7 @@ export const ProjectsPage: React.FC = () => {
       areasConfig: (project.areasConfig || []).map((ac: any) => ({
         areaId: typeof ac.areaId === 'string' ? ac.areaId : ac.areaId._id,
         shiftIds: ac.shiftIds.map((s: any) => (typeof s === 'string' ? s : s._id)),
+        sedeId: ac.sedeId ?? null,
       })),
       metadata: {
         centroCostoId: project.metadata?.centroCostoId,
@@ -282,9 +278,6 @@ export const ProjectsPage: React.FC = () => {
         responsableId: project.metadata?.responsableId,
       },
     });
-    setSelectedAreaId('');
-    setIsAddingArea(false);
-    setConfiguringAreaId(null);
     setShowCreateModal(true);
     fetchAuxData();
   };
@@ -870,205 +863,10 @@ export const ProjectsPage: React.FC = () => {
                 <input type="date" className="input-field" value={formData.endDate} onChange={(e) => setFormData((p) => ({ ...p, endDate: e.target.value }))} />
               </div>
 
-              {/* Áreas y Turnos */}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6 col-span-2">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Configuración por Área</label>
-                  </div>
-                  <button type="button" onClick={() => setIsAddingArea(true)} className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 border border-blue-100 dark:border-blue-800 transition-all shadow-sm">
-                    <FontAwesomeIcon icon={faPlus} className="h-3 w-3" />
-                    Agregar Área
-                  </button>
-                </div>
+              {/* Áreas y Turnos (y la sede de cada área, si el proyecto trabaja en varias): ver `ConfiguracionPorArea`. */}
+              <div className="col-span-2"><ConfiguracionPorArea areasConfig={formData.areasConfig} onChange={(next) => setFormData((p) => ({ ...p, areasConfig: next }))} areas={availableAreas} shifts={availableShifts} sedes={sedesDelProyectoConNombre(availableSedes, sedesDelForm(formData.metadata))} /></div>
 
-                <div className="space-y-1.5">
-                  {formData.areasConfig.length === 0 ? (
-                    <div className="text-center py-10 bg-gray-50/30 dark:bg-gray-900/10 border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-2xl">
-                      <FontAwesomeIcon icon={faLayerGroup} className="h-8 w-8 text-gray-200 dark:text-gray-700 mb-3" />
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sin Áreas Integradas</p>
-                    </div>
-                  ) : (
-                    formData.areasConfig.map((ac) => {
-                      const area = availableAreas.find((a) => a._id === ac.areaId);
-                      if (!area) return null;
 
-                      return (
-                        <div key={ac.areaId} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-gray-50/50 dark:bg-gray-900/30 border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 transition-all group">
-                          <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-lg bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-400 group-hover:text-blue-500 transition-colors">
-                              <FontAwesomeIcon icon={faLayerGroup} className="h-3.5 w-3.5" />
-                            </div>
-                            <div>
-                              <div className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
-                                {area.name}
-                                {area.isSystem && <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 uppercase tracking-wider">Sistema</span>}
-                              </div>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${ac.shiftIds.length > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'}`}>
-                                  {ac.shiftIds.length} {ac.shiftIds.length === 1 ? 'Turno' : 'Turnos'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button type="button" onClick={() => setConfiguringAreaId(ac.areaId)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all" title="Configurar Turnos">
-                              <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
-                            </button>
-                            {!area.isSystem && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    areasConfig: prev.areasConfig.filter((item) => item.areaId !== ac.areaId),
-                                  }));
-                                }}
-                                className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all"
-                                title="Quitar"
-                              >
-                                <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              {/* MODAL: Agregar Área */}
-              {isAddingArea && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-                  <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 animate-in zoom-in-95 duration-200 overflow-hidden">
-                    <div className="p-6 bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
-                        <FontAwesomeIcon icon={faLayerGroup} className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">Agregar Nueva Área</h3>
-                      </div>
-                    </div>
-
-                    <div className="p-6 space-y-6">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Áreas Disponibles</label>
-                        <select
-                          className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-all cursor-pointer"
-                          value={selectedAreaId}
-                          autoFocus
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (!val) return;
-                            setFormData((prev) => ({
-                              ...prev,
-                              areasConfig: [...prev.areasConfig, { areaId: val, shiftIds: [] }],
-                            }));
-                            setSelectedAreaId('');
-                            setIsAddingArea(false);
-                            setConfiguringAreaId(val);
-                          }}
-                        >
-                          <option value="">Seleccionar del sistema...</option>
-                          {availableAreas
-                            .filter((a) => !formData.areasConfig.some((ac) => ac.areaId === a._id))
-                            .map((a) => (
-                              <option key={a._id} value={a._id}>
-                                {a.name}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-
-                      <div className="flex justify-end pt-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsAddingArea(false);
-                            setSelectedAreaId('');
-                          }}
-                          className="px-6 py-2.5 text-xs font-bold text-gray-500 hover:text-gray-700 transition-colors uppercase tracking-widest border border-gray-100 dark:border-gray-800 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* MODAL: Configurar Turnos */}
-              {configuringAreaId && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-                  <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col max-h-[80vh]">
-                    <div className="p-6 bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
-                          <FontAwesomeIcon icon={faTable} className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight">{availableAreas.find((a) => a._id === configuringAreaId)?.name}</h3>
-                          <p className="text-[10px] text-gray-500 uppercase font-medium">Habilitar turnos para esta área</p>
-                        </div>
-                      </div>
-                      <button onClick={() => setConfiguringAreaId(null)} className="w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-all flex items-center justify-center">
-                        <FontAwesomeIcon icon={faPlus} className="h-4 w-4 rotate-45" />
-                      </button>
-                    </div>
-
-                    <div className="p-4 overflow-y-auto space-y-3">
-                      {availableShifts.map((shift) => {
-                        const areaConfigIndex = formData.areasConfig.findIndex((ac) => ac.areaId === configuringAreaId);
-                        const isShiftSelected = areaConfigIndex !== -1 && formData.areasConfig[areaConfigIndex].shiftIds.includes(shift._id);
-
-                        return (
-                          <div
-                            key={shift._id}
-                            onClick={() => {
-                              if (areaConfigIndex === -1) return;
-                              const newAreasConfig = [...formData.areasConfig];
-                              const currentArea = newAreasConfig[areaConfigIndex];
-                              if (isShiftSelected) {
-                                currentArea.shiftIds = currentArea.shiftIds.filter((id) => id !== shift._id);
-                              } else {
-                                currentArea.shiftIds = [...currentArea.shiftIds, shift._id];
-                              }
-                              setFormData((prev) => ({ ...prev, areasConfig: newAreasConfig }));
-                            }}
-                            className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${isShiftSelected ? 'bg-emerald-50/50 border-emerald-500/30 dark:bg-emerald-900/10' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'}`}
-                          >
-                            <div>
-                              <div className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-tight">{shift.name}</div>
-                              <div className="text-[10px] text-gray-500 font-bold uppercase mt-1 tracking-wider">
-                                {shift.startTime} — {shift.endTime}
-                              </div>
-                              {shift.days && shift.days.length > 0 && (
-                                <div className="flex gap-0.5 mt-1.5">
-                                  {['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'].map((label, dayIdx) => (
-                                    <span key={dayIdx} className={`text-[8px] font-bold px-1.5 py-0.5 rounded-md ${shift.days.includes(dayIdx) ? (isShiftSelected ? 'bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300') : 'text-gray-300 dark:text-gray-600'}`}>
-                                      {label}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${isShiftSelected ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xl ring-0 transition duration-200 ease-in-out ${isShiftSelected ? 'translate-x-5' : 'translate-x-0'}`} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className="p-4 bg-gray-50/50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex justify-end">
-                      <button type="button" onClick={() => setConfiguringAreaId(null)} className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
-                        Listo
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Estado, al final. El bloque es compartido: ver `components/ui/BloqueEstado`. */}
               <BloqueEstado
