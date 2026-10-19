@@ -11,6 +11,8 @@ import { projectsAPI, Project, AreaShiftMember } from "../../../../api/projects"
 import { areasAPI, Area } from "../../../../api/areas";
 import { shiftsAPI, Shift } from "../../../../api/shifts";
 import { claveOrdenTurno, etiquetaDeTurno, textoDeDias } from "../../../../utils/jerarquiaTurnos";
+import { infoAPI } from "../../../../api/info";
+import { claveAreaTurno, claveFilaArea, sedeDe } from "@compartido/areaTurno";
 
 interface MyTeamsProps {
   onNavigate: (view: ViewType) => void;
@@ -67,6 +69,8 @@ interface TurnoACargo {
 
 interface AreaACargo {
   areaId: string;
+  /** La fila de «Configuración por Área» (área + sede): la misma área puede estar una vez por sede. */
+  filaKey: string;
   nombre: string;
   /** Vacío cuando los turnos del área no trabajan los mismos días: ahí cada uno los dice por su cuenta. */
   diasComunes: string;
@@ -99,6 +103,15 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
   const [contratoDe, setContratoDe] = useState<{ userId: string; nombre: string } | null>(null);
   /** La ficha del proyecto (cliente, sede, centro de costo, empresas): la misma que el escritorio. */
   const [verInfoProyecto, setVerInfoProyecto] = useState(false);
+  const [sedesCatalogo, setSedesCatalogo] = useState<Array<{ name?: string; data?: any }>>([]);
+  useEffect(() => {
+    infoAPI
+      .listByType("sede")
+      .then((l) => setSedesCatalogo(l as any[]))
+      .catch(() => {
+        /* sin catálogo: la fila dice «Sede N» */
+      });
+  }, []);
 
   useEffect(() => {
     let cancelado = false;
@@ -138,26 +151,37 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
         const coordinaciones = (p.coordinatorAssignments || []).filter(esMia);
 
         // Las combinaciones que me tocan: todas las del proyecto si lo superviso.
-        const combos: { areaId: string; shiftId: string }[] = supervisa
-          ? (p.areasConfig || []).flatMap((ac: any) => (ac.shiftIds || []).map((s: any) => ({ areaId: idDe(ac.areaId), shiftId: idDe(s) })))
-          : coordinaciones.map((a: any) => ({ areaId: idDe(a.areaId), shiftId: idDe(a.shiftId) }));
+        // Cada combinación con la sede de su fila (área × turno × sede): sin sedes por área, null como siempre.
+        const combos: { areaId: string; shiftId: string; sedeId: number | null }[] = supervisa
+          ? (p.areasConfig || []).flatMap((ac: any) => (ac.shiftIds || []).map((s: any) => ({ areaId: idDe(ac.areaId), shiftId: idDe(s), sedeId: sedeDe(ac.sedeId) })))
+          : coordinaciones.map((a: any) => ({ areaId: idDe(a.areaId), shiftId: idDe(a.shiftId), sedeId: sedeDe(a.sedeId) }));
+        const nombreSede = (id: number | null) => {
+          if (!id) return "";
+          const sd = sedesCatalogo.find((x) => Number(x.data?.id) === id);
+          return String(sd?.data?.nombre || sd?.name || `Sede ${id}`);
+        };
 
         const porArea = new Map<string, AreaACargo>();
         for (const c of combos) {
           if (!c.areaId || !c.shiftId) continue;
+          const filaKey = claveFilaArea(c);
+          const nombreBase = nombreArea.get(c.areaId) || (p.areasConfig || []).map((ac: any) => ac.areaId).find((a: any) => idDe(a) === c.areaId)?.name || "Área";
           const area =
-            porArea.get(c.areaId) ||
+            porArea.get(filaKey) ||
             ({
               areaId: c.areaId,
-              nombre: nombreArea.get(c.areaId) || (p.areasConfig || []).map((ac: any) => ac.areaId).find((a: any) => idDe(a) === c.areaId)?.name || "Área",
+              filaKey,
+              nombre: c.sedeId ? `${nombreBase} · ${nombreSede(c.sedeId)}` : nombreBase,
               diasComunes: "",
               turnos: [],
             } as AreaACargo);
           if (area.turnos.some((t) => t.shiftId === c.shiftId)) continue;
           const turno = turnoPorId.get(c.shiftId);
-          const coord: any = (p.coordinatorAssignments || []).find((a: any) => idDe(a.areaId) === c.areaId && idDe(a.shiftId) === c.shiftId)?.userId;
+          const clave = claveAreaTurno(c);
+          const coord: any = (p.coordinatorAssignments || []).find((a: any) => claveAreaTurno(a) === clave)?.userId;
           area.turnos.push({
-            clave: `${c.areaId}::${c.shiftId}`,
+            // La misma clave que manda el server en `claves` (con la sede si la fila la tiene).
+            clave,
             shiftId: c.shiftId,
             nombre: etiquetaDeTurno(turno?.name || "Turno"),
             horario: turno?.startTime && turno?.endTime ? `${turno.startTime} a ${turno.endTime}` : "",
@@ -167,7 +191,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
             coordinadorId: idDe(coord),
             coordinadorNombre: coord && typeof coord === "object" ? `${coord.firstName || ""} ${coord.lastName || ""}`.trim() : "",
           });
-          porArea.set(c.areaId, area);
+          porArea.set(filaKey, area);
         }
 
         const areasACargo = [...porArea.values()]
@@ -186,7 +210,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
       })
       .filter((e) => e.areas.length > 0)
       .sort((a, b) => a.proyecto.name.localeCompare(b.proyecto.name));
-  }, [proyectos, areas, turnos, misIds, miEmail, miIdFrame, user]);
+  }, [proyectos, areas, turnos, misIds, miEmail, miIdFrame, user, sedesCatalogo]);
 
   // Con un solo proyecto no hay nada que elegir: queda seleccionado.
   useEffect(() => {
@@ -414,7 +438,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
                 <div className="flex items-center justify-end gap-2 text-xs font-semibold">
                   <button
                     type="button"
-                    onClick={() => setAbiertos(new Set([...equipo.areas.map((a) => "area::" + a.areaId), ...equipo.areas.flatMap((a) => a.turnos.map((t) => t.clave)), ...(sinAsignar ? ["sin-asignar"] : [])]))}
+                    onClick={() => setAbiertos(new Set([...equipo.areas.map((a) => "area::" + a.filaKey), ...equipo.areas.flatMap((a) => a.turnos.map((t) => t.clave)), ...(sinAsignar ? ["sin-asignar"] : [])]))}
                     className="text-blue-600 dark:text-blue-400"
                   >
                     Expandir todo
@@ -427,12 +451,12 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
 
                 {/* Un bloque por área. Dentro, sus turnos en orden de horario. */}
                 {equipo.areas.map((a) => {
-                  const areaAbierta = abiertos.has("area::" + a.areaId);
+                  const areaAbierta = abiertos.has("area::" + a.filaKey);
                   return (
-                    <section key={a.areaId} className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/60">
+                    <section key={a.filaKey} className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/60">
                       <button
                         type="button"
-                        onClick={() => alternar("area::" + a.areaId)}
+                        onClick={() => alternar("area::" + a.filaKey)}
                         aria-expanded={areaAbierta}
                         className={`flex w-full flex-wrap items-center gap-2 text-left ${areaAbierta ? "mb-3 border-b border-slate-200 pb-2 dark:border-slate-700" : ""}`}
                       >

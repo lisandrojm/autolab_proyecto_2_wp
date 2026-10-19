@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { claveFilaArea, sedeDe } from "@compartido/areaTurno";
 import { valoracionesDeCategoria } from "@compartido/valoracionesDeCategoria";
 import { Modal } from "./Modal";
 import { CampoTipoContrato, ModalTipoContrato } from "./contratacion/SelectorTipoContrato";
@@ -81,10 +82,12 @@ interface OpcionAreaTurno {
   dias: string;
   /** Para ordenar los turnos como en el admin (ver `claveOrdenTurno`). */
   orden: string;
+  /** La sede de la fila de «Configuración por Área» (área × turno × sede), o null = todas las sedes. */
+  sedeId: number | null;
 }
 
-/** Arma la opción a partir de área y turno, poblados (con nombre) o como id pelado. */
-const opcionAreaTurno = (area: any, turno: any): OpcionAreaTurno => {
+/** Arma la opción a partir de área y turno, poblados (con nombre) o como id pelado, y la sede de la fila. */
+const opcionAreaTurno = (area: any, turno: any, sedeId: unknown = null): OpcionAreaTurno => {
   const idDe = (x: any) => (x && typeof x === "object" ? String(x._id) : String(x || ""));
   const t = turno && typeof turno === "object" ? turno : null;
   return {
@@ -97,6 +100,7 @@ const opcionAreaTurno = (area: any, turno: any): OpcionAreaTurno => {
     fin: t?.endTime || "",
     dias: Array.isArray(t?.days) && t.days.length > 0 ? textoDeDias(t.days) : "",
     orden: claveOrdenTurno(t),
+    sedeId: sedeDe(sedeId),
   };
 };
 
@@ -303,7 +307,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     /** El tipo de contrato elegido (`Contrato._id`). De él sale el trámite. */
     contratoId: "",
     /** El área y turno que coordina quien pide, ya puestos en la solicitud. */
-    areaShiftAssignments: [] as { areaId: string; shiftIds: string[] }[],
+    areaShiftAssignments: [] as { areaId: string; shiftIds: string[]; sedeId?: number }[],
     /** A quién reemplaza: el id numérico que usa el contrato (puede faltar) y el `_id`, que no. */
     empleado_id_reemplezado: "",
     replacedUserId: "",
@@ -955,7 +959,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const coordinacionesEnProyecto = useMemo<OpcionAreaTurno[]>(() => {
     return ((proyectoElegido as any)?.coordinatorAssignments || [])
       .filter((a: any) => a?.areaId && a?.shiftId)
-      .map((a: any) => opcionAreaTurno(a.areaId, a.shiftId));
+      .map((a: any) => opcionAreaTurno(a.areaId, a.shiftId, a.sedeId));
   }, [proyectoElegido]);
 
   /*
@@ -990,7 +994,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       .getProject(id, { team: "ids" })
       .then((p) => {
         if (cancelado) return;
-        setAreasDelProyecto(((p.areasConfig || []) as any[]).flatMap((ac) => (ac.shiftIds || []).map((s: any) => opcionAreaTurno(ac.areaId, s))));
+        setAreasDelProyecto(((p.areasConfig || []) as any[]).flatMap((ac) => (ac.shiftIds || []).map((s: any) => opcionAreaTurno(ac.areaId, s, ac.sedeId))));
       })
       .catch(() => !cancelado && setAreasDelProyecto([]));
     return () => {
@@ -1031,18 +1035,31 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const sinAreaParaElRol = filtraPorRol && (opcionesDelProyecto || []).length > 0 && (opcionesAreaTurno || []).length === 0;
 
   /** Por área, con sus turnos en el orden del día: con muchas combinaciones, una lista plana no se lee. */
+  // Una entrada por fila área + sede: «Edición · Libertador» y «Edición · Huidobro» son dos, cada una con su supervisor.
+  const nombreDeSede = (id: number | null) => (id ? catalogoSedes.find((x) => Number(x.data?.id) === id)?.name || `Sede ${id}` : "");
   const areasAgrupadas = useMemo(() => {
-    const porArea = new Map<string, { areaId: string; nombre: string; turnos: OpcionAreaTurno[] }>();
+    const porArea = new Map<string, { areaId: string; filaKey: string; sedeId: number | null; nombre: string; turnos: OpcionAreaTurno[] }>();
     for (const o of opcionesAreaTurno || []) {
-      const area = porArea.get(o.areaId) || { areaId: o.areaId, nombre: o.areaNombre, turnos: [] };
+      const filaKey = claveFilaArea(o);
+      const area = porArea.get(filaKey) || { areaId: o.areaId, filaKey, sedeId: o.sedeId, nombre: o.sedeId ? `${o.areaNombre} · ${nombreDeSede(o.sedeId)}` : o.areaNombre, turnos: [] };
       if (!area.turnos.some((t) => t.shiftId === o.shiftId)) area.turnos.push(o);
-      porArea.set(o.areaId, area);
+      porArea.set(filaKey, area);
     }
     return [...porArea.values()].map((a) => ({ ...a, turnos: a.turnos.sort((x, y) => x.orden.localeCompare(y.orden)) })).sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [opcionesAreaTurno]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opcionesAreaTurno, catalogoSedes]);
 
   /** La combinación elegida, si es una de las ofrecidas. Sin esto la solicitud no se envía. */
-  const areaTurnoElegido = (opcionesAreaTurno || []).find((o) => formData.areaShiftAssignments.some((a) => a.areaId === o.areaId && a.shiftIds.includes(o.shiftId))) || null;
+  const coincideLaSede = (a: { sedeId?: number | null }, o: OpcionAreaTurno) => {
+    const sedeA = sedeDe(a.sedeId);
+    if (sedeA !== null) return sedeA === o.sedeId;
+    return o.sedeId === null || o.sedeId === Number(formData.sedeId);
+  };
+  const areaTurnoElegido = (opcionesAreaTurno || []).find((o) => formData.areaShiftAssignments.some((a) => a.areaId === o.areaId && a.shiftIds.includes(o.shiftId) && coincideLaSede(a, o))) || null;
+  /** Un área de una sede fija la sede de la solicitud: la sede de la persona sale de su contrato. */
+  const sedeFijadaPorArea = areaTurnoElegido?.sedeId ?? null;
+  const elegirAreaTurno = (o: OpcionAreaTurno) =>
+    setFormData((prev) => ({ ...prev, areaShiftAssignments: [{ areaId: o.areaId, shiftIds: [o.shiftId], ...(o.sedeId ? { sedeId: o.sedeId } : {}) }], ...(o.sedeId ? { sedeId: String(o.sedeId) } : {}) }));
 
   /*
     LAS ÁREAS SE COLAPSAN.
@@ -1054,7 +1071,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   */
   const [areasTocadas, setAreasTocadas] = useState<Set<string> | null>(null);
   useEffect(() => setAreasTocadas(null), [isOpen, proyectoElegido?._id]);
-  const areasAbiertas: Set<string> = areasTocadas ?? new Set(areasAgrupadas.length === 1 ? [areasAgrupadas[0].areaId] : areaTurnoElegido ? [areaTurnoElegido.areaId] : []);
+  const areasAbiertas: Set<string> = areasTocadas ?? new Set(areasAgrupadas.length === 1 ? [areasAgrupadas[0].filaKey] : areaTurnoElegido ? [claveFilaArea(areaTurnoElegido)] : []);
   const alternarArea = (areaId: string) => {
     const next = new Set(areasAbiertas);
     if (next.has(areaId)) next.delete(areaId);
@@ -1083,8 +1100,12 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   useEffect(() => {
     if (!opcionesAreaTurno) return;
     if (opcionesAreaTurno.length === 1) {
-      const { areaId, shiftId } = opcionesAreaTurno[0];
-      setFormData((p) => (p.areaShiftAssignments.length === 1 && p.areaShiftAssignments[0].areaId === areaId && p.areaShiftAssignments[0].shiftIds.includes(shiftId) ? p : { ...p, areaShiftAssignments: [{ areaId, shiftIds: [shiftId] }] }));
+      const { areaId, shiftId, sedeId } = opcionesAreaTurno[0];
+      setFormData((p) =>
+        p.areaShiftAssignments.length === 1 && p.areaShiftAssignments[0].areaId === areaId && p.areaShiftAssignments[0].shiftIds.includes(shiftId) && sedeDe(p.areaShiftAssignments[0].sedeId) === sedeId
+          ? p
+          : { ...p, areaShiftAssignments: [{ areaId, shiftIds: [shiftId], ...(sedeId ? { sedeId } : {}) }], ...(sedeId ? { sedeId: String(sedeId) } : {}) },
+      );
       return;
     }
     setFormData((p) => {
@@ -1853,7 +1874,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           ? `Desde el ${fechaAR(formData.startDate)} (tiempo indeterminado)`
           : `Del ${fechaAR(formData.startDate)} al ${fechaAR(formData.dueDate)}`
         : "",
-    areaTurno: areaTurnoElegido ? `${areaTurnoElegido.areaNombre} · ${areaTurnoElegido.turnoNombre}${areaTurnoElegido.horario ? ` (${areaTurnoElegido.horario})` : ""}` : "",
+    areaTurno: areaTurnoElegido ? `${areaTurnoElegido.areaNombre}${areaTurnoElegido.sedeId ? ` · ${nombreDeSede(areaTurnoElegido.sedeId)}` : ""} · ${areaTurnoElegido.turnoNombre}${areaTurnoElegido.horario ? ` (${areaTurnoElegido.horario})` : ""}` : "",
     dias: porDiasSueltos
       ? `${formData.fechasTrabajadas.length} ${formData.fechasTrabajadas.length === 1 ? "día marcado" : "días marcados"}`
       : formData.diasRotativos
@@ -2431,7 +2452,13 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               <FontAwesomeIcon icon={faBuilding} className="text-blue-500 text-[10px]" />
               Sede
             </label>
-            {opcionesSede.length === 1 ? (
+            {sedeFijadaPorArea ? (
+              // La fija el área elegida («Edición · Libertador»): para cambiarla se elige el área en otra sede.
+              <p className="h-12 flex items-center px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white">
+                {nombreDeSede(sedeFijadaPorArea)}
+                <span className="ml-2 text-[11px] font-normal text-slate-400">(la fija el área)</span>
+              </p>
+            ) : opcionesSede.length === 1 ? (
               <p className="h-12 flex items-center px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white">{opcionesSede[0].nombre}</p>
             ) : (
               <select name="sedeId" value={formData.sedeId} onChange={handleChange} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white appearance-none">
@@ -2627,11 +2654,11 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                 </p>
                 <div className="space-y-2">
                   {areasAgrupadas.map((area) => (
-                    <div key={area.areaId} className="rounded-lg border border-slate-200 dark:border-slate-700">
-                      <button type="button" onClick={() => alternarArea(area.areaId)} aria-expanded={areasAbiertas.has(area.areaId)} className="flex w-full items-center gap-2 p-2.5 text-left">
-                        <FontAwesomeIcon icon={areasAbiertas.has(area.areaId) ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0 text-slate-400" />
+                    <div key={area.filaKey} className="rounded-lg border border-slate-200 dark:border-slate-700">
+                      <button type="button" onClick={() => alternarArea(area.filaKey)} aria-expanded={areasAbiertas.has(area.filaKey)} className="flex w-full items-center gap-2 p-2.5 text-left">
+                        <FontAwesomeIcon icon={areasAbiertas.has(area.filaKey) ? faChevronDown : faChevronRight} className="h-3 w-3 shrink-0 text-slate-400" />
                         <span className="min-w-0 flex-1 truncate text-[11px] font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">{area.nombre}</span>
-                        {areaTurnoElegido?.areaId === area.areaId ? (
+                        {areaTurnoElegido && claveFilaArea(areaTurnoElegido) === area.filaKey ? (
                           <span className="shrink-0 truncate rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{areaTurnoElegido.turnoNombre}</span>
                         ) : (
                           <span className="shrink-0 text-[10px] text-slate-400">
@@ -2639,16 +2666,16 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                           </span>
                         )}
                       </button>
-                      {areasAbiertas.has(area.areaId) && (
+                      {areasAbiertas.has(area.filaKey) && (
                         <>
                           <div className="grid grid-cols-1 gap-1.5 px-2.5 pb-2.5 sm:grid-cols-3">
                             {area.turnos.map((t) => {
-                              const elegido = areaTurnoElegido?.areaId === t.areaId && areaTurnoElegido?.shiftId === t.shiftId;
+                              const elegido = areaTurnoElegido?.areaId === t.areaId && areaTurnoElegido?.shiftId === t.shiftId && areaTurnoElegido?.sedeId === t.sedeId;
                               return (
                                 <button
                                   key={`${t.areaId}-${t.shiftId}`}
                                   type="button"
-                                  onClick={() => setFormData((prev) => ({ ...prev, areaShiftAssignments: [{ areaId: t.areaId, shiftIds: [t.shiftId] }] }))}
+                                  onClick={() => elegirAreaTurno(t)}
                                   aria-pressed={elegido}
                                   className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all ${elegido ? "border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
                                 >
@@ -2663,7 +2690,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                             })}
                           </div>
                           {/* Elegido el turno, acá mismo se dice cómo trabaja en él. */}
-                          {areaTurnoElegido?.areaId === area.areaId && <div className="px-2.5 pb-2.5">{panelComoTrabaja("Cómo trabaja en este turno")}</div>}
+                          {areaTurnoElegido && claveFilaArea(areaTurnoElegido) === area.filaKey && <div className="px-2.5 pb-2.5">{panelComoTrabaja("Cómo trabaja en este turno")}</div>}
                         </>
                       )}
                     </div>
