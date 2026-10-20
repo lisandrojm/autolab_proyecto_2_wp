@@ -16,8 +16,8 @@ import { sweetAlert } from "../utils/sweetAlert";
   lo alcanza (ver `horarioAltasAutomaticas.ts` en el server).
 
   DOS MODOS (pedido del 19/10/2026): «una vez por día» (sólo la corrida de la hora fija) o «frecuente»
-  (además, la cola de pendientes cada N minutos). En los dos, a la hora fija las altas de ese día van
-  primero y en corridas propias, para que una falla de las atrasadas no las atrase.
+  (además, la cola de pendientes cada N horas: 1 a 12, desde el 20/10/2026). En los dos, a la hora fija
+  las altas de ese día van primero y en corridas propias, para que una falla de las atrasadas no las atrase.
 */
 
 const HORAS = Array.from({ length: 24 }, (_, i) => i);
@@ -34,7 +34,7 @@ const DIAS_ANTES: Array<{ valor: number; texto: string }> = [
   { valor: 30, texto: "30 días antes" },
 ];
 
-const FRECUENCIAS = [15, 30, 60, 120, 180, 240, 360];
+const FRECUENCIAS = [60, 120, 180, 240, 360, 480, 720];
 
 const rotulo = "block text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1";
 
@@ -116,7 +116,7 @@ export const ArcaAltasAutomaticasConfigPage: React.FC = () => {
           <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
             <p>Todos los días a la hora elegida (hora argentina) corre la corrida del día: presenta primero, en corridas propias, las altas de ese día, y después las pendientes atrasadas. Así una falla con las atrasadas no atrasa las del día.</p>
             <p>
-              <strong>Una vez por día</strong>: sólo esa corrida. <strong>Frecuente</strong>: además, cada tanto (15 minutos a 6 horas) corre la cola de pendientes: lo que ya tuvo su turno y no salió. Si
+              <strong>Una vez por día</strong>: sólo esa corrida. <strong>Frecuente</strong>: además, cada tanto (de 1 a 12 horas) corre la cola de pendientes: lo que ya tuvo su turno y no salió. Si
               llega la hora del día mientras la cola corre, la cola corta y le deja el paso.
             </p>
             <p>
@@ -127,8 +127,11 @@ export const ArcaAltasAutomaticasConfigPage: React.FC = () => {
               primera corrida que lo alcanza, y a más tardar en la de su propio día.
             </p>
             <p>
-              Nada queda fuera: las atrasadas de cualquier fecha, los contratos cuya baja ya pasó y las rechazadas por ARCA siguen en la cola hasta que salgan. Una rechazada se vuelve a intentar
-              recién al día siguiente, para no insistir con lo mismo cada pocos minutos.
+              Nada queda fuera: las atrasadas de cualquier fecha, los contratos cuya baja ya pasó y las rechazadas por ARCA siguen en la cola hasta que salgan.
+            </p>
+            <p>
+              La corrida no se traba con los rechazos: presenta toda la vuelta y las rechazadas se retoman al final de la pasada siguiente. Sólo las que ARCA rechaza por el padrón («ya tiene un
+              alta activa») esperan al día siguiente, porque reintentarlas a las pocas horas da lo mismo. Cada alta lleva la cuenta de las veces que se envió a ARCA.
             </p>
             <p>Si se activa después de la hora, empieza al día siguiente.</p>
           </div>

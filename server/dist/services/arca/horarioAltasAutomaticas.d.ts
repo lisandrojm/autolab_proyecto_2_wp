@@ -8,6 +8,7 @@
  *       - "diaria": sólo la corrida del día, una vez por día.
  *       - "frecuente": además, cada `cadaMinutos` corre la COLA: lo que ya tuvo su turno y no salió
  *         (atrasadas, rechazadas, cargadas tarde). La corrida del día sigue siendo a la hora fija.
+ *         Desde el 20/10/2026 la frecuencia es en horas (1, 2, 3, 4, 6, 8 o 12); se guarda en minutos.
  *
  * EL TURNO DE UN ALTA es la corrida del día de `fechaAlta - diasAntes`. Antes de su turno no sale; desde
  * su turno, queda en la cola hasta que se presente.
@@ -19,8 +20,12 @@
  *
  * NADA QUEDA FUERA DE LA AUTOMÁTICA (pedido del 19/10/2026): ni los contratos ya terminados, ni las
  * altas de más de 30 días, ni las rechazadas varias veces o con un rechazo del padrón. Todas siguen en
- * la cola hasta que se presenten. Lo único que se pide es aire: una rechazada en una corrida no se
- * vuelve a intentar hasta el día siguiente, para no golpear ARCA cada pocos minutos con lo mismo.
+ * la cola hasta que se presenten.
+ *
+ * LAS RECHAZADAS SE REINTENTAN EN LA PRÓXIMA PASADA, AL FINAL (pedido del 20/10/2026): la corrida no se
+ * traba con ellas; primero va la vuelta entera de lo que nunca se rechazó y al final se retoman los
+ * rechazos. La excepción son los rechazos del padrón («ya tiene un alta activa», ver
+ * `rechazoDefinitivo.ts`): reintentarlos a las pocas horas da lo mismo, así que esos esperan a mañana.
  *
  * Argentina no tiene horario de verano: el desfase es siempre -03:00.
  */
@@ -36,7 +41,7 @@ export interface ConfigAltasAutomaticas {
 /** Lo que mira el reloj: la hora de la corrida del día. */
 export type HoraDelDia = Pick<ConfigAltasAutomaticas, "hora" | "minuto">;
 /** Las frecuencias que ofrece la configuración, en minutos. */
-export declare const FRECUENCIAS_MINUTOS: readonly [15, 30, 60, 120, 180, 240, 360];
+export declare const FRECUENCIAS_MINUTOS: readonly [60, 120, 180, 240, 360, 480, 720];
 export declare const CONFIG_POR_DEFECTO: ConfigAltasAutomaticas;
 export declare const MAX_DIAS_ANTES = 30;
 /** Un contrato cuya fecha de baja es anterior a hoy: la relación ya pasó entera. Sólo informativo: igual se presenta. */
@@ -83,12 +88,18 @@ export interface CandidatoParaCorrida {
     presentable: boolean;
     /** ISO del último rechazo de ARCA; vacío si no está rechazada. */
     rechazadaEl: string;
+    /** El texto del rechazo si es del padrón (`rechazoDefinitivo.ts`); vacío si no. */
+    rechazoDefinitivo: string;
     motivo: string;
 }
-/** Rechazada hoy: espera al día siguiente para volver a intentarse. */
+/** Rechazada hoy (hora argentina). */
 export declare const rechazadaHoy: (c: Pick<CandidatoParaCorrida, "rechazadaEl">, hoy: string) => boolean;
-/** Entra en la corrida: completo, y sin un rechazo de hoy mismo. */
+/** Rechazada hoy por el padrón: la única que espera al día siguiente. */
+export declare const esperaAManana: (c: Pick<CandidatoParaCorrida, "rechazadaEl" | "rechazoDefinitivo">, hoy: string) => boolean;
+/** Entra en la corrida: completo, y sin un rechazo del padrón de hoy mismo. */
 export declare const entraEnLaCorrida: (c: CandidatoParaCorrida, hoy: string) => boolean;
+/** El orden dentro de la corrida: primero lo que nunca se rechazó, al final los rechazos (estable). */
+export declare const rechazadasAlFinal: <T extends Pick<CandidatoParaCorrida, "rechazadaEl">>(cs: T[]) => T[];
 /** Por qué NO entró, para la lista «Sin presentar» de la corrida. `null` = entró. */
 export declare function motivoDeOmision(c: CandidatoParaCorrida, hoy: string): string | null;
 /** La próxima corrida de la cola (modo frecuente): `cadaMinutos` después de la última, y nunca antes de ahora. */
@@ -99,9 +110,9 @@ export declare const leTocaALaCola: (cfg: ConfigAltasAutomaticas, ultimaCola: st
  * La PRÓXIMA corrida que presentaría un alta con esa fecha. Nunca null: nada queda fuera.
  *   · Antes de su turno: la corrida del día de su turno.
  *   · Desde su turno (en la cola): la próxima corrida que pase, sea la del día o la de la cola.
- *   · Rechazada hoy: la primera de mañana.
+ *   · Rechazada hoy por el padrón: la primera de mañana. Las demás rechazadas siguen como cualquiera.
  */
 export declare function proximaCorridaPara(fechaAlta: string, cfg: ConfigAltasAutomaticas, ahora: Date, hoy: string, o?: {
     ultimaCola?: string;
-    rechazadaHoy?: boolean;
+    esperaAManana?: boolean;
 }): Date | null;

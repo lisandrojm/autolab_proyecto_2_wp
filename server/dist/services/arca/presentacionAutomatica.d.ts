@@ -32,8 +32,10 @@ export interface CandidatoAlta {
     intentos: number;
     /** ISO del primero de esos rechazos; vacío si no hubo. */
     primerIntentoEl: string;
-    /** ISO del último rechazo; vacío si no está rechazada. Rechazada hoy, se reintenta mañana. */
+    /** ISO del último rechazo; vacío si no está rechazada. Va al final de la próxima pasada (la del padrón, mañana). */
     rechazadaEl: string;
+    /** Cuántas veces se mandó a ARCA, automática o forzada, con cualquier resultado. */
+    envios: number;
     /** Por qué no, si no se puede. */
     motivo: string;
     /** El registro de 85, si está completo. */

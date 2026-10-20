@@ -227,6 +227,15 @@ describe("correrTandas contra un ARCA simulado", () => {
     assert.equal(arca.registradas.length, 0);
   });
 
+  it("sin tope de rechazos (la automática) pega la vuelta entera aunque ARCA rechace muchas seguidas", async () => {
+    const todos = items(20);
+    const arca = arcaSimulado({ rechaza: todos.slice(0, 9).map((i) => i.cuil) });
+    const r = await correrTandas({ items: todos, enSeco: false, motor: arca.motor, guardar: baseSimulada().guardar, maxRechazos: Infinity });
+    assert.equal(r.corte, undefined);
+    assert.equal(arca.registradas.length, 11);
+    assert.ok(estados(r).every((e) => e === "registrada" || e === "rechazada"));
+  });
+
   it("un error antes del Aceptar corta sin dejar marcas: no se presentó nada", async () => {
     const arca = arcaSimulado();
     const base = baseSimulada();

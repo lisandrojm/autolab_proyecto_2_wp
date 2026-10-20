@@ -13,11 +13,12 @@ import {
   motivoDeOmision,
   proximaCorridaPara,
   proximaDeLaCola,
+  rechazadasAlFinal,
   validarConfig,
   type CandidatoParaCorrida,
 } from "./horarioAltasAutomaticas.js";
 
-const candidato = (o: Partial<CandidatoParaCorrida> = {}): CandidatoParaCorrida => ({ presentable: true, rechazadaEl: "", motivo: "", ...o });
+const candidato = (o: Partial<CandidatoParaCorrida> = {}): CandidatoParaCorrida => ({ presentable: true, rechazadaEl: "", rechazoDefinitivo: "", motivo: "", ...o });
 const hoy = "2026-10-19";
 
 describe("nada queda fuera de la automática (pedido del 19/10/2026)", () => {
@@ -26,12 +27,27 @@ describe("nada queda fuera de la automática (pedido del 19/10/2026)", () => {
     assert.equal(entraEnLaCorrida(candidato({ rechazadaEl: "2026-10-15T17:01:00.000Z" }), hoy), true);
     assert.equal(motivoDeOmision(candidato({ rechazadaEl: "2026-10-18T20:00:00.000Z" }), hoy), null);
   });
-  it("rechazada hoy (hora argentina): espera a mañana", () => {
+  it("rechazada hoy: entra en la próxima pasada (pedido del 20/10/2026)", () => {
     const c = candidato({ rechazadaEl: "2026-10-19T17:05:00.000Z" });
+    assert.equal(entraEnLaCorrida(c, hoy), true);
+    assert.equal(motivoDeOmision(c, hoy), null);
+  });
+  it("rechazada hoy por el padrón (hora argentina): espera a mañana", () => {
+    const definitivo = "El CUIL ya tiene un alta activa con esa empleadora.";
+    const c = candidato({ rechazadaEl: "2026-10-19T17:05:00.000Z", rechazoDefinitivo: definitivo });
     assert.equal(entraEnLaCorrida(c, hoy), false);
-    assert.equal(motivoDeOmision(c, hoy), "ARCA la rechazó hoy: vuelve a intentarse mañana.");
+    assert.equal(motivoDeOmision(c, hoy), "ARCA la rechazó hoy por el padrón: vuelve a intentarse mañana.");
     // 23:30 argentinas del 18 son las 02:30 UTC del 19: fue ayer.
-    assert.equal(entraEnLaCorrida(candidato({ rechazadaEl: "2026-10-19T02:30:00.000Z" }), hoy), true);
+    assert.equal(entraEnLaCorrida(candidato({ rechazadaEl: "2026-10-19T02:30:00.000Z", rechazoDefinitivo: definitivo }), hoy), true);
+  });
+  it("las rechazadas van al final de la vuelta, sin desordenar el resto", () => {
+    const cs = [
+      { n: "a", rechazadaEl: "2026-10-19T17:05:00.000Z" },
+      { n: "b", rechazadaEl: "" },
+      { n: "c", rechazadaEl: "2026-10-10T17:05:00.000Z" },
+      { n: "d", rechazadaEl: "" },
+    ];
+    assert.deepEqual(rechazadasAlFinal(cs).map((c) => c.n), ["b", "d", "a", "c"]);
   });
   it("incompletas: no entran y el motivo es el del dato que falta", () => {
     const c = candidato({ presentable: false, motivo: "Faltan datos de ARCA: Categoría." });
@@ -41,25 +57,29 @@ describe("nada queda fuera de la automática (pedido del 19/10/2026)", () => {
 });
 
 describe("modo y frecuencia", () => {
-  it("por defecto, diaria cada 60 (la frecuencia sólo pesa en modo frecuente)", () => {
+  it("por defecto, diaria cada 1 hora (la frecuencia sólo pesa en modo frecuente)", () => {
     assert.deepEqual(configDe(undefined), CONFIG_POR_DEFECTO);
-    assert.equal(configDe({ modo: "frecuente", cadaMinutos: 30 }).modo, "frecuente");
+    assert.equal(configDe({ modo: "frecuente", cadaMinutos: 120 }).modo, "frecuente");
     assert.equal(configDe({ modo: "otro", cadaMinutos: 7 }).modo, "diaria");
     assert.equal(configDe({ cadaMinutos: 7 }).cadaMinutos, 60);
+    // Las de minutos que quedaron guardadas de antes del 20/10/2026 pasan a 1 hora.
+    assert.equal(configDe({ cadaMinutos: 30 }).cadaMinutos, 60);
+    assert.equal(configDe({ cadaMinutos: 720 }).cadaMinutos, 720);
   });
-  it("al guardar, el modo y la frecuencia se validan", () => {
-    assert.deepEqual(validarConfig({ modo: "frecuente", cadaMinutos: 30 }), { ok: true, cambios: { modo: "frecuente", cadaMinutos: 30 } });
+  it("al guardar, el modo y la frecuencia (en horas: 1, 2, 3, 4, 6, 8, 12) se validan", () => {
+    assert.deepEqual(validarConfig({ modo: "frecuente", cadaMinutos: 480 }), { ok: true, cambios: { modo: "frecuente", cadaMinutos: 480 } });
     assert.equal(validarConfig({ modo: "x" }).ok, false);
-    assert.equal(validarConfig({ cadaMinutos: 7 }).ok, false);
+    assert.equal(validarConfig({ cadaMinutos: 30 }).ok, false);
+    assert.equal(validarConfig({ cadaMinutos: 300 }).ok, false);
   });
-  it("la cola corre cada N minutos desde la última pasada, y nunca en modo diario", () => {
-    const cfg = configDe({ modo: "frecuente", cadaMinutos: 30 });
+  it("la cola corre cada N horas desde la última pasada, y nunca en modo diario", () => {
+    const cfg = configDe({ modo: "frecuente", cadaMinutos: 120 });
     const ahora = new Date("2026-10-19T15:00:00.000Z");
-    assert.equal(leTocaALaCola(cfg, "2026-10-19T14:40:00.000Z", ahora), false);
-    assert.equal(leTocaALaCola(cfg, "2026-10-19T14:30:00.000Z", ahora), true);
+    assert.equal(leTocaALaCola(cfg, "2026-10-19T13:40:00.000Z", ahora), false);
+    assert.equal(leTocaALaCola(cfg, "2026-10-19T13:00:00.000Z", ahora), true);
     assert.equal(leTocaALaCola(cfg, undefined, ahora), true);
     assert.equal(leTocaALaCola({ ...cfg, modo: "diaria" }, undefined, ahora), false);
-    assert.equal(proximaDeLaCola(cfg, "2026-10-19T14:40:00.000Z", ahora).toISOString(), "2026-10-19T15:10:00.000Z");
+    assert.equal(proximaDeLaCola(cfg, "2026-10-19T13:40:00.000Z", ahora).toISOString(), "2026-10-19T15:40:00.000Z");
   });
 });
 
@@ -98,8 +118,8 @@ describe("la próxima corrida de un alta", () => {
     assert.equal(proximaCorridaPara("2026-10-22", frecuente, despues, hoy, { ultimaCola: "2026-10-19T17:30:00.000Z" })?.toISOString(), "2026-10-22T17:00:00.000Z");
     assert.equal(proximaCorridaPara(hoy, frecuente, antes, hoy, { ultimaCola: "2026-10-19T14:30:00.000Z" })?.toISOString(), "2026-10-19T17:00:00.000Z");
   });
-  it("rechazada hoy: mañana (a la hora del día, o a primera hora en modo frecuente)", () => {
-    assert.equal(proximaCorridaPara("2026-10-10", diaria, despues, hoy, { rechazadaHoy: true })?.toISOString(), "2026-10-20T17:00:00.000Z");
-    assert.equal(proximaCorridaPara("2026-10-10", frecuente, despues, hoy, { rechazadaHoy: true })?.toISOString(), "2026-10-20T03:00:00.000Z");
+  it("rechazada hoy por el padrón: mañana (a la hora del día, o a primera hora en modo frecuente)", () => {
+    assert.equal(proximaCorridaPara("2026-10-10", diaria, despues, hoy, { esperaAManana: true })?.toISOString(), "2026-10-20T17:00:00.000Z");
+    assert.equal(proximaCorridaPara("2026-10-10", frecuente, despues, hoy, { esperaAManana: true })?.toISOString(), "2026-10-20T03:00:00.000Z");
   });
 });

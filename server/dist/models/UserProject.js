@@ -83,6 +83,7 @@ const contractSchema = new Schema({
         }, { _id: false }),
         default: undefined,
     },
+    enviosArca: { type: Number },
     altaDocumentoUrl: { type: String },
     altaDocumentoNombre: { type: String },
     altaConstancia: { type: new Schema({ clave: String, nroTramite: String, validadaEl: Date, vaAFirma: Boolean, archivadaEn: String, enviadaComo: String, origen: { type: String, enum: ["automatica", "descarga", "subida"] }, porUsuarioId: { type: Schema.Types.ObjectId, ref: "User" } }, { _id: false }) },

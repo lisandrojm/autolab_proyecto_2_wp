@@ -23,7 +23,10 @@ const fmtCuil = (c: string) => (c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2,
 /** La fecha argentina de un instante ISO ("DD/MM/AAAA"): la corrida de las 22 h ya es «mañana» en UTC. */
 /** La hora argentina de un instante ISO ("HH:MM"): en modo frecuente cada alta tiene la suya. */
 const horaArgentina = (iso: string) => new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso));
-const fechaArgentina = (iso: string) => fechaCorta(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date(iso)));
+const diaArgentina = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date(iso));
+const fechaArgentina = (iso: string) => fechaCorta(diaArgentina(iso));
+/** «1 vez» / «3 veces». */
+const veces = (n: number) => `${n} ${n === 1 ? "vez" : "veces"}`;
 
 // La cuenta regresiva vive en `components/ui/CuentaRegresiva.tsx`: la comparte con «A.R.C.A Descargas Automáticas».
 
@@ -198,7 +201,7 @@ export const PresentacionesArcaPage: React.FC = () => {
     const antes = estado && c.fechaAlta > estado.hoy;
     const r = await sweetAlert.confirm(
       `Presentar ahora a ${c.nombre}`,
-      `${antes ? `Todavía no es el día de la presentación: su alta es el ${fechaCorta(c.fechaAlta)}. ` : ""}${c.terminado ? `El contrato ya terminó (baja el ${fechaCorta(c.fechaBaja)}): se declara una relación que ya pasó. ` : ""}${c.rechazoDefinitivo ? `ARCA ya la rechazó («${c.rechazoDefinitivo}»): si nada cambió en ARCA, va a rechazarla de nuevo. ` : (c.intentos || 0) > 0 ? `ARCA ya la rechazó ${c.intentos} vez/veces: revisá el motivo antes de insistir. ` : ""}Se presenta ya en ARCA, a nombre de ${c.empresa?.razonSocial || "su empleadora"}. No se deshace.`,
+      `${antes ? `Todavía no es el día de la presentación: su alta es el ${fechaCorta(c.fechaAlta)}. ` : ""}${c.terminado ? `El contrato ya terminó (baja el ${fechaCorta(c.fechaBaja)}): se declara una relación que ya pasó. ` : ""}${c.rechazoDefinitivo ? `ARCA ya la rechazó («${c.rechazoDefinitivo}»): si nada cambió en ARCA, va a rechazarla de nuevo. ` : (c.intentos || 0) > 0 ? `ARCA ya la rechazó ${veces(c.intentos || 0)}: revisá el motivo antes de insistir. ` : ""}Se presenta ya en ARCA, a nombre de ${c.empresa?.razonSocial || "su empleadora"}. No se deshace.`,
       "Sí, presentar",
       "Cancelar",
     );
@@ -217,7 +220,7 @@ export const PresentacionesArcaPage: React.FC = () => {
   const [buscarPendientes, setBuscarPendientes] = useState("");
   const proximas = useMemo(() => {
     const q = buscarPendientes.trim().toLowerCase();
-    const qDigitos = q.replace(/D/g, "");
+    const qDigitos = q.replace(/\D/g, "");
     const coincide = (c: AltaPendienteArca) => !q || c.nombre.toLowerCase().includes(q) || (qDigitos.length > 0 && c.cuil.includes(qDigitos)) || (c.empresa?.razonSocial || "").toLowerCase().includes(q) || c.proyecto.toLowerCase().includes(q);
     // Todas en una sola lista: ya no hay «Fuera de la automática».
     return (estado?.contratos || []).filter(coincide);
@@ -266,14 +269,16 @@ export const PresentacionesArcaPage: React.FC = () => {
               {new Date(c.momento).getTime() <= ahoraServidor ? "En la corrida en curso" : `${fechaArgentina(c.momento)} a las ${horaArgentina(c.momento)}`}
               {!estado?.activa ? " (si está activada)" : ""}
             </p>
-            {/* Rechazada por ARCA: sigue en la cola; si fue hoy, vuelve a intentarse mañana. */}
+            {/* Rechazada por ARCA: se retoma al final de la próxima pasada; la del padrón de hoy, mañana. */}
             {(c.intentos || 0) > 0 || c.rechazoDefinitivo ? (
               <p className="text-[11px] font-semibold text-red-600 dark:text-red-400">
-                {c.rechazoDefinitivo ? `ARCA la rechazó: ${c.rechazoDefinitivo}` : `Rechazada ${c.intentos} vez/veces${c.primerIntentoEl ? ` (la primera el ${fechaArgentina(c.primerIntentoEl)})` : ""}.`} Sigue en la cola.
+                {c.rechazoDefinitivo ? `ARCA la rechazó: ${c.rechazoDefinitivo}` : `Rechazada ${veces(c.intentos || 0)}${c.primerIntentoEl ? ` (la primera el ${fechaArgentina(c.primerIntentoEl)})` : ""}.`}{" "}
+                {c.rechazoDefinitivo && c.rechazadaEl && estado && diaArgentina(c.rechazadaEl) === estado.hoy ? "Vuelve a intentarse mañana." : "Se retoma al final de la próxima pasada."}
               </p>
             ) : (
               estado && c.fechaAlta < estado.hoy && <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Atrasada: su alta fue el {fechaCorta(c.fechaAlta)}. Va en la cola.</p>
             )}
+            {(c.envios || 0) > 0 && <p className="text-[11px] text-gray-500">Enviada a ARCA {veces(c.envios || 0)}.</p>}
             {c.terminado && <p className="text-[11px] text-gray-500">Ya terminó (baja el {fechaCorta(c.fechaBaja)}): se declara igual.</p>}
           </div>
         ) : (

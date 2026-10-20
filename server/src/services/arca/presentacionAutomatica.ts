@@ -22,7 +22,7 @@ import { altaQueSePisa, altasPresentadasDe, textoAltaQueSePisa } from "./altasVi
 import { arrancarCorridaAltas, corridaAltasDe } from "./corridaAltas.js";
 import { quienTiene } from "./candadoArca.js";
 import { esRechazoDefinitivo } from "./rechazoDefinitivo.js";
-import { ConfigAltasAutomaticas, CONFIG_POR_DEFECTO, entraEnLaCorrida, esDelDia, hastaDeLaCorrida, motivoDeOmision, proximaCorridaPara, rechazadaHoy, yaTermino } from "./horarioAltasAutomaticas.js";
+import { ConfigAltasAutomaticas, CONFIG_POR_DEFECTO, entraEnLaCorrida, esDelDia, esperaAManana, hastaDeLaCorrida, motivoDeOmision, proximaCorridaPara, rechazadasAlFinal, yaTermino } from "./horarioAltasAutomaticas.js";
 
 /**
  * PRESENTACIÓN AUTOMÁTICA DE LAS ALTAS EN ARCA: cada día, a la hora configurada (14:00 argentinas por
@@ -40,8 +40,9 @@ import { ConfigAltasAutomaticas, CONFIG_POR_DEFECTO, entraEnLaCorrida, esDelDia,
  *
  * NADA QUEDA FUERA DE LA AUTOMÁTICA (pedido del 19/10/2026): terminados, atrasados de cualquier fecha y
  * rechazados (las veces que sea, o con un rechazo del padrón) siguen en la cola hasta que salgan. Un
- * contrato con `altaArcaPresentada.resultado === "fallida"` sigue siendo un pendiente; rechazado hoy,
- * vuelve a intentarse mañana. `intentos` se sigue contando, sólo para mostrarlo.
+ * contrato con `altaArcaPresentada.resultado === "fallida"` sigue siendo un pendiente y se retoma al final
+ * de la próxima pasada; sólo el rechazo del padrón de hoy espera a mañana. `intentos` (rechazos en
+ * automáticas) y `enviosArca` (todo envío a ARCA) se cuentan para mostrarlos.
  */
 
 
@@ -114,8 +115,10 @@ export interface CandidatoAlta {
   intentos: number;
   /** ISO del primero de esos rechazos; vacío si no hubo. */
   primerIntentoEl: string;
-  /** ISO del último rechazo; vacío si no está rechazada. Rechazada hoy, se reintenta mañana. */
+  /** ISO del último rechazo; vacío si no está rechazada. Va al final de la próxima pasada (la del padrón, mañana). */
   rechazadaEl: string;
+  /** Cuántas veces se mandó a ARCA, automática o forzada, con cualquier resultado. */
+  envios: number;
   /** Por qué no, si no se puede. */
   motivo: string;
   /** El registro de 85, si está completo. */
@@ -162,7 +165,7 @@ export async function candidatosDeAlta(
   const CAMPOS = [
     "fecha_alta_contrato", "fecha_baja_contrato", "nombre_contrato", "nombre_estado_empleado", "altaArcaPresentada", "empresaContratoId", "nombre_empresa_contrato",
     "puestoDesempenado", "categoria_sat_id", "rol_frame_id", "sede_id", "tipo_contrato_id", "sucursalArcaId", "actividadArca",
-    "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "solicitudId", "origen",
+    "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "solicitudId", "origen", "enviosArca",
   ];
   // La fecha de alta como "YYYY-MM-DD" aunque esté guardada ISO (los formatos viejos no son del sistema).
   const altaISO = { $cond: [{ $eq: [{ $type: "$$e.c.fecha_alta_contrato" }, "string"] }, { $substrCP: ["$$e.c.fecha_alta_contrato", 0, 10] }, ""] };
@@ -323,13 +326,14 @@ export async function candidatosDeAlta(
       fechaAlta,
       fechaBaja,
       empresa: empresa ? { _id: String(empresa._id), razonSocial: String(empresa.razonSocial || "") } : null,
-      momento: proximaCorridaPara(fechaAlta, cfg, ahora, hoy, { ultimaCola: opts.ultimaCola, rechazadaHoy: rechazadaHoy({ rechazadaEl }, hoy) })?.toISOString() || "",
+      momento: proximaCorridaPara(fechaAlta, cfg, ahora, hoy, { ultimaCola: opts.ultimaCola, esperaAManana: esperaAManana({ rechazadaEl, rechazoDefinitivo }, hoy) })?.toISOString() || "",
       presentable: !motivo && !!registro,
       terminado,
       rechazoDefinitivo,
       intentos,
       primerIntentoEl,
       rechazadaEl,
+      envios: Number(c.enviosArca || 0),
       motivo,
       registro: motivo ? null : registro,
     });
@@ -486,7 +490,7 @@ export async function correrPresentacionAutomatica(
 ) {
   const hoy = hoyArgentina();
   const candidatos = await candidatosDeAlta(tenantObjectId, { hasta: hastaDeLaCorrida(hoy, cfg, tipo), cfg });
-  const entran = candidatos.filter((c) => entraEnLaCorrida(c, hoy));
+  const entran = rechazadasAlFinal(candidatos.filter((c) => entraEnLaCorrida(c, hoy)));
   const empresas: ResultadoEmpresa[] = [];
   if (tipo === "dia") {
     const delDia = entran.filter((c) => esDelDia(c.fechaAlta, hoy));

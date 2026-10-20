@@ -197,6 +197,8 @@ async function correr(o) {
                         logId: log?._id,
                     },
                 },
+                // Llegó a ARCA (con el resultado que sea): un envío más. Ver `enviosArca` en UserProject.
+                $inc: { [`contracts.${i.contractIndex}.enviosArca`]: 1 },
             }).catch((e) => console.error("Altas ARCA: no pude marcar el contrato:", e?.message || e));
         }
     }
@@ -249,8 +251,11 @@ async function correrPorTandas(o) {
         console.error("Altas ARCA: no pude crear el log:", e?.message || e);
         return null;
     });
-    const marcar = async (i, campos) => {
-        await UserProject.updateOne({ _id: i.userProjectId }, { $set: { [`contracts.${i.contractIndex}.altaArcaPresentada`]: { via: "altas_masivas", fecha: new Date(), logId: log?._id, ...campos } } });
+    const marcar = async (i, campos, envio = false) => {
+        await UserProject.updateOne({ _id: i.userProjectId }, {
+            $set: { [`contracts.${i.contractIndex}.altaArcaPresentada`]: { via: "altas_masivas", fecha: new Date(), logId: log?._id, ...campos } },
+            ...(envio ? { $inc: { [`contracts.${i.contractIndex}.enviosArca`]: 1 } } : {}),
+        });
     };
     /*
       LOS INTENTOS PREVIOS DE CADA CONTRATO, leídos ANTES de tocar nada: `marcar` reescribe el subdocumento
@@ -288,7 +293,9 @@ async function correrPorTandas(o) {
             // Un rechazo de la AUTOMÁTICA suma un intento; el de una presentación a mano (forzada o manual) conserva lo que había.
             const previo = conteoPrevio(x.item);
             const conteo = res === "fallida" && corrida.automatica ? { intentos: (previo?.intentos || 0) + 1, primerIntentoEl: previo?.primerIntentoEl || new Date() } : res === "fallida" ? previo : undefined;
-            await marcar(x.item, { resultado: res, tanda: x.tanda, motivo: x.motivo, cat: x.cat, porConsulta: x.porConsulta || undefined, ...(conteo || {}) });
+            // Un envío a ARCA es un resultado de una tanda presentada; el de una consulta de una incierta de
+            // otra corrida (sin tanda) no se volvió a mandar.
+            await marcar(x.item, { resultado: res, tanda: x.tanda, motivo: x.motivo, cat: x.cat, porConsulta: x.porConsulta || undefined, ...(conteo || {}) }, x.tanda !== undefined);
         },
         tanda: async (t, resultados) => {
             if (!log)
@@ -306,6 +313,9 @@ async function correrPorTandas(o) {
         const aItem = (i) => ({ userProjectId: i.userProjectId, contractIndex: i.contractIndex, cuil: i.cuil, nombre: i.nombre, registro: i.registro });
         r = await correrTandas({
             items: lote.items.map(aItem),
+            // La automática no se traba con los rechazos (pedido del 20/10/2026): pega la vuelta entera. Los
+            // errores de sesión o del motor la siguen cortando. La manual mantiene el corte por rechazos seguidos.
+            maxRechazos: corrida.automatica ? Infinity : undefined,
             inciertas: lote.descartadas.filter((d) => d.motivo === "incierta").map(aItem),
             enSeco: corrida.enSeco,
             motor: {

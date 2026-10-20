@@ -8,6 +8,7 @@
  *       - "diaria": sólo la corrida del día, una vez por día.
  *       - "frecuente": además, cada `cadaMinutos` corre la COLA: lo que ya tuvo su turno y no salió
  *         (atrasadas, rechazadas, cargadas tarde). La corrida del día sigue siendo a la hora fija.
+ *         Desde el 20/10/2026 la frecuencia es en horas (1, 2, 3, 4, 6, 8 o 12); se guarda en minutos.
  *
  * EL TURNO DE UN ALTA es la corrida del día de `fechaAlta - diasAntes`. Antes de su turno no sale; desde
  * su turno, queda en la cola hasta que se presente.
@@ -19,8 +20,12 @@
  *
  * NADA QUEDA FUERA DE LA AUTOMÁTICA (pedido del 19/10/2026): ni los contratos ya terminados, ni las
  * altas de más de 30 días, ni las rechazadas varias veces o con un rechazo del padrón. Todas siguen en
- * la cola hasta que se presenten. Lo único que se pide es aire: una rechazada en una corrida no se
- * vuelve a intentar hasta el día siguiente, para no golpear ARCA cada pocos minutos con lo mismo.
+ * la cola hasta que se presenten.
+ *
+ * LAS RECHAZADAS SE REINTENTAN EN LA PRÓXIMA PASADA, AL FINAL (pedido del 20/10/2026): la corrida no se
+ * traba con ellas; primero va la vuelta entera de lo que nunca se rechazó y al final se retoman los
+ * rechazos. La excepción son los rechazos del padrón («ya tiene un alta activa», ver
+ * `rechazoDefinitivo.ts`): reintentarlos a las pocas horas da lo mismo, así que esos esperan a mañana.
  *
  * Argentina no tiene horario de verano: el desfase es siempre -03:00.
  */
@@ -40,7 +45,7 @@ export interface ConfigAltasAutomaticas {
 export type HoraDelDia = Pick<ConfigAltasAutomaticas, "hora" | "minuto">;
 
 /** Las frecuencias que ofrece la configuración, en minutos. */
-export const FRECUENCIAS_MINUTOS = [15, 30, 60, 120, 180, 240, 360] as const;
+export const FRECUENCIAS_MINUTOS = [60, 120, 180, 240, 360, 480, 720] as const;
 
 export const CONFIG_POR_DEFECTO: ConfigAltasAutomaticas = { hora: 14, minuto: 0, diasAntes: 0, modo: "diaria", cadaMinutos: 60 };
 export const MAX_DIAS_ANTES = 30;
@@ -87,7 +92,7 @@ export function validarConfig(body: any): { ok: true; cambios: Partial<ConfigAlt
   }
   if (body?.cadaMinutos !== undefined) {
     const n = Number(body.cadaMinutos);
-    if (!esFrecuencia(n)) return { ok: false, error: `La frecuencia tiene que ser una de: ${FRECUENCIAS_MINUTOS.join(", ")} minutos.` };
+    if (!esFrecuencia(n)) return { ok: false, error: `La frecuencia tiene que ser una de: ${FRECUENCIAS_MINUTOS.map((m) => m / 60).join(", ")} horas.` };
     cambios.cadaMinutos = n;
   }
   return { ok: true, cambios };
@@ -145,19 +150,27 @@ export interface CandidatoParaCorrida {
   presentable: boolean;
   /** ISO del último rechazo de ARCA; vacío si no está rechazada. */
   rechazadaEl: string;
+  /** El texto del rechazo si es del padrón (`rechazoDefinitivo.ts`); vacío si no. */
+  rechazoDefinitivo: string;
   motivo: string;
 }
 
-/** Rechazada hoy: espera al día siguiente para volver a intentarse. */
+/** Rechazada hoy (hora argentina). */
 export const rechazadaHoy = (c: Pick<CandidatoParaCorrida, "rechazadaEl">, hoy: string): boolean => !!c.rechazadaEl && diaArgentina(new Date(c.rechazadaEl)) === hoy;
 
-/** Entra en la corrida: completo, y sin un rechazo de hoy mismo. */
-export const entraEnLaCorrida = (c: CandidatoParaCorrida, hoy: string): boolean => c.presentable && !rechazadaHoy(c, hoy);
+/** Rechazada hoy por el padrón: la única que espera al día siguiente. */
+export const esperaAManana = (c: Pick<CandidatoParaCorrida, "rechazadaEl" | "rechazoDefinitivo">, hoy: string): boolean => !!c.rechazoDefinitivo && rechazadaHoy(c, hoy);
+
+/** Entra en la corrida: completo, y sin un rechazo del padrón de hoy mismo. */
+export const entraEnLaCorrida = (c: CandidatoParaCorrida, hoy: string): boolean => c.presentable && !esperaAManana(c, hoy);
+
+/** El orden dentro de la corrida: primero lo que nunca se rechazó, al final los rechazos (estable). */
+export const rechazadasAlFinal = <T extends Pick<CandidatoParaCorrida, "rechazadaEl">>(cs: T[]): T[] => [...cs.filter((c) => !c.rechazadaEl), ...cs.filter((c) => !!c.rechazadaEl)];
 
 /** Por qué NO entró, para la lista «Sin presentar» de la corrida. `null` = entró. */
 export function motivoDeOmision(c: CandidatoParaCorrida, hoy: string): string | null {
   if (!c.presentable) return c.motivo || "No se puede presentar.";
-  if (rechazadaHoy(c, hoy)) return "ARCA la rechazó hoy: vuelve a intentarse mañana.";
+  if (esperaAManana(c, hoy)) return "ARCA la rechazó hoy por el padrón: vuelve a intentarse mañana.";
   return null;
 }
 
@@ -176,19 +189,19 @@ export const leTocaALaCola = (cfg: ConfigAltasAutomaticas, ultimaCola: string | 
  * La PRÓXIMA corrida que presentaría un alta con esa fecha. Nunca null: nada queda fuera.
  *   · Antes de su turno: la corrida del día de su turno.
  *   · Desde su turno (en la cola): la próxima corrida que pase, sea la del día o la de la cola.
- *   · Rechazada hoy: la primera de mañana.
+ *   · Rechazada hoy por el padrón: la primera de mañana. Las demás rechazadas siguen como cualquiera.
  */
 export function proximaCorridaPara(
   fechaAlta: string,
   cfg: ConfigAltasAutomaticas,
   ahora: Date,
   hoy: string,
-  o: { ultimaCola?: string; rechazadaHoy?: boolean } = {},
+  o: { ultimaCola?: string; esperaAManana?: boolean } = {},
 ): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaAlta)) return null;
   const manana = sumarDias(hoy, 1);
   const delDiaDeManana = momentoDeCorrida(manana, cfg);
-  if (o.rechazadaHoy) return cfg.modo === "frecuente" ? new Date(`${manana}T00:00:00-03:00`) : delDiaDeManana;
+  if (o.esperaAManana) return cfg.modo === "frecuente" ? new Date(`${manana}T00:00:00-03:00`) : delDiaDeManana;
   const turno = momentoDeCorrida(diaDelTurno(fechaAlta, cfg), cfg);
   if (turno.getTime() > ahora.getTime()) return turno;
   const delDiaDeHoy = momentoDeCorrida(hoy, cfg);

@@ -239,11 +239,17 @@ interface IContract {
     cat?: string;
     /** El alta se confirmó leyendo Relaciones Laborales → Consultas, no por el resultado de la presentación. */
     porConsulta?: boolean;
-    /** Rechazos de corridas AUTOMÁTICAS acumulados (ver `MAX_INTENTOS_AUTOMATICOS`): a los 3 la automática no insiste más. */
+    /** Rechazos de corridas AUTOMÁTICAS acumulados. Sólo se muestra: no corta nada. */
     intentos?: number;
     /** Cuándo fue el primero de esos rechazos. */
     primerIntentoEl?: Date;
   };
+  /**
+   * Cuántas veces se mandó el alta a ARCA (pedido del 20/10/2026): automática o forzada, aceptada,
+   * rechazada o sin respuesta. Va fuera de `altaArcaPresentada` porque ese se reescribe o se borra en
+   * cada resultado; este no se borra nunca.
+   */
+  enviosArca?: number;
   // Documento de "Alta" (AFIP o Servicios, según el Estado impositivo vinculado a la Plantilla).
   altaDocumentoUrl?: string;
   altaDocumentoNombre?: string;
@@ -459,6 +465,7 @@ const contractSchema = new Schema<IContract>(
       ),
       default: undefined,
     },
+    enviosArca: { type: Number },
     altaDocumentoUrl: { type: String },
     altaDocumentoNombre: { type: String },
     altaConstancia: { type: new Schema({ clave: String, nroTramite: String, validadaEl: Date, vaAFirma: Boolean, archivadaEn: String, enviadaComo: String, origen: { type: String, enum: ["automatica", "descarga", "subida"] }, porUsuarioId: { type: Schema.Types.ObjectId, ref: "User" } }, { _id: false }) },
