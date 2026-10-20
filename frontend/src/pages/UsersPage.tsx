@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { usersAPI, User } from '../api/users';
 import { formatDate } from '../components/team/ContractCard';
+import { fechaISO, ordenarContratosDesc } from '../utils/contratoVigencia';
 import { afipAPI, ResultadoValidarNombres } from '../api/afip';
 import { motivoCuitInvalido, cuitEsValido } from '../utils/cuit';
 import { NombreArca, estadoNombreArca } from '../components/arca/NombreArca';
@@ -1702,7 +1703,17 @@ export const UsersPage: React.FC = () => {
               {viewActiveTab === 'proyectos' && (
                 <div className="space-y-4 animate-fadeIn transition-opacity duration-300">
                   {viewUser.metadata?.projects && viewUser.metadata.projects.length > 0 ? (
-                    viewUser.metadata.projects.map((up: any, upIdx: number) => {
+                    /*
+                      DE LO MÁS NUEVO A LO MÁS VIEJO (pedido del 20/10/2026): los proyectos por su contrato
+                      más reciente y, adentro, los contratos igual (`ordenarContratosDesc`, la misma regla
+                      que elige el contrato que rige). Antes salían en el orden en que se cargaron: el
+                      contrato de 2024 arriba y el de este mes al final.
+                    */
+                    [...viewUser.metadata.projects]
+                      .map((up: any) => ({ up, ultimo: ordenarContratosDesc(up.contracts || [])[0] }))
+                      .sort((a, b) => fechaISO(b.ultimo?.fecha_alta_contrato).localeCompare(fechaISO(a.ultimo?.fecha_alta_contrato)))
+                      .map(({ up }) => up)
+                      .map((up: any, upIdx: number) => {
                       const pId = typeof up.projectId === 'object' ? up.projectId?._id : up.projectId;
                       const populatedProject = typeof up.projectId === 'object' ? up.projectId : null;
                       const project = { ...projectMap.get(pId), ...populatedProject };
@@ -1726,7 +1737,7 @@ export const UsersPage: React.FC = () => {
                           {/* Contracts List */}
                           <div className="p-4 space-y-3">
                             {up.contracts && up.contracts.length > 0 ? (
-                              up.contracts.map((c: any, cIdx: number) => {
+                              ordenarContratosDesc(up.contracts as any[]).map((c: any, cIdx: number) => {
                                 // Build standard area data list
                                 let standardAreaData: { id: string; name: string }[] = [];
 
