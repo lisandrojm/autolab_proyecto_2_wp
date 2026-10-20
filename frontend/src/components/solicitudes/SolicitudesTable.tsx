@@ -279,8 +279,14 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              {/*
+                LA CASILLA Y EL NOMBRE QUEDAN FIJOS al correr la tabla de costado (pedido del 20/10/2026):
+                con muchas columnas, al llegar a Estado o Acciones ya no se veía de quién era la fila.
+                Fondos opacos: por una celda fija translúcida se ve pasar lo que scrollea (`#18202f` es el
+                gris del encabezado ya mezclado, como en Gestionar Equipo).
+              */}
               {conSeleccion && (
-                <th className="w-10 pl-4 py-3">
+                <th className="sticky left-0 z-[6] w-10 min-w-[2.5rem] pl-4 py-3 bg-gray-50 dark:bg-[#18202f]">
                   <input
                     type="checkbox"
                     checked={todoMarcado}
@@ -294,7 +300,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   />
                 </th>
               )}
-              <th className="px-4 py-3 font-semibold">Nombre</th>
+              <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] border-r border-gray-200 dark:border-gray-700 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]`}>Nombre</th>
               <th className="px-4 py-3 font-semibold">Solicitó</th>
               {mostrarProyectos && (
                 <>
@@ -316,6 +322,8 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
               const tramite = resolverTramite(s.tipoImpositivo);
               // Las que ya no están en juego se atenúan, para que la fila no se lea igual que una pendiente.
               const filaApagada = s.estado === "rechazada" || s.estado === "cancelada";
+              // El fondo OPACO de las celdas fijas, con el mismo estado que la fila (elegida, hover).
+              const fondoFijo = seleccionadas?.has(s._id) ? "bg-[#f7faff] dark:bg-[#1f2b3f]" : "bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634]";
 
               return (
                 /*
@@ -325,13 +333,13 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   necesita leerlos antes de decidir, no después. Los botones de la última columna
                   siguen funcionando como atajo, cortando la propagación del click.
                 */
-                <tr key={s._id} onClick={onVerDetalle ? () => onVerDetalle(s) : undefined} className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${onVerDetalle ? "cursor-pointer" : ""} ${filaApagada ? "opacity-60 bg-gray-50/60 dark:bg-gray-900/30" : ""} ${seleccionadas?.has(s._id) ? "bg-blue-50/70 dark:bg-blue-900/20" : ""}`}>
+                <tr key={s._id} onClick={onVerDetalle ? () => onVerDetalle(s) : undefined} className={`group border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${onVerDetalle ? "cursor-pointer" : ""} ${filaApagada ? "opacity-60 bg-gray-50/60 dark:bg-gray-900/30" : ""} ${seleccionadas?.has(s._id) ? "bg-blue-50/70 dark:bg-blue-900/20" : ""}`}>
                   {conSeleccion && (
-                    <td className="w-10 pl-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <td className={`sticky left-0 z-[5] w-10 min-w-[2.5rem] pl-4 py-3 ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={!!seleccionadas?.has(s._id)} onChange={() => alternar(s._id)} aria-label={`Seleccionar a ${s.nombre}`} className="h-4 w-4 rounded cursor-pointer" />
                     </td>
                   )}
-                  <td className="px-4 py-3">
+                  <td className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[5] px-4 py-3 min-w-[14rem] max-w-[20rem] border-r border-gray-200 dark:border-gray-700 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)] ${fondoFijo}`}>
                     <div className="min-w-0">
                       <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
                         {s.nombre}
