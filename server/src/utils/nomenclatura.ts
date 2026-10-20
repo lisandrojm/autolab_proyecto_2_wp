@@ -182,7 +182,7 @@ export const PATRON_POR_DEFECTO: Record<TipoNomenclatura, string> = (() => {
   return {
     // El de Contratos lo fijó el cliente (20/10/2026: el que tenía guardado Demo-Tenant pasó a ser el de
     // fábrica, para que figure como «Sistema» y no se pueda descartar).
-    Contrato: "{{centroDeCosto}}_{{proyecto}}_{{tipo}}_{{extra}}_{{apellido}}_{{nombres}}-{{email}}_{{cuit}}_D-{{fechaAlta}}_H-{{fechaBaja}}_{{codigo}}",
+    Contrato: "{{centroDeCosto}}_{{proyecto}}_{{tipo}}_{{extra}}_{{apellido}}_{{nombres}}_{{email}}_{{cuit}}_D-{{fechaAlta}}_H-{{fechaBaja}}_{{codigo}}",
     Release: deContrato,
     AltaAFIP: deContrato,
     ConstanciaCUIT: deContrato,
