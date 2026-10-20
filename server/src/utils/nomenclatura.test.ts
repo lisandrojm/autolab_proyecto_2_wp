@@ -143,11 +143,11 @@ describe("el default rinde el nombre de siempre", () => {
     assert.ok(nombre.endsWith("_Empresa-30710295839_ID-000123"), "el CUIT de la empleadora va último, antes del código");
   });
 
-  /** El de Contratos lo eligió el cliente (20/10/2026): sin la empleadora, y el email con su propio campo. */
+  /** El de Contratos lo eligió el cliente (20/10/2026): REC_SUELDO fijo, el período, sin la empleadora. */
   it("Contratos: el patrón que eligió el cliente", () => {
-    const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
-    assert.ok(nombre.startsWith("426-LN+_Contrato_"), nombre);
-    assert.ok(nombre.includes("_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_20331501027_D-20260810_H--_ID-000123"), nombre);
+    const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, periodo: "2026_PERIODO_08" });
+    assert.equal(nombre, "426-LN+_REC_SUELDO_2026_PERIODO_08_gonzalez-rotstein_juan-manuel_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_20331501027_D-20260810_H--_ID-000123");
+    assert.equal(leerAnclas(nombre).cuit, "20331501027");
   });
 
   /**

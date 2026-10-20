@@ -166,9 +166,11 @@ export const PATRON_POR_DEFECTO = (() => {
     */
     const deContrato = "{{centroDeCosto}}_{{proyecto}}_{{apellido}}_{{tipo}}_{{contrato}}_D-{{fechaAlta}}_H-{{fechaBaja}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}_{{codigo}}";
     return {
-        // El de Contratos lo fijó el cliente (20/10/2026: el que tenía guardado Demo-Tenant pasó a ser el de
-        // fábrica, para que figure como «Sistema» y no se pueda descartar).
-        Contrato: "{{centroDeCosto}}_{{proyecto}}_{{tipo}}_{{extra}}_{{apellido}}_{{nombres}}_{{email}}_{{cuit}}_D-{{fechaAlta}}_H-{{fechaBaja}}_{{codigo}}",
+        // El de Contratos lo fijó el cliente (20/10/2026): figura como «Sistema» y no se puede descartar.
+        // «REC_SUELDO» es texto fijo y el período va adelante; las fechas siguen al final porque son las
+        // que separan dos contratos de la misma persona en la carpeta de Dropbox (y descartan un recibo
+        // viejo que la nombra). Ver `estadoDropboxCronService`.
+        Contrato: "{{centroDeCosto}}_{{proyecto}}_REC_SUELDO_{{periodo}}_{{apellido}}_{{nombres}}_{{email}}_{{cuit}}_D-{{fechaAlta}}_H-{{fechaBaja}}_{{codigo}}",
         Release: deContrato,
         AltaAFIP: deContrato,
         ConstanciaCUIT: deContrato,
