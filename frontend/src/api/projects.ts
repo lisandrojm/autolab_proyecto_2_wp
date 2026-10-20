@@ -1157,6 +1157,8 @@ export interface AltaPendienteArca {
   userProjectId: string;
   contractIndex: number;
   userId: string;
+  /** Un server anterior no lo manda: sin él no se puede editar ni eliminar desde la cola. */
+  projectId?: string;
   nombre: string;
   cuil: string;
   proyecto: string;

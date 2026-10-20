@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBolt, faClock, faTriangleExclamation, faCircleCheck, faSpinner, faSearch, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faBolt, faClock, faTriangleExclamation, faCircleCheck, faSpinner, faSearch, faXmark, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Link } from "react-router-dom";
@@ -9,6 +9,7 @@ import { BotonOrden, useOrdenTabla } from "../components/ui/OrdenTabla";
 import { CorridaAltasArca } from "../components/contratos/CorridaAltasArca";
 import { CuentaRegresiva } from "../components/ui/CuentaRegresiva";
 import { sweetAlert } from "../utils/sweetAlert";
+import { ProjectTeamPage } from "./ProjectTeamPage";
 
 /*
   A.R.C.A ALTAS AUTOMÁTICAS: cada alta temprana se presenta sola a la hora configurada (14:00 argentinas
@@ -93,6 +94,11 @@ export const PresentacionesArcaPage: React.FC = () => {
   // La hora del SERVIDOR: la cuenta regresiva no puede depender de un reloj de PC atrasado.
   const [desfase, setDesfase] = useState(0);
   const [ahora, setAhora] = useState(Date.now());
+
+  // Editar o eliminar un contrato de la cola (pedido del 20/10/2026): el que ARCA rechaza porque ya
+  // tiene un alta activa, o al que le falta algo. Editar abre el mismo formulario del equipo, en modal.
+  const [editando, setEditando] = useState<AltaPendienteArca | null>(null);
+  const [borrando, setBorrando] = useState("");
 
   const cargar = useCallback(async () => {
     try {
@@ -296,9 +302,39 @@ export const PresentacionesArcaPage: React.FC = () => {
           <FontAwesomeIcon icon={faBolt} className="h-3 w-3" />
           Forzar presentación
         </button>
+        {c.projectId && (
+          <div className="mt-2 flex items-center justify-end gap-1">
+            <button type="button" onClick={() => setEditando(c)} title="Editar este contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+              <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+            </button>
+            <button type="button" onClick={() => eliminar(c)} disabled={!!borrando} title="Eliminar este contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <FontAwesomeIcon icon={borrando === claveDe(c) ? faSpinner : faTrash} spin={borrando === claveDe(c)} className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </td>
     </tr>
   );
+
+  const eliminar = async (c: AltaPendienteArca) => {
+    if (!c.projectId) return;
+    const r = await sweetAlert.confirm(
+      "¿Eliminar contrato?",
+      `Se eliminará el contrato «${c.tipoContrato || "sin tipo"}» de ${c.nombre} en «${c.proyecto}» (alta ${fechaCorta(c.fechaAlta)}). Sale de la cola y no se presenta. En ARCA no cambia nada. No se puede deshacer.`,
+      "Sí, eliminar",
+    );
+    if (!r.isConfirmed) return;
+    setBorrando(claveDe(c));
+    try {
+      await projectsAPI.deleteMemberContract(c.projectId, c.userId, c.contractIndex);
+      sweetAlert.success("Contrato eliminado", `${c.nombre} salió de la cola.`);
+      await cargar();
+    } catch (err: any) {
+      sweetAlert.error("No se pudo eliminar", err?.response?.data?.error || err?.message || "");
+    } finally {
+      setBorrando("");
+    }
+  };
 
   const tabla = (lista: AltaPendienteArca[]) => (
     <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -605,6 +641,20 @@ export const PresentacionesArcaPage: React.FC = () => {
           }}
           lote={null}
           onTerminado={() => void cargar()}
+        />
+      )}
+      {editando?.projectId && (
+        <ProjectTeamPage
+          soloAprobacion={{
+            projectId: editando.projectId,
+            solicitudId: "",
+            editarContrato: { userId: editando.userId, contractIndex: editando.contractIndex },
+            onCerrar: () => setEditando(null),
+            onAprobada: () => {
+              setEditando(null);
+              void cargar();
+            },
+          }}
         />
       )}
     </PageLayout>

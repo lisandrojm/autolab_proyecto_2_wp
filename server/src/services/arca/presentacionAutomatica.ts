@@ -92,6 +92,8 @@ export interface CandidatoAlta {
   userProjectId: string;
   contractIndex: number;
   userId: string;
+  /** Para editar o eliminar el contrato desde la cola (las rutas del equipo van por proyecto y persona). */
+  projectId: string;
   nombre: string;
   cuil: string;
   proyecto: string;
@@ -318,6 +320,7 @@ export async function candidatosDeAlta(
       userProjectId: String(up._id),
       contractIndex: i,
       userId: String(up.userId),
+      projectId: String(up.projectId),
       nombre,
       cuil: String(u.metadata?.cuit || "").replace(/\D/g, ""),
       proyecto: proyecto?.name || "",

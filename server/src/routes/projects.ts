@@ -2604,6 +2604,17 @@ router.delete("/projects/:projectId/members/:userId/contracts/:index", requireTe
       res.status(400).json({ error: "Contrato no encontrado" });
       return;
     }
+    // Una presentación de altas en curso marca cada contrato por su POSICIÓN: borrar uno corre a los
+    // demás y el resultado quedaría en otro contrato. Se espera a que termine.
+    const corrida = quienTiene(String(req.tenantObjectId));
+    if (corrida && (corrida.tipo === "altas_masivas" || corrida.tipo === "carga_masiva")) {
+      res.status(409).json({ error: "Hay una presentación de altas en ARCA en curso. Esperá a que termine para eliminar contratos." });
+      return;
+    }
+    if ((up.contracts?.[idx] as any)?.altaArcaPresentada?.resultado === "presentando") {
+      res.status(409).json({ error: "Este contrato se está presentando en ARCA ahora mismo: no se puede eliminar." });
+      return;
+    }
 
     await quitarContrato(up, idx);
 

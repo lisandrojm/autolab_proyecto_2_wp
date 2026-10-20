@@ -282,6 +282,7 @@ export async function candidatosDeAlta(tenantObjectId, opts = {}) {
             userProjectId: String(up._id),
             contractIndex: i,
             userId: String(up.userId),
+            projectId: String(up.projectId),
             nombre,
             cuil: String(u.metadata?.cuit || "").replace(/\D/g, ""),
             proyecto: proyecto?.name || "",

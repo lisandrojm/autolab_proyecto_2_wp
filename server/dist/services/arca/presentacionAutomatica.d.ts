@@ -6,6 +6,8 @@ export interface CandidatoAlta {
     userProjectId: string;
     contractIndex: number;
     userId: string;
+    /** Para editar o eliminar el contrato desde la cola (las rutas del equipo van por proyecto y persona). */
+    projectId: string;
     nombre: string;
     cuil: string;
     proyecto: string;
