@@ -5,6 +5,7 @@ import { ViewType } from "../types";
 import SectionHeader from "../components/SectionHeader";
 import ContratoMiembroModal from "../components/ContratoMiembroModal";
 import ProyectoInfoModal from "../components/ProyectoInfoModal";
+import { BadgeCentroCosto, SelectorDeProyecto, etiquetaDeProyecto } from "../components/SelectorDeProyecto";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useProfile } from "../hooks/useProfile";
 import { projectsAPI, Project, AreaShiftMember } from "../../../../api/projects";
@@ -216,9 +217,15 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
       .sort((a, b) => a.proyecto.name.localeCompare(b.proyecto.name));
   }, [proyectos, areas, turnos, misIds, miEmail, miIdFrame, user, sedesCatalogo]);
 
-  // Con un solo proyecto no hay nada que elegir: queda seleccionado.
+  /*
+    Con un solo proyecto no hay nada que elegir: queda seleccionado. Con varios no se elige ninguno por
+    defecto (pedido del 19/10/2026): hay que elegirlo en la ventana. Si el elegido deja de estar, se
+    vuelve a pedir.
+  */
   useEffect(() => {
-    if (equipos && equipos.length > 0 && !equipos.some((e) => e.proyecto._id === proyectoId)) setProyectoId(equipos[0].proyecto._id);
+    if (!equipos) return;
+    if (equipos.length === 1 && proyectoId !== equipos[0].proyecto._id) setProyectoId(equipos[0].proyecto._id);
+    else if (proyectoId && !equipos.some((e) => e.proyecto._id === proyectoId)) setProyectoId("");
   }, [equipos, proyectoId]);
 
   useEffect(() => {
@@ -401,24 +408,14 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
             {equipos.length > 1 ? (
               <div>
                 <label className="mb-1 block text-xs font-bold text-slate-500 dark:text-slate-400">Proyecto</label>
-                <div className="flex items-center gap-1">
-                  <select value={proyectoId} onChange={(e) => setProyectoId(e.target.value)} className="w-full rounded border border-slate-300 px-4 py-2 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
-                    {equipos.map((e) => (
-                      <option key={e.proyecto._id} value={e.proyecto._id}>
-                        {typeof e.proyecto.clientId === "object" && e.proyecto.clientId?.name ? `${e.proyecto.clientId.name} | ` : ""}
-                        {e.proyecto.name}
-                      </option>
-                    ))}
-                  </select>
-                  {botonInfoProyecto}
-                </div>
+                {/* La misma elección que en la Solicitud de Contratación: ventana, centro de costo y valoración. */}
+                <SelectorDeProyecto proyectos={equipos.map((e) => e.proyecto)} valor={proyectoId} onElegir={setProyectoId} extra={equipo ? botonInfoProyecto : null} />
+                {!equipo && <p className="mt-3 text-center text-sm text-slate-500 dark:text-slate-400">Elegí un proyecto para ver sus equipos.</p>}
               </div>
             ) : (
-              <p className="flex items-center gap-1 text-lg font-bold text-slate-900 dark:text-slate-100">
-                <span className="min-w-0 truncate">
-                  {typeof equipo?.proyecto.clientId === "object" && equipo?.proyecto.clientId?.name ? `${equipo.proyecto.clientId.name} | ` : ""}
-                  {equipo?.proyecto.name}
-                </span>
+              <p className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-100">
+                {equipo && <BadgeCentroCosto proyecto={equipo.proyecto} />}
+                <span className="min-w-0 truncate">{equipo ? etiquetaDeProyecto(equipo.proyecto) : ""}</span>
                 {botonInfoProyecto}
               </p>
             )}

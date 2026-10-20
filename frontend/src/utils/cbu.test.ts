@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { CBU_DIGITOS, soloDigitosCbu, faltanDigitosCbu, cbuIncompleto, contadorCbu } from "./cbu.js";
+import { CBU_DIGITOS, soloDigitosCbu, faltanDigitosCbu, cbuIncompleto, contadorCbu, cbuValido as _cbuValido, completarCvu as _completarCvu } from "./cbu.js";
 
 /**
  * UN CBU MAL CARGADO NO FALLA ACÁ: FALLA EN EL BANCO.
@@ -62,5 +62,27 @@ describe("faltanDigitosCbu y el contador", () => {
     assert.equal(contadorCbu("1"), "1 de 22 · faltan 21.");
     assert.equal(contadorCbu("017009992000001234567"), "21 de 22 · falta 1.");
     assert.equal(contadorCbu(VALIDO), "22 de 22 ✓");
+  });
+});
+
+
+describe("cbuValido y completarCvu (billetera virtual)", () => {
+  it("un CVU de Mercado Pago completo cierra los dos verificadores", () => {
+    assert.equal(_cbuValido("0000003100091372603261"), true);
+    assert.equal(_cbuValido("0000003100091372603262"), false);
+  });
+  it("el CVU copiado sin los seis ceros se completa", () => {
+    assert.equal(_completarCvu("3100091372603261"), "0000003100091372603261");
+  });
+  it("un número que con ceros no da un CVU válido queda como está", () => {
+    assert.equal(_completarCvu("3100091372603262"), "3100091372603262");
+  });
+  it("un número corto o todo ceros no se completa (22 ceros cierran los verificadores y no son una cuenta)", () => {
+    assert.equal(_completarCvu("0"), "0");
+    assert.equal(_completarCvu("1234"), "1234");
+  });
+  it("vacío y completo no se tocan", () => {
+    assert.equal(_completarCvu(""), "");
+    assert.equal(_completarCvu("0000003100091372603261"), "0000003100091372603261");
   });
 });

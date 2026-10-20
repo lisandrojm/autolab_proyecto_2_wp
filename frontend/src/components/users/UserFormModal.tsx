@@ -10,7 +10,7 @@ import { CuitInput, isValidCuit } from "../ui/CuitInput";
 import { Modal } from "../ui/Modal";
 import { BloqueEstado } from "../ui/BloqueEstado";
 import { sweetAlert } from "../../utils/sweetAlert";
-import { CBU_DIGITOS, soloDigitosCbu, contadorCbu, cbuIncompleto as esCbuIncompleto } from "../../utils/cbu";
+import { CBU_DIGITOS, soloDigitosCbu, contadorCbu, cbuIncompleto as esCbuIncompleto, completarCvu } from "../../utils/cbu";
 import { opcionesTipoEntidad, camposDe, labelTipo, declaraSinBanco, resumenSinBanco } from "../../utils/bancarios";
 import { tiposEntidadAPI, TipoEntidadFinanciera } from "../../api/tiposEntidadFinanciera";
 import { afipAPI } from "../../api/afip";
@@ -1581,10 +1581,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                       78» del homebanking entra limpio y del tirón, que es como se carga en la vida
                       real. Y el «(sin guiones)» del rótulo explica por qué desaparecen al pegarlos.
                     */}
-                    <input type="text" inputMode="numeric" value={formData.cbu || ""} onChange={(e) => setFormData((prev) => ({ ...prev, cbu: soloDigitosCbu(e.target.value) }))} className="input-field" placeholder={`${CBU_DIGITOS} dígitos, sin guiones`} />
+                    {/* CVU de billetera: si lo copiaron sin los ceros del principio, se completa al salir (ver `completarCvu`). */}
+                    <input type="text" inputMode="numeric" value={formData.cbu || ""} onChange={(e) => setFormData((prev) => ({ ...prev, cbu: soloDigitosCbu(e.target.value) }))} onBlur={() => camposDe(formData.tipoEntidadFinanciera || "", tiposEntidad).cbuLabel === "CVU" && setFormData((prev) => ({ ...prev, cbu: completarCvu(prev.cbu || "") }))} className="input-field" placeholder={`${CBU_DIGITOS} dígitos, sin guiones`} />
                     {/* El contador va SIEMPRE, no solo cuando falta: contar 22 dígitos a ojo es lo que
                         nadie hace, y es cuando se cuela uno de 21. */}
-                    <p className={`text-[11px] mt-1 ${cbuIncompleto ? "text-amber-700 dark:text-amber-400" : "text-gray-400"}`}>{contadorCbu(formData.cbu || "")}</p>
+                    <p className={`text-[11px] mt-1 ${cbuIncompleto ? "text-amber-700 dark:text-amber-400" : "text-gray-400"}`}>
+                      {contadorCbu(formData.cbu || "")}
+                      {cbuIncompleto && camposDe(formData.tipoEntidadFinanciera || "", tiposEntidad).cbuLabel === "CVU" && " El CVU de una billetera empieza con ceros (Mercado Pago: 000000…): si lo copiaste sin ellos, se completa solo al salir del campo."}
+                    </p>
                   </div>
                 </div>
 

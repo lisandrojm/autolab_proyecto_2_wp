@@ -1,5 +1,5 @@
 import { esPersonaJuridica, mismasPalabras, nombreSinPartir, sugerirParticion } from "@compartido/nombreEntero";
-import { CBU_DIGITOS, soloDigitosCbu, contadorCbu, cbuIncompleto, faltanDigitosCbu } from "../utils/cbu";
+import { CBU_DIGITOS, soloDigitosCbu, contadorCbu, cbuIncompleto, faltanDigitosCbu, completarCvu } from "../utils/cbu";
 import { SIN_BANCO, opcionesTipoEntidad, camposDe, labelTipo, MOTIVOS_SIN_BANCO, MotivoSinBanco, TipoEntidadConfig } from "../utils/bancarios";
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -1510,10 +1510,15 @@ export const RegistroPage: React.FC = () => {
                             placeholder={`${CBU_DIGITOS} dígitos, sin guiones`}
                             value={form.cbu}
                             onChange={(e) => set("cbu", soloDigitosCbu(e.target.value))}
+                            // CVU de billetera copiado sin los ceros del principio: se completa (ver `completarCvu`).
+                            onBlur={() => camposDe(form.tipoEntidadFinanciera, tiposEntidad).cbuLabel === "CVU" && set("cbu", completarCvu(form.cbu))}
                           />
                           {/* El contador va siempre: es la única regla que hay que cumplir y contar 22
                               dígitos a ojo es lo que nadie hace. */}
-                          <p className={`text-[11px] mt-1 ${cbuIncompleto(form.cbu) ? "text-amber-400" : "text-gray-400"}`}>{contadorCbu(form.cbu)}</p>
+                          <p className={`text-[11px] mt-1 ${cbuIncompleto(form.cbu) ? "text-amber-400" : "text-gray-400"}`}>
+                            {contadorCbu(form.cbu)}
+                            {cbuIncompleto(form.cbu) && camposDe(form.tipoEntidadFinanciera, tiposEntidad).cbuLabel === "CVU" && " El CVU de una billetera empieza con ceros (Mercado Pago: 000000…): si lo copiaste sin ellos, se completa solo al salir del campo."}
+                          </p>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

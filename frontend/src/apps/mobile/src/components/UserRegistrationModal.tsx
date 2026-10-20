@@ -24,7 +24,7 @@ import { categoriaSatAPI, CategoriaSatItem } from "../../../../api/categoriasSat
 // La cadena empleadora → convenio → categoría es la MISMA que usa el escritorio. Ver ese módulo.
 import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, codigosDeConveniosDelProyecto, conveniosOfrecidos, importePorJornadaDeCategoria, proporcionNetoDeCategoria } from "../../../../utils/seleccionConvenioCategoria";
 import { tramiteSinConvenioNiCategoria } from "@compartido/tramiteSinEscala";
-import { ChipValoracionDelProyecto, useValoraciones } from "../../../../components/proyectos/ChipValoracion";
+import { useValoraciones } from "../../../../components/proyectos/ChipValoracion";
 import { sweetAlert } from "../utils/sweetAlert";
 import { CustomDatePicker } from "./CustomDatePicker";
 // El mismo calendario de Vacaciones: se pintan los días de a uno.
@@ -52,7 +52,7 @@ import { MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, PROJECT_SUPERVISOR } from "..
 import { plantillasEquipoAPI } from "../../../../api/plantillasEquipo";
 import Swal from "sweetalert2";
 import { copiarMiLinkDeRegistro } from "../utils/portapapeles";
-import { nombreCentroCosto } from "../../../../utils/centroCosto";
+import { SelectorDeProyecto } from "./SelectorDeProyecto";
 
 
 /**
@@ -128,18 +128,6 @@ interface UserRegistrationModalProps {
    */
   renovacion?: { plantilla: any; userProjectId: string; fechaBajaContrato: string } | null;
 }
-
-
-/** El centro de costo del proyecto, como badge (el mismo color que en la ficha del proyecto). Sin centro, nada. */
-const BadgeCentroCosto = ({ proyecto }: { proyecto: any }) => {
-  const cc = nombreCentroCosto(proyecto);
-  if (!cc) return null;
-  return (
-    <span title={`Centro de costo ${cc}`} className="shrink-0 inline-flex items-center rounded px-1.5 py-0.5 text-xs font-semibold tabular-nums bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400">
-      {cc}
-    </span>
-  );
-};
 
 export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ isOpen, onClose, onSuccess, editingUser, renovacion }) => {
   const { profile } = useProfile();
@@ -264,7 +252,6 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const [motivos, setMotivos] = useState<RequestConfig[]>([]);
   /** Ventana de rol empresa, con su propio buscador. Mismo patrón que la de Usuarios. */
   const [rolModalOpen, setRolModalOpen] = useState(false);
-  const [proyectoModalOpen, setProyectoModalOpen] = useState(false);
   const [rolSearchTerm, setRolSearchTerm] = useState("");
   /** Texto del buscador dentro de la ventana de "a quién reemplaza". */
   const [replacedSearchTerm, setReplacedSearchTerm] = useState("");
@@ -2339,32 +2326,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           ) : projects.length === 0 ? (
             <div className="flex items-center justify-center py-4 text-slate-500 italic text-sm">No hay proyectos disponibles</div>
           ) : (
-            <div className="flex items-center gap-2">
-              {!proyectoElegido ? (
-                // Varios proyectos y ninguno elegido: el campo entero abre la ventana para elegirlo.
-                <button type="button" onClick={() => setProyectoModalOpen(true)} className="flex flex-1 items-center gap-3 rounded-lg border border-dashed border-blue-300 bg-white p-3 text-left transition-colors hover:bg-blue-50 dark:border-blue-700 dark:bg-slate-900 dark:hover:bg-blue-900/20">
-                  <FontAwesomeIcon icon={faBriefcase} className="text-[10px] text-blue-500" />
-                  <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">Seleccionar proyecto</span>
-                  <span className="ml-auto text-[11px] text-slate-400">{projects.length} disponibles</span>
-                </button>
-              ) : (
-              <div className="flex flex-1 items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-left dark:border-blue-700 dark:bg-blue-900/20">
-                <FontAwesomeIcon icon={faBriefcase} className="text-[10px] text-blue-500" />
-                <BadgeCentroCosto proyecto={proyectoElegido} />
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-400">{etiquetaProyecto(proyectoElegido)}</span>
-                {/* LA VALORACIÓN DEL PROYECTO, ACÁ ARRIBA.
-                    Es la que decide qué categorías corresponden —el selector de abajo filtra por ella y avisa
-                    cuando la elegida difiere—, así que tenerla a la vista desde el principio evita elegir una
-                    categoría y recién ahí enterarse de contra qué se la está comparando. */}
-                <ChipValoracionDelProyecto project={proyectoElegido} valoraciones={valoraciones} mostrarSinValorar className="ml-auto shrink-0" />
-              </div>
-              )}
-              {projects.length > 1 && proyectoElegido && (
-                <button type="button" onClick={() => setProyectoModalOpen(true)} className="shrink-0 rounded-lg border border-slate-300 px-3 py-3 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800">
-                  Cambiar
-                </button>
-              )}
-            </div>
+            <SelectorDeProyecto proyectos={projects} valor={formData.projectIds[0] || ""} onElegir={(id) => setFormData((prev) => ({ ...prev, projectIds: [id] }))} />
           )}
         </div>
 
@@ -3477,47 +3439,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           empleadora, y todo eso se carga una sola vez en este formulario. Por eso es una lista de
           opciones excluyentes y elegir una cierra la ventana.
         */}
-        <Modal
-          isOpen={proyectoModalOpen}
-          onClose={() => setProyectoModalOpen(false)}
-          title="Elegí el proyecto"
-          subtitle={`${projects.length} disponibles`}
-          size="md"
-          zIndex={80}
-          footer={
-            <div className="flex w-full justify-end items-center gap-3">
-              <button type="button" onClick={() => setProyectoModalOpen(false)} className="bg-blue-500 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
-                Listo
-              </button>
-            </div>
-          }
-        >
-          <div className="grid grid-cols-1 gap-2 py-2">
-            {projects.map((p) => {
-              const isSelected = formData.projectIds.includes(p._id);
-              return (
-                <button
-                  key={p._id}
-                  type="button"
-                  onClick={() => {
-                    setFormData((prev) => ({ ...prev, projectIds: [p._id] }));
-                    setProyectoModalOpen(false);
-                  }}
-                  aria-pressed={isSelected}
-                  className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-all ${isSelected ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400" : "border-slate-100 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"}`}
-                >
-                  {/* Redondo: es una opción entre varias, no una casilla que se suma. */}
-                  <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{isSelected && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</div>
-                  <BadgeCentroCosto proyecto={p} />
-                  <span className="text-sm font-medium">{etiquetaProyecto(p)}</span>
-                  {/* El nivel de cada proyecto al elegir, no después: es lo que va a definir qué categorías se
-                      ofrecen para esta contratación. */}
-                  <ChipValoracionDelProyecto project={p} valoraciones={valoraciones} mostrarSinValorar className="ml-auto shrink-0" />
-                </button>
-              );
-            })}
-          </div>
-        </Modal>
+        {/* La ventana para elegir el proyecto la trae `SelectorDeProyecto`. */}
 
 
         {/* Filtro por rol de la lista de personas. Se abre desde la ventana de arriba, así que va por

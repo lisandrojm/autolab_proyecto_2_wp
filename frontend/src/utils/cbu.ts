@@ -54,3 +54,33 @@ export const contadorCbu = (valor: string): string => {
   if (faltan > 0) return `${puestos} de ${CBU_DIGITOS} · falta${faltan === 1 ? "" : "n"} ${faltan}.`;
   return `${CBU_DIGITOS} de ${CBU_DIGITOS} ✓`;
 };
+
+/**
+ * ¿Los dos dígitos verificadores cierran? (algoritmo del BCRA: bloque de 8 con pesos 7-1-3-9 y
+ * bloque de 14 con pesos 3-9-7-1). Sólo con los 22 dígitos.
+ */
+export const cbuValido = (valor: string): boolean => {
+  const d = soloDigitosCbu(valor);
+  if (d.length !== CBU_DIGITOS) return false;
+  const verifica = (bloque: string, pesos: number[]) => {
+    const suma = pesos.reduce((t, p, i) => t + Number(bloque[i]) * p, 0);
+    return (10 - (suma % 10)) % 10 === Number(bloque[pesos.length]);
+  };
+  return verifica(d.slice(0, 8), [7, 1, 3, 9, 7, 1, 3]) && verifica(d.slice(8), [3, 9, 7, 1, 3, 9, 7, 1, 3, 9, 7, 1, 3]);
+};
+
+/**
+ * EL CVU DE UNA BILLETERA, CON LOS CEROS DEL PRINCIPIO.
+ *
+ * El CVU tiene 22 dígitos como el CBU, pero los de las billeteras empiezan con seis ceros
+ * («0000003100…» en Mercado Pago) y la gente lo copia sin ellos: 16 dígitos que nunca llegan a 22.
+ * Si al completarlo con ceros adelante los verificadores cierran, era eso y se completa; si no, se deja
+ * como está (es un número mal copiado, no un CVU sin ceros). Con menos de 14 dígitos, o todo ceros, no
+ * se intenta: «0» con 21 ceros adelante cierra los verificadores y no es la cuenta de nadie.
+ */
+export const completarCvu = (valor: string): string => {
+  const d = soloDigitosCbu(valor);
+  if (d.length < 14 || d.length >= CBU_DIGITOS || !/[1-9]/.test(d)) return d;
+  const completo = d.padStart(CBU_DIGITOS, "0");
+  return cbuValido(completo) ? completo : d;
+};
