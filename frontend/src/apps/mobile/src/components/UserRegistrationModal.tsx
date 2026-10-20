@@ -135,8 +135,8 @@ const BadgeCentroCosto = ({ proyecto }: { proyecto: any }) => {
   const cc = nombreCentroCosto(proyecto);
   if (!cc) return null;
   return (
-    <span title={`Centro de costo ${cc}`} className="shrink-0 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400">
-      CC {cc}
+    <span title={`Centro de costo ${cc}`} className="shrink-0 inline-flex items-center rounded px-1.5 py-0.5 text-xs font-semibold tabular-nums bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400">
+      {cc}
     </span>
   );
 };
@@ -2350,8 +2350,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               ) : (
               <div className="flex flex-1 items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-left dark:border-blue-700 dark:bg-blue-900/20">
                 <FontAwesomeIcon icon={faBriefcase} className="text-[10px] text-blue-500" />
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-400">{etiquetaProyecto(proyectoElegido)}</span>
                 <BadgeCentroCosto proyecto={proyectoElegido} />
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-400">{etiquetaProyecto(proyectoElegido)}</span>
                 {/* LA VALORACIÓN DEL PROYECTO, ACÁ ARRIBA.
                     Es la que decide qué categorías corresponden —el selector de abajo filtra por ella y avisa
                     cuando la elegida difiere—, así que tenerla a la vista desde el principio evita elegir una
@@ -3508,8 +3508,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                 >
                   {/* Redondo: es una opción entre varias, no una casilla que se suma. */}
                   <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-blue-600" : "border-slate-300 dark:border-slate-600"}`}>{isSelected && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}</div>
-                  <span className="text-sm font-medium">{etiquetaProyecto(p)}</span>
                   <BadgeCentroCosto proyecto={p} />
+                  <span className="text-sm font-medium">{etiquetaProyecto(p)}</span>
                   {/* El nivel de cada proyecto al elegir, no después: es lo que va a definir qué categorías se
                       ofrecen para esta contratación. */}
                   <ChipValoracionDelProyecto project={p} valoraciones={valoraciones} mostrarSinValorar className="ml-auto shrink-0" />
