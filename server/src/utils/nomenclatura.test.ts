@@ -134,7 +134,7 @@ describe("el default rinde el nombre de siempre", () => {
    * empleadora al final porque es el campo más largo y el que menos se busca.
    */
   it("arranca con el proyecto y termina con la empleadora y el código", () => {
-    const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
+    const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Release, { ...DATOS, tipo: "Contrato" });
     assert.equal(
       nombre,
       "426-LN+_gonzalez-rotstein_Contrato_Jornada-2030-SRL_D-20260810_H--_20331501027_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_Empresa-30710295839_ID-000123",
@@ -143,13 +143,20 @@ describe("el default rinde el nombre de siempre", () => {
     assert.ok(nombre.endsWith("_Empresa-30710295839_ID-000123"), "el CUIT de la empleadora va último, antes del código");
   });
 
+  /** El de Contratos lo eligió el cliente (20/10/2026): sin la empleadora, y el email con su propio campo. */
+  it("Contratos: el patrón que eligió el cliente", () => {
+    const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
+    assert.ok(nombre.startsWith("426-LN+_Contrato_"), nombre);
+    assert.ok(nombre.includes("_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_20331501027_D-20260810_H--_ID-000123"), nombre);
+  });
+
   /**
    * Los siete tipos comparten el mismo esqueleto. Quien mira una carpeta con contratos, pedidos y
    * vacaciones mezclados lee siempre los mismos campos en el mismo lugar; cada tipo cambia solo en lo
    * que de verdad tiene distinto (un período contra un número).
    */
   it("todos empiezan por centro de costo y proyecto, y terminan en la empleadora y el código", () => {
-    for (const tipo of TIPOS_NOMENCLATURA) {
+    for (const tipo of TIPOS_NOMENCLATURA.filter((t) => t !== "Contrato")) {
       const p = PATRON_POR_DEFECTO[tipo];
       assert.ok(p.startsWith("{{centroDeCosto}}_{{proyecto}}_"), `${tipo} no arranca con el centro de costo y el proyecto: ${p}`);
       // La empleadora al final, y después solo el código único del documento.
@@ -290,7 +297,8 @@ describe("la empleadora y el tipo de contrato en el nombre", () => {
    *    otra cosa: dos contratos del mismo tipo pueden salir de plantillas distintas.
    */
   it("el patrón por defecto de los documentos de contrato incluye el tipo de contrato", () => {
-    for (const tipo of ["Contrato", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion"] as const) {
+    // Contratos no: su patrón lo eligió el cliente (20/10/2026), con `{{tipo}}` y `{{extra}}`.
+    for (const tipo of ["Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion"] as const) {
       assert.match(PATRON_POR_DEFECTO[tipo], /\{\{contrato\}\}/, `${tipo} no incluye {{contrato}}`);
       assert.ok(VARIABLES_POR_TIPO[tipo].some((v) => v.variable === "{{contrato}}"), `${tipo} no ofrece {{contrato}}`);
     }
@@ -303,8 +311,8 @@ describe("la empleadora y el tipo de contrato en el nombre", () => {
     assert.equal(nombre, "Jornada-2030-SRL_Acuerdo-de-titularidad");
   });
 
-  it("la empleadora cierra el nombre en todos los tipos", () => {
-    for (const tipo of TIPOS_NOMENCLATURA) {
+  it("la empleadora cierra el nombre en todos los tipos (menos Contratos, que no la lleva)", () => {
+    for (const tipo of TIPOS_NOMENCLATURA.filter((t) => t !== "Contrato")) {
       const nombre = renderNomenclatura(PATRON_POR_DEFECTO[tipo], { ...DATOS, tipo });
       assert.ok(nombre.endsWith("_Empresa-30710295839_ID-000123"), `${tipo} termina en: ${nombre.slice(-60)}`);
     }
@@ -449,7 +457,7 @@ describe("el nombre entra en el tope de Dropbox", () => {
   });
 
   it("no desaparece ningún campo: se acortan los valores, no se borran bloques", () => {
-    const entero = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, LARGO);
+    const entero = renderNomenclatura(PATRON_POR_DEFECTO.Release, LARGO);
     const recortado = recortarNombre(entero);
     assert.equal(recortado.split("_").length, entero.split("_").length, `se perdieron bloques: ${recortado}`);
     // Las etiquetas son lo que hace legible el nombre: tienen que sobrevivir al recorte.

@@ -45,7 +45,8 @@ const codigoDe = (over) => {
         h = (h * 31 + ch.charCodeAt(0)) % 1_000_000;
     return `ID-${String(h).padStart(6, "0")}`;
 };
-const nombreDe = (over = {}) => renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, codigo: codigoDe(over), ...over });
+// Con el de Release: el de Contratos ya no lleva el CUIT de la empleadora (20/10/2026), y acá se prueba que no se confunda.
+const nombreDe = (over = {}) => renderNomenclatura(PATRON_POR_DEFECTO.Release, { ...DATOS, codigo: codigoDe(over), ...over });
 const archivo = (name) => ({ tag: "file", name, path: `/HelloSign/Outbox/${name}` });
 describe("lo que se puede leer del nombre", () => {
     it("saca el CUIT, no el de la empleadora", () => {

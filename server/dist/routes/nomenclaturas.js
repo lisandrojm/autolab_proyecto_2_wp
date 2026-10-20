@@ -128,7 +128,8 @@ router.get("/", async (req, res) => {
                 tipo,
                 patron,
                 patronPorDefecto: PATRON_POR_DEFECTO[tipo],
-                personalizado: !!fila,
+                // Guardado igual al de fábrica no es personalizado: figura como «Sistema» y no hay nada que descartar.
+                personalizado: !!fila && patron !== asegurarCodigo(PATRON_POR_DEFECTO[tipo]),
                 seLeeDeVuelta: TIPOS_NOMBRE_SE_LEE_DE_VUELTA.includes(tipo),
                 variables: VARIABLES_POR_TIPO[tipo],
                 grupos: ORDEN_GRUPOS.filter((g) => VARIABLES_POR_TIPO[tipo].some((v) => v.grupo === g)),
@@ -180,6 +181,12 @@ router.put("/:tipo", async (req, res) => {
         const errores = validarPatron(tipo, patron);
         if (errores.length > 0) {
             res.status(400).json({ error: errores.map((e) => e.motivo).join(" "), errores });
+            return;
+        }
+        // Igual al de fábrica: no se guarda como personalizado (queda «Sistema»).
+        if (patron === asegurarCodigo(PATRON_POR_DEFECTO[tipo])) {
+            await NomenclaturaArchivo.deleteOne({ tenantId: req.tenantObjectId, tipo });
+            res.json({ tipo, patron, personalizado: false, ejemplo: renderNomenclatura(patron, { ...EJEMPLO, tipo }) });
             return;
         }
         const fila = await NomenclaturaArchivo.findOneAndUpdate({ tenantId: req.tenantObjectId, tipo }, { $set: { patron, actualizadoPor: req.user?.userId || null } }, { new: true, upsert: true });
