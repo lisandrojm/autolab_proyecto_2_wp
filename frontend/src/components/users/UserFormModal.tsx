@@ -426,6 +426,26 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
       .catch(() => setTiposEntidad(null));
   }, [isOpen, tiposEntidad]);
 
+  /*
+    EL CVU GUARDADO SIN LOS CEROS DEL PRINCIPIO, YA COMPLETO AL ABRIR. Completarlo sólo al salir del
+    campo dejaba la ficha de alguien ya cargado con «16 de 22» hasta que alguien entrara y saliera del
+    CVU. Se revisa una vez por apertura, cuando ya está el tipo de entidad (ver `completarCvu`).
+  */
+  const cvuRevisado = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isOpen) {
+      cvuRevisado.current = null;
+      return;
+    }
+    const clave = String(user?._id || "nuevo");
+    // Recién con el formulario cargado con ESTA persona (si no, se revisarían los datos de la anterior).
+    if (!initializedRef.current || cvuRevisado.current === clave || !formData.tipoEntidadFinanciera) return;
+    cvuRevisado.current = clave;
+    if (camposDe(formData.tipoEntidadFinanciera, tiposEntidad).cbuLabel !== "CVU") return;
+    const completo = completarCvu(formData.cbu || "");
+    if (completo !== (formData.cbu || "")) setFormData((prev) => ({ ...prev, cbu: completo }));
+  }, [isOpen, user?._id, formData.tipoEntidadFinanciera, formData.cbu, tiposEntidad]);
+
   // ─────────── Inicialización del formulario al abrir ───────────
   useEffect(() => {
     if (!isOpen) {
