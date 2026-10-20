@@ -118,6 +118,7 @@ export declare function datosNombreArchivo(opts: {
     contract: any;
     docName?: string;
     extra?: string;
+    periodo?: string;
 }): Record<string, string>;
 export declare function buildDocFileName(opts: {
     tipo: "Contrato" | "Release" | "ConstanciaCUIT" | "AltaAFIP" | "Documentacion";

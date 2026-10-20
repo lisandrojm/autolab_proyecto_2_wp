@@ -2,6 +2,7 @@ import { buscarCategoriaCompatPorLegacyId } from "./categoriaCompat.js";
 import { numeroALetras } from "./numeroALetras.js";
 import { formatDateAr } from "./releaseFiller.js";
 import { normalizarCuit } from "./constanciaPdf.js";
+import { periodoNomenclatura } from "./nomenclatura.js";
 import { Project } from "../models/Project.js";
 import { Client } from "../models/Client.js";
 import { Contrato } from "../models/Contrato.js";
@@ -193,8 +194,8 @@ export const ETIQUETA_TRAMITE: Record<"alta_temprana_afip" | "constancia_cuit", 
  * tienen que partir de los mismos valores ya normalizados o el `{{apellido}}` del ABM y el de acá
  * darían resultados distintos para la misma persona.
  */
-export function datosNombreArchivo(opts: { tipo: string; user: any; up: any; contract: any; docName?: string; extra?: string }): Record<string, string> {
-  const { tipo, user, up, contract, docName, extra } = opts;
+export function datosNombreArchivo(opts: { tipo: string; user: any; up: any; contract: any; docName?: string; extra?: string; periodo?: string }): Record<string, string> {
+  const { tipo, user, up, contract, docName, extra, periodo } = opts;
   /*
     `proyecto` es el NOMBRE del proyecto ("426_LN+"), no su id externo ("705").
 
@@ -220,6 +221,12 @@ export function datosNombreArchivo(opts: { tipo: string; user: any; up: any; con
     // y sin alta significa dato sin cargar. Omitir el bloque hacía indistinguibles esos dos casos.
     fechaAlta: fechaCompacta(contract?.fecha_alta_contrato) || "-",
     fechaBaja: fechaCompacta(contract?.fecha_baja_contrato) || "-",
+    // `{{periodo}}`: el del trámite si lo trae, si no el mes de alta, y sin alta el mes en que se genera
+    // (hora argentina). Nunca vacío: un documento siempre es de algún mes.
+    periodo:
+      periodoNomenclatura(periodo) ||
+      periodoNomenclatura(contract?.fecha_alta_contrato) ||
+      periodoNomenclatura(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date())),
     // La variable se llama `{{cuit}}` en el patrón. Sale de `buildIdentidadTag`: el CUIL, o el
     // documento cuando la persona no tiene CUIL cargado.
     cuit: buildIdentidadTag(user),

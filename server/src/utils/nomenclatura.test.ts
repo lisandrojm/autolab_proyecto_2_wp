@@ -12,8 +12,8 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { asegurarCodigo, validarPatron, renderNomenclatura, PATRON_POR_DEFECTO, VARIABLES_POR_TIPO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, campoNomenclatura, TIPOS_NOMENCLATURA, VARIABLES_COMPUESTAS, recortarNombre, MAX_NOMBRE, TOPES_CAMPO } from "./nomenclatura.js";
-import { emailNomenclatura, MARCA_ARROBA, buildIdentidadTag } from "./employeeDocData.js";
+import { asegurarCodigo, validarPatron, renderNomenclatura, PATRON_POR_DEFECTO, VARIABLES_POR_TIPO, TIPOS_NOMBRE_SE_LEE_DE_VUELTA, campoNomenclatura, TIPOS_NOMENCLATURA, VARIABLES_COMPUESTAS, recortarNombre, MAX_NOMBRE, TOPES_CAMPO, periodoNomenclatura } from "./nomenclatura.js";
+import { emailNomenclatura, MARCA_ARROBA, buildIdentidadTag, datosNombreArchivo } from "./employeeDocData.js";
 import { leerAnclas } from "./anclasNombre.js";
 
 /**
@@ -744,5 +744,56 @@ describe("{{codigo}}: el código único del documento va en todos los patrones",
   it("no se recorta nunca, aunque el nombre no entre en 255", () => {
     const largo = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, contrato: "x".repeat(300) });
     assert.ok(recortarNombre(largo).endsWith("_ID-000123"));
+  });
+});
+
+/** `{{periodo}}` (pedido del 20/10/2026, para los recibos de sueldo): año y mes como `2026_PERIODO_08`. */
+describe("la variable {{periodo}}", () => {
+  const PATRON = "{{centroDeCosto}}_{{proyecto}}_{{tipo}}_{{periodo}}_{{apellido}}_{{nombres}}-{{email}}_{{cuit}}_D-{{fechaAlta}}_H-{{fechaBaja}}";
+
+  it("arma año y mes de cualquier fecha que entienda, y vacío si no", () => {
+    assert.equal(periodoNomenclatura("2026-08"), "2026_PERIODO_08");
+    assert.equal(periodoNomenclatura("2026-08-15"), "2026_PERIODO_08");
+    assert.equal(periodoNomenclatura("2026-08-15T03:00:00.000Z"), "2026_PERIODO_08");
+    assert.equal(periodoNomenclatura("202608"), "2026_PERIODO_08");
+    assert.equal(periodoNomenclatura(""), "");
+    assert.equal(periodoNomenclatura("2026-13"), "");
+    assert.equal(periodoNomenclatura(undefined), "");
+  });
+
+  it("se ofrece en los documentos de contrato, y no es obligatoria", () => {
+    for (const tipo of ["Contrato", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion"] as const) {
+      const v = VARIABLES_POR_TIPO[tipo].find((x) => x.variable === "{{periodo}}");
+      assert.ok(v, `${tipo} no ofrece {{periodo}}`);
+      assert.ok(!v.requerida, `${tipo}: {{periodo}} no tiene que ser obligatoria`);
+      assert.equal(v.grupo, "Período");
+    }
+    // Los patrones de fábrica, que no la usan, siguen validando.
+    for (const tipo of TIPOS_NOMENCLATURA) assert.deepEqual(validarPatron(tipo, PATRON_POR_DEFECTO[tipo]), []);
+  });
+
+  it("el patrón del pedido valida y rinde el período con sus «_», sin normalizarlo", () => {
+    assert.deepEqual(validarPatron("Contrato", PATRON), []);
+    const nombre = renderNomenclatura(asegurarCodigo(PATRON), { ...DATOS, centroDeCosto: "99", proyecto: "PRODUCTORA", tipo: "REC_SUELDO", periodo: "2026_PERIODO_08" });
+    assert.ok(nombre.startsWith("99_PRODUCTORA_REC-SUELDO_2026_PERIODO_08_gonzalez-rotstein_juan-manuel-"), nombre);
+    assert.ok(nombre.endsWith("_D-20260810_H--_ID-000123"), nombre);
+  });
+
+  it("con el período en el nombre, se sigue leyendo de vuelta igual", () => {
+    const nombre = renderNomenclatura(asegurarCodigo(PATRON), { ...DATOS, periodo: "2026_PERIODO_08" });
+    const a = leerAnclas(nombre);
+    assert.equal(a.cuit, "20331501027");
+  });
+
+  it("sin período del trámite sale del mes de alta; sin alta, del mes en que se genera", () => {
+    const base = { tipo: "Contrato", user: { lastName: "Stoltzing", firstName: "Micaela" }, up: {} };
+    assert.equal(datosNombreArchivo({ ...base, contract: { fecha_alta_contrato: "2026-10-01" }, periodo: "2026-08" }).periodo, "2026_PERIODO_08");
+    assert.equal(datosNombreArchivo({ ...base, contract: { fecha_alta_contrato: "2026-10-01" } }).periodo, "2026_PERIODO_10");
+    assert.match(datosNombreArchivo({ ...base, contract: {} }).periodo, /^\d{4}_PERIODO_\d{2}$/);
+  });
+
+  it("un período vacío no deja un «_» colgando", () => {
+    const nombre = renderNomenclatura(asegurarCodigo(PATRON), { ...DATOS, periodo: "" });
+    assert.ok(!nombre.includes("__"), nombre);
   });
 });

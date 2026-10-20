@@ -87,6 +87,11 @@ export declare const campoNomenclatura: (v: unknown) => string;
  */
 export declare const VARIABLES_COMPUESTAS: Set<string>;
 /**
+ * `{{periodo}}` armado: «2026_PERIODO_08». Acepta "YYYY-MM", "YYYY-MM-DD", un ISO completo o un Date;
+ * lo que no se entiende rinde vacío (y `renderNomenclatura` no deja un «_» colgando).
+ */
+export declare const periodoNomenclatura: (v: unknown) => string;
+/**
  * El patrón con `{{codigo}}`: si no lo tiene, se le agrega al FINAL.
  *
  * Se aplica al leer cualquier patrón —el que genera archivos y el que muestra el ABM—, así que todos

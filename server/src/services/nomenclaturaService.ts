@@ -158,6 +158,8 @@ export async function nombreArchivoDocumento(opts: {
   contract: any;
   docName?: string;
   extra?: string;
+  /** El período del trámite ("YYYY-MM"), para `{{periodo}}`. Sin él, el mes de alta del contrato. */
+  periodo?: string;
   /**
    * La empleadora YA resuelta, cuando quien llama la tiene.
    *

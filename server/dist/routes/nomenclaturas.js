@@ -41,6 +41,8 @@ const EJEMPLO = {
     numero: "1042",
     timestamp: "20261005-143012",
     anio: "2026",
+    // El mes de alta del ejemplo: es de donde sale cuando el documento no trae período propio.
+    periodo: "2026_PERIODO_10",
     fecha: "20261005",
     empresa: "2030 S.R.L.",
     empresaCuit: "30717068374",

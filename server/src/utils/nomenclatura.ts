@@ -62,6 +62,7 @@ const G = {
   persona: "Persona",
   documento: "Documento",
   periodo: "Período del contrato",
+  mes: "Período",
   identificacion: "Identificación",
   empresa: "Empleadora (se toma del contrato)",
   otros: "Otros",
@@ -103,13 +104,20 @@ const V = {
    */
   empresa: { variable: "{{empresa}}", descripcion: "Razón social de la empleadora", grupo: G.empresa },
   empresaCuit: { variable: "{{empresaCuit}}", descripcion: "CUIT de la empleadora, solo los 11 dígitos", grupo: G.empresa },
+  /**
+   * El PERÍODO del documento, año y mes (pedido del 20/10/2026, para los recibos de sueldo): rinde
+   * `2026_PERIODO_08`. Lleva «_» adentro a propósito —son tres campos del nombre—, así que es
+   * compuesta y no se normaliza. Sale del período del trámite si quien llama lo tiene; si no, del mes
+   * de alta del contrato; y sin alta, del mes en que se genera. Ver `periodoNomenclatura`.
+   */
+  periodo: { variable: "{{periodo}}", descripcion: "Período del documento, año y mes: 2026_PERIODO_08 (sin período cargado, el mes de alta del contrato)", grupo: G.mes },
   anio: { variable: "{{anio}}", descripcion: "Año del período", grupo: G.otros },
   fecha: { variable: "{{fecha}}", descripcion: "Fecha de generación, YYYYMMDD", grupo: G.otros },
   timestamp: { variable: "{{timestamp}}", descripcion: "Marca temporal de generación", grupo: G.otros },
 } satisfies Record<string, VariableNomenclatura>;
 
 /** El orden en que se muestran los grupos: sigue el orden de los campos en el nombre. */
-export const ORDEN_GRUPOS = [G.proyecto, G.persona, G.documento, G.periodo, G.identificacion, G.empresa, G.otros];
+export const ORDEN_GRUPOS = [G.proyecto, G.persona, G.documento, G.periodo, G.mes, G.identificacion, G.empresa, G.otros];
 
 /**
  * Qué variables ofrece cada tipo, y cuáles son obligatorias.
@@ -133,6 +141,7 @@ export const VARIABLES_POR_TIPO: Record<TipoNomenclatura, VariableNomenclatura[]
     V.docName,
     { ...V.fechaAlta, requerida: true },
     { ...V.fechaBaja, requerida: true },
+    V.periodo,
     { ...V.cuit, requerida: true },
     { ...V.email, requerida: true },
     V.extra,
@@ -220,7 +229,18 @@ export const campoNomenclatura = (v: unknown): string => {
  * "-", el nombre quedaba `CUIL-20331501027-DNI-33150102`, y el documento firmado volvía sin poder
  * identificar el documento de la persona. Se veía perfecto y estaba roto.
  */
-export const VARIABLES_COMPUESTAS = new Set(["cuit", "identidad"]);
+export const VARIABLES_COMPUESTAS = new Set(["cuit", "identidad", "periodo"]);
+
+/**
+ * `{{periodo}}` armado: «2026_PERIODO_08». Acepta "YYYY-MM", "YYYY-MM-DD", un ISO completo o un Date;
+ * lo que no se entiende rinde vacío (y `renderNomenclatura` no deja un «_» colgando).
+ */
+export const periodoNomenclatura = (v: unknown): string => {
+  const s = v instanceof Date ? (Number.isNaN(v.getTime()) ? "" : v.toISOString()) : String(v ?? "").trim();
+  const m = /^(\d{4})-?(\d{2})/.exec(s);
+  if (!m || Number(m[2]) < 1 || Number(m[2]) > 12) return "";
+  return `${m[1]}_PERIODO_${m[2]}`;
+};
 
 /**
  * Variables que EXISTIERON y ya no se ofrecen.
