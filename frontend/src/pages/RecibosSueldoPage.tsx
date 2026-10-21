@@ -121,7 +121,39 @@ export const RecibosSueldoPage: React.FC = () => {
   }, [recibos, buscar]);
   const { ordenados, orden, alternar } = useOrdenTabla(filtrados, { pagina: (r) => r.paginas[0] || 0, persona: (r) => r.nombreUsuario || r.datos.nombre, cuil: (r) => r.datos.cuil, estado: (r) => r.estado }, { columna: "pagina", direccion: "asc" });
   const listos = recibos.filter((r) => r.estado === "listo");
-  const seleccionados = listos.filter((r) => seleccion.has(r._id));
+  /** Se puede tildar (y releer) todo lo que todavía no salió a firmar. Enviar toma sólo los listos de entre lo tildado. */
+  const sePuedeReleer = (r: ReciboDelLote) => r.estado === "sin_persona" || r.estado === "listo" || r.estado === "error";
+  const tildables = filtrados.filter(sePuedeReleer);
+  const tildados = recibos.filter((r) => seleccion.has(r._id) && sePuedeReleer(r));
+  const seleccionados = tildados.filter((r) => r.estado === "listo");
+
+  /*
+    RELEER EN COLA (pedido del 21/10/2026): las filas tildadas pasan de a una por la relectura, como si se
+    tocara el botón de cada una, con el avance a la vista y la posibilidad de frenar. Cada recibo son
+    unos 10 s (dos páginas, cuatro pasadas de OCR).
+  */
+  const [cola, setCola] = useState<{ actual: number; total: number; nombre: string } | null>(null);
+  const frenarCola = useRef(false);
+  const releerEnCola = async (items: ReciboDelLote[]) => {
+    if (!lote || items.length === 0) return;
+    frenarCola.current = false;
+    let hechos = 0;
+    let fallidos = 0;
+    for (const [i, r] of items.entries()) {
+      if (frenarCola.current) break;
+      setCola({ actual: i + 1, total: items.length, nombre: r.nombreUsuario || r.datos.nombre || `páginas ${r.paginas.join("-")}` });
+      try {
+        setLote(await recibosSueldoAPI.releer(lote._id, r._id));
+        hechos++;
+      } catch {
+        fallidos++;
+      }
+    }
+    setCola(null);
+    setSeleccion(new Set());
+    void cargarLotes();
+    sweetAlert.info(frenarCola.current ? "Relectura frenada" : "Relectura terminada", `${hechos} releído${hechos === 1 ? "" : "s"}${fallidos ? `, ${fallidos} con error` : ""}.`, 4000);
+  };
 
   const enviar = async (items: ReciboDelLote[]) => {
     if (!lote || items.length === 0) return;
@@ -268,8 +300,20 @@ export const RecibosSueldoPage: React.FC = () => {
                   {lote.paginas} páginas · {recibos.length} recibos · {listos.length} listos · {recibos.filter((r) => r.estado === "sin_persona").length} sin persona · {recibos.filter((r) => r.estado === "enviado").length} enviados · {recibos.filter((r) => r.estado === "firmado").length} firmados
                 </span>
                 <div className="ml-auto flex items-center gap-2">
-                  <button type="button" disabled={enviando || seleccionados.length === 0} onClick={() => enviar(seleccionados)} className="btn-primary flex items-center gap-2 text-sm px-4 py-2 disabled:opacity-50">
-                    <FontAwesomeIcon icon={enviando ? faSpinner : faPaperPlane} spin={enviando} /> Enviar a firmar {seleccionados.length > 0 ? `(${seleccionados.length})` : ""}
+                  {cola ? (
+                    <span className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+                      <FontAwesomeIcon icon={faSpinner} spin /> Releyendo {cola.actual} de {cola.total}: {cola.nombre}
+                      <button type="button" onClick={() => (frenarCola.current = true)} className="ml-1 rounded border border-blue-300 px-2 py-0.5 text-[11px] hover:bg-blue-100 dark:hover:bg-blue-900/40">
+                        Frenar
+                      </button>
+                    </span>
+                  ) : (
+                    <button type="button" disabled={enviando || tildados.length === 0} onClick={() => releerEnCola(tildados)} className="btn-secondary flex items-center gap-2 text-sm px-3 py-2 disabled:opacity-50" title="Volver a leer las filas tildadas, de a una, en orden">
+                      <FontAwesomeIcon icon={faRotateRight} /> Releer tildados {tildados.length > 0 ? `(${tildados.length})` : ""}
+                    </button>
+                  )}
+                  <button type="button" disabled={enviando || !!cola || seleccionados.length === 0} onClick={() => enviar(seleccionados)} className="btn-primary flex items-center gap-2 text-sm px-4 py-2 disabled:opacity-50" title="Manda a firmar los listos de entre los tildados">
+                    <FontAwesomeIcon icon={enviando ? faSpinner : faPaperPlane} spin={enviando} /> Enviar a firmar {seleccionados.length > 0 ? `(${seleccionados.length} listo${seleccionados.length === 1 ? "" : "s"})` : ""}
                   </button>
                   <button type="button" disabled={enviando || listos.length === 0} onClick={() => enviar(listos)} className="btn-secondary text-sm px-3 py-2 disabled:opacity-50" title="Todos los recibos listos del lote">
                     Enviar todos los listos ({listos.length})
@@ -282,7 +326,7 @@ export const RecibosSueldoPage: React.FC = () => {
                   <thead>
                     <tr>
                       <th className={th}>
-                        <input type="checkbox" checked={listos.length > 0 && seleccionados.length === listos.length} onChange={(e) => setSeleccion(e.target.checked ? new Set(listos.map((r) => r._id)) : new Set())} title="Tildar todos los listos" />
+                        <input type="checkbox" checked={tildables.length > 0 && tildables.every((r) => seleccion.has(r._id))} onChange={(e) => setSeleccion(e.target.checked ? new Set(tildables.map((r) => r._id)) : new Set())} title="Tildar todas las filas que todavía no se enviaron (las de la búsqueda, si hay una)" />
                       </th>
                       <th className={th}>
                         <BotonOrden columna="pagina" orden={orden} onAlternar={alternar}>Páginas</BotonOrden>
@@ -313,7 +357,7 @@ export const RecibosSueldoPage: React.FC = () => {
                     )}
                     {ordenados.map((r) => (
                       <tr key={r._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
-                        <td className="px-4 py-3">{r.estado === "listo" && <input type="checkbox" checked={seleccion.has(r._id)} onChange={(e) => setSeleccion((s) => { const n = new Set(s); if (e.target.checked) n.add(r._id); else n.delete(r._id); return n; })} />}</td>
+                        <td className="px-4 py-3">{sePuedeReleer(r) && <input type="checkbox" checked={seleccion.has(r._id)} onChange={(e) => setSeleccion((s) => { const n = new Set(s); if (e.target.checked) n.add(r._id); else n.delete(r._id); return n; })} />}</td>
                         <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{r.paginas.join("-")}</td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col">
@@ -329,7 +373,7 @@ export const RecibosSueldoPage: React.FC = () => {
                         <td className="px-4 py-3 text-sm">{r.datos.legajo || "—"}</td>
                         <td className="px-4 py-3 text-sm whitespace-nowrap">{r.datos.neto ? `$ ${r.datos.neto}` : "—"}</td>
                         <td className="px-4 py-3">
-                          <a href={getImageUrl(r.archivoUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700" title="Abrir el PDF de este recibo">
+                          <a href={getImageUrl(r.archivoUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300" title="Abrir el PDF de este recibo">
                             <FontAwesomeIcon icon={faFilePdf} /> Ver
                           </a>
                         </td>
