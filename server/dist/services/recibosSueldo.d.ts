@@ -3,20 +3,22 @@ import { type ILoteRecibosSueldo } from "../models/LoteRecibosSueldo.js";
 /**
  * RECIBOS DE SUELDO (Contratación › Recibos de sueldo, 20/10/2026).
  *
- * Se sube la sábana (un PDF con todos los recibos del mes, de a dos páginas por persona), se lee el
- * texto de cada página, se parte en un recibo por persona (`agruparPaginas`), cada recibo se guarda
- * como PDF propio y se asocia a la persona por su CUIL y a su contrato que rige. Después, el mismo
- * circuito que los contratos: el PDF va al Outbox de Dropbox con la nomenclatura «Recibos de sueldo»
- * y vuelve firmado, reconocido por su código.
+ * Se sube la sábana (un PDF con todos los recibos del mes, de a dos páginas por persona). El lote nace
+ * en el acto, «leyendo», y la lectura sigue en segundo plano: se saca el texto de cada página y, si no
+ * trae el CUIL (los recibos de MEMOSOFT dibujan los datos como trazos), se la renderiza y se le hace
+ * OCR. Con el texto de cada página se parte la sábana en un recibo por persona (`agruparPaginas`),
+ * cada recibo se guarda como PDF propio y se asocia a la persona por su CUIL y a su contrato que rige.
+ * Después, el mismo circuito que los contratos: el PDF va al Outbox de Dropbox con la nomenclatura
+ * «Recibos de sueldo» y vuelve firmado, reconocido por su código.
  *
- * Los archivos viven en `storage/<tenant>/recibos-sueldo/<lote>/`, servidos como el resto de
- * `/storage`. Multi-tenant: todo filtra por `tenantId`.
+ * Los archivos viven en `storage/<tenant>/recibos-sueldo/<lote>/` (fuera del repo), servidos como el
+ * resto de `/storage`. Multi-tenant: todo filtra por `tenantId`.
  */
 export declare class ErrorRecibos extends Error {
     status: number;
     constructor(msg: string, status?: number);
 }
-/** Sube la sábana: la parte, la lee, asocia personas y guarda el lote. */
+/** Crea el lote, guarda la sábana y dispara la lectura en segundo plano. Devuelve el lote «leyendo». */
 export declare function procesarSabana(tenantId: Types.ObjectId, subidoPor: string | undefined, nombreArchivo: string, buffer: Buffer, paginasPorRecibo?: number): Promise<ILoteRecibosSueldo>;
 /** Asigna a mano la persona de un recibo (y su contrato que rige). */
 export declare function asignarPersona(lote: ILoteRecibosSueldo, reciboId: string, userId: string): Promise<void>;
@@ -45,6 +47,7 @@ export declare function exportacionDelLote(lote: ILoteRecibosSueldo): {
         paginas: number;
         paginasPorRecibo: number;
         periodo: string;
+        estado: import("../models/LoteRecibosSueldo.js").EstadoLote;
         subido: Date;
     };
     recibos: {

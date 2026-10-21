@@ -39,6 +39,31 @@ describe("leer un recibo de sueldo", () => {
         assert.equal(periodoDelTexto("Mes de pago: Noviembre de 2026"), "2026-11");
     });
 });
+/** Lo que devuelve el OCR de un recibo de MEMOSOFT: sin los rótulos (van en gris), con ORIGINAL/COPIA arriba. */
+const OCR_ORIGINAL = `ORIGINAL
+2030 S.R.L. STOLTZING, Micaela Sol 00070
+27-40073687-7 1123646. 21 01/11/2021 | 5ams |
+RUIZ HUIDOBRO 4365 -  - CABA - CAPITAL FEDERAL
+C.U.I.T. : 30-71706837-4 [Productora |A Tiempo completo indeterminado /Tr
+108/2026 10/09/2026 | GALICIA SEPTIEMBRE 2026
+CONTRIBUCIONES EMPRESA
+1101 Previsional Contribucion 286.619,41`;
+const OCR_COPIA = OCR_ORIGINAL.replace("ORIGINAL", "COPIA");
+describe("un recibo de MEMOSOFT leído por OCR (sin rótulos)", () => {
+    it("nombre y legajo de la línea «APELLIDO, Nombres legajo»; el período liquidado y no el del depósito", () => {
+        const d = leerRecibo(OCR_ORIGINAL);
+        assert.equal(d.cuil, "27400736877");
+        assert.equal(d.empleadorCuit, "30717068374");
+        assert.equal(d.nombre, "STOLTZING, Micaela Sol");
+        assert.equal(d.legajo, "00070");
+        assert.equal(d.periodo, "2026-09", "«SEPTIEMBRE 2026», no «08/2026» del depósito de aportes");
+    });
+    it("ORIGINAL abre el recibo y COPIA se le pega, aunque las dos hojas traigan el mismo CUIL", () => {
+        assert.deepEqual(agruparPaginas([OCR_ORIGINAL, OCR_COPIA, OCR_ORIGINAL, OCR_COPIA]), [[0, 1], [2, 3]]);
+        // Sin COPIA en la segunda hoja, un ORIGINAL siempre empieza uno nuevo.
+        assert.deepEqual(agruparPaginas([OCR_ORIGINAL, OCR_ORIGINAL, OCR_ORIGINAL]), [[0], [1], [2]]);
+    });
+});
 describe("partir la sábana en recibos", () => {
     it("dos hojas por persona: la segunda sin CUIL o con el mismo se pega a la primera", () => {
         assert.deepEqual(agruparPaginas([HOJA_1, HOJA_2, OTRA, "detalle"]), [[0, 1], [2, 3]]);

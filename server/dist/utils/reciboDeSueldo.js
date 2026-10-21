@@ -39,14 +39,21 @@ export function cuitsDelTexto(texto) {
  */
 export function periodoDelTexto(textoCrudo) {
     const texto = sinTildes(textoCrudo).replace(/\s+/g, " ");
+    // «PERIODO LIQUIDADO SEPTIEMBRE 2026» manda sobre cualquier otro período del recibo (el del depósito de aportes es el mes anterior).
+    const liquidado = /per[ií]odo\s+liquidado\s*:?\s*([A-Za-z0-9\/\-\. ]{4,25})/i.exec(texto);
     const conRotulo = /(?:per[ií]odo|periodo|mes)\s*(?:de\s+(?:pago|liquidacion|liquidaci[oó]n)\s*)?:?\s*([A-Za-z0-9\/\-\. ]{4,25})/i.exec(texto);
-    const candidatos = [conRotulo?.[1] || "", texto];
+    const candidatos = [liquidado?.[1] || "", conRotulo?.[1] || "", texto];
     for (const c of candidatos) {
         if (!c)
             continue;
-        const letras = /\b([A-Za-z]{4,10})\b\s*(?:de\s*)?[\/\-\s]?\s*(20\d{2})\b/i.exec(c);
-        if (letras && MESES[letras[1].toLowerCase()])
-            return `${letras[2]}-${MESES[letras[1].toLowerCase()]}`;
+        // Todos los «palabra año» hasta dar con un mes: «ORIGINAL 2030» (la empleadora se llama 2030 S.R.L.) no es un período.
+        const reLetras = /\b([A-Za-z]{4,10})\b\s*(?:de\s*)?[\/\-\s]?\s*(20\d{2})\b/gi;
+        let letras;
+        while ((letras = reLetras.exec(c))) {
+            const mes = MESES[letras[1].toLowerCase()];
+            if (mes)
+                return `${letras[2]}-${mes}`;
+        }
         const mmAaaa = /(?<!\d)(0[1-9]|1[0-2])\s*[\/\-\.]\s*(20\d{2})(?!\d)/.exec(c);
         if (mmAaaa)
             return `${mmAaaa[2]}-${mmAaaa[1]}`;
@@ -68,18 +75,28 @@ function valorDespuesDe(texto, rotulos) {
     const corte = resto.search(/\r?\n|\s{3,}|\s+(?:Legajo|CUIL|CUIT|DNI|Fecha|Categor[ií]a|Sector|Per[ií]odo|Periodo|Puesto|Cargo|Convenio|Sueldo|Obra\s+Social)\b/i);
     return (corte >= 0 ? resto.slice(0, corte) : resto).trim();
 }
-/** El nombre de la persona, por los rótulos habituales de un recibo. "" si no hay rótulo reconocible. */
+/**
+ * «APELLIDO, Nombres 00070»: la línea del recibo que trae el nombre y, al final, el legajo. Es lo que
+ * queda cuando los rótulos no están en el texto (OCR de un recibo de MEMOSOFT: los rótulos van en
+ * gris y el OCR no los lee). El apellido en mayúsculas seguido de coma lo distingue de un concepto.
+ */
+const RE_APELLIDO_NOMBRE = /(?:^|\s)([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ' ]{1,40}),\s+([A-Za-zÁÉÍÓÚÑáéíóúñ' ]{2,50}?)\s+(\d{3,8})\s*$/m;
+/** El nombre de la persona, por los rótulos habituales de un recibo o por la línea «APELLIDO, Nombres legajo». "" si no se reconoce. */
 export function nombreDelTexto(texto) {
     const v = valorDespuesDe(texto, /(?:apellido\s*y\s*nombres?|nombres?\s*y\s*apellidos?|empleado|trabajador|nombre)\s*:?/i);
     // Un nombre no tiene dígitos: si lo que sigue al rótulo es un número, el rótulo era otra cosa.
     const limpio = v.replace(/\s+/g, " ").trim();
-    if (!limpio || /\d{3,}/.test(limpio))
-        return "";
-    return limpio.slice(0, 80);
+    if (limpio && !/\d{3,}/.test(limpio))
+        return limpio.slice(0, 80);
+    const m = RE_APELLIDO_NOMBRE.exec(texto);
+    return m ? `${m[1].trim()}, ${m[2].trim()}`.slice(0, 80) : "";
 }
 export function legajoDelTexto(texto) {
     const v = valorDespuesDe(texto, /legajo\s*(?:n[°ºo.]*)?\s*:?/i);
-    return /^[A-Za-z0-9\-\/]{1,15}$/.test(v.split(" ")[0] || "") ? v.split(" ")[0] : "";
+    if (/^[A-Za-z0-9\-\/]{1,15}$/.test(v.split(" ")[0] || ""))
+        return v.split(" ")[0];
+    const m = RE_APELLIDO_NOMBRE.exec(texto);
+    return m ? m[3] : "";
 }
 export function netoDelTexto(texto) {
     const t = texto.replace(/\s+/g, " ");
@@ -111,6 +128,9 @@ export function leerRecibo(textoCrudo) {
  */
 export function agruparPaginas(textosPorPagina, paginasPorRecibo = 2) {
     const cuilDe = textosPorPagina.map((t) => leerRecibo(t).cuil);
+    // «ORIGINAL» arriba de la hoja abre un recibo; «COPIA»/«DUPLICADO» nunca (es la segunda hoja de MEMOSOFT).
+    const original = textosPorPagina.map((t) => /^\s*ORIGINAL\b/i.test(t));
+    const copia = textosPorPagina.map((t) => /^\s*(COPIA|DUPLICADO)\b/i.test(t));
     if (!cuilDe.some(Boolean)) {
         const grupos = [];
         for (let i = 0; i < textosPorPagina.length; i += paginasPorRecibo)
@@ -123,6 +143,14 @@ export function agruparPaginas(textosPorPagina, paginasPorRecibo = 2) {
         const abierto = grupos[grupos.length - 1];
         if (!abierto) {
             grupos.push({ cuil, paginas: [i] });
+            continue;
+        }
+        if (original[i] && !copia[i]) {
+            grupos.push({ cuil, paginas: [i] });
+            continue;
+        }
+        if (copia[i] && abierto.paginas.length < paginasPorRecibo) {
+            abierto.paginas.push(i);
             continue;
         }
         if (!cuil) {

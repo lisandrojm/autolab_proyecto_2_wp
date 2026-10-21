@@ -9,7 +9,7 @@ import UserProject from "../models/UserProject.js";
 import { Project } from "../models/Project.js";
 import { Tenant } from "../models/Tenant.js";
 import { DocumentoGenerado } from "../models/DocumentoGenerado.js";
-import { agruparPaginas, leerRecibo } from "../utils/reciboDeSueldo.js";
+import { agruparPaginas, leerRecibo, normalizarNombre } from "../utils/reciboDeSueldo.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
 import { getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
 import { nombreArchivoDocumento } from "./nomenclaturaService.js";
@@ -92,6 +92,22 @@ async function usuariosPorCuil(tenantId: Types.ObjectId, cuils: string[]): Promi
     if (c && cuils.includes(c) && !m.has(c)) m.set(c, u);
   }
   return m;
+}
+
+/**
+ * Cuando el OCR no leyó el CUIL pero sí «APELLIDO, Nombres»: la persona cuyo apellido y primer nombre
+ * coinciden, si es UNA sola. Se marca aparte (`asociadoPorNombre`) para que se revise antes de enviar:
+ * es un respaldo, no la regla. Las tildes no cuentan (el OCR las pierde).
+ */
+async function usuarioPorNombre(tenantId: Types.ObjectId, nombreLeido: string): Promise<any | null> {
+  const m = /^([^,]+),\s*(.+)$/.exec(normalizarNombre(nombreLeido));
+  if (!m) return null;
+  const apellido = m[1].trim();
+  const primerNombre = m[2].trim().split(" ")[0];
+  if (!apellido || !primerNombre) return null;
+  const candidatos: any[] = await User.find({ tenantId, "metadata.isSolicitud": { $ne: true } }).select("firstName lastName email metadata.cuit").lean();
+  const iguales = candidatos.filter((u) => normalizarNombre(u.lastName) === apellido && normalizarNombre(u.firstName).split(" ")[0] === primerNombre);
+  return iguales.length === 1 ? iguales[0] : null;
 }
 
 /** Crea el lote, guarda la sábana y dispara la lectura en segundo plano. Devuelve el lote «leyendo». */
@@ -263,22 +279,4 @@ export async function eliminarLote(lote: ILoteRecibosSueldo): Promise<void> {
 
 /** Marca como firmado el recibo cuyo código volvió a la carpeta de firmados. Lo llama el escaneo de Dropbox. */
 export async function marcarReciboFirmado(tenantId: unknown, codigo: string): Promise<boolean> {
-  const r = await LoteRecibosSueldo.updateOne({ tenantId, "recibos.codigo": codigo, "recibos.estado": "enviado" }, { $set: { "recibos.$.estado": "firmado", "recibos.$.firmadoEl": new Date() } });
-  return r.modifiedCount > 0;
-}
-
-/** Todo lo que se leyó del PDF, para descargar como JSON y revisar qué entendió el lector. */
-export function exportacionDelLote(lote: ILoteRecibosSueldo) {
-  return {
-    lote: { id: String(lote._id), archivo: lote.nombreArchivo, paginas: lote.paginas, paginasPorRecibo: lote.paginasPorRecibo, periodo: lote.periodo, estado: lote.estadoLote, subido: lote.createdAt },
-    recibos: (lote.recibos as any[]).map((r) => ({
-      paginas: r.paginas,
-      datos: r.datos,
-      persona: r.userId ? { id: String(r.userId), nombre: r.nombreUsuario, proyecto: r.nombreProyecto, asignadoAMano: !!r.asignadoAMano } : null,
-      estado: r.estado,
-      error: r.error || undefined,
-      enviado: r.nombreEnviado ? { nombre: r.nombreEnviado, codigo: r.codigo, el: r.enviadoEl } : undefined,
-      textoCrudo: r.textoCrudo,
-    })),
-  };
-}
+  const r = await LoteRecibosSueldo.updateOne({ tenantId, "recibos.codigo": codigo, "re

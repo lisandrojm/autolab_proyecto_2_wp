@@ -33,7 +33,7 @@ export declare function cuitsDelTexto(texto: string): string[];
  * «mes año» en letras, que es lo que un recibo suele poner en el título.
  */
 export declare function periodoDelTexto(textoCrudo: string): string;
-/** El nombre de la persona, por los rótulos habituales de un recibo. "" si no hay rótulo reconocible. */
+/** El nombre de la persona, por los rótulos habituales de un recibo o por la línea «APELLIDO, Nombres legajo». "" si no se reconoce. */
 export declare function nombreDelTexto(texto: string): string;
 export declare function legajoDelTexto(texto: string): string;
 export declare function netoDelTexto(texto: string): string;

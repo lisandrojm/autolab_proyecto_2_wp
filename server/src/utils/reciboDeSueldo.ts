@@ -50,7 +50,21 @@ const MESES: Record<string, string> = {
 
 const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "");
 
-/** Todos los números de 11 dígitos (con o sin guiones) que son un CUIT/CUIL válido, sin repetir. */
+/** El dígito verificador (módulo 11) de los diez primeros dígitos de un CUIT/CUIL. */
+export function digitoVerificador(diez: string): string {
+  const pesos = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+  const suma = pesos.reduce((acc, p, i) => acc + p * Number(diez[i]), 0);
+  const resto = suma % 11;
+  return String(resto === 0 ? 0 : resto === 1 ? 9 : 11 - resto);
+}
+
+/**
+ * Todos los números de 11 dígitos (con o sin guiones) que son un CUIT/CUIL válido, sin repetir.
+ *
+ * También «20-37008740-» o «27-21471133-.»: el OCR suele perder el último dígito, que queda pegado al
+ * borde de la celda. Ese dígito es el verificador y sale de los otros diez, así que se recalcula: el
+ * CUIL completo es único para esos diez dígitos, no se inventa nada.
+ */
 export function cuitsDelTexto(texto: string): string[] {
   const vistos = new Set<string>();
   const res: string[] = [];
@@ -58,6 +72,15 @@ export function cuitsDelTexto(texto: string): string[] {
   let m: RegExpExecArray | null;
   while ((m = re.exec(texto))) {
     const d = `${m[1]}${m[2]}${m[3]}`;
+    if (!vistos.has(d) && cuitEsValido(d)) {
+      vistos.add(d);
+      res.push(d);
+    }
+  }
+  const reSinVerificador = /(?<!\d)([23]\d)-(\d{8})-(?!\d)/g;
+  while ((m = reSinVerificador.exec(texto))) {
+    const diez = `${m[1]}${m[2]}`;
+    const d = `${diez}${digitoVerificador(diez)}`;
     if (!vistos.has(d) && cuitEsValido(d)) {
       vistos.add(d);
       res.push(d);
@@ -111,7 +134,8 @@ function valorDespuesDe(texto: string, rotulos: RegExp): string {
  * queda cuando los rótulos no están en el texto (OCR de un recibo de MEMOSOFT: los rótulos van en
  * gris y el OCR no los lee). El apellido en mayúsculas seguido de coma lo distingue de un concepto.
  */
-const RE_APELLIDO_NOMBRE = /(?:^|\s)([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ' ]{1,40}),\s+([A-Za-zÁÉÍÓÚÑáéíóúñ' ]{2,50}?)\s+(\d{3,8})\s*$/m;
+// El legajo puede faltar (el OCR a veces no lo lee) y la línea puede terminar en una coma suelta.
+const RE_APELLIDO_NOMBRE = /(?:^|\s)([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ' ]{1,40}),\s+([A-Za-zÁÉÍÓÚÑáéíóúñ' ]{2,50}?)(?:\s+(\d{3,8}))?[.,;:]*\s*$/m;
 
 /** El nombre de la persona, por los rótulos habituales de un recibo o por la línea «APELLIDO, Nombres legajo». "" si no se reconoce. */
 export function nombreDelTexto(texto: string): string {
@@ -127,8 +151,16 @@ export function legajoDelTexto(texto: string): string {
   const v = valorDespuesDe(texto, /legajo\s*(?:n[°ºo.]*)?\s*:?/i);
   if (/^[A-Za-z0-9\-\/]{1,15}$/.test(v.split(" ")[0] || "")) return v.split(" ")[0];
   const m = RE_APELLIDO_NOMBRE.exec(texto);
-  return m ? m[3] : "";
+  return m?.[3] || "";
 }
+
+/** «Mart n Fernando» → el OCR perdió una tilde: se deja un comodín para comparar nombres sin tildes. */
+export const normalizarNombre = (s: string): string =>
+  sinTildes(String(s || ""))
+    .toUpperCase()
+    .replace(/[^A-Z ,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 export function netoDelTexto(texto: string): string {
   const t = texto.replace(/\s+/g, " ");

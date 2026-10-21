@@ -62,6 +62,15 @@ describe("un recibo de MEMOSOFT leído por OCR (sin rótulos)", () => {
     assert.equal(d.legajo, "00070");
     assert.equal(d.periodo, "2026-09", "«SEPTIEMBRE 2026», no «08/2026» del depósito de aportes");
   });
+  it("un CUIL al que el OCR le perdió el verificador se completa: «20-37008740-» → 20-37008740-X", () => {
+    const d = leerRecibo("ORIGINAL\n2030 S.R.L. CORDOBA, Mart n Fernando 00077\n20-37008740- 2623570.7: 20/10/2021 | 5ams |");
+    assert.equal(d.cuil.length, 11);
+    assert.equal(d.cuil.slice(0, 10), "2037008740");
+    assert.equal(d.nombre, "CORDOBA, Mart n Fernando");
+    // Y una línea de nombre sin legajo o con una coma suelta igual se lee.
+    assert.equal(leerRecibo("2030 S.R.L. SANTANGELO, Agustina\n27-43321099-4").nombre, "SANTANGELO, Agustina");
+    assert.equal(leerRecibo("2030 S.R.L. MANIA, Cinthia Jimena 00094,\n27-27727589-4").legajo, "00094");
+  });
   it("ORIGINAL abre el recibo y COPIA se le pega, aunque las dos hojas traigan el mismo CUIL", () => {
     assert.deepEqual(agruparPaginas([OCR_ORIGINAL, OCR_COPIA, OCR_ORIGINAL, OCR_COPIA]), [[0, 1], [2, 3]]);
     // Sin COPIA en la segunda hoja, un ORIGINAL siempre empieza uno nuevo.

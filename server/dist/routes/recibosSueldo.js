@@ -128,7 +128,10 @@ recibosSueldoRoutes.post("/lotes/:id/enviar", async (req, res) => {
 });
 recibosSueldoRoutes.delete("/lotes/:id", async (req, res) => {
     try {
-        await eliminarLote(await loteDe(req));
+        const lote = await loteDe(req);
+        if (lote.estadoLote === "leyendo")
+            throw new ErrorRecibos("El lote todavía se está leyendo: esperá a que termine.", 409);
+        await eliminarLote(lote);
         res.json({ ok: true });
     }
     catch (e) {

@@ -45,10 +45,23 @@ export interface IReciboDelLote {
     codigo?: string;
     error?: string;
 }
+export type EstadoLote = "leyendo" | "listo" | "error";
 export interface ILoteRecibosSueldo extends Document {
     tenantId: Types.ObjectId;
     nombreArchivo: string;
     subidoPor?: Types.ObjectId | null;
+    /** La sábana original, por si hay que volver a leerla: `/storage/<tenant>/recibos-sueldo/<lote>/sabana.pdf`. */
+    sabanaUrl: string;
+    /**
+     * La lectura corre en segundo plano (OCR: ~1 s por página): el lote nace «leyendo», con el avance en
+     * `progreso`, y pasa a «listo» con sus recibos, o a «error» con el motivo.
+     */
+    estadoLote: EstadoLote;
+    progreso: {
+        leidas: number;
+        total: number;
+    };
+    error?: string;
     paginas: number;
     paginasPorRecibo: number;
     /** El período que más se repite entre los recibos leídos ("YYYY-MM"), o "". */
