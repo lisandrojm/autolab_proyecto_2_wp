@@ -64,7 +64,7 @@ describe("lo que el archivo necesita para volver de la firma", () => {
      * persona — que es peor que no caer en ninguno.
      */
     it("un patrón sin fechas NO se puede guardar", () => {
-        const errores = validarPatron("Contrato", "{{apellido}}_{{nombres}}_{{cuit}}");
+        const errores = validarPatron("Release", "{{apellido}}_{{nombres}}_{{cuit}}");
         assert.equal(errores.length, 1);
         assert.match(errores[0].motivo, /fechaAlta/);
         assert.match(errores[0].motivo, /fechaBaja/);
@@ -92,7 +92,10 @@ describe("lo que el archivo necesita para volver de la firma", () => {
      * de esta persona" de "un pedido de esta persona".
      */
     it("cada tipo exige el ancla que le corresponde", () => {
-        for (const tipo of ["Contrato", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion"]) {
+        // Recibos de sueldo (tipo "Contrato") es la excepción: es de un período, y lo ancla su {{codigo}}.
+        const delRecibo = VARIABLES_POR_TIPO.Contrato.filter((v) => v.requerida).map((v) => v.variable);
+        assert.ok(delRecibo.includes("{{codigo}}") && !delRecibo.includes("{{fechaAlta}}"), "Recibos de sueldo se ancla por el código, sin fechas obligatorias");
+        for (const tipo of ["Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion"]) {
             const requeridas = VARIABLES_POR_TIPO[tipo].filter((v) => v.requerida).map((v) => v.variable);
             assert.ok(requeridas.includes("{{fechaAlta}}"), `${tipo} no exige {{fechaAlta}}`);
             assert.ok(requeridas.includes("{{fechaBaja}}"), `${tipo} no exige {{fechaBaja}}`);
@@ -132,8 +135,15 @@ describe("el default rinde el nombre de siempre", () => {
     /** El de Contratos lo eligió el cliente (20/10/2026): REC_SUELDO fijo, el período, sin la empleadora. */
     it("Contratos: el patrón que eligió el cliente", () => {
         const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, periodo: "2026_PERIODO_08" });
-        assert.equal(nombre, "426-LN+_REC_SUELDO_2026_PERIODO_08_gonzalez-rotstein_juan-manuel_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_20331501027_D-20260810_H--_ID-000123");
+        assert.equal(nombre, "426-LN+_REC_SUELDO_2026_PERIODO_08_gonzalez-rotstein_juan-manuel_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_20331501027_ID-000123");
         assert.equal(leerAnclas(nombre).cuit, "20331501027");
+        assert.equal(leerAnclas(nombre).codigo, "ID-000123", "sin fechas, lo que lo reconoce al volver es el código");
+    });
+    /** Recibos de sueldo: las fechas son opcionales (los ancla el código); en los demás documentos de contrato siguen obligatorias. */
+    it("Recibos de sueldo se guardan sin fechas; Releases no", () => {
+        const sinFechas = "{{centroDeCosto}}_{{proyecto}}_REC_SUELDO_{{periodo}}_{{apellido}}_{{nombres}}_{{email}}_{{cuit}}_{{codigo}}";
+        assert.deepEqual(validarPatron("Contrato", sinFechas), []);
+        assert.ok(validarPatron("Release", sinFechas).some((e) => e.motivo.includes("{{fechaAlta}}")));
     });
     /**
      * Los siete tipos comparten el mismo esqueleto. Quien mira una carpeta con contratos, pedidos y
@@ -156,7 +166,7 @@ describe("el default rinde el nombre de siempre", () => {
      * no se leen como una fecha (el cron busca tokens de OCHO).
      */
     it("el CUIT de la empleadora no interfiere con el parseo de vuelta", () => {
-        const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
+        const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Release, DATOS);
         // El CUIL va pelado, así que el que corre es el respaldo por posición: el PRIMER 11 dígitos.
         assert.equal(PARSERS_CUIL.exec(nombre)?.[1], "20331501027", "el primer 11 dígitos tiene que ser el de la PERSONA, no el de la empleadora");
         const fechas = nombre.match(/(?<!\d)(?<!(?:DNI|CI|LE|LC|PAS|DOC)-)(\d{8})(?!\d)/g) ?? [];
@@ -168,19 +178,19 @@ describe("el default rinde el nombre de siempre", () => {
         //
         // El `H--` doble sale de que la etiqueta va pegada (`H-{{fechaBaja}}`) para ahorrar
         // un separador: queda feo pero es la única forma de decir "sin baja" sin gastar caracteres.
-        assert.match(renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS), /_H--_/);
-        assert.match(renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, fechaBaja: "20270810" }), /_H-20270810_/);
+        assert.match(renderNomenclatura(PATRON_POR_DEFECTO.Release, DATOS), /_H--_/);
+        assert.match(renderNomenclatura(PATRON_POR_DEFECTO.Release, { ...DATOS, fechaBaja: "20270810" }), /_H-20270810_/);
     });
     it("una variable vacía no deja un separador colgando", () => {
         // Sin plantilla ni etiqueta extra, el nombre no puede tener "__" ni terminar en "_".
-        const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, docName: "", extra: "" });
+        const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Release, { ...DATOS, docName: "", extra: "" });
         assert.ok(!nombre.includes("__"), nombre);
         assert.ok(!nombre.endsWith("_"), nombre);
     });
     it("el nombre resultante sigue siendo parseable por los servicios de vuelta", () => {
         // Las dos expresiones reales, copiadas de sus servicios. Si alguien toca el render y rompe el
         // formato, esto se cae acá y no seis meses después con un contrato "perdido".
-        const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
+        const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Release, DATOS);
         assert.match(nombre, PARSERS_CUIL, "extraerIdentidadDeArchivo no encontraría el CUIL");
         // El documento ya NO va cuando hay CUIL: era el mismo número dos veces (ver `buildIdentidadTag`).
         // Lo que sí tiene que seguir pasando es que `buscarEnOutbox` encuentre a la persona por el CUIL.
@@ -375,7 +385,7 @@ describe("el email se puede reconstruir", () => {
         }
     });
     it("la marca sobrevive al render y queda una sola vez", () => {
-        const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, DATOS);
+        const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Release, DATOS);
         assert.equal(nombre.split(MARCA_ARROBA).length - 1, 1, `la marca tiene que aparecer exactamente una vez: ${nombre}`);
     });
 });
@@ -395,11 +405,11 @@ describe("el nombre entra en el tope de Dropbox", () => {
         assert.equal(recortarNombre(corto), corto);
     });
     it("el peor caso real queda por debajo de 255", () => {
-        const nombre = recortarNombre(renderNomenclatura(PATRON_POR_DEFECTO.Contrato, LARGO));
+        const nombre = recortarNombre(renderNomenclatura(PATRON_POR_DEFECTO.Release, LARGO));
         assert.ok(nombre.length <= MAX_NOMBRE - 4, `quedó en ${nombre.length}: ${nombre}`);
     });
     it("recortar no toca el CUIL, el documento ni las fechas", () => {
-        const nombre = recortarNombre(renderNomenclatura(PATRON_POR_DEFECTO.Contrato, LARGO));
+        const nombre = recortarNombre(renderNomenclatura(PATRON_POR_DEFECTO.Release, LARGO));
         assert.match(nombre, PARSERS.cuil, `se perdió el CUIL: ${nombre}`);
         const fechas = nombre.match(PARSERS.fechas) ?? [];
         assert.ok(fechas.includes("20260810"), `se perdió la fecha de alta (quedaron ${JSON.stringify(fechas)})`);
@@ -415,7 +425,7 @@ describe("el nombre entra en el tope de Dropbox", () => {
         }
     });
     it("respeta lo que el llamador va a agregar después", () => {
-        const nombre = recortarNombre(renderNomenclatura(PATRON_POR_DEFECTO.Contrato, LARGO), 30);
+        const nombre = recortarNombre(renderNomenclatura(PATRON_POR_DEFECTO.Release, LARGO), 30);
         assert.ok(nombre.length <= MAX_NOMBRE - 30, `quedó en ${nombre.length} con 30 reservados`);
     });
 });
@@ -478,9 +488,9 @@ describe("la identidad: CUIL solo, y el documento como respaldo", () => {
         assert.equal(buildIdentidadTag({ metadata: {} }), "");
     });
     it("lo que sale sigue siendo parseable por el servicio de vuelta", () => {
-        const conCuil = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, cuit: buildIdentidadTag(usuario("20-33150102-7", "33150102")) });
+        const conCuil = renderNomenclatura(PATRON_POR_DEFECTO.Release, { ...DATOS, cuit: buildIdentidadTag(usuario("20-33150102-7", "33150102")) });
         assert.match(conCuil, PARSERS.cuil);
-        const sinCuil = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, cuit: buildIdentidadTag(usuario("", "43092696")) });
+        const sinCuil = renderNomenclatura(PATRON_POR_DEFECTO.Release, { ...DATOS, cuit: buildIdentidadTag(usuario("", "43092696")) });
         assert.match(sinCuil, PARSERS.documento, `sin CUIL hay que poder encontrarlo por el documento: ${sinCuil}`);
     });
 });
@@ -600,7 +610,7 @@ describe("topes por campo: un valor siempre se escribe igual", () => {
     });
     it("con los topes puestos, el peor caso teórico del default entra holgado", () => {
         // Todos los campos variables en su tope a la vez: la combinación no existe, pero es la cota.
-        const enElTope = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, {
+        const enElTope = renderNomenclatura(PATRON_POR_DEFECTO.Release, {
             proyecto: "X".repeat(60),
             apellido: "Y".repeat(40),
             tipo: "ConstanciaCUIT",
@@ -659,7 +669,7 @@ describe("{{codigo}}: el código único del documento va en todos los patrones",
         assert.deepEqual(validarPatron("Contrato", PATRON_POR_DEFECTO.Contrato.replace("_{{codigo}}", "")), []);
     });
     it("no se recorta nunca, aunque el nombre no entre en 255", () => {
-        const largo = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, contrato: "x".repeat(300) });
+        const largo = renderNomenclatura(PATRON_POR_DEFECTO.Release, { ...DATOS, contrato: "x".repeat(300) });
         assert.ok(recortarNombre(largo).endsWith("_ID-000123"));
     });
 });

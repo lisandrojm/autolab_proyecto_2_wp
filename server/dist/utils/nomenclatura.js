@@ -126,8 +126,16 @@ export const VARIABLES_POR_TIPO = (() => {
         V.empresaCuit,
         { ...V.codigo, requerida: true },
     ];
+    /*
+      RECIBOS DE SUELDO (tipo interno "Contrato", 20/10/2026): sin fechas obligatorias. Un recibo es de un
+      período, no de un alta y una baja, y el cliente lo nombra sin ellas. Lo que lo ancla al volver es su
+      {{codigo}} (siempre presente, ver `asegurarCodigo`): la bandeja de Dropbox Sign, la limpieza del
+      Pendbox y el escaneo de carpetas lo reconocen por el código, que apunta al contrato exacto que quedó
+      registrado al generarlo (`documentos_generados`). Las fechas se siguen ofreciendo, opcionales.
+    */
+    const deReciboDeSueldo = deContrato.map((v) => (v.variable === V.fechaAlta.variable || v.variable === V.fechaBaja.variable ? { ...v, requerida: false } : v));
     return {
-        Contrato: deContrato,
+        Contrato: deReciboDeSueldo,
         Release: deContrato,
         AltaAFIP: deContrato,
         ConstanciaCUIT: deContrato,
@@ -166,11 +174,10 @@ export const PATRON_POR_DEFECTO = (() => {
     */
     const deContrato = "{{centroDeCosto}}_{{proyecto}}_{{apellido}}_{{tipo}}_{{contrato}}_D-{{fechaAlta}}_H-{{fechaBaja}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}_{{codigo}}";
     return {
-        // El de Contratos lo fijó el cliente (20/10/2026): figura como «Sistema» y no se puede descartar.
-        // «REC_SUELDO» es texto fijo y el período va adelante; las fechas siguen al final porque son las
-        // que separan dos contratos de la misma persona en la carpeta de Dropbox (y descartan un recibo
-        // viejo que la nombra). Ver `estadoDropboxCronService`.
-        Contrato: "{{centroDeCosto}}_{{proyecto}}_REC_SUELDO_{{periodo}}_{{apellido}}_{{nombres}}_{{email}}_{{cuit}}_D-{{fechaAlta}}_H-{{fechaBaja}}_{{codigo}}",
+        // Recibos de sueldo: el patrón lo fijó el cliente (20/10/2026). «REC_SUELDO» es texto fijo, el
+        // período va adelante y NO lleva fechas: el contrato exacto lo da el {{codigo}} (ver `VARIABLES_POR_TIPO`
+        // y el escaneo de carpetas en `estadoDropboxCronService`).
+        Contrato: "{{centroDeCosto}}_{{proyecto}}_REC_SUELDO_{{periodo}}_{{apellido}}_{{nombres}}_{{email}}_{{cuit}}_{{codigo}}",
         Release: deContrato,
         AltaAFIP: deContrato,
         ConstanciaCUIT: deContrato,

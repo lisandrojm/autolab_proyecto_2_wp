@@ -9,6 +9,25 @@ import { normalizarCuit, parseConstanciaPdf } from "../utils/constanciaPdf.js";
 import { leerAnclas, normalizarEmail } from "../utils/anclasNombre.js";
 import { esElAltaEnviada, momentoDeCarga, motivoParaDescartarArchivo, TEXTO_DESCARTE } from "../utils/archivoDeContrato.js";
 import { limpiarPendbox } from "./limpiezaPendboxService.js";
+import { DocumentoGenerado } from "../models/DocumentoGenerado.js";
+import { fechaISO } from "../utils/contratoVigencia.js";
+
+/**
+ * El contrato que nombra el CÓDIGO del documento (`{{codigo}}`, «ID-000123»): el que quedó registrado en
+ * `documentos_generados` al generarlo. Mismo criterio que la bandeja de Dropbox Sign
+ * (`dropboxSignMailService.contratoDelCodigo`): por sus fechas (no cambian) y, si no, por la posición
+ * guardada. `null` si el código no tiene registro o no es de ese vínculo.
+ */
+function indiceDelRegistro(up: any, reg: any): number | null {
+  if (!reg || String(reg.userProjectId) !== String(up?._id)) return null;
+  const c = reg.contrato || {};
+  const contratos: any[] = up.contracts || [];
+  const porFechas = contratos
+    .map((x, idx) => ({ x, idx }))
+    .filter(({ x }) => fechaISO(x.fecha_alta_contrato) === (c.alta || "") && fechaISO(x.fecha_baja_contrato) === (c.baja || "") && (!c.carga || String(x.fecha_carga ?? "") === c.carga));
+  if (porFechas.length === 1) return porFechas[0].idx;
+  return typeof c.indice === "number" && contratos[c.indice] ? c.indice : null;
+}
 
 /**
  * Job periódico: revisa, para cada Estado con transición automática "dropbox_carpeta", si aparecieron
@@ -410,6 +429,8 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
       await new Promise((r) => setImmediate(r));
     }
 
+    // El registro de cada código, una vez por corrida (ver `indiceDelRegistro`).
+    const registroPorCodigo = new Map<string, any>();
     for (const file of archivos) {
       const key = `${tenant._id}:${estadoDestino._id}:${file.path}`;
       const { cuit: cuitEncontrado, email: emailEncontrado, via: viaCuit } = identidadPorArchivo.get(file.path) || { cuit: "", email: "", via: null };
@@ -438,8 +459,21 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
         matches = disponibles.filter((c) => c.palabras.length > 0 && c.palabras.every((p) => nombreArchivoNormalizado.includes(p)));
       }
 
-      // CUÁL de sus contratos. Una misma persona puede tener dos superpuestos, y ahí desempatan las
-      // fechas del nombre — obligatorias en la nomenclatura justamente para esto.
+      /*
+        CUÁL de sus contratos, primero por el CÓDIGO del documento (20/10/2026). Un recibo de sueldo no
+        trae fechas en el nombre; lo que lo ata a un contrato es su «ID-000123», registrado al generarlo.
+        Con código y registro manda eso, aunque haya un solo candidato: un recibo viejo de otro contrato
+        de la misma persona no puede mover el contrato nuevo. Sin registro (documentos de antes del
+        código), se sigue como siempre, por las fechas.
+      */
+      const codigoArchivo = leerAnclas(file.name).codigo;
+      if (codigoArchivo && matches.length > 0) {
+        if (!registroPorCodigo.has(codigoArchivo)) registroPorCodigo.set(codigoArchivo, await DocumentoGenerado.findOne({ tenantId: tenant._id, codigo: codigoArchivo }).select("userProjectId contrato").lean());
+        const reg = registroPorCodigo.get(codigoArchivo);
+        if (reg) matches = matches.filter((m) => indiceDelRegistro(m.up, reg) === m.idx);
+      }
+
+      // Si no, una misma persona puede tener dos superpuestos, y ahí desempatan las fechas del nombre.
       if (matches.length > 1) {
         const fechasArchivo = extraerFechasDeNombre(file.name);
         if (fechasArchivo.length > 0) {
