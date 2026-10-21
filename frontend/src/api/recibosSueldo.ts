@@ -17,6 +17,8 @@ export interface ReciboDelLote {
   nombreUsuario?: string;
   nombreProyecto?: string;
   asignadoAMano?: boolean;
+  /** Se asoció por apellido y nombre porque el OCR no leyó el CUIL: revisar antes de enviar. */
+  asociadoPorNombre?: boolean;
   estado: EstadoRecibo;
   enviadoEl?: string | null;
   firmadoEl?: string | null;

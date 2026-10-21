@@ -37,6 +37,8 @@ export interface IReciboDelLote {
     nombreProyecto?: string;
     /** Si la persona se eligió a mano (el CUIL no se leyó o no coincidía). */
     asignadoAMano?: boolean;
+    /** Si se asoció por apellido y nombre porque el OCR no leyó el CUIL: para revisar antes de enviar. */
+    asociadoPorNombre?: boolean;
     estado: EstadoRecibo;
     enviadoEl?: Date | null;
     firmadoEl?: Date | null;

@@ -303,6 +303,7 @@ export const RecibosSueldoPage: React.FC = () => {
                             {/* Lo que dice el recibo, para cotejar con la persona asociada. */}
                             {r.datos.nombre && <span className="text-xs text-gray-500">En el recibo: {r.datos.nombre}</span>}
                             {r.nombreProyecto && <span className="text-[11px] text-gray-400">{r.nombreProyecto}{r.asignadoAMano ? " · elegida a mano" : ""}</span>}
+                            {r.asociadoPorNombre && !r.asignadoAMano && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Asociada por nombre (sin CUIL legible): revisá antes de enviar</span>}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm font-mono whitespace-nowrap">{fmtCuil(r.datos.cuil)}</td>

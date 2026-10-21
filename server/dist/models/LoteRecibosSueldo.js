@@ -19,6 +19,7 @@ const reciboSchema = new Schema({
     nombreUsuario: { type: String, default: "" },
     nombreProyecto: { type: String, default: "" },
     asignadoAMano: { type: Boolean, default: false },
+    asociadoPorNombre: { type: Boolean, default: false },
     estado: { type: String, enum: ["sin_persona", "listo", "enviado", "firmado", "error"], default: "sin_persona" },
     enviadoEl: { type: Date, default: null },
     firmadoEl: { type: Date, default: null },

@@ -9,7 +9,7 @@ import UserProject from "../models/UserProject.js";
 import { Project } from "../models/Project.js";
 import { Tenant } from "../models/Tenant.js";
 import { DocumentoGenerado } from "../models/DocumentoGenerado.js";
-import { agruparPaginas, leerRecibo } from "../utils/reciboDeSueldo.js";
+import { agruparPaginas, leerRecibo, normalizarNombre } from "../utils/reciboDeSueldo.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
 import { getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
 import { nombreArchivoDocumento } from "./nomenclaturaService.js";
@@ -91,6 +91,23 @@ async function usuariosPorCuil(tenantId, cuils) {
     }
     return m;
 }
+/**
+ * Cuando el OCR no leyó el CUIL pero sí «APELLIDO, Nombres»: la persona cuyo apellido y primer nombre
+ * coinciden, si es UNA sola. Se marca aparte (`asociadoPorNombre`) para que se revise antes de enviar:
+ * es un respaldo, no la regla. Las tildes no cuentan (el OCR las pierde).
+ */
+async function usuarioPorNombre(tenantId, nombreLeido) {
+    const m = /^([^,]+),\s*(.+)$/.exec(normalizarNombre(nombreLeido));
+    if (!m)
+        return null;
+    const apellido = m[1].trim();
+    const primerNombre = m[2].trim().split(" ")[0];
+    if (!apellido || !primerNombre)
+        return null;
+    const candidatos = await User.find({ tenantId, "metadata.isSolicitud": { $ne: true } }).select("firstName lastName email metadata.cuit").lean();
+    const iguales = candidatos.filter((u) => normalizarNombre(u.lastName) === apellido && normalizarNombre(u.firstName).split(" ")[0] === primerNombre);
+    return iguales.length === 1 ? iguales[0] : null;
+}
 /** Crea el lote, guarda la sábana y dispara la lectura en segundo plano. Devuelve el lote «leyendo». */
 export async function procesarSabana(tenantId, subidoPor, nombreArchivo, buffer, paginasPorRecibo = 2) {
     let total = 0;
@@ -157,16 +174,24 @@ async function leerLote(lote, buffer) {
     const leidos = grupos.map((paginas) => ({ paginas, texto: paginas.map((i) => textos[i]).join("\n\n----- página siguiente -----\n\n") })).map((g) => ({ ...g, datos: leerRecibo(g.texto) }));
     const porCuil = await usuariosPorCuil(lote.tenantId, [...new Set(leidos.map((g) => g.datos.cuil).filter(Boolean))]);
     const contratoDe = new Map();
-    for (const u of porCuil.values())
-        contratoDe.set(String(u._id), await personaYContrato(lote.tenantId, u._id));
+    const contratoDeUsuario = async (u) => {
+        if (!contratoDe.has(String(u._id)))
+            contratoDe.set(String(u._id), await personaYContrato(lote.tenantId, u._id));
+        return contratoDe.get(String(u._id));
+    };
     const dir = dirDelLote(lote);
     const periodos = new Map();
     const recibos = [];
     for (const [n, g] of leidos.entries()) {
         const archivo = `${String(n + 1).padStart(3, "0")}.pdf`;
         fs.writeFileSync(path.join(dir, archivo), await extraerPaginas(sabana, g.paginas));
-        const u = g.datos.cuil ? porCuil.get(g.datos.cuil) : null;
-        const contrato = u ? contratoDe.get(String(u._id)) : null;
+        let u = g.datos.cuil ? porCuil.get(g.datos.cuil) : null;
+        let porNombre = false;
+        if (!u && !g.datos.cuil && g.datos.nombre) {
+            u = await usuarioPorNombre(lote.tenantId, g.datos.nombre);
+            porNombre = !!u;
+        }
+        const contrato = u ? await contratoDeUsuario(u) : null;
         if (g.datos.periodo)
             periodos.set(g.datos.periodo, (periodos.get(g.datos.periodo) || 0) + 1);
         recibos.push({
@@ -177,8 +202,9 @@ async function leerLote(lote, buffer) {
             userId: u?._id || null,
             nombreUsuario: u ? nombreDe(u) : "",
             ...(contrato || { userProjectId: null, projectId: null, contractIndex: null, nombreProyecto: "" }),
+            asociadoPorNombre: porNombre,
             estado: u && contrato?.userProjectId ? "listo" : "sin_persona",
-            error: u && !contrato?.userProjectId ? "La persona no tiene un contrato vigente en ningún proyecto." : !g.datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "",
+            error: u && !contrato?.userProjectId ? "La persona no tiene un contrato vigente en ningún proyecto." : porNombre ? "El OCR no leyó el CUIL: se asoció por apellido y nombre. Revisá que sea la persona antes de enviar." : !g.datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "",
         });
     }
     const periodo = [...periodos.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";

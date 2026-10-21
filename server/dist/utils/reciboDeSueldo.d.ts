@@ -25,7 +25,15 @@ export interface DatosRecibo {
     /** Todos los CUIL/CUIT válidos que aparecen, en orden: para revisar cuando el fuerte no es el esperado. */
     cuitsEncontrados: string[];
 }
-/** Todos los números de 11 dígitos (con o sin guiones) que son un CUIT/CUIL válido, sin repetir. */
+/** El dígito verificador (módulo 11) de los diez primeros dígitos de un CUIT/CUIL. */
+export declare function digitoVerificador(diez: string): string;
+/**
+ * Todos los números de 11 dígitos (con o sin guiones) que son un CUIT/CUIL válido, sin repetir.
+ *
+ * También «20-37008740-» o «27-21471133-.»: el OCR suele perder el último dígito, que queda pegado al
+ * borde de la celda. Ese dígito es el verificador y sale de los otros diez, así que se recalcula: el
+ * CUIL completo es único para esos diez dígitos, no se inventa nada.
+ */
 export declare function cuitsDelTexto(texto: string): string[];
 /**
  * El período del recibo como "YYYY-MM". Acepta «Período: 08/2026», «PERIODO 2026/08», «Agosto 2026»,
@@ -36,6 +44,8 @@ export declare function periodoDelTexto(textoCrudo: string): string;
 /** El nombre de la persona, por los rótulos habituales de un recibo o por la línea «APELLIDO, Nombres legajo». "" si no se reconoce. */
 export declare function nombreDelTexto(texto: string): string;
 export declare function legajoDelTexto(texto: string): string;
+/** «Mart n Fernando» → el OCR perdió una tilde: se deja un comodín para comparar nombres sin tildes. */
+export declare const normalizarNombre: (s: string) => string;
 export declare function netoDelTexto(texto: string): string;
 /** Lee todo lo que se pueda del texto de un recibo (una o varias páginas concatenadas). */
 export declare function leerRecibo(textoCrudo: string): DatosRecibo;
