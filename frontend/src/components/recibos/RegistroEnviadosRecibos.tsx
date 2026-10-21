@@ -212,7 +212,7 @@ export const RegistroEnviadosRecibos: React.FC = () => {
                 <th className={th}>Categoría · Tarea</th>
                 <th className={`${th} text-right`}>Neto a cobrar</th>
                 <th className={th}>Código</th>
-                <th className={th}>Estado</th>
+                <th className={th}>Estado | Firma</th>
                 <th className={th}></th>
               </tr>
             </thead>

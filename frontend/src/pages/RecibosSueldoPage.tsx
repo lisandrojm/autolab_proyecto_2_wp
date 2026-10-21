@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faReceipt, faUpload, faFilePdf, faPaperPlane, faTrash, faFileCode, faSpinner, faUserPen, faAlignLeft, faCircleCheck, faCircleXmark, faClock, faUserSlash, faRotateRight } from "@fortawesome/free-solid-svg-icons";
+import { faReceipt, faUpload, faFilePdf, faPaperPlane, faTrash, faFileCode, faSpinner, faUserPen, faAlignLeft, faCircleCheck, faCircleXmark, faClock, faUserSlash, faRotateRight, faChevronDown, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Modal } from "../components/ui/Modal";
@@ -10,6 +10,7 @@ import { getImageUrl } from "../utils/imageHelpers";
 import { sweetAlert } from "../utils/sweetAlert";
 import { DetalleRecibo, fmtCuil, fechaHora, periodoTexto, importeNumero, pesos } from "../components/recibos/DetalleRecibo";
 import { RegistroEnviadosRecibos } from "../components/recibos/RegistroEnviadosRecibos";
+import { BadgesLote, ElegirSabana, conteoDe } from "../components/recibos/ElegirSabana";
 
 /*
   RECIBOS DE SUELDO (Contratación, 20/10/2026). Se sube la sábana PDF con todos los recibos del mes (dos
@@ -55,6 +56,7 @@ export const RecibosSueldoPage: React.FC = () => {
   const inputArchivo = useRef<HTMLInputElement>(null);
   const [resultado, setResultado] = useState<ResultadoMasivo | null>(null);
   const [vista, setVista] = useState<"lotes" | "enviados">("lotes");
+  const [eligiendoSabana, setEligiendoSabana] = useState(false);
 
   const cargarLotes = useCallback(async () => {
     try {
@@ -353,14 +355,22 @@ export const RecibosSueldoPage: React.FC = () => {
             <div className="space-y-4">
               {/* Los lotes subidos: uno por sábana. */}
               <div className="flex flex-wrap items-center gap-2">
-                <select value={loteId || ""} onChange={(e) => setLoteId(e.target.value || null)} className="input-field py-2 text-sm max-w-md">
-                  {lotes.map((l) => (
-                    <option key={l._id} value={l._id}>
-                      {periodoTexto(l.periodo)} · {l.nombreArchivo} · {l.resumen?.total ?? l.recibos.length} recibos
-                      {l.resumen ? ` (${l.resumen.listos} listos, ${l.resumen.enviados} enviados, ${l.resumen.firmados} firmados${l.resumen.sinPersona ? `, ${l.resumen.sinPersona} sin persona` : ""})` : ""} · {fechaHora(l.createdAt)}
-                    </option>
-                  ))}
-                </select>
+                {/* La sábana que se está viendo; se cambia en una ventana con todas, con sus números como badges. */}
+                {(() => {
+                  const actual = lotes.find((l) => l._id === loteId);
+                  return (
+                    <button type="button" onClick={() => setEligiendoSabana(true)} className="flex min-w-0 max-w-full items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 text-left hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-700" title="Elegir otra sábana">
+                      <FontAwesomeIcon icon={faLayerGroup} className="text-blue-500" />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-gray-800 dark:text-gray-100">{actual ? `${periodoTexto(actual.periodo)} · ${actual.nombreArchivo}` : "Elegir sábana"}</span>
+                        <span className="text-[11px] text-gray-500">
+                          {lotes.length} sábana{lotes.length === 1 ? "" : "s"} subida{lotes.length === 1 ? "" : "s"} · cambiar
+                        </span>
+                      </span>
+                      <FontAwesomeIcon icon={faChevronDown} className="ml-1 text-xs text-gray-400" />
+                    </button>
+                  );
+                })()}
                 {lote && (
                   <>
                     <button type="button" onClick={() => recibosSueldoAPI.descargarExportacion(lote)} className="btn-secondary flex items-center gap-2 text-sm px-3 py-2" title="Bajar un JSON con todo lo que el lector entendió de cada recibo, incluido el texto crudo">
@@ -403,16 +413,7 @@ export const RecibosSueldoPage: React.FC = () => {
                 <>
                   <div className="flex flex-wrap items-center gap-3">
                     <input value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por nombre, CUIL o legajo…" className="input-field py-2 text-sm w-72" />
-                    <span className="text-xs text-gray-500">
-                      {deTxt ? (
-                        <span className="mr-1 rounded bg-emerald-100 px-1.5 py-0.5 font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title={lote.nombreTxt || ""}>
-                          Datos del TXT
-                        </span>
-                      ) : (
-                        <span className="mr-1 rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Leído por OCR</span>
-                      )}
-                      {lote.paginas} páginas · {recibos.length} recibos · {listos.length} listos · {recibos.filter((r) => r.estado === "sin_persona").length} sin persona · {recibos.filter((r) => r.estado === "enviado").length} enviados · {recibos.filter((r) => r.estado === "firmado").length} firmados
-                    </span>
+                    <BadgesLote lote={lote} conteo={conteoDe({ ...lote, resumen: undefined })} />
                     <div className="ml-auto flex items-center gap-2">
                       {deTxt ? null : cola ? (
                         <span className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
@@ -511,7 +512,7 @@ export const RecibosSueldoPage: React.FC = () => {
                           <th className={th}>PDF</th>
                           <th className={th}>
                             <BotonOrden columna="estado" orden={orden} onAlternar={alternar}>
-                              Estado
+                              Estado | Firma
                             </BotonOrden>
                           </th>
                           <th className={th}></th>
@@ -660,6 +661,8 @@ export const RecibosSueldoPage: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {eligiendoSabana && lotes && <ElegirSabana lotes={lotes} actual={loteId} onElegir={setLoteId} onClose={() => setEligiendoSabana(false)} />}
 
       {asignando && lote && (
         <AsignarPersona

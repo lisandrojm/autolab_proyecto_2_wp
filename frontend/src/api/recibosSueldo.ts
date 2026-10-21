@@ -146,7 +146,7 @@ export const ETIQUETA_ESTADO_RECIBO: Record<EstadoRecibo, string> = {
   sin_persona: "Sin persona",
   listo: "Listo",
   enviando: "Enviando…",
-  enviado: "Enviado a firmar",
+  enviado: "Enviado",
   firmado: "Firmado",
   error: "Error",
 };
