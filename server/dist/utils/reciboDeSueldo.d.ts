@@ -51,6 +51,12 @@ export declare function nombreDelTexto(texto: string): string;
 export declare function legajoDelTexto(texto: string): string;
 /** «Mart n Fernando» → el OCR perdió una tilde: se deja un comodín para comparar nombres sin tildes. */
 export declare const normalizarNombre: (s: string) => string;
+/**
+ * El neto a cobrar. En un recibo de MEMOSOFT el rótulo cierra la fila de encabezados de los totales
+ * («REMUNERATIVO … OTROS NETO A COBRAR») y los importes vienen en la línea siguiente, en el mismo
+ * orden: el neto es el ÚLTIMO de esa línea, no el primero (que es el remunerativo). Si el importe viene
+ * en la misma línea que el rótulo («Neto a cobrar: 1.234,56»), se toma ése.
+ */
 export declare function netoDelTexto(texto: string): string;
 /** Lee todo lo que se pueda del texto de un recibo (una o varias páginas concatenadas). */
 export declare function leerRecibo(textoCrudo: string): DatosRecibo;

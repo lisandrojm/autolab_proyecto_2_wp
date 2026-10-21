@@ -59,9 +59,11 @@ export async function ocrDeImagen(worker, png, psm = PSM.AUTO) {
     return { texto: r.data.text || "", confianza: Math.round(r.data.confidence || 0) };
 }
 /**
- * El texto OCR de una página: la caja de datos y la página entera siempre; si con eso `faltaAlgo`
- * (no apareció el CUIL) o se pidió `minucioso` (botón «volver a leer»), también la página entera a 3×
- * y el encabezado a 4×. Devuelve las pasadas hechas, para el texto crudo.
+ * El texto OCR de una página, en tres pasadas siempre: la caja de datos (nombre, legajo, CUIL,
+ * período), la página entera a 2× (trae el «ORIGINAL»/«COPIA» de arriba, que a 3× a veces se pierde)
+ * y la página entera a 3× (es la única que lee la fila de totales en gris: el neto a cobrar). Unos
+ * 3 s por página. Si con eso `faltaAlgo` (no apareció el CUIL) o se pidió `minucioso` (botón «volver
+ * a leer»), también el encabezado a 4×. Devuelve las pasadas hechas, para el texto crudo.
  */
 export async function ocrDePagina(worker, parser, pagina, faltaAlgo, minucioso = false) {
     const partes = [];
@@ -74,8 +76,8 @@ export async function ocrDePagina(worker, parser, pagina, faltaAlgo, minucioso =
     const a3 = await renderizarPagina(parser, pagina, 3);
     await pasar("caja de datos 3×", await recortar(a3, CAJA_DATOS), PSM.SINGLE_COLUMN);
     await pasar("página entera 2×", await renderizarPagina(parser, pagina, 2), PSM.AUTO);
+    await pasar("página entera 3×", a3, PSM.AUTO);
     if (minucioso || faltaAlgo(partes.join("\n"))) {
-        await pasar("página entera 3×", a3, PSM.AUTO);
         await pasar("encabezado 4×", await recortar(await renderizarPagina(parser, pagina, 4), ENCABEZADO), PSM.AUTO);
     }
     return { texto: partes.join("\n"), pasadas };

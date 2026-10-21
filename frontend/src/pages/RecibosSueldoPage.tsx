@@ -104,7 +104,7 @@ export const RecibosSueldoPage: React.FC = () => {
       const nuevo = await recibosSueldoAPI.subir(archivo, paginasPorRecibo);
       await cargarLotes();
       setLoteId(nuevo._id);
-      sweetAlert.info("Leyendo la sábana", `${nuevo.paginas} página${nuevo.paginas === 1 ? "" : "s"}. Los datos están dibujados en el PDF, así que cada página pasa por OCR: tarda alrededor de un segundo por página. La lista se arma sola cuando termina.`, 6000);
+      sweetAlert.info("Leyendo la sábana", `${nuevo.paginas} página${nuevo.paginas === 1 ? "" : "s"}. Los datos están dibujados en el PDF, así que cada página pasa por OCR en tres pasadas: unos 3 segundos por página. La lista se arma sola cuando termina.`, 6000);
     } catch (e: any) {
       sweetAlert.error("No se pudo leer el PDF", e?.response?.data?.error || e?.message || "");
     } finally {
@@ -253,7 +253,7 @@ export const RecibosSueldoPage: React.FC = () => {
               <div className="mt-3 h-2 w-full rounded-full bg-blue-100 dark:bg-blue-950">
                 <div className="h-2 rounded-full bg-blue-600 transition-all" style={{ width: `${Math.round(((lote.progreso?.leidas ?? 0) / Math.max(1, lote.progreso?.total || lote.paginas)) * 100)}%` }} />
               </div>
-              <p className="mt-2 text-xs text-blue-700/80 dark:text-blue-300/80">Cada página se renderiza y pasa por OCR (los datos del recibo están dibujados, no son texto). Alrededor de un segundo por página. Podés salir de esta pantalla: la lectura sigue en el server.</p>
+              <p className="mt-2 text-xs text-blue-700/80 dark:text-blue-300/80">Cada página se renderiza y pasa por OCR (los datos del recibo están dibujados, no son texto). Tres pasadas por página (la caja de datos, la página a 2 y a 3 aumentos): unos 3 segundos cada una. Podés salir de esta pantalla: la lectura sigue en el server.</p>
             </div>
           ) : lote.estadoLote === "error" ? (
             <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">

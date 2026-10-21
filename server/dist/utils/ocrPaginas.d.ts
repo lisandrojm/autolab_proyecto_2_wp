@@ -15,9 +15,11 @@ export declare function ocrDeImagen(worker: Worker, png: Buffer, psm?: PSM): Pro
     confianza: number;
 }>;
 /**
- * El texto OCR de una página: la caja de datos y la página entera siempre; si con eso `faltaAlgo`
- * (no apareció el CUIL) o se pidió `minucioso` (botón «volver a leer»), también la página entera a 3×
- * y el encabezado a 4×. Devuelve las pasadas hechas, para el texto crudo.
+ * El texto OCR de una página, en tres pasadas siempre: la caja de datos (nombre, legajo, CUIL,
+ * período), la página entera a 2× (trae el «ORIGINAL»/«COPIA» de arriba, que a 3× a veces se pierde)
+ * y la página entera a 3× (es la única que lee la fila de totales en gris: el neto a cobrar). Unos
+ * 3 s por página. Si con eso `faltaAlgo` (no apareció el CUIL) o se pidió `minucioso` (botón «volver
+ * a leer»), también el encabezado a 4×. Devuelve las pasadas hechas, para el texto crudo.
  */
 export declare function ocrDePagina(worker: Worker, parser: PDFParse, pagina: number, faltaAlgo: (texto: string) => boolean, minucioso?: boolean): Promise<{
     texto: string;

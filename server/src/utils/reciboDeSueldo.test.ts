@@ -77,9 +77,15 @@ describe("un recibo de MEMOSOFT leído por OCR (sin rótulos)", () => {
     // Apellido compuesto, nombres en mayúsculas, y el rótulo LEGAJO que en la tabla queda seguido de otro rótulo.
     assert.equal(leerRecibo("APELLIDO Y NUMBRE> LEGAJO\nCOCA GRADASCHI, CAROLINA 01862\n27-46026728-0").nombre, "COCA GRADASCHI, CAROLINA");
     assert.equal(leerRecibo("APELLIDO Y NUMBRE> LEGAJO\nDE FEO, Pablo Nicolas 00446").legajo, "00446");
+    // El neto a cobrar es la ÚLTIMA columna de la fila de totales, no la primera (que es el remunerativo).
+    const totales = "REMUNERATIVO NO REMUNERATIVO DESCUENTOS SUELDO NETO OTROS NETO A COBRAR\n2.765.531,44 -470.140,34 2.295.391,10 0,90 2.295.392,00";
+    assert.equal(leerRecibo(totales).neto, "2.295.392,00");
+    assert.equal(leerRecibo("Neto a cobrar: $ 985.432,10").neto, "985.432,10");
     const tabla = "APELLIDO Y NUMBRE>\nPALOMINO MATEO, Esthefany Omayra\nC.U.T.L. BASICO\nLEGAJO\nINGRESO ANTIGUEDAD\n27-94231772-2 890985.22";
     assert.equal(leerRecibo(tabla).nombre, "PALOMINO MATEO, Esthefany Omayra");
     assert.equal(leerRecibo(tabla).legajo, "");
+    // Y el legajo en una línea propia debajo del rótulo (así sale la caja de datos cuando la celda del nombre es angosta).
+    assert.equal(leerRecibo("APELLIDO Y NUMBRE>\nYORIO, Jose Ignacio\nLEGAJO\n00099\nC.U.T.L. BASICO").legajo, "00099");
   });
   it("ORIGINAL abre el recibo y COPIA se le pega, aunque las dos hojas traigan el mismo CUIL", () => {
     assert.deepEqual(agruparPaginas([OCR_ORIGINAL, OCR_COPIA, OCR_ORIGINAL, OCR_COPIA]), [[0, 1], [2, 3]]);

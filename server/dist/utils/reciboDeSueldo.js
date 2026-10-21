@@ -141,7 +141,17 @@ export function legajoDelTexto(texto) {
         return deLaLinea;
     const v = (valorDespuesDe(texto, /\blegajo\s*(?:n[°ºo.]*)?\s*:?/i).split(" ")[0] || "").trim();
     // En una tabla el rótulo «LEGAJO» puede quedar seguido del rótulo de al lado («INGRESO»): un legajo tiene dígitos.
-    return /^[A-Za-z0-9\-\/]{1,15}$/.test(v) && /\d/.test(v) ? v : "";
+    if (/^[A-Za-z0-9\-\/]{1,15}$/.test(v) && /\d/.test(v))
+        return v;
+    // O el número queda en una línea propia, hasta tres más abajo del rótulo («LEGAJO» / «00099»).
+    const lineas = texto.split(/\r?\n/);
+    const i = lineas.findIndex((l) => /\blegajo\b/i.test(l));
+    for (let j = i + 1; i >= 0 && j < Math.min(lineas.length, i + 4); j++) {
+        const m = /^\s*(\d{3,8})\s*$/.exec(lineas[j]);
+        if (m)
+            return m[1];
+    }
+    return "";
 }
 /** «Mart n Fernando» → el OCR perdió una tilde: se deja un comodín para comparar nombres sin tildes. */
 export const normalizarNombre = (s) => sinTildes(String(s || ""))
@@ -149,10 +159,30 @@ export const normalizarNombre = (s) => sinTildes(String(s || ""))
     .replace(/[^A-Z ,]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+const RE_IMPORTE = /-?[\d.]{1,15},\d{2}(?!\d)/g;
+/**
+ * El neto a cobrar. En un recibo de MEMOSOFT el rótulo cierra la fila de encabezados de los totales
+ * («REMUNERATIVO … OTROS NETO A COBRAR») y los importes vienen en la línea siguiente, en el mismo
+ * orden: el neto es el ÚLTIMO de esa línea, no el primero (que es el remunerativo). Si el importe viene
+ * en la misma línea que el rótulo («Neto a cobrar: 1.234,56»), se toma ése.
+ */
 export function netoDelTexto(texto) {
-    const t = texto.replace(/\s+/g, " ");
-    const m = /(?:neto\s*a\s*(?:cobrar|pagar)|total\s*neto|importe\s*neto|neto)\s*:?\s*\$?\s*([\d.]{1,15},\d{2}|[\d,]{1,15}\.\d{2})/i.exec(t);
-    return m ? m[1] : "";
+    const lineas = texto.split(/\r?\n/);
+    for (let i = 0; i < lineas.length; i++) {
+        const m = /(?:neto\s*a\s*(?:cobrar|pagar)|total\s*neto|importe\s*neto)\s*:?\s*\$?\s*(.*)$/i.exec(lineas[i]);
+        if (!m)
+            continue;
+        const enLaLinea = m[1].match(RE_IMPORTE);
+        if (enLaLinea?.length)
+            return enLaLinea[enLaLinea.length - 1];
+        // La fila de importes es la próxima línea que trae varios: el último es el de la última columna.
+        for (let j = i + 1; j < Math.min(lineas.length, i + 4); j++) {
+            const importes = lineas[j].match(RE_IMPORTE);
+            if (importes && importes.length >= 2)
+                return importes[importes.length - 1];
+        }
+    }
+    return "";
 }
 /** Lee todo lo que se pueda del texto de un recibo (una o varias páginas concatenadas). */
 export function leerRecibo(textoCrudo) {
