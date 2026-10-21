@@ -66,6 +66,16 @@ describe("un recibo de MEMOSOFT leído por OCR (sin rótulos)", () => {
         // Y una línea de nombre sin legajo o con una coma suelta igual se lee.
         assert.equal(leerRecibo("2030 S.R.L. SANTANGELO, Agustina\n27-43321099-4").nombre, "SANTANGELO, Agustina");
         assert.equal(leerRecibo("2030 S.R.L. MANIA, Cinthia Jimena 00094,\n27-27727589-4").legajo, "00094");
+        // La nota del pie («SIPA, Fondo Nacional de Empleo…») no es una persona, y la línea con legajo gana aunque venga después.
+        const t = "Nota: Seguridad social del empleador incluye SIPA, Fondo Nacional de Empleo y Asignaciones Familiares\nAPELLIDO Y NUMBRE> LEGAJO\nPELLEGRINI, Valentina 00483\n27-47028505-8 734833.56";
+        assert.equal(leerRecibo(t).nombre, "PELLEGRINI, Valentina");
+        assert.equal(leerRecibo(t).legajo, "00483");
+        // Apellido compuesto, nombres en mayúsculas, y el rótulo LEGAJO que en la tabla queda seguido de otro rótulo.
+        assert.equal(leerRecibo("APELLIDO Y NUMBRE> LEGAJO\nCOCA GRADASCHI, CAROLINA 01862\n27-46026728-0").nombre, "COCA GRADASCHI, CAROLINA");
+        assert.equal(leerRecibo("APELLIDO Y NUMBRE> LEGAJO\nDE FEO, Pablo Nicolas 00446").legajo, "00446");
+        const tabla = "APELLIDO Y NUMBRE>\nPALOMINO MATEO, Esthefany Omayra\nC.U.T.L. BASICO\nLEGAJO\nINGRESO ANTIGUEDAD\n27-94231772-2 890985.22";
+        assert.equal(leerRecibo(tabla).nombre, "PALOMINO MATEO, Esthefany Omayra");
+        assert.equal(leerRecibo(tabla).legajo, "");
     });
     it("ORIGINAL abre el recibo y COPIA se le pega, aunque las dos hojas traigan el mismo CUIL", () => {
         assert.deepEqual(agruparPaginas([OCR_ORIGINAL, OCR_COPIA, OCR_ORIGINAL, OCR_COPIA]), [[0, 1], [2, 3]]);

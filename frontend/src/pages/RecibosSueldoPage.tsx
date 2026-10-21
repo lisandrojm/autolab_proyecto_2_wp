@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faReceipt, faUpload, faFilePdf, faPaperPlane, faTrash, faFileCode, faSpinner, faUserPen, faAlignLeft, faCircleCheck, faCircleXmark, faClock, faUserSlash } from "@fortawesome/free-solid-svg-icons";
+import { faReceipt, faUpload, faFilePdf, faPaperPlane, faTrash, faFileCode, faSpinner, faUserPen, faAlignLeft, faCircleCheck, faCircleXmark, faClock, faUserSlash, faRotateRight } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Modal } from "../components/ui/Modal";
@@ -153,6 +153,24 @@ export const RecibosSueldoPage: React.FC = () => {
       await cargarLotes();
     } catch (e: any) {
       sweetAlert.error("No se pudo borrar", e?.response?.data?.error || e?.message || "");
+    }
+  };
+
+  /** Volver a leer un recibo: su PDF pasa otra vez por OCR a más resolución. Unos segundos por recibo. */
+  const [releyendo, setReleyendo] = useState<string | null>(null);
+  const releer = async (recibo: ReciboDelLote) => {
+    if (!lote) return;
+    setReleyendo(recibo._id);
+    try {
+      const nuevo = await recibosSueldoAPI.releer(lote._id, recibo._id);
+      setLote(nuevo);
+      const r = nuevo.recibos.find((x) => x._id === recibo._id);
+      sweetAlert.info("Recibo releído", r ? `${r.datos.nombre || "sin nombre"} · CUIL ${fmtCuil(r.datos.cuil)} · ${ETIQUETA_ESTADO_RECIBO[r.estado]}` : "", 4000);
+      void cargarLotes();
+    } catch (e: any) {
+      sweetAlert.error("No se pudo releer", e?.response?.data?.error || e?.message || "");
+    } finally {
+      setReleyendo(null);
     }
   };
 
@@ -335,6 +353,14 @@ export const RecibosSueldoPage: React.FC = () => {
                             <button type="button" onClick={() => abrirTexto(r)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Ver el texto que se leyó del PDF">
                               <FontAwesomeIcon icon={faAlignLeft} />
                             </button>
+                            <button type="button" onClick={() => recibosSueldoAPI.descargarJsonDeRecibo(lote, r)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Bajar el JSON de este recibo (datos, persona y texto leído)">
+                              <FontAwesomeIcon icon={faFileCode} />
+                            </button>
+                            {(r.estado === "sin_persona" || r.estado === "listo" || r.estado === "error") && (
+                              <button type="button" disabled={releyendo === r._id} onClick={() => releer(r)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg disabled:opacity-50" title="Volver a leer el PDF de este recibo (OCR a más resolución)">
+                                <FontAwesomeIcon icon={releyendo === r._id ? faSpinner : faRotateRight} spin={releyendo === r._id} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

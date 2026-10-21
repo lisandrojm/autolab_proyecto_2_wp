@@ -8,7 +8,7 @@ import { requirePermission } from "../middleware/permissions.js";
 import { LoteRecibosSueldo } from "../models/LoteRecibosSueldo.js";
 import { User } from "../models/User.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
-import { ErrorRecibos, asignarPersona, eliminarLote, enviarAFirmar, exportacionDelLote, procesarSabana } from "../services/recibosSueldo.js";
+import { ErrorRecibos, asignarPersona, eliminarLote, enviarAFirmar, exportacionDelLote, procesarSabana, releerRecibo } from "../services/recibosSueldo.js";
 
 /**
  * /api/v1/recibos-sueldo — el módulo Recibos de sueldo (ver `services/recibosSueldo.ts`).
@@ -101,6 +101,17 @@ recibosSueldoRoutes.get("/lotes/:id/recibos/:rid/texto", async (req: Authenticat
     res.json({ texto: r.textoCrudo || "" });
   } catch (e) {
     responderError(res, e, "texto");
+  }
+});
+
+// POST /lotes/:id/recibos/:rid/releer — volver a pasar el PDF de ese recibo por OCR (a más resolución) y releer sus datos.
+recibosSueldoRoutes.post("/lotes/:id/recibos/:rid/releer", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const lote = await loteDe(req);
+    await releerRecibo(lote, req.params.rid);
+    res.json(await LoteRecibosSueldo.findById(lote._id).select(SIN_TEXTO).lean());
+  } catch (e) {
+    responderError(res, e, "releer");
   }
 });
 

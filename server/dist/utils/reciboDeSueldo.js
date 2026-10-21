@@ -103,23 +103,45 @@ function valorDespuesDe(texto, rotulos) {
  * gris y el OCR no los lee). El apellido en mayúsculas seguido de coma lo distingue de un concepto.
  */
 // El legajo puede faltar (el OCR a veces no lo lee) y la línea puede terminar en una coma suelta.
-const RE_APELLIDO_NOMBRE = /(?:^|\s)([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ' ]{1,40}),\s+([A-Za-zÁÉÍÓÚÑáéíóúñ' ]{2,50}?)(?:\s+(\d{3,8}))?[.,;:]*\s*$/m;
-/** El nombre de la persona, por los rótulos habituales de un recibo o por la línea «APELLIDO, Nombres legajo». "" si no se reconoce. */
-export function nombreDelTexto(texto) {
-    const v = valorDespuesDe(texto, /(?:apellido\s*y\s*nombres?|nombres?\s*y\s*apellidos?|empleado|trabajador|nombre)\s*:?/i);
-    // Un nombre no tiene dígitos: si lo que sigue al rótulo es un número, el rótulo era otra cosa.
-    const limpio = v.replace(/\s+/g, " ").trim();
-    if (limpio && !/\d{3,}/.test(limpio))
-        return limpio.slice(0, 80);
-    const m = RE_APELLIDO_NOMBRE.exec(texto);
-    return m ? `${m[1].trim()}, ${m[2].trim()}`.slice(0, 80) : "";
+const RE_APELLIDO_NOMBRE = /(?:^|\s)([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ' ]{1,40}),\s+([A-Za-zÁÉÍÓÚÑáéíóúñ' ]{2,50}?)(?:\s+(\d{3,8}))?[.,;:]*\s*$/gm;
+// Siglas que aparecen como «SIGLA, lo que sigue» en el pie del recibo y no son nadie.
+const NO_SON_APELLIDO = new Set(["SIPA", "ART", "ANSES", "AFIP", "ARCA", "INSSJP", "SCVO", "CUIL", "CUIT"]);
+/** Las líneas «APELLIDO, Nombres [legajo]» del texto; primero las que traen legajo, que son la caja de datos. */
+function lineasApellidoNombre(texto) {
+    const res = [];
+    for (const m of texto.matchAll(RE_APELLIDO_NOMBRE)) {
+        const apellido = m[1].trim();
+        if (NO_SON_APELLIDO.has(apellido) || apellido.split(" ").length > 4)
+            continue;
+        res.push({ apellido, nombres: m[2].trim(), legajo: m[3] || "" });
+    }
+    return res.sort((a, b) => Number(!!b.legajo) - Number(!!a.legajo));
 }
+/**
+ * El nombre de la persona. Primero la línea «APELLIDO, Nombres [legajo]» (es como viene en la caja de
+ * datos, y no depende de que el rótulo quede al lado del valor); si no hay, lo que sigue a un rótulo
+ * («Apellido y Nombre: …»), siempre que parezca un nombre.
+ */
+export function nombreDelTexto(texto) {
+    const l = lineasApellidoNombre(texto)[0];
+    if (l)
+        return `${l.apellido}, ${l.nombres}`.slice(0, 80);
+    // Con bordes de palabra: «empleado» no puede matchear dentro de «empleador» («…del empleador incluye SIPA…»).
+    const v = valorDespuesDe(texto, /\b(?:apellido\s*y\s*nombres?|nombres?\s*y\s*apellidos?|empleado|trabajador|nombre)\b\s*:?/i);
+    const limpio = v.replace(/\s+/g, " ").trim();
+    // Un nombre: «APELLIDO, Nombres» o al menos dos palabras con mayúscula inicial; sin dígitos. Si lo que sigue al rótulo es
+    // otra cosa (el rótulo de al lado en una tabla, un importe), el rótulo no era el del nombre.
+    const pareceNombre = /^[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ' ]+,\s*[A-Za-zÁÉÍÓÚÑáéíóúñ' ]+$/.test(limpio) || /^(?:[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+\s+){1,4}[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+$/.test(limpio);
+    return pareceNombre ? limpio.slice(0, 80) : "";
+}
+/** El legajo: el de la línea «APELLIDO, Nombres legajo» o, si no, lo que sigue al rótulo «Legajo» siempre que traiga un número. */
 export function legajoDelTexto(texto) {
-    const v = valorDespuesDe(texto, /legajo\s*(?:n[°ºo.]*)?\s*:?/i);
-    if (/^[A-Za-z0-9\-\/]{1,15}$/.test(v.split(" ")[0] || ""))
-        return v.split(" ")[0];
-    const m = RE_APELLIDO_NOMBRE.exec(texto);
-    return m?.[3] || "";
+    const deLaLinea = lineasApellidoNombre(texto)[0]?.legajo;
+    if (deLaLinea)
+        return deLaLinea;
+    const v = (valorDespuesDe(texto, /\blegajo\s*(?:n[°ºo.]*)?\s*:?/i).split(" ")[0] || "").trim();
+    // En una tabla el rótulo «LEGAJO» puede quedar seguido del rótulo de al lado («INGRESO»): un legajo tiene dígitos.
+    return /^[A-Za-z0-9\-\/]{1,15}$/.test(v) && /\d/.test(v) ? v : "";
 }
 /** «Mart n Fernando» → el OCR perdió una tilde: se deja un comodín para comparar nombres sin tildes. */
 export const normalizarNombre = (s) => sinTildes(String(s || ""))

@@ -1,9 +1,25 @@
 import { PDFParse } from "pdf-parse";
-import { type Worker } from "tesseract.js";
+import { PSM, type Worker } from "tesseract.js";
 export declare function abrirOcr(): Promise<Worker>;
-/** El PNG de una página (base 1), renderizada al doble de tamaño. */
-export declare function renderizarPagina(parser: PDFParse, pagina: number): Promise<Buffer>;
-export declare function ocrDeImagen(worker: Worker, png: Buffer): Promise<{
+/** El PNG de una página (base 1), renderizada a `escala` veces su tamaño. */
+export declare function renderizarPagina(parser: PDFParse, pagina: number, escala: number): Promise<Buffer>;
+/** Un recorte de la imagen, por fracciones de ancho y alto. */
+export declare function recortar(png: Buffer, caja: {
+    x0: number;
+    y0: number;
+    x1: number;
+    y1: number;
+}): Promise<Buffer>;
+export declare function ocrDeImagen(worker: Worker, png: Buffer, psm?: PSM): Promise<{
     texto: string;
     confianza: number;
+}>;
+/**
+ * El texto OCR de una página: la caja de datos y la página entera siempre; si con eso `faltaAlgo`
+ * (no apareció el CUIL) o se pidió `minucioso` (botón «volver a leer»), también la página entera a 3×
+ * y el encabezado a 4×. Devuelve las pasadas hechas, para el texto crudo.
+ */
+export declare function ocrDePagina(worker: Worker, parser: PDFParse, pagina: number, faltaAlgo: (texto: string) => boolean, minucioso?: boolean): Promise<{
+    texto: string;
+    pasadas: string[];
 }>;

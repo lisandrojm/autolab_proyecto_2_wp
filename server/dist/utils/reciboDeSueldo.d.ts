@@ -41,8 +41,13 @@ export declare function cuitsDelTexto(texto: string): string[];
  * «mes año» en letras, que es lo que un recibo suele poner en el título.
  */
 export declare function periodoDelTexto(textoCrudo: string): string;
-/** El nombre de la persona, por los rótulos habituales de un recibo o por la línea «APELLIDO, Nombres legajo». "" si no se reconoce. */
+/**
+ * El nombre de la persona. Primero la línea «APELLIDO, Nombres [legajo]» (es como viene en la caja de
+ * datos, y no depende de que el rótulo quede al lado del valor); si no hay, lo que sigue a un rótulo
+ * («Apellido y Nombre: …»), siempre que parezca un nombre.
+ */
 export declare function nombreDelTexto(texto: string): string;
+/** El legajo: el de la línea «APELLIDO, Nombres legajo» o, si no, lo que sigue al rótulo «Legajo» siempre que traiga un número. */
 export declare function legajoDelTexto(texto: string): string;
 /** «Mart n Fernando» → el OCR perdió una tilde: se deja un comodín para comparar nombres sin tildes. */
 export declare const normalizarNombre: (s: string) => string;

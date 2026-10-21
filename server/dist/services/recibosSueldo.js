@@ -16,7 +16,7 @@ import { nombreArchivoDocumento } from "./nomenclaturaService.js";
 import { getTenantDropboxConfig, uploadFile } from "./dropboxService.js";
 import { resolverCarpetaPorProposito } from "../utils/estadoCarpetas.js";
 import { leerAnclas } from "../utils/anclasNombre.js";
-import { abrirOcr, ocrDeImagen, renderizarPagina } from "../utils/ocrPaginas.js";
+import { abrirOcr, ocrDePagina } from "../utils/ocrPaginas.js";
 /**
  * RECIBOS DE SUELDO (Contratación › Recibos de sueldo, 20/10/2026).
  *
@@ -105,8 +105,30 @@ async function usuarioPorNombre(tenantId, nombreLeido) {
     if (!apellido || !primerNombre)
         return null;
     const candidatos = await User.find({ tenantId, "metadata.isSolicitud": { $ne: true } }).select("firstName lastName email metadata.cuit").lean();
-    const iguales = candidatos.filter((u) => normalizarNombre(u.lastName) === apellido && normalizarNombre(u.firstName).split(" ")[0] === primerNombre);
-    return iguales.length === 1 ? iguales[0] : null;
+    const mismoNombre = (u) => normalizarNombre(u.firstName).split(" ")[0] === primerNombre;
+    const iguales = candidatos.filter((u) => normalizarNombre(u.lastName) === apellido && mismoNombre(u));
+    if (iguales.length === 1)
+        return iguales[0];
+    if (iguales.length > 1)
+        return null;
+    // El OCR cambia una letra del apellido («VORIO» por «YORIO»): se admite UNA de diferencia, con el mismo primer nombre.
+    if (apellido.length < 5)
+        return null;
+    const parecidos = candidatos.filter((u) => mismoNombre(u) && distancia1(normalizarNombre(u.lastName), apellido));
+    return parecidos.length === 1 ? parecidos[0] : null;
+}
+/** ¿Difieren en una sola letra (cambiada, de más o de menos)? */
+function distancia1(a, b) {
+    if (a === b)
+        return false;
+    if (Math.abs(a.length - b.length) > 1)
+        return false;
+    let i = 0;
+    while (i < a.length && i < b.length && a[i] === b[i])
+        i++;
+    if (a.length === b.length)
+        return a.slice(i + 1) === b.slice(i + 1);
+    return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
 }
 /** Crea el lote, guarda la sábana y dispara la lectura en segundo plano. Devuelve el lote «leyendo». */
 export async function procesarSabana(tenantId, subidoPor, nombreArchivo, buffer, paginasPorRecibo = 2) {
@@ -156,9 +178,9 @@ async function leerLote(lote, buffer) {
             if (!leerRecibo(texto).cuil) {
                 if (!ocr)
                     ocr = await abrirOcr();
-                const { texto: leido, confianza } = await ocrDeImagen(ocr, await renderizarPagina(parser, i + 1));
+                const { texto: leido, pasadas } = await ocrDePagina(ocr, parser, i + 1, (t) => !leerRecibo(t).cuil);
                 // El OCR va primero (es lo que trae los datos); la capa de texto, después (trae los rótulos).
-                texto = `${leido}\n\n[Texto del PDF — OCR con confianza ${confianza}%]\n${texto}`;
+                texto = `${leido}\n\n[OCR: ${pasadas.join(" + ")}. Texto del PDF:]\n${texto}`;
             }
             textos.push(texto);
             await LoteRecibosSueldo.updateOne({ _id: lote._id }, { $set: { "progreso.leidas": i + 1 } });
@@ -209,6 +231,59 @@ async function leerLote(lote, buffer) {
     }
     const periodo = [...periodos.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
     await LoteRecibosSueldo.updateOne({ _id: lote._id }, { $set: { recibos, periodo, estadoLote: "listo", "progreso.leidas": textos.length } });
+}
+/**
+ * VOLVER A LEER UN RECIBO: su PDF (las páginas ya separadas) pasa otra vez por OCR, a más resolución
+ * que la lectura del lote (4× la página entera, y el encabezado a 4× si falta el CUIL), se releen los
+ * datos y se vuelve a buscar a la persona por CUIL o por nombre. La persona elegida a mano se respeta.
+ */
+export async function releerRecibo(lote, reciboId) {
+    const r = lote.recibos.id(reciboId);
+    if (!r)
+        throw new ErrorRecibos("Recibo no encontrado.", 404);
+    if (r.estado === "enviado" || r.estado === "firmado")
+        throw new ErrorRecibos("Ese recibo ya se envió a firmar: no se vuelve a leer.", 409);
+    const archivo = path.join(RAIZ_STORAGE, String(r.archivoUrl || "").replace(/^\/storage\//, ""));
+    if (!r.archivoUrl || !fs.existsSync(archivo))
+        throw new ErrorRecibos("El PDF de ese recibo ya no está en el servidor.", 404);
+    const parser = new PDFParse({ data: new Uint8Array(fs.readFileSync(archivo)) });
+    const ocr = await abrirOcr();
+    const textos = [];
+    try {
+        const capa = await textosPorPagina(parser);
+        for (let i = 0; i < capa.length; i++) {
+            const { texto, pasadas } = await ocrDePagina(ocr, parser, i + 1, (t) => !leerRecibo(t).cuil, true);
+            textos.push(`${texto}\n\n[Relectura — OCR: ${pasadas.join(" + ")}. Texto del PDF:]\n${capa[i]}`);
+        }
+    }
+    finally {
+        await parser.destroy().catch(() => { });
+        await ocr.terminate().catch(() => { });
+    }
+    const texto = textos.join("\n\n----- página siguiente -----\n\n");
+    const datos = leerRecibo(texto);
+    r.textoCrudo = texto;
+    r.datos = datos;
+    if (!r.asignadoAMano) {
+        let u = datos.cuil ? (await usuariosPorCuil(lote.tenantId, [datos.cuil])).get(datos.cuil) : null;
+        let porNombre = false;
+        if (!u && !datos.cuil && datos.nombre) {
+            u = await usuarioPorNombre(lote.tenantId, datos.nombre);
+            porNombre = !!u;
+        }
+        const contrato = u ? await personaYContrato(lote.tenantId, u._id) : null;
+        r.userId = u?._id || null;
+        r.nombreUsuario = u ? nombreDe(u) : "";
+        r.userProjectId = contrato?.userProjectId || null;
+        r.projectId = contrato?.projectId || null;
+        r.contractIndex = contrato?.contractIndex ?? null;
+        r.nombreProyecto = contrato?.nombreProyecto || "";
+        r.asociadoPorNombre = porNombre;
+        r.estado = u && contrato?.userProjectId ? "listo" : "sin_persona";
+        r.error = u && !contrato?.userProjectId ? "La persona no tiene un contrato vigente en ningún proyecto." : porNombre ? "El OCR no leyó el CUIL: se asoció por apellido y nombre. Revisá que sea la persona antes de enviar." : !datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "";
+    }
+    lote.markModified("recibos");
+    await lote.save();
 }
 /** Asigna a mano la persona de un recibo (y su contrato que rige). */
 export async function asignarPersona(lote, reciboId, userId) {

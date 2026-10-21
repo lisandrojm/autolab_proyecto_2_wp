@@ -92,6 +92,25 @@ export const recibosSueldoAPI = {
     a.remove();
     window.URL.revokeObjectURL(url);
   },
+  /** Vuelve a pasar el PDF de ese recibo por OCR, a más resolución, y relee sus datos. */
+  async releer(loteId: string, reciboId: string): Promise<LoteRecibos> {
+    const { data } = await axios.post(`/recibos-sueldo/lotes/${loteId}/recibos/${reciboId}/releer`);
+    return data;
+  },
+  /** El JSON de un solo recibo: sus datos, su persona y el texto crudo leído. */
+  async descargarJsonDeRecibo(lote: LoteRecibos, recibo: ReciboDelLote): Promise<void> {
+    const texto = await this.textoDeRecibo(lote._id, recibo._id);
+    const { textoCrudo: _omitido, ...resto } = recibo as any;
+    const json = JSON.stringify({ lote: { id: lote._id, archivo: lote.nombreArchivo, periodo: lote.periodo }, recibo: { ...resto, textoCrudo: texto } }, null, 2);
+    const url = window.URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `recibo-${(recibo.nombreUsuario || recibo.datos.nombre || recibo.paginas.join("-")).replace(/[^\w.-]+/g, "_")}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
   async asignarPersona(loteId: string, reciboId: string, userId: string): Promise<LoteRecibos> {
     const { data } = await axios.patch(`/recibos-sueldo/lotes/${loteId}/recibos/${reciboId}/persona`, { userId });
     return data;

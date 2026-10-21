@@ -20,6 +20,12 @@ export declare class ErrorRecibos extends Error {
 }
 /** Crea el lote, guarda la sábana y dispara la lectura en segundo plano. Devuelve el lote «leyendo». */
 export declare function procesarSabana(tenantId: Types.ObjectId, subidoPor: string | undefined, nombreArchivo: string, buffer: Buffer, paginasPorRecibo?: number): Promise<ILoteRecibosSueldo>;
+/**
+ * VOLVER A LEER UN RECIBO: su PDF (las páginas ya separadas) pasa otra vez por OCR, a más resolución
+ * que la lectura del lote (4× la página entera, y el encabezado a 4× si falta el CUIL), se releen los
+ * datos y se vuelve a buscar a la persona por CUIL o por nombre. La persona elegida a mano se respeta.
+ */
+export declare function releerRecibo(lote: ILoteRecibosSueldo, reciboId: string): Promise<void>;
 /** Asigna a mano la persona de un recibo (y su contrato que rige). */
 export declare function asignarPersona(lote: ILoteRecibosSueldo, reciboId: string, userId: string): Promise<void>;
 /**
