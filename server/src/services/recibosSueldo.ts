@@ -10,6 +10,7 @@ import UserProject from "../models/UserProject.js";
 import { Project } from "../models/Project.js";
 import { Tenant } from "../models/Tenant.js";
 import { DocumentoGenerado } from "../models/DocumentoGenerado.js";
+import { ReciboSueldoEnviado } from "../models/ReciboSueldoEnviado.js";
 import { agruparPaginas, leerRecibo, normalizarNombre } from "../utils/reciboDeSueldo.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
 import { getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
@@ -330,7 +331,8 @@ async function armarRecibos(lote: ILoteRecibosSueldo, sabana: PDFDocument, leido
   const periodo = [...periodos.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
   const set = { recibos, periodo, estadoLote: "listo", "progreso.leidas": lote.paginas };
   await LoteRecibosSueldo.updateOne({ _id: lote._id }, { $set: set });
-  lote.set({ periodo, estadoLote: "listo" });
+  // También en memoria: quien llamó (la subida masiva) cuenta los recibos del lote que tiene en la mano.
+  lote.set({ recibos, periodo, estadoLote: "listo" });
 }
 
 /**
@@ -414,7 +416,7 @@ export async function asignarPersona(lote: ILoteRecibosSueldo, reciboId: string,
  * sueldo para que, al volver firmado, el escaneo de carpetas marque el recibo y NO mueva el estado del
  * contrato (ver `estadoDropboxCronService`).
  */
-export async function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: string[]): Promise<{ enviados: number; fallidos: Array<{ reciboId: string; motivo: string }> }> {
+export async function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: string[], enviadoPor?: string): Promise<{ enviados: number; fallidos: Array<{ reciboId: string; motivo: string }> }> {
   const tenant = await Tenant.findById(lote.tenantId).lean();
   const cfg = getTenantDropboxConfig(tenant);
   if (!cfg) throw new ErrorRecibos("Dropbox no está conectado para esta organización.");
@@ -425,6 +427,7 @@ export async function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: string
   const elegidos: any[] = (lote.recibos as any[]).filter((r) => (!reciboIds || reciboIds.includes(String(r._id))) && r.estado === "listo");
   let enviados = 0;
   const fallidos: Array<{ reciboId: string; motivo: string }> = [];
+  const quien: any = enviadoPor && Types.ObjectId.isValid(enviadoPor) ? await User.findById(enviadoPor).select("firstName lastName email").lean() : null;
   for (const r of elegidos) {
     try {
       const [user, up] = await Promise.all([User.findOne({ _id: r.userId, tenantId: lote.tenantId }).lean(), UserProject.findById(r.userProjectId).lean()]);
@@ -442,6 +445,9 @@ export async function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: string
       r.codigo = codigo;
       r.error = "";
       enviados++;
+      // El registro permanente de lo enviado. Si falla, el envío ya se hizo: se avisa en el log y el
+      // historial lo completa la próxima vez que se consulte (`completarHistorial`, desde el lote).
+      await registrarEnviado(lote, r, quien).catch((e) => console.error(`[RECIBOS-SUELDO] No se registró el envío del recibo ${r._id}:`, e));
     } catch (e: any) {
       const motivo = e?.response?.data ? JSON.stringify(e.response.data) : e?.message || String(e);
       r.error = motivo;
@@ -462,8 +468,86 @@ export async function eliminarLote(lote: ILoteRecibosSueldo): Promise<void> {
 
 /** Marca como firmado el recibo cuyo código volvió a la carpeta de firmados. Lo llama el escaneo de Dropbox. */
 export async function marcarReciboFirmado(tenantId: unknown, codigo: string): Promise<boolean> {
-  const r = await LoteRecibosSueldo.updateOne({ tenantId, "recibos.codigo": codigo, "recibos.estado": "enviado" }, { $set: { "recibos.$.estado": "firmado", "recibos.$.firmadoEl": new Date() } });
-  return r.modifiedCount > 0;
+  const ahora = new Date();
+  const r = await LoteRecibosSueldo.updateOne({ tenantId, "recibos.codigo": codigo, "recibos.estado": "enviado" }, { $set: { "recibos.$.estado": "firmado", "recibos.$.firmadoEl": ahora } });
+  const h = await ReciboSueldoEnviado.updateOne({ tenantId, codigo, estado: "enviado" }, { $set: { estado: "firmado", firmadoEl: ahora } });
+  return r.modifiedCount > 0 || h.modifiedCount > 0;
+}
+
+/** La foto de un recibo enviado, para el registro permanente (`ReciboSueldoEnviado`). */
+function filaDelHistorial(lote: ILoteRecibosSueldo, r: any, quien?: any) {
+  const datos = JSON.parse(JSON.stringify(r.datos || {}));
+  return {
+    tenantId: lote.tenantId,
+    loteId: lote._id,
+    reciboId: r._id,
+    nombreSabana: lote.nombreArchivo || "",
+    nombreTxt: lote.nombreTxt || "",
+    fuente: lote.fuente || "ocr",
+    paginas: [...(r.paginas || [])],
+    periodo: datos.periodo || lote.periodo || "",
+    userId: r.userId || null,
+    nombreUsuario: r.nombreUsuario || "",
+    userProjectId: r.userProjectId || null,
+    projectId: r.projectId || null,
+    contractIndex: r.contractIndex ?? null,
+    nombreProyecto: r.nombreProyecto || "",
+    asignadoAMano: !!r.asignadoAMano,
+    datos,
+    archivoUrl: r.archivoUrl || "",
+    nombreEnviado: r.nombreEnviado || "",
+    codigo: r.codigo || "",
+    enviadoEl: r.enviadoEl || new Date(),
+    ...(quien ? { enviadoPor: quien._id, nombreEnviadoPor: nombreDe(quien) } : {}),
+    estado: r.estado === "firmado" ? "firmado" : "enviado",
+    firmadoEl: r.firmadoEl || null,
+  };
+}
+
+/** Guarda (o actualiza, si se reenvió) la fila del recibo en el registro de enviados. */
+async function registrarEnviado(lote: ILoteRecibosSueldo, r: any, quien?: any): Promise<void> {
+  await ReciboSueldoEnviado.updateOne({ loteId: lote._id, reciboId: r._id }, { $set: filaDelHistorial(lote, r, quien) }, { upsert: true });
+}
+
+/**
+ * Completa el registro con los recibos enviados que todavía no están: los que salieron antes de que
+ * existiera el registro, o aquéllos cuyo registro falló al enviar. Sólo agrega lo que falta y pone al día
+ * el «firmado»; no pisa lo que ya está.
+ */
+export async function completarHistorial(tenantId: Types.ObjectId): Promise<number> {
+  const lotes = await LoteRecibosSueldo.find({ tenantId, "recibos.estado": { $in: ["enviado", "firmado"] } }).select("-recibos.textoCrudo");
+  let agregados = 0;
+  for (const lote of lotes) {
+    for (const r of lote.recibos as any[]) {
+      if (r.estado !== "enviado" && r.estado !== "firmado") continue;
+      const fila = filaDelHistorial(lote, r);
+      const res = await ReciboSueldoEnviado.updateOne({ loteId: lote._id, reciboId: r._id }, { $setOnInsert: fila }, { upsert: true });
+      if (res.upsertedCount) agregados++;
+      else if (r.estado === "firmado") await ReciboSueldoEnviado.updateOne({ loteId: lote._id, reciboId: r._id, estado: "enviado" }, { $set: { estado: "firmado", firmadoEl: r.firmadoEl || new Date() } });
+    }
+  }
+  return agregados;
+}
+
+/** El registro de enviados, más nuevos primero, con filtros por período, estado y texto. */
+export async function listarEnviados(tenantId: Types.ObjectId, f: { periodo?: string; estado?: string; q?: string; pagina?: number; porPagina?: number }) {
+  const filtro: any = { tenantId };
+  if (f.periodo && /^\d{4}-\d{2}$/.test(f.periodo)) filtro.periodo = f.periodo;
+  if (f.estado === "enviado" || f.estado === "firmado") filtro.estado = f.estado;
+  const q = String(f.q || "").trim();
+  if (q) {
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    const digitos = q.replace(/\D/g, "");
+    filtro.$or = [{ nombreUsuario: re }, { "datos.nombre": re }, { "datos.legajo": re }, { nombreProyecto: re }, { codigo: re }, { "datos.tarea": re }, { "datos.categoria": re }, ...(digitos.length >= 3 ? [{ "datos.cuil": new RegExp(digitos) }] : [])];
+  }
+  const porPagina = Math.min(500, Math.max(1, f.porPagina || 100));
+  const pagina = Math.max(1, f.pagina || 1);
+  const [items, total, periodos] = await Promise.all([
+    ReciboSueldoEnviado.find(filtro).select("-datos.conceptos").sort({ enviadoEl: -1, _id: -1 }).skip((pagina - 1) * porPagina).limit(porPagina).lean(),
+    ReciboSueldoEnviado.countDocuments(filtro),
+    ReciboSueldoEnviado.distinct("periodo", { tenantId }),
+  ]);
+  return { items, total, pagina, porPagina, periodos: (periodos as string[]).filter(Boolean).sort().reverse() };
 }
 
 /** Todo lo que se leyó del PDF, para descargar como JSON y revisar qué entendió el lector. */

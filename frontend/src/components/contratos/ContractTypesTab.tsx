@@ -837,6 +837,11 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       return;
     }
 
+    if (Number(form.multiplicadorDiario) < 0) {
+      sweetAlert.error('Multiplicador negativo', 'El multiplicador diario no puede ser negativo. Para pagar la mitad de la escala, poné 0,5.');
+      return;
+    }
+
     const payload = {
       nombre: name,
       cantidadJornadas: form.cantidadJornadas,
@@ -1297,7 +1302,21 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
               </div>
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Multiplicador Diario</label>
-                <input type="number" className="input-field w-full" value={form.multiplicadorDiario} onChange={(e) => setForm((p) => ({ ...p, multiplicadorDiario: e.target.value }))} />
+                {/*
+                  Multiplica el importe por jornada de la escala: 1,5 paga una vez y media; 0,5 paga la mitad
+                  (no hace falta un «divisor»). Vacío o 0 es 1. Un número negativo no tiene sentido y el
+                  cálculo lo tomaba como 1 sin avisar: no se deja cargar (pedido del 21/10/2026).
+                */}
+                <input type="number" min={0} step="0.01" className={`input-field w-full ${Number(form.multiplicadorDiario) < 0 ? 'border-red-500' : ''}`} value={form.multiplicadorDiario} onChange={(e) => setForm((p) => ({ ...p, multiplicadorDiario: e.target.value }))} placeholder="1" />
+                {Number(form.multiplicadorDiario) < 0 ? (
+                  <p className="text-[11px] text-red-500 ml-1">No puede ser negativo. Para pagar la mitad, poné 0,5.</p>
+                ) : (
+                  <p className="text-[11px] text-gray-400 ml-1">
+                    {Number(form.multiplicadorDiario) > 0 && Number(form.multiplicadorDiario) !== 1
+                      ? `Paga el ${Math.round(Number(form.multiplicadorDiario) * 100)}% de la escala por jornada.`
+                      : '1,5 = una vez y media · 0,5 = la mitad. Vacío o 0 = la escala tal cual.'}
+                  </p>
+                )}
               </div>
             </div>
 

@@ -6,9 +6,10 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { LoteRecibosSueldo } from "../models/LoteRecibosSueldo.js";
+import { ReciboSueldoEnviado } from "../models/ReciboSueldoEnviado.js";
 import { User } from "../models/User.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
-import { ErrorRecibos, procesarVarios, asignarPersona, eliminarLote, enviarAFirmar, exportacionDelLote, procesarSabana, releerRecibo } from "../services/recibosSueldo.js";
+import { ErrorRecibos, procesarVarios, completarHistorial, listarEnviados, asignarPersona, eliminarLote, enviarAFirmar, exportacionDelLote, procesarSabana, releerRecibo } from "../services/recibosSueldo.js";
 /**
  * /api/v1/recibos-sueldo — el módulo Recibos de sueldo (ver `services/recibosSueldo.ts`).
  * Mismo permiso que Contratos: es una etapa más del circuito de firma.
@@ -74,6 +75,31 @@ recibosSueldoRoutes.post("/lotes/masivo", upload.array("archivos", 60), async (r
     }
     catch (e) {
         responderError(res, e, "subir varios");
+    }
+});
+// GET /enviados?periodo=&estado=&q=&pagina= — el registro permanente de los recibos enviados a firmar.
+recibosSueldoRoutes.get("/enviados", async (req, res) => {
+    try {
+        // Primero se completa con lo enviado que todavía no esté registrado (envíos anteriores al registro).
+        await completarHistorial(req.tenantObjectId);
+        res.json(await listarEnviados(req.tenantObjectId, { periodo: String(req.query.periodo || ""), estado: String(req.query.estado || ""), q: String(req.query.q || ""), pagina: Number(req.query.pagina) || 1, porPagina: Number(req.query.porPagina) || 100 }));
+    }
+    catch (e) {
+        responderError(res, e, "listar enviados");
+    }
+});
+// GET /enviados/:id — una fila del registro, completa (con los conceptos).
+recibosSueldoRoutes.get("/enviados/:id", async (req, res) => {
+    try {
+        if (!Types.ObjectId.isValid(req.params.id))
+            throw new ErrorRecibos("Registro no encontrado.", 404);
+        const fila = await ReciboSueldoEnviado.findOne({ _id: req.params.id, tenantId: req.tenantObjectId }).lean();
+        if (!fila)
+            throw new ErrorRecibos("Registro no encontrado.", 404);
+        res.json(fila);
+    }
+    catch (e) {
+        responderError(res, e, "ver enviado");
     }
 });
 // GET /lotes — los lotes del tenant, más nuevos primero, con el resumen de cada uno.
@@ -155,7 +181,7 @@ recibosSueldoRoutes.post("/lotes/:id/enviar", async (req, res) => {
     try {
         const { reciboIds } = z.object({ reciboIds: z.array(z.string()).max(2000).optional() }).parse(req.body || {});
         const lote = await loteDe(req);
-        const r = await enviarAFirmar(lote, reciboIds);
+        const r = await enviarAFirmar(lote, reciboIds, req.user?.userId);
         res.json({ ...r, lote });
     }
     catch (e) {

@@ -99,6 +99,40 @@ export interface ResultadoMasivo {
   omitidos: Array<{ archivo: string; motivo: string }>;
 }
 
+/** Una fila del registro permanente de recibos enviados a firmar (`recibos_sueldo_enviados`). */
+export interface ReciboEnviado {
+  _id: string;
+  loteId: string;
+  reciboId: string;
+  nombreSabana: string;
+  nombreTxt: string;
+  fuente: string;
+  paginas: number[];
+  periodo: string;
+  userId?: string | null;
+  nombreUsuario: string;
+  nombreProyecto: string;
+  asignadoAMano: boolean;
+  /** En el listado viene sin `conceptos`; completo en `enviado(id)`. */
+  datos: DatosRecibo;
+  archivoUrl: string;
+  nombreEnviado: string;
+  codigo: string;
+  enviadoEl: string;
+  nombreEnviadoPor: string;
+  estado: "enviado" | "firmado";
+  firmadoEl?: string | null;
+}
+
+export interface PaginaEnviados {
+  items: ReciboEnviado[];
+  total: number;
+  pagina: number;
+  porPagina: number;
+  /** Los períodos que hay en el registro, más nuevos primero: para el filtro. */
+  periodos: string[];
+}
+
 export interface PersonaBuscada {
   _id: string;
   nombre: string;
@@ -108,7 +142,7 @@ export interface PersonaBuscada {
 
 export const ETIQUETA_ESTADO_RECIBO: Record<EstadoRecibo, string> = {
   sin_persona: "Sin persona",
-  listo: "Listo para enviar",
+  listo: "Listo",
   enviado: "Enviado a firmar",
   firmado: "Firmado",
   error: "Error",
@@ -133,6 +167,15 @@ export const recibosSueldoAPI = {
     for (const a of archivos) fd.append("archivos", a);
     fd.append("paginasPorRecibo", String(paginasPorRecibo));
     const { data } = await axios.post("/recibos-sueldo/lotes/masivo", fd, { headers: { "Content-Type": "multipart/form-data" } });
+    return data;
+  },
+  /** El registro de enviados (nunca se borra). Filtros opcionales: período "YYYY-MM", estado y texto. */
+  async enviados(filtros: { periodo?: string; estado?: string; q?: string; pagina?: number; porPagina?: number } = {}): Promise<PaginaEnviados> {
+    const { data } = await axios.get("/recibos-sueldo/enviados", { params: filtros });
+    return data;
+  },
+  async enviado(id: string): Promise<ReciboEnviado> {
+    const { data } = await axios.get(`/recibos-sueldo/enviados/${id}`);
     return data;
   },
   async lotes(): Promise<LoteRecibos[]> {

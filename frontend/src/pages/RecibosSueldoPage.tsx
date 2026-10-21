@@ -8,6 +8,8 @@ import { BotonOrden, useOrdenTabla } from "../components/ui/OrdenTabla";
 import { recibosSueldoAPI, ETIQUETA_ESTADO_RECIBO, type LoteRecibos, type ReciboDelLote, type PersonaBuscada, type ResultadoMasivo } from "../api/recibosSueldo";
 import { getImageUrl } from "../utils/imageHelpers";
 import { sweetAlert } from "../utils/sweetAlert";
+import { DetalleRecibo, fmtCuil, fechaHora, periodoTexto, importeNumero, pesos } from "../components/recibos/DetalleRecibo";
+import { RegistroEnviadosRecibos } from "../components/recibos/RegistroEnviadosRecibos";
 
 /*
   RECIBOS DE SUELDO (Contratación, 20/10/2026). Se sube la sábana PDF con todos los recibos del mes (dos
@@ -18,19 +20,6 @@ import { sweetAlert } from "../utils/sweetAlert";
   nomenclatura «Recibos de sueldo»). Lo que el lector entendió se puede bajar entero como JSON.
 */
 
-const fmtCuil = (c: string) => (c && c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}` : c || "—");
-const fechaHora = (iso?: string | null) => (iso ? new Date(iso).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—");
-const periodoTexto = (p: string) => {
-  const m = /^(\d{4})-(\d{2})$/.exec(p || "");
-  if (!m) return p || "—";
-  const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-  return `${meses[Number(m[2]) - 1]} ${m[1]}`;
-};
-
-/** «1.234.567,89» → 1234567.89, para ordenar. */
-const importeNumero = (s?: string) => (s ? Number(s.replace(/\./g, "").replace(",", ".")) || 0 : 0);
-const pesos = (s?: string) => (s ? `$ ${s}` : "—");
-
 const CLASE_ESTADO: Record<string, string> = {
   sin_persona: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800",
   listo: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
@@ -38,7 +27,13 @@ const CLASE_ESTADO: Record<string, string> = {
   firmado: "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800",
   error: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800",
 };
-const ICONO_ESTADO: Record<string, any> = { sin_persona: faUserSlash, listo: faCircleCheck, enviado: faClock, firmado: faCircleCheck, error: faCircleXmark };
+const ICONO_ESTADO: Record<string, any> = {
+  sin_persona: faUserSlash,
+  listo: faCircleCheck,
+  enviado: faClock,
+  firmado: faCircleCheck,
+  error: faCircleXmark,
+};
 
 export const RecibosSueldoPage: React.FC = () => {
   const [lotes, setLotes] = useState<LoteRecibos[] | null>(null);
@@ -50,10 +45,14 @@ export const RecibosSueldoPage: React.FC = () => {
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [buscar, setBuscar] = useState("");
   const [paginasPorRecibo, setPaginasPorRecibo] = useState(2);
-  const [verTexto, setVerTexto] = useState<{ recibo: ReciboDelLote; texto: string | null } | null>(null);
+  const [verTexto, setVerTexto] = useState<{
+    recibo: ReciboDelLote;
+    texto: string | null;
+  } | null>(null);
   const [asignando, setAsignando] = useState<ReciboDelLote | null>(null);
   const inputArchivo = useRef<HTMLInputElement>(null);
   const [resultado, setResultado] = useState<ResultadoMasivo | null>(null);
+  const [vista, setVista] = useState<"lotes" | "enviados">("lotes");
 
   const cargarLotes = useCallback(async () => {
     try {
@@ -187,7 +186,11 @@ export const RecibosSueldoPage: React.FC = () => {
     tocara el botón de cada una, con el avance a la vista y la posibilidad de frenar. Cada recibo son
     unos 10 s (dos páginas, cuatro pasadas de OCR).
   */
-  const [cola, setCola] = useState<{ actual: number; total: number; nombre: string } | null>(null);
+  const [cola, setCola] = useState<{
+    actual: number;
+    total: number;
+    nombre: string;
+  } | null>(null);
   const frenarCola = useRef(false);
   const releerEnCola = async (items: ReciboDelLote[]) => {
     if (!lote || items.length === 0) return;
@@ -196,7 +199,11 @@ export const RecibosSueldoPage: React.FC = () => {
     let fallidos = 0;
     for (const [i, r] of items.entries()) {
       if (frenarCola.current) break;
-      setCola({ actual: i + 1, total: items.length, nombre: r.nombreUsuario || r.datos.nombre || `páginas ${r.paginas.join("-")}` });
+      setCola({
+        actual: i + 1,
+        total: items.length,
+        nombre: r.nombreUsuario || r.datos.nombre || `páginas ${r.paginas.join("-")}`,
+      });
       try {
         setLote(await recibosSueldoAPI.releer(lote._id, r._id));
         hechos++;
@@ -216,10 +223,20 @@ export const RecibosSueldoPage: React.FC = () => {
     if (!r.isConfirmed) return;
     setEnviando(true);
     try {
-      const res = await recibosSueldoAPI.enviar(lote._id, items.map((x) => x._id));
+      const res = await recibosSueldoAPI.enviar(
+        lote._id,
+        items.map((x) => x._id),
+      );
       setLote(res.lote);
       setSeleccion(new Set());
-      if (res.fallidos.length) sweetAlert.warning(`${res.enviados} enviado${res.enviados === 1 ? "" : "s"}, ${res.fallidos.length} con error`, res.fallidos.map((f) => f.motivo).slice(0, 3).join(" · "));
+      if (res.fallidos.length)
+        sweetAlert.warning(
+          `${res.enviados} enviado${res.enviados === 1 ? "" : "s"}, ${res.fallidos.length} con error`,
+          res.fallidos
+            .map((f) => f.motivo)
+            .slice(0, 3)
+            .join(" · "),
+        );
       else sweetAlert.success("Enviados", `${res.enviados} recibo${res.enviados === 1 ? "" : "s"} al Outbox.`);
       void cargarLotes();
     } catch (e: any) {
@@ -265,9 +282,15 @@ export const RecibosSueldoPage: React.FC = () => {
     if (!lote) return;
     setVerTexto({ recibo, texto: null });
     try {
-      setVerTexto({ recibo, texto: await recibosSueldoAPI.textoDeRecibo(lote._id, recibo._id) });
+      setVerTexto({
+        recibo,
+        texto: await recibosSueldoAPI.textoDeRecibo(lote._id, recibo._id),
+      });
     } catch (e: any) {
-      setVerTexto({ recibo, texto: `No se pudo leer: ${e?.response?.data?.error || e?.message || ""}` });
+      setVerTexto({
+        recibo,
+        texto: `No se pudo leer: ${e?.response?.data?.error || e?.message || ""}`,
+      });
     }
   };
 
@@ -293,226 +316,312 @@ export const RecibosSueldoPage: React.FC = () => {
         </div>
       }
     >
-      {resultado && <ResultadoSubida resultado={resultado} lotes={lotes || []} onElegir={setLoteId} onCerrar={() => setResultado(null)} />}
-      {lotes === null ? (
-        <div className="flex justify-center py-16">
-          <LoadingSpinner />
-        </div>
-      ) : lotes.length === 0 ? (
-        <div className="text-center py-16 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
-          <FontAwesomeIcon icon={faReceipt} className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Todavía no se subió ninguna sábana de recibos.</p>
-          <p className="text-xs text-gray-400 mt-1">Las sábanas PDF del mes y el TXT que MEMOSOFT exporta con cada una: se eligen todos juntos y se emparejan solos.</p>
-        </div>
+      {/* Dos vistas: los lotes subidos (para revisar y enviar) y el registro de lo que ya se envió, que no se borra. */}
+      <div className="mb-4 flex gap-1 border-b border-gray-200 dark:border-gray-700">
+        {(
+          [
+            ["lotes", "Sábanas subidas"],
+            ["enviados", "Enviados (registro)"],
+          ] as const
+        ).map(([v, t]) => (
+          <button key={v} type="button" onClick={() => setVista(v)} className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold ${vista === v ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+            {t}
+          </button>
+        ))}
+      </div>
+      {vista === "enviados" ? (
+        <RegistroEnviadosRecibos />
       ) : (
-        <div className="space-y-4">
-          {/* Los lotes subidos: uno por sábana. */}
-          <div className="flex flex-wrap items-center gap-2">
-            <select value={loteId || ""} onChange={(e) => setLoteId(e.target.value || null)} className="input-field py-2 text-sm max-w-md">
-              {lotes.map((l) => (
-                <option key={l._id} value={l._id}>
-                  {periodoTexto(l.periodo)} · {l.nombreArchivo} · {l.resumen?.total ?? l.recibos.length} recibos{l.resumen ? ` (${l.resumen.listos} listos, ${l.resumen.enviados} enviados, ${l.resumen.firmados} firmados${l.resumen.sinPersona ? `, ${l.resumen.sinPersona} sin persona` : ""})` : ""} · {fechaHora(l.createdAt)}
-                </option>
-              ))}
-            </select>
-            {lote && (
-              <>
-                <button type="button" onClick={() => recibosSueldoAPI.descargarExportacion(lote)} className="btn-secondary flex items-center gap-2 text-sm px-3 py-2" title="Bajar un JSON con todo lo que el lector entendió de cada recibo, incluido el texto crudo">
-                  <FontAwesomeIcon icon={faFileCode} /> Descargar lo leído (JSON)
-                </button>
-                <button type="button" onClick={eliminarLote} className="btn-secondary flex items-center gap-2 text-sm px-3 py-2 text-red-600" title="Borrar el lote (sólo si no se envió nada)">
-                  <FontAwesomeIcon icon={faTrash} /> Borrar lote
-                </button>
-              </>
-            )}
-          </div>
-
-          {!lote && cargandoLote ? (
+        <>
+          {resultado && <ResultadoSubida resultado={resultado} lotes={lotes || []} onElegir={setLoteId} onCerrar={() => setResultado(null)} />}
+          {lotes === null ? (
             <div className="flex justify-center py-16">
               <LoadingSpinner />
             </div>
-          ) : !lote ? null : lote.estadoLote === "leyendo" ? (
-            /* La lectura en el server: se muestra el avance y la lista aparece sola al terminar. */
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-6 dark:border-blue-800 dark:bg-blue-900/20">
-              <p className="flex items-center gap-2 text-sm font-semibold text-blue-800 dark:text-blue-200">
-                <FontAwesomeIcon icon={faSpinner} spin />
-                Leyendo la sábana: página {lote.progreso?.leidas ?? 0} de {lote.progreso?.total || lote.paginas}
-              </p>
-              <div className="mt-3 h-2 w-full rounded-full bg-blue-100 dark:bg-blue-950">
-                <div className="h-2 rounded-full bg-blue-600 transition-all" style={{ width: `${Math.round(((lote.progreso?.leidas ?? 0) / Math.max(1, lote.progreso?.total || lote.paginas)) * 100)}%` }} />
-              </div>
-              <p className="mt-2 text-xs text-blue-700/80 dark:text-blue-300/80">Cada página se renderiza y pasa por OCR (los datos del recibo están dibujados, no son texto). Tres pasadas por página (la caja de datos, la página a 2 y a 3 aumentos): unos 3 segundos cada una. Podés salir de esta pantalla: la lectura sigue en el server.</p>
-            </div>
-          ) : lote.estadoLote === "error" ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">
-              <p className="font-semibold">No se pudo leer la sábana.</p>
-              <p className="mt-1 text-xs">{lote.error || "Error desconocido."} Borrá el lote y volvé a subirla.</p>
+          ) : lotes.length === 0 ? (
+            <div className="text-center py-16 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+              <FontAwesomeIcon icon={faReceipt} className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Todavía no se subió ninguna sábana de recibos.</p>
+              <p className="text-xs text-gray-400 mt-1">Las sábanas PDF del mes y el TXT que MEMOSOFT exporta con cada una: se eligen todos juntos y se emparejan solos.</p>
             </div>
           ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-3">
-                <input value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por nombre, CUIL o legajo…" className="input-field py-2 text-sm w-72" />
-                <span className="text-xs text-gray-500">
-                  {deTxt ? <span className="mr-1 rounded bg-emerald-100 px-1.5 py-0.5 font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title={lote.nombreTxt || ""}>Datos del TXT</span> : <span className="mr-1 rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Leído por OCR</span>}
-                  {lote.paginas} páginas · {recibos.length} recibos · {listos.length} listos · {recibos.filter((r) => r.estado === "sin_persona").length} sin persona · {recibos.filter((r) => r.estado === "enviado").length} enviados · {recibos.filter((r) => r.estado === "firmado").length} firmados
-                </span>
-                <div className="ml-auto flex items-center gap-2">
-                  {deTxt ? null : cola ? (
-                    <span className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
-                      <FontAwesomeIcon icon={faSpinner} spin /> Releyendo {cola.actual} de {cola.total}: {cola.nombre}
-                      <button type="button" onClick={() => (frenarCola.current = true)} className="ml-1 rounded border border-blue-300 px-2 py-0.5 text-[11px] hover:bg-blue-100 dark:hover:bg-blue-900/40">
-                        Frenar
-                      </button>
-                    </span>
-                  ) : (
-                    <button type="button" disabled={enviando || tildados.length === 0} onClick={() => releerEnCola(tildados)} className="btn-secondary flex items-center gap-2 text-sm px-3 py-2 disabled:opacity-50" title="Volver a leer las filas tildadas, de a una, en orden">
-                      <FontAwesomeIcon icon={faRotateRight} /> Releer tildados {tildados.length > 0 ? `(${tildados.length})` : ""}
+            <div className="space-y-4">
+              {/* Los lotes subidos: uno por sábana. */}
+              <div className="flex flex-wrap items-center gap-2">
+                <select value={loteId || ""} onChange={(e) => setLoteId(e.target.value || null)} className="input-field py-2 text-sm max-w-md">
+                  {lotes.map((l) => (
+                    <option key={l._id} value={l._id}>
+                      {periodoTexto(l.periodo)} · {l.nombreArchivo} · {l.resumen?.total ?? l.recibos.length} recibos
+                      {l.resumen ? ` (${l.resumen.listos} listos, ${l.resumen.enviados} enviados, ${l.resumen.firmados} firmados${l.resumen.sinPersona ? `, ${l.resumen.sinPersona} sin persona` : ""})` : ""} · {fechaHora(l.createdAt)}
+                    </option>
+                  ))}
+                </select>
+                {lote && (
+                  <>
+                    <button type="button" onClick={() => recibosSueldoAPI.descargarExportacion(lote)} className="btn-secondary flex items-center gap-2 text-sm px-3 py-2" title="Bajar un JSON con todo lo que el lector entendió de cada recibo, incluido el texto crudo">
+                      <FontAwesomeIcon icon={faFileCode} /> Descargar lo leído (JSON)
                     </button>
-                  )}
-                  <button type="button" disabled={enviando || !!cola || seleccionados.length === 0} onClick={() => enviar(seleccionados)} className="btn-primary flex items-center gap-2 text-sm px-4 py-2 disabled:opacity-50" title="Manda a firmar los listos de entre los tildados">
-                    <FontAwesomeIcon icon={enviando ? faSpinner : faPaperPlane} spin={enviando} /> Enviar a firmar {seleccionados.length > 0 ? `(${seleccionados.length} listo${seleccionados.length === 1 ? "" : "s"})` : ""}
-                  </button>
-                  <button type="button" disabled={enviando || listos.length === 0} onClick={() => enviar(listos)} className="btn-secondary text-sm px-3 py-2 disabled:opacity-50" title="Todos los recibos listos del lote">
-                    Enviar todos los listos ({listos.length})
-                  </button>
-                </div>
+                    <button type="button" onClick={eliminarLote} className="btn-secondary flex items-center gap-2 text-sm px-3 py-2 text-red-600" title="Borrar el lote (sólo si no se envió nada)">
+                      <FontAwesomeIcon icon={faTrash} /> Borrar lote
+                    </button>
+                  </>
+                )}
               </div>
 
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr>
-                      <th className={th}>
-                        <input type="checkbox" checked={tildables.length > 0 && tildables.every((r) => seleccion.has(r._id))} onChange={(e) => setSeleccion(e.target.checked ? new Set(tildables.map((r) => r._id)) : new Set())} title="Tildar todas las filas que todavía no se enviaron (las de la búsqueda, si hay una)" />
-                      </th>
-                      <th className={th}>
-                        <BotonOrden columna="pagina" orden={orden} onAlternar={alternar}>Páginas</BotonOrden>
-                      </th>
-                      <th className={th}>
-                        <BotonOrden columna="persona" orden={orden} onAlternar={alternar}>Persona</BotonOrden>
-                      </th>
-                      <th className={th}>
-                        <BotonOrden columna="legajo" orden={orden} onAlternar={alternar}>Legajo</BotonOrden>
-                      </th>
-                      <th className={th}>
-                        <BotonOrden columna="cuil" orden={orden} onAlternar={alternar}>CUIL</BotonOrden>
-                      </th>
-                      <th className={th}>
-                        <BotonOrden columna="puesto" orden={orden} onAlternar={alternar}>Categoría · Tarea</BotonOrden>
-                      </th>
-                      <th className={th}>
-                        <BotonOrden columna="ingreso" orden={orden} onAlternar={alternar}>Ingreso</BotonOrden>
-                      </th>
-                      <th className={th}>Período</th>
-                      <th className={`${th} text-right`}>
-                        <BotonOrden columna="bruto" orden={orden} onAlternar={alternar}>Bruto</BotonOrden>
-                      </th>
-                      <th className={`${th} text-right`}>
-                        <BotonOrden columna="descuentos" orden={orden} onAlternar={alternar}>Descuentos</BotonOrden>
-                      </th>
-                      <th className={`${th} text-right`}>
-                        <BotonOrden columna="neto" orden={orden} onAlternar={alternar}>Neto a cobrar</BotonOrden>
-                      </th>
-                      <th className={th}>
-                        <BotonOrden columna="recibo" orden={orden} onAlternar={alternar}>Recibo</BotonOrden>
-                      </th>
-                      <th className={th}>PDF</th>
-                      <th className={th}>
-                        <BotonOrden columna="estado" orden={orden} onAlternar={alternar}>Estado</BotonOrden>
-                      </th>
-                      <th className={th}></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {ordenados.length === 0 && (
-                      <tr>
-                        <td colSpan={16} className="px-4 py-10 text-center text-sm text-gray-500">
-                          Ningún recibo coincide con la búsqueda.
-                        </td>
-                      </tr>
-                    )}
-                    {ordenados.map((r) => (
-                      <tr key={r._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
-                        <td className="px-4 py-3">{sePuedeTildar(r) && <input type="checkbox" checked={seleccion.has(r._id)} onChange={(e) => setSeleccion((s) => { const n = new Set(s); if (e.target.checked) n.add(r._id); else n.delete(r._id); return n; })} />}</td>
-                        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{r.paginas.join("-")}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col">
-                            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{r.nombreUsuario || <span className="italic text-amber-600 dark:text-amber-400">Sin persona en la plataforma</span>}</span>
-                            {/* Lo que dice el recibo, para cotejar con la persona asociada. */}
-                            {r.datos.nombre && <span className="text-xs text-gray-500">En el recibo: {r.datos.nombre}</span>}
-                            {r.nombreProyecto && <span className="text-[11px] text-gray-400">{r.nombreProyecto}{r.asignadoAMano ? " · elegida a mano" : ""}</span>}
-                            {r.asociadoPorNombre && !r.asignadoAMano && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Asociada por nombre (sin CUIL legible): revisá antes de enviar</span>}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm font-mono">{r.datos.legajo || "—"}</td>
-                        <td className="px-4 py-3 text-sm font-mono whitespace-nowrap">{fmtCuil(r.datos.cuil)}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col min-w-[10rem]">
-                            <span className="text-sm text-gray-800 dark:text-gray-200">{r.datos.categoria || "—"}</span>
-                            {r.datos.tarea && <span className="text-xs text-gray-500">{r.datos.tarea}</span>}
-                            {r.datos.sector && <span className="text-[11px] text-gray-400">Sector: {r.datos.sector}</span>}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col whitespace-nowrap">
-                            <span className="text-sm">{r.datos.ingreso || "—"}</span>
-                            {r.datos.antiguedad && <span className="text-xs text-gray-500">{r.datos.antiguedad}</span>}
-                            {r.datos.modalidad && <span className="text-[11px] text-gray-400 max-w-[12rem] truncate" title={r.datos.modalidad}>{r.datos.modalidad}</span>}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm whitespace-nowrap">{periodoTexto(r.datos.periodo)}</td>
-                        <td className="px-4 py-3 text-sm whitespace-nowrap text-right" title={r.datos.basico ? `Básico ${r.datos.basico}` : ""}>{pesos(r.datos.sueldoBruto)}</td>
-                        <td className="px-4 py-3 text-sm whitespace-nowrap text-right text-red-600 dark:text-red-400">{pesos(r.datos.descuentos)}</td>
-                        <td className="px-4 py-3 text-sm whitespace-nowrap text-right font-semibold" title={r.datos.otros ? `Sueldo neto ${r.datos.sueldoNeto || "—"} · Otros ${r.datos.otros}` : ""}>{pesos(r.datos.neto)}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col whitespace-nowrap">
-                            <span className="text-sm font-mono">{r.datos.numeroRecibo ? `N° ${r.datos.numeroRecibo}` : "—"}</span>
-                            {r.datos.fechaPago && <span className="text-[11px] text-gray-400">Pago {r.datos.fechaPago}</span>}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <a href={getImageUrl(r.archivoUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300" title="Abrir el PDF de este recibo">
-                            <FontAwesomeIcon icon={faFilePdf} /> Ver
-                          </a>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1">
-                            <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[11px] font-semibold border ${CLASE_ESTADO[r.estado]}`} title={r.error || r.nombreEnviado || ""}>
-                              <FontAwesomeIcon icon={ICONO_ESTADO[r.estado]} className="h-3 w-3" /> {ETIQUETA_ESTADO_RECIBO[r.estado]}
-                            </span>
-                            {r.enviadoEl && <span className="text-[11px] text-gray-400">Enviado {fechaHora(r.enviadoEl)}{r.codigo ? ` · ${r.codigo}` : ""}</span>}
-                            {r.firmadoEl && <span className="text-[11px] text-green-600">Firmado {fechaHora(r.firmadoEl)}</span>}
-                            {r.error && <span className="text-[11px] text-red-600 max-w-xs">{r.error}</span>}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            {(r.estado === "sin_persona" || r.estado === "listo" || r.estado === "error") && (
-                              <button type="button" onClick={() => setAsignando(r)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg" title="Elegir la persona de este recibo">
-                                <FontAwesomeIcon icon={faUserPen} />
-                              </button>
-                            )}
-                            <button type="button" onClick={() => abrirTexto(r)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Ver el detalle del recibo: conceptos y el texto leído">
-                              <FontAwesomeIcon icon={faAlignLeft} />
-                            </button>
-                            <button type="button" onClick={() => recibosSueldoAPI.descargarJsonDeRecibo(lote, r)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Bajar el JSON de este recibo (datos, persona y texto leído)">
-                              <FontAwesomeIcon icon={faFileCode} />
-                            </button>
-                            {sePuedeReleer(r) && (
-                              <button type="button" disabled={releyendo === r._id} onClick={() => releer(r)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg disabled:opacity-50" title="Volver a leer el PDF de este recibo (OCR a más resolución)">
-                                <FontAwesomeIcon icon={releyendo === r._id ? faSpinner : faRotateRight} spin={releyendo === r._id} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
+              {!lote && cargandoLote ? (
+                <div className="flex justify-center py-16">
+                  <LoadingSpinner />
+                </div>
+              ) : !lote ? null : lote.estadoLote === "leyendo" ? (
+                /* La lectura en el server: se muestra el avance y la lista aparece sola al terminar. */
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-6 dark:border-blue-800 dark:bg-blue-900/20">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-blue-800 dark:text-blue-200">
+                    <FontAwesomeIcon icon={faSpinner} spin />
+                    Leyendo la sábana: página {lote.progreso?.leidas ?? 0} de {lote.progreso?.total || lote.paginas}
+                  </p>
+                  <div className="mt-3 h-2 w-full rounded-full bg-blue-100 dark:bg-blue-950">
+                    <div
+                      className="h-2 rounded-full bg-blue-600 transition-all"
+                      style={{
+                        width: `${Math.round(((lote.progreso?.leidas ?? 0) / Math.max(1, lote.progreso?.total || lote.paginas)) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-blue-700/80 dark:text-blue-300/80">Cada página se renderiza y pasa por OCR (los datos del recibo están dibujados, no son texto). Tres pasadas por página (la caja de datos, la página a 2 y a 3 aumentos): unos 3 segundos cada una. Podés salir de esta pantalla: la lectura sigue en el server.</p>
+                </div>
+              ) : lote.estadoLote === "error" ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">
+                  <p className="font-semibold">No se pudo leer la sábana.</p>
+                  <p className="mt-1 text-xs">{lote.error || "Error desconocido."} Borrá el lote y volvé a subirla.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <input value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por nombre, CUIL o legajo…" className="input-field py-2 text-sm w-72" />
+                    <span className="text-xs text-gray-500">
+                      {deTxt ? (
+                        <span className="mr-1 rounded bg-emerald-100 px-1.5 py-0.5 font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title={lote.nombreTxt || ""}>
+                          Datos del TXT
+                        </span>
+                      ) : (
+                        <span className="mr-1 rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Leído por OCR</span>
+                      )}
+                      {lote.paginas} páginas · {recibos.length} recibos · {listos.length} listos · {recibos.filter((r) => r.estado === "sin_persona").length} sin persona · {recibos.filter((r) => r.estado === "enviado").length} enviados · {recibos.filter((r) => r.estado === "firmado").length} firmados
+                    </span>
+                    <div className="ml-auto flex items-center gap-2">
+                      {deTxt ? null : cola ? (
+                        <span className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+                          <FontAwesomeIcon icon={faSpinner} spin /> Releyendo {cola.actual} de {cola.total}: {cola.nombre}
+                          <button type="button" onClick={() => (frenarCola.current = true)} className="ml-1 rounded border border-blue-300 px-2 py-0.5 text-[11px] hover:bg-blue-100 dark:hover:bg-blue-900/40">
+                            Frenar
+                          </button>
+                        </span>
+                      ) : (
+                        <button type="button" disabled={enviando || tildados.length === 0} onClick={() => releerEnCola(tildados)} className="btn-secondary flex items-center gap-2 text-sm px-3 py-2 disabled:opacity-50" title="Volver a leer las filas tildadas, de a una, en orden">
+                          <FontAwesomeIcon icon={faRotateRight} /> Releer tildados {tildados.length > 0 ? `(${tildados.length})` : ""}
+                        </button>
+                      )}
+                      <button type="button" disabled={enviando || !!cola || seleccionados.length === 0} onClick={() => enviar(seleccionados)} className="btn-primary flex items-center gap-2 text-sm px-4 py-2 disabled:opacity-50" title="Manda a firmar los listos de entre los tildados">
+                        <FontAwesomeIcon icon={enviando ? faSpinner : faPaperPlane} spin={enviando} /> Enviar a firmar {seleccionados.length > 0 ? `(${seleccionados.length} listo${seleccionados.length === 1 ? "" : "s"})` : ""}
+                      </button>
+                      <button type="button" disabled={enviando || listos.length === 0} onClick={() => enviar(listos)} className="btn-secondary text-sm px-3 py-2 disabled:opacity-50" title="Todos los recibos listos del lote">
+                        Enviar todos los listos ({listos.length})
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr>
+                          <th className={th}>
+                            <input type="checkbox" checked={tildables.length > 0 && tildables.every((r) => seleccion.has(r._id))} onChange={(e) => setSeleccion(e.target.checked ? new Set(tildables.map((r) => r._id)) : new Set())} title="Tildar todas las filas que todavía no se enviaron (las de la búsqueda, si hay una)" />
+                          </th>
+                          <th className={th}>
+                            <BotonOrden columna="pagina" orden={orden} onAlternar={alternar}>
+                              Páginas
+                            </BotonOrden>
+                          </th>
+                          <th className={th}>
+                            <BotonOrden columna="persona" orden={orden} onAlternar={alternar}>
+                              Persona
+                            </BotonOrden>
+                          </th>
+                          <th className={th}>
+                            <BotonOrden columna="legajo" orden={orden} onAlternar={alternar}>
+                              Legajo
+                            </BotonOrden>
+                          </th>
+                          <th className={th}>
+                            <BotonOrden columna="cuil" orden={orden} onAlternar={alternar}>
+                              CUIL
+                            </BotonOrden>
+                          </th>
+                          <th className={th}>
+                            <BotonOrden columna="puesto" orden={orden} onAlternar={alternar}>
+                              Categoría · Tarea
+                            </BotonOrden>
+                          </th>
+                          <th className={th}>
+                            <BotonOrden columna="ingreso" orden={orden} onAlternar={alternar}>
+                              Ingreso
+                            </BotonOrden>
+                          </th>
+                          <th className={th}>Período</th>
+                          <th className={`${th} text-right`}>
+                            <BotonOrden columna="bruto" orden={orden} onAlternar={alternar}>
+                              Bruto
+                            </BotonOrden>
+                          </th>
+                          <th className={`${th} text-right`}>
+                            <BotonOrden columna="descuentos" orden={orden} onAlternar={alternar}>
+                              Descuentos
+                            </BotonOrden>
+                          </th>
+                          <th className={`${th} text-right`}>
+                            <BotonOrden columna="neto" orden={orden} onAlternar={alternar}>
+                              Neto a cobrar
+                            </BotonOrden>
+                          </th>
+                          <th className={th}>
+                            <BotonOrden columna="recibo" orden={orden} onAlternar={alternar}>
+                              Recibo
+                            </BotonOrden>
+                          </th>
+                          <th className={th}>PDF</th>
+                          <th className={th}>
+                            <BotonOrden columna="estado" orden={orden} onAlternar={alternar}>
+                              Estado
+                            </BotonOrden>
+                          </th>
+                          <th className={th}></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                        {ordenados.length === 0 && (
+                          <tr>
+                            <td colSpan={16} className="px-4 py-10 text-center text-sm text-gray-500">
+                              Ningún recibo coincide con la búsqueda.
+                            </td>
+                          </tr>
+                        )}
+                        {ordenados.map((r) => (
+                          <tr key={r._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
+                            <td className="px-4 py-3">
+                              {sePuedeTildar(r) && (
+                                <input
+                                  type="checkbox"
+                                  checked={seleccion.has(r._id)}
+                                  onChange={(e) =>
+                                    setSeleccion((s) => {
+                                      const n = new Set(s);
+                                      if (e.target.checked) n.add(r._id);
+                                      else n.delete(r._id);
+                                      return n;
+                                    })
+                                  }
+                                />
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{r.paginas.join("-")}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col min-w-[12rem]">
+                                <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{r.nombreUsuario || <span className="italic text-amber-600 dark:text-amber-400">Sin persona en la plataforma</span>}</span>
+                                {/* Lo que dice el recibo, para cotejar con la persona asociada. */}
+                                {r.datos.nombre && <span className="text-xs text-gray-500">En el recibo: {r.datos.nombre}</span>}
+                                {r.nombreProyecto && (
+                                  <span className="text-[11px] text-gray-400">
+                                    {r.nombreProyecto}
+                                    {r.asignadoAMano ? " · elegida a mano" : ""}
+                                  </span>
+                                )}
+                                {r.asociadoPorNombre && !r.asignadoAMano && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Asociada por nombre (sin CUIL legible): revisá antes de enviar</span>}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm font-mono">{r.datos.legajo || "—"}</td>
+                            <td className="px-4 py-3 text-sm font-mono whitespace-nowrap">{fmtCuil(r.datos.cuil)}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col min-w-[10rem]">
+                                <span className="text-sm text-gray-800 dark:text-gray-200">{r.datos.categoria || "—"}</span>
+                                {r.datos.tarea && <span className="text-xs text-gray-500">{r.datos.tarea}</span>}
+                                {r.datos.sector && <span className="text-[11px] text-gray-400">Sector: {r.datos.sector}</span>}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col whitespace-nowrap">
+                                <span className="text-sm">{r.datos.ingreso || "—"}</span>
+                                {r.datos.antiguedad && <span className="text-xs text-gray-500">{r.datos.antiguedad}</span>}
+                                {r.datos.modalidad && (
+                                  <span className="text-[11px] text-gray-400 max-w-[12rem] truncate" title={r.datos.modalidad}>
+                                    {r.datos.modalidad}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm whitespace-nowrap">{periodoTexto(r.datos.periodo)}</td>
+                            <td className="px-4 py-3 text-sm whitespace-nowrap text-right" title={r.datos.basico ? `Básico ${r.datos.basico}` : ""}>
+                              {pesos(r.datos.sueldoBruto)}
+                            </td>
+                            <td className="px-4 py-3 text-sm whitespace-nowrap text-right text-red-600 dark:text-red-400">{pesos(r.datos.descuentos)}</td>
+                            <td className="px-4 py-3 text-sm whitespace-nowrap text-right font-semibold" title={r.datos.otros ? `Sueldo neto ${r.datos.sueldoNeto || "—"} · Otros ${r.datos.otros}` : ""}>
+                              {pesos(r.datos.neto)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col whitespace-nowrap">
+                                <span className="text-sm font-mono">{r.datos.numeroRecibo ? `N° ${r.datos.numeroRecibo}` : "—"}</span>
+                                {r.datos.fechaPago && <span className="text-[11px] text-gray-400">Pago {r.datos.fechaPago}</span>}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <a href={getImageUrl(r.archivoUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300" title="Abrir el PDF de este recibo">
+                                <FontAwesomeIcon icon={faFilePdf} /> Ver
+                              </a>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col gap-1">
+                                <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[11px] font-semibold border ${CLASE_ESTADO[r.estado]}`} title={r.error || r.nombreEnviado || ""}>
+                                  <FontAwesomeIcon icon={ICONO_ESTADO[r.estado]} className="h-3 w-3" /> {ETIQUETA_ESTADO_RECIBO[r.estado]}
+                                </span>
+                                {r.enviadoEl && (
+                                  <span className="text-[11px] text-gray-400">
+                                    Enviado {fechaHora(r.enviadoEl)}
+                                    {r.codigo ? ` · ${r.codigo}` : ""}
+                                  </span>
+                                )}
+                                {r.firmadoEl && <span className="text-[11px] text-green-600">Firmado {fechaHora(r.firmadoEl)}</span>}
+                                {r.error && <span className="text-[11px] text-red-600 max-w-xs">{r.error}</span>}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                {(r.estado === "sin_persona" || r.estado === "listo" || r.estado === "error") && (
+                                  <button type="button" onClick={() => setAsignando(r)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg" title="Elegir la persona de este recibo">
+                                    <FontAwesomeIcon icon={faUserPen} />
+                                  </button>
+                                )}
+                                <button type="button" onClick={() => abrirTexto(r)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Ver el detalle del recibo: conceptos y el texto leído">
+                                  <FontAwesomeIcon icon={faAlignLeft} />
+                                </button>
+                                <button type="button" onClick={() => recibosSueldoAPI.descargarJsonDeRecibo(lote, r)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Bajar el JSON de este recibo (datos, persona y texto leído)">
+                                  <FontAwesomeIcon icon={faFileCode} />
+                                </button>
+                                {sePuedeReleer(r) && (
+                                  <button type="button" disabled={releyendo === r._id} onClick={() => releer(r)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg disabled:opacity-50" title="Volver a leer el PDF de este recibo (OCR a más resolución)">
+                                    <FontAwesomeIcon icon={releyendo === r._id ? faSpinner : faRotateRight} spin={releyendo === r._id} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {verTexto && (
@@ -524,7 +633,10 @@ export const RecibosSueldoPage: React.FC = () => {
               <pre className="mt-2 text-xs bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 max-h-[40vh] overflow-auto whitespace-pre-wrap">{JSON.stringify({ ...verTexto.recibo.datos, conceptos: undefined }, null, 2)}</pre>
             </details>
             {verTexto.texto === null ? <LoadingSpinner /> : <pre className="text-xs bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 max-h-[50vh] overflow-auto whitespace-pre-wrap">{verTexto.texto || "(sin texto: el PDF puede ser una imagen escaneada)"}</pre>}
-            <p className="text-[11px] text-gray-400">Arriba, lo que se entendió; abajo, el texto tal cual se leyó ({lote?.fuente === "txt" ? "del TXT de MEMOSOFT" : "por OCR del PDF"}).</p>
+            <p className="text-[11px] text-gray-400">
+              Arriba, lo que se entendió; abajo, el texto tal cual se leyó ({lote?.fuente === "txt" ? "del TXT de MEMOSOFT" : "por OCR del PDF"}
+              ).
+            </p>
           </div>
         </Modal>
       )}
@@ -548,17 +660,35 @@ export const RecibosSueldoPage: React.FC = () => {
   );
 };
 
-const COMO_SE_EMPAREJO: Record<string, string> = { nombre: "por nombre", paginas: "por cantidad de páginas", unicos: "único PDF con único TXT" };
+const COMO_SE_EMPAREJO: Record<string, string> = {
+  nombre: "por nombre",
+  paginas: "por cantidad de páginas",
+  unicos: "único PDF con único TXT",
+};
 
 /** Lo que pasó con cada archivo de la subida: qué TXT fue con qué PDF y qué quedó afuera, con el motivo. */
-const ResultadoSubida: React.FC<{ resultado: ResultadoMasivo; lotes: LoteRecibos[]; onElegir: (id: string) => void; onCerrar: () => void }> = ({ resultado, lotes, onElegir, onCerrar }) => {
+const ResultadoSubida: React.FC<{
+  resultado: ResultadoMasivo;
+  lotes: LoteRecibos[];
+  onElegir: (id: string) => void;
+  onCerrar: () => void;
+}> = ({ resultado, lotes, onElegir, onCerrar }) => {
   const total = resultado.lotes.reduce((n, l) => n + l.recibos, 0);
   return (
     <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <div className="flex items-start justify-between gap-3">
         <p className="font-semibold text-gray-800 dark:text-gray-200">
-          {resultado.lotes.length} sábana{resultado.lotes.length === 1 ? "" : "s"} subida{resultado.lotes.length === 1 ? "" : "s"} · {total} recibo{total === 1 ? "" : "s"}
-          {resultado.omitidos.length > 0 && <span className="text-amber-600 dark:text-amber-400"> · {resultado.omitidos.length} archivo{resultado.omitidos.length === 1 ? "" : "s"} sin subir</span>}
+          {resultado.lotes.length} sábana
+          {resultado.lotes.length === 1 ? "" : "s"} subida
+          {resultado.lotes.length === 1 ? "" : "s"} · {total} recibo
+          {total === 1 ? "" : "s"}
+          {resultado.omitidos.length > 0 && (
+            <span className="text-amber-600 dark:text-amber-400">
+              {" "}
+              · {resultado.omitidos.length} archivo
+              {resultado.omitidos.length === 1 ? "" : "s"} sin subir
+            </span>
+          )}
         </p>
         <button type="button" onClick={onCerrar} className="text-xs text-gray-400 hover:text-gray-600" title="Cerrar">
           <FontAwesomeIcon icon={faCircleXmark} />
@@ -575,7 +705,9 @@ const ResultadoSubida: React.FC<{ resultado: ResultadoMasivo; lotes: LoteRecibos
                   {l.pdf}
                 </button>
                 <span className="text-gray-400">+ {l.txt}</span>
-                <span className="text-gray-500">· {l.recibos} recibos · {COMO_SE_EMPAREJO[l.por] || l.por}</span>
+                <span className="text-gray-500">
+                  · {l.recibos} recibos · {COMO_SE_EMPAREJO[l.por] || l.por}
+                </span>
                 {lote?.resumen?.sinPersona ? <span className="text-amber-600 dark:text-amber-400">· {lote.resumen.sinPersona} sin persona</span> : null}
               </li>
             );
@@ -596,91 +728,12 @@ const ResultadoSubida: React.FC<{ resultado: ResultadoMasivo; lotes: LoteRecibos
   );
 };
 
-/** Los datos del recibo y sus conceptos, como en el papel. Con OCR casi todo queda vacío y se muestra lo que haya. */
-const DetalleRecibo: React.FC<{ datos: ReciboDelLote["datos"] }> = ({ datos: d }) => {
-  const filas: Array<[string, string | undefined]> = [
-    ["Empresa", d.empresa ? `${d.empresa}${d.empleadorCuit ? ` · CUIT ${fmtCuil(d.empleadorCuit)}` : ""}` : d.empleadorCuit ? `CUIT ${fmtCuil(d.empleadorCuit)}` : ""],
-    ["Apellido y nombres", d.nombre],
-    ["Legajo", d.legajo],
-    ["CUIL", d.cuil ? fmtCuil(d.cuil) : ""],
-    ["Básico", d.basico],
-    ["Ingreso", [d.ingreso, d.antiguedad].filter(Boolean).join(" · ")],
-    ["Sector", d.sector],
-    ["Modalidad", d.modalidad],
-    ["Categoría", d.categoria],
-    ["Tarea", d.tarea],
-    ["Período liquidado", d.periodoTexto || periodoTexto(d.periodo)],
-    ["Depósito de aportes", [d.periodoDeposito, d.fechaDeposito, d.bancoDeposito].filter(Boolean).join(" · ")],
-    ["Forma de pago", [d.formaPago, d.fechaPago].filter(Boolean).join(" · ")],
-    ["Recibo N°", d.numeroRecibo],
-  ];
-  const totales: Array<[string, string | undefined]> = [
-    ["Costo total empleador", d.costoTotal],
-    ["Contribuciones empleador", d.contribucionesEmpleador],
-    ["Sueldo bruto", d.sueldoBruto],
-    ["Remunerativo", d.remunerativo],
-    ["No remunerativo", d.noRemunerativo],
-    ["Descuentos", d.descuentos],
-    ["Sueldo neto", d.sueldoNeto],
-    ["Otros", d.otros],
-    ["Neto a cobrar", d.neto],
-  ];
-  const secciones = [...new Set((d.conceptos || []).map((c) => c.seccion))];
-  return (
-    <div className="space-y-3 text-sm">
-      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-        {filas.filter(([, v]) => v).map(([k, v]) => (
-          <div key={k} className="flex justify-between gap-3 border-b border-gray-100 dark:border-gray-700 py-1">
-            <dt className="text-gray-500">{k}</dt>
-            <dd className="text-right font-medium text-gray-800 dark:text-gray-200">{v}</dd>
-          </div>
-        ))}
-      </dl>
-      {totales.some(([, v]) => v) && (
-        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {totales.filter(([, v]) => v).map(([k, v]) => (
-            <div key={k} className={`rounded-lg border px-3 py-2 ${k === "Neto a cobrar" ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20" : "border-gray-200 dark:border-gray-700"}`}>
-              <dt className="text-[11px] text-gray-500">{k}</dt>
-              <dd className="font-semibold text-gray-800 dark:text-gray-200">$ {v}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-      {secciones.length > 0 && (
-        <table className="w-full text-xs border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-          <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500">
-            <tr>
-              <th className="px-2 py-1 text-left">Código</th>
-              <th className="px-2 py-1 text-left">Concepto</th>
-              <th className="px-2 py-1 text-right">Unidad</th>
-              <th className="px-2 py-1 text-right">Monto</th>
-            </tr>
-          </thead>
-          <tbody>
-            {secciones.map((sec) => (
-              <React.Fragment key={sec}>
-                <tr>
-                  <td colSpan={4} className="px-2 py-1 font-bold text-gray-600 dark:text-gray-300 bg-gray-50/60 dark:bg-gray-800">{sec || "—"}</td>
-                </tr>
-                {(d.conceptos || []).filter((c) => c.seccion === sec).map((c, i) => (
-                  <tr key={`${sec}-${c.codigo}-${i}`} className="border-t border-gray-100 dark:border-gray-700">
-                    <td className="px-2 py-1 font-mono text-gray-500">{c.codigo}</td>
-                    <td className="px-2 py-1">{c.concepto}</td>
-                    <td className="px-2 py-1 text-right">{c.unidad}</td>
-                    <td className={`px-2 py-1 text-right font-mono ${c.monto.startsWith("-") ? "text-red-600 dark:text-red-400" : ""}`}>{c.monto}</td>
-                  </tr>
-                ))}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-};
-
 /** Elegir a mano la persona de un recibo: por nombre, email o CUIL. */
-const AsignarPersona: React.FC<{ recibo: ReciboDelLote; onClose: () => void; onElegir: (p: PersonaBuscada) => Promise<void> }> = ({ recibo, onClose, onElegir }) => {
+const AsignarPersona: React.FC<{
+  recibo: ReciboDelLote;
+  onClose: () => void;
+  onElegir: (p: PersonaBuscada) => Promise<void>;
+}> = ({ recibo, onClose, onElegir }) => {
   const [q, setQ] = useState(recibo.datos.cuil || recibo.datos.nombre || "");
   const [resultados, setResultados] = useState<PersonaBuscada[] | null>(null);
   useEffect(() => {
@@ -716,7 +769,10 @@ const AsignarPersona: React.FC<{ recibo: ReciboDelLote; onClose: () => void; onE
               <li key={p._id}>
                 <button type="button" onClick={() => onElegir(p)} className="w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center justify-between gap-3">
                   <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{p.nombre}</span>
-                  <span className="text-xs text-gray-500 font-mono">{fmtCuil(p.cuil)}{p.email ? ` · ${p.email}` : ""}</span>
+                  <span className="text-xs text-gray-500 font-mono">
+                    {fmtCuil(p.cuil)}
+                    {p.email ? ` · ${p.email}` : ""}
+                  </span>
                 </button>
               </li>
             ))}

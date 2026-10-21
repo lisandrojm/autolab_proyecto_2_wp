@@ -66,7 +66,7 @@ export declare function asignarPersona(lote: ILoteRecibosSueldo, reciboId: strin
  * sueldo para que, al volver firmado, el escaneo de carpetas marque el recibo y NO mueva el estado del
  * contrato (ver `estadoDropboxCronService`).
  */
-export declare function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: string[]): Promise<{
+export declare function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: string[], enviadoPor?: string): Promise<{
     enviados: number;
     fallidos: Array<{
         reciboId: string;
@@ -77,6 +77,30 @@ export declare function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: stri
 export declare function eliminarLote(lote: ILoteRecibosSueldo): Promise<void>;
 /** Marca como firmado el recibo cuyo código volvió a la carpeta de firmados. Lo llama el escaneo de Dropbox. */
 export declare function marcarReciboFirmado(tenantId: unknown, codigo: string): Promise<boolean>;
+/**
+ * Completa el registro con los recibos enviados que todavía no están: los que salieron antes de que
+ * existiera el registro, o aquéllos cuyo registro falló al enviar. Sólo agrega lo que falta y pone al día
+ * el «firmado»; no pisa lo que ya está.
+ */
+export declare function completarHistorial(tenantId: Types.ObjectId): Promise<number>;
+/** El registro de enviados, más nuevos primero, con filtros por período, estado y texto. */
+export declare function listarEnviados(tenantId: Types.ObjectId, f: {
+    periodo?: string;
+    estado?: string;
+    q?: string;
+    pagina?: number;
+    porPagina?: number;
+}): Promise<{
+    items: (import("mongoose").FlattenMaps<import("../models/ReciboSueldoEnviado.js").IReciboSueldoEnviado> & Required<{
+        _id: Types.ObjectId;
+    }> & {
+        __v: number;
+    })[];
+    total: number;
+    pagina: number;
+    porPagina: number;
+    periodos: string[];
+}>;
 /** Todo lo que se leyó del PDF, para descargar como JSON y revisar qué entendió el lector. */
 export declare function exportacionDelLote(lote: ILoteRecibosSueldo): {
     lote: {
