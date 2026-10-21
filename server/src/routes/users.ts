@@ -172,6 +172,21 @@ async function resolveProjectTeamFilterIds(projectId: string, filtros: TeamFilte
   return ids;
 }
 
+/*
+  QUIÉN CARGÓ CADA SOLICITUD (`solicitudCreadaPor`), con nombre y roles: la tabla de Solicitudes lo
+  muestra en su columna «Solicitó», con los roles de coordinación o supervisión debajo. Una consulta
+  para toda la página. La usan la pestaña del proyecto (`GET /users?solicitudAny`) y la pantalla
+  global (`GET /users/solicitudes-overview`).
+*/
+async function solicitantesDe(tenantId: Types.ObjectId, solicitudes: any[]): Promise<Map<string, { nombre: string; roles: string[] }>> {
+  const solicitantes = new Map<string, { nombre: string; roles: string[] }>();
+  const ids = [...new Set(solicitudes.map((u: any) => String(u.metadata?.solicitudCreadaPor || "")).filter((id: string) => Types.ObjectId.isValid(id)))];
+  if (ids.length === 0) return solicitantes;
+  const quienes: any[] = await User.find({ _id: { $in: ids }, tenantId }).select("firstName lastName metadata.fullName email roles").populate({ path: "roles", select: "name", model: Role }).lean();
+  for (const q of quienes) solicitantes.set(String(q._id), { nombre: `${q.firstName || ""} ${q.lastName || ""}`.trim() || q.metadata?.fullName || q.email || "", roles: (q.roles || []).map((r: any) => String(r?.name || "")).filter(Boolean) });
+  return solicitantes;
+}
+
 
 
 const updateUserSchema = z
@@ -894,19 +909,8 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
       juntos. Son las dos fechas que la fila muestra («Vigente · Alta 3/2/2025 · Baja —»).
     */
 
-    /*
-      QUIÉN CARGÓ CADA SOLICITUD (`solicitudCreadaPor`), con nombre y roles: la tabla de Solicitudes lo
-      muestra en su columna «Solicitó», con los roles de coordinación o supervisión debajo. Una consulta
-      para toda la página; sólo cuando se piden solicitudes.
-    */
-    const solicitantes = new Map<string, { nombre: string; roles: string[] }>();
-    if (req.query.solicitudAny === "true") {
-      const ids = [...new Set(enrichedUsers.map((u: any) => String(u.metadata?.solicitudCreadaPor || "")).filter((id: string) => Types.ObjectId.isValid(id)))];
-      if (ids.length > 0) {
-        const quienes: any[] = await User.find({ _id: { $in: ids }, tenantId: req.tenantObjectId }).select("firstName lastName roles").populate({ path: "roles", select: "name", model: Role }).lean();
-        for (const q of quienes) solicitantes.set(String(q._id), { nombre: `${q.firstName || ""} ${q.lastName || ""}`.trim(), roles: (q.roles || []).map((r: any) => String(r?.name || "")).filter(Boolean) });
-      }
-    }
+    // Quién cargó cada solicitud (ver `solicitantesDe`); sólo cuando se piden solicitudes.
+    const solicitantes = req.query.solicitudAny === "true" ? await solicitantesDe(req.tenantObjectId as Types.ObjectId, enrichedUsers) : new Map<string, { nombre: string; roles: string[] }>();
 
     const totalesPorUsuario = new Map<string, { jornadas: number; contratos: number }>();
     for (const f of filasTotales) totalesPorUsuario.set(String(f._id), { jornadas: Number(f.jornadas) || 0, contratos: Number(f.contratos) || 0 });
@@ -1861,6 +1865,9 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
     }
     for (const [sid, os] of obraSocialPorSolicitud) os.cuil = String(fichaDe.get(os.userId)?.cuit || fichaDe.get(sid)?.cuit || "");
 
+    // Para la columna «Solicitó» (ver `solicitantesDe`).
+    const solicitantes = await solicitantesDe(req.tenantObjectId as Types.ObjectId, docs);
+
     const rows = docs.map((u: any) => {
       const m = u.metadata || {};
       const personaId = personaDe.get(String(u._id)) || String(u._id);
@@ -1877,6 +1884,7 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
         email: u.email,
         estado: m.solicitudStatus || "pendiente",
         creadaEl: u.createdAt,
+        solicitante: m.solicitudCreadaPor ? solicitantes.get(String(m.solicitudCreadaPor)) || null : null,
         proyectos,
         // El resto va crudo: quién lo resuelve a nombre es la pantalla, contra los catálogos que ya
         // tiene cargados (roles frame, categorías SAT, estados), igual que la pestaña del proyecto.

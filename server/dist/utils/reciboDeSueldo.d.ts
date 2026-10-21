@@ -56,6 +56,9 @@ export declare const normalizarNombre: (s: string) => string;
  * («REMUNERATIVO … OTROS NETO A COBRAR») y los importes vienen en la línea siguiente, en el mismo
  * orden: el neto es el ÚLTIMO de esa línea, no el primero (que es el remunerativo). Si el importe viene
  * en la misma línea que el rótulo («Neto a cobrar: 1.234,56»), se toma ése.
+ *
+ * El recibo viene repetido (ORIGINAL y COPIA) y el neto es el mismo en todas: se lee de cada aparición
+ * y gana el que más se repite (empate: el primero). Así una copia mal leída no decide.
  */
 export declare function netoDelTexto(texto: string): string;
 /** Lee todo lo que se pueda del texto de un recibo (una o varias páginas concatenadas). */

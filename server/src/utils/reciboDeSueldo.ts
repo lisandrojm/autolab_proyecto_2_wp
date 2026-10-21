@@ -195,25 +195,43 @@ export const normalizarNombre = (s: string): string =>
 const RE_IMPORTE = /-?[\d.]{1,15},\d{2}(?!\d)/g;
 
 /**
+ * El OCR a veces mete un espacio después de la coma decimal («826.847, 00»). Sin unirlo, el importe no
+ * se reconoce y el último de la fila pasaba a ser el de la columna anterior (OTROS: «0,76»).
+ */
+const unirDecimales = (linea: string): string => linea.replace(/(\d),\s+(\d{2})(?!\d)/g, "$1,$2");
+
+/**
  * El neto a cobrar. En un recibo de MEMOSOFT el rótulo cierra la fila de encabezados de los totales
  * («REMUNERATIVO … OTROS NETO A COBRAR») y los importes vienen en la línea siguiente, en el mismo
  * orden: el neto es el ÚLTIMO de esa línea, no el primero (que es el remunerativo). Si el importe viene
  * en la misma línea que el rótulo («Neto a cobrar: 1.234,56»), se toma ése.
+ *
+ * El recibo viene repetido (ORIGINAL y COPIA) y el neto es el mismo en todas: se lee de cada aparición
+ * y gana el que más se repite (empate: el primero). Así una copia mal leída no decide.
  */
 export function netoDelTexto(texto: string): string {
-  const lineas = texto.split(/\r?\n/);
+  const lineas = texto.split(/\r?\n/).map(unirDecimales);
+  const leidos: string[] = [];
   for (let i = 0; i < lineas.length; i++) {
     const m = /(?:neto\s*a\s*(?:cobrar|pagar)|total\s*neto|importe\s*neto)\s*:?\s*\$?\s*(.*)$/i.exec(lineas[i]);
     if (!m) continue;
     const enLaLinea = m[1].match(RE_IMPORTE);
-    if (enLaLinea?.length) return enLaLinea[enLaLinea.length - 1];
+    if (enLaLinea?.length) {
+      leidos.push(enLaLinea[enLaLinea.length - 1]);
+      continue;
+    }
     // La fila de importes es la próxima línea que trae varios: el último es el de la última columna.
     for (let j = i + 1; j < Math.min(lineas.length, i + 4); j++) {
       const importes = lineas[j].match(RE_IMPORTE);
-      if (importes && importes.length >= 2) return importes[importes.length - 1];
+      if (importes && importes.length >= 2) {
+        leidos.push(importes[importes.length - 1]);
+        break;
+      }
     }
   }
-  return "";
+  const veces = new Map<string, number>();
+  for (const v of leidos) veces.set(v, (veces.get(v) || 0) + 1);
+  return leidos.reduce((mejor, v) => (veces.get(v)! > (veces.get(mejor) || 0) ? v : mejor), "");
 }
 
 /** Lee todo lo que se pueda del texto de un recibo (una o varias páginas concatenadas). */

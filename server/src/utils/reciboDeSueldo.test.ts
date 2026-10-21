@@ -81,6 +81,12 @@ describe("un recibo de MEMOSOFT leído por OCR (sin rótulos)", () => {
     const totales = "REMUNERATIVO NO REMUNERATIVO DESCUENTOS SUELDO NETO OTROS NETO A COBRAR\n2.765.531,44 -470.140,34 2.295.391,10 0,90 2.295.392,00";
     assert.equal(leerRecibo(totales).neto, "2.295.392,00");
     assert.equal(leerRecibo("Neto a cobrar: $ 985.432,10").neto, "985.432,10");
+    // El OCR separó los decimales («826.847, 00»): sin unirlos salía el de OTROS (0,76). Caso real, BARDINI 09/2026.
+    const bardini = "REMUNERATIVO NO REMUNERATIVO DESCUENTOS SUELDO NETO OTROS NETO A COBRAR\n937.425,84 78.378,52 -188.958,12 826.846,24 0,76 826.847, 00";
+    assert.equal(leerRecibo(bardini).neto, "826.847,00");
+    // ORIGINAL y COPIA traen el mismo neto: una copia mal leída no decide.
+    const copias = [bardini, "SUELDO NETO OTROS NETO A COBRAR\n826.846,24 0,76 826.847,00", "SUELDO NETO OTROS NETO A COBRAR\n826.846,24 826.847,0O 0,76"].join("\n");
+    assert.equal(leerRecibo(copias).neto, "826.847,00");
     const tabla = "APELLIDO Y NUMBRE>\nPALOMINO MATEO, Esthefany Omayra\nC.U.T.L. BASICO\nLEGAJO\nINGRESO ANTIGUEDAD\n27-94231772-2 890985.22";
     assert.equal(leerRecibo(tabla).nombre, "PALOMINO MATEO, Esthefany Omayra");
     assert.equal(leerRecibo(tabla).legajo, "");

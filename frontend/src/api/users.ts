@@ -110,6 +110,8 @@ export interface SolicitudOverviewRow {
   email: string;
   estado: "pendiente" | "aprobada" | "rechazada" | "cancelada";
   creadaEl?: string;
+  /** Quién la cargó (`solicitudCreadaPor`), para la columna «Solicitó». */
+  solicitante?: { nombre: string; roles: string[] } | null;
   proyectos: { _id: string; name: string; clienteId: string; clienteNombre: string }[];
   roleFrameId?: any;
   rolesFrameIds?: any[] | null;
