@@ -26,6 +26,31 @@ export interface IReciboDelLote {
     legajo: string;
     neto: string;
     cuitsEncontrados: string[];
+    /** Lo que sigue sólo sale del TXT de MEMOSOFT (`utils/reciboTxtMemosoft.ts`); con OCR queda vacío. */
+    empresa?: string;
+    basico?: string;
+    ingreso?: string;
+    antiguedad?: string;
+    sector?: string;
+    modalidad?: string;
+    categoria?: string;
+    tarea?: string;
+    periodoTexto?: string;
+    periodoDeposito?: string;
+    fechaDeposito?: string;
+    bancoDeposito?: string;
+    costoTotal?: string;
+    contribucionesEmpleador?: string;
+    sueldoBruto?: string;
+    remunerativo?: string;
+    noRemunerativo?: string;
+    descuentos?: string;
+    sueldoNeto?: string;
+    otros?: string;
+    formaPago?: string;
+    fechaPago?: string;
+    numeroRecibo?: string;
+    conceptos?: Array<{ codigo: string; concepto: string; unidad: string; monto: string; seccion: string }>;
   };
   textoCrudo: string;
   /** `/storage/<tenant>/recibos-sueldo/<lote>/<n>.pdf` */
@@ -67,6 +92,13 @@ export interface ILoteRecibosSueldo extends Document {
   error?: string;
   paginas: number;
   paginasPorRecibo: number;
+  /**
+   * De dónde salen los datos: «txt» si se subió el TXT que MEMOSOFT exporta con la sábana (el bloque N
+   * del TXT es la página N del PDF; sin OCR), «ocr» si sólo vino el PDF.
+   */
+  fuente: "ocr" | "txt";
+  nombreTxt?: string;
+  txtUrl?: string;
   /** El período que más se repite entre los recibos leídos ("YYYY-MM"), o "". */
   periodo: string;
   recibos: Types.DocumentArray<IReciboDelLote & Types.Subdocument>;
@@ -85,6 +117,33 @@ const reciboSchema = new Schema<IReciboDelLote>(
       legajo: { type: String, default: "" },
       neto: { type: String, default: "" },
       cuitsEncontrados: { type: [String], default: [] },
+      empresa: { type: String, default: "" },
+      basico: { type: String, default: "" },
+      ingreso: { type: String, default: "" },
+      antiguedad: { type: String, default: "" },
+      sector: { type: String, default: "" },
+      modalidad: { type: String, default: "" },
+      categoria: { type: String, default: "" },
+      tarea: { type: String, default: "" },
+      periodoTexto: { type: String, default: "" },
+      periodoDeposito: { type: String, default: "" },
+      fechaDeposito: { type: String, default: "" },
+      bancoDeposito: { type: String, default: "" },
+      costoTotal: { type: String, default: "" },
+      contribucionesEmpleador: { type: String, default: "" },
+      sueldoBruto: { type: String, default: "" },
+      remunerativo: { type: String, default: "" },
+      noRemunerativo: { type: String, default: "" },
+      descuentos: { type: String, default: "" },
+      sueldoNeto: { type: String, default: "" },
+      otros: { type: String, default: "" },
+      formaPago: { type: String, default: "" },
+      fechaPago: { type: String, default: "" },
+      numeroRecibo: { type: String, default: "" },
+      conceptos: {
+        type: [new Schema({ codigo: String, concepto: String, unidad: String, monto: String, seccion: String }, { _id: false })],
+        default: [],
+      },
     },
     textoCrudo: { type: String, default: "" },
     archivoUrl: { type: String, default: "" },
@@ -117,6 +176,9 @@ const schema = new Schema<ILoteRecibosSueldo>(
     error: { type: String, default: "" },
     paginas: { type: Number, default: 0 },
     paginasPorRecibo: { type: Number, default: 2 },
+    fuente: { type: String, enum: ["ocr", "txt"], default: "ocr" },
+    nombreTxt: { type: String, default: "" },
+    txtUrl: { type: String, default: "" },
     periodo: { type: String, default: "" },
     recibos: { type: [reciboSchema], default: [] },
   },

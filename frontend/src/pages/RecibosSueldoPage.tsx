@@ -5,14 +5,15 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Modal } from "../components/ui/Modal";
 import { BotonOrden, useOrdenTabla } from "../components/ui/OrdenTabla";
-import { recibosSueldoAPI, ETIQUETA_ESTADO_RECIBO, type LoteRecibos, type ReciboDelLote, type PersonaBuscada } from "../api/recibosSueldo";
+import { recibosSueldoAPI, ETIQUETA_ESTADO_RECIBO, type LoteRecibos, type ReciboDelLote, type PersonaBuscada, type ResultadoMasivo } from "../api/recibosSueldo";
 import { getImageUrl } from "../utils/imageHelpers";
 import { sweetAlert } from "../utils/sweetAlert";
 
 /*
   RECIBOS DE SUELDO (Contratación, 20/10/2026). Se sube la sábana PDF con todos los recibos del mes (dos
-  páginas por persona); el server la parte en un recibo por persona, lee de cada uno el CUIL, el nombre,
-  el período, el legajo y el neto, y asocia a la persona por su CUIL. Cada fila tiene su PDF para
+  páginas por persona) junto con el TXT que MEMOSOFT exporta con ella; el server parte el PDF en un recibo
+  por persona y saca los datos del TXT (legajo, CUIL, categoría, tarea, importes, conceptos…), sin OCR. Sin
+  TXT se lee el PDF por OCR, con menos datos y errores posibles. Se asocia a la persona por su CUIL. Cada fila tiene su PDF para
   revisarlo y, tildando, se mandan a firmar por el mismo circuito que los contratos (Outbox de Dropbox,
   nomenclatura «Recibos de sueldo»). Lo que el lector entendió se puede bajar entero como JSON.
 */
@@ -25,6 +26,10 @@ const periodoTexto = (p: string) => {
   const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
   return `${meses[Number(m[2]) - 1]} ${m[1]}`;
 };
+
+/** «1.234.567,89» → 1234567.89, para ordenar. */
+const importeNumero = (s?: string) => (s ? Number(s.replace(/\./g, "").replace(",", ".")) || 0 : 0);
+const pesos = (s?: string) => (s ? `$ ${s}` : "—");
 
 const CLASE_ESTADO: Record<string, string> = {
   sin_persona: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800",
@@ -48,6 +53,7 @@ export const RecibosSueldoPage: React.FC = () => {
   const [verTexto, setVerTexto] = useState<{ recibo: ReciboDelLote; texto: string | null } | null>(null);
   const [asignando, setAsignando] = useState<ReciboDelLote | null>(null);
   const inputArchivo = useRef<HTMLInputElement>(null);
+  const [resultado, setResultado] = useState<ResultadoMasivo | null>(null);
 
   const cargarLotes = useCallback(async () => {
     try {
@@ -98,18 +104,47 @@ export const RecibosSueldoPage: React.FC = () => {
     estadoAnterior.current = lote?.estadoLote;
   }, [lote?.estadoLote, cargarLotes]);
 
-  const subir = async (archivo: File) => {
+  /*
+    SUBIDA: se eligen de una vez todas las sábanas PDF y sus TXT (pedido del 21/10/2026). El server
+    empareja cada TXT con su PDF y crea un lote por par; el resultado queda a la vista. Un PDF solo, sin
+    TXT, se lee por OCR, después de avisar que es más lento y menos preciso.
+  */
+  const subir = async (lista: FileList) => {
+    const archivos = Array.from(lista);
+    if (inputArchivo.current) inputArchivo.current.value = "";
+    const pdfs = archivos.filter((f) => /\.pdf$/i.test(f.name));
+    const txts = archivos.filter((f) => /\.txt$/i.test(f.name));
+    if (pdfs.length === 0) {
+      sweetAlert.error("Falta el PDF", "Elegí las sábanas PDF junto con sus TXT (los dos archivos que exporta MEMOSOFT por cada liquidación).");
+      return;
+    }
+    setResultado(null);
+    if (pdfs.length === 1 && txts.length === 0) {
+      const r = await sweetAlert.confirm("¿Subir sin el TXT?", "Sin el TXT que exporta MEMOSOFT, el PDF se lee por OCR: tarda unos 3 segundos por página, trae menos datos (sin categoría, tarea ni importes) y puede leer mal algún CUIL o nombre. Para subir con el TXT, elegí los dos juntos en el selector de archivos.", "Sí, leer por OCR");
+      if (!r.isConfirmed) return;
+      setSubiendo(true);
+      try {
+        const nuevo = await recibosSueldoAPI.subir(pdfs[0], null, paginasPorRecibo);
+        await cargarLotes();
+        setLoteId(nuevo._id);
+        sweetAlert.info("Leyendo la sábana", `${nuevo.paginas} página${nuevo.paginas === 1 ? "" : "s"}. Los datos están dibujados en el PDF, así que cada página pasa por OCR en tres pasadas: unos 3 segundos por página. La lista se arma sola cuando termina.`, 6000);
+      } catch (e: any) {
+        sweetAlert.error("No se pudo leer la sábana", e?.response?.data?.error || e?.message || "");
+      } finally {
+        setSubiendo(false);
+      }
+      return;
+    }
     setSubiendo(true);
     try {
-      const nuevo = await recibosSueldoAPI.subir(archivo, paginasPorRecibo);
+      const res = await recibosSueldoAPI.subirVarios(archivos, paginasPorRecibo);
+      setResultado(res);
       await cargarLotes();
-      setLoteId(nuevo._id);
-      sweetAlert.info("Leyendo la sábana", `${nuevo.paginas} página${nuevo.paginas === 1 ? "" : "s"}. Los datos están dibujados en el PDF, así que cada página pasa por OCR en tres pasadas: unos 3 segundos por página. La lista se arma sola cuando termina.`, 6000);
+      if (res.lotes[0]) setLoteId(res.lotes[0].loteId);
     } catch (e: any) {
-      sweetAlert.error("No se pudo leer el PDF", e?.response?.data?.error || e?.message || "");
+      sweetAlert.error("No se pudieron subir", e?.response?.data?.error || e?.message || "");
     } finally {
       setSubiendo(false);
-      if (inputArchivo.current) inputArchivo.current.value = "";
     }
   };
 
@@ -117,14 +152,34 @@ export const RecibosSueldoPage: React.FC = () => {
   const filtrados = useMemo(() => {
     const q = buscar.trim().toLowerCase();
     const digitos = q.replace(/\D/g, "");
-    return q ? recibos.filter((r) => (r.nombreUsuario || "").toLowerCase().includes(q) || (r.datos.nombre || "").toLowerCase().includes(q) || (digitos && r.datos.cuil.includes(digitos)) || (r.datos.legajo || "").toLowerCase().includes(q)) : recibos;
+    const textos = (r: ReciboDelLote) => [r.nombreUsuario, r.datos.nombre, r.datos.legajo, r.datos.categoria, r.datos.tarea, r.datos.sector, r.datos.numeroRecibo, r.nombreProyecto].map((x) => (x || "").toLowerCase());
+    return q ? recibos.filter((r) => textos(r).some((t) => t.includes(q)) || (digitos.length >= 3 && r.datos.cuil.includes(digitos))) : recibos;
   }, [recibos, buscar]);
-  const { ordenados, orden, alternar } = useOrdenTabla(filtrados, { pagina: (r) => r.paginas[0] || 0, persona: (r) => r.nombreUsuario || r.datos.nombre, cuil: (r) => r.datos.cuil, estado: (r) => r.estado }, { columna: "pagina", direccion: "asc" });
+  const { ordenados, orden, alternar } = useOrdenTabla(
+    filtrados,
+    {
+      pagina: (r) => r.paginas[0] || 0,
+      persona: (r) => r.nombreUsuario || r.datos.nombre,
+      legajo: (r) => Number(r.datos.legajo) || 0,
+      cuil: (r) => r.datos.cuil,
+      puesto: (r) => `${r.datos.categoria || ""} ${r.datos.tarea || ""}`,
+      ingreso: (r) => (r.datos.ingreso || "").split("/").reverse().join(""),
+      bruto: (r) => importeNumero(r.datos.sueldoBruto),
+      descuentos: (r) => importeNumero(r.datos.descuentos),
+      neto: (r) => importeNumero(r.datos.neto),
+      recibo: (r) => Number(r.datos.numeroRecibo) || 0,
+      estado: (r) => r.estado,
+    },
+    { columna: "pagina", direccion: "asc" },
+  );
+  const deTxt = lote?.fuente === "txt";
   const listos = recibos.filter((r) => r.estado === "listo");
   /** Se puede tildar (y releer) todo lo que todavía no salió a firmar. Enviar toma sólo los listos de entre lo tildado. */
-  const sePuedeReleer = (r: ReciboDelLote) => r.estado === "sin_persona" || r.estado === "listo" || r.estado === "error";
-  const tildables = filtrados.filter(sePuedeReleer);
-  const tildados = recibos.filter((r) => seleccion.has(r._id) && sePuedeReleer(r));
+  const sePuedeTildar = (r: ReciboDelLote) => r.estado === "sin_persona" || r.estado === "listo" || r.estado === "error";
+  // Con el TXT no hay nada que releer: los datos son los del archivo.
+  const sePuedeReleer = (r: ReciboDelLote) => !deTxt && sePuedeTildar(r);
+  const tildables = filtrados.filter(sePuedeTildar);
+  const tildados = recibos.filter((r) => seleccion.has(r._id) && sePuedeTildar(r));
   const seleccionados = tildados.filter((r) => r.estado === "listo");
 
   /*
@@ -223,21 +278,22 @@ export const RecibosSueldoPage: React.FC = () => {
       title="Recibos de sueldo"
       itemCount={recibos.length}
       faIcon={{ icon: faReceipt }}
-      subtitle="Subí la sábana PDF con todos los recibos del mes: se separa por persona, se lee cada uno y se manda a firmar"
+      subtitle="Subí de una vez las sábanas PDF y sus TXT de MEMOSOFT: cada PDF se separa por persona, los datos salen de su TXT y se manda a firmar"
       headerActions={
         <div className="flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-1.5 text-xs text-gray-500" title="Cuántas páginas tiene el recibo de cada persona. Es la pista para partir la sábana cuando el texto no alcanza; con el CUIL en cada hoja se parte solo.">
             Páginas por persona
             <input type="number" min={1} max={10} value={paginasPorRecibo} onChange={(e) => setPaginasPorRecibo(Math.min(10, Math.max(1, Number(e.target.value) || 2)))} className="input-field w-14 py-1 text-center" />
           </label>
-          <input ref={inputArchivo} type="file" accept="application/pdf,.pdf" className="hidden" onChange={(e) => e.target.files?.[0] && subir(e.target.files[0])} />
-          <button type="button" onClick={() => inputArchivo.current?.click()} disabled={subiendo} className="btn-primary flex items-center gap-2 text-sm px-4 py-2">
+          <input ref={inputArchivo} type="file" multiple accept="application/pdf,.pdf,text/plain,.txt" className="hidden" onChange={(e) => e.target.files?.length && subir(e.target.files)} />
+          <button type="button" onClick={() => inputArchivo.current?.click()} disabled={subiendo} className="btn-primary flex items-center gap-2 text-sm px-4 py-2" title="Elegí todos juntos (Cmd/Ctrl + clic o Cmd/Ctrl + A): las sábanas PDF y sus TXT. Cada TXT se empareja solo con su PDF, por nombre o por cantidad de páginas">
             <FontAwesomeIcon icon={subiendo ? faSpinner : faUpload} spin={subiendo} />
-            {subiendo ? "Leyendo el PDF…" : "Subir sábana PDF"}
+            {subiendo ? "Subiendo…" : "Subir sábanas (PDF + TXT)"}
           </button>
         </div>
       }
     >
+      {resultado && <ResultadoSubida resultado={resultado} lotes={lotes || []} onElegir={setLoteId} onCerrar={() => setResultado(null)} />}
       {lotes === null ? (
         <div className="flex justify-center py-16">
           <LoadingSpinner />
@@ -246,7 +302,7 @@ export const RecibosSueldoPage: React.FC = () => {
         <div className="text-center py-16 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
           <FontAwesomeIcon icon={faReceipt} className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Todavía no se subió ninguna sábana de recibos.</p>
-          <p className="text-xs text-gray-400 mt-1">Un solo PDF con todos los recibos del mes, de a dos páginas por persona.</p>
+          <p className="text-xs text-gray-400 mt-1">Las sábanas PDF del mes y el TXT que MEMOSOFT exporta con cada una: se eligen todos juntos y se emparejan solos.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -297,10 +353,11 @@ export const RecibosSueldoPage: React.FC = () => {
               <div className="flex flex-wrap items-center gap-3">
                 <input value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por nombre, CUIL o legajo…" className="input-field py-2 text-sm w-72" />
                 <span className="text-xs text-gray-500">
+                  {deTxt ? <span className="mr-1 rounded bg-emerald-100 px-1.5 py-0.5 font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title={lote.nombreTxt || ""}>Datos del TXT</span> : <span className="mr-1 rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Leído por OCR</span>}
                   {lote.paginas} páginas · {recibos.length} recibos · {listos.length} listos · {recibos.filter((r) => r.estado === "sin_persona").length} sin persona · {recibos.filter((r) => r.estado === "enviado").length} enviados · {recibos.filter((r) => r.estado === "firmado").length} firmados
                 </span>
                 <div className="ml-auto flex items-center gap-2">
-                  {cola ? (
+                  {deTxt ? null : cola ? (
                     <span className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
                       <FontAwesomeIcon icon={faSpinner} spin /> Releyendo {cola.actual} de {cola.total}: {cola.nombre}
                       <button type="button" onClick={() => (frenarCola.current = true)} className="ml-1 rounded border border-blue-300 px-2 py-0.5 text-[11px] hover:bg-blue-100 dark:hover:bg-blue-900/40">
@@ -335,11 +392,30 @@ export const RecibosSueldoPage: React.FC = () => {
                         <BotonOrden columna="persona" orden={orden} onAlternar={alternar}>Persona</BotonOrden>
                       </th>
                       <th className={th}>
+                        <BotonOrden columna="legajo" orden={orden} onAlternar={alternar}>Legajo</BotonOrden>
+                      </th>
+                      <th className={th}>
                         <BotonOrden columna="cuil" orden={orden} onAlternar={alternar}>CUIL</BotonOrden>
                       </th>
+                      <th className={th}>
+                        <BotonOrden columna="puesto" orden={orden} onAlternar={alternar}>Categoría · Tarea</BotonOrden>
+                      </th>
+                      <th className={th}>
+                        <BotonOrden columna="ingreso" orden={orden} onAlternar={alternar}>Ingreso</BotonOrden>
+                      </th>
                       <th className={th}>Período</th>
-                      <th className={th}>Legajo</th>
-                      <th className={th}>Neto</th>
+                      <th className={`${th} text-right`}>
+                        <BotonOrden columna="bruto" orden={orden} onAlternar={alternar}>Bruto</BotonOrden>
+                      </th>
+                      <th className={`${th} text-right`}>
+                        <BotonOrden columna="descuentos" orden={orden} onAlternar={alternar}>Descuentos</BotonOrden>
+                      </th>
+                      <th className={`${th} text-right`}>
+                        <BotonOrden columna="neto" orden={orden} onAlternar={alternar}>Neto a cobrar</BotonOrden>
+                      </th>
+                      <th className={th}>
+                        <BotonOrden columna="recibo" orden={orden} onAlternar={alternar}>Recibo</BotonOrden>
+                      </th>
                       <th className={th}>PDF</th>
                       <th className={th}>
                         <BotonOrden columna="estado" orden={orden} onAlternar={alternar}>Estado</BotonOrden>
@@ -350,14 +426,14 @@ export const RecibosSueldoPage: React.FC = () => {
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                     {ordenados.length === 0 && (
                       <tr>
-                        <td colSpan={10} className="px-4 py-10 text-center text-sm text-gray-500">
+                        <td colSpan={16} className="px-4 py-10 text-center text-sm text-gray-500">
                           Ningún recibo coincide con la búsqueda.
                         </td>
                       </tr>
                     )}
                     {ordenados.map((r) => (
                       <tr key={r._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
-                        <td className="px-4 py-3">{sePuedeReleer(r) && <input type="checkbox" checked={seleccion.has(r._id)} onChange={(e) => setSeleccion((s) => { const n = new Set(s); if (e.target.checked) n.add(r._id); else n.delete(r._id); return n; })} />}</td>
+                        <td className="px-4 py-3">{sePuedeTildar(r) && <input type="checkbox" checked={seleccion.has(r._id)} onChange={(e) => setSeleccion((s) => { const n = new Set(s); if (e.target.checked) n.add(r._id); else n.delete(r._id); return n; })} />}</td>
                         <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{r.paginas.join("-")}</td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col">
@@ -368,10 +444,32 @@ export const RecibosSueldoPage: React.FC = () => {
                             {r.asociadoPorNombre && !r.asignadoAMano && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Asociada por nombre (sin CUIL legible): revisá antes de enviar</span>}
                           </div>
                         </td>
+                        <td className="px-4 py-3 text-sm font-mono">{r.datos.legajo || "—"}</td>
                         <td className="px-4 py-3 text-sm font-mono whitespace-nowrap">{fmtCuil(r.datos.cuil)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col min-w-[10rem]">
+                            <span className="text-sm text-gray-800 dark:text-gray-200">{r.datos.categoria || "—"}</span>
+                            {r.datos.tarea && <span className="text-xs text-gray-500">{r.datos.tarea}</span>}
+                            {r.datos.sector && <span className="text-[11px] text-gray-400">Sector: {r.datos.sector}</span>}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col whitespace-nowrap">
+                            <span className="text-sm">{r.datos.ingreso || "—"}</span>
+                            {r.datos.antiguedad && <span className="text-xs text-gray-500">{r.datos.antiguedad}</span>}
+                            {r.datos.modalidad && <span className="text-[11px] text-gray-400 max-w-[12rem] truncate" title={r.datos.modalidad}>{r.datos.modalidad}</span>}
+                          </div>
+                        </td>
                         <td className="px-4 py-3 text-sm whitespace-nowrap">{periodoTexto(r.datos.periodo)}</td>
-                        <td className="px-4 py-3 text-sm">{r.datos.legajo || "—"}</td>
-                        <td className="px-4 py-3 text-sm whitespace-nowrap">{r.datos.neto ? `$ ${r.datos.neto}` : "—"}</td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap text-right" title={r.datos.basico ? `Básico ${r.datos.basico}` : ""}>{pesos(r.datos.sueldoBruto)}</td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap text-right text-red-600 dark:text-red-400">{pesos(r.datos.descuentos)}</td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap text-right font-semibold" title={r.datos.otros ? `Sueldo neto ${r.datos.sueldoNeto || "—"} · Otros ${r.datos.otros}` : ""}>{pesos(r.datos.neto)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col whitespace-nowrap">
+                            <span className="text-sm font-mono">{r.datos.numeroRecibo ? `N° ${r.datos.numeroRecibo}` : "—"}</span>
+                            {r.datos.fechaPago && <span className="text-[11px] text-gray-400">Pago {r.datos.fechaPago}</span>}
+                          </div>
+                        </td>
                         <td className="px-4 py-3">
                           <a href={getImageUrl(r.archivoUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300" title="Abrir el PDF de este recibo">
                             <FontAwesomeIcon icon={faFilePdf} /> Ver
@@ -394,13 +492,13 @@ export const RecibosSueldoPage: React.FC = () => {
                                 <FontAwesomeIcon icon={faUserPen} />
                               </button>
                             )}
-                            <button type="button" onClick={() => abrirTexto(r)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Ver el texto que se leyó del PDF">
+                            <button type="button" onClick={() => abrirTexto(r)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Ver el detalle del recibo: conceptos y el texto leído">
                               <FontAwesomeIcon icon={faAlignLeft} />
                             </button>
                             <button type="button" onClick={() => recibosSueldoAPI.descargarJsonDeRecibo(lote, r)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Bajar el JSON de este recibo (datos, persona y texto leído)">
                               <FontAwesomeIcon icon={faFileCode} />
                             </button>
-                            {(r.estado === "sin_persona" || r.estado === "listo" || r.estado === "error") && (
+                            {sePuedeReleer(r) && (
                               <button type="button" disabled={releyendo === r._id} onClick={() => releer(r)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg disabled:opacity-50" title="Volver a leer el PDF de este recibo (OCR a más resolución)">
                                 <FontAwesomeIcon icon={releyendo === r._id ? faSpinner : faRotateRight} spin={releyendo === r._id} />
                               </button>
@@ -418,10 +516,15 @@ export const RecibosSueldoPage: React.FC = () => {
       )}
 
       {verTexto && (
-        <Modal isOpen onClose={() => setVerTexto(null)} title="Texto leído del recibo" subtitle={`Páginas ${verTexto.recibo.paginas.join("-")} · ${verTexto.recibo.nombreUsuario || verTexto.recibo.datos.nombre || "sin persona"}`} size="lg">
+        <Modal isOpen onClose={() => setVerTexto(null)} title="Detalle del recibo" subtitle={`Páginas ${verTexto.recibo.paginas.join("-")} · ${verTexto.recibo.nombreUsuario || verTexto.recibo.datos.nombre || "sin persona"}`} size="lg">
           <div className="space-y-3">
-            <pre className="text-xs bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 max-h-[50vh] overflow-auto whitespace-pre-wrap">{JSON.stringify(verTexto.recibo.datos, null, 2)}</pre>
+            <DetalleRecibo datos={verTexto.recibo.datos} />
+            <details>
+              <summary className="cursor-pointer text-xs font-semibold text-gray-500">Datos leídos (JSON)</summary>
+              <pre className="mt-2 text-xs bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 max-h-[40vh] overflow-auto whitespace-pre-wrap">{JSON.stringify({ ...verTexto.recibo.datos, conceptos: undefined }, null, 2)}</pre>
+            </details>
             {verTexto.texto === null ? <LoadingSpinner /> : <pre className="text-xs bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 max-h-[50vh] overflow-auto whitespace-pre-wrap">{verTexto.texto || "(sin texto: el PDF puede ser una imagen escaneada)"}</pre>}
+            <p className="text-[11px] text-gray-400">Arriba, lo que se entendió; abajo, el texto tal cual se leyó ({lote?.fuente === "txt" ? "del TXT de MEMOSOFT" : "por OCR del PDF"}).</p>
           </div>
         </Modal>
       )}
@@ -442,6 +545,137 @@ export const RecibosSueldoPage: React.FC = () => {
         />
       )}
     </PageLayout>
+  );
+};
+
+const COMO_SE_EMPAREJO: Record<string, string> = { nombre: "por nombre", paginas: "por cantidad de páginas", unicos: "único PDF con único TXT" };
+
+/** Lo que pasó con cada archivo de la subida: qué TXT fue con qué PDF y qué quedó afuera, con el motivo. */
+const ResultadoSubida: React.FC<{ resultado: ResultadoMasivo; lotes: LoteRecibos[]; onElegir: (id: string) => void; onCerrar: () => void }> = ({ resultado, lotes, onElegir, onCerrar }) => {
+  const total = resultado.lotes.reduce((n, l) => n + l.recibos, 0);
+  return (
+    <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4 text-sm shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex items-start justify-between gap-3">
+        <p className="font-semibold text-gray-800 dark:text-gray-200">
+          {resultado.lotes.length} sábana{resultado.lotes.length === 1 ? "" : "s"} subida{resultado.lotes.length === 1 ? "" : "s"} · {total} recibo{total === 1 ? "" : "s"}
+          {resultado.omitidos.length > 0 && <span className="text-amber-600 dark:text-amber-400"> · {resultado.omitidos.length} archivo{resultado.omitidos.length === 1 ? "" : "s"} sin subir</span>}
+        </p>
+        <button type="button" onClick={onCerrar} className="text-xs text-gray-400 hover:text-gray-600" title="Cerrar">
+          <FontAwesomeIcon icon={faCircleXmark} />
+        </button>
+      </div>
+      {resultado.lotes.length > 0 && (
+        <ul className="mt-2 space-y-1">
+          {resultado.lotes.map((l) => {
+            const lote = lotes.find((x) => x._id === l.loteId);
+            return (
+              <li key={l.loteId} className="flex flex-wrap items-center gap-x-2 text-xs">
+                <FontAwesomeIcon icon={faCircleCheck} className="text-green-600" />
+                <button type="button" onClick={() => onElegir(l.loteId)} className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                  {l.pdf}
+                </button>
+                <span className="text-gray-400">+ {l.txt}</span>
+                <span className="text-gray-500">· {l.recibos} recibos · {COMO_SE_EMPAREJO[l.por] || l.por}</span>
+                {lote?.resumen?.sinPersona ? <span className="text-amber-600 dark:text-amber-400">· {lote.resumen.sinPersona} sin persona</span> : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {resultado.omitidos.length > 0 && (
+        <ul className="mt-2 space-y-1 border-t border-gray-100 pt-2 dark:border-gray-700">
+          {resultado.omitidos.map((o) => (
+            <li key={o.archivo} className="text-xs">
+              <FontAwesomeIcon icon={faCircleXmark} className="mr-1 text-amber-500" />
+              <span className="font-medium text-gray-700 dark:text-gray-300">{o.archivo}</span>: <span className="text-gray-500">{o.motivo}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+/** Los datos del recibo y sus conceptos, como en el papel. Con OCR casi todo queda vacío y se muestra lo que haya. */
+const DetalleRecibo: React.FC<{ datos: ReciboDelLote["datos"] }> = ({ datos: d }) => {
+  const filas: Array<[string, string | undefined]> = [
+    ["Empresa", d.empresa ? `${d.empresa}${d.empleadorCuit ? ` · CUIT ${fmtCuil(d.empleadorCuit)}` : ""}` : d.empleadorCuit ? `CUIT ${fmtCuil(d.empleadorCuit)}` : ""],
+    ["Apellido y nombres", d.nombre],
+    ["Legajo", d.legajo],
+    ["CUIL", d.cuil ? fmtCuil(d.cuil) : ""],
+    ["Básico", d.basico],
+    ["Ingreso", [d.ingreso, d.antiguedad].filter(Boolean).join(" · ")],
+    ["Sector", d.sector],
+    ["Modalidad", d.modalidad],
+    ["Categoría", d.categoria],
+    ["Tarea", d.tarea],
+    ["Período liquidado", d.periodoTexto || periodoTexto(d.periodo)],
+    ["Depósito de aportes", [d.periodoDeposito, d.fechaDeposito, d.bancoDeposito].filter(Boolean).join(" · ")],
+    ["Forma de pago", [d.formaPago, d.fechaPago].filter(Boolean).join(" · ")],
+    ["Recibo N°", d.numeroRecibo],
+  ];
+  const totales: Array<[string, string | undefined]> = [
+    ["Costo total empleador", d.costoTotal],
+    ["Contribuciones empleador", d.contribucionesEmpleador],
+    ["Sueldo bruto", d.sueldoBruto],
+    ["Remunerativo", d.remunerativo],
+    ["No remunerativo", d.noRemunerativo],
+    ["Descuentos", d.descuentos],
+    ["Sueldo neto", d.sueldoNeto],
+    ["Otros", d.otros],
+    ["Neto a cobrar", d.neto],
+  ];
+  const secciones = [...new Set((d.conceptos || []).map((c) => c.seccion))];
+  return (
+    <div className="space-y-3 text-sm">
+      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+        {filas.filter(([, v]) => v).map(([k, v]) => (
+          <div key={k} className="flex justify-between gap-3 border-b border-gray-100 dark:border-gray-700 py-1">
+            <dt className="text-gray-500">{k}</dt>
+            <dd className="text-right font-medium text-gray-800 dark:text-gray-200">{v}</dd>
+          </div>
+        ))}
+      </dl>
+      {totales.some(([, v]) => v) && (
+        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {totales.filter(([, v]) => v).map(([k, v]) => (
+            <div key={k} className={`rounded-lg border px-3 py-2 ${k === "Neto a cobrar" ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20" : "border-gray-200 dark:border-gray-700"}`}>
+              <dt className="text-[11px] text-gray-500">{k}</dt>
+              <dd className="font-semibold text-gray-800 dark:text-gray-200">$ {v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {secciones.length > 0 && (
+        <table className="w-full text-xs border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+          <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500">
+            <tr>
+              <th className="px-2 py-1 text-left">Código</th>
+              <th className="px-2 py-1 text-left">Concepto</th>
+              <th className="px-2 py-1 text-right">Unidad</th>
+              <th className="px-2 py-1 text-right">Monto</th>
+            </tr>
+          </thead>
+          <tbody>
+            {secciones.map((sec) => (
+              <React.Fragment key={sec}>
+                <tr>
+                  <td colSpan={4} className="px-2 py-1 font-bold text-gray-600 dark:text-gray-300 bg-gray-50/60 dark:bg-gray-800">{sec || "—"}</td>
+                </tr>
+                {(d.conceptos || []).filter((c) => c.seccion === sec).map((c, i) => (
+                  <tr key={`${sec}-${c.codigo}-${i}`} className="border-t border-gray-100 dark:border-gray-700">
+                    <td className="px-2 py-1 font-mono text-gray-500">{c.codigo}</td>
+                    <td className="px-2 py-1">{c.concepto}</td>
+                    <td className="px-2 py-1 text-right">{c.unidad}</td>
+                    <td className={`px-2 py-1 text-right font-mono ${c.monto.startsWith("-") ? "text-red-600 dark:text-red-400" : ""}`}>{c.monto}</td>
+                  </tr>
+                ))}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
   );
 };
 

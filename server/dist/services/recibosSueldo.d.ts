@@ -3,7 +3,9 @@ import { type ILoteRecibosSueldo } from "../models/LoteRecibosSueldo.js";
 /**
  * RECIBOS DE SUELDO (Contratación › Recibos de sueldo, 20/10/2026).
  *
- * Se sube la sábana (un PDF con todos los recibos del mes, de a dos páginas por persona). El lote nace
+ * Se sube la sábana (un PDF con todos los recibos del mes, de a dos páginas por persona) y, si se tiene,
+ * el TXT que MEMOSOFT exporta con ella: con el TXT los datos salen de ahí, sin OCR y sin errores de
+ * lectura (el bloque N del TXT es la página N del PDF, que sólo se parte). Sin TXT, el lote nace
  * en el acto, «leyendo», y la lectura sigue en segundo plano: se saca el texto de cada página y, si no
  * trae el CUIL (los recibos de MEMOSOFT dibujan los datos como trazos), se la renderiza y se le hace
  * OCR. Con el texto de cada página se parte la sábana en un recibo por persona (`agruparPaginas`),
@@ -18,8 +20,38 @@ export declare class ErrorRecibos extends Error {
     status: number;
     constructor(msg: string, status?: number);
 }
-/** Crea el lote, guarda la sábana y dispara la lectura en segundo plano. Devuelve el lote «leyendo». */
-export declare function procesarSabana(tenantId: Types.ObjectId, subidoPor: string | undefined, nombreArchivo: string, buffer: Buffer, paginasPorRecibo?: number): Promise<ILoteRecibosSueldo>;
+/**
+ * Crea el lote y guarda la sábana. Con el TXT de MEMOSOFT lee los datos de ahí en el acto y devuelve el
+ * lote «listo»; sin TXT dispara la lectura por OCR en segundo plano y lo devuelve «leyendo».
+ */
+export declare function procesarSabana(tenantId: Types.ObjectId, subidoPor: string | undefined, nombreArchivo: string, buffer: Buffer, paginasPorRecibo?: number, txt?: {
+    nombre: string;
+    buffer: Buffer;
+}): Promise<ILoteRecibosSueldo>;
+export interface ResultadoMasivo {
+    lotes: Array<{
+        loteId: string;
+        pdf: string;
+        txt: string;
+        recibos: number;
+        por: string;
+    }>;
+    /** Archivos que no se subieron, con el motivo. */
+    omitidos: Array<{
+        archivo: string;
+        motivo: string;
+    }>;
+}
+/**
+ * SUBIDA MASIVA: todas las sábanas PDF y sus TXT de una vez. Cada TXT se empareja con su PDF (por nombre
+ * y, si no, por cantidad de páginas: ver `utils/emparejarSabanas.ts`) y cada par es un lote, como si se
+ * hubiera subido solo. Lo que no tiene pareja no se sube y se informa: un PDF solo se lee por OCR, que es
+ * lento y menos preciso, así que se sube aparte a propósito.
+ */
+export declare function procesarVarios(tenantId: Types.ObjectId, subidoPor: string | undefined, archivos: Array<{
+    nombre: string;
+    buffer: Buffer;
+}>, paginasPorRecibo?: number): Promise<ResultadoMasivo>;
 /**
  * VOLVER A LEER UN RECIBO: su PDF (las páginas ya separadas) pasa otra vez por OCR, a más resolución
  * que la lectura del lote (4× la página entera, y el encabezado a 4× si falta el CUIL), se releen los
@@ -50,6 +82,8 @@ export declare function exportacionDelLote(lote: ILoteRecibosSueldo): {
     lote: {
         id: string;
         archivo: string;
+        fuente: "ocr" | "txt";
+        txt: string;
         paginas: number;
         paginasPorRecibo: number;
         periodo: string;

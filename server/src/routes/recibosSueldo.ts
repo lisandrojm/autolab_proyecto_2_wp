@@ -8,7 +8,7 @@ import { requirePermission } from "../middleware/permissions.js";
 import { LoteRecibosSueldo } from "../models/LoteRecibosSueldo.js";
 import { User } from "../models/User.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
-import { ErrorRecibos, asignarPersona, eliminarLote, enviarAFirmar, exportacionDelLote, procesarSabana, releerRecibo } from "../services/recibosSueldo.js";
+import { ErrorRecibos, procesarVarios, asignarPersona, eliminarLote, enviarAFirmar, exportacionDelLote, procesarSabana, releerRecibo } from "../services/recibosSueldo.js";
 
 /**
  * /api/v1/recibos-sueldo — el módulo Recibos de sueldo (ver `services/recibosSueldo.ts`).
@@ -20,7 +20,8 @@ recibosSueldoRoutes.use(requireTenant, authenticateToken, requirePermission("adm
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => cb(null, file.mimetype === "application/pdf" || /\.pdf$/i.test(file.originalname)),
+  // La sábana PDF y, opcional, el TXT que MEMOSOFT exporta con ella.
+  fileFilter: (_req, file, cb) => cb(null, file.mimetype === "application/pdf" || /\.(pdf|txt)$/i.test(file.originalname) || file.mimetype === "text/plain"),
 });
 
 const SIN_TEXTO = "-recibos.textoCrudo";
@@ -40,15 +41,37 @@ async function loteDe(req: AuthenticatedRequest & TenantRequest, conTexto = fals
   return lote;
 }
 
-// POST /lotes — subir la sábana. `paginasPorRecibo` (default 2) es la pista para partirla cuando el texto no alcanza.
-recibosSueldoRoutes.post("/lotes", upload.single("archivo"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+// POST /lotes — subir la sábana (`archivo`) y, si se tiene, el TXT de MEMOSOFT (`txt`): con el TXT los datos salen de ahí, sin OCR.
+// `paginasPorRecibo` (default 2) es la pista para partir la sábana por OCR cuando el texto no alcanza.
+recibosSueldoRoutes.post("/lotes", upload.fields([{ name: "archivo", maxCount: 1 }, { name: "txt", maxCount: 1 }]), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    if (!req.file) throw new ErrorRecibos("Subí un PDF con los recibos.");
+    const archivos = (req.files || {}) as Record<string, Express.Multer.File[]>;
+    const pdf = archivos.archivo?.[0];
+    const txt = archivos.txt?.[0];
+    if (!pdf || !/\.pdf$/i.test(pdf.originalname)) throw new ErrorRecibos("Subí el PDF con los recibos.");
+    if (txt && !/\.txt$/i.test(txt.originalname)) throw new ErrorRecibos("El segundo archivo tiene que ser el TXT de los recibos.");
     const paginasPorRecibo = Math.min(10, Math.max(1, Number(req.body?.paginasPorRecibo) || 2));
-    const lote = await procesarSabana(req.tenantObjectId!, req.user?.userId, req.file.originalname, req.file.buffer, paginasPorRecibo);
+    const lote = await procesarSabana(req.tenantObjectId!, req.user?.userId, pdf.originalname, pdf.buffer, paginasPorRecibo, txt ? { nombre: txt.originalname, buffer: txt.buffer } : undefined);
     res.status(201).json(await LoteRecibosSueldo.findById(lote._id).select(SIN_TEXTO).lean());
   } catch (e) {
     responderError(res, e, "subir");
+  }
+});
+
+// POST /lotes/masivo — todas las sábanas PDF y sus TXT de una vez (`archivos`): un lote por cada PDF que tenga su TXT.
+recibosSueldoRoutes.post("/lotes/masivo", upload.array("archivos", 60), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    // Multer entrega el nombre en Latin-1 (las tildes llegan rotas): se pasa a UTF-8 si eso da un texto válido.
+    const nombreDe = (n: string) => {
+      const utf8 = Buffer.from(n, "latin1").toString("utf8");
+      return utf8.includes("\uFFFD") ? n : utf8;
+    };
+    const archivos = ((req.files || []) as Express.Multer.File[]).map((f) => ({ nombre: nombreDe(f.originalname), buffer: f.buffer }));
+    if (archivos.length === 0) throw new ErrorRecibos("Elegí las sábanas PDF y sus TXT.");
+    const paginasPorRecibo = Math.min(10, Math.max(1, Number(req.body?.paginasPorRecibo) || 2));
+    res.status(201).json(await procesarVarios(req.tenantObjectId!, req.user?.userId, archivos, paginasPorRecibo));
+  } catch (e) {
+    responderError(res, e, "subir varios");
   }
 });
 

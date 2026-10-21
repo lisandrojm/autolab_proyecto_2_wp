@@ -1,4 +1,5 @@
 import fs from "fs";
+import { createHash } from "crypto";
 import path from "path";
 import { Types } from "mongoose";
 import { PDFDocument } from "pdf-lib";
@@ -17,10 +18,14 @@ import { getTenantDropboxConfig, uploadFile } from "./dropboxService.js";
 import { resolverCarpetaPorProposito } from "../utils/estadoCarpetas.js";
 import { leerAnclas } from "../utils/anclasNombre.js";
 import { abrirOcr, ocrDePagina } from "../utils/ocrPaginas.js";
+import { bloquesDelTxt, decodificarTxt, leerTxtDeRecibos } from "../utils/reciboTxtMemosoft.js";
+import { emparejarSabanas } from "../utils/emparejarSabanas.js";
 /**
  * RECIBOS DE SUELDO (Contratación › Recibos de sueldo, 20/10/2026).
  *
- * Se sube la sábana (un PDF con todos los recibos del mes, de a dos páginas por persona). El lote nace
+ * Se sube la sábana (un PDF con todos los recibos del mes, de a dos páginas por persona) y, si se tiene,
+ * el TXT que MEMOSOFT exporta con ella: con el TXT los datos salen de ahí, sin OCR y sin errores de
+ * lectura (el bloque N del TXT es la página N del PDF, que sólo se parte). Sin TXT, el lote nace
  * en el acto, «leyendo», y la lectura sigue en segundo plano: se saca el texto de cada página y, si no
  * trae el CUIL (los recibos de MEMOSOFT dibujan los datos como trazos), se la renderiza y se le hace
  * OCR. Con el texto de cada página se parte la sábana en un recibo por persona (`agruparPaginas`),
@@ -130,8 +135,11 @@ function distancia1(a, b) {
         return a.slice(i + 1) === b.slice(i + 1);
     return a.length > b.length ? a.slice(i + 1) === b.slice(i) : a.slice(i) === b.slice(i + 1);
 }
-/** Crea el lote, guarda la sábana y dispara la lectura en segundo plano. Devuelve el lote «leyendo». */
-export async function procesarSabana(tenantId, subidoPor, nombreArchivo, buffer, paginasPorRecibo = 2) {
+/**
+ * Crea el lote y guarda la sábana. Con el TXT de MEMOSOFT lee los datos de ahí en el acto y devuelve el
+ * lote «listo»; sin TXT dispara la lectura por OCR en segundo plano y lo devuelve «leyendo».
+ */
+export async function procesarSabana(tenantId, subidoPor, nombreArchivo, buffer, paginasPorRecibo = 2, txt) {
     let total = 0;
     try {
         const doc = await PDFDocument.load(buffer, { ignoreEncryption: true });
@@ -142,6 +150,14 @@ export async function procesarSabana(tenantId, subidoPor, nombreArchivo, buffer,
     }
     if (total === 0)
         throw new ErrorRecibos("El PDF no tiene páginas.");
+    // El TXT se valida antes de crear nada: tiene que traer una hoja por cada página del PDF.
+    const deTxt = txt ? leerTxtDeRecibos(decodificarTxt(txt.buffer)) : null;
+    if (deTxt) {
+        if (deTxt.recibos.length === 0)
+            throw new ErrorRecibos("El TXT no tiene recibos de MEMOSOFT (no se encontró ninguna hoja «ORIGINAL … APELLIDO Y NOMBRES»).");
+        if (deTxt.bloques.length !== total)
+            throw new ErrorRecibos(`El TXT trae ${deTxt.bloques.length} hojas (${deTxt.recibos.length} recibos) y el PDF ${total} páginas: no parecen de la misma liquidación. Subí el TXT y el PDF que exportó MEMOSOFT juntos.`);
+    }
     const lote = new LoteRecibosSueldo({
         tenantId,
         nombreArchivo,
@@ -150,18 +166,87 @@ export async function procesarSabana(tenantId, subidoPor, nombreArchivo, buffer,
         paginasPorRecibo,
         estadoLote: "leyendo",
         progreso: { leidas: 0, total },
+        fuente: deTxt ? "txt" : "ocr",
+        nombreTxt: txt?.nombre || "",
     });
     const dir = dirDelLote(lote);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, "sabana.pdf"), buffer);
     lote.sabanaUrl = `/storage/${tenantId}/recibos-sueldo/${lote._id}/sabana.pdf`;
+    if (txt) {
+        fs.writeFileSync(path.join(dir, "recibos.txt"), txt.buffer);
+        lote.txtUrl = `/storage/${tenantId}/recibos-sueldo/${lote._id}/recibos.txt`;
+    }
     await lote.save();
+    if (deTxt) {
+        // Sin OCR: unos segundos aunque sean cientos de recibos, así que se hace en el acto.
+        try {
+            const sabana = await PDFDocument.load(buffer, { ignoreEncryption: true });
+            await armarRecibos(lote, sabana, deTxt.recibos.map((r) => ({ paginas: r.hojas, texto: r.texto, datos: r.datos })));
+        }
+        catch (e) {
+            await LoteRecibosSueldo.updateOne({ _id: lote._id }, { $set: { estadoLote: "error", error: e?.message || String(e) } }).catch(() => { });
+            throw e;
+        }
+        return lote;
+    }
     // Sin `await`: la respuesta vuelve ya; la pantalla sigue el avance por `progreso`.
     void leerLote(lote, buffer).catch(async (e) => {
         console.error(`[RECIBOS-SUELDO] Falló la lectura del lote ${lote._id}:`, e);
         await LoteRecibosSueldo.updateOne({ _id: lote._id }, { $set: { estadoLote: "error", error: e?.message || String(e) } }).catch(() => { });
     });
     return lote;
+}
+/**
+ * SUBIDA MASIVA: todas las sábanas PDF y sus TXT de una vez. Cada TXT se empareja con su PDF (por nombre
+ * y, si no, por cantidad de páginas: ver `utils/emparejarSabanas.ts`) y cada par es un lote, como si se
+ * hubiera subido solo. Lo que no tiene pareja no se sube y se informa: un PDF solo se lee por OCR, que es
+ * lento y menos preciso, así que se sube aparte a propósito.
+ */
+export async function procesarVarios(tenantId, subidoPor, archivos, paginasPorRecibo = 2) {
+    const omitidos = [];
+    const pdfs = [];
+    const txts = [];
+    const porNombre = new Map();
+    // El mismo archivo bajado dos veces («… (1).pdf»): se sube una sola vez.
+    const vistos = new Map();
+    for (const a of archivos) {
+        const huella = createHash("sha1").update(a.buffer).digest("hex");
+        if (porNombre.has(a.nombre) || vistos.has(huella)) {
+            omitidos.push({ archivo: a.nombre, motivo: `Repetido: es el mismo archivo que «${vistos.get(huella) || a.nombre}».` });
+            continue;
+        }
+        vistos.set(huella, a.nombre);
+        porNombre.set(a.nombre, a.buffer);
+        if (/\.pdf$/i.test(a.nombre)) {
+            try {
+                pdfs.push({ nombre: a.nombre, paginas: (await PDFDocument.load(a.buffer, { ignoreEncryption: true })).getPageCount() });
+            }
+            catch (e) {
+                omitidos.push({ archivo: a.nombre, motivo: `No se pudo leer el PDF: ${e?.message || e}` });
+            }
+        }
+        else if (/\.txt$/i.test(a.nombre))
+            txts.push({ nombre: a.nombre, hojas: bloquesDelTxt(decodificarTxt(a.buffer)).length });
+        else
+            omitidos.push({ archivo: a.nombre, motivo: "No es un PDF ni un TXT." });
+    }
+    const e = emparejarSabanas(pdfs, txts);
+    for (const p of e.pdfsSinTxt)
+        omitidos.push({ archivo: p, motivo: "No vino su TXT. Para leerlo por OCR, subilo solo." });
+    for (const t of e.txtsSinPdf)
+        omitidos.push({ archivo: t.nombre, motivo: t.motivo });
+    const lotes = [];
+    for (const par of e.pares) {
+        try {
+            const lote = await procesarSabana(tenantId, subidoPor, par.pdf, porNombre.get(par.pdf), paginasPorRecibo, { nombre: par.txt, buffer: porNombre.get(par.txt) });
+            lotes.push({ loteId: String(lote._id), pdf: par.pdf, txt: par.txt, recibos: (lote.recibos || []).length, por: par.por });
+        }
+        catch (err) {
+            omitidos.push({ archivo: `${par.pdf} + ${par.txt}`, motivo: err?.message || String(err) });
+        }
+    }
+    return { lotes, omitidos };
 }
 /**
  * La lectura en sí. Texto de cada página y, si no trae un CUIL de persona, OCR de su imagen. El
@@ -194,6 +279,14 @@ async function leerLote(lote, buffer) {
     const sabana = await PDFDocument.load(buffer, { ignoreEncryption: true });
     const grupos = agruparPaginas(textos, lote.paginasPorRecibo);
     const leidos = grupos.map((paginas) => ({ paginas, texto: paginas.map((i) => textos[i]).join("\n\n----- página siguiente -----\n\n") })).map((g) => ({ ...g, datos: leerRecibo(g.texto) }));
+    await armarRecibos(lote, sabana, leidos);
+}
+/**
+ * Con lo leído de cada recibo (por OCR o del TXT): guarda su PDF con sus páginas, busca a la persona por
+ * CUIL (o por nombre, si no hay CUIL) y su contrato que rige, y deja el lote «listo».
+ */
+async function armarRecibos(lote, sabana, leidos) {
+    const fuente = lote.fuente === "txt" ? "El TXT" : "El OCR";
     const porCuil = await usuariosPorCuil(lote.tenantId, [...new Set(leidos.map((g) => g.datos.cuil).filter(Boolean))]);
     const contratoDe = new Map();
     const contratoDeUsuario = async (u) => {
@@ -226,11 +319,13 @@ async function leerLote(lote, buffer) {
             ...(contrato || { userProjectId: null, projectId: null, contractIndex: null, nombreProyecto: "" }),
             asociadoPorNombre: porNombre,
             estado: u && contrato?.userProjectId ? "listo" : "sin_persona",
-            error: u && !contrato?.userProjectId ? "La persona no tiene un contrato vigente en ningún proyecto." : porNombre ? "El OCR no leyó el CUIL: se asoció por apellido y nombre. Revisá que sea la persona antes de enviar." : !g.datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "",
+            error: u && !contrato?.userProjectId ? "La persona no tiene un contrato vigente en ningún proyecto." : porNombre ? `${fuente} no trajo el CUIL: se asoció por apellido y nombre. Revisá que sea la persona antes de enviar.` : !g.datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "",
         });
     }
     const periodo = [...periodos.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
-    await LoteRecibosSueldo.updateOne({ _id: lote._id }, { $set: { recibos, periodo, estadoLote: "listo", "progreso.leidas": textos.length } });
+    const set = { recibos, periodo, estadoLote: "listo", "progreso.leidas": lote.paginas };
+    await LoteRecibosSueldo.updateOne({ _id: lote._id }, { $set: set });
+    lote.set({ periodo, estadoLote: "listo" });
 }
 /**
  * VOLVER A LEER UN RECIBO: su PDF (las páginas ya separadas) pasa otra vez por OCR, a más resolución
@@ -243,6 +338,8 @@ export async function releerRecibo(lote, reciboId) {
         throw new ErrorRecibos("Recibo no encontrado.", 404);
     if (r.estado === "enviado" || r.estado === "firmado")
         throw new ErrorRecibos("Ese recibo ya se envió a firmar: no se vuelve a leer.", 409);
+    if (lote.fuente === "txt")
+        throw new ErrorRecibos("Los datos de este lote salen del TXT de MEMOSOFT: no hace falta volver a leerlos.", 409);
     const archivo = path.join(RAIZ_STORAGE, String(r.archivoUrl || "").replace(/^\/storage\//, ""));
     if (!r.archivoUrl || !fs.existsSync(archivo))
         throw new ErrorRecibos("El PDF de ese recibo ya no está en el servidor.", 404);
@@ -373,7 +470,7 @@ export async function marcarReciboFirmado(tenantId, codigo) {
 /** Todo lo que se leyó del PDF, para descargar como JSON y revisar qué entendió el lector. */
 export function exportacionDelLote(lote) {
     return {
-        lote: { id: String(lote._id), archivo: lote.nombreArchivo, paginas: lote.paginas, paginasPorRecibo: lote.paginasPorRecibo, periodo: lote.periodo, estado: lote.estadoLote, subido: lote.createdAt },
+        lote: { id: String(lote._id), archivo: lote.nombreArchivo, fuente: lote.fuente, txt: lote.nombreTxt || undefined, paginas: lote.paginas, paginasPorRecibo: lote.paginasPorRecibo, periodo: lote.periodo, estado: lote.estadoLote, subido: lote.createdAt },
         recibos: lote.recibos.map((r) => ({
             paginas: r.paginas,
             datos: r.datos,

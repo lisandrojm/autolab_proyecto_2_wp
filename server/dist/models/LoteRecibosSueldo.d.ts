@@ -24,6 +24,37 @@ export interface IReciboDelLote {
         legajo: string;
         neto: string;
         cuitsEncontrados: string[];
+        /** Lo que sigue sólo sale del TXT de MEMOSOFT (`utils/reciboTxtMemosoft.ts`); con OCR queda vacío. */
+        empresa?: string;
+        basico?: string;
+        ingreso?: string;
+        antiguedad?: string;
+        sector?: string;
+        modalidad?: string;
+        categoria?: string;
+        tarea?: string;
+        periodoTexto?: string;
+        periodoDeposito?: string;
+        fechaDeposito?: string;
+        bancoDeposito?: string;
+        costoTotal?: string;
+        contribucionesEmpleador?: string;
+        sueldoBruto?: string;
+        remunerativo?: string;
+        noRemunerativo?: string;
+        descuentos?: string;
+        sueldoNeto?: string;
+        otros?: string;
+        formaPago?: string;
+        fechaPago?: string;
+        numeroRecibo?: string;
+        conceptos?: Array<{
+            codigo: string;
+            concepto: string;
+            unidad: string;
+            monto: string;
+            seccion: string;
+        }>;
     };
     textoCrudo: string;
     /** `/storage/<tenant>/recibos-sueldo/<lote>/<n>.pdf` */
@@ -66,6 +97,13 @@ export interface ILoteRecibosSueldo extends Document {
     error?: string;
     paginas: number;
     paginasPorRecibo: number;
+    /**
+     * De dónde salen los datos: «txt» si se subió el TXT que MEMOSOFT exporta con la sábana (el bloque N
+     * del TXT es la página N del PDF; sin OCR), «ocr» si sólo vino el PDF.
+     */
+    fuente: "ocr" | "txt";
+    nombreTxt?: string;
+    txtUrl?: string;
     /** El período que más se repite entre los recibos leídos ("YYYY-MM"), o "". */
     periodo: string;
     recibos: Types.DocumentArray<IReciboDelLote & Types.Subdocument>;

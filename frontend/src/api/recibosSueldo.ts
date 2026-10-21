@@ -4,10 +4,55 @@ import axios from "./axiosConfig";
 
 export type EstadoRecibo = "sin_persona" | "listo" | "enviado" | "firmado" | "error";
 
+export interface ConceptoRecibo {
+  codigo: string;
+  concepto: string;
+  unidad: string;
+  monto: string;
+  /** «CONTRIBUCIONES EMPRESA», «REMUNERATIVO», «NO REMUNERATIVO», «DESCUENTOS», «OTROS»… */
+  seccion: string;
+}
+
+/** Lo leído del recibo. Los campos opcionales salen sólo del TXT de MEMOSOFT (con OCR quedan vacíos). */
+export interface DatosRecibo {
+  cuil: string;
+  empleadorCuit: string;
+  nombre: string;
+  periodo: string;
+  legajo: string;
+  /** Neto a cobrar. */
+  neto: string;
+  cuitsEncontrados: string[];
+  empresa?: string;
+  basico?: string;
+  ingreso?: string;
+  antiguedad?: string;
+  sector?: string;
+  modalidad?: string;
+  categoria?: string;
+  tarea?: string;
+  periodoTexto?: string;
+  periodoDeposito?: string;
+  fechaDeposito?: string;
+  bancoDeposito?: string;
+  costoTotal?: string;
+  contribucionesEmpleador?: string;
+  sueldoBruto?: string;
+  remunerativo?: string;
+  noRemunerativo?: string;
+  descuentos?: string;
+  sueldoNeto?: string;
+  otros?: string;
+  formaPago?: string;
+  fechaPago?: string;
+  numeroRecibo?: string;
+  conceptos?: ConceptoRecibo[];
+}
+
 export interface ReciboDelLote {
   _id: string;
   paginas: number[];
-  datos: { cuil: string; empleadorCuit: string; nombre: string; periodo: string; legajo: string; neto: string; cuitsEncontrados: string[] };
+  datos: DatosRecibo;
   /** `/storage/...`: se abre con `getImageUrl`. */
   archivoUrl: string;
   userId?: string | null;
@@ -39,10 +84,19 @@ export interface LoteRecibos {
   error?: string;
   paginas: number;
   paginasPorRecibo: number;
+  /** «txt»: los datos salen del TXT de MEMOSOFT (sin OCR); «ocr»: sólo se subió el PDF. */
+  fuente?: "ocr" | "txt";
+  nombreTxt?: string;
   periodo: string;
   recibos: ReciboDelLote[];
   createdAt: string;
   resumen?: { total: number; listos: number; sinPersona: number; enviados: number; firmados: number };
+}
+
+export interface ResultadoMasivo {
+  /** `por`: cómo se emparejó — "nombre", "paginas" (mismo tamaño) o "unicos" (el único PDF con el único TXT). */
+  lotes: Array<{ loteId: string; pdf: string; txt: string; recibos: number; por: string }>;
+  omitidos: Array<{ archivo: string; motivo: string }>;
 }
 
 export interface PersonaBuscada {
@@ -61,11 +115,24 @@ export const ETIQUETA_ESTADO_RECIBO: Record<EstadoRecibo, string> = {
 };
 
 export const recibosSueldoAPI = {
-  async subir(archivo: File, paginasPorRecibo = 2): Promise<LoteRecibos> {
+  /** La sábana PDF y, si se tiene, el TXT que MEMOSOFT exporta con ella: con el TXT los datos salen de ahí, sin OCR. */
+  async subir(archivo: File, txt: File | null, paginasPorRecibo = 2): Promise<LoteRecibos> {
     const fd = new FormData();
     fd.append("archivo", archivo);
+    if (txt) fd.append("txt", txt);
     fd.append("paginasPorRecibo", String(paginasPorRecibo));
     const { data } = await axios.post("/recibos-sueldo/lotes", fd, { headers: { "Content-Type": "multipart/form-data" } });
+    return data;
+  },
+  /**
+   * Subida masiva: todas las sábanas PDF y sus TXT juntos. El server empareja cada TXT con su PDF (por
+   * nombre o por cantidad de páginas) y crea un lote por par; lo que no tiene pareja vuelve en `omitidos`.
+   */
+  async subirVarios(archivos: File[], paginasPorRecibo = 2): Promise<ResultadoMasivo> {
+    const fd = new FormData();
+    for (const a of archivos) fd.append("archivos", a);
+    fd.append("paginasPorRecibo", String(paginasPorRecibo));
+    const { data } = await axios.post("/recibos-sueldo/lotes/masivo", fd, { headers: { "Content-Type": "multipart/form-data" } });
     return data;
   },
   async lotes(): Promise<LoteRecibos[]> {
