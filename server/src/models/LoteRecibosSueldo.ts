@@ -12,7 +12,7 @@ import mongoose, { Schema, Document, Model, Types } from "mongoose";
  *
  * `textoCrudo` puede pesar (unos KB por página): los listados lo excluyen con `select`.
  */
-export type EstadoRecibo = "sin_persona" | "listo" | "enviado" | "firmado" | "error";
+export type EstadoRecibo = "sin_persona" | "listo" | "enviando" | "enviado" | "firmado" | "error";
 
 export interface IReciboDelLote {
   _id: Types.ObjectId;
@@ -101,6 +101,8 @@ export interface ILoteRecibosSueldo extends Document {
   txtUrl?: string;
   /** El período que más se repite entre los recibos leídos ("YYYY-MM"), o "". */
   periodo: string;
+  /** El último envío a firmar, que corre en segundo plano: su avance, para mostrarlo en la pantalla. */
+  envio?: { estado: "enviando" | "listo" | "error"; total: number; hechos: number; fallidos: number; iniciadoEl: Date; ultimoAvance: Date; terminadoEl?: Date | null; porNombre?: string; error?: string } | null;
   recibos: Types.DocumentArray<IReciboDelLote & Types.Subdocument>;
   createdAt: Date;
   updatedAt: Date;
@@ -155,7 +157,7 @@ const reciboSchema = new Schema<IReciboDelLote>(
     nombreProyecto: { type: String, default: "" },
     asignadoAMano: { type: Boolean, default: false },
     asociadoPorNombre: { type: Boolean, default: false },
-    estado: { type: String, enum: ["sin_persona", "listo", "enviado", "firmado", "error"], default: "sin_persona" },
+    estado: { type: String, enum: ["sin_persona", "listo", "enviando", "enviado", "firmado", "error"], default: "sin_persona" },
     enviadoEl: { type: Date, default: null },
     firmadoEl: { type: Date, default: null },
     nombreEnviado: { type: String, default: "" },
@@ -180,6 +182,13 @@ const schema = new Schema<ILoteRecibosSueldo>(
     nombreTxt: { type: String, default: "" },
     txtUrl: { type: String, default: "" },
     periodo: { type: String, default: "" },
+    envio: {
+      type: new Schema(
+        { estado: String, total: Number, hechos: Number, fallidos: Number, iniciadoEl: Date, ultimoAvance: Date, terminadoEl: Date, porNombre: String, error: String },
+        { _id: false },
+      ),
+      default: null,
+    },
     recibos: { type: [reciboSchema], default: [] },
   },
   { timestamps: true, collection: "recibos_sueldo_lotes" },

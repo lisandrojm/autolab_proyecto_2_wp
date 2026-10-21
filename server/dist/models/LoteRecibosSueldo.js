@@ -47,7 +47,7 @@ const reciboSchema = new Schema({
     nombreProyecto: { type: String, default: "" },
     asignadoAMano: { type: Boolean, default: false },
     asociadoPorNombre: { type: Boolean, default: false },
-    estado: { type: String, enum: ["sin_persona", "listo", "enviado", "firmado", "error"], default: "sin_persona" },
+    estado: { type: String, enum: ["sin_persona", "listo", "enviando", "enviado", "firmado", "error"], default: "sin_persona" },
     enviadoEl: { type: Date, default: null },
     firmadoEl: { type: Date, default: null },
     nombreEnviado: { type: String, default: "" },
@@ -68,6 +68,10 @@ const schema = new Schema({
     nombreTxt: { type: String, default: "" },
     txtUrl: { type: String, default: "" },
     periodo: { type: String, default: "" },
+    envio: {
+        type: new Schema({ estado: String, total: Number, hechos: Number, fallidos: Number, iniciadoEl: Date, ultimoAvance: Date, terminadoEl: Date, porNombre: String, error: String }, { _id: false }),
+        default: null,
+    },
     recibos: { type: [reciboSchema], default: [] },
 }, { timestamps: true, collection: "recibos_sueldo_lotes" });
 schema.index({ tenantId: 1, createdAt: -1 });

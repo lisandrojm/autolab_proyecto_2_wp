@@ -23,6 +23,7 @@ import { RegistroEnviadosRecibos } from "../components/recibos/RegistroEnviadosR
 const CLASE_ESTADO: Record<string, string> = {
   sin_persona: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800",
   listo: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
+  enviando: "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800",
   enviado: "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800",
   firmado: "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800",
   error: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800",
@@ -30,6 +31,7 @@ const CLASE_ESTADO: Record<string, string> = {
 const ICONO_ESTADO: Record<string, any> = {
   sin_persona: faUserSlash,
   listo: faCircleCheck,
+  enviando: faSpinner,
   enviado: faClock,
   firmado: faCircleCheck,
   error: faCircleXmark,
@@ -86,16 +88,30 @@ export const RecibosSueldoPage: React.FC = () => {
   }, [loteId, cargarLote]);
 
   /*
-    Se relee solo: cada 2 s mientras el lote se está leyendo (OCR en el server, ~1 s por página), y cada
-    medio minuto mientras haya recibos enviados (el escaneo de Dropbox los marca firmados).
+    Se relee solo: cada 2 s mientras el lote se está leyendo (OCR en el server, ~1 s por página) o
+    enviando a firmar (también en el server, recibo por recibo), y cada medio minuto mientras haya
+    recibos enviados (el escaneo de Dropbox los marca firmados).
   */
+  const enviandoLote = lote?.envio?.estado === "enviando";
   useEffect(() => {
     if (!loteId || !lote) return;
-    const leyendo = lote.estadoLote === "leyendo";
-    if (!leyendo && !lote.recibos.some((r) => r.estado === "enviado")) return;
-    const t = setInterval(() => void cargarLote(loteId), leyendo ? 2_000 : 30_000);
+    const rapido = lote.estadoLote === "leyendo" || lote.envio?.estado === "enviando";
+    if (!rapido && !lote.recibos.some((r) => r.estado === "enviado")) return;
+    const t = setInterval(() => void cargarLote(loteId), rapido ? 2_000 : 30_000);
     return () => clearInterval(t);
   }, [loteId, lote, cargarLote]);
+  // Cuando termina el envío, el resumen: cuántos salieron y cuántos fallaron (con el motivo en su fila).
+  const envioAnterior = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const e = lote?.envio;
+    if (envioAnterior.current === "enviando" && e && e.estado !== "enviando") {
+      if (e.estado === "error") sweetAlert.error("El envío se cortó", `${e.hechos} enviado${e.hechos === 1 ? "" : "s"} antes del corte. ${e.error || ""}`);
+      else if (e.fallidos) sweetAlert.warning(`${e.hechos} enviado${e.hechos === 1 ? "" : "s"}, ${e.fallidos} con error`, "El motivo de cada uno está en su fila; quedaron «Listo» para reintentar.");
+      else sweetAlert.success("Envío terminado", `${e.hechos} recibo${e.hechos === 1 ? "" : "s"} al Outbox.`);
+      void cargarLotes();
+    }
+    envioAnterior.current = e?.estado;
+  }, [lote?.envio, cargarLotes]);
   // Cuando termina la lectura, el resumen del selector de lotes también cambia.
   const estadoAnterior = useRef<string | undefined>(undefined);
   useEffect(() => {
@@ -223,24 +239,13 @@ export const RecibosSueldoPage: React.FC = () => {
     if (!r.isConfirmed) return;
     setEnviando(true);
     try {
-      const res = await recibosSueldoAPI.enviar(
-        lote._id,
-        items.map((x) => x._id),
-      );
+      // El server responde en el acto y sigue mandando solo: el avance se ve arriba de la tabla.
+      const res = await recibosSueldoAPI.enviar(lote._id, items.map((x) => x._id));
       setLote(res.lote);
       setSeleccion(new Set());
-      if (res.fallidos.length)
-        sweetAlert.warning(
-          `${res.enviados} enviado${res.enviados === 1 ? "" : "s"}, ${res.fallidos.length} con error`,
-          res.fallidos
-            .map((f) => f.motivo)
-            .slice(0, 3)
-            .join(" · "),
-        );
-      else sweetAlert.success("Enviados", `${res.enviados} recibo${res.enviados === 1 ? "" : "s"} al Outbox.`);
-      void cargarLotes();
     } catch (e: any) {
       sweetAlert.error("No se pudo enviar", e?.response?.data?.error || e?.message || "");
+      void cargarLote(lote._id);
     } finally {
       setEnviando(false);
     }
@@ -421,14 +426,29 @@ export const RecibosSueldoPage: React.FC = () => {
                           <FontAwesomeIcon icon={faRotateRight} /> Releer tildados {tildados.length > 0 ? `(${tildados.length})` : ""}
                         </button>
                       )}
-                      <button type="button" disabled={enviando || !!cola || seleccionados.length === 0} onClick={() => enviar(seleccionados)} className="btn-primary flex items-center gap-2 text-sm px-4 py-2 disabled:opacity-50" title="Manda a firmar los listos de entre los tildados">
+                      <button type="button" disabled={enviando || enviandoLote || !!cola || seleccionados.length === 0} onClick={() => enviar(seleccionados)} className="btn-primary flex items-center gap-2 text-sm px-4 py-2 disabled:opacity-50" title="Manda a firmar los listos de entre los tildados">
                         <FontAwesomeIcon icon={enviando ? faSpinner : faPaperPlane} spin={enviando} /> Enviar a firmar {seleccionados.length > 0 ? `(${seleccionados.length} listo${seleccionados.length === 1 ? "" : "s"})` : ""}
                       </button>
-                      <button type="button" disabled={enviando || listos.length === 0} onClick={() => enviar(listos)} className="btn-secondary text-sm px-3 py-2 disabled:opacity-50" title="Todos los recibos listos del lote">
+                      <button type="button" disabled={enviando || enviandoLote || listos.length === 0} onClick={() => enviar(listos)} className="btn-secondary text-sm px-3 py-2 disabled:opacity-50" title="Todos los recibos listos del lote">
                         Enviar todos los listos ({listos.length})
                       </button>
                     </div>
                   </div>
+
+                  {/* El envío a firmar corre en el server: el avance, recibo por recibo. Se puede salir de la pantalla. */}
+                  {enviandoLote && lote.envio && (
+                    <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-800 dark:bg-sky-900/20">
+                      <p className="flex items-center gap-2 text-sm font-semibold text-sky-800 dark:text-sky-200">
+                        <FontAwesomeIcon icon={faSpinner} spin />
+                        Enviando a firmar: {lote.envio.hechos + lote.envio.fallidos} de {lote.envio.total}
+                        {lote.envio.fallidos ? <span className="text-red-600 dark:text-red-400"> · {lote.envio.fallidos} con error</span> : null}
+                      </p>
+                      <div className="mt-2 h-2 w-full rounded-full bg-sky-100 dark:bg-sky-950">
+                        <div className="h-2 rounded-full bg-sky-600 transition-all" style={{ width: `${Math.round(((lote.envio.hechos + lote.envio.fallidos) / Math.max(1, lote.envio.total)) * 100)}%` }} />
+                      </div>
+                      <p className="mt-1 text-xs text-sky-700/80 dark:text-sky-300/80">Cada recibo se sube al Outbox de Dropbox y queda marcado apenas sale. Podés salir de esta pantalla: el envío sigue en el servidor.</p>
+                    </div>
+                  )}
 
                   <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -580,7 +600,7 @@ export const RecibosSueldoPage: React.FC = () => {
                             <td className="px-4 py-3">
                               <div className="flex flex-col gap-1">
                                 <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[11px] font-semibold border ${CLASE_ESTADO[r.estado]}`} title={r.error || r.nombreEnviado || ""}>
-                                  <FontAwesomeIcon icon={ICONO_ESTADO[r.estado]} className="h-3 w-3" /> {ETIQUETA_ESTADO_RECIBO[r.estado]}
+                                  <FontAwesomeIcon icon={ICONO_ESTADO[r.estado]} spin={r.estado === "enviando"} className="h-3 w-3" /> {ETIQUETA_ESTADO_RECIBO[r.estado]}
                                 </span>
                                 {r.enviadoEl && (
                                   <span className="text-[11px] text-gray-400">

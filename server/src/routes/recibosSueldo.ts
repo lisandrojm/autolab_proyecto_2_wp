@@ -9,7 +9,7 @@ import { LoteRecibosSueldo } from "../models/LoteRecibosSueldo.js";
 import { ReciboSueldoEnviado } from "../models/ReciboSueldoEnviado.js";
 import { User } from "../models/User.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
-import { ErrorRecibos, procesarVarios, completarHistorial, listarEnviados, asignarPersona, eliminarLote, enviarAFirmar, exportacionDelLote, procesarSabana, releerRecibo } from "../services/recibosSueldo.js";
+import { ErrorRecibos, destrabarEnvio, procesarVarios, completarHistorial, listarEnviados, asignarPersona, eliminarLote, enviarAFirmar, exportacionDelLote, procesarSabana, releerRecibo } from "../services/recibosSueldo.js";
 
 /**
  * /api/v1/recibos-sueldo — el módulo Recibos de sueldo (ver `services/recibosSueldo.ts`).
@@ -122,7 +122,10 @@ recibosSueldoRoutes.get("/lotes", async (req: AuthenticatedRequest & TenantReque
 
 recibosSueldoRoutes.get("/lotes/:id", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    res.json(await loteDe(req));
+    const lote = await loteDe(req);
+    // Un envío que dejó de avanzar (reinicio del server) libera sus recibos.
+    if (await destrabarEnvio(lote)) return res.json(await loteDe(req));
+    res.json(lote);
   } catch (e) {
     responderError(res, e, "ver");
   }
@@ -179,8 +182,9 @@ recibosSueldoRoutes.post("/lotes/:id/enviar", async (req: AuthenticatedRequest &
   try {
     const { reciboIds } = z.object({ reciboIds: z.array(z.string()).max(2000).optional() }).parse(req.body || {});
     const lote = await loteDe(req);
+    // Responde en el acto: el envío sigue en segundo plano y la pantalla muestra el avance (`lote.envio`).
     const r = await enviarAFirmar(lote, reciboIds, req.user?.userId);
-    res.json({ ...r, lote });
+    res.status(202).json({ ...r, lote: await LoteRecibosSueldo.findById(lote._id).select(SIN_TEXTO).lean() });
   } catch (e) {
     responderError(res, e, "enviar");
   }

@@ -11,7 +11,7 @@ import { Document, Model, Types } from "mongoose";
  *
  * `textoCrudo` puede pesar (unos KB por página): los listados lo excluyen con `select`.
  */
-export type EstadoRecibo = "sin_persona" | "listo" | "enviado" | "firmado" | "error";
+export type EstadoRecibo = "sin_persona" | "listo" | "enviando" | "enviado" | "firmado" | "error";
 export interface IReciboDelLote {
     _id: Types.ObjectId;
     /** Páginas de la sábana (base 1) que forman este recibo. */
@@ -106,6 +106,18 @@ export interface ILoteRecibosSueldo extends Document {
     txtUrl?: string;
     /** El período que más se repite entre los recibos leídos ("YYYY-MM"), o "". */
     periodo: string;
+    /** El último envío a firmar, que corre en segundo plano: su avance, para mostrarlo en la pantalla. */
+    envio?: {
+        estado: "enviando" | "listo" | "error";
+        total: number;
+        hechos: number;
+        fallidos: number;
+        iniciadoEl: Date;
+        ultimoAvance: Date;
+        terminadoEl?: Date | null;
+        porNombre?: string;
+        error?: string;
+    } | null;
     recibos: Types.DocumentArray<IReciboDelLote & Types.Subdocument>;
     createdAt: Date;
     updatedAt: Date;

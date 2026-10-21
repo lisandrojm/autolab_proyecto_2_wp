@@ -343,7 +343,7 @@ async function armarRecibos(lote: ILoteRecibosSueldo, sabana: PDFDocument, leido
 export async function releerRecibo(lote: ILoteRecibosSueldo, reciboId: string): Promise<void> {
   const r: any = lote.recibos.id(reciboId);
   if (!r) throw new ErrorRecibos("Recibo no encontrado.", 404);
-  if (r.estado === "enviado" || r.estado === "firmado") throw new ErrorRecibos("Ese recibo ya se envió a firmar: no se vuelve a leer.", 409);
+  if (r.estado === "enviando" || r.estado === "enviado" || r.estado === "firmado") throw new ErrorRecibos("Ese recibo ya se envió a firmar: no se vuelve a leer.", 409);
   if (lote.fuente === "txt") throw new ErrorRecibos("Los datos de este lote salen del TXT de MEMOSOFT: no hace falta volver a leerlos.", 409);
   const archivo = path.join(RAIZ_STORAGE, String(r.archivoUrl || "").replace(/^\/storage\//, ""));
   if (!r.archivoUrl || !fs.existsSync(archivo)) throw new ErrorRecibos("El PDF de ese recibo ya no está en el servidor.", 404);
@@ -392,7 +392,7 @@ export async function releerRecibo(lote: ILoteRecibosSueldo, reciboId: string): 
 export async function asignarPersona(lote: ILoteRecibosSueldo, reciboId: string, userId: string): Promise<void> {
   const r: any = lote.recibos.id(reciboId);
   if (!r) throw new ErrorRecibos("Recibo no encontrado.", 404);
-  if (r.estado === "enviado" || r.estado === "firmado") throw new ErrorRecibos("Ese recibo ya se envió a firmar: no se cambia la persona.", 409);
+  if (r.estado === "enviando" || r.estado === "enviado" || r.estado === "firmado") throw new ErrorRecibos("Ese recibo ya se envió a firmar: no se cambia la persona.", 409);
   if (!Types.ObjectId.isValid(userId)) throw new ErrorRecibos("Persona inválida.");
   const u: any = await User.findOne({ _id: userId, tenantId: lote.tenantId }).select("firstName lastName email").lean();
   if (!u) throw new ErrorRecibos("Persona no encontrada.", 404);
@@ -410,13 +410,23 @@ export async function asignarPersona(lote: ILoteRecibosSueldo, reciboId: string,
   await lote.save();
 }
 
+/*
+  EL ENVÍO CORRE EN SEGUNDO PLANO (21/10/2026). Antes la llamada mandaba todos los recibos uno detrás del
+  otro y respondía al final: con 60 recibos pasaba el minuto de espera del navegador y la pantalla decía
+  «tardó demasiado» mientras el server seguía mandando. Ahora la llamada valida, marca los elegidos
+  «enviando» y responde en el acto; el envío sigue solo y guarda cada recibo apenas sale, con el avance
+  en `lote.envio`. Un recibo «enviando» no se puede volver a elegir: nada sale dos veces.
+*/
+
+/** Si el envío no avanza hace este tiempo, se dio por cortado (el server se reinició en el medio). */
+const ENVIO_TRABADO_MS = 10 * 60 * 1000;
+
 /**
- * Manda los recibos al Outbox de Dropbox, uno por uno, con la nomenclatura «Recibos de sueldo» (tipo
- * interno "Contrato") del contrato que rige. El código del documento queda marcado como recibo de
- * sueldo para que, al volver firmado, el escaneo de carpetas marque el recibo y NO mueva el estado del
- * contrato (ver `estadoDropboxCronService`).
+ * Arranca el envío al Outbox de Dropbox de los recibos listos (los tildados, o todos), con la
+ * nomenclatura «Recibos de sueldo» (tipo interno "Contrato") del contrato que rige. Devuelve cuántos van.
  */
-export async function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: string[], enviadoPor?: string): Promise<{ enviados: number; fallidos: Array<{ reciboId: string; motivo: string }> }> {
+export async function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: string[], enviadoPor?: string): Promise<{ enEnvio: number }> {
+  if ((lote as any).envio?.estado === "enviando") throw new ErrorRecibos("Este lote ya se está enviando: esperá a que termine.", 409);
   const tenant = await Tenant.findById(lote.tenantId).lean();
   const cfg = getTenantDropboxConfig(tenant);
   if (!cfg) throw new ErrorRecibos("Dropbox no está conectado para esta organización.");
@@ -425,10 +435,32 @@ export async function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: string
   const carpeta = outbox.replace(/\/$/, "");
 
   const elegidos: any[] = (lote.recibos as any[]).filter((r) => (!reciboIds || reciboIds.includes(String(r._id))) && r.estado === "listo");
-  let enviados = 0;
-  const fallidos: Array<{ reciboId: string; motivo: string }> = [];
+  if (elegidos.length === 0) throw new ErrorRecibos("No hay recibos listos para enviar entre los elegidos.");
   const quien: any = enviadoPor && Types.ObjectId.isValid(enviadoPor) ? await User.findById(enviadoPor).select("firstName lastName email").lean() : null;
+
+  // Marcar todo de una, condicionado a que siga «listo»: si otra pestaña los tomó, no salen dos veces.
+  const ids = elegidos.map((r) => r._id);
+  const ahora = new Date();
+  const marcado = await LoteRecibosSueldo.updateOne(
+    { _id: lote._id, "envio.estado": { $ne: "enviando" } },
+    {
+      $set: { "recibos.$[r].estado": "enviando", "recibos.$[r].error": "", envio: { estado: "enviando", total: ids.length, hechos: 0, fallidos: 0, iniciadoEl: ahora, ultimoAvance: ahora, terminadoEl: null, porNombre: quien ? nombreDe(quien) : "" } },
+    },
+    { arrayFilters: [{ "r._id": { $in: ids }, "r.estado": "listo" }] },
+  );
+  if (!marcado.modifiedCount) throw new ErrorRecibos("Este lote ya se está enviando: esperá a que termine.", 409);
+
+  void enviarEnSegundoPlano(lote, elegidos, cfg, carpeta, quien).catch(async (e: any) => {
+    console.error(`[RECIBOS-SUELDO] Falló el envío del lote ${lote._id}:`, e);
+    await LoteRecibosSueldo.updateOne({ _id: lote._id }, { $set: { "envio.estado": "error", "envio.error": e?.message || String(e), "envio.terminadoEl": new Date() } }).catch(() => {});
+  });
+  return { enEnvio: ids.length };
+}
+
+async function enviarEnSegundoPlano(lote: ILoteRecibosSueldo, elegidos: any[], cfg: any, carpeta: string, quien: any): Promise<void> {
   for (const r of elegidos) {
+    const set: Record<string, any> = {};
+    let ok = false;
     try {
       const [user, up] = await Promise.all([User.findOne({ _id: r.userId, tenantId: lote.tenantId }).lean(), UserProject.findById(r.userProjectId).lean()]);
       const contract: any = (up as any)?.contracts?.[r.contractIndex ?? -1];
@@ -444,24 +476,40 @@ export async function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: string
       r.nombreEnviado = nombre;
       r.codigo = codigo;
       r.error = "";
-      enviados++;
-      // El registro permanente de lo enviado. Si falla, el envío ya se hizo: se avisa en el log y el
-      // historial lo completa la próxima vez que se consulte (`completarHistorial`, desde el lote).
-      await registrarEnviado(lote, r, quien).catch((e) => console.error(`[RECIBOS-SUELDO] No se registró el envío del recibo ${r._id}:`, e));
+      Object.assign(set, { "recibos.$.estado": "enviado", "recibos.$.enviadoEl": r.enviadoEl, "recibos.$.nombreEnviado": nombre, "recibos.$.codigo": codigo, "recibos.$.error": "" });
+      ok = true;
     } catch (e: any) {
       const motivo = e?.response?.data ? JSON.stringify(e.response.data) : e?.message || String(e);
-      r.error = motivo;
-      fallidos.push({ reciboId: String(r._id), motivo });
+      // Vuelve a «listo» con el motivo: se puede reintentar.
+      Object.assign(set, { "recibos.$.estado": "listo", "recibos.$.error": motivo });
     }
+    // Cada recibo se guarda apenas sale: si algo se corta, lo enviado ya quedó marcado.
+    await LoteRecibosSueldo.updateOne({ _id: lote._id, "recibos._id": r._id }, { $set: { ...set, "envio.ultimoAvance": new Date() }, $inc: ok ? { "envio.hechos": 1 } : { "envio.fallidos": 1 } });
+    // El registro permanente de lo enviado. Si falla, el historial lo completa desde el lote (`completarHistorial`).
+    if (ok) await registrarEnviado(lote, r, quien).catch((e) => console.error(`[RECIBOS-SUELDO] No se registró el envío del recibo ${r._id}:`, e));
   }
-  lote.markModified("recibos");
-  await lote.save();
-  return { enviados, fallidos };
+  await LoteRecibosSueldo.updateOne({ _id: lote._id }, { $set: { "envio.estado": "listo", "envio.terminadoEl": new Date() } });
+}
+
+/**
+ * Un envío que dejó de avanzar (el server se reinició a mitad de camino): sus recibos «enviando» vuelven
+ * a «listo» con un aviso, para no dejarlos trabados. Puede que alguno haya llegado a Dropbox sin quedar
+ * marcado: el aviso pide revisar el Outbox antes de reenviar. Se llama al ver el lote.
+ */
+export async function destrabarEnvio(lote: ILoteRecibosSueldo): Promise<boolean> {
+  const envio: any = (lote as any).envio;
+  if (envio?.estado !== "enviando" || Date.now() - new Date(envio.ultimoAvance || envio.iniciadoEl || 0).getTime() < ENVIO_TRABADO_MS) return false;
+  await LoteRecibosSueldo.updateOne(
+    { _id: lote._id },
+    { $set: { "recibos.$[r].estado": "listo", "recibos.$[r].error": "El envío se cortó a mitad de camino. Revisá en el Outbox de Dropbox que este recibo no haya salido antes de reenviarlo.", "envio.estado": "error", "envio.error": "El envío se cortó (el servidor se reinició).", "envio.terminadoEl": new Date() } },
+    { arrayFilters: [{ "r.estado": "enviando" }] },
+  );
+  return true;
 }
 
 /** Borra el lote y sus PDFs. Sólo si ningún recibo salió a firmar. */
 export async function eliminarLote(lote: ILoteRecibosSueldo): Promise<void> {
-  if ((lote.recibos as any[]).some((r) => r.estado === "enviado" || r.estado === "firmado")) throw new ErrorRecibos("Este lote tiene recibos ya enviados a firmar: no se borra.", 409);
+  if ((lote.recibos as any[]).some((r) => r.estado === "enviando" || r.estado === "enviado" || r.estado === "firmado")) throw new ErrorRecibos("Este lote tiene recibos ya enviados a firmar: no se borra.", 409);
   fs.rmSync(dirDelLote(lote), { recursive: true, force: true });
   await lote.deleteOne();
 }

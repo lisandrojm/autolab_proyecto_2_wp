@@ -61,18 +61,18 @@ export declare function releerRecibo(lote: ILoteRecibosSueldo, reciboId: string)
 /** Asigna a mano la persona de un recibo (y su contrato que rige). */
 export declare function asignarPersona(lote: ILoteRecibosSueldo, reciboId: string, userId: string): Promise<void>;
 /**
- * Manda los recibos al Outbox de Dropbox, uno por uno, con la nomenclatura «Recibos de sueldo» (tipo
- * interno "Contrato") del contrato que rige. El código del documento queda marcado como recibo de
- * sueldo para que, al volver firmado, el escaneo de carpetas marque el recibo y NO mueva el estado del
- * contrato (ver `estadoDropboxCronService`).
+ * Arranca el envío al Outbox de Dropbox de los recibos listos (los tildados, o todos), con la
+ * nomenclatura «Recibos de sueldo» (tipo interno "Contrato") del contrato que rige. Devuelve cuántos van.
  */
 export declare function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: string[], enviadoPor?: string): Promise<{
-    enviados: number;
-    fallidos: Array<{
-        reciboId: string;
-        motivo: string;
-    }>;
+    enEnvio: number;
 }>;
+/**
+ * Un envío que dejó de avanzar (el server se reinició a mitad de camino): sus recibos «enviando» vuelven
+ * a «listo» con un aviso, para no dejarlos trabados. Puede que alguno haya llegado a Dropbox sin quedar
+ * marcado: el aviso pide revisar el Outbox antes de reenviar. Se llama al ver el lote.
+ */
+export declare function destrabarEnvio(lote: ILoteRecibosSueldo): Promise<boolean>;
 /** Borra el lote y sus PDFs. Sólo si ningún recibo salió a firmar. */
 export declare function eliminarLote(lote: ILoteRecibosSueldo): Promise<void>;
 /** Marca como firmado el recibo cuyo código volvió a la carpeta de firmados. Lo llama el escaneo de Dropbox. */

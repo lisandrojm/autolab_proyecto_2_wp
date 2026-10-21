@@ -2,7 +2,7 @@ import axios from "./axiosConfig";
 
 /** Contratación › Recibos de sueldo (ver `server/src/services/recibosSueldo.ts`). */
 
-export type EstadoRecibo = "sin_persona" | "listo" | "enviado" | "firmado" | "error";
+export type EstadoRecibo = "sin_persona" | "listo" | "enviando" | "enviado" | "firmado" | "error";
 
 export interface ConceptoRecibo {
   codigo: string;
@@ -84,6 +84,8 @@ export interface LoteRecibos {
   error?: string;
   paginas: number;
   paginasPorRecibo: number;
+  /** El último envío a firmar, que corre en segundo plano en el server. */
+  envio?: { estado: "enviando" | "listo" | "error"; total: number; hechos: number; fallidos: number; iniciadoEl: string; ultimoAvance: string; terminadoEl?: string | null; porNombre?: string; error?: string } | null;
   /** «txt»: los datos salen del TXT de MEMOSOFT (sin OCR); «ocr»: sólo se subió el PDF. */
   fuente?: "ocr" | "txt";
   nombreTxt?: string;
@@ -143,6 +145,7 @@ export interface PersonaBuscada {
 export const ETIQUETA_ESTADO_RECIBO: Record<EstadoRecibo, string> = {
   sin_persona: "Sin persona",
   listo: "Listo",
+  enviando: "Enviando…",
   enviado: "Enviado a firmar",
   firmado: "Firmado",
   error: "Error",
@@ -225,7 +228,8 @@ export const recibosSueldoAPI = {
     const { data } = await axios.patch(`/recibos-sueldo/lotes/${loteId}/recibos/${reciboId}/persona`, { userId });
     return data;
   },
-  async enviar(loteId: string, reciboIds?: string[]): Promise<{ enviados: number; fallidos: Array<{ reciboId: string; motivo: string }>; lote: LoteRecibos }> {
+  /** Arranca el envío, que sigue en segundo plano en el server: el avance queda en `lote.envio`. */
+  async enviar(loteId: string, reciboIds?: string[]): Promise<{ enEnvio: number; lote: LoteRecibos }> {
     const { data } = await axios.post(`/recibos-sueldo/lotes/${loteId}/enviar`, { reciboIds });
     return data;
   },
