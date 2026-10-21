@@ -39,6 +39,8 @@ export interface IReciboDelLote {
   nombreProyecto?: string;
   /** Si la persona se eligió a mano (el CUIL no se leyó o no coincidía). */
   asignadoAMano?: boolean;
+  /** Si se asoció por apellido y nombre porque el OCR no leyó el CUIL: para revisar antes de enviar. */
+  asociadoPorNombre?: boolean;
   estado: EstadoRecibo;
   enviadoEl?: Date | null;
   firmadoEl?: Date | null;
@@ -93,6 +95,7 @@ const reciboSchema = new Schema<IReciboDelLote>(
     nombreUsuario: { type: String, default: "" },
     nombreProyecto: { type: String, default: "" },
     asignadoAMano: { type: Boolean, default: false },
+    asociadoPorNombre: { type: Boolean, default: false },
     estado: { type: String, enum: ["sin_persona", "listo", "enviado", "firmado", "error"], default: "sin_persona" },
     enviadoEl: { type: Date, default: null },
     firmadoEl: { type: Date, default: null },

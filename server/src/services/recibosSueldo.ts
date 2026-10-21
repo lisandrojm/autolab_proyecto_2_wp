@@ -176,7 +176,10 @@ async function leerLote(lote: ILoteRecibosSueldo, buffer: Buffer): Promise<void>
 
   const porCuil = await usuariosPorCuil(lote.tenantId, [...new Set(leidos.map((g) => g.datos.cuil).filter(Boolean))]);
   const contratoDe = new Map<string, Awaited<ReturnType<typeof personaYContrato>>>();
-  for (const u of porCuil.values()) contratoDe.set(String(u._id), await personaYContrato(lote.tenantId, u._id));
+  const contratoDeUsuario = async (u: any) => {
+    if (!contratoDe.has(String(u._id))) contratoDe.set(String(u._id), await personaYContrato(lote.tenantId, u._id));
+    return contratoDe.get(String(u._id))!;
+  };
 
   const dir = dirDelLote(lote);
   const periodos = new Map<string, number>();
@@ -184,8 +187,13 @@ async function leerLote(lote: ILoteRecibosSueldo, buffer: Buffer): Promise<void>
   for (const [n, g] of leidos.entries()) {
     const archivo = `${String(n + 1).padStart(3, "0")}.pdf`;
     fs.writeFileSync(path.join(dir, archivo), await extraerPaginas(sabana, g.paginas));
-    const u = g.datos.cuil ? porCuil.get(g.datos.cuil) : null;
-    const contrato = u ? contratoDe.get(String(u._id)) : null;
+    let u = g.datos.cuil ? porCuil.get(g.datos.cuil) : null;
+    let porNombre = false;
+    if (!u && !g.datos.cuil && g.datos.nombre) {
+      u = await usuarioPorNombre(lote.tenantId, g.datos.nombre);
+      porNombre = !!u;
+    }
+    const contrato = u ? await contratoDeUsuario(u) : null;
     if (g.datos.periodo) periodos.set(g.datos.periodo, (periodos.get(g.datos.periodo) || 0) + 1);
     recibos.push({
       paginas: g.paginas.map((i) => i + 1),
@@ -195,8 +203,9 @@ async function leerLote(lote: ILoteRecibosSueldo, buffer: Buffer): Promise<void>
       userId: u?._id || null,
       nombreUsuario: u ? nombreDe(u) : "",
       ...(contrato || { userProjectId: null, projectId: null, contractIndex: null, nombreProyecto: "" }),
+      asociadoPorNombre: porNombre,
       estado: u && contrato?.userProjectId ? "listo" : "sin_persona",
-      error: u && !contrato?.userProjectId ? "La persona no tiene un contrato vigente en ningún proyecto." : !g.datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "",
+      error: u && !contrato?.userProjectId ? "La persona no tiene un contrato vigente en ningún proyecto." : porNombre ? "El OCR no leyó el CUIL: se asoció por apellido y nombre. Revisá que sea la persona antes de enviar." : !g.datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "",
     });
   }
   const periodo = [...periodos.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
@@ -279,4 +288,22 @@ export async function eliminarLote(lote: ILoteRecibosSueldo): Promise<void> {
 
 /** Marca como firmado el recibo cuyo código volvió a la carpeta de firmados. Lo llama el escaneo de Dropbox. */
 export async function marcarReciboFirmado(tenantId: unknown, codigo: string): Promise<boolean> {
-  const r = await LoteRecibosSueldo.updateOne({ tenantId, "recibos.codigo": codigo, "re
+  const r = await LoteRecibosSueldo.updateOne({ tenantId, "recibos.codigo": codigo, "recibos.estado": "enviado" }, { $set: { "recibos.$.estado": "firmado", "recibos.$.firmadoEl": new Date() } });
+  return r.modifiedCount > 0;
+}
+
+/** Todo lo que se leyó del PDF, para descargar como JSON y revisar qué entendió el lector. */
+export function exportacionDelLote(lote: ILoteRecibosSueldo) {
+  return {
+    lote: { id: String(lote._id), archivo: lote.nombreArchivo, paginas: lote.paginas, paginasPorRecibo: lote.paginasPorRecibo, periodo: lote.periodo, estado: lote.estadoLote, subido: lote.createdAt },
+    recibos: (lote.recibos as any[]).map((r) => ({
+      paginas: r.paginas,
+      datos: r.datos,
+      persona: r.userId ? { id: String(r.userId), nombre: r.nombreUsuario, proyecto: r.nombreProyecto, asignadoAMano: !!r.asignadoAMano } : null,
+      estado: r.estado,
+      error: r.error || undefined,
+      enviado: r.nombreEnviado ? { nombre: r.nombreEnviado, codigo: r.codigo, el: r.enviadoEl } : undefined,
+      textoCrudo: r.textoCrudo,
+    })),
+  };
+}
