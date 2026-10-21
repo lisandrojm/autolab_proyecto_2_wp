@@ -25,9 +25,16 @@ export interface ReciboDelLote {
   error?: string;
 }
 
+export type EstadoLote = "leyendo" | "listo" | "error";
+
 export interface LoteRecibos {
   _id: string;
   nombreArchivo: string;
+  sabanaUrl?: string;
+  /** La lectura corre en segundo plano: «leyendo» con el avance en `progreso`, después «listo» o «error». */
+  estadoLote: EstadoLote;
+  progreso: { leidas: number; total: number };
+  error?: string;
   paginas: number;
   paginasPorRecibo: number;
   periodo: string;

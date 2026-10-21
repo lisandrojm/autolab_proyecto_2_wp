@@ -16,18 +16,21 @@ import { nombreArchivoDocumento } from "./nomenclaturaService.js";
 import { getTenantDropboxConfig, uploadFile } from "./dropboxService.js";
 import { resolverCarpetaPorProposito } from "../utils/estadoCarpetas.js";
 import { leerAnclas } from "../utils/anclasNombre.js";
+import { abrirOcr, ocrDeImagen, renderizarPagina } from "../utils/ocrPaginas.js";
 
 /**
  * RECIBOS DE SUELDO (Contratación › Recibos de sueldo, 20/10/2026).
  *
- * Se sube la sábana (un PDF con todos los recibos del mes, de a dos páginas por persona), se lee el
- * texto de cada página, se parte en un recibo por persona (`agruparPaginas`), cada recibo se guarda
- * como PDF propio y se asocia a la persona por su CUIL y a su contrato que rige. Después, el mismo
- * circuito que los contratos: el PDF va al Outbox de Dropbox con la nomenclatura «Recibos de sueldo»
- * y vuelve firmado, reconocido por su código.
+ * Se sube la sábana (un PDF con todos los recibos del mes, de a dos páginas por persona). El lote nace
+ * en el acto, «leyendo», y la lectura sigue en segundo plano: se saca el texto de cada página y, si no
+ * trae el CUIL (los recibos de MEMOSOFT dibujan los datos como trazos), se la renderiza y se le hace
+ * OCR. Con el texto de cada página se parte la sábana en un recibo por persona (`agruparPaginas`),
+ * cada recibo se guarda como PDF propio y se asocia a la persona por su CUIL y a su contrato que rige.
+ * Después, el mismo circuito que los contratos: el PDF va al Outbox de Dropbox con la nomenclatura
+ * «Recibos de sueldo» y vuelve firmado, reconocido por su código.
  *
- * Los archivos viven en `storage/<tenant>/recibos-sueldo/<lote>/`, servidos como el resto de
- * `/storage`. Multi-tenant: todo filtra por `tenantId`.
+ * Los archivos viven en `storage/<tenant>/recibos-sueldo/<lote>/` (fuera del repo), servidos como el
+ * resto de `/storage`. Multi-tenant: todo filtra por `tenantId`.
  */
 
 export class ErrorRecibos extends Error {
@@ -41,17 +44,13 @@ export class ErrorRecibos extends Error {
 
 const RAIZ_STORAGE = path.join(process.cwd(), "storage");
 const nombreDe = (u: any) => `${u?.firstName || ""} ${u?.lastName || ""}`.trim() || u?.email || "";
+const dirDelLote = (lote: ILoteRecibosSueldo) => path.join(RAIZ_STORAGE, String(lote.tenantId), "recibos-sueldo", String(lote._id));
 
 /** El texto de cada página, en orden. Lanza si el archivo no es un PDF legible. */
-async function textosPorPagina(buffer: Buffer): Promise<string[]> {
-  const parser = new PDFParse({ data: new Uint8Array(buffer) });
-  try {
-    const res = await parser.getText();
-    const paginas = [...(res.pages || [])].sort((a, b) => a.num - b.num);
-    return paginas.map((p) => p.text || "");
-  } finally {
-    await parser.destroy().catch(() => {});
-  }
+async function textosPorPagina(parser: PDFParse): Promise<string[]> {
+  const res = await parser.getText();
+  const paginas = [...(res.pages || [])].sort((a, b) => a.num - b.num);
+  return paginas.map((p) => p.text || "");
 }
 
 /** Un PDF nuevo con sólo esas páginas (base 0) de la sábana. */
@@ -86,7 +85,6 @@ async function personaYContrato(tenantId: Types.ObjectId, userId: Types.ObjectId
 /** Las personas del tenant por CUIL normalizado (el guardado puede traer guiones). */
 async function usuariosPorCuil(tenantId: Types.ObjectId, cuils: string[]): Promise<Map<string, any>> {
   if (cuils.length === 0) return new Map();
-  // El CUIL guardado puede estar con o sin guiones: se traen los que contengan los 8 dígitos del medio.
   const usuarios: any[] = await User.find({ tenantId, "metadata.cuit": { $exists: true, $ne: "" }, "metadata.sinCuit": { $ne: true } }).select("firstName lastName email metadata.cuit").lean();
   const m = new Map<string, any>();
   for (const u of usuarios) {
@@ -96,50 +94,97 @@ async function usuariosPorCuil(tenantId: Types.ObjectId, cuils: string[]): Promi
   return m;
 }
 
-/** Sube la sábana: la parte, la lee, asocia personas y guarda el lote. */
+/** Crea el lote, guarda la sábana y dispara la lectura en segundo plano. Devuelve el lote «leyendo». */
 export async function procesarSabana(tenantId: Types.ObjectId, subidoPor: string | undefined, nombreArchivo: string, buffer: Buffer, paginasPorRecibo = 2): Promise<ILoteRecibosSueldo> {
-  let textos: string[];
-  let sabana: PDFDocument;
+  let total = 0;
   try {
-    [textos, sabana] = await Promise.all([textosPorPagina(buffer), PDFDocument.load(buffer, { ignoreEncryption: true })]);
+    const doc = await PDFDocument.load(buffer, { ignoreEncryption: true });
+    total = doc.getPageCount();
   } catch (e: any) {
     throw new ErrorRecibos(`No se pudo leer el PDF: ${e?.message || e}`);
   }
-  if (textos.length === 0) throw new ErrorRecibos("El PDF no tiene páginas.");
+  if (total === 0) throw new ErrorRecibos("El PDF no tiene páginas.");
 
-  const grupos = agruparPaginas(textos, paginasPorRecibo);
+  const lote = new LoteRecibosSueldo({
+    tenantId,
+    nombreArchivo,
+    subidoPor: subidoPor && Types.ObjectId.isValid(subidoPor) ? new Types.ObjectId(subidoPor) : null,
+    paginas: total,
+    paginasPorRecibo,
+    estadoLote: "leyendo",
+    progreso: { leidas: 0, total },
+  });
+  const dir = dirDelLote(lote);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "sabana.pdf"), buffer);
+  lote.sabanaUrl = `/storage/${tenantId}/recibos-sueldo/${lote._id}/sabana.pdf`;
+  await lote.save();
+
+  // Sin `await`: la respuesta vuelve ya; la pantalla sigue el avance por `progreso`.
+  void leerLote(lote, buffer).catch(async (e: any) => {
+    console.error(`[RECIBOS-SUELDO] Falló la lectura del lote ${lote._id}:`, e);
+    await LoteRecibosSueldo.updateOne({ _id: lote._id }, { $set: { estadoLote: "error", error: e?.message || String(e) } }).catch(() => {});
+  });
+  return lote;
+}
+
+/**
+ * La lectura en sí. Texto de cada página y, si no trae un CUIL de persona, OCR de su imagen. El
+ * avance se guarda página a página para que se vea desde la pantalla.
+ */
+async function leerLote(lote: ILoteRecibosSueldo, buffer: Buffer): Promise<void> {
+  const parser = new PDFParse({ data: new Uint8Array(buffer) });
+  let ocr: Awaited<ReturnType<typeof abrirOcr>> | null = null;
+  const textos: string[] = [];
+  try {
+    const capa = await textosPorPagina(parser);
+    for (let i = 0; i < capa.length; i++) {
+      let texto = capa[i];
+      if (!leerRecibo(texto).cuil) {
+        if (!ocr) ocr = await abrirOcr();
+        const { texto: leido, confianza } = await ocrDeImagen(ocr, await renderizarPagina(parser, i + 1));
+        // El OCR va primero (es lo que trae los datos); la capa de texto, después (trae los rótulos).
+        texto = `${leido}\n\n[Texto del PDF — OCR con confianza ${confianza}%]\n${texto}`;
+      }
+      textos.push(texto);
+      await LoteRecibosSueldo.updateOne({ _id: lote._id }, { $set: { "progreso.leidas": i + 1 } });
+    }
+  } finally {
+    await parser.destroy().catch(() => {});
+    if (ocr) await ocr.terminate().catch(() => {});
+  }
+
+  const sabana = await PDFDocument.load(buffer, { ignoreEncryption: true });
+  const grupos = agruparPaginas(textos, lote.paginasPorRecibo);
   const leidos = grupos.map((paginas) => ({ paginas, texto: paginas.map((i) => textos[i]).join("\n\n----- página siguiente -----\n\n") })).map((g) => ({ ...g, datos: leerRecibo(g.texto) }));
 
-  const porCuil = await usuariosPorCuil(tenantId, [...new Set(leidos.map((g) => g.datos.cuil).filter(Boolean))]);
+  const porCuil = await usuariosPorCuil(lote.tenantId, [...new Set(leidos.map((g) => g.datos.cuil).filter(Boolean))]);
   const contratoDe = new Map<string, Awaited<ReturnType<typeof personaYContrato>>>();
-  for (const u of porCuil.values()) contratoDe.set(String(u._id), await personaYContrato(tenantId, u._id));
+  for (const u of porCuil.values()) contratoDe.set(String(u._id), await personaYContrato(lote.tenantId, u._id));
 
-  const lote = new LoteRecibosSueldo({ tenantId, nombreArchivo, subidoPor: subidoPor && Types.ObjectId.isValid(subidoPor) ? new Types.ObjectId(subidoPor) : null, paginas: textos.length, paginasPorRecibo });
-  const dir = path.join(RAIZ_STORAGE, String(tenantId), "recibos-sueldo", String(lote._id));
-  fs.mkdirSync(dir, { recursive: true });
-
+  const dir = dirDelLote(lote);
   const periodos = new Map<string, number>();
+  const recibos: any[] = [];
   for (const [n, g] of leidos.entries()) {
     const archivo = `${String(n + 1).padStart(3, "0")}.pdf`;
     fs.writeFileSync(path.join(dir, archivo), await extraerPaginas(sabana, g.paginas));
     const u = g.datos.cuil ? porCuil.get(g.datos.cuil) : null;
     const contrato = u ? contratoDe.get(String(u._id)) : null;
     if (g.datos.periodo) periodos.set(g.datos.periodo, (periodos.get(g.datos.periodo) || 0) + 1);
-    lote.recibos.push({
+    recibos.push({
       paginas: g.paginas.map((i) => i + 1),
       datos: g.datos,
       textoCrudo: g.texto,
-      archivoUrl: `/storage/${tenantId}/recibos-sueldo/${lote._id}/${archivo}`,
+      archivoUrl: `/storage/${lote.tenantId}/recibos-sueldo/${lote._id}/${archivo}`,
       userId: u?._id || null,
       nombreUsuario: u ? nombreDe(u) : "",
       ...(contrato || { userProjectId: null, projectId: null, contractIndex: null, nombreProyecto: "" }),
       estado: u && contrato?.userProjectId ? "listo" : "sin_persona",
       error: u && !contrato?.userProjectId ? "La persona no tiene un contrato vigente en ningún proyecto." : !g.datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "",
-    } as any);
+    });
   }
-  lote.periodo = [...periodos.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
-  await lote.save();
-  return lote;
+  const periodo = [...periodos.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+  await LoteRecibosSueldo.updateOne({ _id: lote._id }, { $set: { recibos, periodo, estadoLote: "listo", "progreso.leidas": textos.length } });
 }
 
 /** Asigna a mano la persona de un recibo (y su contrato que rige). */
@@ -212,7 +257,7 @@ export async function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: string
 /** Borra el lote y sus PDFs. Sólo si ningún recibo salió a firmar. */
 export async function eliminarLote(lote: ILoteRecibosSueldo): Promise<void> {
   if ((lote.recibos as any[]).some((r) => r.estado === "enviado" || r.estado === "firmado")) throw new ErrorRecibos("Este lote tiene recibos ya enviados a firmar: no se borra.", 409);
-  fs.rmSync(path.join(RAIZ_STORAGE, String(lote.tenantId), "recibos-sueldo", String(lote._id)), { recursive: true, force: true });
+  fs.rmSync(dirDelLote(lote), { recursive: true, force: true });
   await lote.deleteOne();
 }
 
@@ -225,7 +270,7 @@ export async function marcarReciboFirmado(tenantId: unknown, codigo: string): Pr
 /** Todo lo que se leyó del PDF, para descargar como JSON y revisar qué entendió el lector. */
 export function exportacionDelLote(lote: ILoteRecibosSueldo) {
   return {
-    lote: { id: String(lote._id), archivo: lote.nombreArchivo, paginas: lote.paginas, paginasPorRecibo: lote.paginasPorRecibo, periodo: lote.periodo, subido: lote.createdAt },
+    lote: { id: String(lote._id), archivo: lote.nombreArchivo, paginas: lote.paginas, paginasPorRecibo: lote.paginasPorRecibo, periodo: lote.periodo, estado: lote.estadoLote, subido: lote.createdAt },
     recibos: (lote.recibos as any[]).map((r) => ({
       paginas: r.paginas,
       datos: r.datos,

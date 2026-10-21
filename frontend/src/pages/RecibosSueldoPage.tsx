@@ -80,12 +80,23 @@ export const RecibosSueldoPage: React.FC = () => {
     else setLote(null);
   }, [loteId, cargarLote]);
 
-  // Mientras hay recibos enviados, se relee cada medio minuto: el escaneo de Dropbox los marca firmados.
+  /*
+    Se relee solo: cada 2 s mientras el lote se está leyendo (OCR en el server, ~1 s por página), y cada
+    medio minuto mientras haya recibos enviados (el escaneo de Dropbox los marca firmados).
+  */
   useEffect(() => {
-    if (!loteId || !lote?.recibos.some((r) => r.estado === "enviado")) return;
-    const t = setInterval(() => void cargarLote(loteId), 30_000);
+    if (!loteId || !lote) return;
+    const leyendo = lote.estadoLote === "leyendo";
+    if (!leyendo && !lote.recibos.some((r) => r.estado === "enviado")) return;
+    const t = setInterval(() => void cargarLote(loteId), leyendo ? 2_000 : 30_000);
     return () => clearInterval(t);
   }, [loteId, lote, cargarLote]);
+  // Cuando termina la lectura, el resumen del selector de lotes también cambia.
+  const estadoAnterior = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (estadoAnterior.current === "leyendo" && lote?.estadoLote && lote.estadoLote !== "leyendo") void cargarLotes();
+    estadoAnterior.current = lote?.estadoLote;
+  }, [lote?.estadoLote, cargarLotes]);
 
   const subir = async (archivo: File) => {
     setSubiendo(true);
@@ -93,8 +104,7 @@ export const RecibosSueldoPage: React.FC = () => {
       const nuevo = await recibosSueldoAPI.subir(archivo, paginasPorRecibo);
       await cargarLotes();
       setLoteId(nuevo._id);
-      const sinPersona = nuevo.recibos.filter((r) => r.estado === "sin_persona").length;
-      sweetAlert.success("Sábana leída", `${nuevo.recibos.length} recibo${nuevo.recibos.length === 1 ? "" : "s"} en ${nuevo.paginas} página${nuevo.paginas === 1 ? "" : "s"}.${sinPersona ? ` ${sinPersona} sin persona: elegila a mano en cada fila.` : ""}`);
+      sweetAlert.info("Leyendo la sábana", `${nuevo.paginas} página${nuevo.paginas === 1 ? "" : "s"}. Los datos están dibujados en el PDF, así que cada página pasa por OCR: tarda alrededor de un segundo por página. La lista se arma sola cuando termina.`, 6000);
     } catch (e: any) {
       sweetAlert.error("No se pudo leer el PDF", e?.response?.data?.error || e?.message || "");
     } finally {
@@ -211,9 +221,26 @@ export const RecibosSueldoPage: React.FC = () => {
             )}
           </div>
 
-          {cargandoLote || !lote ? (
+          {!lote && cargandoLote ? (
             <div className="flex justify-center py-16">
               <LoadingSpinner />
+            </div>
+          ) : !lote ? null : lote.estadoLote === "leyendo" ? (
+            /* La lectura en el server: se muestra el avance y la lista aparece sola al terminar. */
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-6 dark:border-blue-800 dark:bg-blue-900/20">
+              <p className="flex items-center gap-2 text-sm font-semibold text-blue-800 dark:text-blue-200">
+                <FontAwesomeIcon icon={faSpinner} spin />
+                Leyendo la sábana: página {lote.progreso?.leidas ?? 0} de {lote.progreso?.total || lote.paginas}
+              </p>
+              <div className="mt-3 h-2 w-full rounded-full bg-blue-100 dark:bg-blue-950">
+                <div className="h-2 rounded-full bg-blue-600 transition-all" style={{ width: `${Math.round(((lote.progreso?.leidas ?? 0) / Math.max(1, lote.progreso?.total || lote.paginas)) * 100)}%` }} />
+              </div>
+              <p className="mt-2 text-xs text-blue-700/80 dark:text-blue-300/80">Cada página se renderiza y pasa por OCR (los datos del recibo están dibujados, no son texto). Alrededor de un segundo por página. Podés salir de esta pantalla: la lectura sigue en el server.</p>
+            </div>
+          ) : lote.estadoLote === "error" ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">
+              <p className="font-semibold">No se pudo leer la sábana.</p>
+              <p className="mt-1 text-xs">{lote.error || "Error desconocido."} Borrá el lote y volvé a subirla.</p>
             </div>
           ) : (
             <>

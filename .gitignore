@@ -37,3 +37,6 @@ frontend/cuils.txt
 #
 # Anclada a la raíz para que no matchee una carpeta `tango` dentro de otro directorio.
 /tango/
+
+# Recibos de sueldo: los PDFs de cada tenant NO van al repo (datos de personas); el idioma del OCR (server/tessdata) sí.
+server/storage/*/recibos-sueldo/

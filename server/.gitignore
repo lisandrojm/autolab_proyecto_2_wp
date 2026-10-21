@@ -1,3 +1,7 @@
 
 # Respaldos puntuales antes de migraciones destructivas (no van al repo).
 backups/
+
+
+# Recibos de sueldo: los PDFs de cada tenant no van al repo.
+storage/*/recibos-sueldo/
