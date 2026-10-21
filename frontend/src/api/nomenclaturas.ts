@@ -87,7 +87,8 @@ export const nomenclaturasAPI = {
 
 /** Cómo se llama cada tipo en pantalla. El backend usa los identificadores internos. */
 export const ETIQUETA_TIPO: Record<string, string> = {
-  Contrato: "Contratos",
+  // El tipo interno sigue siendo "Contrato", pero el documento que nombra es el recibo de sueldo (patrón «REC_SUELDO», 20/10/2026).
+  Contrato: "Recibos de sueldo",
   Release: "Releases",
   AltaAFIP: "Altas de ARCA",
   ConstanciaCUIT: "Constancias de CUIT",
