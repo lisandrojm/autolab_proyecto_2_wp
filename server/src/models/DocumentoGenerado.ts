@@ -33,6 +33,13 @@ export interface IDocumentoGenerado extends Document {
     baja?: string;
     carga?: string;
   };
+  /**
+   * Qué documento es, cuando no es el documento del contrato: «recibo_sueldo» (módulo Recibos de
+   * sueldo). Al volver firmado, el escaneo de Dropbox marca el recibo y no mueve el estado del contrato.
+   */
+  clase?: string;
+  loteRecibosId?: Types.ObjectId | null;
+  reciboId?: Types.ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +60,9 @@ const schema = new Schema<IDocumentoGenerado>(
       baja: { type: String, default: "" },
       carga: { type: String, default: "" },
     },
+    clase: { type: String, default: undefined },
+    loteRecibosId: { type: Schema.Types.ObjectId, default: null },
+    reciboId: { type: Schema.Types.ObjectId, default: null },
   },
   { timestamps: true, collection: "documentos_generados" },
 );

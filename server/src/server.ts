@@ -120,6 +120,7 @@ import { backupRoutes } from "./routes/backups.js";
 import { dropboxWebhookRoutes } from "./routes/dropboxWebhook.js";
 import { afipRoutes } from "./routes/afip.js";
 import { firmaDigitalRoutes } from "./routes/firmaDigital.js";
+import { recibosSueldoRoutes } from "./routes/recibosSueldo.js";
 import { dropboxSignRoutes } from "./routes/dropboxSign.js";
 import { iniciarMonitorDeBloqueos } from "./utils/monitorBloqueos.js";
 
@@ -360,6 +361,7 @@ app.use("/api/v1/backups", backupRoutes);
 app.use("/api/v1/dropbox", dropboxRoutes);
 app.use("/api/v1/afip", afipRoutes);
 app.use("/api/v1/firma-digital", firmaDigitalRoutes);
+app.use("/api/v1/recibos-sueldo", recibosSueldoRoutes);
 app.use("/api/v1/dropbox-sign", dropboxSignRoutes);
 
 

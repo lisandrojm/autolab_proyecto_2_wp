@@ -14,6 +14,9 @@ const schema = new Schema({
         baja: { type: String, default: "" },
         carga: { type: String, default: "" },
     },
+    clase: { type: String, default: undefined },
+    loteRecibosId: { type: Schema.Types.ObjectId, default: null },
+    reciboId: { type: Schema.Types.ObjectId, default: null },
 }, { timestamps: true, collection: "documentos_generados" });
 // Un código no se repite NUNCA dentro del tenant: es la garantía de que un aviso apunta a un solo documento.
 schema.index({ tenantId: 1, codigo: 1 }, { unique: true });

@@ -30,6 +30,7 @@ import { ValidacionObrasSocialesPage } from "./pages/ValidacionObrasSocialesPage
 import { ArcaAltasAutomaticasConfigPage } from "./pages/ArcaAltasAutomaticasConfigPage";
 import { ArcaDescargaConstanciasConfigPage } from "./pages/ArcaDescargaConstanciasConfigPage";
 import { DescargasArcaPage } from "./pages/DescargasArcaPage";
+import { RecibosSueldoPage } from "./pages/RecibosSueldoPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
 import { ContratosSinDiasPage } from "./pages/ContratosSinDiasPage";
 import { PlantillasGeneralesPage } from "./pages/PlantillasGeneralesPage";
@@ -351,6 +352,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <DescargasArcaPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/recibos-sueldo"
+                element={
+                  <ProtectedRoute>
+                    <RecibosSueldoPage />
                   </ProtectedRoute>
                 }
               />

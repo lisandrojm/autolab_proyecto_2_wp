@@ -11,6 +11,8 @@ import { esElAltaEnviada, momentoDeCarga, motivoParaDescartarArchivo, TEXTO_DESC
 import { limpiarPendbox } from "./limpiezaPendboxService.js";
 import { DocumentoGenerado } from "../models/DocumentoGenerado.js";
 import { fechaISO } from "../utils/contratoVigencia.js";
+import { marcarReciboFirmado } from "./recibosSueldo.js";
+import { resolverProposito } from "../utils/estadoCarpetas.js";
 
 /**
  * El contrato que nombra el CÓDIGO del documento (`{{codigo}}`, «ID-000123»): el que quedó registrado en
@@ -431,6 +433,8 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
 
     // El registro de cada código, una vez por corrida (ver `indiceDelRegistro`).
     const registroPorCodigo = new Map<string, any>();
+    // La carpeta de firmados: ahí un recibo de sueldo que vuelve se marca como firmado.
+    const carpetaDeFirmados = ((await resolverProposito("firmados").catch(() => null))?.carpeta || "").replace(/\/$/, "");
     for (const file of archivos) {
       const key = `${tenant._id}:${estadoDestino._id}:${file.path}`;
       const { cuit: cuitEncontrado, email: emailEncontrado, via: viaCuit } = identidadPorArchivo.get(file.path) || { cuit: "", email: "", via: null };
@@ -468,8 +472,18 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
       */
       const codigoArchivo = leerAnclas(file.name).codigo;
       if (codigoArchivo && matches.length > 0) {
-        if (!registroPorCodigo.has(codigoArchivo)) registroPorCodigo.set(codigoArchivo, await DocumentoGenerado.findOne({ tenantId: tenant._id, codigo: codigoArchivo }).select("userProjectId contrato").lean());
+        if (!registroPorCodigo.has(codigoArchivo)) registroPorCodigo.set(codigoArchivo, await DocumentoGenerado.findOne({ tenantId: tenant._id, codigo: codigoArchivo }).select("userProjectId contrato clase").lean());
         const reg = registroPorCodigo.get(codigoArchivo);
+        /*
+          UN RECIBO DE SUELDO NO MUEVE EL CONTRATO (módulo Recibos de sueldo, 20/10/2026). Pasa por Outbox,
+          Pendbox y Firmados como el contrato, pero es otro trámite: si cayera acá, un recibo firmado
+          «avanzaría» el contrato al estado de esta carpeta. En la carpeta de firmados se marca el recibo.
+        */
+        if (reg?.clase === "recibo_sueldo") {
+          if (carpetaDeFirmados && ruta.replace(/\/$/, "") === carpetaDeFirmados && (await marcarReciboFirmado(tenant._id, codigoArchivo))) console.log(`[ESTADO-DROPBOX-CRON] ${file.path}: recibo de sueldo ${codigoArchivo} firmado`);
+          logSiCambio(key, "recibo_sueldo", `[ESTADO-DROPBOX-CRON] ${file.path}: es un recibo de sueldo (${codigoArchivo}), no mueve el estado del contrato — se omite (destino: ${estadoDestino.name})`);
+          continue;
+        }
         if (reg) matches = matches.filter((m) => indiceDelRegistro(m.up, reg) === m.idx);
       }
 
