@@ -1,0 +1,20 @@
+{
+  "archivo": "426_LN+_PEREZ_Contrato_Plazo-fijo-6x6_D-20261010_H-20261210_20273130293_fulano-ARROBA-gmail.com_Empresa-30717068374_ID-000125.pdf",
+  "firmante": "JUANA PEREZ",
+  "nota": "Cierre de un CONTRATO PLAZO FIJO 6X6: misma línea «Firma:» que Jornada, más abajo en la última página (mitad inferior). Construido a mano.",
+  "paginas": [
+    { "numero": 1, "ancho": 595, "alto": 842, "items": [{ "str": "CONTRATO PLAZO FIJO 6X6", "x": 56, "y": 57, "w": 300, "h": 13 }] },
+    { "numero": 2, "ancho": 595, "alto": 842, "items": [{ "str": "(cláusulas)", "x": 56, "y": 57, "w": 300, "h": 11 }] },
+    {
+      "numero": 3,
+      "ancho": 595,
+      "alto": 842,
+      "items": [
+        { "str": "En prueba de conformidad se firman dos ejemplares de un mismo tenor y a un solo efecto, el día 10/10/2026.", "x": 56, "y": 540, "w": 480, "h": 11 },
+        { "str": "· Firma: ________________________", "x": 56, "y": 596, "w": 230, "h": 11 },
+        { "str": "Aclaración: JUANA INES PEREZ", "x": 56, "y": 622, "w": 190, "h": 11 },
+        { "str": "DNI: 27313029", "x": 56, "y": 648, "w": 90, "h": 11 }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "archivo": "99_PRODUCTORA_REC_SUELDO_2026_PERIODO_09_PEREZ_Juana_fulano-ARROBA-gmail.com_20273130293_ID-000900.pdf",
+  "firmante": "JUANA PEREZ",
+  "nota": "PENDIENTE. Los recibos de MEMOSOFT tienen dos páginas por persona (ORIGINAL y COPIA) y dibujan los datos como trazos (sin texto); el pie dice «Firma Empleado» a la derecha de «RECIBO N° …». Para activar la regla hay que relevar un PDF real y completar este fixture con los ítems de texto (si los tiene) o definir el fallback de pantalla.",
+  "paginas": [
+    { "numero": 1, "ancho": 595, "alto": 842, "items": [{ "str": "ORIGINAL", "x": 300, "y": 20, "w": 50, "h": 9 }, { "str": "Firma Empleado", "x": 480, "y": 820, "w": 80, "h": 9 }] },
+    { "numero": 2, "ancho": 595, "alto": 842, "items": [{ "str": "COPIA", "x": 300, "y": 20, "w": 40, "h": 9 }, { "str": "Firma Empleado", "x": 480, "y": 820, "w": 80, "h": 9 }] }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "archivo": "426_LN+_PEREZ_Contrato_Jornada_D-20261010_H-20261010_20273130293_fulano-ARROBA-gmail.com_Empresa-30717068374_ID-000124.pdf",
+  "firmante": "JUANA PEREZ",
+  "nota": "Cierre de un CONTRATO DE PLAZO FIJO - JORNADA, según la receta validada: «En prueba de conformidad…», línea «Firma: ____», «Aclaración:», «DNI:». Construido a mano con la geometría típica de los PDF de la app (A4, 595×842, y desde arriba).",
+  "paginas": [
+    { "numero": 1, "ancho": 595, "alto": 842, "items": [{ "str": "CONTRATO DE PLAZO FIJO - JORNADA", "x": 56, "y": 57, "w": 300, "h": 13 }] },
+    {
+      "numero": 2,
+      "ancho": 595,
+      "alto": 842,
+      "items": [
+        { "str": "En prueba de conformidad se firman dos ejemplares de un mismo tenor y a un solo efecto, el día 10/10/2026.", "x": 56, "y": 180, "w": 480, "h": 11 },
+        { "str": "Firma: ________________________", "x": 56, "y": 236, "w": 220, "h": 11 },
+        { "str": "Aclaración: JUANA INES PEREZ", "x": 56, "y": 262, "w": 190, "h": 11 },
+        { "str": "DNI: 27313029", "x": 56, "y": 288, "w": 90, "h": 11 }
+      ]
+    }
+  ]
+}

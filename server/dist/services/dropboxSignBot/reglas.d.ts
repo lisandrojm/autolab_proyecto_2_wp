@@ -1,59 +1,25 @@
+import { VIEWPORT, ORIGEN_FIRMA } from "../../compartido/reglasColocacionFirma.js";
 /**
  * LAS REGLAS DE NEGOCIO DEL ENVÍO A LA FIRMA, puras y testeables (sin Playwright, sin base).
  *
  * Validadas con ~176 envíos reales hechos a mano (ver el brief del 22/10/2026). Lo que está acá no se
  * negocia desde el motor: el motor pregunta y obedece.
  *
- *  · El TIPO del documento sale del nombre del archivo, y decide dónde va la firma. Un tipo sin regla
- *    de colocación NO se envía: queda `requiere_revision`. Jamás se adivina la colocación.
- *  · Hay tipos RECONOCIDOS PERO PENDIENTES (hoy `REC_SUELDO`, los recibos de sueldo): se saben nombrar,
- *    pero falta relevar dónde va la firma. Cuando se defina, es una entrada más de `colocacionDe` y su
- *    test, nunca algo en el motor.
- *  · El GUARD previo al click final: título exacto, CC correcto, firmante listado, colocación conocida.
+ *  · DÓNDE VA LA FIRMA vive en `compartido/reglasColocacionFirma.ts` (tabla declarativa por tipo,
+ *    anclada al texto del PDF, con la receta de pantalla como respaldo). Acá sólo se reexporta lo que
+ *    el resto del bot necesita: el tipo por nombre de archivo y por qué un tipo no se envía.
+ *  · El GUARD previo al click final: título exacto, CC correcto, firmante listado, tipo con regla.
  */
-export type TipoDocumento = "AltaAFIP" | "Contrato_Jornada" | "Contrato_Plazo-fijo" | "Release" | "REC_SUELDO";
-/** Viewport con el que se validaron las coordenadas. El motor lo exige: con otro, nada de esto vale. */
-export declare const VIEWPORT: {
-    readonly width: 1457;
-    readonly height: 812;
-};
-/** Dónde está el ítem «Firma» del panel izquierdo del editor, en ese viewport. */
-export declare const ORIGEN_FIRMA: {
-    readonly x: 69;
-    readonly y: 504;
-};
-export interface Colocacion {
-    tipo: TipoDocumento;
-    /** En qué página va la firma. */
-    pagina: "primera" | "ultima";
-    /** Ticks de rueda del visor antes de arrastrar, y dónde apuntar la rueda. `null` = sin scroll. */
-    scroll: {
-        ticks: number;
-        direccion: "abajo" | "arriba";
-        en: {
-            x: number;
-            y: number;
-        };
-    } | null;
-    /** Dónde soltar el campo «Firma». */
-    destino: {
-        x: number;
-        y: number;
-    };
-    /** Qué se espera ver en la zona, para el humano que lea el log. */
-    descripcion: string;
-}
-/** Tipos que se reconocen pero todavía no tienen regla de colocación, con el motivo que ve el usuario. */
-export declare const TIPOS_PENDIENTES: Partial<Record<TipoDocumento, string>>;
-/**
- * El tipo del documento por su nombre de archivo. `null` si no es ninguno de los conocidos: ahí entran
- * `_CCM_`, `_Contrato_Servicios_`, `_Release_Servicios_` y cualquier otro.
- */
+export { VIEWPORT, ORIGEN_FIRMA };
+export type TipoDocumento = string;
+/** Los tipos reconocidos pero sin regla de colocación todavía, con el motivo que ve el usuario. */
+export declare const TIPOS_PENDIENTES: Record<string, string>;
+/** El tipo del documento por su nombre de archivo, o `null` si no matchea ninguna regla. */
 export declare function tipoDeDocumento(archivo: string): TipoDocumento | null;
-/** Dónde va la firma para ese archivo, o `null` si el tipo no tiene regla (desconocido o pendiente). */
-export declare function colocacionDe(archivo: string): Colocacion | null;
-/** Por qué un archivo no se puede enviar por su tipo, o `null` si sí se puede. */
+/** Por qué un archivo no se puede enviar por su tipo, o `null` si tiene regla activa. */
 export declare function motivoSinColocacion(archivo: string): string | null;
+/** Hay regla ACTIVA para ese archivo (la colocación concreta la resuelve `resolverColocacion` con el texto del PDF). */
+export declare const tieneRegla: (archivo: string) => boolean;
 /** «JOAQUIN NAVARRO MARTIN»: primer nombre + apellido(s), en mayúsculas. */
 export declare function nombreDeFirmante(user: {
     firstName?: string | null;

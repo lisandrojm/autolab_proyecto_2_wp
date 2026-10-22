@@ -13,7 +13,9 @@ import { getTenantDropboxConfig, listFolder, downloadFileContent } from "../drop
 import { resolverCarpetaPorProposito } from "../../utils/estadoCarpetas.js";
 import { leerAnclas } from "../../utils/anclasNombre.js";
 import { CONFIG_POR_DEFECTO, fechaYHoraArgentina, planificar, puedeCorrer, validarEncolado, type Candidato, type ConfigEnvio, type EstadoThrottle, type ItemEnCola, type Plan } from "./planificador.js";
-import { colocacionDe, esTextoDeLimite, guardDeEnvio, nombreDeFirmante } from "./reglas.js";
+import { esTextoDeLimite, guardDeEnvio, nombreDeFirmante } from "./reglas.js";
+import { pantallaAPdf, pdfAPantalla, resolverColocacion, type Colocacion } from "../../compartido/reglasColocacionFirma.js";
+import { textoDelPdf } from "./pdfTexto.js";
 import { abrirSesionDropboxSign, anotarError, guardarSesion, type SesionDropboxSign } from "./navegador.js";
 import { quienTieneDropboxSign, soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 import { MOTOR_DROPBOX_SIGN } from "./motor.js";
@@ -30,6 +32,9 @@ import { MOTOR_DROPBOX_SIGN } from "./motor.js";
  *    modo seco, y a partir de ahí «Detener» ya no corta ese documento.
  *  · El LÍMITE antiabuso frena la tanda, deja `enfriadoHasta`, el documento queda `limite` (sigue en la
  *    cola) y el scheduler no reintenta hasta que venza.
+ *  · DÓNDE VA LA FIRMA se resuelve ANTES de abrir el navegador (`compartido/reglasColocacionFirma.ts`):
+ *    se baja el PDF, se lee su texto con posiciones y se busca el ancla del tipo; sin ancla queda la
+ *    receta de pantalla (y se loguea); sin regla → requiere_revision sin abrir Chromium.
  */
 
 const BASE = "integrations.dropboxSign.bot";
@@ -308,6 +313,42 @@ async function correr(corrida: CorridaEnvio, cc: string, config: ConfigEnvio): P
       return;
     }
 
+    // Resolver la colocación de cada documento ANTES de abrir el navegador: los que no tienen dónde
+    // firmar salen como requiere_revision sin gastar un intento de pantalla.
+    const { cfg } = await leerOutbox(tenantId);
+    const resueltos = new Map<string, { rutaPdf: string; colocacion: Colocacion }>();
+    for (const c of cola.tanda as Candidato[]) {
+      const rutaPdf = path.join(dir, c.archivo);
+      try {
+        fs.writeFileSync(rutaPdf, await downloadFileContent(tenantId, cfg, `${cola.outbox}/${c.archivo}`));
+        const paginas = await textoDelPdf(fs.readFileSync(rutaPdf));
+        const r = resolverColocacion(c.archivo, paginas, { nombreFirmante: c.firmante });
+        if (r.ok === false) {
+          const motivo: string = r.motivo;
+          fs.rmSync(rutaPdf, { force: true });
+          corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: "requiere_revision", detalle: motivo });
+          emitir({ tipo: "resultado", archivo: c.archivo, codigo: c.codigo, estado: "requiere_revision", texto: `requiere_revision: ${motivo}` });
+          await actualizarRegistro(tenantId, c.codigo, { estado: "requiere_revision", detalle: motivo });
+          continue;
+        }
+        emitir({ tipo: "info", archivo: c.archivo, texto: `Colocación por ${r.colocacion.estrategia}: ${r.colocacion.nota}` });
+        resueltos.set(c.codigo, { rutaPdf, colocacion: r.colocacion });
+      } catch (e: any) {
+        fs.rmSync(rutaPdf, { force: true });
+        const detalle = `No se pudo bajar o leer el PDF: ${e?.message || e}`;
+        corrida.errores++;
+        corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: "error", detalle });
+        emitir({ tipo: "resultado", archivo: c.archivo, codigo: c.codigo, estado: "error", texto: `error: ${detalle}` });
+        await actualizarRegistro(tenantId, c.codigo, { estado: "error", detalle });
+      }
+    }
+    const tanda = (cola.tanda as Candidato[]).filter((c) => resueltos.has(c.codigo));
+    if (tanda.length === 0) {
+      resultado = corrida.errores > 0 ? "con_errores" : "sin_tanda";
+      emitir({ tipo: "info", texto: "Ningún documento de la tanda tiene colocación de firma: no se abre el navegador." });
+      return;
+    }
+
     emitir({ tipo: "abriendo", texto: "Abriendo el navegador con la sesión de Dropbox Sign…" });
     sesion = await abrirSesionDropboxSign(tenantId);
     emitir({ tipo: "sesion", texto: sesion.seLogueo ? "Sesión iniciada con usuario y contraseña." : "Sesión guardada vigente." });
@@ -321,9 +362,7 @@ async function correr(corrida: CorridaEnvio, cc: string, config: ConfigEnvio): P
       emitir({ tipo: "info", texto: `No se pudieron revisar los borradores: ${e?.message || e}` });
     }
 
-    const { cfg } = await leerOutbox(tenantId);
-
-    for (const c of cola.tanda as Candidato[]) {
+    for (const c of tanda) {
       if (corrida.señal.cortada) {
         resultado = "detenida";
         emitir({ tipo: "info", texto: "Detenida antes del siguiente documento." });
@@ -337,17 +376,17 @@ async function correr(corrida: CorridaEnvio, cc: string, config: ConfigEnvio): P
       }
       corrida.actual = c.archivo;
       emitir({ tipo: "documento", archivo: c.archivo, codigo: c.codigo, texto: `${c.archivo} → ${c.firmante} (${c.email})` });
-      const rutaPdf = path.join(dir, c.archivo);
+      const { rutaPdf, colocacion } = resueltos.get(c.codigo)!;
       let r: any;
       try {
-        fs.writeFileSync(rutaPdf, await downloadFileContent(tenantId, cfg, `${cola.outbox}/${c.archivo}`));
         r = await motor.enviarDocumento({
           page: sesion.page,
           rutaPdf,
           archivo: c.archivo,
           firmante: { nombre: c.firmante, email: c.email },
           cc,
-          colocacion: colocacionDe(c.archivo),
+          colocacion,
+          geometria: { pdfAPantalla, pantallaAPdf },
           enSeco: corrida.enSeco,
           señal: corrida.señal,
           onProgreso: (texto: string) => emitir({ tipo: "info", archivo: c.archivo, texto }),
@@ -396,6 +435,7 @@ async function correr(corrida: CorridaEnvio, cc: string, config: ConfigEnvio): P
     emitir({ tipo: "fallo", texto: error! });
     await anotarError(tenantId, error);
   } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
     if (sesion && !error) await guardarSesion(tenantId, sesion.ctx).catch(() => {});
     await sesion?.browser.close().catch(() => {});
     soltarCandadoDropboxSign(tenantId);

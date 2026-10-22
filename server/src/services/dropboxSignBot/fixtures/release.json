@@ -1,0 +1,33 @@
+{
+  "archivo": "426_LN+_PEREZ_Release_Contrato-custom_D-20261014_H-20261014_20273130293_fulano-ARROBA-gmail.com_Empresa-30710295839_ID-000057.pdf",
+  "firmante": "JUANA PEREZ",
+  "nota": "Última página real de un ACUERDO DE TITULARIDAD DE LA OBRA generado por la app (anonimizado): dos columnas, la izquierda del empleado y la derecha del empleador.",
+  "paginas": [
+    { "numero": 1, "ancho": 595, "alto": 842, "items": [{ "str": "ACUERDO DE TITULARIDAD DE LA OBRA", "x": 56, "y": 57, "w": 300, "h": 13 }] },
+    { "numero": 2, "ancho": 595, "alto": 842, "items": [{ "str": "(texto del acuerdo)", "x": 56, "y": 57, "w": 300, "h": 11 }] },
+    { "numero": 3, "ancho": 595, "alto": 842, "items": [{ "str": "(texto del acuerdo)", "x": 56, "y": 57, "w": 300, "h": 11 }] },
+    { "numero": 4, "ancho": 595, "alto": 842, "items": [{ "str": "(texto del acuerdo)", "x": 56, "y": 57, "w": 300, "h": 11 }] },
+    {
+      "numero": 5,
+      "ancho": 595,
+      "alto": 842,
+      "items": [
+        { "str": "consecuencia del ejercicio de los derechos otorgados en el presente.", "x": 56, "y": 113, "w": 337, "h": 11 },
+        { "str": "Certifico y declaro que he leído el texto precedente y entiendo acabadamente el significado y", "x": 56, "y": 140, "w": 483, "h": 11 },
+        { "str": "efecto del mismo y con la intención de quedar obligado legalmente firmo esta autorización en", "x": 56, "y": 155, "w": 483, "h": 11 },
+        { "str": "CABA, a los 13/10/2026.", "x": 56, "y": 171, "w": 120, "h": 11 },
+        { "str": "_______________________________", "x": 62, "y": 227, "w": 190, "h": 11 },
+        { "str": "Firma", "x": 62, "y": 254, "w": 30, "h": 11 },
+        { "str": "Aclaración: JUANA INES PEREZ", "x": 62, "y": 279, "w": 193, "h": 11 },
+        { "str": "Documento de identidad N°: 27313029", "x": 62, "y": 305, "w": 190, "h": 11 },
+        { "str": "CUIT: 20273130293", "x": 62, "y": 331, "w": 98, "h": 11 },
+        { "str": "_______________________________", "x": 302, "y": 227, "w": 190, "h": 11 },
+        { "str": "Firma", "x": 302, "y": 254, "w": 30, "h": 11 },
+        { "str": "Aclaración: Hernan Marcelo Pellegrini", "x": 302, "y": 279, "w": 184, "h": 11 },
+        { "str": "Documento de identidad N°: 26.116.576", "x": 302, "y": 305, "w": 195, "h": 11 },
+        { "str": "Cargo: Socio Gerente", "x": 302, "y": 331, "w": 106, "h": 11 },
+        { "str": "Por: FZERO S.R.L", "x": 302, "y": 356, "w": 91, "h": 11 }
+      ]
+    }
+  ]
+}

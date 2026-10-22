@@ -1,0 +1,29 @@
+{
+  "archivo": "426_LN+_PEREZ_AltaAFIP_Jornada_D-20261010_H-20261010_20273130293_fulano-ARROBA-gmail.com_Empresa-30717068374_ID-000123.pdf",
+  "firmante": "JUANA PEREZ",
+  "nota": "Constancia de alta de ARCA (Simplificación Registral) con DOS páginas: la 1 (original para el trabajador) trae la celda «Firma empleado y fecha de notificacion» a la derecha; la 2 es el talón para el empleador y NO se firma. Construido a mano con la geometría de la constancia.",
+  "paginas": [
+    {
+      "numero": 1,
+      "ancho": 595,
+      "alto": 842,
+      "items": [
+        { "str": "Simplificación Registral - Constancia del Trabajador", "x": 60, "y": 60, "w": 300, "h": 12 },
+        { "str": "Alta", "x": 60, "y": 300, "w": 30, "h": 11 },
+        { "str": "Fecha de alta telefónica:", "x": 60, "y": 330, "w": 120, "h": 10 },
+        { "str": "Clave:", "x": 60, "y": 395, "w": 40, "h": 10 },
+        { "str": "Fecha - hora de envío:", "x": 60, "y": 412, "w": 110, "h": 10 },
+        { "str": "Firma empleado y fecha de notificacion", "x": 350, "y": 430, "w": 180, "h": 9 }
+      ]
+    },
+    {
+      "numero": 2,
+      "ancho": 595,
+      "alto": 842,
+      "items": [
+        { "str": "Talón para el empleador", "x": 60, "y": 60, "w": 200, "h": 12 },
+        { "str": "Firma empleado y fecha de notificacion", "x": 350, "y": 430, "w": 180, "h": 9 }
+      ]
+    }
+  ]
+}

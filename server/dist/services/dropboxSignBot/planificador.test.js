@@ -27,7 +27,7 @@ describe("validar el encolado", () => {
         const r1 = validarEncolado(archivo(2, "CCM"), ok);
         assert.ok(!r1.ok && /sin regla/.test(r1.motivo));
         const r2 = validarEncolado("99_PRODUCTORA_REC_SUELDO_2026_PERIODO_09_PEREZ_Juan_a-ARROBA-b.com_20273130293_ID-000004.pdf", ok);
-        assert.ok(!r2.ok && r2.motivo === "Tipo REC_SUELDO: falta definir posición de firma");
+        assert.ok(!r2.ok && /^Tipo REC_SUELDO: .*posición de firma/i.test(r2.motivo), r2.motivo);
         const r3 = validarEncolado("426_LN+_PEREZ_Contrato_Jornada_D-20261010_H-20261010_20273130293_fulano-ARROBA-gmail.com.pdf", ok);
         assert.ok(!r3.ok && /c[oó]digo/.test(r3.motivo));
         const r4 = validarEncolado(archivo(5), { ...ok, firmante: null, motivoSinFirmante: "No hay usuario para el código ID-000005." });
