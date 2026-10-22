@@ -243,7 +243,7 @@ export const PanelBotFirma: React.FC<{ bot: ReturnType<typeof useBotFirma>; enCo
       </div>
       {!cfg.tieneSesion && (
         <p className="text-[11px] text-red-600 dark:text-red-400">
-          Sin sesión de Dropbox Sign el bot no puede enviar. En el servidor, dentro de <span className="font-mono">server/</span>: <span className="font-mono">TENANT=&lt;slug&gt; npm run dropbox-sign:login</span>
+          Sin sesión de Dropbox Sign el bot no puede enviar. Se captura desde una computadora con pantalla (el VPS no tiene), dentro de <span className="font-mono">server/</span> con el <span className="font-mono">.env.production</span> del servidor: <span className="font-mono">TENANT=&lt;slug&gt; npm run dropbox-sign:login</span>
         </p>
       )}
       {cfg.ultimoError && <p className="text-[11px] text-red-600 dark:text-red-400 break-words">Último error del bot: {cfg.ultimoError}</p>}

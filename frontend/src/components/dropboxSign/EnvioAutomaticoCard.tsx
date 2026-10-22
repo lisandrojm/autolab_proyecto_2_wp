@@ -208,7 +208,7 @@ export const EnvioAutomaticoCard: React.FC = () => {
               </button>
               {PIDE_LOGIN_MANUAL.test(cfg.ultimoError) && (
                 <p className="mt-1 text-gray-600 dark:text-gray-300">
-                  <strong>Repetir login manual:</strong> en el servidor, dentro de <span className="font-mono">server/</span>: <span className="font-mono">TENANT=&lt;slug&gt; npm run dropbox-sign:login</span>
+                  <strong>Repetir login manual:</strong> desde una computadora con pantalla (el VPS no tiene), dentro de <span className="font-mono">server/</span> con el <span className="font-mono">.env.production</span> del servidor: <span className="font-mono">TENANT=&lt;slug&gt; npm run dropbox-sign:login</span>
                 </p>
               )}
             </div>
@@ -216,7 +216,7 @@ export const EnvioAutomaticoCard: React.FC = () => {
         )}
         {!cfg?.tieneSesion && (
           <p>
-            La primera vez la sesión se captura con una ventana, para resolver el captcha a mano: en el servidor, <span className="font-mono">TENANT=&lt;slug&gt; npm run dropbox-sign:login</span>. Después el bot corre solo y la renueva en cada corrida.
+            La primera vez la sesión se captura con una ventana, para resolver el captcha a mano. El VPS no tiene pantalla, así que se corre desde una computadora con pantalla, dentro de <span className="font-mono">server/</span> con el <span className="font-mono">.env.production</span> del servidor: <span className="font-mono">TENANT=&lt;slug&gt; npm run dropbox-sign:login</span>. La sesión queda cifrada en la base; después el bot del servidor corre solo y la renueva en cada corrida.
           </p>
         )}
       </div>
@@ -379,7 +379,7 @@ export const EnvioAutomaticoCard: React.FC = () => {
                 <pre className="mt-2 max-h-56 overflow-y-auto whitespace-pre-wrap break-all font-mono text-[11px] text-red-800 dark:text-red-200">{limpiarAnsi(cfg.ultimoError)}</pre>
                 {PIDE_LOGIN_MANUAL.test(cfg.ultimoError) && (
                   <p className="mt-2 text-gray-700 dark:text-gray-300">
-                    <strong>Repetir login manual:</strong> en el servidor, dentro de <span className="font-mono">server/</span>: <span className="font-mono">TENANT=&lt;slug&gt; npm run dropbox-sign:login</span>. Se borra solo cuando el bot vuelve a entrar bien.
+                    <strong>Repetir login manual:</strong> desde una computadora con pantalla (el VPS no tiene), dentro de <span className="font-mono">server/</span> con el <span className="font-mono">.env.production</span> del servidor: <span className="font-mono">TENANT=&lt;slug&gt; npm run dropbox-sign:login</span>. Se borra solo cuando el bot vuelve a entrar bien.
                   </p>
                 )}
               </div>
