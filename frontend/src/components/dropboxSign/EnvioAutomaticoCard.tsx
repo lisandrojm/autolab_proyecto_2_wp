@@ -13,6 +13,18 @@ import { sweetAlert } from "../../utils/sweetAlert";
 */
 
 const fmt = (iso?: string | null) => (iso ? new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
+
+/*
+  EL ERROR DEL NAVEGADOR DEL SERVIDOR (Playwright) viene con el «call log» entero, con restos de códigos
+  de color de la terminal («[2m», «[22m») y URLs larguísimas: en la tarjeta se muestra sólo la primera
+  línea, sin esos restos, y el texto completo va al modal de Logs (pedido del 22/10/2026).
+*/
+const limpiarAnsi = (texto: string) => texto.replace(/\u001b?\[\d{1,2}m/g, "");
+const resumenDelError = (texto: string) => {
+  const primera = limpiarAnsi(texto).split(/\r?\n/)[0].split(/\s+Call log:/i)[0].trim();
+  return primera.length > 160 ? `${primera.slice(0, 157)}…` : primera;
+};
+const PIDE_LOGIN_MANUAL = /captcha|c[oó]digo|segundo factor|login manual|password|contraseña|login_password/i;
 const POLL_MS = 2000;
 
 const ESTADO_LINEA: Record<BotLinea["estado"], { label: string; clase: string }> = {
@@ -41,7 +53,11 @@ export const EnvioAutomaticoCard: React.FC = () => {
       setCfg(c);
       setForm((f) => ({ ...f, loginEmail: c.loginEmail, loginPassword: "", ...c.envio }));
       const l = await dropboxSignBotAPI.logs().catch(() => null);
-      if (l) setRevision(l.requierenRevision.filter((r) => r.estado === "requiere_revision"));
+      if (l) {
+        setRevision(l.requierenRevision.filter((r) => r.estado === "requiere_revision"));
+        // Se guardan ya: el botón «Logs» muestra cuántas corridas hay sin esperar a abrirlo.
+        setLogs((x) => ({ ...x, datos: l }));
+      }
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo cargar el envío automático.");
     }
@@ -183,18 +199,20 @@ export const EnvioAutomaticoCard: React.FC = () => {
           {cfg?.ultimoLoginAt ? ` · último login ${fmt(cfg.ultimoLoginAt)}` : ""}
         </p>
         {cfg?.ultimoError && (
-          <p className="flex items-start gap-1.5 text-red-600 dark:text-red-400">
+          <div className="flex items-start gap-1.5 text-red-600 dark:text-red-400">
             <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5 shrink-0" />
-            <span>
-              {cfg.ultimoError}
-              {/captcha|c[oó]digo|segundo factor|login manual/i.test(cfg.ultimoError) && (
-                <>
-                  {" "}
+            <div className="min-w-0 flex-1 break-words">
+              <span title="El texto completo está en Logs">{resumenDelError(cfg.ultimoError)}</span>{" "}
+              <button type="button" onClick={verLogs} className="font-semibold underline underline-offset-2 hover:text-red-700 dark:hover:text-red-300">
+                Ver completo en Logs
+              </button>
+              {PIDE_LOGIN_MANUAL.test(cfg.ultimoError) && (
+                <p className="mt-1 text-gray-600 dark:text-gray-300">
                   <strong>Repetir login manual:</strong> en el servidor, dentro de <span className="font-mono">server/</span>: <span className="font-mono">TENANT=&lt;slug&gt; npm run dropbox-sign:login</span>
-                </>
+                </p>
               )}
-            </span>
-          </p>
+            </div>
+          </div>
         )}
         {!cfg?.tieneSesion && (
           <p>
@@ -277,6 +295,7 @@ export const EnvioAutomaticoCard: React.FC = () => {
           </button>
           <button type="button" onClick={verLogs} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
             <FontAwesomeIcon icon={faListUl} /> Logs
+            {logs.datos?.logs.length ? <span className="text-xs font-bold text-gray-500 dark:text-gray-400">({logs.datos.logs.length})</span> : null}
           </button>
           <button type="button" onClick={guardar} disabled={guardando || corriendo} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-gray-700 text-white hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 disabled:opacity-50">
             <FontAwesomeIcon icon={guardando ? faSpinner : faCheck} spin={guardando} /> Guardar
@@ -348,17 +367,31 @@ export const EnvioAutomaticoCard: React.FC = () => {
           <p className="text-sm text-gray-500 flex items-center gap-2">
             <FontAwesomeIcon icon={faSpinner} spin /> Cargando…
           </p>
-        ) : logs.datos.logs.length === 0 ? (
-          <p className="text-sm text-gray-500">Todavía no corrió ninguna tanda.</p>
         ) : (
           <div className="max-h-[65vh] overflow-y-auto space-y-3">
+            {/* El último error del navegador, entero: es lo que la tarjeta muestra resumido. */}
+            {cfg?.ultimoError && (
+              <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3 text-xs">
+                <p className="flex items-center gap-2 font-semibold text-red-700 dark:text-red-300">
+                  <FontAwesomeIcon icon={faTriangleExclamation} /> Último error del navegador del servidor
+                  {cfg.ultimoLoginAt ? <span className="font-normal text-red-600/80 dark:text-red-300/80">· último login bueno {fmt(cfg.ultimoLoginAt)}</span> : null}
+                </p>
+                <pre className="mt-2 max-h-56 overflow-y-auto whitespace-pre-wrap break-all font-mono text-[11px] text-red-800 dark:text-red-200">{limpiarAnsi(cfg.ultimoError)}</pre>
+                {PIDE_LOGIN_MANUAL.test(cfg.ultimoError) && (
+                  <p className="mt-2 text-gray-700 dark:text-gray-300">
+                    <strong>Repetir login manual:</strong> en el servidor, dentro de <span className="font-mono">server/</span>: <span className="font-mono">TENANT=&lt;slug&gt; npm run dropbox-sign:login</span>. Se borra solo cuando el bot vuelve a entrar bien.
+                  </p>
+                )}
+              </div>
+            )}
+            {logs.datos.logs.length === 0 && <p className="text-sm text-gray-500">Todavía no corrió ninguna tanda.</p>}
             {logs.datos.logs.map((l) => (
               <div key={l._id} className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 text-xs">
                 <p className="flex items-center gap-2 font-semibold text-gray-700 dark:text-gray-200">
                   <FontAwesomeIcon icon={l.resultado === "ok" || l.resultado === "sin_tanda" ? faCircleCheck : faCircleXmark} className={l.resultado === "ok" || l.resultado === "sin_tanda" ? "text-green-600" : l.limite ? "text-amber-600" : "text-red-600"} />
                   {fmt(l.inicio)} · {l.resultado}{l.enSeco ? " · seco" : ""}{l.automatica ? " · automática" : " · manual"} · {l.enviados} enviado(s) · {l.errores} error(es)
                 </p>
-                {l.error && <p className="text-red-600 dark:text-red-400 mt-1 break-words">{l.error}</p>}
+                {l.error && <pre className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap break-all font-mono text-[11px] text-red-600 dark:text-red-400">{limpiarAnsi(l.error)}</pre>}
                 <ul className="mt-2 space-y-1">
                   {l.lineas.map((x, i) => (
                     <li key={i} className="break-all">
