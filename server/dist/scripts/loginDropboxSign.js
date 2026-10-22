@@ -5,6 +5,11 @@ import { abrirSesionDropboxSign, guardarSesion, pantallaDe } from "../services/d
 /**
  * LOGIN MANUAL DE DROPBOX SIGN, UNA SOLA VEZ, CON VENTANA (patrón `reconocerAltasArca.ts`).
  *
+ * SE CORRE DESDE UNA COMPUTADORA CON PANTALLA, NO EN EL VPS: abre un Chromium con ventana y el VPS no
+ * tiene X (da «Unable to open X display»). Apunta a la base de producción con el `.env.production` del
+ * servidor (misma MONGO_URI y misma llave de cifrado: ENCRYPTION_KEY o, si no está, JWT_SECRET), así la
+ * sesión que guarda la puede descifrar el bot que corre headless en el VPS.
+ *
  * Abre un Chromium VISIBLE con la sesión guardada (si hay). Si ya entra a /home/manage, la vuelve a
  * guardar y termina. Si pide login, el operador se loguea a mano —y resuelve captcha o segundo factor
  * si aparecen— y el script, apenas ve el listado de documentos, captura el `storageState` y lo guarda
@@ -15,7 +20,14 @@ import { abrirSesionDropboxSign, guardarSesion, pantallaDe } from "../services/d
  *   (npm run dropbox-sign:login — con TENANT en el entorno)
  */
 const ESPERA_MAX_MS = 10 * 60_000;
+const SIN_PANTALLA = "Este login abre un Chromium CON VENTANA y acá no hay pantalla (no hay DISPLAY): en el VPS no se puede. " +
+    "Corrélo desde una computadora con pantalla, dentro de server/, con el .env.production del servidor " +
+    "(misma MONGO_URI y misma llave de cifrado, ENCRYPTION_KEY o JWT_SECRET):\n\n" +
+    "    TENANT=<slug> npm run dropbox-sign:login\n\n" +
+    "La sesión queda cifrada en la base y el bot del VPS la usa headless.";
 async function main() {
+    if (process.platform === "linux" && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY)
+        throw new Error(SIN_PANTALLA);
     await mongoose.connect(process.env.MONGO_URI, { dbName: process.env.MONGO_DB_NAME });
     const ref = String(process.env.TENANT || "").trim();
     const tenant = ref ? await Tenant.findOne(mongoose.isValidObjectId(ref) ? { _id: ref } : { slug: ref }).select("_id slug name").lean() : await Tenant.findOne({}).select("_id slug name").lean();
