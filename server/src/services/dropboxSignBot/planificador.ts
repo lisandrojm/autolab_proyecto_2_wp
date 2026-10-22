@@ -1,13 +1,13 @@
 import { leerAnclas } from "../../utils/anclasNombre.js";
-import { tipoDeDocumento } from "./reglas.js";
+import { motivoSinColocacion, tipoDeDocumento } from "./reglas.js";
 
 /**
- * QUÉ SE ENVÍA EN LA PRÓXIMA TANDA, y si corresponde enviar ahora. Lógica pura (sin Dropbox ni base):
- * recibe el listado del Outbox ya leído, los envíos ya registrados y el estado del throttle, y
- * devuelve la tanda, lo que requiere revisión y por qué no se corre si no se corre.
+ * LA COLA DE ENVÍO Y LA PRÓXIMA TANDA. Lógica pura (sin Dropbox ni base).
  *
- * Orden: por nombre de archivo, ascendente. Dedupe duro por código: lo que ya figura `enviado` no
- * vuelve a salir aunque siga en Outbox (el IMAP lo mueve a los ~2 min).
+ * Nada se envía si no fue ENCOLADO desde el tab «Para Firmar» (22/10/2026). `validarEncolado` decide
+ * si un archivo puede entrar en la cola; `planificar` toma SÓLO lo encolado (y lo frenado por el
+ * límite, que se reintenta), por orden de encolado, y aplica tanda, tope diario, ventana horaria y
+ * enfriamiento. Lo que no está encolado simplemente espera.
  */
 
 export interface ConfigEnvio {
@@ -28,35 +28,23 @@ export interface EstadoThrottle {
   ultimaCorridaAt: Date | null;
 }
 
-/** Un archivo del Outbox ya resuelto contra la base (o no). */
-export interface ArchivoResuelto {
-  archivo: string;
-  /** Email y nombre del firmante, ya decididos (la base manda sobre el nombre de archivo). `null` si no se pudo resolver. */
-  firmante: { nombre: string; email: string } | null;
-  /** Por qué no se pudo resolver, para el log. */
-  motivoSinFirmante?: string;
-}
-
-export interface Candidato {
+/** Un documento en la cola (un `DropboxSignEnvio` en estado `en_cola` o `limite`). */
+export interface ItemEnCola {
   archivo: string;
   codigo: string;
   tipo: string;
   email: string;
   firmante: string;
+  orden: number;
 }
 
-export interface RequiereRevision {
-  archivo: string;
-  codigo: string;
-  motivo: string;
-}
+export interface Candidato extends ItemEnCola {}
 
 export interface Plan {
   tanda: Candidato[];
-  requiereRevision: RequiereRevision[];
-  /** Ya enviados (en Outbox todavía porque el IMAP no los movió). */
-  yaEnviados: string[];
-  /** Cuántos quedan para tandas siguientes. */
+  /** Encolados cuyo archivo ya no está en Outbox (el IMAP lo movió, o alguien lo borró): no se envían. */
+  faltantes: ItemEnCola[];
+  /** Cuántos encolados quedan para tandas siguientes. */
   pendientesDespues: number;
   /** Cupo que queda hoy. */
   cupoHoy: number;
@@ -76,8 +64,8 @@ export const cupoDelDia = (config: ConfigEnvio, estado: EstadoThrottle, ahora: D
 };
 
 /**
- * ¿Le toca correr al scheduler ahora? Devuelve el motivo si no. (El botón «Enviar tanda ahora» no
- * pasa por acá salvo por el enfriamiento y el cupo: es una decisión de la persona.)
+ * ¿Le toca correr al scheduler ahora? Devuelve el motivo si no. (El botón «Enviar a la firma» no pasa
+ * por acá salvo por el enfriamiento y el cupo: es una decisión de la persona.)
  */
 export function puedeCorrer(config: ConfigEnvio, estado: EstadoThrottle, ahora: Date, opciones: { manual?: boolean } = {}): { ok: boolean; motivo?: string } {
   if (estado.enfriadoHasta && estado.enfriadoHasta.getTime() > ahora.getTime()) {
@@ -94,43 +82,64 @@ export function puedeCorrer(config: ConfigEnvio, estado: EstadoThrottle, ahora: 
   return { ok: true };
 }
 
-/** La tanda a enviar y lo que queda afuera, a partir del Outbox resuelto. */
-export function planificar(archivos: ArchivoResuelto[], codigosEnviados: Set<string>, config: ConfigEnvio, estado: EstadoThrottle, ahora: Date): Plan {
-  const ordenados = [...archivos].filter((a) => /\.pdf$/i.test(a.archivo)).sort((a, b) => a.archivo.localeCompare(b.archivo));
-  const tanda: Candidato[] = [];
-  const requiereRevision: RequiereRevision[] = [];
-  const yaEnviados: string[] = [];
-  let pendientesDespues = 0;
+/** Lo que hace falta saber de un archivo para decidir si entra en la cola. */
+export interface ContextoDeEncolado {
+  /** Está en el Outbox tal como lo lista Dropbox. */
+  enOutbox: boolean;
+  /** El registro previo de ese código, si hay. */
+  registroPrevio: { estado: string } | null;
+  /** El firmante resuelto desde la base, o null. */
+  firmante: { nombre: string; email: string } | null;
+  motivoSinFirmante?: string;
+}
+
+export interface ResultadoEncolado {
+  ok: boolean;
+  codigo: string;
+  /** Por qué no entra ("" si entra). */
+  motivo: string;
+  /** Si no entra: ¿se puede volver a intentar cuando se arregle la causa? (false para lo enviado/encolado) */
+  reencolable: boolean;
+  tipo?: string;
+  firmante?: { nombre: string; email: string };
+}
+
+/**
+ * ¿Puede entrar este archivo en la cola? Lo que no pasa queda `requiere_revision` con el motivo, salvo
+ * lo que ya está enviado o encolado (eso no se toca). UN ARCHIVO ENVIADO JAMÁS SE RE-ENCOLA.
+ */
+export function validarEncolado(archivo: string, ctx: ContextoDeEncolado): ResultadoEncolado {
+  const { codigo } = leerAnclas(archivo);
+  if (!ctx.enOutbox) return { ok: false, codigo, motivo: "No está en Outbox.", reencolable: false };
+  if (!codigo) return { ok: false, codigo, motivo: "El nombre no trae el código del documento (ID-NNNNNN): no se puede garantizar que no se envíe dos veces.", reencolable: false };
+  const previo = ctx.registroPrevio?.estado;
+  if (previo === "enviado") return { ok: false, codigo, motivo: "Ya se envió a la firma: no se vuelve a encolar.", reencolable: false };
+  if (previo === "en_cola") return { ok: false, codigo, motivo: "Ya está en la cola.", reencolable: false };
+  if (previo === "limite") return { ok: false, codigo, motivo: "Ya está en la cola (frenado por el límite de Dropbox Sign; se reintenta solo).", reencolable: false };
+  const sinColocacion = motivoSinColocacion(archivo);
+  if (sinColocacion) return { ok: false, codigo, motivo: sinColocacion, reencolable: true };
+  if (!ctx.firmante) return { ok: false, codigo, motivo: ctx.motivoSinFirmante || "No se pudo resolver al firmante en la base.", reencolable: true };
+  return { ok: true, codigo, motivo: "", reencolable: false, tipo: tipoDeDocumento(archivo)!, firmante: ctx.firmante };
+}
+
+/** La tanda a enviar, a partir de la cola y de lo que sigue en Outbox. */
+export function planificar(enCola: ItemEnCola[], archivosEnOutbox: Set<string>, config: ConfigEnvio, estado: EstadoThrottle, ahora: Date): Plan {
+  const ordenados = [...enCola].sort((a, b) => a.orden - b.orden || a.archivo.localeCompare(b.archivo));
   const cupoHoy = cupoDelDia(config, estado, ahora);
   const tope = Math.max(0, Math.min(config.tamanoTanda, cupoHoy));
+  const tanda: Candidato[] = [];
+  const faltantes: ItemEnCola[] = [];
+  let pendientesDespues = 0;
   const vistos = new Set<string>();
-
-  for (const a of ordenados) {
-    const { codigo } = leerAnclas(a.archivo);
-    if (!codigo) {
-      requiereRevision.push({ archivo: a.archivo, codigo: "", motivo: "El nombre no trae el código del documento (ID-NNNNNN): no se puede garantizar que no se envíe dos veces." });
+  for (const it of ordenados) {
+    if (vistos.has(it.codigo)) continue;
+    vistos.add(it.codigo);
+    if (!archivosEnOutbox.has(it.archivo)) {
+      faltantes.push(it);
       continue;
     }
-    if (vistos.has(codigo)) {
-      requiereRevision.push({ archivo: a.archivo, codigo, motivo: `Hay otro archivo en Outbox con el mismo código ${codigo}.` });
-      continue;
-    }
-    vistos.add(codigo);
-    if (codigosEnviados.has(codigo)) {
-      yaEnviados.push(a.archivo);
-      continue;
-    }
-    const tipo = tipoDeDocumento(a.archivo);
-    if (!tipo) {
-      requiereRevision.push({ archivo: a.archivo, codigo, motivo: "Tipo de documento sin regla de colocación de la firma: no se envía hasta que se defina." });
-      continue;
-    }
-    if (!a.firmante) {
-      requiereRevision.push({ archivo: a.archivo, codigo, motivo: a.motivoSinFirmante || "No se pudo resolver al firmante." });
-      continue;
-    }
-    if (tanda.length < tope) tanda.push({ archivo: a.archivo, codigo, tipo, email: a.firmante.email, firmante: a.firmante.nombre });
+    if (tanda.length < tope) tanda.push(it);
     else pendientesDespues++;
   }
-  return { tanda, requiereRevision, yaEnviados, pendientesDespues, cupoHoy };
+  return { tanda, faltantes, pendientesDespues, cupoHoy };
 }

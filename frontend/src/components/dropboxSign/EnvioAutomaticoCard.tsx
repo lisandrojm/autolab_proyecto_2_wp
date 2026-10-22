@@ -320,30 +320,23 @@ export const EnvioAutomaticoCard: React.FC = () => {
         </div>
       )}
 
-      <InfoModal isOpen={cola.abierta} onClose={() => setCola((c) => ({ ...c, abierta: false }))} title="La próxima tanda" subtitle={cola.datos ? `${cola.datos.archivosEnOutbox} archivo(s) en Outbox · ${cola.datos.tanda.length} en la tanda · ${cola.datos.pendientesDespues} quedan para después · ${cola.datos.yaEnviados.length} ya enviados · cupo hoy ${cola.datos.cupoHoy}` : undefined} size="xl" actions={[{ label: "Cerrar", onClick: () => setCola((c) => ({ ...c, abierta: false })), variant: "ghost" }]}>
+      <InfoModal isOpen={cola.abierta} onClose={() => setCola((c) => ({ ...c, abierta: false }))} title="La próxima tanda" subtitle={cola.datos ? `${cola.datos.enCola} en la cola · ${cola.datos.tanda.length} en la próxima tanda · ${cola.datos.pendientesDespues} quedan para después · ${cola.datos.archivosEnOutbox} archivo(s) en Outbox · cupo hoy ${cola.datos.cupoHoy}` : undefined} size="xl" actions={[{ label: "Cerrar", onClick: () => setCola((c) => ({ ...c, abierta: false })), variant: "ghost" }]}>
         {cola.cargando || !cola.datos ? (
           <p className="text-sm text-gray-500 flex items-center gap-2">
-            <FontAwesomeIcon icon={faSpinner} spin /> Leyendo el Outbox y resolviendo firmantes…
+            <FontAwesomeIcon icon={faSpinner} spin /> Leyendo la cola y el Outbox…
           </p>
         ) : (
           <div className="space-y-4 text-xs max-h-[65vh] overflow-y-auto">
             {cola.datos.motivoNoCorre && <p className="text-amber-700 dark:text-amber-300">El scheduler ahora no correría: {cola.datos.motivoNoCorre}</p>}
+            <p className="text-gray-500">La cola se arma desde Contratos → Para Firmar («Enviar a la firma» o «Encolar todo lo elegible»).</p>
             <div>
               <p className="font-bold text-gray-700 dark:text-gray-200 mb-1">Se enviarían ({cola.datos.tanda.length})</p>
-              {cola.datos.tanda.length === 0 ? <p className="text-gray-500">Nada para enviar.</p> : cola.datos.tanda.map((t) => <p key={t.codigo} className="font-mono break-all text-gray-700 dark:text-gray-200">{t.archivo} → {t.firmante} ({t.email}) · {t.tipo}</p>)}
+              {cola.datos.tanda.length === 0 ? <p className="text-gray-500">Nada en la cola para esta tanda.</p> : cola.datos.tanda.map((t) => <p key={t.codigo} className="font-mono break-all text-gray-700 dark:text-gray-200">#{t.orden} {t.archivo} → {t.firmante} ({t.email}) · {t.tipo}</p>)}
             </div>
-            <div>
-              <p className="font-bold text-amber-700 dark:text-amber-300 mb-1">Requieren revisión ({cola.datos.requiereRevision.length})</p>
-              {cola.datos.requiereRevision.map((r, i) => (
-                <p key={i} className="break-all text-gray-700 dark:text-gray-200">
-                  <span className="font-mono">{r.archivo}</span> — {r.motivo}
-                </p>
-              ))}
-            </div>
-            {cola.datos.avisos.length > 0 && (
+            {cola.datos.faltantes.length > 0 && (
               <div>
-                <p className="font-bold text-gray-700 dark:text-gray-200 mb-1">Avisos</p>
-                {cola.datos.avisos.map((a, i) => <p key={i} className="break-all text-gray-600 dark:text-gray-300">{a}</p>)}
+                <p className="font-bold text-amber-700 dark:text-amber-300 mb-1">Encolados que ya no están en Outbox ({cola.datos.faltantes.length})</p>
+                {cola.datos.faltantes.map((t) => <p key={t.codigo} className="font-mono break-all text-gray-700 dark:text-gray-200">{t.archivo}</p>)}
               </div>
             )}
           </div>

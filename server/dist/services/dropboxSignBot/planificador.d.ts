@@ -1,10 +1,10 @@
 /**
- * QUÉ SE ENVÍA EN LA PRÓXIMA TANDA, y si corresponde enviar ahora. Lógica pura (sin Dropbox ni base):
- * recibe el listado del Outbox ya leído, los envíos ya registrados y el estado del throttle, y
- * devuelve la tanda, lo que requiere revisión y por qué no se corre si no se corre.
+ * LA COLA DE ENVÍO Y LA PRÓXIMA TANDA. Lógica pura (sin Dropbox ni base).
  *
- * Orden: por nombre de archivo, ascendente. Dedupe duro por código: lo que ya figura `enviado` no
- * vuelve a salir aunque siga en Outbox (el IMAP lo mueve a los ~2 min).
+ * Nada se envía si no fue ENCOLADO desde el tab «Para Firmar» (22/10/2026). `validarEncolado` decide
+ * si un archivo puede entrar en la cola; `planificar` toma SÓLO lo encolado (y lo frenado por el
+ * límite, que se reintenta), por orden de encolado, y aplica tanda, tope diario, ventana horaria y
+ * enfriamiento. Lo que no está encolado simplemente espera.
  */
 export interface ConfigEnvio {
     activo: boolean;
@@ -24,35 +24,22 @@ export interface EstadoThrottle {
     enfriadoHasta: Date | null;
     ultimaCorridaAt: Date | null;
 }
-/** Un archivo del Outbox ya resuelto contra la base (o no). */
-export interface ArchivoResuelto {
-    archivo: string;
-    /** Email y nombre del firmante, ya decididos (la base manda sobre el nombre de archivo). `null` si no se pudo resolver. */
-    firmante: {
-        nombre: string;
-        email: string;
-    } | null;
-    /** Por qué no se pudo resolver, para el log. */
-    motivoSinFirmante?: string;
-}
-export interface Candidato {
+/** Un documento en la cola (un `DropboxSignEnvio` en estado `en_cola` o `limite`). */
+export interface ItemEnCola {
     archivo: string;
     codigo: string;
     tipo: string;
     email: string;
     firmante: string;
+    orden: number;
 }
-export interface RequiereRevision {
-    archivo: string;
-    codigo: string;
-    motivo: string;
+export interface Candidato extends ItemEnCola {
 }
 export interface Plan {
     tanda: Candidato[];
-    requiereRevision: RequiereRevision[];
-    /** Ya enviados (en Outbox todavía porque el IMAP no los movió). */
-    yaEnviados: string[];
-    /** Cuántos quedan para tandas siguientes. */
+    /** Encolados cuyo archivo ya no está en Outbox (el IMAP lo movió, o alguien lo borró): no se envían. */
+    faltantes: ItemEnCola[];
+    /** Cuántos encolados quedan para tandas siguientes. */
     pendientesDespues: number;
     /** Cupo que queda hoy. */
     cupoHoy: number;
@@ -64,8 +51,8 @@ export declare function fechaYHoraArgentina(ahora: Date): {
 };
 export declare const cupoDelDia: (config: ConfigEnvio, estado: EstadoThrottle, ahora: Date) => number;
 /**
- * ¿Le toca correr al scheduler ahora? Devuelve el motivo si no. (El botón «Enviar tanda ahora» no
- * pasa por acá salvo por el enfriamiento y el cupo: es una decisión de la persona.)
+ * ¿Le toca correr al scheduler ahora? Devuelve el motivo si no. (El botón «Enviar a la firma» no pasa
+ * por acá salvo por el enfriamiento y el cupo: es una decisión de la persona.)
  */
 export declare function puedeCorrer(config: ConfigEnvio, estado: EstadoThrottle, ahora: Date, opciones?: {
     manual?: boolean;
@@ -73,5 +60,38 @@ export declare function puedeCorrer(config: ConfigEnvio, estado: EstadoThrottle,
     ok: boolean;
     motivo?: string;
 };
-/** La tanda a enviar y lo que queda afuera, a partir del Outbox resuelto. */
-export declare function planificar(archivos: ArchivoResuelto[], codigosEnviados: Set<string>, config: ConfigEnvio, estado: EstadoThrottle, ahora: Date): Plan;
+/** Lo que hace falta saber de un archivo para decidir si entra en la cola. */
+export interface ContextoDeEncolado {
+    /** Está en el Outbox tal como lo lista Dropbox. */
+    enOutbox: boolean;
+    /** El registro previo de ese código, si hay. */
+    registroPrevio: {
+        estado: string;
+    } | null;
+    /** El firmante resuelto desde la base, o null. */
+    firmante: {
+        nombre: string;
+        email: string;
+    } | null;
+    motivoSinFirmante?: string;
+}
+export interface ResultadoEncolado {
+    ok: boolean;
+    codigo: string;
+    /** Por qué no entra ("" si entra). */
+    motivo: string;
+    /** Si no entra: ¿se puede volver a intentar cuando se arregle la causa? (false para lo enviado/encolado) */
+    reencolable: boolean;
+    tipo?: string;
+    firmante?: {
+        nombre: string;
+        email: string;
+    };
+}
+/**
+ * ¿Puede entrar este archivo en la cola? Lo que no pasa queda `requiere_revision` con el motivo, salvo
+ * lo que ya está enviado o encolado (eso no se toca). UN ARCHIVO ENVIADO JAMÁS SE RE-ENCOLA.
+ */
+export declare function validarEncolado(archivo: string, ctx: ContextoDeEncolado): ResultadoEncolado;
+/** La tanda a enviar, a partir de la cola y de lo que sigue en Outbox. */
+export declare function planificar(enCola: ItemEnCola[], archivosEnOutbox: Set<string>, config: ConfigEnvio, estado: EstadoThrottle, ahora: Date): Plan;

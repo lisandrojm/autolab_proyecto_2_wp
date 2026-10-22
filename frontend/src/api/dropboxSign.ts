@@ -156,16 +156,42 @@ export interface BotCorrida {
   enSecoForzado: boolean;
 }
 
+export interface BotItemCola {
+  archivo: string;
+  codigo: string;
+  tipo: string;
+  email: string;
+  firmante: string;
+  orden: number;
+}
+
 export interface BotCola {
-  tanda: Array<{ archivo: string; codigo: string; tipo: string; email: string; firmante: string }>;
-  requiereRevision: Array<{ archivo: string; codigo: string; motivo: string }>;
-  yaEnviados: string[];
+  tanda: BotItemCola[];
+  /** Encolados que ya no están en Outbox: no se envían. */
+  faltantes: BotItemCola[];
   pendientesDespues: number;
   cupoHoy: number;
   outbox: string | null;
   archivosEnOutbox: number;
-  avisos: string[];
+  enCola: number;
   motivoNoCorre: string | null;
+}
+
+/** El estado de un archivo del listado «Para Firmar» frente al bot. */
+export interface EstadoArchivoFirma {
+  archivo: string;
+  codigo: string;
+  /** "" = sin encolar · en_cola · seco · enviando · enviado · limite · error · requiere_revision */
+  estado: "" | "en_cola" | "seco" | "enviando" | "enviado" | "limite" | "error" | "requiere_revision";
+  detalle: string;
+  enviadoAt: string | null;
+  posicion: number | null;
+}
+
+export interface ResultadoEncolado {
+  encolados: number;
+  rechazados: Array<{ archivo: string; motivo: string }>;
+  porMotivo: Record<string, number>;
 }
 
 export interface BotLog {
@@ -222,6 +248,21 @@ class DropboxSignBotAPI {
   }
   async logs(): Promise<{ logs: BotLog[]; requierenRevision: BotEnvioRegistro[] }> {
     const { data } = await axios.get("/dropbox-sign/bot/logs");
+    return data;
+  }
+  /** Encola archivos del Outbox (por nombre) o todo lo elegible. Tarda: resuelve firmantes. */
+  async encolar(pedido: { archivos?: string[]; todosElegibles?: boolean }): Promise<ResultadoEncolado> {
+    const { data } = await axios.post("/dropbox-sign/bot/encolar", pedido, { timeout: 180000 });
+    return data;
+  }
+  async desencolar(codigos: string[]): Promise<{ quitados: number }> {
+    const { data } = await axios.post("/dropbox-sign/bot/desencolar", { codigos });
+    return data;
+  }
+  /** El estado de cada archivo del listado: una query, sin tocar Dropbox. */
+  async estadoArchivos(archivos: string[]): Promise<EstadoArchivoFirma[]> {
+    if (archivos.length === 0) return [];
+    const { data } = await axios.post("/dropbox-sign/bot/estado-archivos", { archivos });
     return data;
   }
 }

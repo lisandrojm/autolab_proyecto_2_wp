@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUpRightFromSquare, faCircleInfo, faDownload, faFilePdf, faFileZipper, faFolderOpen, faPen, faRotateRight, faSpinner, faTrash, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUpRightFromSquare, faCircleInfo, faDownload, faFilePdf, faFileZipper, faFolderOpen, faPen, faRotateRight, faSpinner, faTrash, faTriangleExclamation, faPaperPlane, faListCheck } from "@fortawesome/free-solid-svg-icons";
 import { dropboxAPI, DropboxEntry } from "../../api/dropbox";
 import { firmaDigitalAPI } from "../../api/firmaDigital";
-import { dropboxSignAPI } from "../../api/dropboxSign";
+import { useBotFirma, PanelBotFirma, BadgeFirma, InstructivoParaFirmar } from "./FirmaBotParaFirmar";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { EmptyState } from "../ui/EmptyState";
 import { Modal } from "../ui/Modal";
@@ -75,71 +75,7 @@ export const fetchDropboxCounts = async (): Promise<Record<TipoBandejaDropbox, n
  * Instructivo de cómo enviar a firmar en Dropbox Sign. Se muestra en dos lugares (el ⓘ del paso
  * "Para Firmar" del stepper y el ⓘ de la propia pestaña), así que vive acá para no duplicarlo.
  */
-/**
- * La casilla de CC que hay que poner al enviar a firmar: la configurada en Configuración → DropboxSign.
- * Antes estaba escrita fija («rrhh@frame.com.ar») y quedó vieja: la casilla real es otra.
- */
-const CasillaCC: React.FC = () => {
-  const [cc, setCc] = useState<string | null>(null);
-  useEffect(() => {
-    dropboxSignAPI
-      .config()
-      .then((c) => setCc(c.email || ""))
-      .catch(() => setCc(""));
-  }, []);
-  if (cc === null) return <span className="font-mono text-xs">…</span>;
-  return cc ? <span className="font-mono text-xs">{cc}</span> : <span className="italic">la casilla configurada en Configuración → DropboxSign (todavía no hay ninguna)</span>;
-};
-
-export const InstructivoParaFirmar: React.FC = () => (
-          <div className="space-y-4">
-            <p className="text-sm text-gray-700 dark:text-gray-200">
-              Lo que aparece en esta pestaña es lo que hay en la carpeta <strong>Outbox</strong> de Dropbox: contratos ya generados y <strong>listos para importar</strong> en Dropbox Sign. Todavía no se
-              envió nada a firmar.
-            </p>
-
-            <ol className="text-sm text-gray-600 dark:text-gray-300 space-y-2 list-decimal list-inside">
-              <li>
-                Entrá a Dropbox Sign (botón <strong>Ir a Dropbox Sign</strong>) y elegí <strong>Firmar documentos</strong>.
-              </li>
-              <li>
-                En <em>Seleccionar documentos para firmar</em>, elegí el origen <strong>Dropbox</strong>.
-              </li>
-              <li>
-                Navegá a la carpeta <span className="font-mono text-xs">HelloSign/Outbox</span> y seleccioná el archivo.
-              </li>
-              <li>
-                <strong>Agregar firmantes</strong>: cargá nombre y correo de quien tiene que firmar.
-              </li>
-              <li>
-                <strong>Insertar campos</strong>: colocá el campo de firma donde corresponda en el documento.
-              </li>
-              <li>
-                En <em>Revisar y enviar</em>, apretá <strong>Enviar para firmar</strong>.
-              </li>
-            </ol>
-
-            {/* El CC no es un detalle administrativo: es lo que dispara la detección del envío. */}
-            <div className="rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/20 px-3 py-2.5">
-              <p className="text-sm font-bold text-amber-800 dark:text-amber-300 mb-1">IMPORTANTE — antes de enviar</p>
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                En <em>Revisar y enviar</em>, agregá en <strong>CC</strong> el correo <CasillaCC />.
-              </p>
-              <p className="text-xs text-amber-700 dark:text-amber-300/90 mt-1.5">
-                Ese aviso de Dropbox Sign es la única forma que tiene el sistema de enterarse de que el documento se envió: con él, el archivo pasa solo de <strong>Outbox</strong> a{" "}
-                <strong>Pendbox</strong> y aparece en <strong>Enviado a la firma</strong>. Si no lo ponés, el contrato queda figurando como no enviado y se corre el riesgo de mandarlo dos veces.
-              </p>
-            </div>
-
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Cuando vuelve firmado queda en <span className="font-mono text-xs">Requested signatures</span> y se ve en la pestaña <strong>Firmados</strong>. En ese momento el original sale solo de{" "}
-              <strong>Enviado a la firma</strong>: esa pestaña muestra únicamente lo que todavía espera la firma.
-            </p>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">
-              El envío y la firma se hacen en Dropbox Sign, no en la aplicación. Desde acá sí podés descargar, renombrar o eliminar los archivos de Outbox antes de importarlos.
-            </p>
-          </div>
-);
+export { InstructivoParaFirmar } from "./FirmaBotParaFirmar";
 
 /**
  * Pestañas que muestran contratos que no viven en la base sino en carpetas de Dropbox. Son las tres
@@ -173,6 +109,11 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
   const [filtro, setFiltro] = useState("");
   /** Explicación de cómo se importan los contratos desde Outbox (modal del ⓘ). */
   const [infoOpen, setInfoOpen] = useState(false);
+  // El bot de envío a la firma: estado por archivo, corrida en vivo y acciones (sólo en «Para Firmar»).
+  const nombresDeArchivos = useMemo(() => entries.map((e) => e.name), [entries]);
+  const bot = useBotFirma(nombresDeArchivos, tipo === "para_firmar");
+  const enColaTotal = useMemo(() => [...bot.estados.values()].filter((e) => e.estado === "en_cola" || e.estado === "seco" || e.estado === "limite").length, [bot.estados]);
+  const seleccionadosNombres = useMemo(() => entries.filter((e) => selected.has(e.path)).map((e) => e.name), [entries, selected]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -352,23 +293,19 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
 
   return (
     <div className="space-y-4">
-      {/* Mismo patrón que "Cargar en ARCA": el botón, y al lado el ⓘ con la explicación. */}
       {tipo === "para_firmar" && (
-        <div className="flex items-center justify-end gap-2">
-          <a
-            href={DROPBOX_SIGN_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Abrir Dropbox Sign para firmar los contratos de Outbox"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shrink-0 whitespace-nowrap"
-          >
-            <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-4 w-4" />
-            Ir a Dropbox Sign
-          </a>
-          <button type="button" onClick={() => setInfoOpen(true)} title="Cómo se importan los contratos desde Outbox" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0">
-            <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-          </button>
-        </div>
+        <>
+          <PanelBotFirma bot={bot} enCola={enColaTotal} />
+          <div className="flex items-center justify-end gap-2 -mt-2">
+            <a href={DROPBOX_SIGN_URL} target="_blank" rel="noopener noreferrer" title="Abrir Dropbox Sign (para mirar; el envío lo hace el sistema)" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+              <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3" />
+              Dropbox Sign
+            </a>
+            <button type="button" onClick={() => setInfoOpen(true)} title="Cómo se envían a firmar" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+            </button>
+          </div>
+        </>
       )}
 
       {infoOpen && (
@@ -405,6 +342,22 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
             <button onClick={() => setSelected(new Set())} className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 whitespace-nowrap">
               Deseleccionar
             </button>
+            {tipo === "para_firmar" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => bot.enviarALaFirma(seleccionadosNombres)}
+                  disabled={!!bot.ocupado || !bot.cfg}
+                  title="Encola los tildados y, si el bot está libre y hay cupo, arranca el envío"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-60"
+                >
+                  <FontAwesomeIcon icon={bot.ocupado === "encolando" ? faSpinner : faPaperPlane} spin={bot.ocupado === "encolando"} /> Enviar a la firma ({selected.size})
+                </button>
+                <button type="button" onClick={() => bot.quitarDeLaCola(seleccionadosNombres)} disabled={!!bot.ocupado} title="Saca de la cola los tildados que estén en cola" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60">
+                  <FontAwesomeIcon icon={faListCheck} /> Quitar de la cola ({seleccionadosNombres.filter((n) => ["en_cola", "seco"].includes(bot.estados.get(n)?.estado || "")).length})
+                </button>
+              </>
+            )}
             <button
               onClick={handleBulkDownload}
               disabled={descargandoZip || excedePeso}
@@ -487,6 +440,7 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
                       Tamaño
                     </BotonOrden>
                   </th>
+                  {tipo === "para_firmar" && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Firma</th>}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right bg-gray-50 dark:bg-gray-900">Acciones</th>
                 </tr>
               </thead>
@@ -506,6 +460,11 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtTamanio(e.size)}</td>
+                    {tipo === "para_firmar" && (
+                      <td className="px-4 py-3">
+                        <BadgeFirma e={bot.estados.get(e.name)} />
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         {/*

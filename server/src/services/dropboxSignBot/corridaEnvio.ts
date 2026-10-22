@@ -7,28 +7,29 @@ import { Tenant } from "../../models/Tenant.js";
 import { User } from "../../models/User.js";
 import UserProject from "../../models/UserProject.js";
 import { DocumentoGenerado } from "../../models/DocumentoGenerado.js";
-import { DropboxSignEnvio } from "../../models/DropboxSignEnvio.js";
+import { DropboxSignEnvio, type EstadoEnvio } from "../../models/DropboxSignEnvio.js";
 import { DropboxSignEnvioLog, type ILineaEnvio } from "../../models/DropboxSignEnvioLog.js";
 import { getTenantDropboxConfig, listFolder, downloadFileContent } from "../dropboxService.js";
 import { resolverCarpetaPorProposito } from "../../utils/estadoCarpetas.js";
 import { leerAnclas } from "../../utils/anclasNombre.js";
-import { CONFIG_POR_DEFECTO, fechaYHoraArgentina, planificar, puedeCorrer, type ArchivoResuelto, type Candidato, type ConfigEnvio, type EstadoThrottle, type Plan } from "./planificador.js";
+import { CONFIG_POR_DEFECTO, fechaYHoraArgentina, planificar, puedeCorrer, validarEncolado, type Candidato, type ConfigEnvio, type EstadoThrottle, type ItemEnCola, type Plan } from "./planificador.js";
 import { colocacionDe, esTextoDeLimite, guardDeEnvio, nombreDeFirmante } from "./reglas.js";
 import { abrirSesionDropboxSign, anotarError, guardarSesion, type SesionDropboxSign } from "./navegador.js";
 import { quienTieneDropboxSign, soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 import { MOTOR_DROPBOX_SIGN } from "./motor.js";
 
 /**
- * LA CORRIDA DE ENVÍO A LA FIRMA (patrón `arca/corridaAltas.ts`): una tanda de documentos del Outbox
+ * LA CORRIDA DE ENVÍO A LA FIRMA (patrón `arca/corridaAltas.ts`): una tanda de documentos DE LA COLA
  * pasa por el motor de pantalla de Dropbox Sign, de a uno. Vive en memoria, arranca sin esperar y la
  * UI la sigue por polling (`GET /dropbox-sign/bot/corrida`).
  *
- *  · El PLAN lo arma `planificador.ts` (puro) con el Outbox leído por la API de Dropbox y los envíos
- *    ya registrados (`DropboxSignEnvio`): nunca se envía dos veces el mismo código.
+ *  · LA COLA la arma la gente desde «Para Firmar» (`encolar`); nada se envía si no fue encolado. El
+ *    PLAN lo hace `planificador.ts` (puro) con la cola y el Outbox: nunca se envía dos veces un código.
  *  · EL FIRMANTE sale de la base (`DocumentoGenerado` por código → usuario), no del nombre de archivo.
  *  · El click «Enviar para firmar» es el único irreversible: pasa por el guard de `reglas.ts` y por el
  *    modo seco, y a partir de ahí «Detener» ya no corta ese documento.
- *  · El LÍMITE antiabuso frena la tanda, deja `enfriadoHasta` y el scheduler no reintenta hasta que venza.
+ *  · El LÍMITE antiabuso frena la tanda, deja `enfriadoHasta`, el documento queda `limite` (sigue en la
+ *    cola) y el scheduler no reintenta hasta que venza.
  */
 
 const BASE = "integrations.dropboxSign.bot";
@@ -56,11 +57,14 @@ export interface CorridaEnvio {
   enviados: number;
   errores: number;
   limite: boolean;
+  /** El archivo que está pasando por el wizard ahora. */
+  actual: string | null;
   lineas: ILineaEnvio[];
 }
 
 const corridas = new Map<string, CorridaEnvio>();
 export const corridaEnvioDe = (tenantId: string): CorridaEnvio | undefined => corridas.get(tenantId);
+export const ocupadaPor = (tenantId: string) => quienTieneDropboxSign(tenantId);
 
 /** Seco salvo que se diga lo contrario fuera de producción; en producción, real salvo que se fuerce seco. */
 export function enSecoForzado(): boolean {
@@ -108,7 +112,7 @@ export async function configDelTenant(tenantId: string): Promise<{ config: Confi
  * APELLIDOS». Sin registro en la base, se busca al usuario por el email del nombre de archivo y se
  * deja constancia del respaldo.
  */
-export async function resolverFirmante(tenantId: string, archivo: string, avisar?: (texto: string) => void): Promise<ArchivoResuelto> {
+export async function resolverFirmante(tenantId: string, archivo: string, avisar?: (texto: string) => void): Promise<{ firmante: { nombre: string; email: string } | null; motivoSinFirmante?: string }> {
   const anclas = leerAnclas(archivo);
   let user: any = null;
   let viaRegistro = false;
@@ -125,44 +129,126 @@ export async function resolverFirmante(tenantId: string, archivo: string, avisar
     user = await User.findOne({ tenantId, email: new RegExp(`^${anclas.email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") }).select("firstName lastName email").lean();
     if (user) avisar?.(`${archivo}: sin registro en la base para ${anclas.codigo || "el código"}; se tomó al usuario por el email del nombre de archivo.`);
   }
-  if (!user) return { archivo, firmante: null, motivoSinFirmante: anclas.codigo ? `No hay usuario para el código ${anclas.codigo} ni para el email del nombre de archivo.` : "El nombre de archivo no trae código ni email reconocibles." };
+  if (!user) return { firmante: null, motivoSinFirmante: anclas.codigo ? `No hay usuario para el código ${anclas.codigo} ni para el email del nombre de archivo.` : "El nombre de archivo no trae código ni email reconocibles." };
   const email = String(user.email || "").trim().toLowerCase() || anclas.email;
   if (viaRegistro && anclas.email && email !== anclas.email) avisar?.(`${archivo}: el email del nombre de archivo (${anclas.email}) difiere del de la base (${email}); se usa el de la base.`);
   const nombre = nombreDeFirmante(user);
-  if (!nombre || !email) return { archivo, firmante: null, motivoSinFirmante: "El usuario no tiene nombre o email cargados." };
-  return { archivo, firmante: { nombre, email } };
+  if (!nombre || !email) return { firmante: null, motivoSinFirmante: "El usuario no tiene nombre o email cargados." };
+  return { firmante: { nombre, email } };
+}
+
+/** El Outbox del tenant: la carpeta y los PDFs que hay. */
+async function leerOutbox(tenantId: string): Promise<{ outbox: string; archivos: string[]; cfg: NonNullable<ReturnType<typeof getTenantDropboxConfig>> }> {
+  const tenant = await Tenant.findById(tenantId).lean();
+  const cfg = getTenantDropboxConfig(tenant);
+  if (!cfg) throw Object.assign(new Error("Dropbox no está conectado para esta organización."), { status: 400 });
+  const outbox = await resolverCarpetaPorProposito("outbox");
+  if (!outbox) throw Object.assign(new Error('No hay ninguna carpeta de Dropbox configurada como "Outbox".'), { status: 400 });
+  const { entries } = await listFolder(tenantId, cfg, outbox);
+  return { outbox: outbox.replace(/\/$/, ""), archivos: entries.filter((e) => e.tag === "file" && /\.pdf$/i.test(e.name)).map((e) => e.name), cfg };
+}
+
+const itemDe = (r: any): ItemEnCola => ({ archivo: r.archivo, codigo: r.codigo, tipo: r.tipo, email: r.email, firmante: r.firmante, orden: Number(r.orden) || 0 });
+
+/**
+ * ENCOLAR desde «Para Firmar»: cada archivo se valida (`validarEncolado`) y entra con el próximo
+ * `orden`. Lo que no pasa queda `requiere_revision` con su motivo (salvo lo ya enviado o encolado,
+ * que no se toca). `todosElegibles` recorre el Outbox entero.
+ */
+export async function encolar(tenantId: string, userId: string | undefined, pedido: { archivos?: string[]; todosElegibles?: boolean }): Promise<{ encolados: number; rechazados: Array<{ archivo: string; motivo: string }>; porMotivo: Record<string, number> }> {
+  const { archivos: enOutbox } = await leerOutbox(tenantId);
+  const setOutbox = new Set(enOutbox);
+  const pedidos = pedido.todosElegibles ? enOutbox : [...new Set((pedido.archivos || []).map((a) => String(a).trim()).filter(Boolean))];
+  const codigos = pedidos.map((a) => leerAnclas(a).codigo).filter(Boolean);
+  const previos = new Map<string, any>(((await DropboxSignEnvio.find({ tenantId, codigo: { $in: codigos } }).lean()) as any[]).map((r) => [r.codigo, r]));
+  const ultimo: any = await DropboxSignEnvio.findOne({ tenantId, orden: { $ne: null } }).sort({ orden: -1 }).select("orden").lean();
+  let orden = Number(ultimo?.orden) || 0;
+  const tid = new Types.ObjectId(tenantId);
+  const quien = userId && Types.ObjectId.isValid(userId) ? new Types.ObjectId(userId) : null;
+
+  let encolados = 0;
+  const rechazados: Array<{ archivo: string; motivo: string }> = [];
+  const porMotivo: Record<string, number> = {};
+  for (const archivo of pedidos) {
+    const { codigo } = leerAnclas(archivo);
+    const { firmante, motivoSinFirmante } = setOutbox.has(archivo) ? await resolverFirmante(tenantId, archivo) : { firmante: null, motivoSinFirmante: undefined };
+    const r = validarEncolado(archivo, { enOutbox: setOutbox.has(archivo), registroPrevio: codigo ? previos.get(codigo) || null : null, firmante, motivoSinFirmante });
+    if (r.ok && r.firmante) {
+      orden++;
+      await DropboxSignEnvio.updateOne(
+        { tenantId: tid, codigo: r.codigo },
+        { $set: { archivo, email: r.firmante.email, firmante: r.firmante.nombre, tipo: r.tipo || "", estado: "en_cola", detalle: "", orden, encoladoAt: new Date(), encoladoPor: quien, probadoEnSecoAt: null }, $setOnInsert: { tenantId: tid, codigo: r.codigo } },
+        { upsert: true },
+      );
+      encolados++;
+      continue;
+    }
+    rechazados.push({ archivo, motivo: r.motivo });
+    porMotivo[r.motivo] = (porMotivo[r.motivo] || 0) + 1;
+    // Queda registrado como «requiere revisión» para que se vea en el tab, salvo lo que ya está enviado/encolado.
+    if (r.reencolable && r.codigo) {
+      await DropboxSignEnvio.updateOne({ tenantId: tid, codigo: r.codigo }, { $set: { archivo, estado: "requiere_revision", detalle: r.motivo }, $setOnInsert: { tenantId: tid, codigo: r.codigo } }, { upsert: true }).catch(() => {});
+    }
+  }
+  return { encolados, rechazados, porMotivo };
+}
+
+/** Saca de la cola. Sólo afecta `en_cola`: lo enviado, lo frenado por el límite y lo demás no se toca. */
+export async function desencolar(tenantId: string, codigos: string[]): Promise<{ quitados: number }> {
+  const r = await DropboxSignEnvio.deleteMany({ tenantId, codigo: { $in: codigos }, estado: "en_cola" });
+  return { quitados: r.deletedCount || 0 };
+}
+
+export interface EstadoArchivo {
+  archivo: string;
+  codigo: string;
+  /** `en_cola` | `enviando` | `enviado` | `limite` | `error` | `requiere_revision` | `seco` | "" (sin encolar) */
+  estado: string;
+  detalle: string;
+  enviadoAt: string | null;
+  /** Posición en la cola (1 = próximo), si está en ella. */
+  posicion: number | null;
+}
+
+/** El estado de cada archivo del listado del tab: una query por lote, sin tocar Dropbox. */
+export async function estadoDeArchivos(tenantId: string, archivos: string[]): Promise<EstadoArchivo[]> {
+  const codigoDe = new Map(archivos.map((a) => [a, leerAnclas(a).codigo]));
+  const codigos = [...new Set([...codigoDe.values()].filter(Boolean))];
+  const registros = new Map<string, any>(((await DropboxSignEnvio.find({ tenantId, codigo: { $in: codigos } }).lean()) as any[]).map((r) => [r.codigo, r]));
+  const enCola: any[] = await DropboxSignEnvio.find({ tenantId, estado: { $in: ["en_cola", "limite"] } }).sort({ orden: 1 }).select("codigo").lean();
+  const posicion = new Map(enCola.map((r, i) => [r.codigo, i + 1]));
+  const corrida = corridas.get(tenantId);
+  const actual = corrida && !corrida.terminada ? corrida.actual : null;
+  return archivos.map((archivo) => {
+    const codigo = codigoDe.get(archivo) || "";
+    const r = registros.get(codigo);
+    if (!r) return { archivo, codigo, estado: "", detalle: "", enviadoAt: null, posicion: null };
+    const estado = archivo === actual ? "enviando" : r.estado === "en_cola" && r.probadoEnSecoAt ? "seco" : r.estado;
+    return { archivo, codigo, estado, detalle: r.detalle || "", enviadoAt: r.enviadoAt ? new Date(r.enviadoAt).toISOString() : null, posicion: posicion.get(codigo) ?? null };
+  });
 }
 
 export interface Cola extends Plan {
   outbox: string | null;
   archivosEnOutbox: number;
-  avisos: string[];
+  enCola: number;
   /** Por qué el scheduler no correría ahora (informativo). */
   motivoNoCorre: string | null;
 }
 
-/** Qué enviaría la próxima tanda: lee el Outbox, resuelve firmantes y planifica. */
+/** Qué enviaría la próxima tanda: la cola contra el Outbox, planificada. No envía nada. */
 export async function armarCola(tenantId: string, opciones: { manual?: boolean } = {}): Promise<Cola> {
   const { config, estado } = await configDelTenant(tenantId);
-  const tenant = await Tenant.findById(tenantId).lean();
-  const cfg = getTenantDropboxConfig(tenant);
-  if (!cfg) throw new Error("Dropbox no está conectado para esta organización.");
-  const outbox = await resolverCarpetaPorProposito("outbox");
-  if (!outbox) throw new Error('No hay ninguna carpeta de Dropbox configurada como "Outbox".');
-  const { entries } = await listFolder(tenantId, cfg, outbox);
-  const archivos = entries.filter((e) => e.tag === "file" && /\.pdf$/i.test(e.name));
-  const avisos: string[] = [];
-  const resueltos: ArchivoResuelto[] = [];
-  for (const a of archivos) resueltos.push(await resolverFirmante(tenantId, a.name, (t) => avisos.push(t)));
-  const enviados = await DropboxSignEnvio.find({ tenantId, estado: "enviado" }).select("codigo").lean();
+  const { outbox, archivos } = await leerOutbox(tenantId);
+  const enCola: any[] = await DropboxSignEnvio.find({ tenantId, estado: { $in: ["en_cola", "limite"] } }).sort({ orden: 1 }).lean();
   const ahora = new Date();
-  const plan = planificar(resueltos, new Set(enviados.map((e: any) => e.codigo)), config, estado, ahora);
+  const plan = planificar(enCola.map(itemDe), new Set(archivos), config, estado, ahora);
   const puede = puedeCorrer(config, estado, ahora, opciones);
-  return { ...plan, outbox, archivosEnOutbox: archivos.length, avisos, motivoNoCorre: puede.ok ? null : puede.motivo || "No se puede correr ahora." };
+  return { ...plan, outbox, archivosEnOutbox: archivos.length, enCola: enCola.length, motivoNoCorre: puede.ok ? null : puede.motivo || "No se puede correr ahora." };
 }
 
-/** Arranca una corrida y vuelve en el acto. `manual` = botón de la UI (respeta sólo enfriamiento y cupo). */
-export async function arrancarCorridaEnvio(tenantId: string, opciones: { automatica?: boolean; enSeco?: boolean } = {}): Promise<{ total: number; enSeco: boolean }> {
+/** Arranca una corrida y vuelve en el acto. Manual (botón) respeta sólo enfriamiento y cupo. */
+export async function arrancarCorridaEnvio(tenantId: string, opciones: { automatica?: boolean; enSeco?: boolean } = {}): Promise<{ enSeco: boolean }> {
   const automatica = !!opciones.automatica;
   tomarCandadoDropboxSign(tenantId, automatica);
   try {
@@ -171,11 +257,11 @@ export async function arrancarCorridaEnvio(tenantId: string, opciones: { automat
     if (!puede.ok) throw Object.assign(new Error(puede.motivo || "No se puede correr ahora."), { status: 409 });
     if (!cc) throw Object.assign(new Error("Falta la casilla de CC (Configuración → DropboxSign → correo que recibe los avisos)."), { status: 400 });
     const enSeco = enSecoForzado() || !!opciones.enSeco;
-    const corrida: CorridaEnvio = { tenantId, enSeco, automatica, eventos: [], terminada: false, irreversible: false, señal: { cortada: false }, arrancadaEl: new Date(), total: 0, enviados: 0, errores: 0, limite: false, lineas: [] };
+    const corrida: CorridaEnvio = { tenantId, enSeco, automatica, eventos: [], terminada: false, irreversible: false, señal: { cortada: false }, arrancadaEl: new Date(), total: 0, enviados: 0, errores: 0, limite: false, actual: null, lineas: [] };
     corridas.set(tenantId, corrida);
     await Tenant.updateOne({ _id: tenantId }, { $set: { [`${BASE}.ultimaCorridaAt`]: corrida.arrancadaEl } });
     void correr(corrida, cc, config);
-    return { total: 0, enSeco };
+    return { enSeco };
   } catch (e) {
     soltarCandadoDropboxSign(tenantId);
     throw e;
@@ -190,12 +276,8 @@ async function sumarAlContador(tenantId: string): Promise<void> {
   if (r.modifiedCount === 0) await Tenant.updateOne({ _id: tenantId }, { $set: { [`${BASE}.contadorDia`]: { fecha, enviados: 1 } } });
 }
 
-async function registrarEnvio(tenantId: string, c: Candidato, estado: "enviado" | "error" | "limite" | "requiere_revision", detalle: string): Promise<void> {
-  await DropboxSignEnvio.updateOne(
-    { tenantId, codigo: c.codigo },
-    { $set: { archivo: c.archivo, email: c.email, firmante: c.firmante, tipo: c.tipo, estado, detalle, ...(estado === "enviado" ? { enviadoAt: new Date() } : {}) }, $setOnInsert: { tenantId: new Types.ObjectId(tenantId), codigo: c.codigo } },
-    { upsert: true },
-  ).catch((e) => console.warn("[DROPBOX-SIGN-BOT] No se pudo registrar el envío:", e?.message || e));
+async function actualizarRegistro(tenantId: string, codigo: string, set: Partial<{ estado: EstadoEnvio; detalle: string; enviadoAt: Date | null; probadoEnSecoAt: Date | null }>): Promise<void> {
+  await DropboxSignEnvio.updateOne({ tenantId, codigo }, { $set: set }).catch((e) => console.warn("[DROPBOX-SIGN-BOT] No se pudo actualizar el registro:", e?.message || e));
 }
 
 async function correr(corrida: CorridaEnvio, cc: string, config: ConfigEnvio): Promise<void> {
@@ -212,15 +294,15 @@ async function correr(corrida: CorridaEnvio, cc: string, config: ConfigEnvio): P
   fs.mkdirSync(dir, { recursive: true });
 
   try {
-    emitir({ tipo: "cola", texto: "Leyendo el Outbox y armando la tanda…" });
+    emitir({ tipo: "cola", texto: "Leyendo la cola y el Outbox…" });
     const cola = await armarCola(tenantId, { manual: !corrida.automatica });
-    for (const a of cola.avisos) emitir({ tipo: "info", texto: a });
-    for (const r of cola.requiereRevision) {
-      corrida.lineas.push({ archivo: r.archivo, codigo: r.codigo, email: "", estado: "requiere_revision", detalle: r.motivo });
-      if (r.codigo) await DropboxSignEnvio.updateOne({ tenantId, codigo: r.codigo, estado: { $ne: "enviado" } }, { $set: { archivo: r.archivo, estado: "requiere_revision", detalle: r.motivo }, $setOnInsert: { tenantId: new Types.ObjectId(tenantId), codigo: r.codigo } }, { upsert: true }).catch(() => {});
+    for (const f of cola.faltantes) {
+      const detalle = "El archivo ya no está en Outbox (¿se movió a Pendbox o se borró?): salió de la cola.";
+      corrida.lineas.push({ archivo: f.archivo, codigo: f.codigo, email: f.email, estado: "requiere_revision", detalle });
+      await actualizarRegistro(tenantId, f.codigo, { estado: "requiere_revision", detalle });
     }
     corrida.total = cola.tanda.length;
-    emitir({ tipo: "cola", texto: `${cola.archivosEnOutbox} archivo(s) en Outbox · ${cola.tanda.length} en esta tanda · ${cola.requiereRevision.length} requieren revisión · ${cola.yaEnviados.length} ya enviados · ${cola.pendientesDespues} quedan para después${corrida.enSeco ? " · MODO SECO: no se envía nada" : ""}` });
+    emitir({ tipo: "cola", texto: `${cola.enCola} en la cola · ${cola.tanda.length} en esta tanda · ${cola.pendientesDespues} quedan para después · ${cola.faltantes.length} ya no están en Outbox · cupo hoy ${cola.cupoHoy}${corrida.enSeco ? " · MODO SECO: no se envía nada" : ""}` });
     if (cola.tanda.length === 0) {
       resultado = "sin_tanda";
       return;
@@ -239,26 +321,26 @@ async function correr(corrida: CorridaEnvio, cc: string, config: ConfigEnvio): P
       emitir({ tipo: "info", texto: `No se pudieron revisar los borradores: ${e?.message || e}` });
     }
 
-    const tenant = await Tenant.findById(tenantId).lean();
-    const cfg = getTenantDropboxConfig(tenant)!;
+    const { cfg } = await leerOutbox(tenantId);
 
-    for (const c of cola.tanda) {
+    for (const c of cola.tanda as Candidato[]) {
       if (corrida.señal.cortada) {
         resultado = "detenida";
         emitir({ tipo: "info", texto: "Detenida antes del siguiente documento." });
         break;
       }
       // Segunda mirada al dedupe, por si otra corrida (otro proceso) lo mandó mientras se armaba la cola.
-      const ya = await DropboxSignEnvio.findOne({ tenantId, codigo: c.codigo, estado: "enviado" }).select("_id").lean();
-      if (ya) {
-        corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: "salteado", detalle: "Ya figuraba como enviado." });
+      const vigente: any = await DropboxSignEnvio.findOne({ tenantId, codigo: c.codigo }).select("estado").lean();
+      if (!vigente || !["en_cola", "limite"].includes(vigente.estado)) {
+        corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: "salteado", detalle: vigente?.estado === "enviado" ? "Ya figuraba como enviado." : "Salió de la cola mientras se armaba la tanda." });
         continue;
       }
+      corrida.actual = c.archivo;
       emitir({ tipo: "documento", archivo: c.archivo, codigo: c.codigo, texto: `${c.archivo} → ${c.firmante} (${c.email})` });
       const rutaPdf = path.join(dir, c.archivo);
       let r: any;
       try {
-        fs.writeFileSync(rutaPdf, await downloadFileContent(tenantId, cfg, `${cola.outbox!.replace(/\/$/, "")}/${c.archivo}`));
+        fs.writeFileSync(rutaPdf, await downloadFileContent(tenantId, cfg, `${cola.outbox}/${c.archivo}`));
         r = await motor.enviarDocumento({
           page: sesion.page,
           rutaPdf,
@@ -277,33 +359,34 @@ async function correr(corrida: CorridaEnvio, cc: string, config: ConfigEnvio): P
         r = { resultado: "error", detalle: e?.message || String(e), captura: e?.captura };
       } finally {
         corrida.irreversible = false;
+        corrida.actual = null;
         fs.rmSync(rutaPdf, { force: true });
       }
       const estado = r?.resultado || "error";
       const detalle = String(r?.detalle || "");
-      corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: estado === "seco" ? "seco" : estado, detalle });
+      corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado, detalle });
       emitir({ tipo: estado === "limite" ? "limite" : "resultado", archivo: c.archivo, codigo: c.codigo, estado, texto: `${estado}: ${detalle}` });
       if (r?.captura && !capturaError) capturaError = Buffer.from(r.captura).toString("base64");
 
       if (estado === "enviado") {
         corrida.enviados++;
-        await registrarEnvio(tenantId, c, "enviado", detalle);
+        await actualizarRegistro(tenantId, c.codigo, { estado: "enviado", detalle, enviadoAt: new Date() });
         await sumarAlContador(tenantId);
       } else if (estado === "limite") {
         corrida.limite = true;
         resultado = "limite";
-        await registrarEnvio(tenantId, c, "limite", detalle);
         const hasta = new Date(Date.now() + config.enfriamientoHoras * 3600_000);
+        await actualizarRegistro(tenantId, c.codigo, { estado: "limite", detalle: `${detalle} Se reintenta después del enfriamiento.` });
         await Tenant.updateOne({ _id: tenantId }, { $set: { [`${BASE}.enfriadoHasta`]: hasta } });
         emitir({ tipo: "limite", texto: `Dropbox Sign frenó los envíos. Enfriamiento hasta ${hasta.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}. Quedó un borrador en Dropbox Sign.` });
         break;
-      } else if (estado === "requiere_revision") {
-        await registrarEnvio(tenantId, c, "requiere_revision", detalle);
       } else if (estado === "seco") {
-        /* nada que registrar: no se envió */
+        await actualizarRegistro(tenantId, c.codigo, { detalle, probadoEnSecoAt: new Date() });
+      } else if (estado === "requiere_revision") {
+        await actualizarRegistro(tenantId, c.codigo, { estado: "requiere_revision", detalle });
       } else {
         corrida.errores++;
-        await registrarEnvio(tenantId, c, "error", detalle);
+        await actualizarRegistro(tenantId, c.codigo, { estado: "error", detalle });
       }
     }
     if (resultado === "ok" && corrida.errores > 0) resultado = "con_errores";
@@ -316,6 +399,7 @@ async function correr(corrida: CorridaEnvio, cc: string, config: ConfigEnvio): P
     if (sesion && !error) await guardarSesion(tenantId, sesion.ctx).catch(() => {});
     await sesion?.browser.close().catch(() => {});
     soltarCandadoDropboxSign(tenantId);
+    corrida.actual = null;
     corrida.terminada = true;
     emitir({ tipo: "fin", texto: `Fin: ${corrida.enviados} enviado(s), ${corrida.errores} error(es)${corrida.limite ? ", frenada por el límite" : ""}.` });
     const resumen = { arrancadaEl: corrida.arrancadaEl, fin: new Date(), resultado, enviados: corrida.enviados, errores: corrida.errores, limite: corrida.limite, enSeco: corrida.enSeco, total: corrida.total, automatica: corrida.automatica };
@@ -323,5 +407,3 @@ async function correr(corrida: CorridaEnvio, cc: string, config: ConfigEnvio): P
     await DropboxSignEnvioLog.create({ tenantId: new Types.ObjectId(tenantId), inicio: corrida.arrancadaEl, fin: new Date(), resultado, enviados: corrida.enviados, errores: corrida.errores, limite: corrida.limite, enSeco: corrida.enSeco, automatica: corrida.automatica, lineas: corrida.lineas, error: error || undefined, capturaError }).catch((e) => console.warn("[DROPBOX-SIGN-BOT] No se pudo guardar el log:", e?.message || e));
   }
 }
-
-export const ocupadaPor = (tenantId: string) => quienTieneDropboxSign(tenantId);

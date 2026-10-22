@@ -1,5 +1,5 @@
 import { leerAnclas } from "../../utils/anclasNombre.js";
-import { tipoDeDocumento } from "./reglas.js";
+import { motivoSinColocacion, tipoDeDocumento } from "./reglas.js";
 export const CONFIG_POR_DEFECTO = { activo: false, tamanoTanda: 10, intervaloHoras: 4, topeDiario: 40, enfriamientoHoras: 6, horaDesde: 8, horaHasta: 22 };
 /** La fecha (YYYY-MM-DD) y la hora (0-23) en Argentina. */
 export function fechaYHoraArgentina(ahora) {
@@ -13,8 +13,8 @@ export const cupoDelDia = (config, estado, ahora) => {
     return Math.max(0, config.topeDiario - enviadosHoy);
 };
 /**
- * ¿Le toca correr al scheduler ahora? Devuelve el motivo si no. (El botón «Enviar tanda ahora» no
- * pasa por acá salvo por el enfriamiento y el cupo: es una decisión de la persona.)
+ * ¿Le toca correr al scheduler ahora? Devuelve el motivo si no. (El botón «Enviar a la firma» no pasa
+ * por acá salvo por el enfriamiento y el cupo: es una decisión de la persona.)
  */
 export function puedeCorrer(config, estado, ahora, opciones = {}) {
     if (estado.enfriadoHasta && estado.enfriadoHasta.getTime() > ahora.getTime()) {
@@ -34,44 +34,51 @@ export function puedeCorrer(config, estado, ahora, opciones = {}) {
     }
     return { ok: true };
 }
-/** La tanda a enviar y lo que queda afuera, a partir del Outbox resuelto. */
-export function planificar(archivos, codigosEnviados, config, estado, ahora) {
-    const ordenados = [...archivos].filter((a) => /\.pdf$/i.test(a.archivo)).sort((a, b) => a.archivo.localeCompare(b.archivo));
-    const tanda = [];
-    const requiereRevision = [];
-    const yaEnviados = [];
-    let pendientesDespues = 0;
+/**
+ * ¿Puede entrar este archivo en la cola? Lo que no pasa queda `requiere_revision` con el motivo, salvo
+ * lo que ya está enviado o encolado (eso no se toca). UN ARCHIVO ENVIADO JAMÁS SE RE-ENCOLA.
+ */
+export function validarEncolado(archivo, ctx) {
+    const { codigo } = leerAnclas(archivo);
+    if (!ctx.enOutbox)
+        return { ok: false, codigo, motivo: "No está en Outbox.", reencolable: false };
+    if (!codigo)
+        return { ok: false, codigo, motivo: "El nombre no trae el código del documento (ID-NNNNNN): no se puede garantizar que no se envíe dos veces.", reencolable: false };
+    const previo = ctx.registroPrevio?.estado;
+    if (previo === "enviado")
+        return { ok: false, codigo, motivo: "Ya se envió a la firma: no se vuelve a encolar.", reencolable: false };
+    if (previo === "en_cola")
+        return { ok: false, codigo, motivo: "Ya está en la cola.", reencolable: false };
+    if (previo === "limite")
+        return { ok: false, codigo, motivo: "Ya está en la cola (frenado por el límite de Dropbox Sign; se reintenta solo).", reencolable: false };
+    const sinColocacion = motivoSinColocacion(archivo);
+    if (sinColocacion)
+        return { ok: false, codigo, motivo: sinColocacion, reencolable: true };
+    if (!ctx.firmante)
+        return { ok: false, codigo, motivo: ctx.motivoSinFirmante || "No se pudo resolver al firmante en la base.", reencolable: true };
+    return { ok: true, codigo, motivo: "", reencolable: false, tipo: tipoDeDocumento(archivo), firmante: ctx.firmante };
+}
+/** La tanda a enviar, a partir de la cola y de lo que sigue en Outbox. */
+export function planificar(enCola, archivosEnOutbox, config, estado, ahora) {
+    const ordenados = [...enCola].sort((a, b) => a.orden - b.orden || a.archivo.localeCompare(b.archivo));
     const cupoHoy = cupoDelDia(config, estado, ahora);
     const tope = Math.max(0, Math.min(config.tamanoTanda, cupoHoy));
+    const tanda = [];
+    const faltantes = [];
+    let pendientesDespues = 0;
     const vistos = new Set();
-    for (const a of ordenados) {
-        const { codigo } = leerAnclas(a.archivo);
-        if (!codigo) {
-            requiereRevision.push({ archivo: a.archivo, codigo: "", motivo: "El nombre no trae el código del documento (ID-NNNNNN): no se puede garantizar que no se envíe dos veces." });
+    for (const it of ordenados) {
+        if (vistos.has(it.codigo))
             continue;
-        }
-        if (vistos.has(codigo)) {
-            requiereRevision.push({ archivo: a.archivo, codigo, motivo: `Hay otro archivo en Outbox con el mismo código ${codigo}.` });
-            continue;
-        }
-        vistos.add(codigo);
-        if (codigosEnviados.has(codigo)) {
-            yaEnviados.push(a.archivo);
-            continue;
-        }
-        const tipo = tipoDeDocumento(a.archivo);
-        if (!tipo) {
-            requiereRevision.push({ archivo: a.archivo, codigo, motivo: "Tipo de documento sin regla de colocación de la firma: no se envía hasta que se defina." });
-            continue;
-        }
-        if (!a.firmante) {
-            requiereRevision.push({ archivo: a.archivo, codigo, motivo: a.motivoSinFirmante || "No se pudo resolver al firmante." });
+        vistos.add(it.codigo);
+        if (!archivosEnOutbox.has(it.archivo)) {
+            faltantes.push(it);
             continue;
         }
         if (tanda.length < tope)
-            tanda.push({ archivo: a.archivo, codigo, tipo, email: a.firmante.email, firmante: a.firmante.nombre });
+            tanda.push(it);
         else
             pendientesDespues++;
     }
-    return { tanda, requiereRevision, yaEnviados, pendientesDespues, cupoHoy };
+    return { tanda, faltantes, pendientesDespues, cupoHoy };
 }

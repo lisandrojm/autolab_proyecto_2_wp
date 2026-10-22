@@ -4,11 +4,14 @@
  * Validadas con ~176 envíos reales hechos a mano (ver el brief del 22/10/2026). Lo que está acá no se
  * negocia desde el motor: el motor pregunta y obedece.
  *
- *  · El TIPO del documento sale del nombre del archivo, y decide dónde va la firma. Un tipo que no
- *    está acá NO se envía: queda `requiere_revision`. Jamás se adivina la colocación.
- *  · El GUARD previo al click final: título exacto, CC correcto, firmante listado, tipo soportado.
+ *  · El TIPO del documento sale del nombre del archivo, y decide dónde va la firma. Un tipo sin regla
+ *    de colocación NO se envía: queda `requiere_revision`. Jamás se adivina la colocación.
+ *  · Hay tipos RECONOCIDOS PERO PENDIENTES (hoy `REC_SUELDO`, los recibos de sueldo): se saben nombrar,
+ *    pero falta relevar dónde va la firma. Cuando se defina, es una entrada más de `colocacionDe` y su
+ *    test, nunca algo en el motor.
+ *  · El GUARD previo al click final: título exacto, CC correcto, firmante listado, colocación conocida.
  */
-export type TipoDocumento = "AltaAFIP" | "Contrato_Jornada" | "Contrato_Plazo-fijo" | "Release";
+export type TipoDocumento = "AltaAFIP" | "Contrato_Jornada" | "Contrato_Plazo-fijo" | "Release" | "REC_SUELDO";
 /** Viewport con el que se validaron las coordenadas. El motor lo exige: con otro, nada de esto vale. */
 export declare const VIEWPORT: {
     readonly width: 1457;
@@ -40,14 +43,18 @@ export interface Colocacion {
     /** Qué se espera ver en la zona, para el humano que lea el log. */
     descripcion: string;
 }
+/** Tipos que se reconocen pero todavía no tienen regla de colocación, con el motivo que ve el usuario. */
+export declare const TIPOS_PENDIENTES: Partial<Record<TipoDocumento, string>>;
 /**
- * El tipo del documento por su nombre de archivo. `null` si no es uno de los cuatro soportados: ahí
- * entran `_CCM_`, `_Contrato_Servicios_`, `_Release_Servicios_`, `REC_SUELDO` y cualquier otro.
+ * El tipo del documento por su nombre de archivo. `null` si no es ninguno de los conocidos: ahí entran
+ * `_CCM_`, `_Contrato_Servicios_`, `_Release_Servicios_` y cualquier otro.
  */
 export declare function tipoDeDocumento(archivo: string): TipoDocumento | null;
-/** Dónde va la firma para ese archivo, o `null` si el tipo no está soportado. */
+/** Dónde va la firma para ese archivo, o `null` si el tipo no tiene regla (desconocido o pendiente). */
 export declare function colocacionDe(archivo: string): Colocacion | null;
-/** «JOAQUIN NAVARRO MARTIN»: primer nombre + apellido(s), en mayúsculas y sin tildes raras. */
+/** Por qué un archivo no se puede enviar por su tipo, o `null` si sí se puede. */
+export declare function motivoSinColocacion(archivo: string): string | null;
+/** «JOAQUIN NAVARRO MARTIN»: primer nombre + apellido(s), en mayúsculas. */
 export declare function nombreDeFirmante(user: {
     firstName?: string | null;
     lastName?: string | null;

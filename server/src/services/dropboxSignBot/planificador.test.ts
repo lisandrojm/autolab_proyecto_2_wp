@@ -1,53 +1,64 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { CONFIG_POR_DEFECTO, planificar, puedeCorrer, type ArchivoResuelto, type EstadoThrottle } from "./planificador.js";
+import { CONFIG_POR_DEFECTO, planificar, puedeCorrer, validarEncolado, type EstadoThrottle, type ItemEnCola } from "./planificador.js";
 
 const archivo = (n: number, tipo = "Contrato_Jornada", prefijo = "426_LN+") => `${prefijo}_PEREZ_${tipo}_D-20261010_H-20261010_20273130293_fulano-ARROBA-gmail.com_Empresa-30717068374_ID-${String(n).padStart(6, "0")}.pdf`;
-const resuelto = (a: string): ArchivoResuelto => ({ archivo: a, firmante: { nombre: "JUAN PEREZ", email: "fulano@gmail.com" } });
+const item = (n: number, orden = n): ItemEnCola => ({ archivo: archivo(n), codigo: `ID-${String(n).padStart(6, "0")}`, tipo: "Contrato_Jornada", email: "fulano@gmail.com", firmante: "JUAN PEREZ", orden });
+const FIRMANTE = { nombre: "JUAN PEREZ", email: "fulano@gmail.com" };
 // Un martes a las 12:00 de Argentina (UTC-3).
 const AHORA = new Date("2026-10-20T15:00:00Z");
 const limpio: EstadoThrottle = { contadorDia: { fecha: "2026-10-20", enviados: 0 }, enfriadoHasta: null, ultimaCorridaAt: null };
 const config = { ...CONFIG_POR_DEFECTO, activo: true };
 
-describe("planificar la tanda", () => {
-  it("respeta el tamaño de tanda y ordena por nombre", () => {
-    const archivos = [5, 3, 1, 4, 2].map((n) => resuelto(archivo(n)));
-    const plan = planificar(archivos, new Set(), { ...config, tamanoTanda: 3 }, limpio, AHORA);
-    assert.deepEqual(plan.tanda.map((c) => c.codigo), ["ID-000001", "ID-000002", "ID-000003"]);
+describe("validar el encolado", () => {
+  const ok = { enOutbox: true, registroPrevio: null, firmante: FIRMANTE };
+  it("pasa con archivo en Outbox, código, tipo con regla y firmante", () => {
+    const r = validarEncolado(archivo(1), ok);
+    assert.ok(r.ok && r.codigo === "ID-000001" && r.tipo === "Contrato_Jornada");
+  });
+  it("un enviado jamás se re-encola; un en_cola o limite tampoco se duplica", () => {
+    for (const estado of ["enviado", "en_cola", "limite"]) {
+      const r = validarEncolado(archivo(1), { ...ok, registroPrevio: { estado } });
+      assert.ok(!r.ok && !r.reencolable, estado);
+    }
+    // Un error o un requiere_revision previo sí se puede volver a encolar.
+    assert.ok(validarEncolado(archivo(1), { ...ok, registroPrevio: { estado: "error" } }).ok);
+    assert.ok(validarEncolado(archivo(1), { ...ok, registroPrevio: { estado: "requiere_revision" } }).ok);
+  });
+  it("tipo desconocido, REC_SUELDO pendiente, sin código, sin usuario, fuera de Outbox", () => {
+    const r1 = validarEncolado(archivo(2, "CCM"), ok);
+    assert.ok(!r1.ok && /sin regla/.test(r1.motivo));
+    const r2 = validarEncolado("99_PRODUCTORA_REC_SUELDO_2026_PERIODO_09_PEREZ_Juan_a-ARROBA-b.com_20273130293_ID-000004.pdf", ok);
+    assert.ok(!r2.ok && r2.motivo === "Tipo REC_SUELDO: falta definir posición de firma");
+    const r3 = validarEncolado("426_LN+_PEREZ_Contrato_Jornada_D-20261010_H-20261010_20273130293_fulano-ARROBA-gmail.com.pdf", ok);
+    assert.ok(!r3.ok && /c[oó]digo/.test(r3.motivo));
+    const r4 = validarEncolado(archivo(5), { ...ok, firmante: null, motivoSinFirmante: "No hay usuario para el código ID-000005." });
+    assert.ok(!r4.ok && /usuario/.test(r4.motivo));
+    const r5 = validarEncolado(archivo(6), { ...ok, enOutbox: false });
+    assert.ok(!r5.ok && /Outbox/.test(r5.motivo));
+  });
+});
+
+describe("planificar la tanda desde la cola", () => {
+  const outbox = new Set([1, 2, 3, 4, 5].map((n) => archivo(n)));
+  it("sólo lo encolado, por orden de encolado, y respeta el tamaño de tanda", () => {
+    const cola = [item(3, 1), item(1, 2), item(5, 3), item(2, 4), item(4, 5)];
+    const plan = planificar(cola, outbox, { ...config, tamanoTanda: 3 }, limpio, AHORA);
+    assert.deepEqual(plan.tanda.map((c) => c.codigo), ["ID-000003", "ID-000001", "ID-000005"]);
     assert.equal(plan.pendientesDespues, 2);
   });
-  it("respeta el tope diario: con 38 enviados hoy y tope 40, la tanda es de 2", () => {
-    const archivos = [1, 2, 3, 4, 5].map((n) => resuelto(archivo(n)));
-    const plan = planificar(archivos, new Set(), config, { ...limpio, contadorDia: { fecha: "2026-10-20", enviados: 38 } }, AHORA);
-    assert.equal(plan.tanda.length, 2);
-    assert.equal(plan.cupoHoy, 2);
-    // El contador de OTRO día no cuenta.
-    assert.equal(planificar(archivos, new Set(), config, { ...limpio, contadorDia: { fecha: "2026-10-19", enviados: 38 } }, AHORA).tanda.length, 5);
+  it("respeta el tope diario: con 38 enviados hoy y tope 40, la tanda es de 2; el contador de otro día no cuenta", () => {
+    const cola = [1, 2, 3, 4, 5].map((n) => item(n));
+    assert.equal(planificar(cola, outbox, config, { ...limpio, contadorDia: { fecha: "2026-10-20", enviados: 38 } }, AHORA).tanda.length, 2);
+    assert.equal(planificar(cola, outbox, config, { ...limpio, contadorDia: { fecha: "2026-10-19", enviados: 38 } }, AHORA).tanda.length, 5);
   });
-  it("dedupe por código: lo ya enviado no sale aunque siga en Outbox", () => {
-    const plan = planificar([1, 2].map((n) => resuelto(archivo(n))), new Set(["ID-000001"]), config, limpio, AHORA);
-    assert.deepEqual(plan.tanda.map((c) => c.codigo), ["ID-000002"]);
-    assert.deepEqual(plan.yaEnviados, [archivo(1)]);
+  it("lo encolado que ya no está en Outbox va a faltantes y no se envía", () => {
+    const plan = planificar([item(1), item(9)], outbox, config, limpio, AHORA);
+    assert.deepEqual(plan.tanda.map((c) => c.codigo), ["ID-000001"]);
+    assert.deepEqual(plan.faltantes.map((c) => c.codigo), ["ID-000009"]);
   });
-  it("separa lo que requiere revisión: tipos sin regla, sin código, sin firmante, código repetido", () => {
-    const sinCodigo = "426_LN+_PEREZ_Contrato_Jornada_D-20261010_H-20261010_20273130293_fulano-ARROBA-gmail.com.pdf";
-    const archivos: ArchivoResuelto[] = [
-      resuelto(archivo(1, "CCM", "701_X")),
-      resuelto(archivo(2, "Contrato_Servicios", "99_PRODUCTORA")),
-      resuelto(archivo(3, "Release_Servicios", "99_PRODUCTORA")),
-      resuelto("99_PRODUCTORA_REC_SUELDO_2026_PERIODO_09_PEREZ_Juan_fulano-ARROBA-gmail.com_20273130293_ID-000004.pdf"),
-      resuelto(sinCodigo),
-      { archivo: archivo(6), firmante: null, motivoSinFirmante: "No hay usuario con ese código." },
-      resuelto(archivo(7)),
-      resuelto(archivo(7, "Release")),
-    ];
-    const plan = planificar(archivos, new Set(), config, limpio, AHORA);
-    assert.deepEqual(plan.tanda.map((c) => c.codigo), ["ID-000007"]);
-    // CCM, Contrato_Servicios, Release_Servicios, REC_SUELDO, sin código, sin firmante y el código repetido: 7.
-    assert.equal(plan.requiereRevision.length, 7);
-    assert.ok(plan.requiereRevision.some((r) => r.archivo === sinCodigo));
-    assert.ok(plan.requiereRevision.some((r) => r.codigo === "ID-000006" && /usuario/.test(r.motivo)));
-    assert.ok(plan.requiereRevision.some((r) => r.codigo === "ID-000007" && /mismo código/.test(r.motivo)));
+  it("un código repetido en la cola sale una sola vez", () => {
+    assert.equal(planificar([item(1, 1), item(1, 2)], outbox, config, limpio, AHORA).tanda.length, 1);
   });
 });
 

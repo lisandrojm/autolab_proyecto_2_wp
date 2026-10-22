@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { colocacionDe, esTextoDeLimite, guardDeEnvio, nombreDeFirmante, tipoDeDocumento } from "./reglas.js";
+import { colocacionDe, esTextoDeLimite, guardDeEnvio, motivoSinColocacion, nombreDeFirmante, tipoDeDocumento } from "./reglas.js";
 
 const ALTA = "426_LN+_PEREZ_AltaAFIP_Jornada_D-20261010_H-20261010_20273130293_fulano-ARROBA-gmail.com_Empresa-30717068374_ID-000123.pdf";
 const JORNADA = "426_LN+_PEREZ_Contrato_Jornada_D-20261010_H-20261010_20273130293_fulano-ARROBA-gmail.com_Empresa-30717068374_ID-000124.pdf";
@@ -18,11 +18,19 @@ describe("tipo y colocación por nombre de archivo", () => {
     assert.equal(colocacionDe(RELEASE)?.scroll, null);
     assert.deepEqual(colocacionDe(RELEASE)?.destino, { x: 465, y: 418 });
   });
-  it("cualquier otro tipo es null: CCM, Contrato_Servicios, Release_Servicios, REC_SUELDO", () => {
-    for (const a of ["701_X_PEREZ_CCM_Jornada_D-20261010_H-20261010_20273130293_a-ARROBA-b.com_ID-000001.pdf", "99_PRODUCTORA_PEREZ_Contrato_Servicios_D-20261010_H-20261010_20273130293_a-ARROBA-b.com_ID-000002.pdf", "99_PRODUCTORA_PEREZ_Release_Servicios_D-20261010_H-20261010_20273130293_a-ARROBA-b.com_ID-000003.pdf", "99_PRODUCTORA_REC_SUELDO_2026_PERIODO_09_PEREZ_Juan_a-ARROBA-b.com_20273130293_ID-000004.pdf"]) {
+  it("cualquier otro tipo es null: CCM, Contrato_Servicios, Release_Servicios", () => {
+    for (const a of ["701_X_PEREZ_CCM_Jornada_D-20261010_H-20261010_20273130293_a-ARROBA-b.com_ID-000001.pdf", "99_PRODUCTORA_PEREZ_Contrato_Servicios_D-20261010_H-20261010_20273130293_a-ARROBA-b.com_ID-000002.pdf", "99_PRODUCTORA_PEREZ_Release_Servicios_D-20261010_H-20261010_20273130293_a-ARROBA-b.com_ID-000003.pdf"]) {
       assert.equal(tipoDeDocumento(a), null, a);
       assert.equal(colocacionDe(a), null, a);
+      assert.match(motivoSinColocacion(a)!, /sin regla de colocación/);
     }
+  });
+  it("REC_SUELDO se reconoce pero está pendiente: sin colocación, con su motivo propio", () => {
+    const a = "99_PRODUCTORA_REC_SUELDO_2026_PERIODO_09_PEREZ_Juan_a-ARROBA-b.com_20273130293_ID-000004.pdf";
+    assert.equal(tipoDeDocumento(a), "REC_SUELDO");
+    assert.equal(colocacionDe(a), null);
+    assert.equal(motivoSinColocacion(a), "Tipo REC_SUELDO: falta definir posición de firma");
+    assert.equal(motivoSinColocacion(JORNADA), null);
   });
 });
 

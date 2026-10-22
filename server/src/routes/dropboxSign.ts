@@ -5,7 +5,7 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { Tenant } from "../models/Tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
 import { leerCasillaDropboxSign, registrarLectura } from "../services/dropboxSignMailService.js";
-import { armarCola, arrancarCorridaEnvio, configDelTenant, corridaEnvioDe, detenerCorridaEnvio, enSecoForzado } from "../services/dropboxSignBot/corridaEnvio.js";
+import { armarCola, arrancarCorridaEnvio, configDelTenant, corridaEnvioDe, desencolar, detenerCorridaEnvio, enSecoForzado, encolar, estadoDeArchivos } from "../services/dropboxSignBot/corridaEnvio.js";
 import { cupoDelDia, fechaYHoraArgentina, puedeCorrer } from "../services/dropboxSignBot/planificador.js";
 import { DropboxSignEnvio } from "../models/DropboxSignEnvio.js";
 import { DropboxSignEnvioLog } from "../models/DropboxSignEnvioLog.js";
@@ -219,6 +219,44 @@ router.get("/bot/cola", async (req: AuthenticatedRequest & TenantRequest, res) =
     res.json(await armarCola(String(req.tenantObjectId), { manual: true }));
   } catch (error: any) {
     res.status(400).json({ error: error?.message || "No se pudo armar la cola." });
+  }
+});
+
+/*
+  LA COLA, desde el tab «Para Firmar» (22/10/2026): nada se envía si no fue encolado.
+*/
+/** POST /bot/encolar {archivos: string[]} | {todosElegibles: true} → {encolados, rechazados, porMotivo}. */
+router.post("/bot/encolar", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede encolar envíos a la firma." });
+    const parsed = z.object({ archivos: z.array(z.string().min(1)).max(2000).optional(), todosElegibles: z.boolean().optional() }).safeParse(req.body || {});
+    if (!parsed.success || (!parsed.data.todosElegibles && !parsed.data.archivos?.length)) return res.status(400).json({ error: "Indicá qué archivos encolar." });
+    res.json(await encolar(String(req.tenantObjectId), req.user?.userId, parsed.data));
+  } catch (error: any) {
+    res.status(error?.status || 500).json({ error: error?.message || "No se pudo encolar." });
+  }
+});
+
+/** POST /bot/desencolar {codigos: string[]} — sólo saca lo que está `en_cola`. */
+router.post("/bot/desencolar", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede quitar de la cola." });
+    const parsed = z.object({ codigos: z.array(z.string().min(1)).min(1).max(2000) }).safeParse(req.body || {});
+    if (!parsed.success) return res.status(400).json({ error: "Indicá qué códigos quitar." });
+    res.json(await desencolar(String(req.tenantObjectId), parsed.data.codigos));
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "No se pudo quitar de la cola." });
+  }
+});
+
+/** POST /bot/estado-archivos {archivos: string[]} — el estado de cada archivo del listado (una query, sin Dropbox). */
+router.post("/bot/estado-archivos", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const parsed = z.object({ archivos: z.array(z.string()).max(5000) }).safeParse(req.body || {});
+    if (!parsed.success) return res.status(400).json({ error: "Datos inválidos" });
+    res.json(await estadoDeArchivos(String(req.tenantObjectId), parsed.data.archivos));
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Internal server error" });
   }
 });
 
