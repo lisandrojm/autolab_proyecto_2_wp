@@ -21,8 +21,12 @@ export const useUserHistory = () => {
         `solicitudAny` trae las solicitudes en cualquier estado, que es justo un historial: las
         pendientes, las aprobadas, las rechazadas y las canceladas. Sin `sort` vienen de la más nueva
         a la más vieja.
+
+        Y SÓLO LAS DE QUIEN MIRA (`creadasPorMi`, 22/10/2026): sin eso venían las de todo el tenant y un
+        coordinador veía en su historial lo que pidieron los demás. El server filtra por
+        `metadata.solicitudCreadaPor` (y para quien entra sólo con el permiso del móvil lo hace siempre).
       */
-      const response = await usersAPI.list({ limit: 50, solicitudAny: "true" });
+      const response = await usersAPI.list({ limit: 50, solicitudAny: "true", creadasPorMi: "true" });
       setUsers(response.users);
     } catch (err: any) {
       setError(err.response?.data?.error || "Error al cargar el historial de usuarios");

@@ -115,6 +115,27 @@ export const requirePermission = (perm: string | string[]) => {
 export const requireAnyPermission = (...perms: string[]) => requirePermission(perms);
 
 /**
+ * ¿Tiene el permiso?, sin cortar la request. Mismas reglas que `requirePermission` —SuperAdmin y Admin
+ * todo (Admin salvo `tenants`), «ver» da todo el módulo, comodines `*` y `modulo:*`— para cuando un
+ * handler decide QUÉ devolver según el permiso y no SI responde: `GET /users?solicitudAny` devuelve
+ * todas las solicitudes a quien administra y sólo las propias a quien entra con el permiso del móvil.
+ */
+export async function tienePermiso(req: AuthenticatedRequest, perm: string): Promise<boolean> {
+  const user = req.user;
+  const tenantId = req.tenantObjectId;
+  const roleNames = user?.roles || [];
+  if (!user || !tenantId || roleNames.length === 0) return false;
+  const roles = await Role.find({ name: { $in: roleNames.map((name) => new RegExp(`^${name}$`, "i")) }, tenantId }).select("name permissions");
+  const lowerRoleNames = roles.map((r) => r.name.toLowerCase());
+  const primaryRole = user.primaryRole?.toLowerCase();
+  if (lowerRoleNames.includes("superadmin") || primaryRole === "superadmin") return true;
+  const [module] = perm.split(":");
+  if (lowerRoleNames.includes("admin") || primaryRole === "admin") return module !== "tenants";
+  const permissions = new Set(roles.flatMap((r) => r.permissions));
+  return permissions.has("*") || permissions.has(perm) || permissions.has(`${module}:view`) || permissions.has(`${module}:*`);
+}
+
+/**
  * Helper: Verifica si un usuario puede ver un documento.
  * (No hay más funciones para editar, eliminar o compartir)
  */

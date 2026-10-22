@@ -870,6 +870,8 @@ export type ListadoUsuariosParams = {
     isSolicitud?: string;
     /** Sólo solicitudes de alta, en CUALQUIER estado (pendiente/aprobada/rechazada/cancelada). */
     solicitudAny?: string;
+    /** Con `solicitudAny`: sólo las que cargó quien consulta (`metadata.solicitudCreadaPor`). Es lo que pide el historial del móvil. */
+    creadasPorMi?: string;
     /** Nombre del rol (separadores flexibles), ej. "Administración". Filtra server-side. */
     roleName?: string;
     /*
@@ -926,6 +928,7 @@ function paramsDelListado(params: ListadoUsuariosParams): URLSearchParams {
   if (params.metadataActivo) searchParams.append("metadataActivo", params.metadataActivo);
   if (params.isSolicitud) searchParams.append("isSolicitud", params.isSolicitud);
   if (params.solicitudAny) searchParams.append("solicitudAny", params.solicitudAny);
+  if (params.creadasPorMi) searchParams.append("creadasPorMi", params.creadasPorMi);
   if (params.roleName) searchParams.append("roleName", params.roleName);
   if (params.vigencia) searchParams.append("vigencia", params.vigencia);
   if (params.tipoContrato) searchParams.append("tipoContrato", params.tipoContrato);

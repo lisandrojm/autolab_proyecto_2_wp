@@ -187,6 +187,29 @@ export const DropboxSignConfigPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Estado de la casilla, dentro de su tarjeta y con las mismas cajas que el bot: antes iba en una
+                tarjeta suelta debajo del envío automático y parecía el estado del bot. */}
+            {cfg?.configuredAt && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2.5">
+                  <p className="text-[11px] text-gray-500">Lectura automática</p>
+                  <p className={`font-bold ${cfg.enabled ? "text-green-600 dark:text-green-400" : "text-gray-500"}`}>{cfg.enabled ? "Activada" : "Desactivada"}</p>
+                </div>
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2.5">
+                  <p className="text-[11px] text-gray-500">Casilla configurada</p>
+                  <p className="font-bold text-gray-800 dark:text-gray-100">{fmtFechaHora(cfg.configuredAt)}</p>
+                </div>
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2.5 md:col-span-2">
+                  <p className="text-[11px] text-gray-500">Última lectura de la casilla</p>
+                  <p className={`font-bold ${cfg.lastCheckOk === false ? "text-red-600 dark:text-red-400" : "text-gray-800 dark:text-gray-100"}`}>
+                    <FontAwesomeIcon icon={cfg.lastCheckOk === false ? faCircleXmark : faEnvelope} className="mr-1.5 h-3.5 w-3.5 opacity-70" />
+                    {cfg.lastCheckAt ? fmtFechaHora(cfg.lastCheckAt) : "Todavía no se leyó"}
+                  </p>
+                  {cfg.lastCheckDetalle && <p className={`mt-0.5 break-words text-xs ${cfg.lastCheckOk === false ? "text-red-600 dark:text-red-400" : "text-gray-500 dark:text-gray-400"}`}>{cfg.lastCheckDetalle}</p>}
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
               <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
                 <input type="checkbox" checked={form.enabled} onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))} className="rounded border-gray-300" />
@@ -225,19 +248,6 @@ export const DropboxSignConfigPage: React.FC = () => {
           {/* El bot que envía a la firma lo que está en Outbox. Va debajo de la casilla: su CC es ese correo. */}
           <EnvioAutomaticoCard />
 
-          {cfg?.configuredAt && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-2 text-sm">
-              <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Estado</p>
-              <p className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                <FontAwesomeIcon icon={faEnvelope} className="h-3.5 w-3.5 text-gray-400" />
-                Configurada el {fmtFechaHora(cfg.configuredAt)} · lectura {cfg.enabled ? <span className="text-green-600 dark:text-green-400 font-semibold">activada</span> : <span className="text-gray-500">desactivada</span>}
-              </p>
-              <p className="text-gray-600 dark:text-gray-300">
-                Última lectura: {fmtFechaHora(cfg.lastCheckAt)}
-                {cfg.lastCheckOk === false && cfg.lastCheckDetalle ? <span className="text-red-600 dark:text-red-400"> — {cfg.lastCheckDetalle}</span> : null}
-              </p>
-            </div>
-          )}
         </div>
       )}
 

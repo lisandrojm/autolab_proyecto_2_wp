@@ -19,6 +19,13 @@ export declare const requirePermission: (perm: string | string[]) => (req: Authe
  */
 export declare const requireAnyPermission: (...perms: string[]) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void | Response<any, Record<string, any>>>;
 /**
+ * ¿Tiene el permiso?, sin cortar la request. Mismas reglas que `requirePermission` —SuperAdmin y Admin
+ * todo (Admin salvo `tenants`), «ver» da todo el módulo, comodines `*` y `modulo:*`— para cuando un
+ * handler decide QUÉ devolver según el permiso y no SI responde: `GET /users?solicitudAny` devuelve
+ * todas las solicitudes a quien administra y sólo las propias a quien entra con el permiso del móvil.
+ */
+export declare function tienePermiso(req: AuthenticatedRequest, perm: string): Promise<boolean>;
+/**
  * Helper: Verifica si un usuario puede ver un documento.
  * (No hay más funciones para editar, eliminar o compartir)
  */

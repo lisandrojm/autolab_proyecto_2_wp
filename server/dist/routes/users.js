@@ -43,7 +43,7 @@ import { ImportHistory } from "../models/ImportHistory.js";
 import { ExternalApiService } from "../services/externalApiService.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
-import { requireAnyPermission, requirePermission } from "../middleware/permissions.js";
+import { requireAnyPermission, requirePermission, tienePermiso } from "../middleware/permissions.js";
 import { toObjectIdArray } from "../utils/mongoIds.js";
 import { createUserSchema, normalizarRolesFrame } from "../validators/usuarioSchemas.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
@@ -278,6 +278,17 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
         // Trae TODA solicitud de alta sin importar su estado (pendiente/aprobada/rechazada/cancelada).
         if (req.query.solicitudAny === "true") {
             andConditions.push({ "metadata.solicitudStatus": { $exists: true, $ne: null } });
+            /*
+              SÓLO LAS PROPIAS. El historial de Contratación del móvil es el de QUIEN MIRA, no el del tenant:
+              hasta el 22/10/2026 venían todas y un coordinador veía en su historial lo que pidieron los
+              demás. Con `creadasPorMi` quedan las que cargó él (`metadata.solicitudCreadaPor`); las que no
+              guardaron quién las pidió (anteriores al 16/09/2026) no se atribuyen a nadie y no entran.
+              Y quien entra sólo con el permiso del móvil, sin `admin_users:view`, no puede pedir las de
+              otros: para él el filtro va aunque no lo pida.
+            */
+            if (req.query.creadasPorMi === "true" || !(await tienePermiso(req, "admin_users:view"))) {
+                andConditions.push({ "metadata.solicitudCreadaPor": new Types.ObjectId(String(req.user.userId)) });
+            }
         }
         else if (req.query.isSolicitud === undefined) {
             // Listado normal de Usuarios: las solicitudes que corresponden a alguien que YA es usuario no
