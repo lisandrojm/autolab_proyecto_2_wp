@@ -121,7 +121,7 @@ export interface SesionArca {
  *
  * `undefined` deja que Playwright use el suyo, que es lo correcto cuando está.
  */
-function rutaChromium(): string | undefined {
+export function rutaChromium(): string | undefined {
   if (process.env.CHROMIUM_PATH) return process.env.CHROMIUM_PATH;
 
   try {
@@ -166,7 +166,7 @@ function chromiumDePuppeteer(): string | undefined {
  * error de la app, sale desarmado e ilegible — y no dice DÓNDE hay que correr ese comando, que es lo
  * único que hace falta saber.
  */
-function errorDeChromium(e: any): Error {
+export function errorDeChromium(e: any): Error {
   const msg = String(e?.message || e);
   if (/Executable doesn't exist|Please run the following command/i.test(msg)) {
     return new Error(

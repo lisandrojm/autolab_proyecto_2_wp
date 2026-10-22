@@ -100,7 +100,7 @@ const SEL_LOGIN = {
  *
  * `undefined` deja que Playwright use el suyo, que es lo correcto cuando está.
  */
-function rutaChromium() {
+export function rutaChromium() {
     if (process.env.CHROMIUM_PATH)
         return process.env.CHROMIUM_PATH;
     try {
@@ -147,7 +147,7 @@ function chromiumDePuppeteer() {
  * error de la app, sale desarmado e ilegible — y no dice DÓNDE hay que correr ese comando, que es lo
  * único que hace falta saber.
  */
-function errorDeChromium(e) {
+export function errorDeChromium(e) {
     const msg = String(e?.message || e);
     if (/Executable doesn't exist|Please run the following command/i.test(msg)) {
         return new Error("Falta el navegador en el servidor. Entrá al VPS y corré, dentro de la carpeta `server/`:\n\n" +

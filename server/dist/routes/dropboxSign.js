@@ -5,6 +5,10 @@ import { requireTenant } from "../middleware/tenant.js";
 import { Tenant } from "../models/Tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
 import { leerCasillaDropboxSign, registrarLectura } from "../services/dropboxSignMailService.js";
+import { armarCola, arrancarCorridaEnvio, configDelTenant, corridaEnvioDe, detenerCorridaEnvio, enSecoForzado } from "../services/dropboxSignBot/corridaEnvio.js";
+import { cupoDelDia, fechaYHoraArgentina, puedeCorrer } from "../services/dropboxSignBot/planificador.js";
+import { DropboxSignEnvio } from "../models/DropboxSignEnvio.js";
+import { DropboxSignEnvioLog } from "../models/DropboxSignEnvioLog.js";
 /**
  * Configuración de "DropboxSign | Firmas": la casilla de correo que recibe las copias de
  * "documento enviado" de Dropbox Sign.
@@ -118,5 +122,148 @@ router.post("/leer", async (req, res) => {
         console.error("Dropbox Sign leer error:", error);
         res.status(500).json({ error: error?.message || "No se pudo leer la casilla." });
     }
+});
+/*
+  ═════════════════════════════ EL BOT DE ENVÍO A LA FIRMA ═════════════════════════════
+  Ver `services/dropboxSignBot/`. Credenciales y sesión cifradas: nunca vuelven al navegador.
+*/
+const BOT = "integrations.dropboxSign.bot";
+const botConfigSchema = z.object({
+    loginEmail: z.string().email("El usuario de Dropbox Sign no es un correo válido").optional(),
+    /** Sólo se manda cuando se quiere cambiar. */
+    loginPassword: z.string().optional(),
+    envio: z
+        .object({
+        activo: z.boolean().optional(),
+        tamanoTanda: z.number().int().min(1).max(50).optional(),
+        intervaloHoras: z.number().min(0.5).max(48).optional(),
+        topeDiario: z.number().int().min(1).max(60).optional(),
+        enfriamientoHoras: z.number().min(1).max(48).optional(),
+        horaDesde: z.number().int().min(0).max(23).optional(),
+        horaHasta: z.number().int().min(1).max(24).optional(),
+    })
+        .optional(),
+});
+/** Lo que la UI puede ver de la configuración del bot: sin contraseña ni sesión. */
+async function configDelBotParaUi(tenantId) {
+    const { config, estado, cc, bot } = await configDelTenant(tenantId);
+    const corrida = corridaEnvioDe(tenantId);
+    const ahora = new Date();
+    const puede = puedeCorrer(config, estado, ahora);
+    return {
+        loginEmail: bot.loginEmail || "",
+        tienePassword: !!bot.loginPasswordEnc,
+        tieneSesion: !!bot.sesionEnc,
+        sesionGuardadaAt: bot.sesionGuardadaAt || null,
+        ultimoLoginAt: bot.ultimoLoginAt || null,
+        cc,
+        envio: config,
+        enviadosHoy: estado.contadorDia.fecha === fechaYHoraArgentina(ahora).fecha ? estado.contadorDia.enviados : 0,
+        cupoHoy: cupoDelDia(config, estado, ahora),
+        enfriadoHasta: estado.enfriadoHasta,
+        ultimaCorridaAt: estado.ultimaCorridaAt,
+        ultimaCorrida: bot.ultimaCorrida || null,
+        ultimoError: bot.ultimoError || null,
+        proximaCorrida: puede.ok ? "Le toca en el próximo minuto del scheduler." : puede.motivo || "",
+        corriendo: !!corrida && !corrida.terminada,
+        enSecoForzado: enSecoForzado(),
+    };
+}
+router.get("/bot/config", async (req, res) => {
+    try {
+        res.json(await configDelBotParaUi(String(req.tenantObjectId)));
+    }
+    catch (error) {
+        console.error("Dropbox Sign bot config error:", error);
+        res.status(500).json({ error: error?.message || "Internal server error" });
+    }
+});
+router.put("/bot/config", async (req, res) => {
+    try {
+        if (!isAdmin(req))
+            return res.status(403).json({ error: "Solo un administrador puede configurar el envío automático." });
+        const parsed = botConfigSchema.safeParse(req.body || {});
+        if (!parsed.success)
+            return res.status(400).json({ error: parsed.error.issues[0]?.message || "Datos inválidos" });
+        const d = parsed.data;
+        const set = {};
+        if (d.loginEmail !== undefined)
+            set[`${BOT}.loginEmail`] = d.loginEmail.trim();
+        if (d.loginPassword)
+            set[`${BOT}.loginPasswordEnc`] = encryptSecret(d.loginPassword);
+        for (const [k, v] of Object.entries(d.envio || {}))
+            if (v !== undefined)
+                set[`${BOT}.envio.${k}`] = v;
+        if (d.envio?.horaDesde !== undefined && d.envio?.horaHasta !== undefined && d.envio.horaDesde >= d.envio.horaHasta)
+            return res.status(400).json({ error: "La ventana horaria tiene que empezar antes de terminar." });
+        if (Object.keys(set).length)
+            await Tenant.findByIdAndUpdate(req.tenantObjectId, { $set: set });
+        const cfg = await configDelBotParaUi(String(req.tenantObjectId));
+        // Activar sin sesión ni credenciales dejaría el scheduler fallando cada intervalo: se apaga y se avisa.
+        if (cfg.envio.activo && !cfg.tieneSesion && !cfg.tienePassword) {
+            await Tenant.findByIdAndUpdate(req.tenantObjectId, { $set: { [`${BOT}.envio.activo`]: false } });
+            return res.status(400).json({ error: "Para activar el envío automático hace falta la sesión de Dropbox Sign (login manual) o usuario y contraseña." });
+        }
+        res.json({ ok: true, ...cfg });
+    }
+    catch (error) {
+        console.error("Dropbox Sign bot save error:", error);
+        res.status(500).json({ error: error?.message || "Internal server error" });
+    }
+});
+/** GET /bot/cola — qué enviaría la próxima tanda (lee el Outbox; no envía nada). */
+router.get("/bot/cola", async (req, res) => {
+    try {
+        res.json(await armarCola(String(req.tenantObjectId), { manual: true }));
+    }
+    catch (error) {
+        res.status(400).json({ error: error?.message || "No se pudo armar la cola." });
+    }
+});
+/** POST /bot/corrida — enviar una tanda ahora (solo admin). `enSeco: true` recorre todo sin enviar. */
+router.post("/bot/corrida", async (req, res) => {
+    try {
+        if (!isAdmin(req))
+            return res.status(403).json({ error: "Solo un administrador puede enviar a firmar." });
+        const r = await arrancarCorridaEnvio(String(req.tenantObjectId), { automatica: false, enSeco: req.body?.enSeco === true });
+        res.json({ arrancada: true, ...r });
+    }
+    catch (error) {
+        res.status(error?.status || 400).json({ error: error?.message || "No se pudo arrancar la corrida." });
+    }
+});
+router.post("/bot/corrida/detener", async (req, res) => {
+    if (!isAdmin(req))
+        return res.status(403).json({ error: "Solo un administrador puede detener la corrida." });
+    const r = detenerCorridaEnvio(String(req.tenantObjectId));
+    res.status(r.ok ? 200 : 409).json(r);
+});
+/** GET /bot/corrida — estado de la corrida en curso (o la última), para el polling de la UI. */
+router.get("/bot/corrida", async (req, res) => {
+    const tenantId = String(req.tenantObjectId);
+    const c = corridaEnvioDe(tenantId);
+    if (!c)
+        return res.json({ hay: false, corriendo: false, eventos: [], enSecoForzado: enSecoForzado() });
+    res.json({ hay: true, corriendo: !c.terminada, enSeco: c.enSeco, automatica: c.automatica, arrancadaEl: c.arrancadaEl, total: c.total, enviados: c.enviados, errores: c.errores, limite: c.limite, irreversible: c.irreversible, detenerPedido: c.señal.cortada, eventos: c.eventos, lineas: c.lineas, enSecoForzado: enSecoForzado() });
+});
+/** GET /bot/logs — las últimas 50 corridas (solo admin). Sin la captura, que pesa: va por id. */
+router.get("/bot/logs", async (req, res) => {
+    try {
+        if (!isAdmin(req))
+            return res.status(403).json({ error: "Solo un administrador puede ver los logs." });
+        const logs = await DropboxSignEnvioLog.find({ tenantId: req.tenantObjectId }).select("-capturaError").sort({ createdAt: -1 }).limit(50).lean();
+        const revision = await DropboxSignEnvio.find({ tenantId: req.tenantObjectId, estado: { $in: ["requiere_revision", "error", "limite"] } }).sort({ updatedAt: -1 }).limit(200).lean();
+        res.json({ logs, requierenRevision: revision });
+    }
+    catch (error) {
+        res.status(500).json({ error: error?.message || "Internal server error" });
+    }
+});
+router.get("/bot/logs/:id/captura", async (req, res) => {
+    const log = await DropboxSignEnvioLog.findOne({ _id: req.params.id, tenantId: req.tenantObjectId }).select("capturaError").lean().catch(() => null);
+    if (!log?.capturaError)
+        return res.status(404).json({ error: "Esa corrida no tiene captura." });
+    res.setHeader("Content-Type", "image/png");
+    res.send(Buffer.from(log.capturaError, "base64"));
 });
 export { router as dropboxSignRoutes };

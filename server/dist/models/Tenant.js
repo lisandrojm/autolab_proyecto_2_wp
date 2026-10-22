@@ -113,6 +113,28 @@ const tenantSchema = new Schema({
         },
         dropboxSign: {
             email: { type: String },
+            // Declarados a propósito (el esquema es `strict`): el bot de envío a la firma.
+            bot: {
+                loginEmail: { type: String },
+                loginPasswordEnc: { type: String },
+                sesionEnc: { type: String },
+                sesionGuardadaAt: { type: Date },
+                envio: {
+                    activo: { type: Boolean, default: false },
+                    tamanoTanda: { type: Number, default: 10 },
+                    intervaloHoras: { type: Number, default: 4 },
+                    topeDiario: { type: Number, default: 40 },
+                    enfriamientoHoras: { type: Number, default: 6 },
+                    horaDesde: { type: Number, default: 8 },
+                    horaHasta: { type: Number, default: 22 },
+                },
+                contadorDia: { fecha: { type: String }, enviados: { type: Number, default: 0 } },
+                enfriadoHasta: { type: Date, default: null },
+                ultimoLoginAt: { type: Date, default: null },
+                ultimaCorridaAt: { type: Date, default: null },
+                ultimoError: { type: String, default: null },
+                ultimaCorrida: { type: Schema.Types.Mixed },
+            },
             imapHost: { type: String },
             imapPort: { type: Number, default: 993 },
             imapSecure: { type: Boolean, default: true },

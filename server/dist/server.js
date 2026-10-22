@@ -28,6 +28,7 @@ import { initEstadoDropboxScheduler } from "./services/estadoDropboxCronService.
 import { initParitariasScheduler } from "./services/paritariasCronService.js";
 import { initCentrosCostoScheduler } from "./services/centrosCostoCronService.js";
 import { initDropboxSignMailScheduler } from "./services/dropboxSignMailService.js";
+import { initDropboxSignEnvioScheduler } from "./services/dropboxSignBot/cron.js";
 import { initPresentacionAutomaticaScheduler } from "./services/presentacionAutomaticaCronService.js";
 import { initDescargaConstanciasScheduler } from "./services/descargaConstanciasCronService.js";
 import { initBarridoObrasSocialesScheduler } from "./services/barridoObrasSocialesCronService.js";
@@ -420,6 +421,13 @@ connectDB()
         }
         catch (error) {
             console.error("❌ Failed to initialize dropbox-sign mail scheduler:", error);
+        }
+        // El bot que envía a la firma los documentos del Outbox por la web de Dropbox Sign (sólo tenants que lo activaron).
+        try {
+            initDropboxSignEnvioScheduler();
+        }
+        catch (error) {
+            console.error("❌ Failed to initialize dropbox-sign envío scheduler:", error);
         }
         // Presentación automática de las altas en ARCA, todos los días a las 14 h (sólo tenants que la activaron).
         try {

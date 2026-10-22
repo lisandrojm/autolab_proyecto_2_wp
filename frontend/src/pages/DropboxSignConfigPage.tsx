@@ -6,6 +6,7 @@ import { dropboxSignAPI, DropboxSignConfig, LineaLog, CorridaLog } from "../api/
 import { InfoModal } from "../components/ui/InfoModal";
 import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
+import { EnvioAutomaticoCard } from "../components/dropboxSign/EnvioAutomaticoCard";
 
 const fmtFechaHora = (iso?: string | null): string => {
   if (!iso) return "—";
@@ -220,6 +221,9 @@ export const DropboxSignConfigPage: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* El bot que envía a la firma lo que está en Outbox. Va debajo de la casilla: su CC es ese correo. */}
+          <EnvioAutomaticoCard />
 
           {cfg?.configuredAt && (
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-2 text-sm">

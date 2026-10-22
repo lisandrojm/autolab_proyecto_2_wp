@@ -205,8 +205,43 @@ export interface ITenant extends Document {
          * se enviaron a firmar, para moverlos de "Outbox" a "Pendbox" sin que nadie toque archivos.
          */
         dropboxSign?: {
-            /** Casilla que recibe las notificaciones (ej. rrhh@frame.com.ar). */
+            /** Casilla que recibe las notificaciones (ej. framerecursoshumanos@gmail.com). Es también el CC obligatorio de cada envío del bot. */
             email?: string;
+            /**
+             * EL BOT QUE ENVÍA A LA FIRMA (ver `services/dropboxSignBot/`): un Chromium del servidor que opera
+             * app.sign.dropbox.com como una persona (el plan Essentials no incluye la API). Credenciales y
+             * sesión cifradas igual que las de ARCA; el throttle existe porque la web corta a los ~55-60
+             * envíos por día.
+             */
+            bot?: {
+                loginEmail?: string;
+                loginPasswordEnc?: string;
+                /** `storageState` de Playwright, cifrado. */
+                sesionEnc?: string;
+                sesionGuardadaAt?: Date;
+                envio?: {
+                    activo?: boolean;
+                    tamanoTanda?: number;
+                    intervaloHoras?: number;
+                    topeDiario?: number;
+                    enfriamientoHoras?: number;
+                    horaDesde?: number;
+                    horaHasta?: number;
+                };
+                /** Enviados en el día (fecha AR, YYYY-MM-DD). */
+                contadorDia?: {
+                    fecha?: string;
+                    enviados?: number;
+                };
+                /** Hasta cuándo no se reintenta después del freno antiabuso de Dropbox Sign. */
+                enfriadoHasta?: Date | null;
+                ultimoLoginAt?: Date | null;
+                /** Cuándo arrancó la última corrida (es el candado entre procesos del scheduler). */
+                ultimaCorridaAt?: Date | null;
+                ultimoError?: string | null;
+                /** Resumen de la última tanda. */
+                ultimaCorrida?: any;
+            };
             imapHost?: string;
             imapPort?: number;
             imapSecure?: boolean;

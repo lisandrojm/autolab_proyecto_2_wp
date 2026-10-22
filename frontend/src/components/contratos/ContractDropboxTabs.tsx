@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare, faCircleInfo, faDownload, faFilePdf, faFileZipper, faFolderOpen, faPen, faRotateRight, faSpinner, faTrash, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { dropboxAPI, DropboxEntry } from "../../api/dropbox";
 import { firmaDigitalAPI } from "../../api/firmaDigital";
+import { dropboxSignAPI } from "../../api/dropboxSign";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { EmptyState } from "../ui/EmptyState";
 import { Modal } from "../ui/Modal";
@@ -74,6 +75,22 @@ export const fetchDropboxCounts = async (): Promise<Record<TipoBandejaDropbox, n
  * Instructivo de cómo enviar a firmar en Dropbox Sign. Se muestra en dos lugares (el ⓘ del paso
  * "Para Firmar" del stepper y el ⓘ de la propia pestaña), así que vive acá para no duplicarlo.
  */
+/**
+ * La casilla de CC que hay que poner al enviar a firmar: la configurada en Configuración → DropboxSign.
+ * Antes estaba escrita fija («rrhh@frame.com.ar») y quedó vieja: la casilla real es otra.
+ */
+const CasillaCC: React.FC = () => {
+  const [cc, setCc] = useState<string | null>(null);
+  useEffect(() => {
+    dropboxSignAPI
+      .config()
+      .then((c) => setCc(c.email || ""))
+      .catch(() => setCc(""));
+  }, []);
+  if (cc === null) return <span className="font-mono text-xs">…</span>;
+  return cc ? <span className="font-mono text-xs">{cc}</span> : <span className="italic">la casilla configurada en Configuración → DropboxSign (todavía no hay ninguna)</span>;
+};
+
 export const InstructivoParaFirmar: React.FC = () => (
           <div className="space-y-4">
             <p className="text-sm text-gray-700 dark:text-gray-200">
@@ -106,7 +123,7 @@ export const InstructivoParaFirmar: React.FC = () => (
             <div className="rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/20 px-3 py-2.5">
               <p className="text-sm font-bold text-amber-800 dark:text-amber-300 mb-1">IMPORTANTE — antes de enviar</p>
               <p className="text-sm text-amber-800 dark:text-amber-200">
-                En <em>Revisar y enviar</em>, agregá en <strong>CC</strong> el correo <span className="font-mono text-xs">rrhh@frame.com.ar</span>.
+                En <em>Revisar y enviar</em>, agregá en <strong>CC</strong> el correo <CasillaCC />.
               </p>
               <p className="text-xs text-amber-700 dark:text-amber-300/90 mt-1.5">
                 Ese aviso de Dropbox Sign es la única forma que tiene el sistema de enterarse de que el documento se envió: con él, el archivo pasa solo de <strong>Outbox</strong> a{" "}
