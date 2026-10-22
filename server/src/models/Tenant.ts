@@ -237,6 +237,9 @@ export interface ITenant extends Document {
         ultimoError?: string | null;
         /** Resumen de la última tanda. */
         ultimaCorrida?: any;
+        /** Las reglas de colocación de la firma editadas por el tenant (ver `compartido/reglasColocacionFirma.ts`). Sin esto rige el catálogo. */
+        reglasColocacion?: any[];
+        reglasColocacionAt?: Date | null;
       };
       imapHost?: string;
       imapPort?: number;
@@ -447,6 +450,8 @@ const tenantSchema = new Schema<ITenant>(
           ultimaCorridaAt: { type: Date, default: null },
           ultimoError: { type: String, default: null },
           ultimaCorrida: { type: Schema.Types.Mixed },
+          reglasColocacion: { type: Schema.Types.Mixed },
+          reglasColocacionAt: { type: Date, default: null },
         },
         imapHost: { type: String },
         imapPort: { type: Number, default: 993 },

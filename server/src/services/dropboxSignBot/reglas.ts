@@ -1,4 +1,4 @@
-import { motivoPorTipo, reglaDe, REGLAS_COLOCACION, VIEWPORT, ORIGEN_FIRMA } from "../../compartido/reglasColocacionFirma.js";
+import { motivoPorTipo, reglaDe, REGLAS_BASE, VIEWPORT, ORIGEN_FIRMA, type ReglaColocacion } from "../../compartido/reglasColocacionFirma.js";
 
 /**
  * LAS REGLAS DE NEGOCIO DEL ENVÍO A LA FIRMA, puras y testeables (sin Playwright, sin base).
@@ -7,8 +7,10 @@ import { motivoPorTipo, reglaDe, REGLAS_COLOCACION, VIEWPORT, ORIGEN_FIRMA } fro
  * negocia desde el motor: el motor pregunta y obedece.
  *
  *  · DÓNDE VA LA FIRMA vive en `compartido/reglasColocacionFirma.ts` (tabla declarativa por tipo,
- *    anclada al texto del PDF, con la receta de pantalla como respaldo). Acá sólo se reexporta lo que
- *    el resto del bot necesita: el tipo por nombre de archivo y por qué un tipo no se envía.
+ *    anclada al texto del PDF o a las palabras del OCR; cada tenant tiene su copia editable, ver
+ *    `reglasTenant.ts`). Acá sólo se reexporta lo que el resto del bot necesita: el tipo por nombre de
+ *    archivo y por qué un tipo no se envía. Todas las funciones aceptan las reglas del tenant; sin
+ *    ellas, rige el catálogo de fábrica.
  *  · El GUARD previo al click final: título exacto, CC correcto, firmante listado, tipo con regla.
  */
 
@@ -16,21 +18,18 @@ export { VIEWPORT, ORIGEN_FIRMA };
 
 export type TipoDocumento = string;
 
-/** Los tipos reconocidos pero sin regla de colocación todavía, con el motivo que ve el usuario. */
-export const TIPOS_PENDIENTES: Record<string, string> = Object.fromEntries(REGLAS_COLOCACION.filter((r) => r.estado === "pendiente").map((r) => [r.tipo, `Tipo ${r.tipo}: ${r.motivoPendiente || "falta definir posición de firma"}`]));
-
 /** El tipo del documento por su nombre de archivo, o `null` si no matchea ninguna regla. */
-export function tipoDeDocumento(archivo: string): TipoDocumento | null {
-  return reglaDe(archivo)?.tipo || null;
+export function tipoDeDocumento(archivo: string, reglas: ReglaColocacion[] = REGLAS_BASE): TipoDocumento | null {
+  return reglaDe(archivo, reglas)?.tipo || null;
 }
 
 /** Por qué un archivo no se puede enviar por su tipo, o `null` si tiene regla activa. */
-export function motivoSinColocacion(archivo: string): string | null {
-  return motivoPorTipo(archivo);
+export function motivoSinColocacion(archivo: string, reglas: ReglaColocacion[] = REGLAS_BASE): string | null {
+  return motivoPorTipo(archivo, reglas);
 }
 
 /** Hay regla ACTIVA para ese archivo (la colocación concreta la resuelve `resolverColocacion` con el texto del PDF). */
-export const tieneRegla = (archivo: string): boolean => !motivoPorTipo(archivo);
+export const tieneRegla = (archivo: string, reglas: ReglaColocacion[] = REGLAS_BASE): boolean => !motivoPorTipo(archivo, reglas);
 
 /** «JOAQUIN NAVARRO MARTIN»: primer nombre + apellido(s), en mayúsculas. */
 export function nombreDeFirmante(user: { firstName?: string | null; lastName?: string | null } | null | undefined): string {
@@ -56,6 +55,8 @@ export interface DatosDelGuard {
   firmanteEmail: string;
   /** El texto de la pantalla de revisión. */
   textoPagina: string;
+  /** Las reglas del tenant (sin ellas, el catálogo). */
+  reglas?: ReglaColocacion[];
 }
 
 /**
@@ -63,7 +64,7 @@ export interface DatosDelGuard {
  * distinto o sin CC rompe el circuito IMAP y deja el contrato como no enviado para siempre.
  */
 export function guardDeEnvio(d: DatosDelGuard): { ok: true } | { ok: false; motivo: string } {
-  const sinColocacion = motivoSinColocacion(d.archivo);
+  const sinColocacion = motivoSinColocacion(d.archivo, d.reglas);
   if (sinColocacion) return { ok: false, motivo: `${sinColocacion} (${d.archivo})` };
   if (String(d.titulo || "").trim() !== String(d.archivo || "").trim()) return { ok: false, motivo: `El título («${d.titulo}») no es el nombre exacto del archivo («${d.archivo}»).` };
   if (!d.ccEsperado) return { ok: false, motivo: "No hay casilla de CC configurada (Configuración → DropboxSign)." };

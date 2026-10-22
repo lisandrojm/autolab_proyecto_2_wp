@@ -15,6 +15,24 @@ import mongoose, { Schema, Document, Model, Types } from "mongoose";
  */
 export type EstadoEnvio = "en_cola" | "enviado" | "error" | "limite" | "requiere_revision";
 
+/**
+ * Lo que dio la última DETECCIÓN del ancla de la firma sobre este archivo (previsualización, «Verificar
+ * todos» o la corrida): es el ✓/✗ que ven la cola y el tab sin volver a bajar el PDF.
+ */
+export interface ResumenColocacion {
+  verificadaAt: Date;
+  ok: boolean;
+  /** Página (base 1) donde quedó o se buscó. */
+  pagina: number | null;
+  /** El rótulo que se tomó de ancla. */
+  rotulo: string;
+  fuente: "texto" | "ocr" | "";
+  motivo: string;
+  /** El campo (puntos PDF, y desde arriba). */
+  campo: { x: number; y: number; w: number; h: number } | null;
+  descartados: number;
+}
+
 export interface IDropboxSignEnvio extends Document {
   tenantId: Types.ObjectId;
   codigo: string;
@@ -31,6 +49,7 @@ export interface IDropboxSignEnvio extends Document {
   /** La última corrida en seco lo recorrió entero y quedó listo para enviar. */
   probadoEnSecoAt?: Date | null;
   enviadoAt?: Date | null;
+  colocacion?: ResumenColocacion | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,6 +69,7 @@ const schema = new Schema<IDropboxSignEnvio>(
     encoladoPor: { type: Schema.Types.ObjectId, ref: "User", default: null },
     probadoEnSecoAt: { type: Date, default: null },
     enviadoAt: { type: Date, default: null },
+    colocacion: { type: Schema.Types.Mixed, default: null },
   },
   { timestamps: true, collection: "dropbox_sign_envios" },
 );

@@ -1,4 +1,4 @@
-import { VIEWPORT, ORIGEN_FIRMA } from "../../compartido/reglasColocacionFirma.js";
+import { VIEWPORT, ORIGEN_FIRMA, type ReglaColocacion } from "../../compartido/reglasColocacionFirma.js";
 /**
  * LAS REGLAS DE NEGOCIO DEL ENVÍO A LA FIRMA, puras y testeables (sin Playwright, sin base).
  *
@@ -6,20 +6,20 @@ import { VIEWPORT, ORIGEN_FIRMA } from "../../compartido/reglasColocacionFirma.j
  * negocia desde el motor: el motor pregunta y obedece.
  *
  *  · DÓNDE VA LA FIRMA vive en `compartido/reglasColocacionFirma.ts` (tabla declarativa por tipo,
- *    anclada al texto del PDF, con la receta de pantalla como respaldo). Acá sólo se reexporta lo que
- *    el resto del bot necesita: el tipo por nombre de archivo y por qué un tipo no se envía.
+ *    anclada al texto del PDF o a las palabras del OCR; cada tenant tiene su copia editable, ver
+ *    `reglasTenant.ts`). Acá sólo se reexporta lo que el resto del bot necesita: el tipo por nombre de
+ *    archivo y por qué un tipo no se envía. Todas las funciones aceptan las reglas del tenant; sin
+ *    ellas, rige el catálogo de fábrica.
  *  · El GUARD previo al click final: título exacto, CC correcto, firmante listado, tipo con regla.
  */
 export { VIEWPORT, ORIGEN_FIRMA };
 export type TipoDocumento = string;
-/** Los tipos reconocidos pero sin regla de colocación todavía, con el motivo que ve el usuario. */
-export declare const TIPOS_PENDIENTES: Record<string, string>;
 /** El tipo del documento por su nombre de archivo, o `null` si no matchea ninguna regla. */
-export declare function tipoDeDocumento(archivo: string): TipoDocumento | null;
+export declare function tipoDeDocumento(archivo: string, reglas?: ReglaColocacion[]): TipoDocumento | null;
 /** Por qué un archivo no se puede enviar por su tipo, o `null` si tiene regla activa. */
-export declare function motivoSinColocacion(archivo: string): string | null;
+export declare function motivoSinColocacion(archivo: string, reglas?: ReglaColocacion[]): string | null;
 /** Hay regla ACTIVA para ese archivo (la colocación concreta la resuelve `resolverColocacion` con el texto del PDF). */
-export declare const tieneRegla: (archivo: string) => boolean;
+export declare const tieneRegla: (archivo: string, reglas?: ReglaColocacion[]) => boolean;
 /** «JOAQUIN NAVARRO MARTIN»: primer nombre + apellido(s), en mayúsculas. */
 export declare function nombreDeFirmante(user: {
     firstName?: string | null;
@@ -38,6 +38,8 @@ export interface DatosDelGuard {
     firmanteEmail: string;
     /** El texto de la pantalla de revisión. */
     textoPagina: string;
+    /** Las reglas del tenant (sin ellas, el catálogo). */
+    reglas?: ReglaColocacion[];
 }
 /**
  * EL GUARD ANTES DE «ENVIAR PARA FIRMAR». Si algo no cierra, no se envía: un envío con título

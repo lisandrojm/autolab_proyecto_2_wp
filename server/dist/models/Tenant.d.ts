@@ -241,6 +241,9 @@ export interface ITenant extends Document {
                 ultimoError?: string | null;
                 /** Resumen de la última tanda. */
                 ultimaCorrida?: any;
+                /** Las reglas de colocación de la firma editadas por el tenant (ver `compartido/reglasColocacionFirma.ts`). Sin esto rige el catálogo. */
+                reglasColocacion?: any[];
+                reglasColocacionAt?: Date | null;
             };
             imapHost?: string;
             imapPort?: number;

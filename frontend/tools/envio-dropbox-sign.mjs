@@ -7,16 +7,18 @@
  *
  * LA RECETA (validada en ~176 envíos con viewport 1457×812 y zoom «Ajustar al ancho»):
  *   manage → «Firmar documentos» → «Cargar» (input[type=file]) → Siguiente → firmante → Siguiente →
- *   editor: (última página si corresponde) arrastrar «Firma» al destino → verificar «Firma de NOMBRE» →
- *   Siguiente → revisar: CC + título exacto → guard → «Enviar para firmar» → «Solicitud de firma enviada».
+ *   editor: (última página si corresponde) arrastrar «Firma» al destino → ajustar el tamaño al de la
+ *   línea → verificar «Firma de NOMBRE» → Siguiente → revisar: CC + título exacto → guard →
+ *   «Enviar para firmar» → «Solicitud de firma enviada».
  *
- * DÓNDE SE SUELTA LA FIRMA no lo decide el motor: recibe una `colocacion` YA RESUELTA por el server
- * (`compartido/reglasColocacionFirma.ts`, anclada al texto del PDF) y la `geometria` para pasar de
- * puntos PDF a píxeles. Estrategia: 1) ANCLA: se mide la caja de la página renderizada y se convierte el
- * punto; 2) FALLBACK: la receta de pantalla (scroll + coordenadas validadas en 1457×812) si no hay
- * ancla o la página no se puede medir (queda en el log); 3) se VERIFICA que haya exactamente un campo
- * «Firma de NOMBRE» y, cuando se puede medir, que caiga dentro del rectángulo esperado; si falla, se
- * deshace y se reintenta UNA vez; si vuelve a fallar → requiere_revision, no se envía.
+ * DÓNDE VA LA FIRMA no lo decide el motor: recibe una `colocacion` YA RESUELTA por el server
+ * (`compartido/reglasColocacionFirma.ts`, anclada al texto del PDF: el campo en puntos PDF, el mismo
+ * que muestra la previsualización) y la `geometria` para pasar de puntos PDF a píxeles. Se mide la caja
+ * de la página renderizada, se suelta «Firma» en el centro del campo, se intenta llevar el campo al
+ * tamaño del rectángulo (mejor esfuerzo: si el editor no lo deja, queda el tamaño por defecto, centrado)
+ * y se VERIFICA que haya exactamente un campo «Firma de NOMBRE» con su centro dentro del rectángulo
+ * esperado; si falla, se deshace y se reintenta UNA vez; si vuelve a fallar → requiere_revision, no se
+ * envía. No hay recetas de pantalla de respaldo: sin caja medible no se coloca nada.
  */
 
 export const MANAGE_URL = "https://app.sign.dropbox.com/home/manage";
@@ -25,6 +27,8 @@ export const ORIGEN_FIRMA = { x: 69, y: 504 };
 const ESPERA_EDITOR_MS = 9000;
 const ESPERA_REVISAR_MS = 6000;
 const ESPERA_RESULTADO_MS = 15000;
+/** Cuánto puede diferir (px) el tamaño del campo del pedido para darlo por ajustado. */
+const TOLERANCIA_TAMANO_PX = 8;
 
 /**
  * LA LISTA BLANCA DE LO QUE SE APRIETA. Todo click no irreversible pasa por `apretar`, que sólo acepta
@@ -42,6 +46,9 @@ export const BOTONES = {
 
 /** El click que sí envía. Fuera de BOTONES a propósito: sólo lo aprieta `enviarParaFirmar`. */
 export const IRREVERSIBLE = { rol: ["button"], nombre: /^enviar para firmar$/i };
+
+/** El campo de firma colocado, tal como lo expone el DOM del editor. */
+const SELECTOR_CAMPO = '[aria-label*="Firma de" i], [title*="Firma de" i]';
 
 const texto = (page) => page.evaluate(() => document.body?.innerText || "").catch(() => "");
 const cortar = (señal, paso) => {
@@ -100,31 +107,27 @@ async function esperarTexto(page, re, ms, descripcion) {
   throw new Error(`No apareció ${descripcion} (${re}).`);
 }
 
-/** Arrastre del campo «Firma» desde el panel hasta un punto de pantalla. Sin DOM estable para el drop. */
-async function arrastrarFirma(page, destino) {
-  await page.mouse.move(ORIGEN_FIRMA.x, ORIGEN_FIRMA.y);
+/** Un arrastre con el mouse, en pasos, de un punto a otro. */
+async function arrastrar(page, desde, hasta, pasos = 12) {
+  await page.mouse.move(desde.x, desde.y);
   await page.mouse.down();
-  const pasos = 12;
   for (let i = 1; i <= pasos; i++) {
-    await page.mouse.move(ORIGEN_FIRMA.x + ((destino.x - ORIGEN_FIRMA.x) * i) / pasos, ORIGEN_FIRMA.y + ((destino.y - ORIGEN_FIRMA.y) * i) / pasos);
+    await page.mouse.move(desde.x + ((hasta.x - desde.x) * i) / pasos, desde.y + ((hasta.y - desde.y) * i) / pasos);
     await page.waitForTimeout(40);
   }
   await page.mouse.up();
   await page.waitForTimeout(800);
 }
 
-/** Rueda del visor según la receta de pantalla del fallback. */
-async function scrollDelFallback(page, scroll) {
-  if (!scroll) return;
-  await page.mouse.move(scroll.enX, scroll.enY);
-  await page.mouse.wheel(0, scroll.ticks * 100 * (scroll.direccion === "abajo" ? 1 : -1));
-  await page.waitForTimeout(800);
+/** Arrastre del campo «Firma» desde el panel hasta un punto de pantalla. Sin DOM estable para el drop. */
+async function arrastrarFirma(page, destino) {
+  await arrastrar(page, ORIGEN_FIRMA, destino);
 }
 
 /**
  * La caja (px) de la página del documento que está a la vista en el editor: el elemento visible más
  * grande con forma de hoja (más alto que ancho, > 300 px de ancho) entre canvas/imágenes/contenedores
- * de página. Si el editor cambia y no se encuentra, devuelve null y se usa la receta de pantalla.
+ * de página. Si el editor cambia y no se encuentra, devuelve null y el documento queda en revisión.
  */
 async function medirCajaDePagina(page) {
   return page
@@ -159,11 +162,17 @@ async function traerALaVista(page, colocacion, geometria) {
   return null;
 }
 
+/** La caja (px) del campo de firma colocado, si el DOM lo expone. */
+async function cajaDelCampo(page) {
+  const loc = page.locator(SELECTOR_CAMPO).first();
+  const b = await loc.boundingBox({ timeout: 1500 }).catch(() => null);
+  return b ? { x: b.x, y: b.y, w: b.width, h: b.height } : null;
+}
+
 /** Dónde quedó el campo de firma colocado (centro, px), si el DOM lo expone. */
 async function centroDelCampo(page) {
-  const loc = page.locator(`[aria-label*="Firma de" i], [title*="Firma de" i]`).first();
-  const b = await loc.boundingBox({ timeout: 1500 }).catch(() => null);
-  return b ? { x: b.x + b.width / 2, y: b.y + b.height / 2 } : null;
+  const b = await cajaDelCampo(page);
+  return b ? { x: b.x + b.w / 2, y: b.y + b.h / 2 } : null;
 }
 
 /** Cuántos campos «Firma de NOMBRE» hay colocados. */
@@ -171,8 +180,44 @@ async function camposDeFirma(page, nombre) {
   const re = new RegExp(`firma de ${nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i");
   const t = await texto(page);
   const enTexto = (t.match(new RegExp(re.source, "gi")) || []).length;
-  const enAria = await page.locator(`[aria-label*="Firma de" i], [title*="Firma de" i]`).count().catch(() => 0);
+  const enAria = await page.locator(SELECTOR_CAMPO).count().catch(() => 0);
   return Math.max(enTexto, enAria);
+}
+
+/** El rectángulo del campo (puntos PDF) pasado a píxeles de pantalla, con la caja de la página. */
+function campoEnPantalla(colocacion, geometria, caja) {
+  const a = geometria.pdfAPantalla({ x: colocacion.campo.x, y: colocacion.campo.y }, colocacion.tamanoPagina, caja);
+  const b = geometria.pdfAPantalla({ x: colocacion.campo.x + colocacion.campo.w, y: colocacion.campo.y + colocacion.campo.h }, colocacion.tamanoPagina, caja);
+  return { x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y };
+}
+
+/**
+ * Lleva el campo recién colocado al rectángulo pedido (px): primero el TAMAÑO, arrastrando el manijón
+ * de redimensionar (o, si el DOM no lo expone, la esquina inferior derecha del campo), después la
+ * POSICIÓN, arrastrando el campo por su centro. Mejor esfuerzo: si el editor no lo deja, el campo
+ * queda con su tamaño por defecto y centrado; se informa y la verificación de después decide.
+ */
+async function ajustarCampo(page, objetivo, onProgreso) {
+  let caja = await cajaDelCampo(page);
+  if (!caja) return { ajustado: false, motivo: "el DOM no expone el campo" };
+  const campo = page.locator(SELECTOR_CAMPO).first();
+  const manijon = campo.locator('[class*="resize" i], [class*="handle" i], [data-qa*="resize" i], [data-testid*="resize" i]');
+  let desde;
+  if ((await manijon.count().catch(() => 0)) > 0) {
+    const mb = await manijon.last().boundingBox({ timeout: 1000 }).catch(() => null);
+    if (mb) desde = { x: mb.x + mb.width / 2, y: mb.y + mb.height / 2 };
+  }
+  if (!desde) desde = { x: caja.x + caja.w - 2, y: caja.y + caja.h - 2 };
+  await arrastrar(page, desde, { x: caja.x + objetivo.w, y: caja.y + objetivo.h }, 8);
+  caja = (await cajaDelCampo(page)) || caja;
+  // La posición: el centro del campo al centro del rectángulo.
+  const centro = { x: caja.x + caja.w / 2, y: caja.y + caja.h / 2 };
+  const meta = { x: objetivo.x + objetivo.w / 2, y: objetivo.y + objetivo.h / 2 };
+  if (Math.hypot(meta.x - centro.x, meta.y - centro.y) > 3) await arrastrar(page, centro, meta, 8);
+  caja = (await cajaDelCampo(page)) || caja;
+  const ajustado = Math.abs(caja.w - objetivo.w) <= TOLERANCIA_TAMANO_PX && Math.abs(caja.h - objetivo.h) <= TOLERANCIA_TAMANO_PX;
+  onProgreso(ajustado ? `Campo ajustado a ${Math.round(caja.w)}×${Math.round(caja.h)} px (pedido ${Math.round(objetivo.w)}×${Math.round(objetivo.h)}).` : `El editor no dejó redimensionar: el campo queda en ${Math.round(caja.w)}×${Math.round(caja.h)} px (pedido ${Math.round(objetivo.w)}×${Math.round(objetivo.h)}), centrado en el rectángulo.`);
+  return { ajustado, caja };
 }
 
 /** Vuelve al listado sin enviar (descarta el wizard). Los diálogos «¿salir sin guardar?» se aceptan. */
@@ -205,6 +250,8 @@ async function enviarParaFirmar(page) {
  */
 export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, colocacion, geometria, enSeco = true, señal = { cortada: false }, onProgreso = () => {}, antesDelIrreversible = () => {}, guard, esLimite }) {
   if (!colocacion) return { resultado: "requiere_revision", detalle: "Tipo de documento sin regla de colocación: no se envía." };
+  if (!colocacion.campo || !colocacion.puntoPdf || !colocacion.tamanoPagina) return { resultado: "requiere_revision", detalle: "La colocación llegó sin el campo resuelto (sin ancla): no se envía." };
+  if (colocacion.pagina === "otra") return { resultado: "requiere_revision", detalle: `El ancla está en la página ${colocacion.paginaIndex + 1}, una del medio: el motor sólo navega a la primera o a la última. No se envía.` };
   if (typeof guard !== "function" || typeof esLimite !== "function") throw new Error("Faltan el guard y el detector de límite del server.");
   if (!geometria || typeof geometria.pdfAPantalla !== "function" || typeof geometria.pantallaAPdf !== "function") throw new Error("Falta la geometría (pdfAPantalla/pantallaAPdf) del server.");
   const captura = async () => page.screenshot({ fullPage: false }).catch(() => undefined);
@@ -244,36 +291,28 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
       await page.waitForTimeout(600);
     }
 
-    // Arrastrar «Firma» al destino (ancla → fallback) y VERIFICAR: exactamente un campo, a nombre del
-    // firmante y, si se puede medir, dentro del rectángulo esperado. Un reintento con deshacer.
-    onProgreso(`Colocación resuelta por ${colocacion.estrategia}: ${colocacion.nota}`);
+    // Arrastrar «Firma» al centro del campo, ajustar el tamaño y VERIFICAR: exactamente un campo, a
+    // nombre del firmante y con su centro dentro del rectángulo esperado. Un reintento con deshacer.
+    onProgreso(`Colocación: ${colocacion.nota}`);
     let colocado = false;
     let motivoFalla = "";
-    let hizoScrollFallback = false;
     for (let intento = 1; intento <= 2 && !colocado; intento++) {
-      let vista = null;
-      if (colocacion.estrategia === "ancla" && colocacion.puntoPdf && colocacion.tamanoPagina) {
-        vista = await traerALaVista(page, colocacion, geometria);
-        if (!vista) onProgreso("No se pudo medir la página renderizada: se usa la receta de pantalla (fallback).");
-      }
-      let destino;
-      if (vista) destino = vista.destino;
-      else if (colocacion.fallback) {
-        if (!hizoScrollFallback) {
-          await scrollDelFallback(page, colocacion.fallback.scroll);
-          hizoScrollFallback = true;
-        }
-        destino = colocacion.fallback.soltarEn;
-        if (colocacion.estrategia !== "fallback") onProgreso("FALLBACK: coordenadas de pantalla validadas, sin ancla de texto.");
-      } else {
-        motivoFalla = "No hay ancla medible ni receta de pantalla para este tipo.";
+      const vista = await traerALaVista(page, colocacion, geometria);
+      if (!vista) {
+        motivoFalla = "No se pudo medir la página renderizada en el editor.";
         break;
       }
-      onProgreso(`Colocando la firma en (${Math.round(destino.x)}, ${Math.round(destino.y)}) — ${colocacion.descripcion}`);
+      const destino = vista.destino;
+      onProgreso(`Colocando la firma en (${Math.round(destino.x)}, ${Math.round(destino.y)}) px — ${colocacion.descripcion}`);
       await arrastrarFirma(page, destino);
-      const n = await camposDeFirma(page, firmante.nombre);
+      let n = await camposDeFirma(page, firmante.nombre);
+      if (n === 1) {
+        const objetivo = campoEnPantalla(colocacion, geometria, (await medirCajaDePagina(page)) || vista.caja);
+        await ajustarCampo(page, objetivo, onProgreso).catch((e) => onProgreso(`No se pudo ajustar el campo: ${e?.message || e}`));
+        n = await camposDeFirma(page, firmante.nombre);
+      }
       if (n !== 1) motivoFalla = `Se esperaba 1 campo de firma y hay ${n}.`;
-      else if (vista && colocacion.rectEsperado) {
+      else {
         const centro = await centroDelCampo(page);
         const cajaAhora = (await medirCajaDePagina(page)) || vista.caja;
         if (!centro) {
@@ -283,10 +322,12 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
           const enPdf = geometria.pantallaAPdf(centro, colocacion.tamanoPagina, cajaAhora);
           const r = colocacion.rectEsperado;
           const adentro = enPdf.x >= r.x && enPdf.x <= r.x + r.w && enPdf.y >= r.y && enPdf.y <= r.y + r.h;
-          if (adentro) colocado = true;
-          else motivoFalla = `El campo quedó en (${Math.round(enPdf.x)}, ${Math.round(enPdf.y)}) pt, fuera del rectángulo esperado.`;
+          if (adentro) {
+            onProgreso(`Campo verificado en (${Math.round(enPdf.x)}, ${Math.round(enPdf.y)}) pt, dentro del rectángulo esperado.`);
+            colocado = true;
+          } else motivoFalla = `El campo quedó en (${Math.round(enPdf.x)}, ${Math.round(enPdf.y)}) pt, fuera del rectángulo esperado.`;
         }
-      } else colocado = true;
+      }
       if (!colocado && intento === 1) {
         onProgreso(`${motivoFalla} Se deshace y se reintenta.`);
         if (n > 0) await apretar(page, "deshacer").catch(() => {});

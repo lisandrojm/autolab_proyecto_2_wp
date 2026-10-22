@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { CONFIG_POR_DEFECTO, planificar, puedeCorrer, validarEncolado } from "./planificador.js";
+import { REGLAS_BASE } from "../../compartido/reglasColocacionFirma.js";
 const archivo = (n, tipo = "Contrato_Jornada", prefijo = "426_LN+") => `${prefijo}_PEREZ_${tipo}_D-20261010_H-20261010_20273130293_fulano-ARROBA-gmail.com_Empresa-30717068374_ID-${String(n).padStart(6, "0")}.pdf`;
 const item = (n, orden = n) => ({ archivo: archivo(n), codigo: `ID-${String(n).padStart(6, "0")}`, tipo: "Contrato_Jornada", email: "fulano@gmail.com", firmante: "JUAN PEREZ", orden });
 const FIRMANTE = { nombre: "JUAN PEREZ", email: "fulano@gmail.com" };
@@ -23,10 +24,14 @@ describe("validar el encolado", () => {
         assert.ok(validarEncolado(archivo(1), { ...ok, registroPrevio: { estado: "error" } }).ok);
         assert.ok(validarEncolado(archivo(1), { ...ok, registroPrevio: { estado: "requiere_revision" } }).ok);
     });
-    it("tipo desconocido, REC_SUELDO pendiente, sin código, sin usuario, fuera de Outbox", () => {
+    it("tipo desconocido, regla pendiente del tenant, sin código, sin usuario, fuera de Outbox", () => {
         const r1 = validarEncolado(archivo(2, "CCM"), ok);
         assert.ok(!r1.ok && /sin regla/.test(r1.motivo));
-        const r2 = validarEncolado("99_PRODUCTORA_REC_SUELDO_2026_PERIODO_09_PEREZ_Juan_a-ARROBA-b.com_20273130293_ID-000004.pdf", ok);
+        // REC_SUELDO tiene regla en el catálogo: entra. Con las reglas del tenant marcándolo pendiente, frena con su motivo.
+        const recibo = "99_PRODUCTORA_REC_SUELDO_2026_PERIODO_09_PEREZ_Juan_a-ARROBA-b.com_20273130293_ID-000004.pdf";
+        assert.ok(validarEncolado(recibo, ok).ok);
+        const pendiente = REGLAS_BASE.map((r) => (r.tipo === "REC_SUELDO" ? { ...r, estado: "pendiente", motivoPendiente: "falta definir posición de firma" } : r));
+        const r2 = validarEncolado(recibo, { ...ok, reglas: pendiente });
         assert.ok(!r2.ok && /^Tipo REC_SUELDO: .*posición de firma/i.test(r2.motivo), r2.motivo);
         const r3 = validarEncolado("426_LN+_PEREZ_Contrato_Jornada_D-20261010_H-20261010_20273130293_fulano-ARROBA-gmail.com.pdf", ok);
         assert.ok(!r3.ok && /c[oó]digo/.test(r3.motivo));

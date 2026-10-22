@@ -9,6 +9,9 @@ import { armarCola, arrancarCorridaEnvio, configDelTenant, corridaEnvioDe, desen
 import { cupoDelDia, fechaYHoraArgentina, puedeCorrer } from "../services/dropboxSignBot/planificador.js";
 import { DropboxSignEnvio } from "../models/DropboxSignEnvio.js";
 import { DropboxSignEnvioLog } from "../models/DropboxSignEnvioLog.js";
+import { guardarReglasDelTenant, reglasDelTenant } from "../services/dropboxSignBot/reglasTenant.js";
+import { arrancarVerificacion, detenerVerificacion, previsualizarColocacion, verificacionDe, type AlcanceVerificacion } from "../services/dropboxSignBot/colocacion.js";
+import { REGLAS_BASE, TIPOS_ANCLA } from "../compartido/reglasColocacionFirma.js";
 
 /**
  * Configuración de "DropboxSign | Firmas": la casilla de correo que recibe las copias de
@@ -302,6 +305,68 @@ router.get("/bot/logs/:id/captura", async (req: AuthenticatedRequest & TenantReq
   if (!log?.capturaError) return res.status(404).json({ error: "Esa corrida no tiene captura." });
   res.setHeader("Content-Type", "image/png");
   res.send(Buffer.from(log.capturaError, "base64"));
+});
+
+/*
+  ═══════════ REGLAS DE COLOCACIÓN DE LA FIRMA Y SU VERIFICACIÓN VISUAL (22/10/2026) ═══════════
+  Ver `compartido/reglasColocacionFirma.ts` (las reglas) y `services/dropboxSignBot/colocacion.ts`
+  (la detección fuera del navegador, la previsualización y «Verificar todos»).
+*/
+
+/** GET /bot/reglas — las reglas vigentes del tenant (editadas o el catálogo), más el catálogo de fábrica. */
+router.get("/bot/reglas", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const r = await reglasDelTenant(String(req.tenantObjectId));
+    res.json({ ...r, catalogo: REGLAS_BASE, tiposAncla: TIPOS_ANCLA });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Internal server error" });
+  }
+});
+
+/** PUT /bot/reglas {reglas: [...]} guarda la lista entera (validada); {restaurar: true} vuelve al catálogo. */
+router.put("/bot/reglas", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede editar las reglas de colocación." });
+    const r = req.body?.restaurar === true ? await guardarReglasDelTenant(String(req.tenantObjectId), null) : await guardarReglasDelTenant(String(req.tenantObjectId), req.body?.reglas);
+    res.json({ ok: true, ...r, catalogo: REGLAS_BASE, tiposAncla: TIPOS_ANCLA });
+  } catch (error: any) {
+    res.status(error?.status || 500).json({ error: error?.message || "No se pudieron guardar las reglas." });
+  }
+});
+
+/** POST /bot/colocacion/previsualizar {archivo} — la detección más la página renderizada (base64) para dibujar encima. Baja el PDF del Outbox. */
+router.post("/bot/colocacion/previsualizar", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede previsualizar la colocación." });
+    const archivo = String(req.body?.archivo || "").trim();
+    if (!archivo) return res.status(400).json({ error: "Indicá el archivo." });
+    res.json(await previsualizarColocacion(String(req.tenantObjectId), archivo));
+  } catch (error: any) {
+    res.status(error?.status || 500).json({ error: error?.message || "No se pudo previsualizar." });
+  }
+});
+
+/** POST /bot/colocacion/verificar-todos {alcance} — corre la detección en seco en segundo plano; se sigue con GET /bot/colocacion/verificacion. */
+router.post("/bot/colocacion/verificar-todos", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede verificar la colocación." });
+    const alcance = (["cola", "revision", "cola_y_revision", "outbox"].includes(req.body?.alcance) ? req.body.alcance : "cola_y_revision") as AlcanceVerificacion;
+    res.json({ arrancada: true, ...(await arrancarVerificacion(String(req.tenantObjectId), alcance)) });
+  } catch (error: any) {
+    res.status(error?.status || 500).json({ error: error?.message || "No se pudo arrancar la verificación." });
+  }
+});
+
+router.get("/bot/colocacion/verificacion", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  const v = verificacionDe(String(req.tenantObjectId));
+  if (!v) return res.json({ hay: false, corriendo: false });
+  res.json({ hay: true, corriendo: !v.terminadaEl, ...v });
+});
+
+router.post("/bot/colocacion/verificacion/detener", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede detener la verificación." });
+  const r = detenerVerificacion(String(req.tenantObjectId));
+  res.status(r.ok ? 200 : 409).json(r);
 });
 
 export { router as dropboxSignRoutes };

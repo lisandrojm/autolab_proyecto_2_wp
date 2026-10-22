@@ -1,5 +1,8 @@
+import { type ResumenColocacion } from "../../models/DropboxSignEnvio.js";
 import { type ILineaEnvio } from "../../models/DropboxSignEnvioLog.js";
 import { type ConfigEnvio, type EstadoThrottle, type Plan } from "./planificador.js";
+import { leerOutbox, resolverFirmante } from "./outbox.js";
+export { leerOutbox, resolverFirmante };
 export type EventoEnvio = {
     tipo: "abriendo" | "sesion" | "cola" | "documento" | "irreversible" | "resultado" | "limite" | "fin" | "fallo" | "info";
     at: Date;
@@ -47,20 +50,6 @@ export declare function configDelTenant(tenantId: string): Promise<{
     bot: any;
 }>;
 /**
- * QUIÉN FIRMA, desde la base. El código del nombre («ID-000123») lleva al `DocumentoGenerado` y de ahí
- * al usuario: su email manda sobre el del nombre de archivo (caso real: el archivo decía
- * `korova-oi@hotmail.com` y la persona tiene `korova_oi@hotmail.com`), y el nombre es «PRIMER NOMBRE
- * APELLIDOS». Sin registro en la base, se busca al usuario por el email del nombre de archivo y se
- * deja constancia del respaldo.
- */
-export declare function resolverFirmante(tenantId: string, archivo: string, avisar?: (texto: string) => void): Promise<{
-    firmante: {
-        nombre: string;
-        email: string;
-    } | null;
-    motivoSinFirmante?: string;
-}>;
-/**
  * ENCOLAR desde «Para Firmar»: cada archivo se valida (`validarEncolado`) y entra con el próximo
  * `orden`. Lo que no pasa queda `requiere_revision` con su motivo (salvo lo ya enviado o encolado,
  * que no se toca). `todosElegibles` recorre el Outbox entero.
@@ -89,6 +78,8 @@ export interface EstadoArchivo {
     enviadoAt: string | null;
     /** Posición en la cola (1 = próximo), si está en ella. */
     posicion: number | null;
+    /** La última detección del ancla de la firma (✓/✗ con página, rótulo y motivo), si se hizo. */
+    colocacion: ResumenColocacion | null;
 }
 /** El estado de cada archivo del listado del tab: una query por lote, sin tocar Dropbox. */
 export declare function estadoDeArchivos(tenantId: string, archivos: string[]): Promise<EstadoArchivo[]>;

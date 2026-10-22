@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faPaperPlane, faStop, faGear, faRobot, faTriangleExclamation, faCircleCheck, faClock, faHourglassHalf, faListCheck } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faPaperPlane, faStop, faGear, faRobot, faTriangleExclamation, faCircleCheck, faClock, faHourglassHalf, faListCheck, faCrosshairs } from "@fortawesome/free-solid-svg-icons";
 import { dropboxSignAPI, dropboxSignBotAPI, type BotConfig, type BotCorrida, type EstadoArchivoFirma } from "../../api/dropboxSign";
 import { sweetAlert } from "../../utils/sweetAlert";
 
@@ -177,9 +177,28 @@ export function useBotFirma(archivos: string[], activo: boolean) {
   return { cfg, estados, corrida, ocupado, enviarALaFirma, encolarTodo, quitarDeLaCola, enviarTandaAhora, detener, refrescar };
 }
 
-/** El badge de la columna «Firma». */
+/**
+ * El ✓/✗ de la última detección del ancla de la firma (previsualización, «Verificar todos» o la
+ * corrida): dice en qué página y con qué rótulo iría, o por qué no. Sin detección no muestra nada.
+ */
+const IndicadorAncla: React.FC<{ e: EstadoArchivoFirma }> = ({ e }) => {
+  const c = e.colocacion;
+  if (!c) return null;
+  return <FontAwesomeIcon icon={faCrosshairs} className={`h-3 w-3 ${c.ok ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`} title={c.ok ? `Firma sobre «${c.rotulo}» en la pág. ${c.pagina} (verificado ${fmt(c.verificadaAt)})` : `Sin ancla: ${c.motivo}`} />;
+};
+
+/** El badge de la columna «Firma», con el ✓/✗ del ancla al lado. */
 export const BadgeFirma: React.FC<{ e?: EstadoArchivoFirma }> = ({ e }) => {
   if (!e || !e.estado) return <span className="text-xs text-gray-400">—</span>;
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {badgeDe(e)}
+      <IndicadorAncla e={e} />
+    </span>
+  );
+};
+
+const badgeDe = (e: EstadoArchivoFirma): React.ReactNode => {
   const base = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap";
   switch (e.estado) {
     case "en_cola":

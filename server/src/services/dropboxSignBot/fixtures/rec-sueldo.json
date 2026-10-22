@@ -1,9 +1,77 @@
 {
   "archivo": "99_PRODUCTORA_REC_SUELDO_2026_PERIODO_09_PEREZ_Juana_fulano-ARROBA-gmail.com_20273130293_ID-000900.pdf",
   "firmante": "JUANA PEREZ",
-  "nota": "PENDIENTE. Los recibos de MEMOSOFT tienen dos páginas por persona (ORIGINAL y COPIA) y dibujan los datos como trazos (sin texto); el pie dice «Firma Empleado» a la derecha de «RECIBO N° …». Para activar la regla hay que relevar un PDF real y completar este fixture con los ítems de texto (si los tiene) o definir el fallback de pantalla.",
+  "nota": "Recibo de MEMOSOFT relevado el 22/10/2026 sobre PDF reales (anonimizado): DOS páginas por persona. La capa de texto trae sólo rótulos de la plantilla (los «Empleador»/«Trabajador» son de la tabla de costos) y el pie de MEMOSOFT; los rótulos de firma están DIBUJADOS. Por OCR de la franja del pie (`ocr`): la página 1 (ORIGINAL) dice «Firma Empleado» con la línea vacía; la página 2 (COPIA) dice «Firma Empleador» con la firma del empleador impresa. `lineas` son las líneas horizontales detectadas en la imagen de la franja. Coordenadas reales (pt, y desde arriba).",
   "paginas": [
-    { "numero": 1, "ancho": 595, "alto": 842, "items": [{ "str": "ORIGINAL", "x": 300, "y": 20, "w": 50, "h": 9 }, { "str": "Firma Empleado", "x": 480, "y": 820, "w": 80, "h": 9 }] },
-    { "numero": 2, "ancho": 595, "alto": 842, "items": [{ "str": "COPIA", "x": 300, "y": 20, "w": 40, "h": 9 }, { "str": "Firma Empleado", "x": 480, "y": 820, "w": 80, "h": 9 }] }
+    {
+      "numero": 1,
+      "ancho": 595,
+      "alto": 842,
+      "items": [
+        { "str": "COSTO TOTAL EMPLEADOR", "x": 335, "y": 138, "w": 110, "h": 8 },
+        { "str": "SUBTOTAL CONTRIBUCIONES EMPLEADOR", "x": 270, "y": 287, "w": 172, "h": 8 },
+        { "str": "Empleador", "x": 70, "y": 573, "w": 39, "h": 8 },
+        { "str": "Trabajador", "x": 70, "y": 585, "w": 39, "h": 8 },
+        { "str": "Empleador", "x": 251, "y": 573, "w": 39, "h": 8 },
+        { "str": "© Copyright", "x": 29, "y": 822, "w": 36, "h": 7 },
+        { "str": "MEMOSOFT", "x": 80, "y": 822, "w": 51, "h": 8 },
+        { "str": "www.memosoft.com.ar", "x": 146, "y": 822, "w": 70, "h": 7 }
+      ],
+      "ocr": [
+        { "str": "FORMA", "x": 171, "y": 770, "w": 20, "h": 7 },
+        { "str": "DE", "x": 195, "y": 771, "w": 8, "h": 6 },
+        { "str": "PAGO", "x": 208, "y": 770, "w": 15, "h": 7 },
+        { "str": "Recib", "x": 31, "y": 798, "w": 19, "h": 6 },
+        { "str": "la", "x": 59, "y": 798, "w": 8, "h": 6 },
+        { "str": "suma", "x": 72, "y": 799, "w": 15, "h": 5 },
+        { "str": "de", "x": 92, "y": 798, "w": 7, "h": 6 },
+        { "str": "pesos", "x": 104, "y": 799, "w": 20, "h": 6 },
+        { "str": "O", "x": 29, "y": 825, "w": 5, "h": 5 },
+        { "str": "Copyright", "x": 36, "y": 825, "w": 29, "h": 6 },
+        { "str": "MEMOSOFT", "x": 80, "y": 825, "w": 51, "h": 6 },
+        { "str": "RECIBO", "x": 289, "y": 824, "w": 24, "h": 6 },
+        { "str": "N*", "x": 318, "y": 824, "w": 7, "h": 6 },
+        { "str": "99999", "x": 332, "y": 824, "w": 20, "h": 6 },
+        { "str": "Firma", "x": 459, "y": 825, "w": 20, "h": 6 },
+        { "str": "Empleado", "x": 483, "y": 825, "w": 33, "h": 7 }
+      ],
+      "lineas": [
+        { "x": 27, "y": 790, "w": 401, "h": 1 },
+        { "x": 27, "y": 812, "w": 401, "h": 1 },
+        { "x": 433, "y": 818, "w": 115, "h": 1 }
+      ]
+    },
+    {
+      "numero": 2,
+      "ancho": 595,
+      "alto": 842,
+      "items": [
+        { "str": "COSTO TOTAL EMPLEADOR", "x": 335, "y": 138, "w": 110, "h": 8 },
+        { "str": "SUBTOTAL CONTRIBUCIONES EMPLEADOR", "x": 270, "y": 287, "w": 172, "h": 8 },
+        { "str": "Empleador", "x": 70, "y": 573, "w": 39, "h": 8 },
+        { "str": "Trabajador", "x": 70, "y": 585, "w": 39, "h": 8 },
+        { "str": "© Copyright", "x": 29, "y": 822, "w": 36, "h": 7 },
+        { "str": "MEMOSOFT", "x": 80, "y": 822, "w": 51, "h": 8 },
+        { "str": "www.memosoft.com.ar", "x": 146, "y": 822, "w": 70, "h": 7 }
+      ],
+      "ocr": [
+        { "str": "Recib", "x": 31, "y": 798, "w": 19, "h": 6 },
+        { "str": "la", "x": 59, "y": 798, "w": 8, "h": 6 },
+        { "str": "suma", "x": 72, "y": 799, "w": 15, "h": 5 },
+        { "str": "O", "x": 29, "y": 825, "w": 5, "h": 5 },
+        { "str": "Copyright", "x": 36, "y": 825, "w": 29, "h": 6 },
+        { "str": "MEMOSOFT", "x": 80, "y": 825, "w": 51, "h": 6 },
+        { "str": "RECIBO", "x": 289, "y": 824, "w": 24, "h": 6 },
+        { "str": "N*", "x": 318, "y": 824, "w": 7, "h": 6 },
+        { "str": "99999", "x": 332, "y": 824, "w": 20, "h": 6 },
+        { "str": "Firma", "x": 459, "y": 825, "w": 20, "h": 6 },
+        { "str": "Empleador", "x": 483, "y": 825, "w": 37, "h": 7 }
+      ],
+      "lineas": [
+        { "x": 27, "y": 790, "w": 401, "h": 1 },
+        { "x": 27, "y": 812, "w": 401, "h": 1 },
+        { "x": 433, "y": 818, "w": 115, "h": 1 }
+      ]
+    }
   ]
 }

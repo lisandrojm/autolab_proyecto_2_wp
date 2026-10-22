@@ -4,21 +4,21 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Types } from "mongoose";
 import { Tenant } from "../../models/Tenant.js";
-import { User } from "../../models/User.js";
-import UserProject from "../../models/UserProject.js";
-import { DocumentoGenerado } from "../../models/DocumentoGenerado.js";
-import { DropboxSignEnvio, type EstadoEnvio } from "../../models/DropboxSignEnvio.js";
+import { DropboxSignEnvio, type EstadoEnvio, type ResumenColocacion } from "../../models/DropboxSignEnvio.js";
 import { DropboxSignEnvioLog, type ILineaEnvio } from "../../models/DropboxSignEnvioLog.js";
-import { getTenantDropboxConfig, listFolder, downloadFileContent } from "../dropboxService.js";
-import { resolverCarpetaPorProposito } from "../../utils/estadoCarpetas.js";
 import { leerAnclas } from "../../utils/anclasNombre.js";
+import { abrirOcr } from "../../utils/ocrPaginas.js";
 import { CONFIG_POR_DEFECTO, fechaYHoraArgentina, planificar, puedeCorrer, validarEncolado, type Candidato, type ConfigEnvio, type EstadoThrottle, type ItemEnCola, type Plan } from "./planificador.js";
-import { esTextoDeLimite, guardDeEnvio, nombreDeFirmante } from "./reglas.js";
-import { pantallaAPdf, pdfAPantalla, resolverColocacion, type Colocacion } from "../../compartido/reglasColocacionFirma.js";
-import { textoDelPdf } from "./pdfTexto.js";
+import { esTextoDeLimite, guardDeEnvio } from "./reglas.js";
+import { pantallaAPdf, pdfAPantalla, reglaDe, type Colocacion } from "../../compartido/reglasColocacionFirma.js";
 import { abrirSesionDropboxSign, anotarError, guardarSesion, type SesionDropboxSign } from "./navegador.js";
 import { quienTieneDropboxSign, soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 import { MOTOR_DROPBOX_SIGN } from "./motor.js";
+import { leerOutbox, resolverFirmante } from "./outbox.js";
+import { reglasDelTenant } from "./reglasTenant.js";
+import { detectarParaArchivo, guardarResumen, resumenDe } from "./colocacion.js";
+
+export { leerOutbox, resolverFirmante };
 
 /**
  * LA CORRIDA DE ENVÍO A LA FIRMA (patrón `arca/corridaAltas.ts`): una tanda de documentos DE LA COLA
@@ -32,9 +32,11 @@ import { MOTOR_DROPBOX_SIGN } from "./motor.js";
  *    modo seco, y a partir de ahí «Detener» ya no corta ese documento.
  *  · El LÍMITE antiabuso frena la tanda, deja `enfriadoHasta`, el documento queda `limite` (sigue en la
  *    cola) y el scheduler no reintenta hasta que venza.
- *  · DÓNDE VA LA FIRMA se resuelve ANTES de abrir el navegador (`compartido/reglasColocacionFirma.ts`):
- *    se baja el PDF, se lee su texto con posiciones y se busca el ancla del tipo; sin ancla queda la
- *    receta de pantalla (y se loguea); sin regla → requiere_revision sin abrir Chromium.
+ *  · DÓNDE VA LA FIRMA se resuelve ANTES de abrir el navegador (`compartido/reglasColocacionFirma.ts`,
+ *    con las reglas del tenant): se baja el PDF, se lee su texto con posiciones (y el OCR de la franja
+ *    si la regla lo pide) y se busca el ancla del tipo. Sin ancla → requiere_revision con el motivo; sin
+ *    regla → requiere_revision sin abrir Chromium. No hay recetas de pantalla de respaldo: lo que se
+ *    coloca es lo que muestra la previsualización (`colocacion.ts`).
  */
 
 const BASE = "integrations.dropboxSign.bot";
@@ -110,50 +112,7 @@ export async function configDelTenant(tenantId: string): Promise<{ config: Confi
   return { config, estado, cc: String(ds.email || "").trim(), bot };
 }
 
-/**
- * QUIÉN FIRMA, desde la base. El código del nombre («ID-000123») lleva al `DocumentoGenerado` y de ahí
- * al usuario: su email manda sobre el del nombre de archivo (caso real: el archivo decía
- * `korova-oi@hotmail.com` y la persona tiene `korova_oi@hotmail.com`), y el nombre es «PRIMER NOMBRE
- * APELLIDOS». Sin registro en la base, se busca al usuario por el email del nombre de archivo y se
- * deja constancia del respaldo.
- */
-export async function resolverFirmante(tenantId: string, archivo: string, avisar?: (texto: string) => void): Promise<{ firmante: { nombre: string; email: string } | null; motivoSinFirmante?: string }> {
-  const anclas = leerAnclas(archivo);
-  let user: any = null;
-  let viaRegistro = false;
-  if (anclas.codigo) {
-    const doc: any = await DocumentoGenerado.findOne({ tenantId: new Types.ObjectId(tenantId), codigo: anclas.codigo }).select("userId userProjectId").lean();
-    let userId = doc?.userId || null;
-    if (!userId && doc?.userProjectId) userId = ((await UserProject.findById(doc.userProjectId).select("userId").lean()) as any)?.userId || null;
-    if (userId) {
-      user = await User.findOne({ _id: userId, tenantId }).select("firstName lastName email").lean();
-      viaRegistro = !!user;
-    }
-  }
-  if (!user && anclas.email) {
-    user = await User.findOne({ tenantId, email: new RegExp(`^${anclas.email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") }).select("firstName lastName email").lean();
-    if (user) avisar?.(`${archivo}: sin registro en la base para ${anclas.codigo || "el código"}; se tomó al usuario por el email del nombre de archivo.`);
-  }
-  if (!user) return { firmante: null, motivoSinFirmante: anclas.codigo ? `No hay usuario para el código ${anclas.codigo} ni para el email del nombre de archivo.` : "El nombre de archivo no trae código ni email reconocibles." };
-  const email = String(user.email || "").trim().toLowerCase() || anclas.email;
-  if (viaRegistro && anclas.email && email !== anclas.email) avisar?.(`${archivo}: el email del nombre de archivo (${anclas.email}) difiere del de la base (${email}); se usa el de la base.`);
-  const nombre = nombreDeFirmante(user);
-  if (!nombre || !email) return { firmante: null, motivoSinFirmante: "El usuario no tiene nombre o email cargados." };
-  return { firmante: { nombre, email } };
-}
-
-/** El Outbox del tenant: la carpeta y los PDFs que hay. */
-async function leerOutbox(tenantId: string): Promise<{ outbox: string; archivos: string[]; cfg: NonNullable<ReturnType<typeof getTenantDropboxConfig>> }> {
-  const tenant = await Tenant.findById(tenantId).lean();
-  const cfg = getTenantDropboxConfig(tenant);
-  if (!cfg) throw Object.assign(new Error("Dropbox no está conectado para esta organización."), { status: 400 });
-  const outbox = await resolverCarpetaPorProposito("outbox");
-  if (!outbox) throw Object.assign(new Error('No hay ninguna carpeta de Dropbox configurada como "Outbox".'), { status: 400 });
-  const { entries } = await listFolder(tenantId, cfg, outbox);
-  return { outbox: outbox.replace(/\/$/, ""), archivos: entries.filter((e) => e.tag === "file" && /\.pdf$/i.test(e.name)).map((e) => e.name), cfg };
-}
-
-const itemDe = (r: any): ItemEnCola => ({ archivo: r.archivo, codigo: r.codigo, tipo: r.tipo, email: r.email, firmante: r.firmante, orden: Number(r.orden) || 0 });
+const itemDe = (r: any): ItemEnCola => ({ archivo: r.archivo, codigo: r.codigo, tipo: r.tipo, email: r.email, firmante: r.firmante, orden: Number(r.orden) || 0, colocacion: r.colocacion || null });
 
 /**
  * ENCOLAR desde «Para Firmar»: cada archivo se valida (`validarEncolado`) y entra con el próximo
@@ -162,6 +121,7 @@ const itemDe = (r: any): ItemEnCola => ({ archivo: r.archivo, codigo: r.codigo, 
  */
 export async function encolar(tenantId: string, userId: string | undefined, pedido: { archivos?: string[]; todosElegibles?: boolean }): Promise<{ encolados: number; rechazados: Array<{ archivo: string; motivo: string }>; porMotivo: Record<string, number> }> {
   const { archivos: enOutbox } = await leerOutbox(tenantId);
+  const { reglas } = await reglasDelTenant(tenantId);
   const setOutbox = new Set(enOutbox);
   const pedidos = pedido.todosElegibles ? enOutbox : [...new Set((pedido.archivos || []).map((a) => String(a).trim()).filter(Boolean))];
   const codigos = pedidos.map((a) => leerAnclas(a).codigo).filter(Boolean);
@@ -177,7 +137,7 @@ export async function encolar(tenantId: string, userId: string | undefined, pedi
   for (const archivo of pedidos) {
     const { codigo } = leerAnclas(archivo);
     const { firmante, motivoSinFirmante } = setOutbox.has(archivo) ? await resolverFirmante(tenantId, archivo) : { firmante: null, motivoSinFirmante: undefined };
-    const r = validarEncolado(archivo, { enOutbox: setOutbox.has(archivo), registroPrevio: codigo ? previos.get(codigo) || null : null, firmante, motivoSinFirmante });
+    const r = validarEncolado(archivo, { enOutbox: setOutbox.has(archivo), registroPrevio: codigo ? previos.get(codigo) || null : null, firmante, motivoSinFirmante, reglas });
     if (r.ok && r.firmante) {
       orden++;
       await DropboxSignEnvio.updateOne(
@@ -213,6 +173,8 @@ export interface EstadoArchivo {
   enviadoAt: string | null;
   /** Posición en la cola (1 = próximo), si está en ella. */
   posicion: number | null;
+  /** La última detección del ancla de la firma (✓/✗ con página, rótulo y motivo), si se hizo. */
+  colocacion: ResumenColocacion | null;
 }
 
 /** El estado de cada archivo del listado del tab: una query por lote, sin tocar Dropbox. */
@@ -227,9 +189,9 @@ export async function estadoDeArchivos(tenantId: string, archivos: string[]): Pr
   return archivos.map((archivo) => {
     const codigo = codigoDe.get(archivo) || "";
     const r = registros.get(codigo);
-    if (!r) return { archivo, codigo, estado: "", detalle: "", enviadoAt: null, posicion: null };
+    if (!r) return { archivo, codigo, estado: "", detalle: "", enviadoAt: null, posicion: null, colocacion: null };
     const estado = archivo === actual ? "enviando" : r.estado === "en_cola" && r.probadoEnSecoAt ? "seco" : r.estado;
-    return { archivo, codigo, estado, detalle: r.detalle || "", enviadoAt: r.enviadoAt ? new Date(r.enviadoAt).toISOString() : null, posicion: posicion.get(codigo) ?? null };
+    return { archivo, codigo, estado, detalle: r.detalle || "", enviadoAt: r.enviadoAt ? new Date(r.enviadoAt).toISOString() : null, posicion: posicion.get(codigo) ?? null, colocacion: r.colocacion || null };
   });
 }
 
@@ -313,34 +275,40 @@ async function correr(corrida: CorridaEnvio, cc: string, config: ConfigEnvio): P
       return;
     }
 
-    // Resolver la colocación de cada documento ANTES de abrir el navegador: los que no tienen dónde
-    // firmar salen como requiere_revision sin gastar un intento de pantalla.
+    // Resolver la colocación de cada documento ANTES de abrir el navegador (el mismo código que la
+    // previsualización): los que no tienen dónde firmar salen como requiere_revision sin gastar un
+    // intento de pantalla. Un solo worker de OCR para toda la tanda, sólo si algún tipo lo necesita.
     const { cfg } = await leerOutbox(tenantId);
+    const { reglas } = await reglasDelTenant(tenantId);
     const resueltos = new Map<string, { rutaPdf: string; colocacion: Colocacion }>();
-    for (const c of cola.tanda as Candidato[]) {
-      const rutaPdf = path.join(dir, c.archivo);
-      try {
-        fs.writeFileSync(rutaPdf, await downloadFileContent(tenantId, cfg, `${cola.outbox}/${c.archivo}`));
-        const paginas = await textoDelPdf(fs.readFileSync(rutaPdf));
-        const r = resolverColocacion(c.archivo, paginas, { nombreFirmante: c.firmante });
-        if (r.ok === false) {
-          const motivo: string = r.motivo;
+    const worker = (cola.tanda as Candidato[]).some((c) => reglaDe(c.archivo, reglas)?.ocr) ? await abrirOcr() : null;
+    try {
+      for (const c of cola.tanda as Candidato[]) {
+        const rutaPdf = path.join(dir, c.archivo);
+        try {
+          const d = await detectarParaArchivo(tenantId, { cfg, outbox: cola.outbox || "" }, c.archivo, reglas, { firmante: { nombre: c.firmante, email: c.email }, worker: worker || undefined });
+          await guardarResumen(tenantId, c.codigo, resumenDe(d.deteccion));
+          if (d.deteccion.ok === false) {
+            const motivo: string = d.deteccion.motivo;
+            corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: "requiere_revision", detalle: motivo });
+            emitir({ tipo: "resultado", archivo: c.archivo, codigo: c.codigo, estado: "requiere_revision", texto: `requiere_revision: ${motivo}` });
+            await actualizarRegistro(tenantId, c.codigo, { estado: "requiere_revision", detalle: motivo });
+            continue;
+          }
+          fs.writeFileSync(rutaPdf, d.buffer);
+          emitir({ tipo: "info", archivo: c.archivo, texto: `Colocación: ${d.deteccion.colocacion.nota}${d.ocrMs ? ` (OCR ${d.ocrMs} ms)` : ""}` });
+          resueltos.set(c.codigo, { rutaPdf, colocacion: d.deteccion.colocacion });
+        } catch (e: any) {
           fs.rmSync(rutaPdf, { force: true });
-          corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: "requiere_revision", detalle: motivo });
-          emitir({ tipo: "resultado", archivo: c.archivo, codigo: c.codigo, estado: "requiere_revision", texto: `requiere_revision: ${motivo}` });
-          await actualizarRegistro(tenantId, c.codigo, { estado: "requiere_revision", detalle: motivo });
-          continue;
+          const detalle = `No se pudo bajar o leer el PDF: ${e?.message || e}`;
+          corrida.errores++;
+          corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: "error", detalle });
+          emitir({ tipo: "resultado", archivo: c.archivo, codigo: c.codigo, estado: "error", texto: `error: ${detalle}` });
+          await actualizarRegistro(tenantId, c.codigo, { estado: "error", detalle });
         }
-        emitir({ tipo: "info", archivo: c.archivo, texto: `Colocación por ${r.colocacion.estrategia}: ${r.colocacion.nota}` });
-        resueltos.set(c.codigo, { rutaPdf, colocacion: r.colocacion });
-      } catch (e: any) {
-        fs.rmSync(rutaPdf, { force: true });
-        const detalle = `No se pudo bajar o leer el PDF: ${e?.message || e}`;
-        corrida.errores++;
-        corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: "error", detalle });
-        emitir({ tipo: "resultado", archivo: c.archivo, codigo: c.codigo, estado: "error", texto: `error: ${detalle}` });
-        await actualizarRegistro(tenantId, c.codigo, { estado: "error", detalle });
       }
+    } finally {
+      await worker?.terminate().catch(() => {});
     }
     const tanda = (cola.tanda as Candidato[]).filter((c) => resueltos.has(c.codigo));
     if (tanda.length === 0) {
@@ -391,7 +359,7 @@ async function correr(corrida: CorridaEnvio, cc: string, config: ConfigEnvio): P
           señal: corrida.señal,
           onProgreso: (texto: string) => emitir({ tipo: "info", archivo: c.archivo, texto }),
           antesDelIrreversible: () => emitir({ tipo: "irreversible", archivo: c.archivo, codigo: c.codigo, texto: "Apretando «Enviar para firmar»…" }),
-          guard: (d: any) => guardDeEnvio({ ...d, archivo: c.archivo, ccEsperado: cc, firmanteNombre: c.firmante, firmanteEmail: c.email }),
+          guard: (d: any) => guardDeEnvio({ ...d, archivo: c.archivo, ccEsperado: cc, firmanteNombre: c.firmante, firmanteEmail: c.email, reglas }),
           esLimite: esTextoDeLimite,
         });
       } catch (e: any) {

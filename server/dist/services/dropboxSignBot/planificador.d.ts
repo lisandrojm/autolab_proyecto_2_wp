@@ -1,3 +1,4 @@
+import type { ReglaColocacion } from "../../compartido/reglasColocacionFirma.js";
 /**
  * LA COLA DE ENVÍO Y LA PRÓXIMA TANDA. Lógica pura (sin Dropbox ni base).
  *
@@ -32,6 +33,14 @@ export interface ItemEnCola {
     email: string;
     firmante: string;
     orden: number;
+    /** La última detección del ancla (✓/✗), si se hizo; la muestra «Ver cola». */
+    colocacion?: {
+        ok: boolean;
+        pagina: number | null;
+        rotulo: string;
+        motivo: string;
+        verificadaAt: Date;
+    } | null;
 }
 export interface Candidato extends ItemEnCola {
 }
@@ -74,6 +83,8 @@ export interface ContextoDeEncolado {
         email: string;
     } | null;
     motivoSinFirmante?: string;
+    /** Las reglas de colocación del tenant (sin ellas, el catálogo de fábrica). */
+    reglas?: ReglaColocacion[];
 }
 export interface ResultadoEncolado {
     ok: boolean;

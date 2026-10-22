@@ -13,6 +13,7 @@ const schema = new Schema({
     encoladoPor: { type: Schema.Types.ObjectId, ref: "User", default: null },
     probadoEnSecoAt: { type: Date, default: null },
     enviadoAt: { type: Date, default: null },
+    colocacion: { type: Schema.Types.Mixed, default: null },
 }, { timestamps: true, collection: "dropbox_sign_envios" });
 // Un código, un registro por tenant: es lo que impide enviar dos veces el mismo documento.
 schema.index({ tenantId: 1, codigo: 1 }, { unique: true });

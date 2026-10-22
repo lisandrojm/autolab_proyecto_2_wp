@@ -1,4 +1,5 @@
 import { leerAnclas } from "../../utils/anclasNombre.js";
+import type { ReglaColocacion } from "../../compartido/reglasColocacionFirma.js";
 import { motivoSinColocacion, tipoDeDocumento } from "./reglas.js";
 
 /**
@@ -36,6 +37,8 @@ export interface ItemEnCola {
   email: string;
   firmante: string;
   orden: number;
+  /** La última detección del ancla (✓/✗), si se hizo; la muestra «Ver cola». */
+  colocacion?: { ok: boolean; pagina: number | null; rotulo: string; motivo: string; verificadaAt: Date } | null;
 }
 
 export interface Candidato extends ItemEnCola {}
@@ -91,6 +94,8 @@ export interface ContextoDeEncolado {
   /** El firmante resuelto desde la base, o null. */
   firmante: { nombre: string; email: string } | null;
   motivoSinFirmante?: string;
+  /** Las reglas de colocación del tenant (sin ellas, el catálogo de fábrica). */
+  reglas?: ReglaColocacion[];
 }
 
 export interface ResultadoEncolado {
@@ -116,10 +121,10 @@ export function validarEncolado(archivo: string, ctx: ContextoDeEncolado): Resul
   if (previo === "enviado") return { ok: false, codigo, motivo: "Ya se envió a la firma: no se vuelve a encolar.", reencolable: false };
   if (previo === "en_cola") return { ok: false, codigo, motivo: "Ya está en la cola.", reencolable: false };
   if (previo === "limite") return { ok: false, codigo, motivo: "Ya está en la cola (frenado por el límite de Dropbox Sign; se reintenta solo).", reencolable: false };
-  const sinColocacion = motivoSinColocacion(archivo);
+  const sinColocacion = motivoSinColocacion(archivo, ctx.reglas);
   if (sinColocacion) return { ok: false, codigo, motivo: sinColocacion, reencolable: true };
   if (!ctx.firmante) return { ok: false, codigo, motivo: ctx.motivoSinFirmante || "No se pudo resolver al firmante en la base.", reencolable: true };
-  return { ok: true, codigo, motivo: "", reencolable: false, tipo: tipoDeDocumento(archivo)!, firmante: ctx.firmante };
+  return { ok: true, codigo, motivo: "", reencolable: false, tipo: tipoDeDocumento(archivo, ctx.reglas)!, firmante: ctx.firmante };
 }
 
 /** La tanda a enviar, a partir de la cola y de lo que sigue en Outbox. */

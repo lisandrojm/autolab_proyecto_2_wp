@@ -1,0 +1,23 @@
+{
+  "archivo": "703-TELECOM-JSA-PROD-POST_PEREZ_Contrato_Servicios-FZERO-SRL_D--_H--_27323863240_fulano-ARROBA-hotmail.com_Empresa-30710295839_ID-000950.pdf",
+  "firmante": "JUANA PEREZ",
+  "nota": "Última página real de un contrato de servicios generado por la app (anonimizado, 22/10/2026): el renglón «Firma: Firma: ______» trae el rótulo DOS veces (defecto de la plantilla) y la línea de guiones en el mismo ítem; debajo «Aclaración: NOMBRE» y «DNI: … – CUIT: …». Seis páginas en el PDF real; acá las intermedias van resumidas.",
+  "paginas": [
+    { "numero": 1, "ancho": 595, "alto": 842, "items": [{ "str": "CONTRATO DE PRESTACIÓN DE SERVICIOS", "x": 56, "y": 57, "w": 300, "h": 13 }] },
+    { "numero": 2, "ancho": 595, "alto": 842, "items": [{ "str": "(cláusulas)", "x": 56, "y": 57, "w": 300, "h": 11 }] },
+    {
+      "numero": 3,
+      "ancho": 595,
+      "alto": 842,
+      "items": [
+        { "str": "En prueba de conformidad, las Partes firman dos (2) ejemplares de un mismo tenor y a un solo", "x": 56, "y": 474, "w": 483, "h": 11 },
+        { "str": "efecto en CABA, Buenos Aires, el día 11/09/2026.", "x": 56, "y": 490, "w": 243, "h": 11 },
+        { "str": "Firma: Firma: ______________________________", "x": 86, "y": 599, "w": 252, "h": 11 },
+        { "str": "Aclaración:", "x": 86, "y": 650, "w": 54, "h": 11 },
+        { "str": "JUANA INES PEREZ", "x": 143, "y": 650, "w": 120, "h": 11 },
+        { "str": "DNI:", "x": 86, "y": 701, "w": 22, "h": 11 },
+        { "str": "27313029 – CUIT: 27273130293", "x": 111, "y": 701, "w": 159, "h": 11 }
+      ]
+    }
+  ]
+}

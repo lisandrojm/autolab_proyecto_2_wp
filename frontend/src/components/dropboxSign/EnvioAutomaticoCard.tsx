@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faCheck, faPaperPlane, faStop, faListUl, faListCheck, faTriangleExclamation, faCircleCheck, faCircleXmark, faRobot, faFlask } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faCheck, faPaperPlane, faStop, faListUl, faListCheck, faTriangleExclamation, faCircleCheck, faCircleXmark, faRobot, faFlask, faEye } from "@fortawesome/free-solid-svg-icons";
 import { dropboxSignBotAPI, type BotConfig, type BotCola, type BotCorrida, type BotLog, type BotEnvioRegistro, type BotLinea } from "../../api/dropboxSign";
 import { InfoModal } from "../ui/InfoModal";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { PrevisualizacionColocacion } from "./PrevisualizacionColocacion";
+import { IndicadorColocacion } from "./ReglasColocacionCard";
 
 /*
   «ENVÍO AUTOMÁTICO A LA FIRMA» (22/10/2026): el bot que manda a firmar, por la web de Dropbox Sign,
@@ -45,6 +47,8 @@ export const EnvioAutomaticoCard: React.FC = () => {
   const [cola, setCola] = useState<{ abierta: boolean; cargando: boolean; datos: BotCola | null }>({ abierta: false, cargando: false, datos: null });
   const [logs, setLogs] = useState<{ abiertos: boolean; cargando: boolean; datos: { logs: BotLog[]; requierenRevision: BotEnvioRegistro[] } | null }>({ abiertos: false, cargando: false, datos: null });
   const [revision, setRevision] = useState<BotEnvioRegistro[]>([]);
+  /** El archivo cuya colocación de firma se está previsualizando. */
+  const [preview, setPreview] = useState<string | null>(null);
   const intervalo = useRef<number | null>(null);
 
   const cargar = useCallback(async () => {
@@ -332,7 +336,10 @@ export const EnvioAutomaticoCard: React.FC = () => {
           <ul className="mt-2 space-y-1 text-[11px] text-amber-900 dark:text-amber-200 max-h-40 overflow-y-auto">
             {revision.map((r) => (
               <li key={r._id} className="break-all">
-                <span className="font-mono">{r.archivo}</span> — {r.detalle}
+                <span className="font-mono">{r.archivo}</span> — {r.detalle}{" "}
+                <button type="button" onClick={() => setPreview(r.archivo)} className="whitespace-nowrap font-semibold text-blue-700 underline underline-offset-2 hover:text-blue-800 dark:text-blue-300" title="Ver sobre el PDF dónde iría la firma y qué se descartó">
+                  <FontAwesomeIcon icon={faEye} className="h-3 w-3" /> Previsualizar
+                </button>
               </li>
             ))}
           </ul>
@@ -350,7 +357,23 @@ export const EnvioAutomaticoCard: React.FC = () => {
             <p className="text-gray-500">La cola se arma desde Contratos → Para Firmar («Enviar a la firma» o «Encolar todo lo elegible»).</p>
             <div>
               <p className="font-bold text-gray-700 dark:text-gray-200 mb-1">Se enviarían ({cola.datos.tanda.length})</p>
-              {cola.datos.tanda.length === 0 ? <p className="text-gray-500">Nada en la cola para esta tanda.</p> : cola.datos.tanda.map((t) => <p key={t.codigo} className="font-mono break-all text-gray-700 dark:text-gray-200">#{t.orden} {t.archivo} → {t.firmante} ({t.email}) · {t.tipo}</p>)}
+              {cola.datos.tanda.length === 0 ? (
+                <p className="text-gray-500">Nada en la cola para esta tanda.</p>
+              ) : (
+                cola.datos.tanda.map((t) => (
+                  <div key={t.codigo} className="flex items-start gap-2 py-0.5">
+                    <p className="min-w-0 flex-1 break-all text-gray-700 dark:text-gray-200">
+                      <span className="font-mono">
+                        #{t.orden} {t.archivo}
+                      </span>{" "}
+                      → {t.firmante} ({t.email}) · {t.tipo} <IndicadorColocacion c={t.colocacion} />
+                    </p>
+                    <button type="button" onClick={() => setPreview(t.archivo)} className="shrink-0 font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400" title="Ver sobre el PDF dónde va la firma">
+                      <FontAwesomeIcon icon={faEye} /> Previsualizar
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
             {cola.datos.faltantes.length > 0 && (
               <div>
@@ -405,6 +428,8 @@ export const EnvioAutomaticoCard: React.FC = () => {
           </div>
         )}
       </InfoModal>
+
+      {preview && <PrevisualizacionColocacion archivo={preview} onClose={() => setPreview(null)} />}
     </div>
   );
 };

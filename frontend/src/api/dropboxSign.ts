@@ -156,6 +156,128 @@ export interface BotCorrida {
   enSecoForzado: boolean;
 }
 
+/*
+  REGLAS DE COLOCACIÓN DE LA FIRMA y su verificación visual (22/10/2026). Espejo de
+  `server/src/compartido/reglasColocacionFirma.ts` y `services/dropboxSignBot/colocacion.ts`.
+  Coordenadas en PUNTOS PDF, con `y` desde arriba.
+*/
+export type TipoAncla = "derechaDelRotulo" | "sobreRotulo" | "columnaDelFirmante";
+export interface AnclaRegla {
+  tipo: TipoAncla;
+  rotulo: string;
+  ocurrencia: "ultima" | "primera";
+  excluir: string[];
+  offset: { dx: number; dy: number };
+}
+export type ValidacionRegla = { tipo: "enMitadIzquierda" } | { tipo: "enMitadDerecha" } | { tipo: "lejosDeTexto"; patron: string; distanciaMin: number } | { tipo: "textoCercano"; patron: string; distanciaMax: number };
+export interface ReglaColocacion {
+  tipo: string;
+  patronNombre: string;
+  estado: "activo" | "pendiente";
+  motivoPendiente?: string;
+  pagina: "primera" | "ultima" | "cualquiera";
+  anclas: AnclaRegla[];
+  ocr: { desde: number; hasta: number } | null;
+  campo: { alto: number; anchoFijo: number };
+  validaciones: ValidacionRegla[];
+  descripcion: string;
+}
+export interface ReglasColocacion {
+  reglas: ReglaColocacion[];
+  /** Hay una copia editada guardada; si no, rige el catálogo de fábrica. */
+  personalizadas: boolean;
+  actualizadasAt: string | null;
+  catalogo: ReglaColocacion[];
+  tiposAncla: Record<TipoAncla, string>;
+}
+export interface RectPdf {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+export interface CandidatoAncla {
+  /** Base 1. */
+  pagina: number;
+  paginaIndex: number;
+  texto: string;
+  renglon: string;
+  rect: RectPdf;
+  fuente: "texto" | "ocr";
+  ancla: TipoAncla;
+  rotulo: string;
+  /** Sólo en los descartados. */
+  motivo?: string;
+}
+export interface ColocacionResuelta {
+  tipo: string;
+  pagina: "primera" | "ultima" | "otra";
+  paginaIndex: number;
+  tamanoPagina: { ancho: number; alto: number };
+  campo: RectPdf;
+  puntoPdf: { x: number; y: number };
+  rectEsperado: RectPdf;
+  linea: RectPdf | null;
+  descripcion: string;
+  nota: string;
+}
+export type DeteccionColocacion =
+  | { ok: true; colocacion: ColocacionResuelta; ancla: CandidatoAncla; descartados: CandidatoAncla[] }
+  | { ok: false; motivo: string; descartados: CandidatoAncla[]; paginaIndex: number | null; tamanoPagina: { ancho: number; alto: number } | null };
+export interface PrevisualizacionColocacion {
+  archivo: string;
+  codigo: string;
+  tipo: string | null;
+  regla: { tipo: string; descripcion: string; pagina: string } | null;
+  firmante: { nombre: string; email: string } | null;
+  motivoSinFirmante?: string;
+  deteccion: DeteccionColocacion;
+  pagina: { numero: number; total: number; ancho: number; alto: number };
+  imagen: { base64: string; ancho: number; alto: number };
+  ocrMs: number;
+}
+/** La última detección guardada en el registro de un archivo (el ✓/✗ de la cola y del tab). */
+export interface ResumenColocacion {
+  verificadaAt: string;
+  ok: boolean;
+  pagina: number | null;
+  rotulo: string;
+  fuente: string;
+  motivo: string;
+  campo: RectPdf | null;
+  descartados: number;
+}
+export type AlcanceVerificacion = "cola" | "revision" | "cola_y_revision" | "outbox";
+export interface ResultadoVerificado {
+  archivo: string;
+  codigo: string;
+  tipo: string | null;
+  estado: string;
+  firmante: string;
+  ok: boolean;
+  pagina: number | null;
+  rotulo: string;
+  fuente: string;
+  motivo: string;
+  ms: number;
+}
+export interface Verificacion {
+  hay: boolean;
+  corriendo: boolean;
+  alcance?: AlcanceVerificacion;
+  arrancadaEl?: string;
+  terminadaEl?: string | null;
+  total?: number;
+  hechos?: number;
+  enviables?: number;
+  noEnviables?: number;
+  actual?: string | null;
+  resultados?: ResultadoVerificado[];
+  porMotivo?: Record<string, number>;
+  error?: string | null;
+  detenerPedido?: boolean;
+}
+
 export interface BotItemCola {
   archivo: string;
   codigo: string;
@@ -163,6 +285,7 @@ export interface BotItemCola {
   email: string;
   firmante: string;
   orden: number;
+  colocacion?: ResumenColocacion | null;
 }
 
 export interface BotCola {
@@ -186,6 +309,7 @@ export interface EstadoArchivoFirma {
   detalle: string;
   enviadoAt: string | null;
   posicion: number | null;
+  colocacion?: ResumenColocacion | null;
 }
 
 export interface ResultadoEncolado {
@@ -218,6 +342,7 @@ export interface BotEnvioRegistro {
   estado: string;
   detalle: string;
   updatedAt: string;
+  colocacion?: ResumenColocacion | null;
 }
 
 class DropboxSignBotAPI {
@@ -263,6 +388,37 @@ class DropboxSignBotAPI {
   async estadoArchivos(archivos: string[]): Promise<EstadoArchivoFirma[]> {
     if (archivos.length === 0) return [];
     const { data } = await axios.post("/dropbox-sign/bot/estado-archivos", { archivos });
+    return data;
+  }
+
+  /* Reglas de colocación y verificación visual. */
+  async reglas(): Promise<ReglasColocacion> {
+    const { data } = await axios.get("/dropbox-sign/bot/reglas");
+    return data;
+  }
+  async guardarReglas(reglas: ReglaColocacion[]): Promise<ReglasColocacion> {
+    const { data } = await axios.put("/dropbox-sign/bot/reglas", { reglas });
+    return data;
+  }
+  async restaurarReglas(): Promise<ReglasColocacion> {
+    const { data } = await axios.put("/dropbox-sign/bot/reglas", { restaurar: true });
+    return data;
+  }
+  /** Baja el PDF del Outbox, detecta el ancla y devuelve la página renderizada: tarda unos segundos. */
+  async previsualizar(archivo: string): Promise<PrevisualizacionColocacion> {
+    const { data } = await axios.post("/dropbox-sign/bot/colocacion/previsualizar", { archivo }, { timeout: 180000 });
+    return data;
+  }
+  async verificarTodos(alcance: AlcanceVerificacion): Promise<{ arrancada: boolean; total: number }> {
+    const { data } = await axios.post("/dropbox-sign/bot/colocacion/verificar-todos", { alcance }, { timeout: 120000 });
+    return data;
+  }
+  async verificacion(): Promise<Verificacion> {
+    const { data } = await axios.get("/dropbox-sign/bot/colocacion/verificacion");
+    return data;
+  }
+  async detenerVerificacion(): Promise<{ ok: boolean; motivo?: string }> {
+    const { data } = await axios.post("/dropbox-sign/bot/colocacion/verificacion/detener");
     return data;
   }
 }
