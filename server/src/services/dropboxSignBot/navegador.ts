@@ -4,6 +4,7 @@ import { decryptSecret, encryptSecret } from "../../utils/secretCrypto.js";
 import { rutaChromium, errorDeChromium } from "../arca/navegador.js";
 import { clasificarPantalla, type PantallaDropboxSign } from "./clasificarPantalla.js";
 import { VIEWPORT } from "./reglas.js";
+import { soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 
 /**
  * UN CHROMIUM EN EL SERVIDOR CON LA SESIÓN DE DROPBOX SIGN (patrón `arca/navegador.ts`).
@@ -48,6 +49,25 @@ export async function guardarSesion(tenantId: string, ctx: BrowserContext): Prom
 }
 
 export const anotarError = (tenantId: string, mensaje: string | null) => Tenant.findByIdAndUpdate(tenantId, { $set: { [`${BASE}.ultimoError`]: mensaje } }).catch(() => {});
+
+/**
+ * EL ESTADO DE LA CONEXIÓN CON DROPBOX SIGN (pedido del 23/10/2026: «parece caída y no se ve»). Cada
+ * vez que el bot abre el navegador —en una corrida o con «Probar conexión»— queda registrado si llegó
+ * al listado de documentos y cómo (sesión guardada o usuario y contraseña), o por qué no. Es lo que la
+ * tarjeta y el tab muestran como «Conectada» / «Caída».
+ */
+export interface ConexionDropboxSign {
+  estado: "ok" | "caida";
+  probadaAt: Date;
+  /** Cómo entró (o intentó entrar). */
+  via: "sesion" | "login" | "";
+  /** En qué pantalla quedó. */
+  pantalla: PantallaDropboxSign | "";
+  detalle: string;
+}
+
+export const anotarConexion = (tenantId: string, conexion: Omit<ConexionDropboxSign, "probadaAt">) =>
+  Tenant.findByIdAndUpdate(tenantId, { $set: { [`${BASE}.conexion`]: { ...conexion, probadaAt: new Date() } } }).catch(() => {});
 
 export async function textoDe(page: Page): Promise<string> {
   return page.evaluate(() => document.body?.innerText || "").catch(() => "");
@@ -108,6 +128,7 @@ export async function abrirSesionDropboxSign(tenantId: string, opciones: { visib
   } catch (e: any) {
     const err = errorDeChromium(e);
     await anotarError(tenantId, err.message);
+    await anotarConexion(tenantId, { estado: "caida", via: "", pantalla: "", detalle: err.message });
     throw err;
   }
   const ctx = await browser.newContext({ ...(cfg.sesion ? { storageState: cfg.sesion } : {}), viewport: { ...VIEWPORT }, locale: "es-AR" });
@@ -118,6 +139,7 @@ export async function abrirSesionDropboxSign(tenantId: string, opciones: { visib
   let pantalla = await pantallaDe(page);
   if (pantalla === "manage") {
     void guardarSesion(tenantId, ctx).catch(() => {});
+    await anotarConexion(tenantId, { estado: "ok", via: "sesion", pantalla, detalle: cfg.sesion ? "Entró con la sesión guardada." : "Entró sin sesión guardada (ya estaba logueado)." });
     return { browser, ctx, page, seLogueo: false, pantalla };
   }
   if (opciones.sinLogin) return { browser, ctx, page, seLogueo: false, pantalla };
@@ -130,10 +152,33 @@ export async function abrirSesionDropboxSign(tenantId: string, opciones: { visib
     if (pantalla !== "manage") throw new Error(`Después del login no se llegó al listado de documentos (pantalla: ${pantalla}).`);
     await guardarSesion(tenantId, ctx);
     await Tenant.findByIdAndUpdate(tenantId, { $set: { [`${BASE}.ultimoLoginAt`]: new Date(), [`${BASE}.ultimoError`]: null } });
+    await anotarConexion(tenantId, { estado: "ok", via: "login", pantalla, detalle: cfg.sesion ? "La sesión guardada había vencido: entró con usuario y contraseña y la renovó." : "Entró con usuario y contraseña y guardó la sesión." });
     return { browser, ctx, page, seLogueo: true, pantalla };
   } catch (e: any) {
-    await anotarError(tenantId, e?.message || String(e));
+    const detalle = e?.message || String(e);
+    await anotarError(tenantId, detalle);
+    await anotarConexion(tenantId, { estado: "caida", via: "login", pantalla: await pantallaDe(page).catch(() => "" as const), detalle: `${cfg.sesion ? "La sesión guardada no sirvió y el login tampoco: " : "Sin sesión guardada, el login falló: "}${detalle}` });
     await browser.close().catch(() => {});
     throw e;
   }
+}
+
+/**
+ * «PROBAR CONEXIÓN»: abre el navegador, intenta llegar al listado de documentos (sesión guardada o
+ * usuario y contraseña) y lo cierra. No toca ningún documento. Deja registrado el resultado como una
+ * corrida más. Pide el candado: no corre mientras hay una tanda en curso.
+ */
+export async function probarConexionDropboxSign(tenantId: string): Promise<ConexionDropboxSign> {
+  tomarCandadoDropboxSign(tenantId, false);
+  try {
+    const sesion = await abrirSesionDropboxSign(tenantId);
+    await guardarSesion(tenantId, sesion.ctx).catch(() => {});
+    await sesion.browser.close().catch(() => {});
+  } catch {
+    /* el motivo ya quedó anotado en `conexion` y en `ultimoError` */
+  } finally {
+    soltarCandadoDropboxSign(tenantId);
+  }
+  const t: any = await Tenant.findById(tenantId).select(`${BASE}.conexion`).lean();
+  return t?.integrations?.dropboxSign?.bot?.conexion || { estado: "caida", probadaAt: new Date(), via: "", pantalla: "", detalle: "No se pudo registrar el resultado." };
 }

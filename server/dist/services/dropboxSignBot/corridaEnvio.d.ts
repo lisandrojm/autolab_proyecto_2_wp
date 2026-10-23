@@ -80,6 +80,8 @@ export interface EstadoArchivo {
     posicion: number | null;
     /** La última detección del ancla de la firma (✓/✗ con página, rótulo y motivo), si se hizo. */
     colocacion: ResumenColocacion | null;
+    /** Cuándo saldría según el scheduler (ISO), si está en la cola y el envío automático está activo. */
+    estimadoAt: string | null;
 }
 /** El estado de cada archivo del listado del tab: una query por lote, sin tocar Dropbox. */
 export declare function estadoDeArchivos(tenantId: string, archivos: string[]): Promise<EstadoArchivo[]>;

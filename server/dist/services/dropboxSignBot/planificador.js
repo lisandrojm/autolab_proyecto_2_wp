@@ -7,6 +7,66 @@ export function fechaYHoraArgentina(ahora) {
     const de = (t) => partes.find((p) => p.type === t)?.value || "";
     return { fecha: `${de("year")}-${de("month")}-${de("day")}`, hora: Number(de("hour")) % 24 };
 }
+/** Argentina no tiene horario de verano desde 2009: UTC-3 fijo. */
+const OFFSET_AR_HORAS = 3;
+/** El instante de «ese día (YYYY-MM-DD) a esa hora, en Argentina». */
+export function instanteArgentino(fecha, hora, minutos = 0) {
+    const [y, m, d] = fecha.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d, hora + OFFSET_AR_HORAS, minutos, 0, 0));
+}
+const diaSiguiente = (fecha) => {
+    const [y, m, d] = fecha.split("-").map(Number);
+    const t = new Date(Date.UTC(y, m - 1, d + 1));
+    return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, "0")}-${String(t.getUTCDate()).padStart(2, "0")}`;
+};
+/**
+ * CUÁNDO SALDRÍA CADA ÍTEM DE LA COLA (la cuenta regresiva del tab, 22/10/2026): se simula el
+ * scheduler hacia adelante —tandas de `tamanoTanda` cada `intervaloHoras`, dentro de la ventana
+ * horaria, sin pasar el tope diario y después del enfriamiento— y se le asigna a cada ítem, por
+ * orden, la hora de arranque de la tanda que lo lleva. Con el envío automático apagado no hay
+ * estimación (sale cuando alguien aprieta «Enviar tanda ahora»). Es una estimación: una corrida
+ * manual, un cambio de configuración o un freno de Dropbox Sign la mueven.
+ */
+export function estimarEnvios(enCola, config, estado, ahora) {
+    const res = new Map();
+    if (!config.activo || enCola.length === 0)
+        return res;
+    const ordenados = [...enCola].sort((a, b) => a.orden - b.orden || a.archivo.localeCompare(b.archivo));
+    const tanda = Math.max(1, Math.min(config.tamanoTanda, config.topeDiario));
+    const intervaloMs = Math.max(0.5, config.intervaloHoras) * 3600_000;
+    // Enviados por día, arrancando con los de hoy.
+    const hoy = fechaYHoraArgentina(ahora);
+    const enviadosPorDia = new Map([[hoy.fecha, estado.contadorDia?.fecha === hoy.fecha ? estado.contadorDia.enviados || 0 : 0]]);
+    let t = new Date(ahora.getTime());
+    if (estado.enfriadoHasta && estado.enfriadoHasta.getTime() > t.getTime())
+        t = new Date(estado.enfriadoHasta.getTime());
+    if (estado.ultimaCorridaAt)
+        t = new Date(Math.max(t.getTime(), estado.ultimaCorridaAt.getTime() + intervaloMs));
+    let i = 0;
+    for (let vueltas = 0; i < ordenados.length && vueltas < 2000; vueltas++) {
+        const { fecha, hora } = fechaYHoraArgentina(t);
+        if (hora < config.horaDesde) {
+            t = instanteArgentino(fecha, config.horaDesde);
+            continue;
+        }
+        if (hora >= config.horaHasta) {
+            t = instanteArgentino(diaSiguiente(fecha), config.horaDesde);
+            continue;
+        }
+        const cupo = config.topeDiario - (enviadosPorDia.get(fecha) || 0);
+        if (cupo <= 0) {
+            t = instanteArgentino(diaSiguiente(fecha), config.horaDesde);
+            continue;
+        }
+        const n = Math.min(tanda, cupo, ordenados.length - i);
+        for (let k = 0; k < n; k++)
+            res.set(ordenados[i + k].codigo, new Date(t.getTime()));
+        enviadosPorDia.set(fecha, (enviadosPorDia.get(fecha) || 0) + n);
+        i += n;
+        t = new Date(t.getTime() + intervaloMs);
+    }
+    return res;
+}
 export const cupoDelDia = (config, estado, ahora) => {
     const { fecha } = fechaYHoraArgentina(ahora);
     const enviadosHoy = estado.contadorDia?.fecha === fecha ? estado.contadorDia.enviados || 0 : 0;

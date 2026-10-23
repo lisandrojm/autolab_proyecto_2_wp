@@ -6,7 +6,7 @@ import { Tenant } from "../models/Tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
 import { leerCasillaDropboxSign, registrarLectura } from "../services/dropboxSignMailService.js";
 import { armarCola, arrancarCorridaEnvio, configDelTenant, corridaEnvioDe, desencolar, detenerCorridaEnvio, enSecoForzado, encolar, estadoDeArchivos } from "../services/dropboxSignBot/corridaEnvio.js";
-import { cupoDelDia, fechaYHoraArgentina, puedeCorrer } from "../services/dropboxSignBot/planificador.js";
+import { cupoDelDia, estimarEnvios, fechaYHoraArgentina, puedeCorrer } from "../services/dropboxSignBot/planificador.js";
 import { DropboxSignEnvio } from "../models/DropboxSignEnvio.js";
 import { DropboxSignEnvioLog } from "../models/DropboxSignEnvioLog.js";
 import { guardarReglasDelTenant, reglasDelTenant } from "../services/dropboxSignBot/reglasTenant.js";
@@ -153,6 +153,9 @@ async function configDelBotParaUi(tenantId) {
     const corrida = corridaEnvioDe(tenantId);
     const ahora = new Date();
     const puede = puedeCorrer(config, estado, ahora);
+    // Cuándo arrancaría la próxima tanda automática: la estimación del primer ítem de la cola.
+    const primero = config.activo ? await DropboxSignEnvio.findOne({ tenantId, estado: { $in: ["en_cola", "limite"] } }).sort({ orden: 1 }).select("codigo archivo orden").lean() : null;
+    const proximaCorridaAt = primero ? estimarEnvios([{ archivo: primero.archivo, codigo: primero.codigo, tipo: "", email: "", firmante: "", orden: Number(primero.orden) || 0 }], config, estado, ahora).get(primero.codigo) || null : null;
     return {
         loginEmail: bot.loginEmail || "",
         tienePassword: !!bot.loginPasswordEnc,
@@ -168,6 +171,7 @@ async function configDelBotParaUi(tenantId) {
         ultimaCorrida: bot.ultimaCorrida || null,
         ultimoError: bot.ultimoError || null,
         proximaCorrida: puede.ok ? "Le toca en el próximo minuto del scheduler." : puede.motivo || "",
+        proximaCorridaAt,
         corriendo: !!corrida && !corrida.terminada,
         enSecoForzado: enSecoForzado(),
     };

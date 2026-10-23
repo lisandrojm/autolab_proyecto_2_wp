@@ -8,7 +8,7 @@ import { DropboxSignEnvio } from "../../models/DropboxSignEnvio.js";
 import { DropboxSignEnvioLog } from "../../models/DropboxSignEnvioLog.js";
 import { leerAnclas } from "../../utils/anclasNombre.js";
 import { abrirOcr } from "../../utils/ocrPaginas.js";
-import { CONFIG_POR_DEFECTO, fechaYHoraArgentina, planificar, puedeCorrer, validarEncolado } from "./planificador.js";
+import { CONFIG_POR_DEFECTO, estimarEnvios, fechaYHoraArgentina, planificar, puedeCorrer, validarEncolado } from "./planificador.js";
 import { esTextoDeLimite, guardDeEnvio } from "./reglas.js";
 import { pantallaAPdf, pdfAPantalla, reglaDe } from "../../compartido/reglasColocacionFirma.js";
 import { abrirSesionDropboxSign, anotarError, guardarSesion } from "./navegador.js";
@@ -128,17 +128,19 @@ export async function estadoDeArchivos(tenantId, archivos) {
     const codigoDe = new Map(archivos.map((a) => [a, leerAnclas(a).codigo]));
     const codigos = [...new Set([...codigoDe.values()].filter(Boolean))];
     const registros = new Map((await DropboxSignEnvio.find({ tenantId, codigo: { $in: codigos } }).lean()).map((r) => [r.codigo, r]));
-    const enCola = await DropboxSignEnvio.find({ tenantId, estado: { $in: ["en_cola", "limite"] } }).sort({ orden: 1 }).select("codigo").lean();
+    const enCola = await DropboxSignEnvio.find({ tenantId, estado: { $in: ["en_cola", "limite"] } }).sort({ orden: 1 }).select("codigo archivo orden").lean();
     const posicion = new Map(enCola.map((r, i) => [r.codigo, i + 1]));
+    const { config, estado: throttle } = await configDelTenant(tenantId);
+    const estimados = estimarEnvios(enCola.map(itemDe), config, throttle, new Date());
     const corrida = corridas.get(tenantId);
     const actual = corrida && !corrida.terminada ? corrida.actual : null;
     return archivos.map((archivo) => {
         const codigo = codigoDe.get(archivo) || "";
         const r = registros.get(codigo);
         if (!r)
-            return { archivo, codigo, estado: "", detalle: "", enviadoAt: null, posicion: null, colocacion: null };
+            return { archivo, codigo, estado: "", detalle: "", enviadoAt: null, posicion: null, colocacion: null, estimadoAt: null };
         const estado = archivo === actual ? "enviando" : r.estado === "en_cola" && r.probadoEnSecoAt ? "seco" : r.estado;
-        return { archivo, codigo, estado, detalle: r.detalle || "", enviadoAt: r.enviadoAt ? new Date(r.enviadoAt).toISOString() : null, posicion: posicion.get(codigo) ?? null, colocacion: r.colocacion || null };
+        return { archivo, codigo, estado, detalle: r.detalle || "", enviadoAt: r.enviadoAt ? new Date(r.enviadoAt).toISOString() : null, posicion: posicion.get(codigo) ?? null, colocacion: r.colocacion || null, estimadoAt: estimados.get(codigo)?.toISOString() || null };
     });
 }
 /** Qué enviaría la próxima tanda: la cola contra el Outbox, planificada. No envía nada. */
@@ -147,7 +149,11 @@ export async function armarCola(tenantId, opciones = {}) {
     const { outbox, archivos } = await leerOutbox(tenantId);
     const enCola = await DropboxSignEnvio.find({ tenantId, estado: { $in: ["en_cola", "limite"] } }).sort({ orden: 1 }).lean();
     const ahora = new Date();
-    const plan = planificar(enCola.map(itemDe), new Set(archivos), config, estado, ahora);
+    const items = enCola.map(itemDe);
+    const estimados = estimarEnvios(items, config, estado, ahora);
+    for (const it of items)
+        it.estimadoAt = estimados.get(it.codigo) || null;
+    const plan = planificar(items, new Set(archivos), config, estado, ahora);
     const puede = puedeCorrer(config, estado, ahora, opciones);
     return { ...plan, outbox, archivosEnOutbox: archivos.length, enCola: enCola.length, motivoNoCorre: puede.ok ? null : puede.motivo || "No se puede correr ahora." };
 }

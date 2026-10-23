@@ -15,13 +15,31 @@ import { sweetAlert } from "../../utils/sweetAlert";
 const POLL_MS = 4000;
 const fmt = (iso?: string | null) => (iso ? new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
 
-/** Cuenta regresiva corta («1 h 20 min»), o "" si ya pasó. */
-const faltan = (iso: string | null | undefined, ahora: number): string => {
+/** Cuenta regresiva corta («2 d 5 h», «1 h 20 min», «15 min»), o "" si ya pasó. */
+export const faltan = (iso: string | null | undefined, ahora: number): string => {
   if (!iso) return "";
   const ms = new Date(iso).getTime() - ahora;
   if (ms <= 0) return "";
   const min = Math.ceil(ms / 60000);
-  return min >= 60 ? `${Math.floor(min / 60)} h ${min % 60} min` : `${min} min`;
+  const d = Math.floor(min / 1440);
+  const h = Math.floor((min % 1440) / 60);
+  const m = min % 60;
+  if (d > 0) return `${d} d ${h} h`;
+  if (h > 0) return `${h} h ${m} min`;
+  return `${m} min`;
+};
+
+/*
+  CUÁNDO SALE CADA ARCHIVO (pedido del 22/10/2026): el server simula el scheduler (tanda, intervalo,
+  ventana horaria, tope diario, enfriamiento) y le asigna a cada ítem de la cola la hora de su tanda
+  (`estimadoAt`). Acá se muestra como cuenta regresiva en días, horas y minutos. Es una estimación:
+  una tanda manual, un cambio de configuración o un freno de Dropbox Sign la corren.
+*/
+const EXPLICACION_ESTIMADO = "Estimado con la tanda, el intervalo, la ventana horaria y el tope diario configurados. Una tanda manual o un freno de Dropbox Sign lo cambian.";
+const cuandoSale = (iso: string | null | undefined, ahora: number): string => {
+  if (!iso) return "";
+  const f = faltan(iso, ahora);
+  return f ? ` · en ${f}` : " · en la próxima tanda";
 };
 
 /** Todo lo que el tab necesita del bot: config, estados por archivo, corrida en vivo y las acciones. */
@@ -30,8 +48,14 @@ export function useBotFirma(archivos: string[], activo: boolean) {
   const [estados, setEstados] = useState<Map<string, EstadoArchivoFirma>>(new Map());
   const [corrida, setCorrida] = useState<BotCorrida | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+  /** Un reloj de 30 s para las cuentas regresivas de los badges. */
+  const [ahora, setAhora] = useState(Date.now());
   const intervalo = useRef<number | null>(null);
   const nombres = useMemo(() => archivos.join("\n"), [archivos]);
+  useEffect(() => {
+    const t = window.setInterval(() => setAhora(Date.now()), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
 
   const cargarEstados = useCallback(async () => {
     if (!activo || archivos.length === 0) {
@@ -174,7 +198,7 @@ export function useBotFirma(archivos: string[], activo: boolean) {
     if (!r.ok) sweetAlert.info("No hay nada que detener", r.motivo || "");
   };
 
-  return { cfg, estados, corrida, ocupado, enviarALaFirma, encolarTodo, quitarDeLaCola, enviarTandaAhora, detener, refrescar };
+  return { cfg, estados, corrida, ocupado, ahora, enviarALaFirma, encolarTodo, quitarDeLaCola, enviarTandaAhora, detener, refrescar };
 }
 
 /**
@@ -187,30 +211,32 @@ const IndicadorAncla: React.FC<{ e: EstadoArchivoFirma }> = ({ e }) => {
   return <FontAwesomeIcon icon={faCrosshairs} className={`h-3 w-3 ${c.ok ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`} title={c.ok ? `Firma sobre «${c.rotulo}» en la pág. ${c.pagina} (verificado ${fmt(c.verificadaAt)})` : `Sin ancla: ${c.motivo}`} />;
 };
 
-/** El badge de la columna «Firma», con el ✓/✗ del ancla al lado. */
-export const BadgeFirma: React.FC<{ e?: EstadoArchivoFirma }> = ({ e }) => {
+/** El badge de la columna «Firma», con la cuenta regresiva y el ✓/✗ del ancla al lado. */
+export const BadgeFirma: React.FC<{ e?: EstadoArchivoFirma; ahora?: number }> = ({ e, ahora }) => {
   if (!e || !e.estado) return <span className="text-xs text-gray-400">—</span>;
   return (
     <span className="inline-flex items-center gap-1.5">
-      {badgeDe(e)}
+      {badgeDe(e, ahora ?? Date.now())}
       <IndicadorAncla e={e} />
     </span>
   );
 };
 
-const badgeDe = (e: EstadoArchivoFirma): React.ReactNode => {
+const badgeDe = (e: EstadoArchivoFirma, ahora: number): React.ReactNode => {
   const base = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap";
+  const sale = cuandoSale(e.estimadoAt, ahora);
+  const tituloCola = e.estimadoAt ? `Sale aprox. ${fmt(e.estimadoAt)}. ${EXPLICACION_ESTIMADO}` : e.detalle || "Sale cuando alguien aprieta «Enviar tanda ahora» (el envío automático está desactivado)";
   switch (e.estado) {
     case "en_cola":
-      return <span className={`${base} border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300`} title={e.detalle}>En cola{e.posicion ? ` (#${e.posicion})` : ""}</span>;
+      return <span className={`${base} border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300`} title={tituloCola}>En cola{e.posicion ? ` (#${e.posicion})` : ""}{sale}</span>;
     case "seco":
-      return <span className={`${base} border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300`} title={e.detalle}>[SECO] listo{e.posicion ? ` (#${e.posicion})` : ""}</span>;
+      return <span className={`${base} border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300`} title={tituloCola}>[SECO] listo{e.posicion ? ` (#${e.posicion})` : ""}{sale}</span>;
     case "enviando":
       return <span className={`${base} border-purple-200 bg-purple-50 text-purple-700 dark:border-purple-800 dark:bg-purple-900/30 dark:text-purple-300`}><FontAwesomeIcon icon={faSpinner} spin className="h-3 w-3" /> Enviando…</span>;
     case "enviado":
       return <span className={`${base} border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300`} title={e.detalle}><FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" /> Enviado {fmt(e.enviadoAt)}</span>;
     case "limite":
-      return <span className={`${base} border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300`} title={e.detalle}><FontAwesomeIcon icon={faHourglassHalf} className="h-3 w-3" /> Límite — reintenta</span>;
+      return <span className={`${base} border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300`} title={e.estimadoAt ? `${e.detalle} Reintento aprox. ${fmt(e.estimadoAt)}.` : e.detalle}><FontAwesomeIcon icon={faHourglassHalf} className="h-3 w-3" /> Límite — reintenta{sale}</span>;
     case "error":
       return <span className={`${base} border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300`} title={e.detalle}>Error</span>;
     case "requiere_revision":
@@ -245,16 +271,19 @@ export const PanelBotFirma: React.FC<{ bot: ReturnType<typeof useBotFirma>; enCo
         <span>
           En cola <strong>{enCola}</strong>
         </span>
-        <span className="inline-flex items-center gap-1">
-          <FontAwesomeIcon icon={faClock} className="text-gray-400" /> {cfg.envio.activo ? cfg.proximaCorrida : "Envío automático desactivado"}
+        <span className="inline-flex items-center gap-1" title={cfg.envio.activo ? `${cfg.proximaCorrida} ${cfg.proximaCorridaAt ? EXPLICACION_ESTIMADO : ""}` : undefined}>
+          <FontAwesomeIcon icon={faClock} className="text-gray-400" />{" "}
+          {!cfg.envio.activo ? "Envío automático desactivado" : cfg.proximaCorridaAt ? `Próxima tanda ${faltan(cfg.proximaCorridaAt, ahora) ? `en ${faltan(cfg.proximaCorridaAt, ahora)}` : "en el próximo minuto"} (${fmt(cfg.proximaCorridaAt)})` : cfg.proximaCorrida}
         </span>
         {enfriando && (
           <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300 font-semibold">
             <FontAwesomeIcon icon={faHourglassHalf} /> Enfriamiento: {enfriando}
           </span>
         )}
-        <span>
-          Sesión: {cfg.tieneSesion ? <span className="text-green-600 dark:text-green-400 font-semibold">guardada</span> : <span className="text-red-600 dark:text-red-400 font-semibold">no hay</span>}
+        <span title={cfg.conexion ? `${cfg.conexion.detalle} (probada ${fmt(cfg.conexion.probadaAt)})` : "El bot todavía no abrió Dropbox Sign"}>
+          Conexión con Dropbox Sign:{" "}
+          {cfg.conexion?.estado === "ok" ? <span className="text-green-600 dark:text-green-400 font-semibold">conectada</span> : cfg.conexion?.estado === "caida" ? <span className="text-red-600 dark:text-red-400 font-semibold">caída ({fmt(cfg.conexion.probadaAt)})</span> : <span className="text-gray-500 font-semibold">sin probar</span>}
+          {" · "}sesión {cfg.tieneSesion ? <span className="text-green-600 dark:text-green-400 font-semibold">guardada</span> : <span className="text-red-600 dark:text-red-400 font-semibold">no hay</span>}
         </span>
         <Link to="/dropbox-sign" className="ml-auto inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold">
           <FontAwesomeIcon icon={faGear} /> Configuración

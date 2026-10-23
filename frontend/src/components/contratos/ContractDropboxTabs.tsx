@@ -462,7 +462,7 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
                     <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtTamanio(e.size)}</td>
                     {tipo === "para_firmar" && (
                       <td className="px-4 py-3">
-                        <BadgeFirma e={bot.estados.get(e.name)} />
+                        <BadgeFirma e={bot.estados.get(e.name)} ahora={bot.ahora} />
                       </td>
                     )}
                     <td className="px-4 py-3">

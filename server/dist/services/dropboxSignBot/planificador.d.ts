@@ -41,6 +41,8 @@ export interface ItemEnCola {
         motivo: string;
         verificadaAt: Date;
     } | null;
+    /** Cuándo saldría según la simulación del scheduler (`estimarEnvios`), si el envío automático está activo. */
+    estimadoAt?: Date | null;
 }
 export interface Candidato extends ItemEnCola {
 }
@@ -58,6 +60,17 @@ export declare function fechaYHoraArgentina(ahora: Date): {
     fecha: string;
     hora: number;
 };
+/** El instante de «ese día (YYYY-MM-DD) a esa hora, en Argentina». */
+export declare function instanteArgentino(fecha: string, hora: number, minutos?: number): Date;
+/**
+ * CUÁNDO SALDRÍA CADA ÍTEM DE LA COLA (la cuenta regresiva del tab, 22/10/2026): se simula el
+ * scheduler hacia adelante —tandas de `tamanoTanda` cada `intervaloHoras`, dentro de la ventana
+ * horaria, sin pasar el tope diario y después del enfriamiento— y se le asigna a cada ítem, por
+ * orden, la hora de arranque de la tanda que lo lleva. Con el envío automático apagado no hay
+ * estimación (sale cuando alguien aprieta «Enviar tanda ahora»). Es una estimación: una corrida
+ * manual, un cambio de configuración o un freno de Dropbox Sign la mueven.
+ */
+export declare function estimarEnvios(enCola: ItemEnCola[], config: ConfigEnvio, estado: EstadoThrottle, ahora: Date): Map<string, Date>;
 export declare const cupoDelDia: (config: ConfigEnvio, estado: EstadoThrottle, ahora: Date) => number;
 /**
  * ¿Le toca correr al scheduler ahora? Devuelve el motivo si no. (El botón «Enviar a la firma» no pasa

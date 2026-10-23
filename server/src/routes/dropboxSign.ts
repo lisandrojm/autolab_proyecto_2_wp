@@ -6,12 +6,13 @@ import { Tenant } from "../models/Tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
 import { leerCasillaDropboxSign, registrarLectura } from "../services/dropboxSignMailService.js";
 import { armarCola, arrancarCorridaEnvio, configDelTenant, corridaEnvioDe, desencolar, detenerCorridaEnvio, enSecoForzado, encolar, estadoDeArchivos } from "../services/dropboxSignBot/corridaEnvio.js";
-import { cupoDelDia, fechaYHoraArgentina, puedeCorrer } from "../services/dropboxSignBot/planificador.js";
+import { cupoDelDia, estimarEnvios, fechaYHoraArgentina, puedeCorrer } from "../services/dropboxSignBot/planificador.js";
 import { DropboxSignEnvio } from "../models/DropboxSignEnvio.js";
 import { DropboxSignEnvioLog } from "../models/DropboxSignEnvioLog.js";
 import { guardarReglasDelTenant, reglasDelTenant } from "../services/dropboxSignBot/reglasTenant.js";
 import { arrancarVerificacion, detenerVerificacion, previsualizarColocacion, verificacionDe, type AlcanceVerificacion } from "../services/dropboxSignBot/colocacion.js";
 import { REGLAS_BASE, TIPOS_ANCLA } from "../compartido/reglasColocacionFirma.js";
+import { probarConexionDropboxSign } from "../services/dropboxSignBot/navegador.js";
 
 /**
  * Configuración de "DropboxSign | Firmas": la casilla de correo que recibe las copias de
@@ -162,6 +163,9 @@ async function configDelBotParaUi(tenantId: string) {
   const corrida = corridaEnvioDe(tenantId);
   const ahora = new Date();
   const puede = puedeCorrer(config, estado, ahora);
+  // Cuándo arrancaría la próxima tanda automática: la estimación del primer ítem de la cola.
+  const primero: any = config.activo ? await DropboxSignEnvio.findOne({ tenantId, estado: { $in: ["en_cola", "limite"] } }).sort({ orden: 1 }).select("codigo archivo orden").lean() : null;
+  const proximaCorridaAt = primero ? estimarEnvios([{ archivo: primero.archivo, codigo: primero.codigo, tipo: "", email: "", firmante: "", orden: Number(primero.orden) || 0 }], config, estado, ahora).get(primero.codigo) || null : null;
   return {
     loginEmail: bot.loginEmail || "",
     tienePassword: !!bot.loginPasswordEnc,
@@ -176,7 +180,9 @@ async function configDelBotParaUi(tenantId: string) {
     ultimaCorridaAt: estado.ultimaCorridaAt,
     ultimaCorrida: bot.ultimaCorrida || null,
     ultimoError: bot.ultimoError || null,
+    conexion: bot.conexion || null,
     proximaCorrida: puede.ok ? "Le toca en el próximo minuto del scheduler." : puede.motivo || "",
+    proximaCorridaAt,
     corriendo: !!corrida && !corrida.terminada,
     enSecoForzado: enSecoForzado(),
   };
@@ -213,6 +219,17 @@ router.put("/bot/config", async (req: AuthenticatedRequest & TenantRequest, res)
   } catch (error: any) {
     console.error("Dropbox Sign bot save error:", error);
     res.status(500).json({ error: error?.message || "Internal server error" });
+  }
+});
+
+/** POST /bot/conexion/probar — abre el navegador, entra a Dropbox Sign y lo cierra (solo admin). No envía nada. */
+router.post("/bot/conexion/probar", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede probar la conexión." });
+    const conexion = await probarConexionDropboxSign(String(req.tenantObjectId));
+    res.json({ conexion });
+  } catch (error: any) {
+    res.status(error?.status || 500).json({ error: error?.message || "No se pudo probar la conexión." });
   }
 });
 

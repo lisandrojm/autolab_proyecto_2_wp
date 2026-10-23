@@ -240,6 +240,8 @@ export interface ITenant extends Document {
         /** Las reglas de colocación de la firma editadas por el tenant (ver `compartido/reglasColocacionFirma.ts`). Sin esto rige el catálogo. */
         reglasColocacion?: any[];
         reglasColocacionAt?: Date | null;
+        /** Última vez que el bot abrió Dropbox Sign: si llegó al listado y cómo, o por qué no (ver `navegador.ts`). */
+        conexion?: { estado: "ok" | "caida"; probadaAt: Date; via: string; pantalla: string; detalle: string } | null;
       };
       imapHost?: string;
       imapPort?: number;
@@ -452,6 +454,7 @@ const tenantSchema = new Schema<ITenant>(
           ultimaCorrida: { type: Schema.Types.Mixed },
           reglasColocacion: { type: Schema.Types.Mixed },
           reglasColocacionAt: { type: Date, default: null },
+          conexion: { type: Schema.Types.Mixed, default: null },
         },
         imapHost: { type: String },
         imapPort: { type: Number, default: 993 },

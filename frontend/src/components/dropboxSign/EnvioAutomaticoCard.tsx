@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faCheck, faPaperPlane, faStop, faListUl, faListCheck, faTriangleExclamation, faCircleCheck, faCircleXmark, faRobot, faFlask, faEye } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faCheck, faPaperPlane, faStop, faListUl, faListCheck, faTriangleExclamation, faCircleCheck, faCircleXmark, faRobot, faFlask, faEye, faPlug, faCircleQuestion } from "@fortawesome/free-solid-svg-icons";
 import { dropboxSignBotAPI, type BotConfig, type BotCola, type BotCorrida, type BotLog, type BotEnvioRegistro, type BotLinea } from "../../api/dropboxSign";
 import { InfoModal } from "../ui/InfoModal";
 import { sweetAlert } from "../../utils/sweetAlert";
@@ -44,6 +44,7 @@ export const EnvioAutomaticoCard: React.FC = () => {
   const [guardando, setGuardando] = useState(false);
   const [corrida, setCorrida] = useState<BotCorrida | null>(null);
   const [arrancando, setArrancando] = useState(false);
+  const [probandoConexion, setProbandoConexion] = useState(false);
   const [cola, setCola] = useState<{ abierta: boolean; cargando: boolean; datos: BotCola | null }>({ abierta: false, cargando: false, datos: null });
   const [logs, setLogs] = useState<{ abiertos: boolean; cargando: boolean; datos: { logs: BotLog[]; requierenRevision: BotEnvioRegistro[] } | null }>({ abiertos: false, cargando: false, datos: null });
   const [revision, setRevision] = useState<BotEnvioRegistro[]>([]);
@@ -132,6 +133,21 @@ export const EnvioAutomaticoCard: React.FC = () => {
     }
   };
 
+  /** «Probar conexión»: el navegador del servidor entra a Dropbox Sign y se cierra. No envía nada. */
+  const probarConexion = async () => {
+    setProbandoConexion(true);
+    try {
+      const { conexion } = await dropboxSignBotAPI.probarConexion();
+      if (conexion.estado === "ok") sweetAlert.success("Conectado", conexion.detalle);
+      else sweetAlert.error("Conexión caída", conexion.detalle);
+    } catch (e: any) {
+      sweetAlert.error("No se pudo probar", e?.response?.data?.error || e?.message || "");
+    } finally {
+      setProbandoConexion(false);
+      void cargar();
+    }
+  };
+
   const detener = async () => {
     try {
       const r = await dropboxSignBotAPI.detener();
@@ -196,6 +212,38 @@ export const EnvioAutomaticoCard: React.FC = () => {
           <input type="password" value={form.loginPassword} onChange={(e) => setForm((f) => ({ ...f, loginPassword: e.target.value }))} placeholder={cfg?.tienePassword ? "•••••••• (guardada — completá solo si la querés cambiar)" : "Se guarda cifrada; nunca vuelve al navegador"} className={inputClass} autoComplete="new-password" />
         </div>
       </div>
+      {/* EL ESTADO DE LA CONEXIÓN (23/10/2026): lo que pasó la última vez que el bot abrió Dropbox Sign, y un botón para probarlo ahora. */}
+      {cfg && (
+        <div className={`rounded-lg border p-3 text-xs space-y-1 ${cfg.conexion?.estado === "ok" ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20" : cfg.conexion?.estado === "caida" ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20" : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40"}`}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="flex items-center gap-2 text-sm font-bold">
+              <FontAwesomeIcon icon={faPlug} className={cfg.conexion?.estado === "ok" ? "text-green-600 dark:text-green-400" : cfg.conexion?.estado === "caida" ? "text-red-600 dark:text-red-400" : "text-gray-400"} />
+              <span className="text-gray-700 dark:text-gray-200">Conexión con Dropbox Sign:</span>
+              {cfg.conexion?.estado === "ok" ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-green-300 bg-white px-2 py-0.5 text-[11px] text-green-700 dark:border-green-700 dark:bg-green-950 dark:text-green-300">
+                  <FontAwesomeIcon icon={faCircleCheck} /> Conectada
+                </span>
+              ) : cfg.conexion?.estado === "caida" ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-red-300 bg-white px-2 py-0.5 text-[11px] text-red-700 dark:border-red-700 dark:bg-red-950 dark:text-red-300">
+                  <FontAwesomeIcon icon={faCircleXmark} /> Caída
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full border border-gray-300 bg-white px-2 py-0.5 text-[11px] text-gray-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                  <FontAwesomeIcon icon={faCircleQuestion} /> Sin probar
+                </span>
+              )}
+              {cfg.conexion && <span className="font-normal text-gray-500">· probada {fmt(cfg.conexion.probadaAt)}{cfg.conexion.via === "sesion" ? " · con la sesión guardada" : cfg.conexion.via === "login" ? " · con usuario y contraseña" : ""}</span>}
+            </p>
+            <button type="button" onClick={probarConexion} disabled={probandoConexion || corriendo || (!cfg.tieneSesion && !cfg.tienePassword)} title="Abre el navegador del servidor, entra a Dropbox Sign y lo cierra. No envía nada. Tarda entre 15 s y 1 min." className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
+              <FontAwesomeIcon icon={probandoConexion ? faSpinner : faPlug} spin={probandoConexion} /> {probandoConexion ? "Probando…" : "Probar conexión"}
+            </button>
+          </div>
+          {cfg.conexion?.estado === "caida" && <p className="break-words text-red-700 dark:text-red-300">{resumenDelError(cfg.conexion.detalle)}</p>}
+          {cfg.conexion?.estado === "ok" && <p className="text-green-700 dark:text-green-300">{cfg.conexion.detalle}</p>}
+          {!cfg.tieneSesion && !cfg.tienePassword && <p className="text-amber-700 dark:text-amber-300">No hay sesión guardada ni usuario y contraseña: el bot no tiene con qué entrar.</p>}
+        </div>
+      )}
+
       <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-3 text-xs text-gray-600 dark:text-gray-300 space-y-1">
         <p>
           Sesión guardada: {cfg?.tieneSesion ? <span className="text-green-600 dark:text-green-400 font-semibold">sí</span> : <span className="text-amber-600 dark:text-amber-400 font-semibold">no</span>}
@@ -366,7 +414,8 @@ export const EnvioAutomaticoCard: React.FC = () => {
                       <span className="font-mono">
                         #{t.orden} {t.archivo}
                       </span>{" "}
-                      → {t.firmante} ({t.email}) · {t.tipo} <IndicadorColocacion c={t.colocacion} />
+                      → {t.firmante} ({t.email}) · {t.tipo}
+                      {t.estimadoAt ? <span className="text-gray-500"> · sale aprox. {fmt(t.estimadoAt)}</span> : null} <IndicadorColocacion c={t.colocacion} />
                     </p>
                     <button type="button" onClick={() => setPreview(t.archivo)} className="shrink-0 font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400" title="Ver sobre el PDF dónde va la firma">
                       <FontAwesomeIcon icon={faEye} /> Previsualizar

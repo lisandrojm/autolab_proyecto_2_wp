@@ -95,6 +95,15 @@ export interface BotEnvioConfig {
   horaHasta: number;
 }
 
+/** Última vez que el bot abrió Dropbox Sign: si llegó al listado de documentos y cómo, o por qué no. */
+export interface ConexionBot {
+  estado: "ok" | "caida";
+  probadaAt: string;
+  via: "sesion" | "login" | "";
+  pantalla: string;
+  detalle: string;
+}
+
 export interface BotConfig {
   loginEmail: string;
   tienePassword: boolean;
@@ -110,7 +119,10 @@ export interface BotConfig {
   ultimaCorridaAt: string | null;
   ultimaCorrida: { arrancadaEl: string; fin: string; resultado: string; enviados: number; errores: number; limite: boolean; enSeco: boolean; total: number; automatica: boolean } | null;
   ultimoError: string | null;
+  conexion: ConexionBot | null;
   proximaCorrida: string;
+  /** Cuándo arrancaría la próxima tanda automática (ISO), si el envío automático está activo y hay cola. */
+  proximaCorridaAt: string | null;
   corriendo: boolean;
   enSecoForzado: boolean;
 }
@@ -286,6 +298,8 @@ export interface BotItemCola {
   firmante: string;
   orden: number;
   colocacion?: ResumenColocacion | null;
+  /** Cuándo saldría según el scheduler (ISO). */
+  estimadoAt?: string | null;
 }
 
 export interface BotCola {
@@ -310,6 +324,8 @@ export interface EstadoArchivoFirma {
   enviadoAt: string | null;
   posicion: number | null;
   colocacion?: ResumenColocacion | null;
+  /** Cuándo saldría según el scheduler (ISO): la cuenta regresiva del badge. Null sin envío automático. */
+  estimadoAt?: string | null;
 }
 
 export interface ResultadoEncolado {
@@ -357,6 +373,11 @@ class DropboxSignBotAPI {
   /** Lee el Outbox y dice qué enviaría la próxima tanda. Tarda (lista Dropbox y resuelve firmantes). */
   async cola(): Promise<BotCola> {
     const { data } = await axios.get("/dropbox-sign/bot/cola", { timeout: 120000 });
+    return data;
+  }
+  /** Abre el navegador del servidor, entra a Dropbox Sign y lo cierra. Tarda 15-60 s. No envía nada. */
+  async probarConexion(): Promise<{ conexion: ConexionBot }> {
+    const { data } = await axios.post("/dropbox-sign/bot/conexion/probar", {}, { timeout: 180000 });
     return data;
   }
   async arrancar(enSeco = false): Promise<{ arrancada: boolean; enSeco: boolean }> {

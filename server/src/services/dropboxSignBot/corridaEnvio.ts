@@ -8,7 +8,7 @@ import { DropboxSignEnvio, type EstadoEnvio, type ResumenColocacion } from "../.
 import { DropboxSignEnvioLog, type ILineaEnvio } from "../../models/DropboxSignEnvioLog.js";
 import { leerAnclas } from "../../utils/anclasNombre.js";
 import { abrirOcr } from "../../utils/ocrPaginas.js";
-import { CONFIG_POR_DEFECTO, fechaYHoraArgentina, planificar, puedeCorrer, validarEncolado, type Candidato, type ConfigEnvio, type EstadoThrottle, type ItemEnCola, type Plan } from "./planificador.js";
+import { CONFIG_POR_DEFECTO, estimarEnvios, fechaYHoraArgentina, planificar, puedeCorrer, validarEncolado, type Candidato, type ConfigEnvio, type EstadoThrottle, type ItemEnCola, type Plan } from "./planificador.js";
 import { esTextoDeLimite, guardDeEnvio } from "./reglas.js";
 import { pantallaAPdf, pdfAPantalla, reglaDe, type Colocacion } from "../../compartido/reglasColocacionFirma.js";
 import { abrirSesionDropboxSign, anotarError, guardarSesion, type SesionDropboxSign } from "./navegador.js";
@@ -175,6 +175,8 @@ export interface EstadoArchivo {
   posicion: number | null;
   /** La última detección del ancla de la firma (✓/✗ con página, rótulo y motivo), si se hizo. */
   colocacion: ResumenColocacion | null;
+  /** Cuándo saldría según el scheduler (ISO), si está en la cola y el envío automático está activo. */
+  estimadoAt: string | null;
 }
 
 /** El estado de cada archivo del listado del tab: una query por lote, sin tocar Dropbox. */
@@ -182,16 +184,18 @@ export async function estadoDeArchivos(tenantId: string, archivos: string[]): Pr
   const codigoDe = new Map(archivos.map((a) => [a, leerAnclas(a).codigo]));
   const codigos = [...new Set([...codigoDe.values()].filter(Boolean))];
   const registros = new Map<string, any>(((await DropboxSignEnvio.find({ tenantId, codigo: { $in: codigos } }).lean()) as any[]).map((r) => [r.codigo, r]));
-  const enCola: any[] = await DropboxSignEnvio.find({ tenantId, estado: { $in: ["en_cola", "limite"] } }).sort({ orden: 1 }).select("codigo").lean();
+  const enCola: any[] = await DropboxSignEnvio.find({ tenantId, estado: { $in: ["en_cola", "limite"] } }).sort({ orden: 1 }).select("codigo archivo orden").lean();
   const posicion = new Map(enCola.map((r, i) => [r.codigo, i + 1]));
+  const { config, estado: throttle } = await configDelTenant(tenantId);
+  const estimados = estimarEnvios(enCola.map(itemDe), config, throttle, new Date());
   const corrida = corridas.get(tenantId);
   const actual = corrida && !corrida.terminada ? corrida.actual : null;
   return archivos.map((archivo) => {
     const codigo = codigoDe.get(archivo) || "";
     const r = registros.get(codigo);
-    if (!r) return { archivo, codigo, estado: "", detalle: "", enviadoAt: null, posicion: null, colocacion: null };
+    if (!r) return { archivo, codigo, estado: "", detalle: "", enviadoAt: null, posicion: null, colocacion: null, estimadoAt: null };
     const estado = archivo === actual ? "enviando" : r.estado === "en_cola" && r.probadoEnSecoAt ? "seco" : r.estado;
-    return { archivo, codigo, estado, detalle: r.detalle || "", enviadoAt: r.enviadoAt ? new Date(r.enviadoAt).toISOString() : null, posicion: posicion.get(codigo) ?? null, colocacion: r.colocacion || null };
+    return { archivo, codigo, estado, detalle: r.detalle || "", enviadoAt: r.enviadoAt ? new Date(r.enviadoAt).toISOString() : null, posicion: posicion.get(codigo) ?? null, colocacion: r.colocacion || null, estimadoAt: estimados.get(codigo)?.toISOString() || null };
   });
 }
 
@@ -209,7 +213,10 @@ export async function armarCola(tenantId: string, opciones: { manual?: boolean }
   const { outbox, archivos } = await leerOutbox(tenantId);
   const enCola: any[] = await DropboxSignEnvio.find({ tenantId, estado: { $in: ["en_cola", "limite"] } }).sort({ orden: 1 }).lean();
   const ahora = new Date();
-  const plan = planificar(enCola.map(itemDe), new Set(archivos), config, estado, ahora);
+  const items = enCola.map(itemDe);
+  const estimados = estimarEnvios(items, config, estado, ahora);
+  for (const it of items) it.estimadoAt = estimados.get(it.codigo) || null;
+  const plan = planificar(items, new Set(archivos), config, estado, ahora);
   const puede = puedeCorrer(config, estado, ahora, opciones);
   return { ...plan, outbox, archivosEnOutbox: archivos.length, enCola: enCola.length, motivoNoCorre: puede.ok ? null : puede.motivo || "No se puede correr ahora." };
 }

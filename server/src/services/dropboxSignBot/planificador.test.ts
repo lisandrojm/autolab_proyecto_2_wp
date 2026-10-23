@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { CONFIG_POR_DEFECTO, planificar, puedeCorrer, validarEncolado, type EstadoThrottle, type ItemEnCola } from "./planificador.js";
+import { CONFIG_POR_DEFECTO, estimarEnvios, instanteArgentino, planificar, puedeCorrer, validarEncolado, type EstadoThrottle, type ItemEnCola } from "./planificador.js";
 import { REGLAS_BASE } from "../../compartido/reglasColocacionFirma.js";
 
 const archivo = (n: number, tipo = "Contrato_Jornada", prefijo = "426_LN+") => `${prefijo}_PEREZ_${tipo}_D-20261010_H-20261010_20273130293_fulano-ARROBA-gmail.com_Empresa-30717068374_ID-${String(n).padStart(6, "0")}.pdf`;
@@ -64,6 +64,37 @@ describe("planificar la tanda desde la cola", () => {
   });
   it("un código repetido en la cola sale una sola vez", () => {
     assert.equal(planificar([item(1, 1), item(1, 2)], outbox, config, limpio, AHORA).tanda.length, 1);
+  });
+});
+
+describe("cuándo saldría cada ítem de la cola (la cuenta regresiva)", () => {
+  const cola = (n: number) => Array.from({ length: n }, (_, i) => item(i + 1));
+  const iso = (d?: Date) => d?.toISOString();
+  it("tandas de 10 cada 4 h desde ahora, dentro de la ventana; lo que cae fuera de la ventana pasa al día siguiente a la hora de inicio", () => {
+    const e = estimarEnvios(cola(45), config, limpio, AHORA);
+    assert.equal(iso(e.get("ID-000001")), "2026-10-20T15:00:00.000Z"); // ahora (12:00 AR)
+    assert.equal(iso(e.get("ID-000010")), "2026-10-20T15:00:00.000Z");
+    assert.equal(iso(e.get("ID-000011")), "2026-10-20T19:00:00.000Z"); // 16:00 AR
+    assert.equal(iso(e.get("ID-000021")), "2026-10-20T23:00:00.000Z"); // 20:00 AR
+    // La 4.ª tanda caería a las 00:00 AR: fuera de la ventana 8-22 → 08:00 AR del 21.
+    assert.equal(iso(e.get("ID-000031")), "2026-10-21T11:00:00.000Z");
+    assert.equal(iso(e.get("ID-000041")), "2026-10-21T15:00:00.000Z");
+    assert.equal(iso(e.get("ID-000045")), "2026-10-21T15:00:00.000Z");
+  });
+  it("respeta el tope diario (con 35 enviados hoy salen 5 ahora y el resto mañana), el intervalo desde la última corrida y el enfriamiento", () => {
+    const conTope = estimarEnvios(cola(12), config, { ...limpio, contadorDia: { fecha: "2026-10-20", enviados: 35 } }, AHORA);
+    assert.equal(iso(conTope.get("ID-000005")), "2026-10-20T15:00:00.000Z");
+    assert.equal(iso(conTope.get("ID-000006")), "2026-10-21T11:00:00.000Z");
+    const conIntervalo = estimarEnvios(cola(1), config, { ...limpio, ultimaCorridaAt: new Date(AHORA.getTime() - 3600_000) }, AHORA);
+    assert.equal(iso(conIntervalo.get("ID-000001")), "2026-10-20T18:00:00.000Z"); // 1 h atrás + 4 h
+    const enfriado = estimarEnvios(cola(1), config, { ...limpio, enfriadoHasta: new Date(AHORA.getTime() + 2 * 3600_000) }, AHORA);
+    assert.equal(iso(enfriado.get("ID-000001")), "2026-10-20T17:00:00.000Z");
+  });
+  it("sin envío automático no hay estimación; fuera de la ventana arranca al abrir; instanteArgentino es UTC-3", () => {
+    assert.equal(estimarEnvios(cola(3), { ...config, activo: false }, limpio, AHORA).size, 0);
+    const deNoche = estimarEnvios(cola(1), config, limpio, new Date("2026-10-21T02:30:00Z")); // 23:30 AR del 20
+    assert.equal(iso(deNoche.get("ID-000001")), "2026-10-21T11:00:00.000Z");
+    assert.equal(instanteArgentino("2026-10-21", 8).toISOString(), "2026-10-21T11:00:00.000Z");
   });
 });
 
