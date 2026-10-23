@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faPaperPlane, faStop, faGear, faRobot, faTriangleExclamation, faCircleCheck, faClock, faHourglassHalf, faListCheck, faCrosshairs } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faPaperPlane, faStop, faGear, faRobot, faTriangleExclamation, faCircleCheck, faClock, faHourglassHalf, faListCheck, faCrosshairs, faRightToBracket } from "@fortawesome/free-solid-svg-icons";
 import { dropboxSignAPI, dropboxSignBotAPI, type BotConfig, type BotCorrida, type EstadoArchivoFirma } from "../../api/dropboxSign";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { LoginAsistidoModal } from "../dropboxSign/LoginAsistidoModal";
 
 /*
   EL «ENVIAR A LA FIRMA» DESDE EL TAB «PARA FIRMAR» (22/10/2026). El envío es por COLA: desde el tab se
@@ -250,6 +251,7 @@ const badgeDe = (e: EstadoArchivoFirma, ahora: number): React.ReactNode => {
 export const PanelBotFirma: React.FC<{ bot: ReturnType<typeof useBotFirma>; enCola: number }> = ({ bot, enCola }) => {
   const { cfg, corrida, ocupado } = bot;
   const [ahora, setAhora] = useState(Date.now());
+  const [login, setLogin] = useState(false);
   useEffect(() => {
     const t = window.setInterval(() => setAhora(Date.now()), 30_000);
     return () => window.clearInterval(t);
@@ -285,14 +287,26 @@ export const PanelBotFirma: React.FC<{ bot: ReturnType<typeof useBotFirma>; enCo
           {cfg.conexion?.estado === "ok" ? <span className="text-green-600 dark:text-green-400 font-semibold">conectada</span> : cfg.conexion?.estado === "caida" ? <span className="text-red-600 dark:text-red-400 font-semibold">caída ({fmt(cfg.conexion.probadaAt)})</span> : <span className="text-gray-500 font-semibold">sin probar</span>}
           {" · "}sesión {cfg.tieneSesion ? <span className="text-green-600 dark:text-green-400 font-semibold">guardada</span> : <span className="text-red-600 dark:text-red-400 font-semibold">no hay</span>}
         </span>
-        <Link to="/dropbox-sign" className="ml-auto inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold">
+        <Link to="/dropbox-sign?tab=envio" className="ml-auto inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold">
           <FontAwesomeIcon icon={faGear} /> Configuración
         </Link>
       </div>
-      {!cfg.tieneSesion && (
-        <p className="text-[11px] text-red-600 dark:text-red-400">
-          Sin sesión de Dropbox Sign el bot no puede enviar. Se captura desde una computadora con pantalla (el VPS no tiene), dentro de <span className="font-mono">server/</span> con el <span className="font-mono">.env.production</span> del servidor: <span className="font-mono">TENANT=&lt;slug&gt; npm run dropbox-sign:login</span>
-        </p>
+      {(!cfg.tieneSesion || cfg.conexion?.estado === "caida") && (
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-red-600 dark:text-red-400">
+          <span>{cfg.conexion?.estado === "caida" ? "La conexión con Dropbox Sign está caída: el bot no puede enviar." : "Sin sesión de Dropbox Sign el bot no puede enviar."}</span>
+          <button type="button" onClick={() => setLogin(true)} disabled={corriendo} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" title="El navegador del servidor aparece en tu pantalla para iniciar sesión">
+            <FontAwesomeIcon icon={faRightToBracket} /> Conectarse a Dropbox Sign
+          </button>
+        </div>
+      )}
+      {login && (
+        <LoginAsistidoModal
+          onClose={() => {
+            setLogin(false);
+            void bot.refrescar();
+          }}
+          onConectado={() => void bot.refrescar()}
+        />
       )}
       {cfg.ultimoError && <p className="text-[11px] text-red-600 dark:text-red-400 break-words">Último error del bot: {cfg.ultimoError}</p>}
       <div className="flex flex-wrap items-center gap-2">

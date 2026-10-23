@@ -257,6 +257,10 @@ export interface ITenant extends Document {
       lastCheckAt?: Date;
       lastCheckOk?: boolean;
       lastCheckDetalle?: string;
+      /** Última «Probar conexión» de la casilla (sólo conecta y cuenta avisos). */
+      conexionAt?: Date | null;
+      conexionOk?: boolean | null;
+      conexionDetalle?: string;
       /**
        * Historial de lecturas, de la más reciente a la más vieja. Solo se guardan las corridas que
        * encontraron algo o que fallaron: el job corre cada 5 minutos y la mayoría no tiene nada que
@@ -466,6 +470,9 @@ const tenantSchema = new Schema<ITenant>(
         lastCheckAt: { type: Date },
         lastCheckOk: { type: Boolean },
         lastCheckDetalle: { type: String },
+        conexionAt: { type: Date, default: null },
+        conexionOk: { type: Boolean, default: null },
+        conexionDetalle: { type: String, default: "" },
         lastCheckHistorial: [
           {
             _id: false,

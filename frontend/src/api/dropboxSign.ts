@@ -16,6 +16,10 @@ export interface DropboxSignConfig {
   lastCheckAt: string | null;
   lastCheckOk: boolean | null;
   lastCheckDetalle: string;
+  /** Última «Probar conexión» de la casilla. */
+  conexionAt: string | null;
+  conexionOk: boolean | null;
+  conexionDetalle: string;
   /** Historial de lecturas, de la más reciente a la más vieja. Lo muestra el modal de Logs. */
   lastCheckHistorial: CorridaLog[];
 }
@@ -102,7 +106,21 @@ export interface ConexionBot {
   via: "sesion" | "login" | "";
   pantalla: string;
   detalle: string;
+  /** Hay una captura de lo que vio el navegador cuando falló (GET /bot/conexion/captura). */
+  tieneCaptura?: boolean;
 }
+
+/** El login asistido desde la web: el navegador del servidor en pantalla. */
+export interface EstadoLoginAsistido {
+  estado: "abierto" | "conectado" | "cerrado";
+  pantalla: string;
+  url: string;
+  detalle: string;
+  viewport: { width: number; height: number };
+  abiertoEl: string | null;
+  jpeg?: string;
+}
+export type AccionLogin = { tipo: "click"; x: number; y: number } | { tipo: "tipear"; texto: string } | { tipo: "tecla"; tecla: string } | { tipo: "scroll"; dy: number };
 
 export interface BotConfig {
   loginEmail: string;
@@ -120,6 +138,8 @@ export interface BotConfig {
   ultimaCorrida: { arrancadaEl: string; fin: string; resultado: string; enviados: number; errores: number; limite: boolean; enSeco: boolean; total: number; automatica: boolean } | null;
   ultimoError: string | null;
   conexion: ConexionBot | null;
+  /** Hay un login asistido abierto en el servidor. */
+  loginAsistidoAbierto: boolean;
   proximaCorrida: string;
   /** Cuándo arrancaría la próxima tanda automática (ISO), si el envío automático está activo y hay cola. */
   proximaCorridaAt: string | null;
@@ -378,6 +398,28 @@ class DropboxSignBotAPI {
   /** Abre el navegador del servidor, entra a Dropbox Sign y lo cierra. Tarda 15-60 s. No envía nada. */
   async probarConexion(): Promise<{ conexion: ConexionBot }> {
     const { data } = await axios.post("/dropbox-sign/bot/conexion/probar", {}, { timeout: 180000 });
+    return data;
+  }
+  /** Lo que vio el navegador cuando no pudo entrar (JPEG). */
+  async capturaConexion(): Promise<Blob> {
+    const { data } = await axios.get("/dropbox-sign/bot/conexion/captura", { responseType: "blob" });
+    return data;
+  }
+  /* Login asistido: el navegador del servidor en pantalla. */
+  async abrirLogin(): Promise<EstadoLoginAsistido> {
+    const { data } = await axios.post("/dropbox-sign/bot/login/abrir", {}, { timeout: 120000 });
+    return data;
+  }
+  async pantallaLogin(): Promise<EstadoLoginAsistido> {
+    const { data } = await axios.get("/dropbox-sign/bot/login/pantalla", { timeout: 30000 });
+    return data;
+  }
+  async accionLogin(accion: AccionLogin): Promise<EstadoLoginAsistido> {
+    const { data } = await axios.post("/dropbox-sign/bot/login/accion", accion, { timeout: 30000 });
+    return data;
+  }
+  async cerrarLogin(): Promise<{ ok: boolean; estado: string }> {
+    const { data } = await axios.post("/dropbox-sign/bot/login/cerrar");
     return data;
   }
   async arrancar(enSeco = false): Promise<{ arrancada: boolean; enSeco: boolean }> {

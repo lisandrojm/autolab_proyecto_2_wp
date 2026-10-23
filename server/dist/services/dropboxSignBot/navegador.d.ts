@@ -18,14 +18,42 @@ export interface SesionDropboxSign {
     seLogueo: boolean;
     pantalla: PantallaDropboxSign;
 }
+export declare function configDelBot(tenantId: string): Promise<{
+    loginEmail: string;
+    loginPassword: string;
+    sesion: any | null;
+}>;
 export declare function guardarSesion(tenantId: string, ctx: BrowserContext): Promise<void>;
 export declare const anotarError: (tenantId: string, mensaje: string | null) => Promise<void | (import("mongoose").Document<unknown, {}, import("../../models/Tenant.js").ITenant, {}, {}> & import("../../models/Tenant.js").ITenant & Required<{
     _id: import("mongoose").Types.ObjectId;
 }> & {
     __v: number;
 })>;
+/**
+ * EL ESTADO DE LA CONEXIÓN CON DROPBOX SIGN (pedido del 23/10/2026: «parece caída y no se ve»). Cada
+ * vez que el bot abre el navegador —en una corrida o con «Probar conexión»— queda registrado si llegó
+ * al listado de documentos y cómo (sesión guardada o usuario y contraseña), o por qué no. Es lo que la
+ * tarjeta y el tab muestran como «Conectada» / «Caída».
+ */
+export interface ConexionDropboxSign {
+    estado: "ok" | "caida";
+    probadaAt: Date;
+    /** Cómo entró (o intentó entrar). */
+    via: "sesion" | "login" | "";
+    /** En qué pantalla quedó. */
+    pantalla: PantallaDropboxSign | "";
+    detalle: string;
+    /** Lo que vio el navegador cuando falló (JPEG en base64), para verlo desde la web. */
+    captura?: string | null;
+}
+export declare const anotarConexion: (tenantId: string, conexion: Omit<ConexionDropboxSign, "probadaAt">) => Promise<void | (import("mongoose").Document<unknown, {}, import("../../models/Tenant.js").ITenant, {}, {}> & import("../../models/Tenant.js").ITenant & Required<{
+    _id: import("mongoose").Types.ObjectId;
+}> & {
+    __v: number;
+})>;
 export declare function textoDe(page: Page): Promise<string>;
 export declare function pantallaDe(page: Page): Promise<PantallaDropboxSign>;
+export declare function irA(page: Page, url: string): Promise<void>;
 /**
  * Abre el navegador con la sesión lista en /home/manage. Con `sinLogin` (login manual del operador)
  * devuelve la sesión en la pantalla que esté, sin intentar loguearse. Quien llama cierra el browser.
@@ -34,3 +62,9 @@ export declare function abrirSesionDropboxSign(tenantId: string, opciones?: {
     visible?: boolean;
     sinLogin?: boolean;
 }): Promise<SesionDropboxSign>;
+/**
+ * «PROBAR CONEXIÓN»: abre el navegador, intenta llegar al listado de documentos (sesión guardada o
+ * usuario y contraseña) y lo cierra. No toca ningún documento. Deja registrado el resultado como una
+ * corrida más. Pide el candado: no corre mientras hay una tanda en curso.
+ */
+export declare function probarConexionDropboxSign(tenantId: string): Promise<ConexionDropboxSign>;

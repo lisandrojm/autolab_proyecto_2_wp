@@ -11,7 +11,7 @@ import { abrirOcr } from "../../utils/ocrPaginas.js";
 import { CONFIG_POR_DEFECTO, estimarEnvios, fechaYHoraArgentina, planificar, puedeCorrer, validarEncolado, type Candidato, type ConfigEnvio, type EstadoThrottle, type ItemEnCola, type Plan } from "./planificador.js";
 import { esTextoDeLimite, guardDeEnvio } from "./reglas.js";
 import { pantallaAPdf, pdfAPantalla, reglaDe, type Colocacion } from "../../compartido/reglasColocacionFirma.js";
-import { abrirSesionDropboxSign, anotarError, guardarSesion, type SesionDropboxSign } from "./navegador.js";
+import { abrirSesionDropboxSign, anotarError, guardarSesion, probarConexionDropboxSign, type SesionDropboxSign } from "./navegador.js";
 import { quienTieneDropboxSign, soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 import { MOTOR_DROPBOX_SIGN } from "./motor.js";
 import { leerOutbox, resolverFirmante } from "./outbox.js";
@@ -153,6 +153,18 @@ export async function encolar(tenantId: string, userId: string | undefined, pedi
     // Queda registrado como «requiere revisión» para que se vea en el tab, salvo lo que ya está enviado/encolado.
     if (r.reencolable && r.codigo) {
       await DropboxSignEnvio.updateOne({ tenantId: tid, codigo: r.codigo }, { $set: { archivo, estado: "requiere_revision", detalle: r.motivo }, $setOnInsert: { tenantId: tid, codigo: r.codigo } }, { upsert: true }).catch(() => {});
+    }
+  }
+  // CONECTARSE SOLO AL ENCOLAR LO PRIMERO (pedido del 23/10/2026): sin sesión guardada pero con usuario
+  // y contraseña, el bot intenta entrar en segundo plano unos segundos después. Si «Enviar a la firma»
+  // arranca la corrida en el acto, ésa ya se loguea y la prueba se saltea (candado tomado).
+  if (encolados > 0) {
+    const t: any = await Tenant.findById(tenantId).select(`${BASE}.sesionEnc ${BASE}.loginPasswordEnc`).lean();
+    const b = t?.integrations?.dropboxSign?.bot || {};
+    if (!b.sesionEnc && b.loginPasswordEnc) {
+      setTimeout(() => {
+        if (!quienTieneDropboxSign(tenantId)) void probarConexionDropboxSign(tenantId).catch(() => {});
+      }, 5000);
     }
   }
   return { encolados, rechazados, porMotivo };

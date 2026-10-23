@@ -244,6 +244,14 @@ export interface ITenant extends Document {
                 /** Las reglas de colocación de la firma editadas por el tenant (ver `compartido/reglasColocacionFirma.ts`). Sin esto rige el catálogo. */
                 reglasColocacion?: any[];
                 reglasColocacionAt?: Date | null;
+                /** Última vez que el bot abrió Dropbox Sign: si llegó al listado y cómo, o por qué no (ver `navegador.ts`). */
+                conexion?: {
+                    estado: "ok" | "caida";
+                    probadaAt: Date;
+                    via: string;
+                    pantalla: string;
+                    detalle: string;
+                } | null;
             };
             imapHost?: string;
             imapPort?: number;
@@ -259,6 +267,10 @@ export interface ITenant extends Document {
             lastCheckAt?: Date;
             lastCheckOk?: boolean;
             lastCheckDetalle?: string;
+            /** Última «Probar conexión» de la casilla (sólo conecta y cuenta avisos). */
+            conexionAt?: Date | null;
+            conexionOk?: boolean | null;
+            conexionDetalle?: string;
             /**
              * Historial de lecturas, de la más reciente a la más vieja. Solo se guardan las corridas que
              * encontraron algo o que fallaron: el job corre cada 5 minutos y la mayoría no tiene nada que

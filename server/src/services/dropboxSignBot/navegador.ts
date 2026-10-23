@@ -29,7 +29,7 @@ export interface SesionDropboxSign {
   pantalla: PantallaDropboxSign;
 }
 
-async function configDelBot(tenantId: string): Promise<{ loginEmail: string; loginPassword: string; sesion: any | null }> {
+export async function configDelBot(tenantId: string): Promise<{ loginEmail: string; loginPassword: string; sesion: any | null }> {
   const t: any = await Tenant.findById(tenantId).select("integrations.dropboxSign.bot").lean();
   const bot = t?.integrations?.dropboxSign?.bot || {};
   let sesion: any = null;
@@ -64,6 +64,8 @@ export interface ConexionDropboxSign {
   /** En qué pantalla quedó. */
   pantalla: PantallaDropboxSign | "";
   detalle: string;
+  /** Lo que vio el navegador cuando falló (JPEG en base64), para verlo desde la web. */
+  captura?: string | null;
 }
 
 export const anotarConexion = (tenantId: string, conexion: Omit<ConexionDropboxSign, "probadaAt">) =>
@@ -77,7 +79,7 @@ export async function pantallaDe(page: Page): Promise<PantallaDropboxSign> {
   return clasificarPantalla(page.url(), await textoDe(page));
 }
 
-async function irA(page: Page, url: string): Promise<void> {
+export async function irA(page: Page, url: string): Promise<void> {
   for (let intento = 1; ; intento++) {
     try {
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: NAVEGACION_MS });
@@ -96,15 +98,18 @@ async function irA(page: Page, url: string): Promise<void> {
 async function loguear(page: Page, cred: { loginEmail: string; loginPassword: string }): Promise<void> {
   if (!cred.loginEmail || !cred.loginPassword) throw new Error("No hay usuario y contraseña de Dropbox Sign cargados (Configuración → DropboxSign → Envío automático).");
   await irA(page, MANAGE_URL);
-  const email = page.locator('input[name="login_email"], input[type="email"], input[name="email"]').first();
+  // Sólo los campos VISIBLES: la página de login de Dropbox trae un `input[type=password]` oculto
+  // («autofill-password», señuelo para el autocompletado) que con `.first()` se tomaba y se esperaba ver
+  // para siempre (caso real del 22/10/2026: «locator resolved to hidden <input name="autofill-password">»).
+  const email = page.locator('input[name="login_email"], input[type="email"], input[name="email"]').filter({ visible: true }).first();
   await email.waitFor({ state: "visible", timeout: 20_000 });
   await email.fill(cred.loginEmail);
-  const continuar = page.getByRole("button", { name: /continuar|siguiente|continue|next|iniciar sesi[oó]n|sign in/i }).first();
+  const continuar = page.getByRole("button", { name: /continuar|siguiente|continue|next|iniciar sesi[oó]n|sign in/i }).filter({ visible: true }).first();
   await continuar.click();
-  const clave = page.locator('input[name="login_password"], input[type="password"]').first();
+  const clave = page.locator('input[name="login_password"], input[type="password"]:not([name="autofill-password"])').filter({ visible: true }).first();
   await clave.waitFor({ state: "visible", timeout: 20_000 });
   await clave.fill(cred.loginPassword);
-  await page.getByRole("button", { name: /iniciar sesi[oó]n|sign in|log in|ingresar|continuar/i }).first().click();
+  await page.getByRole("button", { name: /iniciar sesi[oó]n|sign in|log in|ingresar|continuar/i }).filter({ visible: true }).first().click();
   await page.waitForLoadState("domcontentloaded").catch(() => {});
   await page.waitForTimeout(4000);
   const texto = await textoDe(page);
@@ -157,7 +162,8 @@ export async function abrirSesionDropboxSign(tenantId: string, opciones: { visib
   } catch (e: any) {
     const detalle = e?.message || String(e);
     await anotarError(tenantId, detalle);
-    await anotarConexion(tenantId, { estado: "caida", via: "login", pantalla: await pantallaDe(page).catch(() => "" as const), detalle: `${cfg.sesion ? "La sesión guardada no sirvió y el login tampoco: " : "Sin sesión guardada, el login falló: "}${detalle}` });
+    const captura = await page.screenshot({ type: "jpeg", quality: 50 }).then((b) => b.toString("base64")).catch(() => null);
+    await anotarConexion(tenantId, { estado: "caida", via: "login", pantalla: await pantallaDe(page).catch(() => "" as const), detalle: `${cfg.sesion ? "La sesión guardada no sirvió y el login tampoco: " : "Sin sesión guardada, el login falló: "}${detalle}`, captura });
     await browser.close().catch(() => {});
     throw e;
   }

@@ -12,6 +12,8 @@ import { DropboxSignEnvioLog } from "../models/DropboxSignEnvioLog.js";
 import { guardarReglasDelTenant, reglasDelTenant } from "../services/dropboxSignBot/reglasTenant.js";
 import { arrancarVerificacion, detenerVerificacion, previsualizarColocacion, verificacionDe } from "../services/dropboxSignBot/colocacion.js";
 import { REGLAS_BASE, TIPOS_ANCLA } from "../compartido/reglasColocacionFirma.js";
+import { probarConexionDropboxSign } from "../services/dropboxSignBot/navegador.js";
+import { abrirLoginAsistido, accionLoginAsistido, cerrarLoginAsistido, hayLoginAsistido, pantallaLoginAsistido } from "../services/dropboxSignBot/loginAsistido.js";
 /**
  * Configuración de "DropboxSign | Firmas": la casilla de correo que recibe las copias de
  * "documento enviado" de Dropbox Sign.
@@ -55,6 +57,9 @@ router.get("/config", async (req, res) => {
             lastCheckAt: cfg.lastCheckAt || null,
             lastCheckOk: cfg.lastCheckOk ?? null,
             lastCheckDetalle: cfg.lastCheckDetalle || "",
+            conexionAt: cfg.conexionAt || null,
+            conexionOk: cfg.conexionOk ?? null,
+            conexionDetalle: cfg.conexionDetalle || "",
             lastCheckHistorial: cfg.lastCheckHistorial || [],
         });
     }
@@ -115,10 +120,12 @@ router.post("/leer", async (req, res) => {
         }
         const soloPrueba = req.body?.prueba === true;
         const r = await leerCasillaDropboxSign(String(req.tenantObjectId), soloPrueba);
-        // El resultado queda registrado para poder verlo después desde la configuración.
-        if (!soloPrueba) {
+        // El resultado queda registrado para poder verlo después desde la configuración: la lectura como
+        // lectura, la prueba como estado de la conexión.
+        if (!soloPrueba)
             await Tenant.findByIdAndUpdate(req.tenantObjectId, registrarLectura(r));
-        }
+        else
+            await Tenant.findByIdAndUpdate(req.tenantObjectId, { $set: { "integrations.dropboxSign.conexionAt": new Date(), "integrations.dropboxSign.conexionOk": r.ok, "integrations.dropboxSign.conexionDetalle": r.detalle } });
         res.json(r);
     }
     catch (error) {
@@ -170,6 +177,9 @@ async function configDelBotParaUi(tenantId) {
         ultimaCorridaAt: estado.ultimaCorridaAt,
         ultimaCorrida: bot.ultimaCorrida || null,
         ultimoError: bot.ultimoError || null,
+        // Sin la captura (pesa): se pide aparte con GET /bot/conexion/captura.
+        conexion: bot.conexion ? { ...bot.conexion, captura: undefined, tieneCaptura: !!bot.conexion.captura } : null,
+        loginAsistidoAbierto: hayLoginAsistido(tenantId),
         proximaCorrida: puede.ok ? "Le toca en el próximo minuto del scheduler." : puede.motivo || "",
         proximaCorridaAt,
         corriendo: !!corrida && !corrida.terminada,
@@ -217,6 +227,76 @@ router.put("/bot/config", async (req, res) => {
         console.error("Dropbox Sign bot save error:", error);
         res.status(500).json({ error: error?.message || "Internal server error" });
     }
+});
+/** POST /bot/conexion/probar — abre el navegador, entra a Dropbox Sign y lo cierra (solo admin). No envía nada. */
+router.post("/bot/conexion/probar", async (req, res) => {
+    try {
+        if (!isAdmin(req))
+            return res.status(403).json({ error: "Solo un administrador puede probar la conexión." });
+        const conexion = await probarConexionDropboxSign(String(req.tenantObjectId));
+        res.json({ conexion });
+    }
+    catch (error) {
+        res.status(error?.status || 500).json({ error: error?.message || "No se pudo probar la conexión." });
+    }
+});
+/** GET /bot/conexion/captura — lo que vio el navegador la última vez que no pudo entrar (JPEG). */
+router.get("/bot/conexion/captura", async (req, res) => {
+    const t = await Tenant.findById(req.tenantObjectId).select(`${BOT}.conexion`).lean().catch(() => null);
+    const captura = t?.integrations?.dropboxSign?.bot?.conexion?.captura;
+    if (!captura)
+        return res.status(404).json({ error: "No hay captura de la última conexión." });
+    res.setHeader("Content-Type", "image/jpeg");
+    res.send(Buffer.from(captura, "base64"));
+});
+/*
+  LOGIN ASISTIDO DESDE LA WEB (23/10/2026): el navegador del servidor en pantalla, para iniciar sesión y
+  resolver captcha o código sin consola. Ver `services/dropboxSignBot/loginAsistido.ts`. Solo admin.
+*/
+router.post("/bot/login/abrir", async (req, res) => {
+    try {
+        if (!isAdmin(req))
+            return res.status(403).json({ error: "Solo un administrador puede conectarse a Dropbox Sign." });
+        res.json(await abrirLoginAsistido(String(req.tenantObjectId)));
+    }
+    catch (error) {
+        res.status(error?.status || 500).json({ error: error?.message || "No se pudo abrir el navegador." });
+    }
+});
+router.get("/bot/login/pantalla", async (req, res) => {
+    try {
+        if (!isAdmin(req))
+            return res.status(403).json({ error: "Solo un administrador puede conectarse a Dropbox Sign." });
+        res.json(await pantallaLoginAsistido(String(req.tenantObjectId)));
+    }
+    catch (error) {
+        res.status(500).json({ error: error?.message || "No se pudo capturar la pantalla." });
+    }
+});
+router.post("/bot/login/accion", async (req, res) => {
+    try {
+        if (!isAdmin(req))
+            return res.status(403).json({ error: "Solo un administrador puede conectarse a Dropbox Sign." });
+        const parsed = z
+            .discriminatedUnion("tipo", [
+            z.object({ tipo: z.literal("click"), x: z.number(), y: z.number() }),
+            z.object({ tipo: z.literal("tipear"), texto: z.string().max(500) }),
+            z.object({ tipo: z.literal("tecla"), tecla: z.string().max(20) }),
+            z.object({ tipo: z.literal("scroll"), dy: z.number() }),
+        ])
+            .safeParse(req.body || {});
+        if (!parsed.success)
+            return res.status(400).json({ error: "Acción inválida." });
+        res.json(await accionLoginAsistido(String(req.tenantObjectId), parsed.data));
+    }
+    catch (error) {
+        res.status(error?.status || 500).json({ error: error?.message || "No se pudo enviar la acción." });
+    }
+});
+router.post("/bot/login/cerrar", async (req, res) => {
+    if (!isAdmin(req))
+        return res.status(403).json({ error: "Solo un administrador puede conectarse a Dropbox Sign." });
+    res.json(await cerrarLoginAsistido(String(req.tenantObjectId)));
 });
 /** GET /bot/cola — qué enviaría la próxima tanda (lee el Outbox; no envía nada). */
 router.get("/bot/cola", async (req, res) => {

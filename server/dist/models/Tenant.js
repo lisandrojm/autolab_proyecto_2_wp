@@ -136,6 +136,7 @@ const tenantSchema = new Schema({
                 ultimaCorrida: { type: Schema.Types.Mixed },
                 reglasColocacion: { type: Schema.Types.Mixed },
                 reglasColocacionAt: { type: Date, default: null },
+                conexion: { type: Schema.Types.Mixed, default: null },
             },
             imapHost: { type: String },
             imapPort: { type: Number, default: 993 },
@@ -147,6 +148,9 @@ const tenantSchema = new Schema({
             lastCheckAt: { type: Date },
             lastCheckOk: { type: Boolean },
             lastCheckDetalle: { type: String },
+            conexionAt: { type: Date, default: null },
+            conexionOk: { type: Boolean, default: null },
+            conexionDetalle: { type: String, default: "" },
             lastCheckHistorial: [
                 {
                     _id: false,

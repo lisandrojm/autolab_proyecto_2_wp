@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faCheck, faPaperPlane, faStop, faListUl, faListCheck, faTriangleExclamation, faCircleCheck, faCircleXmark, faRobot, faFlask, faEye, faPlug, faCircleQuestion } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faCheck, faPaperPlane, faStop, faListUl, faListCheck, faTriangleExclamation, faCircleCheck, faCircleXmark, faRobot, faFlask, faEye, faPlug, faCircleQuestion, faRightToBracket, faImage } from "@fortawesome/free-solid-svg-icons";
 import { dropboxSignBotAPI, type BotConfig, type BotCola, type BotCorrida, type BotLog, type BotEnvioRegistro, type BotLinea } from "../../api/dropboxSign";
 import { InfoModal } from "../ui/InfoModal";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { PrevisualizacionColocacion } from "./PrevisualizacionColocacion";
 import { IndicadorColocacion } from "./ReglasColocacionCard";
+import { LoginAsistidoModal } from "./LoginAsistidoModal";
 
 /*
   «ENVÍO AUTOMÁTICO A LA FIRMA» (22/10/2026): el bot que manda a firmar, por la web de Dropbox Sign,
@@ -45,6 +46,9 @@ export const EnvioAutomaticoCard: React.FC = () => {
   const [corrida, setCorrida] = useState<BotCorrida | null>(null);
   const [arrancando, setArrancando] = useState(false);
   const [probandoConexion, setProbandoConexion] = useState(false);
+  /** El login asistido (el navegador del servidor en pantalla) y la captura de lo que vio cuando falló. */
+  const [login, setLogin] = useState(false);
+  const [captura, setCaptura] = useState<string | null>(null);
   const [cola, setCola] = useState<{ abierta: boolean; cargando: boolean; datos: BotCola | null }>({ abierta: false, cargando: false, datos: null });
   const [logs, setLogs] = useState<{ abiertos: boolean; cargando: boolean; datos: { logs: BotLog[]; requierenRevision: BotEnvioRegistro[] } | null }>({ abiertos: false, cargando: false, datos: null });
   const [revision, setRevision] = useState<BotEnvioRegistro[]>([]);
@@ -148,6 +152,15 @@ export const EnvioAutomaticoCard: React.FC = () => {
     }
   };
 
+  const verCaptura = async () => {
+    try {
+      const blob = await dropboxSignBotAPI.capturaConexion();
+      setCaptura(URL.createObjectURL(blob));
+    } catch (e: any) {
+      sweetAlert.error("Sin captura", e?.response?.data?.error || "No hay captura de la última conexión.");
+    }
+  };
+
   const detener = async () => {
     try {
       const r = await dropboxSignBotAPI.detener();
@@ -234,13 +247,28 @@ export const EnvioAutomaticoCard: React.FC = () => {
               )}
               {cfg.conexion && <span className="font-normal text-gray-500">· probada {fmt(cfg.conexion.probadaAt)}{cfg.conexion.via === "sesion" ? " · con la sesión guardada" : cfg.conexion.via === "login" ? " · con usuario y contraseña" : ""}</span>}
             </p>
-            <button type="button" onClick={probarConexion} disabled={probandoConexion || corriendo || (!cfg.tieneSesion && !cfg.tienePassword)} title="Abre el navegador del servidor, entra a Dropbox Sign y lo cierra. No envía nada. Tarda entre 15 s y 1 min." className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
-              <FontAwesomeIcon icon={probandoConexion ? faSpinner : faPlug} spin={probandoConexion} /> {probandoConexion ? "Probando…" : "Probar conexión"}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => setLogin(true)} disabled={corriendo || probandoConexion} title="El navegador del servidor aparece en tu pantalla para iniciar sesión y resolver captcha o código. La sesión queda guardada para el bot." className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+                <FontAwesomeIcon icon={faRightToBracket} /> {cfg.loginAsistidoAbierto ? "Seguir conectándose" : "Conectarse a Dropbox Sign"}
+              </button>
+              <button type="button" onClick={probarConexion} disabled={probandoConexion || corriendo || cfg.loginAsistidoAbierto || (!cfg.tieneSesion && !cfg.tienePassword)} title="Abre el navegador del servidor, entra a Dropbox Sign y lo cierra. No envía nada. Tarda entre 15 s y 1 min." className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
+                <FontAwesomeIcon icon={probandoConexion ? faSpinner : faPlug} spin={probandoConexion} /> {probandoConexion ? "Probando…" : "Probar conexión"}
+              </button>
+              {cfg.conexion?.tieneCaptura && (
+                <button type="button" onClick={verCaptura} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700" title="La pantalla en la que quedó el navegador cuando no pudo entrar">
+                  <FontAwesomeIcon icon={faImage} /> Ver qué vio el navegador
+                </button>
+              )}
+            </div>
           </div>
           {cfg.conexion?.estado === "caida" && <p className="break-words text-red-700 dark:text-red-300">{resumenDelError(cfg.conexion.detalle)}</p>}
           {cfg.conexion?.estado === "ok" && <p className="text-green-700 dark:text-green-300">{cfg.conexion.detalle}</p>}
-          {!cfg.tieneSesion && !cfg.tienePassword && <p className="text-amber-700 dark:text-amber-300">No hay sesión guardada ni usuario y contraseña: el bot no tiene con qué entrar.</p>}
+          {!cfg.tieneSesion && (
+            <p className="text-gray-600 dark:text-gray-300">
+              {cfg.tienePassword ? "Sin sesión guardada, el bot intenta entrar con usuario y contraseña; si Dropbox Sign pide un captcha o un código, " : "No hay sesión guardada: "}
+              usá <strong>«Conectarse a Dropbox Sign»</strong> e iniciá sesión desde acá. Queda guardada y el bot la renueva en cada corrida.
+            </p>
+          )}
         </div>
       )}
 
@@ -260,17 +288,13 @@ export const EnvioAutomaticoCard: React.FC = () => {
               </button>
               {PIDE_LOGIN_MANUAL.test(cfg.ultimoError) && (
                 <p className="mt-1 text-gray-600 dark:text-gray-300">
-                  <strong>Repetir login manual:</strong> desde una computadora con pantalla (el VPS no tiene), dentro de <span className="font-mono">server/</span> con el <span className="font-mono">.env.production</span> del servidor: <span className="font-mono">TENANT=&lt;slug&gt; npm run dropbox-sign:login</span>
+                  Iniciá sesión con <strong>«Conectarse a Dropbox Sign»</strong> (arriba): ahí podés resolver el captcha o el código.
                 </p>
               )}
             </div>
           </div>
         )}
-        {!cfg?.tieneSesion && (
-          <p>
-            La primera vez la sesión se captura con una ventana, para resolver el captcha a mano. El VPS no tiene pantalla, así que se corre desde una computadora con pantalla, dentro de <span className="font-mono">server/</span> con el <span className="font-mono">.env.production</span> del servidor: <span className="font-mono">TENANT=&lt;slug&gt; npm run dropbox-sign:login</span>. La sesión queda cifrada en la base; después el bot del servidor corre solo y la renueva en cada corrida.
-          </p>
-        )}
+
       </div>
 
       {/* Throttle */}
@@ -303,7 +327,11 @@ export const EnvioAutomaticoCard: React.FC = () => {
 
       {/* Estado */}
       {cfg && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2.5">
+            <p className="text-[11px] text-gray-500">Envío automático</p>
+            <p className={`font-bold ${cfg.envio.activo ? "text-green-600 dark:text-green-400" : "text-gray-500"}`}>{cfg.envio.activo ? "Activado" : "Desactivado"}</p>
+          </div>
           <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2.5">
             <p className="text-[11px] text-gray-500">Enviados hoy</p>
             <p className="font-bold text-gray-800 dark:text-gray-100">
@@ -451,7 +479,7 @@ export const EnvioAutomaticoCard: React.FC = () => {
                 <pre className="mt-2 max-h-56 overflow-y-auto whitespace-pre-wrap break-all font-mono text-[11px] text-red-800 dark:text-red-200">{limpiarAnsi(cfg.ultimoError)}</pre>
                 {PIDE_LOGIN_MANUAL.test(cfg.ultimoError) && (
                   <p className="mt-2 text-gray-700 dark:text-gray-300">
-                    <strong>Repetir login manual:</strong> desde una computadora con pantalla (el VPS no tiene), dentro de <span className="font-mono">server/</span> con el <span className="font-mono">.env.production</span> del servidor: <span className="font-mono">TENANT=&lt;slug&gt; npm run dropbox-sign:login</span>. Se borra solo cuando el bot vuelve a entrar bien.
+                    Iniciá sesión con <strong>«Conectarse a Dropbox Sign»</strong> en la tarjeta del bot: ahí podés resolver el captcha o el código. El error se borra solo cuando el bot vuelve a entrar bien.
                   </p>
                 )}
               </div>
@@ -479,6 +507,20 @@ export const EnvioAutomaticoCard: React.FC = () => {
       </InfoModal>
 
       {preview && <PrevisualizacionColocacion archivo={preview} onClose={() => setPreview(null)} />}
+      {login && (
+        <LoginAsistidoModal
+          onClose={() => {
+            setLogin(false);
+            void cargar();
+          }}
+          onConectado={() => void cargar()}
+        />
+      )}
+      {captura && (
+        <InfoModal isOpen onClose={() => setCaptura(null)} title="Lo que vio el navegador del servidor" subtitle={cfg?.conexion ? `${fmt(cfg.conexion.probadaAt)} · ${resumenDelError(cfg.conexion.detalle)}` : undefined} size="xl" zIndex={70} actions={[{ label: "Cerrar", onClick: () => setCaptura(null), variant: "ghost" }]}>
+          <img src={captura} alt="Captura del navegador" className="block w-full rounded-lg border border-gray-300 dark:border-gray-600" />
+        </InfoModal>
+      )}
     </div>
   );
 };
