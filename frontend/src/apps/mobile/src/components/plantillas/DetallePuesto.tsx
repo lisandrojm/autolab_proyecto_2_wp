@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { tramiteSinConvenioNiCategoria } from "@compartido/tramiteSinEscala";
 import { useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRightArrowLeft, faChevronDown, faChevronLeft, faChevronRight, faTriangleExclamation, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRightArrowLeft, faCheck, faChevronDown, faChevronLeft, faChevronRight, faSpinner, faTriangleExclamation, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { plantillasEquipoAPI, Puesto } from "../../../../../api/plantillasEquipo";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { usePlantilla, usePlantillas } from "./contexto";
@@ -62,8 +62,21 @@ export default function DetallePuesto() {
   const jornadasDelPuesto = Number(contratoDelPuesto?.data?.cantidadJornadas) > 0 ? Number(contratoDelPuesto.data.cantidadJornadas) : null;
   const escalaBase = importePorJornadaDeCategoria(categoriaDelPuesto, 1, jornadasDelPuesto);
   const escala = importePorJornadaDeCategoria(categoriaDelPuesto, multDelPuesto, jornadasDelPuesto);
+  /** Lo que se guarda como importe fijado: cero vale; vacío o igual a la escala = sin fijar (null). */
+  const importeFijado = (v: string): number | null => {
+    const n = String(v).trim() !== "" && Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : null;
+    return n !== null && Math.abs(n - escala) < 0.005 ? null : n;
+  };
   /** Si la persona escribió en los importes: lo que emite el componente al montarse no cuenta. */
   const tocoImporte = useRef(false);
+  /*
+    «GUARDAR» ANTES DE «PUESTO SIGUIENTE» (pedido del 23/10/2026): el botón de la derecha dice
+    «Guardar»; guarda lo pendiente, avisa, y recién ahí pasa a «Puesto siguiente». En el último puesto
+    dice «Guardar equipo»: guarda, avisa y vuelve al equipo. `guardadoEn` es el puesto que se guardó;
+    escribir otra vez en el importe lo vuelve a «Guardar».
+  */
+  const [guardadoEn, setGuardadoEn] = useState<number | null>(null);
+  const [guardandoPie, setGuardandoPie] = useState(false);
   /*
     LA CATEGORÍA POR DEFECTO, GUARDADA SOLA. Un puesto sin categoría —agregado después, o creado antes
     de que cargaran las categorías— toma la del nivel del proyecto (o la más cercana), con la misma
@@ -91,10 +104,9 @@ export default function DetallePuesto() {
   */
   useEffect(() => {
     if (!tocoImporte.current || !x) return;
+    setGuardadoEn(null);
     const t = setTimeout(() => {
-      // Cero es un importe válido; sólo el campo vacío vuelve a la escala.
-      const n = String(importe).trim() !== "" && Number.isFinite(Number(importe)) && Number(importe) >= 0 ? Number(importe) : null;
-      const nuevo = n !== null && Math.abs(n - escala) < 0.005 ? null : n;
+      const nuevo = importeFijado(importe);
       if (nuevo !== (x.efectivo.dailyRateManual ?? null)) void cambiar({ dailyRateManual: nuevo });
     }, 700);
     return () => clearTimeout(t);
@@ -127,6 +139,29 @@ export default function DetallePuesto() {
   const anterior = lista[idx - 1];
   const siguiente = lista[idx + 1];
   const irA = (m: number) => navigate(rutas.puesto(p._id, equipo._id, m), { replace: true });
+  const guardado = guardadoEn === numero;
+  /** «Guardar» / «Guardar equipo»: manda lo pendiente del importe (sin esperar al guardado diferido) y avisa. */
+  const guardarPuesto = async () => {
+    if (guardandoPie) return;
+    setGuardandoPie(true);
+    try {
+      const nuevo = importeFijado(importe);
+      if (nuevo !== (x.efectivo.dailyRateManual ?? null)) {
+        const r = await cambiar({ dailyRateManual: nuevo });
+        if (!r) return; // `guardar` ya avisó que no se guardó
+      }
+      tocoImporte.current = false;
+      if (siguiente) {
+        setGuardadoEn(numero);
+        await sweetAlert.success("Puesto guardado", `Puesto ${numero} · ${rol}`);
+      } else {
+        await sweetAlert.success("Equipo guardado", `${equipo.nombre}: ${lista.length} puesto${lista.length === 1 ? "" : "s"}.`);
+        navigate(atras);
+      }
+    } finally {
+      setGuardandoPie(false);
+    }
+  };
 
   /** El puesto como debería quedar en este equipo; el server guarda sólo lo distinto del equipo. */
   const cambiar = (cambios: Record<string, any>) => {
@@ -171,10 +206,17 @@ export default function DetallePuesto() {
             <FontAwesomeIcon icon={faChevronLeft} />
             Puesto anterior
           </button>
-          <button type="button" onClick={() => siguiente && irA(siguiente.n)} disabled={!siguiente} className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 disabled:opacity-30 dark:border-slate-600 dark:text-slate-100">
-            Puesto siguiente
-            <FontAwesomeIcon icon={faChevronRight} />
-          </button>
+          {guardado && siguiente ? (
+            <button type="button" onClick={() => irA(siguiente.n)} className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 dark:border-slate-600 dark:text-slate-100">
+              Puesto siguiente
+              <FontAwesomeIcon icon={faChevronRight} />
+            </button>
+          ) : (
+            <button type="button" onClick={() => void guardarPuesto()} disabled={guardandoPie} className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-bold text-white disabled:opacity-60">
+              <FontAwesomeIcon icon={guardandoPie ? faSpinner : faCheck} spin={guardandoPie} />
+              {siguiente ? "Guardar" : "Guardar equipo"}
+            </button>
+          )}
         </div>
       }
     >
