@@ -1,5 +1,7 @@
 import { Types } from "mongoose";
 import { PlanDeLote } from "../utils/planDeLote.js";
+/** El importe fijado a mano de un puesto: un número >= 0 (el cero vale), o null si viene vacío o inválido. */
+export declare const importeManual: (v: unknown) => number | null;
 export declare class ErrorPlantilla extends Error {
     status: number;
     extra?: any;

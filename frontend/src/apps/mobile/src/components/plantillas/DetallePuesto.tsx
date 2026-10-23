@@ -81,7 +81,7 @@ export default function DetallePuesto() {
     setVerAvisos(false);
     setReemplazoAbierto(!!a?.reemplazo);
     tocoImporte.current = false;
-    setImporte(x?.efectivo.dailyRateManual ? String(x.efectivo.dailyRateManual) : escala ? String(escala) : "");
+    setImporte(x?.efectivo.dailyRateManual != null ? String(x.efectivo.dailyRateManual) : escala ? String(escala) : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numero, equipoId, !!a?.reemplazo, x?.efectivo.dailyRateManual, escala]);
   /*
@@ -92,7 +92,8 @@ export default function DetallePuesto() {
   useEffect(() => {
     if (!tocoImporte.current || !x) return;
     const t = setTimeout(() => {
-      const n = Number(importe) > 0 ? Number(importe) : null;
+      // Cero es un importe válido; sólo el campo vacío vuelve a la escala.
+      const n = String(importe).trim() !== "" && Number.isFinite(Number(importe)) && Number(importe) >= 0 ? Number(importe) : null;
       const nuevo = n !== null && Math.abs(n - escala) < 0.005 ? null : n;
       if (nuevo !== (x.efectivo.dailyRateManual ?? null)) void cambiar({ dailyRateManual: nuevo });
     }, 700);

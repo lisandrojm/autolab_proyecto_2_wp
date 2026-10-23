@@ -99,7 +99,8 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
             dailyRate = Number(p.dailyRate);
             origenImporte = "puntual";
         }
-        else if (integ.dailyRateManual != null && Number(integ.dailyRateManual) > 0) {
+        else if (integ.dailyRateManual != null && Number(integ.dailyRateManual) >= 0) {
+            // El cero fijado a mano vale (23/10/2026): un puesto sin pago se contrata con importe 0.
             dailyRate = Number(integ.dailyRateManual);
             origenImporte = "plantilla";
             // La escala cambió desde que alguien fijó este importe a mano: se avisa, no se pisa.
@@ -115,7 +116,7 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
         }
         const mesesEq = mesesEquivalentes(periodo.desde, periodo.hasta, diasSemana, porDiasSueltos ? fechasSueltas : undefined);
         // Con las jornadas del tipo («Jornada»: 22 por mes), el mensual es jornada × 22: ver `mesesParaImportes`.
-        const importes = derivarImportes({ ancla: null, jornada: dailyRate > 0 ? dailyRate : null, mesesEq: mesesParaImportes(mesesEq, jornadas, Number(contrato?.cantidadJornadas) || null), jornadas, diasSemana: Number(contrato?.diasPorSemana) > 0 ? Number(contrato.diasPorSemana) : diasPorSemana });
+        const importes = derivarImportes({ ancla: null, jornada: dailyRate > 0 || origenImporte === "plantilla" ? dailyRate : null, mesesEq: mesesParaImportes(mesesEq, jornadas, Number(contrato?.cantidadJornadas) || null), jornadas, diasSemana: Number(contrato?.diasPorSemana) > 0 ? Number(contrato.diasPorSemana) : diasPorSemana });
         // ── Las reglas del formulario individual ──
         if (sinPersona)
             errores.push("Falta la persona del puesto: elegila o excluí el puesto.");
@@ -140,7 +141,7 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
             errores.push("El puesto no tiene horario.");
         else if (limiteHoras != null && horas != null && horas > limiteHoras)
             errores.push(`El horario suma ${horas.toLocaleString("es-AR", { maximumFractionDigits: 2 })} h y «${nombreContrato || "el contrato"}» admite hasta ${limiteHoras} h por jornada.`);
-        if (esServicios && !(dailyRate > 0))
+        if (esServicios && origenImporte === "servicios")
             errores.push("Es un servicio: hay que cargar el importe por jornada a mano.");
         if (!esServicios && ctx.hayConvenios && !plantilla.convenioId)
             errores.push("La plantilla no tiene convenio.");

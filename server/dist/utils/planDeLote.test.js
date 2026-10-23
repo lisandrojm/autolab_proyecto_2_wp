@@ -90,6 +90,12 @@ test("override puntual: pisa a la plantilla SÓLO en esta contratación", () => 
     assert.equal(filas[0].inTime, "06:00");
     assert.equal(i.dailyRateManual, 2000, "la plantilla no se toca");
 });
+test("importe fijado a mano en CERO: se respeta (no vuelve a la escala) y los importes quedan en 0", () => {
+    const { filas } = planDeLote(plantilla, [integ("1", { dailyRateManual: 0, escalaAlFijar: 1000 })], SEPT, {}, ctx());
+    assert.equal(filas[0].origenImporte, "plantilla");
+    assert.equal(filas[0].importes.jornada, 0);
+    assert.equal(filas[0].importes.total, 0);
+});
 test("importe fijado a mano en la plantilla: se paga el fijado y, si la escala cambió, se avisa", () => {
     const igual = planDeLote(plantilla, [integ("1", { dailyRateManual: 1800, escalaAlFijar: 1000 })], SEPT, {}, ctx());
     assert.equal(igual.filas[0].origenImporte, "plantilla");

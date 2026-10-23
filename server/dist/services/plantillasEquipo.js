@@ -30,6 +30,13 @@ import { createUserSchema, normalizarRolesFrame } from "../validators/usuarioSch
   abrir (una base sin replica set), se rechaza en vez de crear a medias. Los efectos hacia afuera —avisos
   a quien aprueba, renovaciones— van DESPUÉS del commit, uno por solicitud, iguales al alta individual.
 */
+/** El importe fijado a mano de un puesto: un número >= 0 (el cero vale), o null si viene vacío o inválido. */
+export const importeManual = (v) => {
+    if (v === null || v === undefined || (typeof v === "string" && v.trim() === ""))
+        return null;
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+};
 export class ErrorPlantilla extends Error {
     status;
     extra;
@@ -110,8 +117,9 @@ function leerPuesto(body, acc) {
         c.diasRotativos = !!body.diasRotativos;
     if (body.categoriaSatId !== undefined)
         c.categoriaSatId = idOk(body.categoriaSatId) ? oid(body.categoriaSatId) : null;
+    // CERO ES UN IMPORTE (pedido del 23/10/2026): sólo vacío o null es «sin fijar» (rige la escala).
     if (body.dailyRateManual !== undefined)
-        c.dailyRateManual = Number(body.dailyRateManual) > 0 ? Number(body.dailyRateManual) : null;
+        c.dailyRateManual = importeManual(body.dailyRateManual);
     if (body.comentarios !== undefined)
         c.comentarios = body.comentarios ? str(body.comentarios).trim().slice(0, 1000) : null;
     // El tipo de contrato es de cada persona contratada: va en el puesto. El trámite lo resuelve la pantalla.
@@ -201,7 +209,7 @@ async function condicionesDesde(p, puesto, body, acc, equipo) {
     }
     if ("dailyRateManual" in c || "categoriaSatId" in c || "contratoId" in c) {
         const efectivo = { ...base, ...c };
-        c.escalaAlFijar = efectivo.dailyRateManual ? await escalaDe(p, efectivo) : null;
+        c.escalaAlFijar = efectivo.dailyRateManual != null ? await escalaDe(p, efectivo) : null;
     }
     return Object.keys(c).length ? c : null;
 }
@@ -521,7 +529,7 @@ export async function agregarPuestos(acc, id, nuevos, equipoId) {
         if (!datos.rolesFrame?.length)
             throw new ErrorPlantilla(400, "Cada puesto necesita su rol empresa.");
         const puestoId = new Types.ObjectId();
-        p.integrantes.push({ _id: puestoId, orden: ++orden, ...datos, escalaAlFijar: datos.dailyRateManual ? await escalaDe(p, datos) : null });
+        p.integrantes.push({ _id: puestoId, orden: ++orden, ...datos, escalaAlFijar: datos.dailyRateManual != null ? await escalaDe(p, datos) : null });
         if (u) {
             equipo.asignaciones.push({ puestoId, userId: oid(n.userId) });
         }
@@ -541,7 +549,7 @@ export async function actualizarPuesto(acc, id, puestoId, body) {
         throw new ErrorPlantilla(404, "Ese puesto ya no está en la plantilla.");
     Object.assign(i, leerPuesto(body, acc));
     if (body.dailyRateManual !== undefined || body.categoriaSatId !== undefined || body.contratoId !== undefined)
-        i.escalaAlFijar = i.dailyRateManual ? await escalaDe(p, i) : null;
+        i.escalaAlFijar = i.dailyRateManual != null ? await escalaDe(p, i) : null;
     if (body.orden !== undefined && Number.isFinite(Number(body.orden)))
         i.orden = Number(body.orden);
     p.markModified("integrantes");
