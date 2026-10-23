@@ -72,7 +72,7 @@ export default function DetallePuesto() {
   /*
     «GUARDAR» ANTES DE «PUESTO SIGUIENTE» (pedido del 23/10/2026): el botón de la derecha dice
     «Guardar»; guarda lo pendiente, avisa, y recién ahí pasa a «Puesto siguiente». En el último puesto
-    dice «Guardar equipo»: guarda, avisa y vuelve al equipo. `guardadoEn` es el puesto que se guardó;
+    dice «Guardar equipo»: guarda, avisa y va al inicio de Plantillas. `guardadoEn` es el puesto que se guardó;
     escribir otra vez en el importe lo vuelve a «Guardar».
   */
   const [guardadoEn, setGuardadoEn] = useState<number | null>(null);
@@ -156,7 +156,8 @@ export default function DetallePuesto() {
         await sweetAlert.success("Puesto guardado", `Puesto ${numero} · ${rol}`);
       } else {
         await sweetAlert.success("Equipo guardado", `${equipo.nombre}: ${lista.length} puesto${lista.length === 1 ? "" : "s"}.`);
-        navigate(atras);
+        // Al inicio de Plantillas (pedido del 23/10/2026), no a la pantalla del equipo.
+        navigate(rutas.lista);
       }
     } finally {
       setGuardandoPie(false);
