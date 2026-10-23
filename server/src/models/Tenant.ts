@@ -261,6 +261,9 @@ export interface ITenant extends Document {
       conexionAt?: Date | null;
       conexionOk?: boolean | null;
       conexionDetalle?: string;
+      /** Rescatar del adjunto del email los firmados que la integración de Dropbox no depositó (default true). */
+      rescatarFirmados?: boolean;
+      ultimoRescate?: { at?: Date; archivos?: number } | null;
       /**
        * Historial de lecturas, de la más reciente a la más vieja. Solo se guardan las corridas que
        * encontraron algo o que fallaron: el job corre cada 5 minutos y la mayoría no tiene nada que
@@ -473,6 +476,8 @@ const tenantSchema = new Schema<ITenant>(
         conexionAt: { type: Date, default: null },
         conexionOk: { type: Boolean, default: null },
         conexionDetalle: { type: String, default: "" },
+        rescatarFirmados: { type: Boolean, default: true },
+        ultimoRescate: { at: { type: Date }, archivos: { type: Number } },
         lastCheckHistorial: [
           {
             _id: false,

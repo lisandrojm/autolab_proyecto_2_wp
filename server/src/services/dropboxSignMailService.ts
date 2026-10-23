@@ -4,7 +4,8 @@ import { decryptSecret } from "../utils/secretCrypto.js";
 import { candidatosPorNombre, elMasLargo } from "../utils/coincidenciaDeNombre.js";
 import { leerAnclas, mismoDocumento, AnclasNombre } from "../utils/anclasNombre.js";
 import { resolverCarpetaPorProposito, resolverProposito } from "../utils/estadoCarpetas.js";
-import { getTenantDropboxConfig, listFolder, moveEntry } from "./dropboxService.js";
+import { getTenantDropboxConfig, listFolder, moveEntry, uploadFileEstricto } from "./dropboxService.js";
+import { adjuntosPdf, extraerArchivoFirmado, rescatarFirmados, REMITENTE_FIRMADO, TERMINOS_BUSQUEDA_FIRMADO, type AvisoFirmado, type ResumenRescate } from "./rescateFirmados.js";
 import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { Info } from "../models/Info.js";
@@ -38,6 +39,11 @@ import { DocumentoGenerado } from "../models/DocumentoGenerado.js";
  * signatures» («Firmados»), el escaneo de carpetas (`estadoDropboxCronService`) le pone el código
  * al firmado si no lo trae y saca el original de Pendbox, así «Enviado a la firma» muestra solo lo
  * que de verdad sigue esperando la firma (ver `utils/limpiezaPendbox.ts`).
+ *
+ * RESCATE DE FIRMADOS (23/10/2026): esa integración nativa se corta a veces. En la misma pasada se
+ * leen también los avisos de «documento firmado» y, si el PDF no está en la carpeta de firmados, se
+ * baja del adjunto del email y se sube (ver `rescateFirmados.ts`). Después se dispara el escaneo de
+ * carpetas para que los estados avancen por el camino de siempre.
  */
 
 /**
@@ -52,6 +58,16 @@ const DIAS_ATRAS = 30;
 
 /** Tope de mensajes por corrida, para no barrer una bandeja enorme si la ventana trae de más. */
 const MAX_MENSAJES = 300;
+/** Tope de avisos de FIRMADO por corrida: los más nuevos primero, que son los que pueden faltar. */
+const MAX_FIRMADOS = 400;
+
+/** UIDs de avisos de firmado ya resueltos en esta vida del proceso, por tenant (la verdad sigue siendo la carpeta). */
+const firmadosVerificados = new Map<string, Set<number>>();
+const verificadosDe = (tenantId: string): Set<number> => {
+  let s = firmadosVerificados.get(tenantId);
+  if (!s) firmadosVerificados.set(tenantId, (s = new Set()));
+  return s;
+};
 
 /** Asuntos que manda Dropbox Sign al iniciar el circuito de firma (ES/EN). */
 const ASUNTO_ENVIO = [/se inici[oó] el proceso de firma de\s+(.+)$/i, /you (?:were|have been) added to a signature request[:\s]+(.+)$/i, /signature request(?:ed)? (?:from|for)[:\s]+(.+)$/i];
@@ -244,7 +260,7 @@ export function yaEstaEnPendbox(entries: { tag: string; name: string }[], archiv
 
 /** Una línea por aviso encontrado: qué se decidió y por qué. Lo consume el modal de Logs. */
 export interface LineaLog {
-  resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error";
+  resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error" | "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto";
   asunto?: string;
   archivo?: string;
   cuit?: string;
@@ -261,6 +277,16 @@ export interface ResultadoLectura {
   duplicados: number;
   /** Avisos salteados porque el PDF no aparece en Outbox (no se puede atribuir a un contrato). */
   sinArchivoEnOutbox: number;
+  /** Avisos de «documento firmado» leídos. */
+  avisosFirmado: number;
+  /** De ésos, cuántos ya estaban en la carpeta de firmados (la integración nativa los depositó). */
+  firmadosYaEstaban: number;
+  /** PDF firmados subidos desde el adjunto del email. */
+  rescatados: number;
+  /** Avisos de firmado sin el PDF adjunto (hay que activarlo en Dropbox Sign). */
+  sinAdjunto: number;
+  /** Sólo en prueba: firmados que faltan en la carpeta (se rescatarían). */
+  faltanRescatar: number;
   /** Qué pasó con cada aviso, para el modal de Logs. */
   logs: LineaLog[];
 }
@@ -311,7 +337,7 @@ export function leerCasillaDropboxSign(tenantId: string, soloPrueba = false): Pr
 }
 
 /** Arma el cliente IMAP de la casilla configurada. */
-function clienteImap(cfg: any, extra: Record<string, unknown> = {}): ImapFlow {
+export function clienteImap(cfg: any, extra: Record<string, unknown> = {}): ImapFlow {
   return new ImapFlow({
     host: String(cfg.imapHost),
     port: Number(cfg.imapPort) || 993,
@@ -326,7 +352,7 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
   // Sin el historial de lecturas: es lo que más pesa del tenant y acá no se usa.
   const tenant = await Tenant.findById(tenantId).select("-integrations.dropboxSign.lastCheckHistorial").lean();
   const cfg: any = (tenant as any)?.integrations?.dropboxSign || {};
-  const vacio = { avisos: 0, movidos: 0, duplicados: 0, sinArchivoEnOutbox: 0, logs: [] };
+  const vacio = { avisos: 0, movidos: 0, duplicados: 0, sinArchivoEnOutbox: 0, avisosFirmado: 0, firmadosYaEstaban: 0, rescatados: 0, sinAdjunto: 0, faltanRescatar: 0, logs: [] };
   if (!cfg.email || !cfg.imapHost || !cfg.imapPasswordEnc) {
     return { ok: false, detalle: "La casilla no está configurada (faltan correo, servidor o contraseña).", ...vacio };
   }
@@ -349,6 +375,9 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
   let sinArchivoEnOutbox = 0;
   const errores: string[] = [];
   const logs: LineaLog[] = [];
+  /** Lo que dio el rescate de firmados de esta pasada (null si está apagado). */
+  let rescate: ResumenRescate | null = null;
+  const rescatar = cfg.rescatarFirmados !== false;
 
   /*
     SOLO SE LISTA OUTBOX, NO PENDBOX.
@@ -449,30 +478,107 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
           logs.push({ resultado: "error", asunto, archivo, cuit: ident?.cuit, documento: ident?.documento, detalle: String(e?.message || e) });
         }
       }
+
+      /*
+        LOS FIRMADOS: misma conexión y mismo lock. Se buscan por remitente (Dropbox Sign) y asunto, los
+        más nuevos primero, con la estructura del mensaje para saber si traen el PDF adjunto. La carpeta
+        de firmados se lista UNA vez y sólo si hay avisos; los adjuntos se bajan sólo para los que faltan.
+      */
+      if (rescatar) {
+        const uidsFirmado = new Set<number>();
+        for (const termino of TERMINOS_BUSQUEDA_FIRMADO) {
+          const r = await client.search({ from: REMITENTE_FIRMADO, subject: termino, since: desde }, { uid: true });
+          for (const u of r || []) uidsFirmado.add(u);
+        }
+        const lista = [...uidsFirmado].sort((a, b) => b - a).slice(0, MAX_FIRMADOS);
+        const avisosFirmado: AvisoFirmado[] = [];
+        if (lista.length > 0) {
+          for await (const m of client.fetch(lista.join(","), { envelope: true, bodyStructure: true }, { uid: true })) {
+            const asunto = String((m as any)?.envelope?.subject || "");
+            const titulo = extraerArchivoFirmado(asunto);
+            if (!titulo) continue;
+            avisosFirmado.push({ uid: Number((m as any).uid), asunto, titulo, adjuntos: adjuntosPdf((m as any).bodyStructure) });
+          }
+        }
+        if (avisosFirmado.length > 0) {
+          const carpetaFirmados = await resolverCarpetaPorProposito("firmados");
+          if (!dropboxCfg || !carpetaFirmados) {
+            if (!soloPrueba) {
+              errores.push("Dropbox no está conectado o falta la carpeta de firmados");
+              logs.push({ resultado: "error", detalle: `Hay ${avisosFirmado.length} aviso(s) de documento firmado, pero Dropbox no está conectado o no hay carpeta con propósito «firmados»: no se puede verificar ni rescatar.` });
+            }
+          } else {
+            let enFirmados: { name: string; path: string }[] = [];
+            try {
+              enFirmados = ((await listFolder(tenantId, dropboxCfg, carpetaFirmados, true)).entries || []).filter((e: any) => e.tag === "file").map((e: any) => ({ name: e.name, path: e.path }));
+            } catch (e: any) {
+              errores.push(`No se pudo listar la carpeta de firmados: ${e?.message || e}`);
+              logs.push({ resultado: "error", detalle: `No se pudo listar la carpeta de firmados: ${e?.message || e}` });
+              enFirmados = [];
+            }
+            if (errores.length === 0 || enFirmados.length > 0) {
+              rescate = await rescatarFirmados(avisosFirmado, {
+                carpetaFirmados,
+                enFirmados,
+                soloPrueba,
+                existeDocumento: async (codigo) => !!(await DocumentoGenerado.exists({ tenantId, codigo })),
+                descargar: async (uid, adjunto) => {
+                  const r: any = await client.downloadMany(String(uid), [adjunto.part], { uid: true });
+                  const contenido = r?.[adjunto.part]?.content;
+                  if (!contenido) throw new Error("No se pudo bajar el adjunto del mensaje.");
+                  return Buffer.from(contenido);
+                },
+                subir: async (path, buffer) => {
+                  await uploadFileEstricto(tenantId, dropboxCfg, path, buffer);
+                },
+                verificados: verificadosDe(tenantId),
+                cederHilo: () => new Promise((r) => setImmediate(r)),
+              });
+              for (const l of rescate.logs) logs.push(l);
+              for (const e of rescate.errores) errores.push(e);
+            }
+          }
+        }
+      }
     } finally {
       lock.release();
     }
   } catch (e: any) {
     console.warn("[DROPBOX-SIGN-MAIL] Falló la casilla:", motivoFalloImap(e));
-    return { ok: false, detalle: `No se pudo leer la casilla: ${motivoFalloImap(e)}`, avisos, movidos, duplicados, sinArchivoEnOutbox, logs };
+    return { ok: false, detalle: `No se pudo leer la casilla: ${motivoFalloImap(e)}`, avisos, movidos, duplicados, sinArchivoEnOutbox, avisosFirmado: rescate?.avisos || 0, firmadosYaEstaban: rescate?.yaEstaban || 0, rescatados: rescate?.rescatados || 0, sinAdjunto: rescate?.sinAdjunto || 0, faltanRescatar: rescate?.faltan || 0, logs };
   } finally {
     // SIEMPRE se cierra, también si la lectura falló a mitad de camino: antes el error salteaba el
     // `logout` y la conexión con Gmail quedaba abierta, acumulándose de a una por lectura fallida.
     await client.logout().catch(() => client.close());
   }
 
+  const avisosFirmado = rescate?.avisos || 0;
+  const firmadosYaEstaban = rescate?.yaEstaban || 0;
+  const rescatados = rescate?.rescatados || 0;
+  const sinAdjunto = rescate?.sinAdjunto || 0;
+  const faltanRescatar = rescate?.faltan || 0;
   const detalle = soloPrueba
-    ? `Conexión OK. ${avisos} aviso(s) de envío en los últimos ${DIAS_ATRAS} días.`
+    ? `Conexión OK. ${avisos} aviso(s) de envío y ${avisosFirmado} de documento firmado en los últimos ${DIAS_ATRAS} días${rescatar ? ` (${firmadosYaEstaban} ya están en la carpeta de firmados${faltanRescatar ? `, ${faltanRescatar} faltan y se rescatarían` : ""})` : " (rescate de firmados apagado)"}.`
     : [
         `${avisos} aviso(s) leídos`,
         `${movidos} PDF movido(s) de Outbox a Pendbox`,
         duplicados ? `${duplicados} ya estaban en Pendbox` : "",
         sinArchivoEnOutbox ? `${sinArchivoEnOutbox} sin PDF en Outbox` : "",
+        rescatar ? `${avisosFirmado} aviso(s) de firmado (${firmadosYaEstaban} ya en la carpeta)` : "",
+        rescatados ? `${rescatados} firmado(s) rescatado(s) del email` : "",
+        sinAdjunto ? `${sinAdjunto} firmado(s) sin adjunto` : "",
       ]
         .filter(Boolean)
         .join(" · ") + (errores.length ? ` · ${errores.length} con error: ${errores.slice(0, 3).join(" | ")}` : "");
 
-  return { ok: errores.length === 0, detalle, avisos, movidos, duplicados, sinArchivoEnOutbox, logs };
+  // Tras un rescate, el escaneo de carpetas avanza los contratos a Firmados y limpia Pendbox por el camino de siempre.
+  if (rescatados > 0) {
+    import("./estadoDropboxCronService.js")
+      .then(({ escanearTenantAhora }) => escanearTenantAhora(tenantId))
+      .catch((e: any) => console.warn("[DROPBOX-SIGN-MAIL] No se pudo disparar el escaneo tras el rescate:", e?.message || e));
+  }
+
+  return { ok: errores.length === 0, detalle, avisos, movidos, duplicados, sinArchivoEnOutbox, avisosFirmado, firmadosYaEstaban, rescatados, sinAdjunto, faltanRescatar, logs };
 }
 
 /**
@@ -481,7 +587,7 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
  * del tenant sin aportar nada. Se conservan las últimas 50, de la más reciente a la más vieja.
  */
 /** Lo que vale guardar de una lectura: lo que se movió y lo que falló. Lo demás se repite en cada una. */
-const LINEAS_QUE_SE_GUARDAN = new Set<LineaLog["resultado"]>(["archivado", "error"]);
+const LINEAS_QUE_SE_GUARDAN = new Set<LineaLog["resultado"]>(["archivado", "error", "firmado-rescatado", "firmado-sin-adjunto"]);
 
 export function registrarLectura(r: ResultadoLectura): any {
   const update: any = {
@@ -489,6 +595,7 @@ export function registrarLectura(r: ResultadoLectura): any {
       "integrations.dropboxSign.lastCheckAt": new Date(),
       "integrations.dropboxSign.lastCheckOk": r.ok,
       "integrations.dropboxSign.lastCheckDetalle": r.detalle,
+      ...(r.rescatados > 0 ? { "integrations.dropboxSign.ultimoRescate": { at: new Date(), archivos: r.rescatados } } : {}),
     },
   };
   /*

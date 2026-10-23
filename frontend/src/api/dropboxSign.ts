@@ -20,6 +20,9 @@ export interface DropboxSignConfig {
   conexionAt: string | null;
   conexionOk: boolean | null;
   conexionDetalle: string;
+  /** Rescatar del email los firmados que la integración de Dropbox no depositó. */
+  rescatarFirmados: boolean;
+  ultimoRescate: { at: string; archivos: number } | null;
   /** Historial de lecturas, de la más reciente a la más vieja. Lo muestra el modal de Logs. */
   lastCheckHistorial: CorridaLog[];
 }
@@ -34,7 +37,7 @@ export interface CorridaLog {
 
 /** Una línea del log: qué se decidió para un aviso y por qué. */
 export interface LineaLog {
-  resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error";
+  resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error" | "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto";
   asunto?: string;
   archivo?: string;
   cuit?: string;
@@ -51,6 +54,7 @@ export interface DropboxSignConfigPayload {
   /** Solo se manda cuando se quiere cambiar; vacío conserva la guardada. */
   imapPassword?: string;
   enabled?: boolean;
+  rescatarFirmados?: boolean;
 }
 
 class DropboxSignAPI {

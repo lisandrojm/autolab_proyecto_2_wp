@@ -41,6 +41,7 @@ const configSchema = z.object({
   /** Solo se manda cuando se quiere cambiar: si viene vacía, se conserva la guardada. */
   imapPassword: z.string().optional(),
   enabled: z.boolean().optional(),
+  rescatarFirmados: z.boolean().optional(),
 });
 
 /** GET /dropbox-sign/config - configuración actual. La contraseña NUNCA se devuelve. */
@@ -64,6 +65,8 @@ router.get("/config", async (req: AuthenticatedRequest & TenantRequest, res) => 
       conexionAt: cfg.conexionAt || null,
       conexionOk: cfg.conexionOk ?? null,
       conexionDetalle: cfg.conexionDetalle || "",
+      rescatarFirmados: cfg.rescatarFirmados !== false,
+      ultimoRescate: cfg.ultimoRescate?.at ? { at: cfg.ultimoRescate.at, archivos: Number(cfg.ultimoRescate.archivos) || 0 } : null,
       lastCheckHistorial: cfg.lastCheckHistorial || [],
     });
   } catch (error) {
@@ -93,6 +96,7 @@ router.put("/config", async (req: AuthenticatedRequest & TenantRequest, res) => 
       "integrations.dropboxSign.imapSecure": data.imapSecure ?? true,
       "integrations.dropboxSign.imapUser": (data.imapUser || data.email).trim(),
       "integrations.dropboxSign.enabled": !!data.enabled,
+      "integrations.dropboxSign.rescatarFirmados": data.rescatarFirmados ?? true,
       "integrations.dropboxSign.configuredAt": new Date(),
     };
     // La contraseña solo se pisa si mandaron una nueva (la UI no la trae de vuelta).

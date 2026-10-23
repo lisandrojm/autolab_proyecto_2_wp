@@ -37,14 +37,14 @@ export const DropboxSignConfigPage: React.FC = () => {
   const [guardando, setGuardando] = useState(false);
   /** Explicación de para qué sirve la casilla (modal del ⓘ de la cabecera). */
   const [showInfo, setShowInfo] = useState(false);
-  const [form, setForm] = useState({ email: "", imapHost: "", imapPort: 993, imapSecure: true, imapUser: "", imapPassword: "", enabled: false });
+  const [form, setForm] = useState({ email: "", imapHost: "", imapPort: 993, imapSecure: true, imapUser: "", imapPassword: "", enabled: false, rescatarFirmados: true });
 
   const cargar = async () => {
     setLoading(true);
     try {
       const c = await dropboxSignAPI.config();
       setCfg(c);
-      setForm({ email: c.email, imapHost: c.imapHost, imapPort: c.imapPort, imapSecure: c.imapSecure, imapUser: c.imapUser, imapPassword: "", enabled: c.enabled });
+      setForm({ email: c.email, imapHost: c.imapHost, imapPort: c.imapPort, imapSecure: c.imapSecure, imapUser: c.imapUser, imapPassword: "", enabled: c.enabled, rescatarFirmados: c.rescatarFirmados !== false });
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo cargar la configuración.");
     } finally {
@@ -272,7 +272,7 @@ export const DropboxSignConfigPage: React.FC = () => {
 
             {/* Las cajas de estado, con las mismas que usa el bot. */}
             {cfg && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
                 <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2.5">
                   <p className="text-[11px] text-gray-500">Lectura automática</p>
                   <p className={`font-bold ${cfg.enabled ? "text-green-600 dark:text-green-400" : "text-gray-500"}`}>{cfg.enabled ? "Activada" : "Desactivada"}</p>
@@ -280,6 +280,11 @@ export const DropboxSignConfigPage: React.FC = () => {
                 <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2.5">
                   <p className="text-[11px] text-gray-500">Casilla configurada</p>
                   <p className="font-bold text-gray-800 dark:text-gray-100">{cfg.configuredAt ? fmtFechaHora(cfg.configuredAt) : "Todavía no"}</p>
+                </div>
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2.5" title="Firmados que la integración de Dropbox no depositó y se subieron desde el adjunto del email">
+                  <p className="text-[11px] text-gray-500">Último rescate de firmados</p>
+                  <p className={`font-bold ${cfg.rescatarFirmados ? "text-gray-800 dark:text-gray-100" : "text-gray-500"}`}>{!cfg.rescatarFirmados ? "Apagado" : cfg.ultimoRescate ? `${cfg.ultimoRescate.archivos} archivo${cfg.ultimoRescate.archivos === 1 ? "" : "s"}` : "Ninguno"}</p>
+                  {cfg.rescatarFirmados && cfg.ultimoRescate && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{fmtFechaHora(cfg.ultimoRescate.at)}</p>}
                 </div>
                 <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2.5 md:col-span-2">
                   <p className="text-[11px] text-gray-500">Última lectura de la casilla</p>
@@ -293,10 +298,16 @@ export const DropboxSignConfigPage: React.FC = () => {
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
-                <input type="checkbox" checked={form.enabled} onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))} className="rounded border-gray-300" />
-                Activar la lectura automática de la casilla
-              </label>
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                  <input type="checkbox" checked={form.enabled} onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))} className="rounded border-gray-300" />
+                  Activar la lectura automática de la casilla
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer" title="Cada lectura revisa también los avisos de «documento firmado»: si el PDF no está en la carpeta de firmados, lo baja del adjunto del email y lo sube. Requiere que Dropbox Sign adjunte el PDF firmado en los correos.">
+                  <input type="checkbox" checked={form.rescatarFirmados} onChange={(e) => setForm((f) => ({ ...f, rescatarFirmados: e.target.checked }))} className="rounded border-gray-300" />
+                  Rescatar firmados desde el email (si la integración de Dropbox no los depositó)
+                </label>
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 {/* Leer ahora = procesa y archiva en Pendbox (Probar conexión está arriba, en el estado). */}
                 <button type="button" onClick={() => leerAhora(false)} disabled={!!leyendo || guardando} title="Lee la casilla y archiva en Pendbox los avisos de envío a firmar" className="inline-flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-semibold bg-gray-700 text-white hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 disabled:opacity-50 transition-colors">
@@ -346,11 +357,14 @@ const ESTILO_LOG: Record<LineaLog["resultado"], { label: string; icon: any; clas
   "sin-archivo": { label: "Sin PDF en Outbox", icon: faFolderOpen, clase: "text-amber-600 dark:text-amber-400", ayuda: "Llegó el aviso pero el documento no está en Outbox, así que no hay nada que mover." },
   ignorado: { label: "No es un envío", icon: faBan, clase: "text-gray-400 dark:text-gray-500", ayuda: "El asunto no corresponde a un envío a firmar (avisos de firmado, resúmenes, etc.)." },
   error: { label: "Error", icon: faCircleXmark, clase: "text-red-600 dark:text-red-400", ayuda: "Falló algún paso al procesar este aviso." },
+  "firmado-rescatado": { label: "Firmado rescatado del email", icon: faCircleCheck, clase: "text-green-600 dark:text-green-400", ayuda: "La integración de Dropbox no había depositado el PDF firmado: se subió desde el adjunto del aviso. El escaneo de carpetas avanza el contrato a Firmados." },
+  "firmado-ya-estaba": { label: "Firmado ya en la carpeta", icon: faCircleMinus, clase: "text-gray-500 dark:text-gray-400", ayuda: "El PDF firmado ya estaba en la carpeta de firmados (lo depositó la integración de Dropbox): no se hizo nada." },
+  "firmado-sin-adjunto": { label: "Firmado sin PDF adjunto", icon: faTriangleExclamation, clase: "text-amber-600 dark:text-amber-400", ayuda: "El aviso de firmado no trae el PDF y la carpeta no lo tiene: activá en Dropbox Sign la opción de adjuntar el documento firmado en los correos." },
 };
 
 /** Las líneas de una corrida, agrupadas por resultado. */
 const LineasCorrida: React.FC<{ logs: LineaLog[] }> = ({ logs }) => {
-  const orden: LineaLog["resultado"][] = ["archivado", "sin-archivo", "error", "duplicado", "ignorado"];
+  const orden: LineaLog["resultado"][] = ["archivado", "firmado-rescatado", "firmado-sin-adjunto", "sin-archivo", "error", "duplicado", "firmado-ya-estaba", "ignorado"];
   const grupos = orden.map((r) => ({ resultado: r, items: logs.filter((l) => l.resultado === r) })).filter((g) => g.items.length > 0);
 
   return (
