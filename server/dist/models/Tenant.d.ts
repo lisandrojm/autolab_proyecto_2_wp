@@ -271,6 +271,12 @@ export interface ITenant extends Document {
             conexionAt?: Date | null;
             conexionOk?: boolean | null;
             conexionDetalle?: string;
+            /** Rescatar del adjunto del email los firmados que la integración de Dropbox no depositó (default true). */
+            rescatarFirmados?: boolean;
+            ultimoRescate?: {
+                at?: Date;
+                archivos?: number;
+            } | null;
             /**
              * Historial de lecturas, de la más reciente a la más vieja. Solo se guardan las corridas que
              * encontraron algo o que fallaron: el job corre cada 5 minutos y la mayoría no tiene nada que

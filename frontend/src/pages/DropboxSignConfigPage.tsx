@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner, faCheck, faTriangleExclamation, faEnvelope, faInbox, faListUl, faCircleCheck, faCircleMinus, faFolderOpen, faBan, faCircleXmark, faPlug, faCircleQuestion, faRobot } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faCheck, faTriangleExclamation, faEnvelope, faInbox, faListUl, faCircleCheck, faCircleMinus, faFolderOpen, faBan, faCircleXmark, faPlug, faCircleQuestion, faRobot, faLifeRing } from "@fortawesome/free-solid-svg-icons";
 import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { dropboxSignAPI, DropboxSignConfig, LineaLog, CorridaLog } from "../api/dropboxSign";
 import { InfoModal } from "../components/ui/InfoModal";
@@ -9,6 +9,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
 import { EnvioAutomaticoCard } from "../components/dropboxSign/EnvioAutomaticoCard";
 import { ReglasColocacionCard } from "../components/dropboxSign/ReglasColocacionCard";
+import { RegistroRescatados } from "../components/dropboxSign/RegistroRescatados";
 
 const fmtFechaHora = (iso?: string | null): string => {
   if (!iso) return "—";
@@ -59,6 +60,8 @@ export const DropboxSignConfigPage: React.FC = () => {
   /** Corre la lectura de la casilla: `prueba` solo verifica la conexión, sin escribir en Dropbox. */
   const [leyendo, setLeyendo] = useState<"prueba" | "real" | null>(null);
   const [showLogs, setShowLogs] = useState(false);
+  /** El registro permanente de los firmados rescatados desde el email. */
+  const [showRescates, setShowRescates] = useState(false);
   const leerAhora = async (prueba: boolean) => {
     setLeyendo(prueba ? "prueba" : "real");
     try {
@@ -281,11 +284,13 @@ export const DropboxSignConfigPage: React.FC = () => {
                   <p className="text-[11px] text-gray-500">Casilla configurada</p>
                   <p className="font-bold text-gray-800 dark:text-gray-100">{cfg.configuredAt ? fmtFechaHora(cfg.configuredAt) : "Todavía no"}</p>
                 </div>
-                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2.5" title="Firmados que la integración de Dropbox no depositó y se subieron desde el adjunto del email">
-                  <p className="text-[11px] text-gray-500">Último rescate de firmados</p>
-                  <p className={`font-bold ${cfg.rescatarFirmados ? "text-gray-800 dark:text-gray-100" : "text-gray-500"}`}>{!cfg.rescatarFirmados ? "Apagado" : cfg.ultimoRescate ? `${cfg.ultimoRescate.archivos} archivo${cfg.ultimoRescate.archivos === 1 ? "" : "s"}` : "Ninguno"}</p>
-                  {cfg.rescatarFirmados && cfg.ultimoRescate && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{fmtFechaHora(cfg.ultimoRescate.at)}</p>}
-                </div>
+                <button type="button" onClick={() => setShowRescates(true)} className="rounded-lg border border-gray-200 dark:border-gray-700 p-2.5 text-left hover:border-blue-300 hover:bg-gray-50 dark:hover:bg-gray-700/40" title="Firmados que la integración de Dropbox no depositó y se subieron desde el adjunto del email. Click: ver el registro completo">
+                  <p className="text-[11px] text-gray-500">Rescatados desde el email</p>
+                  <p className={`font-bold ${cfg.rescatarFirmados === false ? "text-gray-500" : "text-gray-800 dark:text-gray-100"}`}>
+                    {cfg.rescatarFirmados === false ? "Apagado" : `${cfg.totalRescatados ?? 0} en total`}
+                  </p>
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{cfg.ultimoRescate ? `Último: ${cfg.ultimoRescate.archivos} el ${fmtFechaHora(cfg.ultimoRescate.at)}` : "Ver registro"}</p>
+                </button>
                 <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2.5 md:col-span-2">
                   <p className="text-[11px] text-gray-500">Última lectura de la casilla</p>
                   <p className={`font-bold ${cfg.lastCheckOk === false ? "text-red-600 dark:text-red-400" : "text-gray-800 dark:text-gray-100"}`}>
@@ -326,6 +331,11 @@ export const DropboxSignConfigPage: React.FC = () => {
                   Logs
                   {cfg?.lastCheckHistorial?.length ? <span className="text-xs font-bold text-gray-500 dark:text-gray-400">({cfg.lastCheckHistorial.length})</span> : null}
                 </button>
+                <button type="button" onClick={() => setShowRescates(true)} title="El registro permanente de los firmados que se subieron desde el email porque la integración de Dropbox no los depositó" className="inline-flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  <FontAwesomeIcon icon={faLifeRing} className="h-4 w-4" />
+                  Rescatados
+                  {cfg?.totalRescatados ? <span className="text-xs font-bold text-gray-500 dark:text-gray-400">({cfg.totalRescatados})</span> : null}
+                </button>
                 <button type="button" onClick={guardar} disabled={guardando} className="inline-flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
                   <FontAwesomeIcon icon={guardando ? faSpinner : faCheck} spin={guardando} className="h-4 w-4" />
                   Guardar
@@ -346,6 +356,7 @@ export const DropboxSignConfigPage: React.FC = () => {
       >
         <HistorialLecturas corridas={cfg?.lastCheckHistorial || []} />
       </InfoModal>
+      {showRescates && <RegistroRescatados onClose={() => setShowRescates(false)} />}
     </PageLayout>
   );
 };

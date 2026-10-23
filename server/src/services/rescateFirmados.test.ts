@@ -5,7 +5,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { adjuntosPdf, esConflictoDeNombre, extraerArchivoFirmado, nombreDestino, rescatarFirmados, validarAdjunto, yaEstaEnFirmados, type AvisoFirmado, type DepsRescate } from "./rescateFirmados.js";
+import { adjuntosPdf, esConflictoDeNombre, extraerArchivoFirmado, extraerAvisoFirmado, nombreDestino, rescatarFirmados, validarAdjunto, yaEstaEnFirmados, type AvisoFirmado, type DepsRescate } from "./rescateFirmados.js";
 import { extraerArchivoDeAsunto } from "./dropboxSignMailService.js";
 
 // Asuntos reales de la casilla (anonimizados).
@@ -14,9 +14,11 @@ const ARCHIVO = "426_LN+_AQUINO_Release_Jornada_D-20261012_H-20261012_2046351589
 const ENVIO = "Se inició el proceso de firma de 426_LN+_AQUINO_AltaAFIP_Plazo-fijo-6x6_D-20261001_H-20261031_20442166987_enzogabrielaquino01-ARROBA-gmail.com_Empresa-30717068374-Frame Firma Digital";
 
 describe("1. el asunto de «documento firmado»", () => {
-  it("reconoce el formato real en español y devuelve el nombre exacto del PDF (con el código)", () => {
+  it("reconoce el formato real en español y devuelve el nombre exacto del PDF (con el código) y quién firmó", () => {
     assert.equal(extraerArchivoFirmado(FIRMADO_ES), ARCHIVO);
     assert.equal(extraerArchivoFirmado(`Fwd: ${FIRMADO_ES}`), ARCHIVO);
+    assert.deepEqual(extraerAvisoFirmado(FIRMADO_ES), { archivo: ARCHIVO, quien: "ALAN AQUINO" });
+    assert.equal(extraerAvisoFirmado(ENVIO), null);
   });
   it("y las variantes en inglés y multi-firmante", () => {
     assert.equal(extraerArchivoFirmado(`ALAN AQUINO signed ${ARCHIVO}`), ARCHIVO);
@@ -83,7 +85,7 @@ describe("3. el adjunto", () => {
 
 describe("4. la pasada de rescate (idempotente)", () => {
   const PDF = Buffer.concat([Buffer.from("%PDF-1.4\n"), Buffer.alloc(120 * 1024, 7)]);
-  const aviso = (uid: number, titulo = ARCHIVO, adjuntos = [{ part: "2", nombre: titulo, bytes: 170000, tipo: "application/pdf" }]): AvisoFirmado => ({ uid, asunto: `ALAN AQUINO firmó ${titulo}`, titulo, adjuntos });
+  const aviso = (uid: number, titulo = ARCHIVO, adjuntos = [{ part: "2", nombre: titulo, bytes: 170000, tipo: "application/pdf" }]): AvisoFirmado => ({ uid, asunto: `ALAN AQUINO firmó ${titulo}`, titulo, quien: "ALAN AQUINO", adjuntos });
   const deps = (extra: Partial<DepsRescate> = {}, subidas: string[] = []): DepsRescate => ({
     carpetaFirmados: "/Requested signatures",
     enFirmados: [],
@@ -113,6 +115,8 @@ describe("4. la pasada de rescate (idempotente)", () => {
     assert.equal(r.yaEstaban, 1);
     assert.deepEqual(subidas, [`/Requested signatures/${ARCHIVO}`]);
     assert.equal(r.logs[0].resultado, "firmado-rescatado");
+    // Lo que va al registro permanente.
+    assert.deepEqual(r.logs[0].rescate, { uid: 1, codigo: "ID-000137", titulo: ARCHIVO, quien: "ALAN AQUINO", path: `/Requested signatures/${ARCHIVO}`, carpeta: "/Requested signatures", bytes: PDF.length });
     assert.ok(d.enFirmados.some((e) => e.name === ARCHIVO), "el listado en memoria se actualiza");
     assert.ok(d.verificados.has(1));
   });

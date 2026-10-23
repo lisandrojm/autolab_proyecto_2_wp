@@ -5,7 +5,8 @@ import { candidatosPorNombre, elMasLargo } from "../utils/coincidenciaDeNombre.j
 import { leerAnclas, mismoDocumento, AnclasNombre } from "../utils/anclasNombre.js";
 import { resolverCarpetaPorProposito, resolverProposito } from "../utils/estadoCarpetas.js";
 import { getTenantDropboxConfig, listFolder, moveEntry, uploadFileEstricto } from "./dropboxService.js";
-import { adjuntosPdf, extraerArchivoFirmado, rescatarFirmados, REMITENTE_FIRMADO, TERMINOS_BUSQUEDA_FIRMADO, type AvisoFirmado, type ResumenRescate } from "./rescateFirmados.js";
+import { adjuntosPdf, extraerAvisoFirmado, rescatarFirmados, REMITENTE_FIRMADO, TERMINOS_BUSQUEDA_FIRMADO, type AvisoFirmado, type ResumenRescate } from "./rescateFirmados.js";
+import { FirmadoRescatado } from "../models/FirmadoRescatado.js";
 import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { Info } from "../models/Info.js";
@@ -495,9 +496,9 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
         if (lista.length > 0) {
           for await (const m of client.fetch(lista.join(","), { envelope: true, bodyStructure: true }, { uid: true })) {
             const asunto = String((m as any)?.envelope?.subject || "");
-            const titulo = extraerArchivoFirmado(asunto);
-            if (!titulo) continue;
-            avisosFirmado.push({ uid: Number((m as any).uid), asunto, titulo, adjuntos: adjuntosPdf((m as any).bodyStructure) });
+            const aviso = extraerAvisoFirmado(asunto);
+            if (!aviso) continue;
+            avisosFirmado.push({ uid: Number((m as any).uid), asunto, titulo: aviso.archivo, quien: aviso.quien, adjuntos: adjuntosPdf((m as any).bodyStructure) });
           }
         }
         if (avisosFirmado.length > 0) {
@@ -536,6 +537,16 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
               });
               for (const l of rescate.logs) logs.push(l);
               for (const e of rescate.errores) errores.push(e);
+              // EL REGISTRO PERMANENTE: una fila por PDF que entró por este camino (ver `models/FirmadoRescatado.ts`).
+              for (const l of rescate.logs) {
+                if (l.resultado !== "firmado-rescatado" || !l.rescate) continue;
+                const d = l.rescate;
+                await FirmadoRescatado.updateOne(
+                  { tenantId, archivo: l.archivo },
+                  { $set: { codigo: d.codigo, path: d.path, carpeta: d.carpeta, titulo: d.titulo, asunto: l.asunto, firmante: d.quien, cuit: l.cuit || "", uid: d.uid, bytes: d.bytes, rescatadoEl: new Date() }, $inc: { veces: 1 }, $setOnInsert: { tenantId } },
+                  { upsert: true },
+                ).catch((e: any) => console.warn("[DROPBOX-SIGN-MAIL] No se pudo registrar el rescate:", e?.message || e));
+              }
             }
           }
         }

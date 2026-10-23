@@ -9,6 +9,7 @@ import { armarCola, arrancarCorridaEnvio, configDelTenant, corridaEnvioDe, desen
 import { cupoDelDia, estimarEnvios, fechaYHoraArgentina, puedeCorrer } from "../services/dropboxSignBot/planificador.js";
 import { DropboxSignEnvio } from "../models/DropboxSignEnvio.js";
 import { DropboxSignEnvioLog } from "../models/DropboxSignEnvioLog.js";
+import { FirmadoRescatado } from "../models/FirmadoRescatado.js";
 import { guardarReglasDelTenant, reglasDelTenant } from "../services/dropboxSignBot/reglasTenant.js";
 import { arrancarVerificacion, detenerVerificacion, previsualizarColocacion, verificacionDe } from "../services/dropboxSignBot/colocacion.js";
 import { REGLAS_BASE, TIPOS_ANCLA } from "../compartido/reglasColocacionFirma.js";
@@ -38,6 +39,7 @@ const configSchema = z.object({
     /** Solo se manda cuando se quiere cambiar: si viene vacía, se conserva la guardada. */
     imapPassword: z.string().optional(),
     enabled: z.boolean().optional(),
+    rescatarFirmados: z.boolean().optional(),
 });
 /** GET /dropbox-sign/config - configuración actual. La contraseña NUNCA se devuelve. */
 router.get("/config", async (req, res) => {
@@ -60,6 +62,9 @@ router.get("/config", async (req, res) => {
             conexionAt: cfg.conexionAt || null,
             conexionOk: cfg.conexionOk ?? null,
             conexionDetalle: cfg.conexionDetalle || "",
+            rescatarFirmados: cfg.rescatarFirmados !== false,
+            ultimoRescate: cfg.ultimoRescate?.at ? { at: cfg.ultimoRescate.at, archivos: Number(cfg.ultimoRescate.archivos) || 0 } : null,
+            totalRescatados: await FirmadoRescatado.countDocuments({ tenantId: req.tenantObjectId }),
             lastCheckHistorial: cfg.lastCheckHistorial || [],
         });
     }
@@ -88,6 +93,7 @@ router.put("/config", async (req, res) => {
             "integrations.dropboxSign.imapSecure": data.imapSecure ?? true,
             "integrations.dropboxSign.imapUser": (data.imapUser || data.email).trim(),
             "integrations.dropboxSign.enabled": !!data.enabled,
+            "integrations.dropboxSign.rescatarFirmados": data.rescatarFirmados ?? true,
             "integrations.dropboxSign.configuredAt": new Date(),
         };
         // La contraseña solo se pisa si mandaron una nueva (la UI no la trae de vuelta).
@@ -106,6 +112,41 @@ router.put("/config", async (req, res) => {
     catch (error) {
         console.error("Dropbox Sign save config error:", error);
         res.status(500).json({ error: "Internal server error" });
+    }
+});
+/**
+ * GET /dropbox-sign/rescates — el registro permanente de los firmados rescatados desde el email (los que la
+ * integración de Dropbox no depositó). Paginado, los más nuevos primero; `q` busca en archivo, código,
+ * firmante y asunto; `desde`/`hasta` (YYYY-MM-DD) acotan la fecha del rescate.
+ */
+router.get("/rescates", async (req, res) => {
+    try {
+        const q = String(req.query.q || "").trim();
+        const pagina = Math.max(1, Number(req.query.pagina) || 1);
+        const porPagina = Math.min(500, Math.max(1, Number(req.query.porPagina) || 100));
+        const filtro = { tenantId: req.tenantObjectId };
+        if (q) {
+            const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            filtro.$or = [{ archivo: re }, { codigo: re }, { firmante: re }, { asunto: re }, { cuit: re }];
+        }
+        const desde = String(req.query.desde || "");
+        const hasta = String(req.query.hasta || "");
+        if (/^\d{4}-\d{2}-\d{2}$/.test(desde) || /^\d{4}-\d{2}-\d{2}$/.test(hasta)) {
+            filtro.rescatadoEl = {};
+            if (/^\d{4}-\d{2}-\d{2}$/.test(desde))
+                filtro.rescatadoEl.$gte = new Date(`${desde}T00:00:00-03:00`);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(hasta))
+                filtro.rescatadoEl.$lte = new Date(`${hasta}T23:59:59.999-03:00`);
+        }
+        const [total, filas, totalTenant] = await Promise.all([
+            FirmadoRescatado.countDocuments(filtro),
+            FirmadoRescatado.find(filtro).sort({ rescatadoEl: -1 }).skip((pagina - 1) * porPagina).limit(porPagina).lean(),
+            FirmadoRescatado.countDocuments({ tenantId: req.tenantObjectId }),
+        ]);
+        res.json({ total, totalTenant, pagina, porPagina, filas });
+    }
+    catch (error) {
+        res.status(500).json({ error: error?.message || "No se pudo leer el registro de rescates." });
     }
 });
 /**

@@ -70,6 +70,12 @@ export declare function downloadFileContent(tenantId: string, cfg: TenantDropbox
 /** `sobrescribir`: reemplaza el archivo si ya existe, en vez de crear «nombre (1).ext». */
 export declare function uploadFile(tenantId: string, cfg: TenantDropboxConfig, path: string, buffer: Buffer, sobrescribir?: boolean): Promise<DropboxEntry>;
 /**
+ * Subida SIN renombrar: si ya hay un archivo con ese nombre, Dropbox contesta 409 `path/conflict/file`
+ * y acá se tira tal cual. La usa el rescate de firmados desde el email: una carrera con la integración
+ * nativa (que deposita el mismo PDF) tiene que terminar en «ya estaba», no en «nombre (1).pdf».
+ */
+export declare function uploadFileEstricto(tenantId: string, cfg: TenantDropboxConfig, path: string, buffer: Buffer): Promise<DropboxEntry>;
+/**
  * Subida por SESIÓN, para archivos que no entran en `uploadFile`.
  *
  * El endpoint simple de Dropbox (`/files/upload`) corta en 150 MB y contesta un error que no dice eso.

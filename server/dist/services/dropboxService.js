@@ -185,6 +185,21 @@ export async function uploadFile(tenantId, cfg, path, buffer, sobrescribir = fal
     return mapEntry(data);
 }
 /**
+ * Subida SIN renombrar: si ya hay un archivo con ese nombre, Dropbox contesta 409 `path/conflict/file`
+ * y acá se tira tal cual. La usa el rescate de firmados desde el email: una carrera con la integración
+ * nativa (que deposita el mismo PDF) tiene que terminar en «ya estaba», no en «nombre (1).pdf».
+ */
+export async function uploadFileEstricto(tenantId, cfg, path, buffer) {
+    const token = await getAccessToken(tenantId, cfg);
+    const { data } = await axios.post(`${CONTENT}/files/upload`, buffer, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/octet-stream", "Dropbox-API-Arg": argHeader({ path, mode: "add", autorename: false, mute: false, strict_conflict: false }) },
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+        timeout: CONTENT_TIMEOUT_MS,
+    });
+    return mapEntry(data);
+}
+/**
  * Subida por SESIÓN, para archivos que no entran en `uploadFile`.
  *
  * El endpoint simple de Dropbox (`/files/upload`) corta en 150 MB y contesta un error que no dice eso.

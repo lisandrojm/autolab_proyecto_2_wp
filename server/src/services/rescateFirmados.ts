@@ -45,16 +45,19 @@ const sinPrefijos = (asunto: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
-/** El nombre del PDF firmado tal como aparece en el asunto (con `.pdf`), o "" si el asunto no es de firmado. */
-export function extraerArchivoFirmado(asunto: string): string {
+/** El aviso de firmado leído del asunto: el nombre del PDF (con `.pdf`) y quién firmó, o null si no es de firmado. */
+export function extraerAvisoFirmado(asunto: string): { archivo: string; quien: string } | null {
   const limpio = sinPrefijos(asunto);
   for (const re of ASUNTO_FIRMADO) {
     const m = re.exec(limpio);
     const archivo = m?.groups?.archivo?.trim();
-    if (archivo) return archivo.replace(/[\\/]/g, "-");
+    if (archivo) return { archivo: archivo.replace(/[\\/]/g, "-"), quien: String(m?.groups?.quien || "").trim() };
   }
-  return "";
+  return null;
 }
+
+/** El nombre del PDF firmado tal como aparece en el asunto (con `.pdf`), o "" si el asunto no es de firmado. */
+export const extraerArchivoFirmado = (asunto: string): string => extraerAvisoFirmado(asunto)?.archivo || "";
 
 export const esAvisoDeFirmado = (asunto: string): boolean => extraerArchivoFirmado(asunto) !== "";
 
@@ -133,6 +136,8 @@ export interface AvisoFirmado {
   asunto: string;
   /** El nombre del PDF según el asunto. */
   titulo: string;
+  /** Quién firmó, según el asunto. */
+  quien?: string;
   adjuntos: AdjuntoPdf[];
 }
 
@@ -145,6 +150,8 @@ export interface LineaRescate {
   cuit?: string;
   documento?: string;
   detalle: string;
+  /** Sólo en «firmado-rescatado»: lo que hace falta para el registro permanente. */
+  rescate?: { uid: number; codigo: string; titulo: string; quien: string; path: string; carpeta: string; bytes: number };
 }
 
 export interface DepsRescate {
@@ -254,7 +261,13 @@ export async function rescatarFirmados(avisos: AvisoFirmado[], deps: DepsRescate
       subidos.add(codigo);
       deps.enFirmados.push({ name: nombre, path });
       deps.verificados.add(a.uid);
-      r.logs.push({ ...base, resultado: "firmado-rescatado", archivo: nombre, detalle: `La integración de Dropbox no lo había depositado: se rescató del adjunto del email (${Math.round(buffer.length / 1024)} KB) y se subió a «${carpeta}».` });
+      r.logs.push({
+        ...base,
+        resultado: "firmado-rescatado",
+        archivo: nombre,
+        detalle: `La integración de Dropbox no lo había depositado: se rescató del adjunto del email (${Math.round(buffer.length / 1024)} KB) y se subió a «${carpeta}».`,
+        rescate: { uid: a.uid, codigo, titulo: a.titulo, quien: a.quien || "", path, carpeta, bytes: buffer.length },
+      });
     } catch (e: any) {
       r.errores.push(`${a.titulo}: ${e?.message || e}`);
       r.logs.push({ ...base, resultado: "error", detalle: `No se pudo rescatar: ${e?.message || e}` });

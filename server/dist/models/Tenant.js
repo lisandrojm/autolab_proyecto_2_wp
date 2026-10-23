@@ -151,6 +151,8 @@ const tenantSchema = new Schema({
             conexionAt: { type: Date, default: null },
             conexionOk: { type: Boolean, default: null },
             conexionDetalle: { type: String, default: "" },
+            rescatarFirmados: { type: Boolean, default: true },
+            ultimoRescate: { at: { type: Date }, archivos: { type: Number } },
             lastCheckHistorial: [
                 {
                     _id: false,

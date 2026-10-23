@@ -1,3 +1,4 @@
+import { ImapFlow } from "imapflow";
 import { leerAnclas, AnclasNombre } from "../utils/anclasNombre.js";
 /** Nombre del documento tal como aparece en el asunto del aviso. "" si el asunto no es de envío. */
 export declare function extraerArchivoDeAsunto(asunto: string): string;
@@ -74,7 +75,7 @@ export declare function yaEstaEnPendbox(entries: {
 }[], archivo: string, _ident?: AnclasNombre): boolean;
 /** Una línea por aviso encontrado: qué se decidió y por qué. Lo consume el modal de Logs. */
 export interface LineaLog {
-    resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error";
+    resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error" | "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto";
     asunto?: string;
     archivo?: string;
     cuit?: string;
@@ -90,6 +91,16 @@ export interface ResultadoLectura {
     duplicados: number;
     /** Avisos salteados porque el PDF no aparece en Outbox (no se puede atribuir a un contrato). */
     sinArchivoEnOutbox: number;
+    /** Avisos de «documento firmado» leídos. */
+    avisosFirmado: number;
+    /** De ésos, cuántos ya estaban en la carpeta de firmados (la integración nativa los depositó). */
+    firmadosYaEstaban: number;
+    /** PDF firmados subidos desde el adjunto del email. */
+    rescatados: number;
+    /** Avisos de firmado sin el PDF adjunto (hay que activarlo en Dropbox Sign). */
+    sinAdjunto: number;
+    /** Sólo en prueba: firmados que faltan en la carpeta (se rescatarían). */
+    faltanRescatar: number;
     /** Qué pasó con cada aviso, para el modal de Logs. */
     logs: LineaLog[];
 }
@@ -107,6 +118,8 @@ export interface ResultadoLectura {
  */
 export declare function motivoFalloImap(e: any): string;
 export declare function leerCasillaDropboxSign(tenantId: string, soloPrueba?: boolean): Promise<ResultadoLectura>;
+/** Arma el cliente IMAP de la casilla configurada. */
+export declare function clienteImap(cfg: any, extra?: Record<string, unknown>): ImapFlow;
 export declare function registrarLectura(r: ResultadoLectura): any;
 /** Corre la lectura para todos los tenants que la tengan activada. */
 export declare function leerCasillasDeTodosLosTenants(): Promise<void>;

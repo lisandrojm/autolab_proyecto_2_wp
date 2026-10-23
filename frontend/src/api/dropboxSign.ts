@@ -23,6 +23,8 @@ export interface DropboxSignConfig {
   /** Rescatar del email los firmados que la integración de Dropbox no depositó. */
   rescatarFirmados: boolean;
   ultimoRescate: { at: string; archivos: number } | null;
+  /** Cuántos firmados entraron por el rescate desde el email, en total (registro permanente). */
+  totalRescatados: number;
   /** Historial de lecturas, de la más reciente a la más vieja. Lo muestra el modal de Logs. */
   lastCheckHistorial: CorridaLog[];
 }
@@ -45,6 +47,30 @@ export interface LineaLog {
   detalle?: string;
 }
 
+/** Una fila del registro permanente de firmados rescatados desde el email. */
+export interface FirmadoRescatado {
+  _id: string;
+  codigo: string;
+  archivo: string;
+  path: string;
+  carpeta: string;
+  titulo: string;
+  asunto: string;
+  firmante: string;
+  cuit: string;
+  uid: number | null;
+  bytes: number;
+  rescatadoEl: string;
+  veces: number;
+}
+export interface PaginaRescatados {
+  total: number;
+  totalTenant: number;
+  pagina: number;
+  porPagina: number;
+  filas: FirmadoRescatado[];
+}
+
 export interface DropboxSignConfigPayload {
   email: string;
   imapHost: string;
@@ -63,6 +89,11 @@ class DropboxSignAPI {
     return data;
   }
 
+  /** El registro permanente de los firmados rescatados desde el email. */
+  async rescates(params: { q?: string; desde?: string; hasta?: string; pagina?: number; porPagina?: number } = {}): Promise<PaginaRescatados> {
+    const { data } = await axios.get("/dropbox-sign/rescates", { params });
+    return data;
+  }
   async save(payload: DropboxSignConfigPayload): Promise<{ ok: boolean; tienePassword: boolean; enabled: boolean }> {
     const { data } = await axios.put("/dropbox-sign/config", payload);
     return data;
