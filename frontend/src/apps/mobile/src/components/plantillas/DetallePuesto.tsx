@@ -70,12 +70,12 @@ export default function DetallePuesto() {
   /** Si la persona escribió en los importes: lo que emite el componente al montarse no cuenta. */
   const tocoImporte = useRef(false);
   /*
-    «GUARDAR» ANTES DE «PUESTO SIGUIENTE» (pedido del 23/10/2026): el botón de la derecha dice
-    «Guardar»; guarda lo pendiente, avisa, y recién ahí pasa a «Puesto siguiente». En el último puesto
-    dice «Guardar equipo»: guarda, avisa y va al inicio de Plantillas. `guardadoEn` es el puesto que se guardó;
-    escribir otra vez en el importe lo vuelve a «Guardar».
+    EL BOTÓN DE LA DERECHA (pedidos del 23/10/2026): en un puesto intermedio dice «Puesto siguiente», y
+    sólo si se cambió algún campo de ESTE puesto pasa a «Guardar» (guarda lo pendiente, avisa y vuelve a
+    «Puesto siguiente»). En el último puesto del equipo siempre dice «Guardar equipo»: guarda, avisa y va
+    al inicio de Plantillas. `cambiadoEn` es el puesto con cambios sin confirmar.
   */
-  const [guardadoEn, setGuardadoEn] = useState<number | null>(null);
+  const [cambiadoEn, setCambiadoEn] = useState<number | null>(null);
   const [guardandoPie, setGuardandoPie] = useState(false);
   /*
     LA CATEGORÍA POR DEFECTO, GUARDADA SOLA. Un puesto sin categoría —agregado después, o creado antes
@@ -85,7 +85,7 @@ export default function DetallePuesto() {
   */
   const categoriaPorDefecto = x && !x.efectivo.categoriaSatId && catalogos.categoriasCargadas ? catalogos.categoriaPorDefectoPara(proyecto, empresaDelEquipo, convenioDelEquipo, puesto?.rolesFrame || [], x?.efectivo.contratoId) : "";
   useEffect(() => {
-    if (categoriaPorDefecto) void cambiar({ categoriaSatId: categoriaPorDefecto });
+    if (categoriaPorDefecto) void cambiar({ categoriaSatId: categoriaPorDefecto }, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoriaPorDefecto, numero, equipoId]);
 
@@ -104,10 +104,10 @@ export default function DetallePuesto() {
   */
   useEffect(() => {
     if (!tocoImporte.current || !x) return;
-    setGuardadoEn(null);
+    setCambiadoEn(numero);
     const t = setTimeout(() => {
       const nuevo = importeFijado(importe);
-      if (nuevo !== (x.efectivo.dailyRateManual ?? null)) void cambiar({ dailyRateManual: nuevo });
+      if (nuevo !== (x.efectivo.dailyRateManual ?? null)) void cambiar({ dailyRateManual: nuevo }, true);
     }, 700);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,7 +139,7 @@ export default function DetallePuesto() {
   const anterior = lista[idx - 1];
   const siguiente = lista[idx + 1];
   const irA = (m: number) => navigate(rutas.puesto(p._id, equipo._id, m), { replace: true });
-  const guardado = guardadoEn === numero;
+  const conCambios = cambiadoEn === numero;
   /** «Guardar» / «Guardar equipo»: manda lo pendiente del importe (sin esperar al guardado diferido) y avisa. */
   const guardarPuesto = async () => {
     if (guardandoPie) return;
@@ -147,12 +147,12 @@ export default function DetallePuesto() {
     try {
       const nuevo = importeFijado(importe);
       if (nuevo !== (x.efectivo.dailyRateManual ?? null)) {
-        const r = await cambiar({ dailyRateManual: nuevo });
+        const r = await cambiar({ dailyRateManual: nuevo }, true);
         if (!r) return; // `guardar` ya avisó que no se guardó
       }
       tocoImporte.current = false;
       if (siguiente) {
-        setGuardadoEn(numero);
+        setCambiadoEn(null);
         await sweetAlert.success("Puesto guardado", `Puesto ${numero} · ${rol}`);
       } else {
         await sweetAlert.success("Equipo guardado", `${equipo.nombre}: ${lista.length} puesto${lista.length === 1 ? "" : "s"}.`);
@@ -165,13 +165,20 @@ export default function DetallePuesto() {
   };
 
   /** El puesto como debería quedar en este equipo; el server guarda sólo lo distinto del equipo. */
-  const cambiar = (cambios: Record<string, any>) => {
+  /** Guarda y marca el puesto con cambios (el botón pasa a «Guardar»). */
+  const guardarCambio = (fn: () => Promise<any>) => {
+    setCambiadoEn(numero);
+    return guardar(fn);
+  };
+  /** `auto`: un guardado que no hizo la persona (la categoría por defecto, el importe diferido): no marca cambios. */
+  const cambiar = (cambios: Record<string, any>, auto = false) => {
+    if (!auto) setCambiadoEn(numero);
     const cuerpo = { areaId: efectivo.areaId, shiftId: efectivo.shiftId, inTime: efectivo.inTime, outTime: efectivo.outTime, diasSemana: efectivo.diasSemana, diasPorSemana: efectivo.diasPorSemana, diasRotativos: efectivo.diasRotativos, contratoId: efectivo.contratoId, nombreContrato: efectivo.nombreContrato, tipoImpositivo: efectivo.tipoImpositivo, categoriaSatId: efectivo.categoriaSatId, dailyRateManual: efectivo.dailyRateManual, ...cambios };
     return guardar(() => plantillasEquipoAPI.condiciones(p._id, equipo._id, puesto._id, cuerpo as any));
   };
   const volverAlEquipo = () => void cambiar({ areaId: base.areaId, shiftId: base.shiftId, inTime: base.inTime, outTime: base.outTime, diasSemana: base.diasSemana, diasPorSemana: base.diasPorSemana, diasRotativos: base.diasRotativos, contratoId: base.contratoId, nombreContrato: base.nombreContrato, tipoImpositivo: base.tipoImpositivo });
 
-  const quitarReemplazo = () => void guardar(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, { quitar: true }));
+  const quitarReemplazo = () => void guardarCambio(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, { quitar: true }));
   // Sin convenio ni categoría según el trámite: hoy ninguno (ver `tramiteSinConvenioNiCategoria`).
   const esServicios = tramiteSinConvenioNiCategoria(efectivo.tipoImpositivo);
   const empresa = empresaDelEquipo;
@@ -207,7 +214,7 @@ export default function DetallePuesto() {
             <FontAwesomeIcon icon={faChevronLeft} />
             Puesto anterior
           </button>
-          {guardado && siguiente ? (
+          {siguiente && !conCambios ? (
             <button type="button" onClick={() => irA(siguiente.n)} className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 dark:border-slate-600 dark:text-slate-100">
               Puesto siguiente
               <FontAwesomeIcon icon={faChevronRight} />
@@ -325,7 +332,7 @@ export default function DetallePuesto() {
           }}
           motivos={catalogos.motivos}
           motivoId={r?.motivoReemplazoId || motivoPendiente}
-          onMotivo={(id) => (r ? void guardar(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, { replacedUserId: r.replacedUserId, motivoReemplazoId: id || null })) : setMotivoPendiente(id))}
+          onMotivo={(id) => (r ? void guardarCambio(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, { replacedUserId: r.replacedUserId, motivoReemplazoId: id || null })) : setMotivoPendiente(id))}
           nombreReemplazado={r?.nombre || ""}
           onElegirPersona={() => setHoja("reemplazado")}
           onQuitarPersona={quitarReemplazo}
@@ -342,7 +349,7 @@ export default function DetallePuesto() {
         {/* Dos botones, uno al lado del otro: son dos acciones distintas, cada una con su blanco entero. */}
         <div className="flex gap-2 border-t border-slate-200 p-3 dark:border-slate-700">
           {persona && (
-            <button type="button" onClick={() => void guardar(() => plantillasEquipoAPI.asignar(p._id, equipo._id, puesto._id, null))} className="flex min-h-[48px] flex-1 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-bold text-slate-800 dark:border-slate-600 dark:text-slate-100">
+            <button type="button" onClick={() => void guardarCambio(() => plantillasEquipoAPI.asignar(p._id, equipo._id, puesto._id, null))} className="flex min-h-[48px] flex-1 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-bold text-slate-800 dark:border-slate-600 dark:text-slate-100">
               Quitar persona
             </button>
           )}
@@ -370,7 +377,7 @@ export default function DetallePuesto() {
         projectId={equipo.projectId}
         rol={catalogos.roleFrames.find((y) => y._id === puesto.rolesFrame[0])?.name}
         marcas={marcas}
-        onElegir={(pe) => void guardar(() => plantillasEquipoAPI.asignar(p._id, equipo._id, puesto._id, pe._id))}
+        onElegir={(pe) => void guardarCambio(() => plantillasEquipoAPI.asignar(p._id, equipo._id, puesto._id, pe._id))}
       />
       <SelectorPersona
         abierta={hoja === "reemplazado"}
@@ -379,7 +386,7 @@ export default function DetallePuesto() {
         subtitulo="Del equipo del proyecto"
         projectId={equipo.projectId}
         soloProyecto
-        onElegir={(pe) => void guardar(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, { replacedUserId: pe._id, motivoReemplazoId: r?.motivoReemplazoId ?? (motivoPendiente || null) }))}
+        onElegir={(pe) => void guardarCambio(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, { replacedUserId: pe._id, motivoReemplazoId: r?.motivoReemplazoId ?? (motivoPendiente || null) }))}
       />
       <ModalCategoria
         abierto={hoja === "categoria"}
