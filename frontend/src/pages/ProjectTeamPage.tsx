@@ -643,11 +643,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const cat = allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id));
     const contratoTipo = contratos.find((c) => c._id === wizardData.contrato_id);
     const jornadaEscala = cat ? importePorJornadaDeCategoria(cat, Number(contratoTipo?.data?.multiplicadorDiario) || null, Number(contratoTipo?.data?.cantidadJornadas) || null) : null;
+    // La diferencia se mide contra la jornada con la que ABRIÓ el formulario (`jornadaBaseWizard`): lo
+    // pedido en la solicitud o lo pactado en el contrato arranca en 0. Sólo sin esa base se compara
+    // con la escala. Antes se comparaba siempre con la escala y un alta aprobada tal cual la pidieron
+    // mostraba una «diferencia» en rojo que nadie había decidido.
     const calculados = sueldosDelContrato({
       jornadaBruto: Number(wizardData.sueldo_jornada) || 0,
       jornadas: Number(wizardData.cantidad_jornadas_laborales) || 0,
       proporcionNeto: proporcionNetoDeCategoria(cat),
-      jornadaBrutoEscala: jornadaEscala,
+      jornadaBrutoEscala: jornadaBaseWizard.current ?? jornadaEscala,
     });
     const sueldo_mano_texto = numeroALetras(calculados.sueldo_mano);
     const { sueldo_mano, sueldo_neto, sueldo_bruto, sueldo_diario_neto, diferencia_diaria_neto } = calculados;
