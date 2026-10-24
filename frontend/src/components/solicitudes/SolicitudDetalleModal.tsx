@@ -16,7 +16,7 @@ import { EstadoBadge, estadoLabel } from "../EstadoSelect";
 import { textoDeDias } from "../../utils/jerarquiaTurnos";
 import { mesesEquivalentes, mesesParaImportes, periodoDeCalculo } from "../../utils/jornadas";
 import { importePorJornadaDeCategoria, proporcionNetoDeCategoria } from "../../utils/seleccionConvenioCategoria";
-import { ESTADO_SOLICITUD, EstadoSolicitud, ProyectoDeSolicitud, SolicitudVista, formatFechaSolicitud, useCatalogosDeSolicitudes } from "./SolicitudesTable";
+import { ESTADO_SOLICITUD, EstadoSolicitud, ProyectoDeSolicitud, SolicitudVista, formatFechaHoraSolicitud, useCatalogosDeSolicitudes } from "./SolicitudesTable";
 
 /*
   REVISAR UNA SOLICITUD ANTES DE DECIDIRLA.
@@ -337,7 +337,7 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
           {m.esRenovacion && <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>}
         </span>
       }
-      subtitle={`Solicitud de contratación · ${formatFechaSolicitud(solicitud?.creadaEl)}`}
+      subtitle={`Solicitud de contratación · solicitada el ${formatFechaHoraSolicitud(solicitud?.creadaEl) || "N/A"}`}
       footer={
         <div className="flex items-center justify-between gap-3">
           <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-bold ${ESTADO_SOLICITUD[estado].clase}`}>

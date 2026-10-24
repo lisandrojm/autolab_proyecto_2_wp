@@ -192,6 +192,17 @@ export const resultadoEliminarSolicitud = (r: ResultadoEliminarSolicitud): { enc
   return { encontrado: false, texto: "Se eliminó la solicitud, pero no se encontró el contrato que generó: puede que al aprobarla se hayan cambiado las fechas. Si la persona sigue en el equipo del proyecto, eliminá el contrato desde ahí." };
 };
 
+/**
+ * CUÁNDO SE HIZO LA SOLICITUD, con hora: en una tanda de altas del mismo día la fecha sola no
+ * distingue nada, y la hora es lo que ordena «cuál se pidió primero».
+ */
+export const formatFechaHoraSolicitud = (dateStr?: string | null) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return String(dateStr);
+  return `${d.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })}, ${d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`;
+};
+
 export const formatFechaSolicitud = (dateStr?: string | null) => {
   if (!dateStr) return "N/A";
   try {
@@ -359,7 +370,6 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                         )}
                       </p>
                       <p className="flex items-center gap-2 text-xs text-gray-500 truncate">
-                        {formatFechaSolicitud(s.creadaEl)}
                         {/* El mismo indicador que Usuarios y Contratos: si el nombre ya se confirmó contra el padrón. */}
                         <NombreArca estado={estadoNombreArca({ cuit: s.cuit || undefined, sinCuit: s.sinCuit, validadoAt: s.nombreValidadoArcaAt })} fecha={s.nombreValidadoArcaAt} conTexto />
                       </p>
@@ -397,15 +407,25 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   </td>
 
                   {/*
-                    QUIÉN LA PIDIÓ, con sus roles de coordinación o supervisión debajo: es lo que dice
-                    con qué autoridad se pidió el alta. Los demás roles (administrativos, etc.) no
-                    suman a esa lectura y se omiten. Las solicitudes viejas sin autor muestran un guión.
+                    QUIÉN LA PIDIÓ Y CUÁNDO, con sus roles de coordinación o supervisión debajo: es lo
+                    que dice con qué autoridad se pidió el alta. Los demás roles (administrativos, etc.)
+                    no suman a esa lectura y se omiten. Las solicitudes viejas sin autor muestran un guión.
+
+                    La fecha va acá, pegada a quién la pidió y con hora, y no suelta debajo del nombre
+                    de la persona: ahí se leía como una fecha del contrato (al lado del período
+                    «24 oct → 24 oct» no se distinguía) y en una tanda del mismo día sólo la hora dice
+                    cuál se pidió primero.
                   */}
                   <td className="px-4 py-3">
-                    {s.solicitante?.nombre ? (
-                      <div className="min-w-0">
-                        <p className="text-sm text-gray-900 dark:text-white truncate">{s.solicitante.nombre}</p>
-                        {s.solicitante.roles.some((r) => ROL_QUE_SOLICITA.test(r)) && (
+                    <div className="min-w-0">
+                      {s.solicitante?.nombre ? <p className="text-sm text-gray-900 dark:text-white truncate">{s.solicitante.nombre}</p> : <span className="text-sm text-gray-400">—</span>}
+                      {s.creadaEl && (
+                        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap" title="Cuándo se hizo la solicitud">
+                          <FontAwesomeIcon icon={faClock} className="text-[10px]" />
+                          Solicitada el {formatFechaHoraSolicitud(s.creadaEl)}
+                        </p>
+                      )}
+                      {s.solicitante?.nombre && s.solicitante.roles.some((r) => ROL_QUE_SOLICITA.test(r)) && (
                           <div className="mt-1 flex flex-wrap gap-1">
                             {s.solicitante.roles.filter((r) => ROL_QUE_SOLICITA.test(r)).map((r) => (
                               <span key={r} className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">
@@ -414,10 +434,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                             ))}
                           </div>
                         )}
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-400">—</span>
-                    )}
+                    </div>
                   </td>
 
                   {/*
