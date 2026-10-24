@@ -99,10 +99,10 @@ describe("lo que el archivo necesita para volver de la firma", () => {
    * de esta persona" de "un pedido de esta persona".
    */
   it("cada tipo exige el ancla que le corresponde", () => {
-    // Recibos de sueldo (tipo "Contrato") es la excepción: es de un período, y lo ancla su {{codigo}}.
-    const delRecibo = VARIABLES_POR_TIPO.Contrato.filter((v) => v.requerida).map((v) => v.variable);
+    // Recibos de sueldo es la excepción: es de un período, y lo ancla su {{codigo}}.
+    const delRecibo = VARIABLES_POR_TIPO.ReciboSueldo.filter((v) => v.requerida).map((v) => v.variable);
     assert.ok(delRecibo.includes("{{codigo}}") && !delRecibo.includes("{{fechaAlta}}"), "Recibos de sueldo se ancla por el código, sin fechas obligatorias");
-    for (const tipo of ["Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion"] as const) {
+    for (const tipo of ["Contrato", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion"] as const) {
       const requeridas = VARIABLES_POR_TIPO[tipo].filter((v) => v.requerida).map((v) => v.variable);
       assert.ok(requeridas.includes("{{fechaAlta}}"), `${tipo} no exige {{fechaAlta}}`);
       assert.ok(requeridas.includes("{{fechaBaja}}"), `${tipo} no exige {{fechaBaja}}`);
@@ -146,9 +146,9 @@ describe("el default rinde el nombre de siempre", () => {
     assert.ok(nombre.endsWith("_Empresa-30710295839_ID-000123"), "el CUIT de la empleadora va último, antes del código");
   });
 
-  /** El de Contratos lo eligió el cliente (20/10/2026): REC_SUELDO fijo, el período, sin la empleadora. */
-  it("Contratos: el patrón que eligió el cliente", () => {
-    const nombre = renderNomenclatura(PATRON_POR_DEFECTO.Contrato, { ...DATOS, periodo: "2026_PERIODO_08" });
+  /** El de Recibos de sueldo lo eligió el cliente (20/10/2026): REC_SUELDO fijo, el período, sin la empleadora. */
+  it("Recibos de sueldo: el patrón que eligió el cliente", () => {
+    const nombre = renderNomenclatura(PATRON_POR_DEFECTO.ReciboSueldo, { ...DATOS, periodo: "2026_PERIODO_08" });
     assert.equal(nombre, "426-LN+_REC_SUELDO_2026_PERIODO_08_gonzalez-rotstein_juan-manuel_juanmanuel.gonzalezrotstein-ARROBA-gmail.com_20331501027_ID-000123");
     assert.equal(leerAnclas(nombre).cuit, "20331501027");
     assert.equal(leerAnclas(nombre).codigo, "ID-000123", "sin fechas, lo que lo reconoce al volver es el código");
@@ -157,8 +157,9 @@ describe("el default rinde el nombre de siempre", () => {
   /** Recibos de sueldo: las fechas son opcionales (los ancla el código); en los demás documentos de contrato siguen obligatorias. */
   it("Recibos de sueldo se guardan sin fechas; Releases no", () => {
     const sinFechas = "{{centroDeCosto}}_{{proyecto}}_REC_SUELDO_{{periodo}}_{{apellido}}_{{nombres}}_{{email}}_{{cuit}}_{{codigo}}";
-    assert.deepEqual(validarPatron("Contrato", sinFechas), []);
+    assert.deepEqual(validarPatron("ReciboSueldo", sinFechas), []);
     assert.ok(validarPatron("Release", sinFechas).some((e) => e.motivo.includes("{{fechaAlta}}")));
+    assert.ok(validarPatron("Contrato", sinFechas).some((e) => e.motivo.includes("{{fechaAlta}}")), "Contratos vuelve a exigir las fechas");
   });
 
   /**
@@ -167,7 +168,7 @@ describe("el default rinde el nombre de siempre", () => {
    * que de verdad tiene distinto (un período contra un número).
    */
   it("todos empiezan por centro de costo y proyecto, y terminan en la empleadora y el código", () => {
-    for (const tipo of TIPOS_NOMENCLATURA.filter((t) => t !== "Contrato")) {
+    for (const tipo of TIPOS_NOMENCLATURA.filter((t) => t !== "ReciboSueldo")) {
       const p = PATRON_POR_DEFECTO[tipo];
       assert.ok(p.startsWith("{{centroDeCosto}}_{{proyecto}}_"), `${tipo} no arranca con el centro de costo y el proyecto: ${p}`);
       // La empleadora al final, y después solo el código único del documento.
@@ -308,8 +309,8 @@ describe("la empleadora y el tipo de contrato en el nombre", () => {
    *    otra cosa: dos contratos del mismo tipo pueden salir de plantillas distintas.
    */
   it("el patrón por defecto de los documentos de contrato incluye el tipo de contrato", () => {
-    // Contratos no: su patrón lo eligió el cliente (20/10/2026), con `{{tipo}}` y `{{extra}}`.
-    for (const tipo of ["Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion"] as const) {
+    // Recibos de sueldo no: su patrón lo eligió el cliente (20/10/2026), con REC_SUELDO fijo.
+    for (const tipo of ["Contrato", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion"] as const) {
       assert.match(PATRON_POR_DEFECTO[tipo], /\{\{contrato\}\}/, `${tipo} no incluye {{contrato}}`);
       assert.ok(VARIABLES_POR_TIPO[tipo].some((v) => v.variable === "{{contrato}}"), `${tipo} no ofrece {{contrato}}`);
     }
@@ -322,8 +323,8 @@ describe("la empleadora y el tipo de contrato en el nombre", () => {
     assert.equal(nombre, "Jornada-2030-SRL_Acuerdo-de-titularidad");
   });
 
-  it("la empleadora cierra el nombre en todos los tipos (menos Contratos, que no la lleva)", () => {
-    for (const tipo of TIPOS_NOMENCLATURA.filter((t) => t !== "Contrato")) {
+  it("la empleadora cierra el nombre en todos los tipos (menos Recibos de sueldo, que no la lleva)", () => {
+    for (const tipo of TIPOS_NOMENCLATURA.filter((t) => t !== "ReciboSueldo")) {
       const nombre = renderNomenclatura(PATRON_POR_DEFECTO[tipo], { ...DATOS, tipo });
       assert.ok(nombre.endsWith("_Empresa-30710295839_ID-000123"), `${tipo} termina en: ${nombre.slice(-60)}`);
     }
@@ -758,6 +759,54 @@ describe("{{codigo}}: el código único del documento va en todos los patrones",
   });
 });
 
+/**
+ * CONTRATOS ES UN TIPO PROPIO (restaurado el 24/10/2026). Entre el 20 y el 24/10 el recibo de sueldo
+ * se montó sobre «Contrato» y los contratos se quedaron sin nomenclatura. Ahora conviven, cada uno
+ * con su fila, y el patrón personalizado que el cliente usaba para Contratos valida tal cual.
+ */
+describe("Contratos y Recibos de sueldo son dos tipos", () => {
+  const PERSONALIZADO = "{{centroDeCosto}}_{{proyecto}}_{{tipo}}_{{extra}}_{{apellido}}_{{nombres}}-{{email}}_{{cuit}}_D-{{fechaAlta}}_H-{{fechaBaja}}";
+
+  it("los dos están en la lista, Contratos primero, y ninguno pisa al otro", () => {
+    assert.ok(TIPOS_NOMENCLATURA.includes("Contrato") && TIPOS_NOMENCLATURA.includes("ReciboSueldo"));
+    assert.equal(TIPOS_NOMENCLATURA.indexOf("Contrato"), 0);
+    assert.notEqual(PATRON_POR_DEFECTO.Contrato, PATRON_POR_DEFECTO.ReciboSueldo);
+    assert.match(PATRON_POR_DEFECTO.ReciboSueldo, /REC_SUELDO/);
+    assert.doesNotMatch(PATRON_POR_DEFECTO.Contrato, /REC_SUELDO/);
+  });
+
+  it("Contratos ofrece sus variables de siempre, agrupadas, más {{periodo}}", () => {
+    const vars = VARIABLES_POR_TIPO.Contrato;
+    const grupo = (v: string) => vars.find((x) => x.variable === v)?.grupo;
+    for (const v of ["{{centroDeCosto}}", "{{proyecto}}", "{{proyectoId}}"]) assert.equal(grupo(v), "Proyecto", v);
+    for (const v of ["{{apellido}}", "{{nombres}}", "{{email}}"]) assert.equal(grupo(v), "Persona", v);
+    for (const v of ["{{tipo}}", "{{contrato}}", "{{docName}}", "{{extra}}"]) assert.equal(grupo(v), "Documento", v);
+    for (const v of ["{{fechaAlta}}", "{{fechaBaja}}"]) assert.equal(grupo(v), "Período del contrato", v);
+    for (const v of ["{{cuit}}", "{{codigo}}"]) assert.equal(grupo(v), "Identificación", v);
+    assert.equal(grupo("{{empresaCuit}}"), "Empleadora (se toma del contrato)");
+    assert.equal(grupo("{{periodo}}"), "Período");
+    const requeridas = vars.filter((v) => v.requerida).map((v) => v.variable).sort();
+    assert.deepEqual(requeridas, ["{{codigo}}", "{{cuit}}", "{{email}}", "{{fechaAlta}}", "{{fechaBaja}}"]);
+  });
+
+  it("el patrón personalizado de Contratos valida, rinde y se lee de vuelta", () => {
+    assert.deepEqual(validarPatron("Contrato", PERSONALIZADO), []);
+    const nombre = renderNomenclatura(asegurarCodigo(PERSONALIZADO), { ...DATOS, extra: "Alta-Temprana" });
+    assert.equal(nombre, "426-LN+_Contrato_Alta-Temprana_gonzalez-rotstein_juan-manuel-juanmanuel.gonzalezrotstein-ARROBA-gmail.com_20331501027_D-20260810_H--_ID-000123");
+    const a = leerAnclas(nombre);
+    assert.equal(a.cuit, "20331501027");
+    assert.deepEqual(a.fechas, ["20260810"]);
+    assert.equal(a.codigo, "ID-000123");
+    // El patrón «Sistema» original de Contratos también sigue vigente como default.
+    assert.equal(PATRON_POR_DEFECTO.Contrato, "{{centroDeCosto}}_{{proyecto}}_{{apellido}}_{{tipo}}_{{contrato}}_D-{{fechaAlta}}_H-{{fechaBaja}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}_{{codigo}}");
+  });
+
+  it("un Contrato sin fechas no se puede guardar; un Recibo sí", () => {
+    assert.ok(validarPatron("Contrato", "{{apellido}}_{{cuit}}_{{email}}").some((e) => /fechaAlta/.test(e.motivo)));
+    assert.deepEqual(validarPatron("ReciboSueldo", "{{apellido}}_{{cuit}}_{{email}}"), []);
+  });
+});
+
 /** `{{periodo}}` (pedido del 20/10/2026, para los recibos de sueldo): año y mes como `2026_PERIODO_08`. */
 describe("la variable {{periodo}}", () => {
   const PATRON = "{{centroDeCosto}}_{{proyecto}}_{{tipo}}_{{periodo}}_{{apellido}}_{{nombres}}-{{email}}_{{cuit}}_D-{{fechaAlta}}_H-{{fechaBaja}}";
@@ -773,7 +822,7 @@ describe("la variable {{periodo}}", () => {
   });
 
   it("se ofrece en los documentos de contrato, y no es obligatoria", () => {
-    for (const tipo of ["Contrato", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion"] as const) {
+    for (const tipo of ["Contrato", "ReciboSueldo", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion"] as const) {
       const v = VARIABLES_POR_TIPO[tipo].find((x) => x.variable === "{{periodo}}");
       assert.ok(v, `${tipo} no ofrece {{periodo}}`);
       assert.ok(!v.requerida, `${tipo}: {{periodo}} no tiene que ser obligatoria`);

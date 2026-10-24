@@ -19,7 +19,7 @@ export interface IDocumentoGenerado extends Document {
   codigo: string;
   /** El número del correlativo (123), para ordenar y para saber cuál sigue. */
   numero: number;
-  /** El tipo de la nomenclatura: Contrato, Release, AltaAFIP, ConstanciaCUIT, Documentacion, Pedido, Vacacion. */
+  /** El tipo de la nomenclatura: Contrato, ReciboSueldo, Release, AltaAFIP, ConstanciaCUIT, Documentacion, Pedido, Vacacion. */
   tipo: string;
   /** El nombre con el que se generó, SIN extensión. */
   archivo: string;

@@ -524,8 +524,8 @@ export const NomenclaturaArchivosPage: React.FC = () => {
   /*
    * Buscador y vista Tarjetas/Tabla, con la misma mecánica que Plantillas | Contratos.
    *
-   * Son siete tipos, así que el buscador no es para "encontrar entre muchos": es para no tener que
-   * barrer siete cards con la vista cuando ya sabés cuál venís a tocar. Busca por el nombre del tipo
+   * Son ocho tipos, así que el buscador no es para "encontrar entre muchos": es para no tener que
+   * barrer ocho cards con la vista cuando ya sabés cuál venís a tocar. Busca por el nombre del tipo
    * y TAMBIÉN dentro del patrón, que es lo que sirve para la pregunta real de esta pantalla —
    * "¿cuáles usan {{docName}}?"— cuando hay que acortar nombres.
    */
@@ -610,7 +610,7 @@ export const NomenclaturaArchivosPage: React.FC = () => {
             </div>
 
             <p className="text-[12px] text-gray-500 dark:text-gray-400">
-              Aplica a los <strong>siete</strong> tipos. Pedidos y Vacaciones también se firman y vuelven; y la Constancia de CUIT, aunque no se firme, igual hay que poder levantarla de Dropbox y saber
+              Aplica a los <strong>ocho</strong> tipos. Pedidos y Vacaciones también se firman y vuelven; y la Constancia de CUIT, aunque no se firme, igual hay que poder levantarla de Dropbox y saber
               de quién es.
             </p>
           </div>

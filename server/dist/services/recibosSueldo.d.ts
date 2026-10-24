@@ -62,7 +62,7 @@ export declare function releerRecibo(lote: ILoteRecibosSueldo, reciboId: string)
 export declare function asignarPersona(lote: ILoteRecibosSueldo, reciboId: string, userId: string): Promise<void>;
 /**
  * Arranca el envío al Outbox de Dropbox de los recibos listos (los tildados, o todos), con la
- * nomenclatura «Recibos de sueldo» (tipo interno "Contrato") del contrato que rige. Devuelve cuántos van.
+ * nomenclatura «Recibos de sueldo» (tipo "ReciboSueldo") del contrato que rige. Devuelve cuántos van.
  */
 export declare function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: string[], enviadoPor?: string): Promise<{
     enEnvio: number;

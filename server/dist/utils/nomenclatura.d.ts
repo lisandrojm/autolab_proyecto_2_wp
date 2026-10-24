@@ -21,8 +21,16 @@
  * Por eso `validarPatron()` NO deja guardar un patrón al que le falten esos bloques en los tipos que
  * viajan a la firma. Es la única validación de este archivo que no se puede relajar.
  */
-/** Los tipos de documento que la plataforma nombra. El orden es el que se muestra en el ABM. */
-export declare const TIPOS_NOMENCLATURA: readonly ["Contrato", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion", "Pedido", "Vacacion"];
+/**
+ * Los tipos de documento que la plataforma nombra. El orden es el que se muestra en el ABM.
+ *
+ * «ReciboSueldo» es un tipo APARTE de «Contrato» (24/10/2026). Entre el 20 y el 24/10 el recibo de
+ * sueldo se había montado sobre el tipo «Contrato» (mismo patrón, misma fila del ABM) y los contratos
+ * se quedaron sin nomenclatura propia. Agregar un tipo es agregarlo acá, en `VARIABLES_POR_TIPO` y en
+ * `PATRON_POR_DEFECTO`: nunca reemplazar uno existente, porque cada tipo tiene su fila guardada por
+ * tenant (`NomenclaturaArchivo`) y su patrón personalizado.
+ */
+export declare const TIPOS_NOMENCLATURA: readonly ["Contrato", "ReciboSueldo", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion", "Pedido", "Vacacion"];
 export type TipoNomenclatura = (typeof TIPOS_NOMENCLATURA)[number];
 /**
  * TODOS los tipos tienen que poder leerse de vuelta. Sin excepción.
@@ -34,7 +42,7 @@ export type TipoNomenclatura = (typeof TIPOS_NOMENCLATURA)[number];
  *    quién es — el archivo llega a la carpeta y lo único que lo identifica es su nombre.
  *
  * O sea que la regla no era "se firma", era "el archivo vuelve a entrar al sistema por su nombre", y
- * eso vale para los siete. Lo que cambia entre tipos no es SI hay datos obligatorios, sino CUÁLES:
+ * eso vale para los ocho. Lo que cambia entre tipos no es SI hay datos obligatorios, sino CUÁLES:
  * un documento de contrato se ancla con las fechas del período, y un pedido con su número.
  */
 export declare const TIPOS_NOMBRE_SE_LEE_DE_VUELTA: TipoNomenclatura[];

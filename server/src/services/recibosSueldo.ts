@@ -423,7 +423,7 @@ const ENVIO_TRABADO_MS = 10 * 60 * 1000;
 
 /**
  * Arranca el envío al Outbox de Dropbox de los recibos listos (los tildados, o todos), con la
- * nomenclatura «Recibos de sueldo» (tipo interno "Contrato") del contrato que rige. Devuelve cuántos van.
+ * nomenclatura «Recibos de sueldo» (tipo "ReciboSueldo") del contrato que rige. Devuelve cuántos van.
  */
 export async function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: string[], enviadoPor?: string): Promise<{ enEnvio: number }> {
   if ((lote as any).envio?.estado === "enviando") throw new ErrorRecibos("Este lote ya se está enviando: esperá a que termine.", 409);
@@ -465,7 +465,7 @@ async function enviarEnSegundoPlano(lote: ILoteRecibosSueldo, elegidos: any[], c
       const [user, up] = await Promise.all([User.findOne({ _id: r.userId, tenantId: lote.tenantId }).lean(), UserProject.findById(r.userProjectId).lean()]);
       const contract: any = (up as any)?.contracts?.[r.contractIndex ?? -1];
       if (!user || !up || !contract) throw new Error("La persona o su contrato ya no están.");
-      const nombre = `${await nombreArchivoDocumento({ tenantId: lote.tenantId, tipo: "Contrato", user, up, contract, periodo: r.datos?.periodo || lote.periodo || undefined })}.pdf`;
+      const nombre = `${await nombreArchivoDocumento({ tenantId: lote.tenantId, tipo: "ReciboSueldo", user, up, contract, periodo: r.datos?.periodo || lote.periodo || undefined })}.pdf`;
       const buffer = fs.readFileSync(path.join(RAIZ_STORAGE, r.archivoUrl.replace(/^\/storage\//, "")));
       await uploadFile(String(lote.tenantId), cfg, `${carpeta}/${nombre}`, buffer);
       const codigo = leerAnclas(nombre).codigo;

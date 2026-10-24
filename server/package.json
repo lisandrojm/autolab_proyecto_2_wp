@@ -111,6 +111,8 @@
     "nomenclatura:centro-de-costo": "dotenv -e .env.production -- tsx src/scripts/nomenclaturaCentroDeCosto.ts",
     "nomenclatura:codigo:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/nomenclaturaCodigo.ts",
     "nomenclatura:codigo": "dotenv -e .env.production -- tsx src/scripts/nomenclaturaCodigo.ts",
+    "nomenclatura:restaurar-contratos:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/nomenclaturaRestaurarContratos.ts",
+    "nomenclatura:restaurar-contratos": "dotenv -e .env.production -- tsx src/scripts/nomenclaturaRestaurarContratos.ts",
     "outbox:codigos:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/codigosEnOutbox.ts",
     "outbox:codigos": "dotenv -e .env.production -- tsx src/scripts/codigosEnOutbox.ts",
     "pendbox:limpiar:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/limpiarPendbox.ts",

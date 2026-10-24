@@ -24,8 +24,16 @@
 
 import { esCampoAncla } from "./anclasNombre.js";
 
-/** Los tipos de documento que la plataforma nombra. El orden es el que se muestra en el ABM. */
-export const TIPOS_NOMENCLATURA = ["Contrato", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion", "Pedido", "Vacacion"] as const;
+/**
+ * Los tipos de documento que la plataforma nombra. El orden es el que se muestra en el ABM.
+ *
+ * «ReciboSueldo» es un tipo APARTE de «Contrato» (24/10/2026). Entre el 20 y el 24/10 el recibo de
+ * sueldo se había montado sobre el tipo «Contrato» (mismo patrón, misma fila del ABM) y los contratos
+ * se quedaron sin nomenclatura propia. Agregar un tipo es agregarlo acá, en `VARIABLES_POR_TIPO` y en
+ * `PATRON_POR_DEFECTO`: nunca reemplazar uno existente, porque cada tipo tiene su fila guardada por
+ * tenant (`NomenclaturaArchivo`) y su patrón personalizado.
+ */
+export const TIPOS_NOMENCLATURA = ["Contrato", "ReciboSueldo", "Release", "AltaAFIP", "ConstanciaCUIT", "Documentacion", "Pedido", "Vacacion"] as const;
 export type TipoNomenclatura = (typeof TIPOS_NOMENCLATURA)[number];
 
 /**
@@ -38,7 +46,7 @@ export type TipoNomenclatura = (typeof TIPOS_NOMENCLATURA)[number];
  *    quién es — el archivo llega a la carpeta y lo único que lo identifica es su nombre.
  *
  * O sea que la regla no era "se firma", era "el archivo vuelve a entrar al sistema por su nombre", y
- * eso vale para los siete. Lo que cambia entre tipos no es SI hay datos obligatorios, sino CUÁLES:
+ * eso vale para los ocho. Lo que cambia entre tipos no es SI hay datos obligatorios, sino CUÁLES:
  * un documento de contrato se ancla con las fechas del período, y un pedido con su número.
  */
 export const TIPOS_NOMBRE_SE_LEE_DE_VUELTA: TipoNomenclatura[] = [...TIPOS_NOMENCLATURA];
@@ -149,15 +157,17 @@ export const VARIABLES_POR_TIPO: Record<TipoNomenclatura, VariableNomenclatura[]
     { ...V.codigo, requerida: true },
   ];
   /*
-    RECIBOS DE SUELDO (tipo interno "Contrato", 20/10/2026): sin fechas obligatorias. Un recibo es de un
-    período, no de un alta y una baja, y el cliente lo nombra sin ellas. Lo que lo ancla al volver es su
-    {{codigo}} (siempre presente, ver `asegurarCodigo`): la bandeja de Dropbox Sign, la limpieza del
-    Pendbox y el escaneo de carpetas lo reconocen por el código, que apunta al contrato exacto que quedó
-    registrado al generarlo (`documentos_generados`). Las fechas se siguen ofreciendo, opcionales.
+    RECIBOS DE SUELDO (tipo propio desde el 24/10/2026; antes iba montado sobre «Contrato»): sin fechas
+    obligatorias. Un recibo es de un período, no de un alta y una baja, y el cliente lo nombra sin
+    ellas. Lo que lo ancla al volver es su {{codigo}} (siempre presente, ver `asegurarCodigo`): la
+    bandeja de Dropbox Sign, la limpieza del Pendbox y el escaneo de carpetas lo reconocen por el
+    código, que apunta al contrato exacto que quedó registrado al generarlo (`documentos_generados`).
+    Las fechas se siguen ofreciendo, opcionales.
   */
   const deReciboDeSueldo: VariableNomenclatura[] = deContrato.map((v) => (v.variable === V.fechaAlta.variable || v.variable === V.fechaBaja.variable ? { ...v, requerida: false } : v));
   return {
-    Contrato: deReciboDeSueldo,
+    Contrato: deContrato,
+    ReciboSueldo: deReciboDeSueldo,
     Release: deContrato,
     AltaAFIP: deContrato,
     ConstanciaCUIT: deContrato,
@@ -191,16 +201,17 @@ export const PATRON_POR_DEFECTO: Record<TipoNomenclatura, string> = (() => {
     que menos se busca y el más largo — adelante empujaría el nombre de la persona fuera de la vista
     en cualquier listado angosto.
 
-    Que los siete sean iguales no es prolijidad: el que mira una carpeta con contratos, pedidos y
+    Que los ocho sean iguales no es prolijidad: el que mira una carpeta con contratos, pedidos y
     vacaciones mezclados lee siempre los mismos campos en el mismo lugar. Cada tipo cambia solo en lo
     que de verdad tiene distinto —un período contra un número de pedido— y todo lo demás coincide.
   */
   const deContrato = "{{centroDeCosto}}_{{proyecto}}_{{apellido}}_{{tipo}}_{{contrato}}_D-{{fechaAlta}}_H-{{fechaBaja}}_{{cuit}}_{{email}}_Empresa-{{empresaCuit}}_{{codigo}}";
   return {
+    Contrato: deContrato,
     // Recibos de sueldo: el patrón lo fijó el cliente (20/10/2026). «REC_SUELDO» es texto fijo, el
     // período va adelante y NO lleva fechas: el contrato exacto lo da el {{codigo}} (ver `VARIABLES_POR_TIPO`
     // y el escaneo de carpetas en `estadoDropboxCronService`).
-    Contrato: "{{centroDeCosto}}_{{proyecto}}_REC_SUELDO_{{periodo}}_{{apellido}}_{{nombres}}_{{email}}_{{cuit}}_{{codigo}}",
+    ReciboSueldo: "{{centroDeCosto}}_{{proyecto}}_REC_SUELDO_{{periodo}}_{{apellido}}_{{nombres}}_{{email}}_{{cuit}}_{{codigo}}",
     Release: deContrato,
     AltaAFIP: deContrato,
     ConstanciaCUIT: deContrato,
