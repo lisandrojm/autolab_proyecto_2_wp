@@ -206,7 +206,7 @@ export const fechaHoraSolicitud = (dateStr?: string | null): { diaSemana: string
   const diaSemana = d.toLocaleDateString("es-AR", { weekday: "long", timeZone: ZONA_AR });
   return {
     diaSemana: diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1),
-    fecha: d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric", timeZone: ZONA_AR }).replace(/\./g, ""),
+    fecha: d.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric", timeZone: ZONA_AR }),
     hora: d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: ZONA_AR }),
   };
 };
