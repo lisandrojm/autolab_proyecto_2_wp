@@ -193,14 +193,26 @@ export const resultadoEliminarSolicitud = (r: ResultadoEliminarSolicitud): { enc
 };
 
 /**
- * CUÁNDO SE HIZO LA SOLICITUD, con hora: en una tanda de altas del mismo día la fecha sola no
- * distingue nada, y la hora es lo que ordena «cuál se pidió primero».
+ * CUÁNDO SE HIZO LA SOLICITUD, en HORARIO ARGENTINO y con día de la semana: en una tanda de altas
+ * del mismo día la fecha sola no distingue nada, y la hora es lo que ordena «cuál se pidió primero».
+ * Se fija la zona horaria y no se confía en la del navegador: la hora de la base es UTC y quien
+ * mira desde otra zona (o con la PC mal configurada) vería otra hora que la de la oficina.
  */
-export const formatFechaHoraSolicitud = (dateStr?: string | null) => {
-  if (!dateStr) return "";
+const ZONA_AR = "America/Argentina/Buenos_Aires";
+export const fechaHoraSolicitud = (dateStr?: string | null): { diaSemana: string; fecha: string; hora: string } | null => {
+  if (!dateStr) return null;
   const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return String(dateStr);
-  return `${d.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })}, ${d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}`;
+  if (Number.isNaN(d.getTime())) return null;
+  const diaSemana = d.toLocaleDateString("es-AR", { weekday: "long", timeZone: ZONA_AR });
+  return {
+    diaSemana: diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1),
+    fecha: d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric", timeZone: ZONA_AR }).replace(/\./g, ""),
+    hora: d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: ZONA_AR }),
+  };
+};
+export const formatFechaHoraSolicitud = (dateStr?: string | null) => {
+  const f = fechaHoraSolicitud(dateStr);
+  return f ? `${f.diaSemana} ${f.fecha}, ${f.hora}` : dateStr ? String(dateStr) : "";
 };
 
 export const formatFechaSolicitud = (dateStr?: string | null) => {
@@ -312,6 +324,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 </th>
               )}
               <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] border-r border-gray-200 dark:border-gray-700 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]`}>Nombre</th>
+              <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">F. Solicitud</th>
               <th className="px-4 py-3 font-semibold">Solicitó</th>
               {mostrarProyectos && (
                 <>
@@ -407,24 +420,35 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   </td>
 
                   {/*
-                    QUIÉN LA PIDIÓ Y CUÁNDO, con sus roles de coordinación o supervisión debajo: es lo
-                    que dice con qué autoridad se pidió el alta. Los demás roles (administrativos, etc.)
-                    no suman a esa lectura y se omiten. Las solicitudes viejas sin autor muestran un guión.
+                    CUÁNDO SE HIZO LA SOLICITUD, en una columna propia después del nombre: día de la
+                    semana, fecha y hora en horario argentino. No va debajo del nombre de la persona
+                    porque ahí se leía como una fecha del contrato (al lado del período «24 oct → 24 oct»
+                    no se distinguía), y en una tanda del mismo día sólo la hora dice cuál se pidió primero.
+                  */}
+                  <td className="px-4 py-3 whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">
+                    {(() => {
+                      const f = fechaHoraSolicitud(s.creadaEl);
+                      return f ? (
+                        <div className="text-xs leading-tight">
+                          <p className="text-gray-500 dark:text-gray-400">{f.diaSemana}</p>
+                          <p className="text-gray-900 dark:text-white">
+                            {f.fecha} <span className="text-gray-500 dark:text-gray-400">· {f.hora} h</span>
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">N/A</span>
+                      );
+                    })()}
+                  </td>
 
-                    La fecha va acá, pegada a quién la pidió y con hora, y no suelta debajo del nombre
-                    de la persona: ahí se leía como una fecha del contrato (al lado del período
-                    «24 oct → 24 oct» no se distinguía) y en una tanda del mismo día sólo la hora dice
-                    cuál se pidió primero.
+                  {/*
+                    QUIÉN LA PIDIÓ, con sus roles de coordinación o supervisión debajo: es lo que dice
+                    con qué autoridad se pidió el alta. Los demás roles (administrativos, etc.) no
+                    suman a esa lectura y se omiten. Las solicitudes viejas sin autor muestran un guión.
                   */}
                   <td className="px-4 py-3">
                     <div className="min-w-0">
                       {s.solicitante?.nombre ? <p className="text-sm text-gray-900 dark:text-white truncate">{s.solicitante.nombre}</p> : <span className="text-sm text-gray-400">—</span>}
-                      {s.creadaEl && (
-                        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap" title="Cuándo se hizo la solicitud">
-                          <FontAwesomeIcon icon={faClock} className="text-[10px]" />
-                          Solicitada el {formatFechaHoraSolicitud(s.creadaEl)}
-                        </p>
-                      )}
                       {s.solicitante?.nombre && s.solicitante.roles.some((r) => ROL_QUE_SOLICITA.test(r)) && (
                           <div className="mt-1 flex flex-wrap gap-1">
                             {s.solicitante.roles.filter((r) => ROL_QUE_SOLICITA.test(r)).map((r) => (
