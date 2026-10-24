@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare, faCircleInfo, faDownload, faFilePdf, faFileZipper, faFolderOpen, faPen, faRotateRight, faSpinner, faTrash, faTriangleExclamation, faPaperPlane, faListCheck } from "@fortawesome/free-solid-svg-icons";
 import { dropboxAPI, DropboxEntry } from "../../api/dropbox";
+import { dropboxSignBotAPI } from "../../api/dropboxSign";
 import { firmaDigitalAPI } from "../../api/firmaDigital";
 import { useBotFirma, PanelBotFirma, BadgeFirma, InstructivoParaFirmar } from "./FirmaBotParaFirmar";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
@@ -104,6 +105,8 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
   const [error, setError] = useState("");
   const [descargando, setDescargando] = useState<string | null>(null);
   const [eliminando, setEliminando] = useState<string | null>(null);
+  /** Borrado masivo en curso: cuántos van de cuántos (se borran de a uno, no hay endpoint en lote). */
+  const [eliminandoMasivo, setEliminandoMasivo] = useState<{ hechos: number; total: number } | null>(null);
   const [descargandoZip, setDescargandoZip] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [filtro, setFiltro] = useState("");
@@ -291,6 +294,49 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
     }
   };
 
+  /**
+   * ELIMINAR LOS TILDADOS. Se borran de a uno con el mismo endpoint que el tacho de cada fila (no hay
+   * borrado en lote en Dropbox desde acá) y se informa cuántos salieron y cuáles no. En «Para Firmar»,
+   * los que estaban en la cola del bot se sacan de la cola: si quedaran, el planificador los marcaría
+   * «requiere revisión» por no estar más en Outbox, que es ruido para algo que se borró a propósito.
+   */
+  const handleBulkDelete = async () => {
+    const elegidos = entries.filter((e) => selected.has(e.path));
+    if (elegidos.length === 0) return;
+    const muestra = elegidos.slice(0, 5).map((e) => `• ${e.name}`).join("\n");
+    const resto = elegidos.length > 5 ? `\n… y ${elegidos.length - 5} más` : "";
+    const enCola = tipo === "para_firmar" ? elegidos.filter((e) => ["en_cola", "seco", "limite"].includes(bot.estados.get(e.name)?.estado || "")) : [];
+    const avisoCola = enCola.length ? `\n\n${enCola.length} de ellos está${enCola.length === 1 ? "" : "n"} en la cola de envío a la firma: también sale${enCola.length === 1 ? "" : "n"} de la cola.` : "";
+    const res = await sweetAlert.confirm(
+      `¿Eliminar ${elegidos.length} archivo${elegidos.length === 1 ? "" : "s"}?`,
+      `Se van a eliminar de Dropbox. Esta acción no se puede deshacer.\n\n${muestra}${resto}${avisoCola}`,
+      `Sí, eliminar ${elegidos.length}`,
+    );
+    if (!res.isConfirmed) return;
+    setEliminandoMasivo({ hechos: 0, total: elegidos.length });
+    const fallidos: string[] = [];
+    const borrados: DropboxEntry[] = [];
+    for (const e of elegidos) {
+      try {
+        await dropboxAPI.remove(e.path, true);
+        borrados.push(e);
+      } catch {
+        fallidos.push(e.name);
+      }
+      setEliminandoMasivo({ hechos: borrados.length + fallidos.length, total: elegidos.length });
+    }
+    if (tipo === "para_firmar") {
+      const codigos = borrados.map((e) => bot.estados.get(e.name)).filter((x) => x && ["en_cola", "seco", "limite"].includes(x.estado)).map((x) => x!.codigo);
+      if (codigos.length) await dropboxSignBotAPI.desencolar(codigos).catch(() => {});
+      await bot.refrescar().catch(() => {});
+    }
+    setEliminandoMasivo(null);
+    setSelected(new Set(fallidos.length ? entries.filter((e) => fallidos.includes(e.name)).map((e) => e.path) : []));
+    await load();
+    if (fallidos.length === 0) sweetAlert.success("Eliminados", `Se eliminaron ${borrados.length} archivo${borrados.length === 1 ? "" : "s"}.`);
+    else sweetAlert.warning("Eliminación parcial", `Se eliminaron ${borrados.length} y fallaron ${fallidos.length} (quedan tildados para reintentar):\n${fallidos.slice(0, 8).join("\n")}${fallidos.length > 8 ? "\n…" : ""}`);
+  };
+
   return (
     <div className="space-y-4">
       {tipo === "para_firmar" && (
@@ -376,6 +422,16 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
                   ? `Bajando ${fmtTamanio(zipRecibidos)}${zipTotal ? ` de ${fmtTamanio(zipTotal)}` : ""}`
                   : `Preparando ${selected.size} archivos…`
                 : `Descargar ${selected.size} (ZIP)`}
+            </button>
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={!!eliminandoMasivo || descargandoZip || !!bot.ocupado}
+              title={`Eliminar de Dropbox los ${selected.size} tildados`}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <FontAwesomeIcon icon={eliminandoMasivo ? faSpinner : faTrash} spin={!!eliminandoMasivo} />{" "}
+              {eliminandoMasivo ? `Eliminando ${eliminandoMasivo.hechos} de ${eliminandoMasivo.total}…` : `Eliminar (${selected.size})`}
             </button>
           </div>
         </div>
