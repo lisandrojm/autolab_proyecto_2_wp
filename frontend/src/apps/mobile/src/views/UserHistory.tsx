@@ -101,7 +101,14 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     dejarlos vencer. Qué entra y quién lo ve lo decide el server (`services/contratosPorVencer.ts`).
     Se piden al entrar y no al abrir la pestaña: el número va en la pestaña, y avisar es el punto.
   */
-  const [pestana, setPestana] = useState<"historial" | "por_vencer" | "plantillas">(pestanaInicial || "historial");
+  /** «menu» = las tarjetas; las otras, adentro de una sección (la flecha vuelve al menú). */
+  const [pestana, setPestana] = useState<"menu" | "historial" | "por_vencer" | "plantillas">(pestanaInicial || "menu");
+  const SECCIONES: { id: "historial" | "por_vencer" | "plantillas"; label: string; icon: typeof faClock }[] = [
+    { id: "historial", label: "Historial", icon: faClock },
+    // Tarjeta propia del permiso «Plantillas de equipo» (`dentroDe` Contratación).
+    ...(puedePlantillas ? [{ id: "plantillas" as const, label: "Plantillas", icon: faLayerGroup }] : []),
+    { id: "por_vencer", label: "Vencimientos", icon: faCalendarAlt },
+  ];
   const [porVencer, setPorVencer] = useState<ContratoPorVencer[] | null>(null);
   const [procesando, setProcesando] = useState<string | null>(null);
   /** El contrato que se está renovando: abre el formulario de solicitud ya completo. */
@@ -611,55 +618,49 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
   return (
     <div className="flex-1 pb-24">
       {/* HEADER */}
+      {/* Adentro de una sección, el título es el de la sección y la flecha vuelve al menú de tarjetas. */}
       <SectionHeader
-        icon={faUsers}
-        titulo="Solicitud de Contratación"
-        onBack={() => onNavigate("home")}
+        icon={pestana === "menu" ? faUsers : (SECCIONES.find((s) => s.id === pestana)?.icon ?? faUsers)}
+        titulo={pestana === "menu" ? "Solicitud de Contratación" : (SECCIONES.find((s) => s.id === pestana)?.label ?? "Solicitud de Contratación")}
+        onBack={() => (pestana === "menu" ? onNavigate("home") : setPestana("menu"))}
         info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Historial» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Vencimientos» aparecen los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer. Con «Filtrar» elegís con cuánta anticipación verlos (7, 15 o 30 días, y queda guardado) y por qué tipo de contrato."}
       />
 
       <div className="px-4 pt-4">
-        <AvisoNovedades tipos={NOVEDADES_CONTRATACION} texto={(n) => (n === 1 ? "1 novedad de contratación" : `${n} novedades de contratación`)} />
-        {/* Lo que se pidió, y lo que hay que decidir antes de que venza. */}
+        {(pestana === "menu" || pestana === "historial") && <AvisoNovedades tipos={NOVEDADES_CONTRATACION} texto={(n) => (n === 1 ? "1 novedad de contratación" : `${n} novedades de contratación`)} />}
         {/*
-          LAS SECCIONES COMO TARJETAS, IGUAL QUE LA HOME (25/10/2026). Eran pestañas en una barra gris y
-          la app tenía dos lenguajes para lo mismo: elegir adónde ir. Ahora es la misma tarjeta de la home
-          —dos columnas, ícono chico a la izquierda, contador verde en la esquina— y la elegida se marca
-          con el borde y el fondo azul. Siguen cambiando la sección en esta misma pantalla. Con lugar de
-          tarjeta, «Vencimientos» va con su nombre entero (en la barra tenía que ser «Vtos.»).
+          UN MENÚ DE TARJETAS, COMO LA HOME (25/10/2026). Eran pestañas en una barra gris, siempre arriba
+          de la lista. Ahora la pantalla abre con las tarjetas —las mismas de la home: dos columnas, ícono
+          chico a la izquierda, contador verde en la esquina— y tocar una ENTRA a esa sección: las tarjetas
+          desaparecen, el título pasa a ser el de la sección y la flecha vuelve acá. Así la lista usa toda
+          la pantalla del celular. Con lugar de tarjeta, «Vencimientos» va con su nombre entero.
         */}
+        {pestana === "menu" && (
         <div className="grid grid-cols-2 gap-3 mb-4">
-          {(
-            [
-              { id: "historial", label: "Historial", icon: faClock },
-              // Tarjeta propia del permiso «Plantillas de equipo» (`dentroDe` Contratación).
-              ...(puedePlantillas ? [{ id: "plantillas", label: "Plantillas", icon: faLayerGroup }] : []),
-              { id: "por_vencer", label: "Vencimientos", icon: faCalendarAlt, contador: porVencer?.length || 0 },
-            ] as { id: "historial" | "por_vencer" | "plantillas"; label: string; icon: typeof faClock; contador?: number }[]
-          ).map((t) => {
-            const activa = pestana === t.id;
+          {SECCIONES.map((t) => {
+            const contador = t.id === "por_vencer" ? porVencer?.length || 0 : 0;
             return (
               <button
                 key={t.id}
                 type="button"
                 onClick={() => setPestana(t.id)}
-                aria-pressed={activa}
-                className={`relative flex min-h-[68px] items-center gap-2.5 rounded-xl border p-4 text-left shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98] ${activa ? "border-blue-500 bg-blue-50 dark:border-blue-500 dark:bg-blue-950/40" : "border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-900/70"}`}
+                className="relative flex min-h-[68px] items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98] dark:border-slate-600 dark:bg-slate-900/70"
               >
                 <FontAwesomeIcon icon={t.icon} className="h-4 w-4 shrink-0 text-primary" />
-                <h2 className={`min-w-0 break-words text-[15px] font-bold leading-tight text-slate-900 dark:text-slate-100 ${t.contador ? "pr-5" : ""}`}>{t.label}</h2>
+                <h2 className={`min-w-0 break-words text-[15px] font-bold leading-tight text-slate-900 dark:text-slate-100 ${contador ? "pr-5" : ""}`}>{t.label}</h2>
                 {/* Cuántos vencen, en la esquina y con el mismo globo verde que la home. */}
-                {!!t.contador && (
+                {!!contador && (
                   <span className="absolute right-2 top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-500/20 px-1 text-[10px] font-black leading-none text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-300">
-                    {t.contador > 99 ? "99+" : t.contador}
+                    {contador > 99 ? "99+" : contador}
                   </span>
                 )}
               </button>
             );
           })}
         </div>
+        )}
 
-        {pestana === "plantillas" && puedePlantillas ? (
+        {pestana === "menu" ? null : pestana === "plantillas" && puedePlantillas ? (
           <ProveedorPlantillas>
             <ListaGrupos embebida />
           </ProveedorPlantillas>
