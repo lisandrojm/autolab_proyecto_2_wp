@@ -5,7 +5,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { adjuntosPdf, esConflictoDeNombre, extraerArchivoFirmado, extraerAvisoFirmado, nombreDestino, rescatarFirmados, validarAdjunto, yaEstaEnFirmados } from "./rescateFirmados.js";
+import { adjuntosPdf, esConflictoDeNombre, extraerArchivoFirmado, extraerAvisoFirmado, nombreDestino, rescatarFirmados, TERMINOS_BUSQUEDA_FIRMADO, validarAdjunto, yaEstaEnFirmados } from "./rescateFirmados.js";
 import { extraerArchivoDeAsunto } from "./dropboxSignMailService.js";
 // Asuntos reales de la casilla (anonimizados).
 const FIRMADO_ES = "ALAN AQUINO firmó 426_LN+_AQUINO_Release_Jornada_D-20261012_H-20261012_20463515892_aquinoalan754-ARROBA-gmail.com_Empresa-30710295839_ID-000137.pdf";
@@ -24,6 +24,16 @@ describe("1. el asunto de «documento firmado»", () => {
         assert.equal(extraerArchivoFirmado(`Todos firmaron ${ARCHIVO}`), ARCHIVO);
         assert.equal(extraerArchivoFirmado(`Everyone has signed ${ARCHIVO}`), ARCHIVO);
         assert.equal(extraerArchivoFirmado(`Juan Pérez ha firmado ${ARCHIVO}`), ARCHIVO);
+    });
+    it("con la cola «: Firma solicitada por …» después del .pdf (9 mails reales del 25/10/2026): el archivo es lo de antes de la cola", () => {
+        const conCola = "LEONEL LOIZZO firmó 426_LN+_LOIZZO_Release_Plazo-fijo-6x6_D-20261001_H-20261031_20463515892_loizzo-ARROBA-gmail.com_Empresa-30710295839_ID-000004.pdf: Firma solicitada por Frame Zero";
+        assert.deepEqual(extraerAvisoFirmado(conCola), { archivo: "426_LN+_LOIZZO_Release_Plazo-fijo-6x6_D-20261001_H-20261031_20463515892_loizzo-ARROBA-gmail.com_Empresa-30710295839_ID-000004.pdf", quien: "LEONEL LOIZZO" });
+    });
+    it("los términos del SEARCH son palabras enteras tal como aparecen en el asunto: Gmail no busca subcadenas («firm» daba 0 con 204 mails de «firmó»)", () => {
+        for (const t of TERMINOS_BUSQUEDA_FIRMADO)
+            assert.notEqual(t, "firm");
+        assert.ok(TERMINOS_BUSQUEDA_FIRMADO.includes("firmó"), "la palabra real del asunto en español, con acento");
+        assert.ok(TERMINOS_BUSQUEDA_FIRMADO.every((t) => extraerArchivoFirmado(`Juan Pérez ${t} ${ARCHIVO}`) === ARCHIVO || extraerArchivoFirmado(`Todos ${t} ${ARCHIVO}`) === ARCHIVO || extraerArchivoFirmado(`Juan Pérez ha ${t} ${ARCHIVO}`) === ARCHIVO), "cada término corresponde a alguna forma que el parser reconoce");
     });
     it("un aviso de ENVÍO jamás es un firmado, y un firmado jamás es un envío", () => {
         assert.equal(extraerArchivoFirmado(ENVIO), "");

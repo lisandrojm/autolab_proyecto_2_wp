@@ -17,22 +17,31 @@ import { recortarNombre } from "../utils/nomenclatura.js";
  */
 /** Remitente de los avisos de Dropbox Sign (confirmado con un mail real: «Frame Zero <noreply@mail.hellosign.com>»). */
 export const REMITENTE_FIRMADO = "mail.hellosign.com";
-/** Términos del SEARCH IMAP (sin acentos: el SEARCH es sensible al charset). El filtro fino es `extraerArchivoFirmado`. */
-export const TERMINOS_BUSQUEDA_FIRMADO = ["firm", "signed"];
+/**
+ * Términos del SEARCH IMAP. PALABRAS ENTERAS, con acento: Gmail no busca por subcadena sino por
+ * palabra (como su buscador), y por eso «firm» devolvía 0 con 204 mails de «firmó» en la casilla
+ * (medido el 25/10/2026: «firm» → 0, «firmo» → 0, «firmó» → 204). El charset no es problema:
+ * ImapFlow manda el SEARCH en UTF-8. El filtro fino sigue siendo `extraerArchivoFirmado`.
+ */
+export const TERMINOS_BUSQUEDA_FIRMADO = ["firmó", "firmado", "firmaron", "signed"];
 /**
  * Asuntos de «documento firmado» (ES/EN). El grupo `archivo` es el nombre EXACTO del PDF: trae el
  * `ID-NNNNNN`. Confirmado con un mail real del 22/10/2026:
  *   «ALAN AQUINO firmó 426_LN+_AQUINO_Release_Jornada_D-…_ID-000137.pdf».
  * Las variantes multi-firmante («Todos firmaron…» / «Everyone has signed…») y en inglés se incluyen
  * por forma; los asuntos reales que no matcheen nada los lista `npm run dropbox-sign:asuntos`.
+ *
+ * Después del «.pdf» puede venir una cola («: Firma solicitada por Frame Zero»): es el título del
+ * envío cuando se mandó con mensaje, visto en 9 mails reales el 25/10/2026. Se admite y se descarta.
  */
+const COLA = String.raw `(?:\s*:\s.*)?$`;
 export const ASUNTO_FIRMADO = [
-    /^(?<quien>.+?)\s+firm[oó]\s+(?<archivo>.+\.pdf)$/i,
-    /^(?<quien>.+?)\s+(?:ha|han)\s+firmado\s+(?<archivo>.+\.pdf)$/i,
-    /^(?:todos|todas|todos los firmantes|todas las partes)\s+(?:ya\s+)?firmaron\s+(?<archivo>.+\.pdf)$/i,
-    /^(?<quien>.+?)\s+(?:has\s+|have\s+|just\s+)?signed\s+(?<archivo>.+\.pdf)$/i,
-    /^(?:everyone|all parties|all signers)\s+(?:has|have)\s+signed\s+(?<archivo>.+\.pdf)$/i,
-    /^(?:completed|completado|listo)[:!\s]+(?:firmaron\s+(?:tu|el)\s+documento[:\s]+)?(?<archivo>.+\.pdf)$/i,
+    new RegExp(String.raw `^(?<quien>.+?)\s+firm[oó]\s+(?<archivo>.+\.pdf)` + COLA, "i"),
+    new RegExp(String.raw `^(?<quien>.+?)\s+(?:ha|han)\s+firmado\s+(?<archivo>.+\.pdf)` + COLA, "i"),
+    new RegExp(String.raw `^(?:todos|todas|todos los firmantes|todas las partes)\s+(?:ya\s+)?firmaron\s+(?<archivo>.+\.pdf)` + COLA, "i"),
+    new RegExp(String.raw `^(?<quien>.+?)\s+(?:has\s+|have\s+|just\s+)?signed\s+(?<archivo>.+\.pdf)` + COLA, "i"),
+    new RegExp(String.raw `^(?:everyone|all parties|all signers)\s+(?:has|have)\s+signed\s+(?<archivo>.+\.pdf)` + COLA, "i"),
+    new RegExp(String.raw `^(?:completed|completado|listo)[:!\s]+(?:firmaron\s+(?:tu|el)\s+documento[:\s]+)?(?<archivo>.+\.pdf)` + COLA, "i"),
 ];
 const sinPrefijos = (asunto) => String(asunto || "")
     .replace(/^(re|rv|fwd?)\s*:\s*/gi, "")

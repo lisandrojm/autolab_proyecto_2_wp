@@ -15,15 +15,13 @@ import { type ArchivoConNombre } from "../utils/coincidenciaDeNombre.js";
  */
 /** Remitente de los avisos de Dropbox Sign (confirmado con un mail real: «Frame Zero <noreply@mail.hellosign.com>»). */
 export declare const REMITENTE_FIRMADO = "mail.hellosign.com";
-/** Términos del SEARCH IMAP (sin acentos: el SEARCH es sensible al charset). El filtro fino es `extraerArchivoFirmado`. */
-export declare const TERMINOS_BUSQUEDA_FIRMADO: string[];
 /**
- * Asuntos de «documento firmado» (ES/EN). El grupo `archivo` es el nombre EXACTO del PDF: trae el
- * `ID-NNNNNN`. Confirmado con un mail real del 22/10/2026:
- *   «ALAN AQUINO firmó 426_LN+_AQUINO_Release_Jornada_D-…_ID-000137.pdf».
- * Las variantes multi-firmante («Todos firmaron…» / «Everyone has signed…») y en inglés se incluyen
- * por forma; los asuntos reales que no matcheen nada los lista `npm run dropbox-sign:asuntos`.
+ * Términos del SEARCH IMAP. PALABRAS ENTERAS, con acento: Gmail no busca por subcadena sino por
+ * palabra (como su buscador), y por eso «firm» devolvía 0 con 204 mails de «firmó» en la casilla
+ * (medido el 25/10/2026: «firm» → 0, «firmo» → 0, «firmó» → 204). El charset no es problema:
+ * ImapFlow manda el SEARCH en UTF-8. El filtro fino sigue siendo `extraerArchivoFirmado`.
  */
+export declare const TERMINOS_BUSQUEDA_FIRMADO: string[];
 export declare const ASUNTO_FIRMADO: RegExp[];
 /** El aviso de firmado leído del asunto: el nombre del PDF (con `.pdf`) y quién firmó, o null si no es de firmado. */
 export declare function extraerAvisoFirmado(asunto: string): {
