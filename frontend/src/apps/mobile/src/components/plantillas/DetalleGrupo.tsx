@@ -142,6 +142,24 @@ export default function DetalleGrupo() {
         entra a una y la flecha de arriba vuelve a las tarjetas. La cantidad va en el nombre: el globo
         verde de la esquina es para cosas nuevas, y éstas no lo son.
       */}
+      {/*
+        LAS ACCIONES DEL GRUPO, PEGADAS A SU NOMBRE (25/10/2026). Iban debajo de las tarjetas Equipos |
+        Puestos con el rótulo «Este grupo», y ahí no se sabía si eliminar borraba el grupo o un equipo.
+        Arriba de todo y con el nombre del grupo, se lee «esto es de Equipo Técnico LN+». Sólo en el
+        menú: adentro de Equipos o Puestos el título cambia y quedarían ambiguas otra vez.
+      */}
+      {pestana === "menu" && (
+        <div className="mb-4">
+          <PieAcciones
+            izquierda={<span className="font-semibold text-slate-700 dark:text-slate-200">{p.nombre}</span>}
+            acciones={[
+              { icono: faEdit, titulo: "Cambiar el nombre del grupo", onClick: () => setHoja("nombre") },
+              { icono: faClone, titulo: "Duplicar el grupo", onClick: () => void duplicar() },
+              { icono: faTrash, titulo: "Eliminar el grupo", onClick: () => void eliminar() },
+            ]}
+          />
+        </div>
+      )}
       {pestana === "menu" && (
         <MenuDeTarjetas
           className="mb-4"
@@ -245,16 +263,6 @@ export default function DetalleGrupo() {
         )}
       </Seccion>
       )}
-
-      {/* Las acciones del grupo, como el pie de una tarjeta de escritorio: cada una avisa qué va a hacer antes de hacerlo. */}
-      <PieAcciones
-        izquierda="Este grupo"
-        acciones={[
-          { icono: faEdit, titulo: "Cambiar el nombre", onClick: () => setHoja("nombre") },
-          { icono: faClone, titulo: "Duplicar el grupo", onClick: () => void duplicar() },
-          { icono: faTrash, titulo: "Eliminar el grupo", onClick: () => void eliminar() },
-        ]}
-      />
 
       <HojaPuestos abierta={hoja === "puestos"} onCerrar={() => setHoja(null)} plantilla={p} />
       <HojaNombre abierta={hoja === "nombre"} onCerrar={() => setHoja(null)} actual={p.nombre} onGuardar={(nombre) => void cambiarDatos({ nombre })} />
