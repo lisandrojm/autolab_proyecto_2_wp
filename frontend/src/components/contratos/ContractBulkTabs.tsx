@@ -2121,6 +2121,13 @@ export const ContractBulkAfipTab: React.FC<{
             {/* Lo que pasa solo, dicho al lado del botón manual: hasta acá la automática era invisible. */}
             <EstadoValidacionAutomaticaOS />
 
+            {/* Los tres botones del circuito ARCA van SOLO con una empleadora elegida (25/10/2026): desde
+                «Todas» no se puede presentar (un TXT es de UN CUIT) ni tiene sentido validar o mirar el
+                registro sin saber de quién. Antes se mostraban apagados y confundían. */}
+            {!empresaDeLaPestana ? (
+              <span className="text-xs text-gray-500 dark:text-gray-400">Elegí la pestaña de una empleadora para validar obras sociales y presentar en ARCA.</span>
+            ) : (
+            <>
             <button
               type="button"
               /* Deshabilitado SOLO si no hay a quién validar. Y ahí el hover dice por qué es cero, que
@@ -2178,6 +2185,8 @@ export const ContractBulkAfipTab: React.FC<{
               <FontAwesomeIcon icon={faFileLines} className="h-3.5 w-3.5" />
               Alta Temprana A.R.C.A
             </button>
+            </>
+            )}
           </div>
         </div>
       )}
@@ -2911,7 +2920,6 @@ export const ContractBulkAfipTab: React.FC<{
               <li>Tildá los contratos a presentar (el check de la cabecera toma todos, de todas las páginas).</li>
               <li>Tocá «Presentar Masivo en A.R.C.A»: el número entre paréntesis es lo que va a ARCA, los tildados que están completos.</li>
             </ol>
-            {!empresaDeLaPestana && <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">Ahora estás en «Todas»: por eso el botón está apagado.</p>}
           </div>
         </Modal>
       )}
