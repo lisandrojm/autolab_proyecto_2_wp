@@ -34,3 +34,6 @@ export function clasificarPantalla(url: string, texto: string): PantallaArca {
   if (/ha ocurrido un error/i.test(texto)) return "error";
   return "servicio";
 }
+
+/** ¿La URL ya está en el dominio del servicio? (sin decir todavía si hay sesión: eso lo dice `clasificarPantalla`). */
+export const esDominioServicio = (url: string): boolean => DOMINIO_SERVICIO.test(url);

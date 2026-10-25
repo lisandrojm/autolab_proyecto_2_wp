@@ -140,7 +140,7 @@
     "test:carpetas": "tsx --test src/utils/estadoCarpetas.test.ts",
     "test:agrupar-contratos": "tsx --test src/utils/agruparContratos.test.ts",
     "test:contrato-solicitud": "tsx --test src/services/contratoDeSolicitud.test.ts",
-    "test:arca-pantalla": "tsx --test src/services/arca/pantallaArca.test.ts",
+    "test:arca-pantalla": "tsx --test src/services/arca/pantallaArca.test.ts src/services/arca/sincronizacionRelacionesCron.test.ts",
     "test:arca-altas": "tsx --test src/services/arca/cotejoAltas.test.ts",
     "test:catalogo-arca": "tsx --test src/compartido/catalogoArca.test.ts src/services/arca/espejoSoloLectura.test.ts",
     "test:puestos": "tsx --test src/compartido/puestosDesempenados.test.ts",

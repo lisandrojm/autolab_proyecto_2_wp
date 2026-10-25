@@ -196,6 +196,8 @@ export interface ITenant extends Document {
         meses?: number;
         ultimoDia?: string;
         ultimaSync?: any;
+        /** Reintento de la automática del día cuando falló (ver `sincronizacionRelacionesCronService`). */
+        reintento?: { dia?: string; numero?: number; desde?: Date | null };
       };
     };
     /**
@@ -434,6 +436,8 @@ const tenantSchema = new Schema<ITenant>(
           meses: { type: Number },
           ultimoDia: { type: String },
           ultimaSync: { type: Schema.Types.Mixed },
+          // Declarado a propósito (el esquema es `strict`): el reintento de la automática del día.
+          reintento: { dia: { type: String }, numero: { type: Number }, desde: { type: Date } },
         },
       },
       dropboxSign: {

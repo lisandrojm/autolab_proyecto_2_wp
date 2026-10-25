@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { clasificarPantalla } from "./pantallaArca.js";
+import { esDominioServicio, clasificarPantalla } from "./pantallaArca.js";
 
 const SERVICIO = "https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/MiSimplificacion/app/login/IndexContribuyente.aspx";
 const ERROR_PAGE = "https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/MiSimplificacion/app/ErrorPage.aspx";
@@ -67,4 +67,10 @@ test("una pestaña en blanco no es ninguna de las de ARCA", () => {
 // El dominio del servicio no se confunde con uno parecido: el chequeo es sobre el host de ARCA.
 test("otro sitio no pasa por servicio", () => {
   assert.equal(clasificarPantalla("https://www.google.com/", "Simplificación Registral"), "otra");
+});
+
+test("esDominioServicio (25/10/2026): el selector de CUIT y las páginas del servicio están en el dominio; el portal y el login no", () => {
+  assert.equal(esDominioServicio("https://serviciossegsoc.afip.gob.ar/tramites_con_clave_fiscal/MiSimplificacion/app/login/IndexContribuyente.aspx"), true);
+  assert.equal(esDominioServicio("https://portalcf.cloud.afip.gob.ar/portal/app/"), false);
+  assert.equal(esDominioServicio("https://auth.afip.gob.ar/contribuyente_/login.xhtml"), false);
 });
