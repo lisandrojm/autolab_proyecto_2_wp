@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { elegirParaBorrar, nombreDeCarpeta } from "./backupService.js";
+import { BYTES_POR_TANDA, elegirParaBorrar, loteParaColeccion, nombreDeCarpeta } from "./backupService.js";
 
 /**
  * QUÉ SE BORRA DE LA CARPETA DE BACKUPS.
@@ -64,5 +64,24 @@ describe("nombreDeCarpeta", () => {
     assert.ok(enero < octubre, `${enero} debería ordenar antes que ${octubre}`);
     assert.ok(enero < mismoDiaMasTarde, `${enero} debería ordenar antes que ${mismoDiaMasTarde}`);
     assert.match(enero, /^db_2026_01_02_03-00$/);
+  });
+});
+
+describe("loteParaColeccion: tandas por peso (la copia cortaba por timeout desde el 21/10/2026)", () => {
+  it("users_&_projects (10,6 KB promedio) ya no pide 500 de una: ~70, unos 750 KB", () => {
+    const n = loteParaColeccion(10.6 * 1024);
+    assert.equal(n, 70);
+    assert.ok(n * 10.6 * 1024 <= BYTES_POR_TANDA);
+  });
+  it("documentos enormes (recibos_sueldo_lotes, 279 KB) van de a 2", () => {
+    assert.equal(loteParaColeccion(279 * 1024), 2);
+  });
+  it("documentos chicos siguen con el tope de 500, y uno más grande que la tanda va de a 1", () => {
+    assert.equal(loteParaColeccion(400), 500);
+    assert.equal(loteParaColeccion(5 * 1024 * 1024), 1);
+  });
+  it("sin estadísticas, una tanda prudente", () => {
+    assert.equal(loteParaColeccion(undefined), 50);
+    assert.equal(loteParaColeccion(0), 50);
   });
 });

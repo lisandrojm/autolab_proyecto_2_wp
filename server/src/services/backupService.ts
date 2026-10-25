@@ -108,7 +108,8 @@ async function volcarColeccion(nombre: string): Promise<ArchivoBackup> {
   const lineas: string[] = [];
   let documentos = 0;
 
-  const cursor = db.collection(nombre).find({}, { batchSize: 500 });
+  const stats: any = await db.command({ collStats: nombre }).catch(() => null);
+  const cursor = db.collection(nombre).find({}, { batchSize: loteParaColeccion(stats?.avgObjSize) });
   for await (const doc of cursor) {
     /*
       CANÓNICO Y NO RELAJADO. Es la diferencia entre una copia fiel y una copia parecida.
@@ -131,6 +132,26 @@ async function volcarColeccion(nombre: string): Promise<ArchivoBackup> {
   // Un solo `join` al final en vez de concatenar en cada vuelta: con colecciones de miles de
   // documentos, sumar strings de a uno copia el acumulado entero cada vez.
   return { nombre: `${nombre}.json`, contenido: Buffer.from(lineas.length > 0 ? lineas.join("\n") + "\n" : "", "utf8"), documentos };
+}
+
+/*
+  TANDAS POR PESO, NO POR CANTIDAD (25/10/2026).
+
+  La copia falló desde el 21/10 con «connection N to …:27017 timed out». Medido contra la base real:
+  desde el servidor se leen ~100 KB/s de Atlas y la conexión corta a los 60 s (`socketTimeoutMS` en
+  `config/db.ts`). Con tandas fijas de 500 documentos, una de `users_&_projects` (10,6 KB promedio) pesa
+  ~5 MB y no llega en 60 s: falló a los 120 s sin traer nada. Con tandas de ~1 MB entró entera en 99 s,
+  la peor tanda en 21 s. La base creció (la copia pasó de 39 a 74 MB en una semana) y la tanda fija dejó
+  de entrar en el tope.
+
+  Se apunta a ~750 KB por tanda (~8 s a esta velocidad), con el promedio de la colección: el tiempo
+  total es el mismo, pero ninguna ida y vuelta se acerca al corte. Sin estadísticas, una tanda prudente.
+*/
+export const BYTES_POR_TANDA = 750 * 1024;
+export function loteParaColeccion(promedioBytes: unknown): number {
+  const prom = Number(promedioBytes);
+  if (!Number.isFinite(prom) || prom <= 0) return 50;
+  return Math.max(1, Math.min(500, Math.floor(BYTES_POR_TANDA / prom)));
 }
 
 /** Todas las colecciones de la base, cada una en su archivo, más el manifiesto. */
