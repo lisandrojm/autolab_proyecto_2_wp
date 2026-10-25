@@ -16,6 +16,7 @@ import { activityReportsAPI, FiltrosDePersonas, ParteConAsistencia } from "../..
 import { isContractVigente } from "../../team/ContractCard";
 import { getContratoActivo } from "../../../utils/contratoVigencia";
 import { overtimeUtils, OvertimeSettings, splitOvertime } from "../../../utils/overtimeUtils";
+import { ANCHOS_GLOSARIO, filasGlosarioExtras } from "../../../utils/hojaGlosarioExtras";
 import * as XLSX from "xlsx";
 import { usePuedeAbrir } from "../../../hooks/usePuedeAbrir";
 import { fechaDeCalendario } from "../../../utils/fechas";
@@ -1883,6 +1884,13 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       .map(([fecha, d]) => `${format(parseISO(fecha + "T00:00:00"), "dd/MM")}: ${d[campo]}`)
       .join(" | ");
 
+  /** La pestaña «Glosario» de los Excel, con los valores del glosario con que se calculó el archivo. */
+  const hojaGlosario = () => {
+    const hoja = XLSX.utils.aoa_to_sheet(filasGlosarioExtras(glossary));
+    hoja["!cols"] = ANCHOS_GLOSARIO;
+    return hoja;
+  };
+
   const handleExport = () => {
     const headers = ["Empleado", "Tipo de Contrato", "Sueldo Jornada", "Sueldo Mano", "Precio Hora", "Hora Base Ex.", "Hora 50% Ex.", "Hora 100% Ex.", "Jornadas", "Proyectos", "Áreas", "Turnos", "Días Presente", "Ausencias", "Detalle Ausencias", "Hs. 50%", "Hs. 100%", "Detalle Hs. Extras", "Monto Extras", "Monto Total", "Observaciones", "Comentarios del parte"];
     const rows = statsByEmployee.map((s) => {
@@ -2054,6 +2062,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Novedades");
+    XLSX.utils.book_append_sheet(wb, hojaGlosario(), "Glosario");
     XLSX.writeFile(wb, `reporte_novedades_${dateFrom}_a_${dateTo}.xlsx`);
   };
 
@@ -2075,7 +2084,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     // «Hs 50%» y «Hs 100%» por separado (25/10/2026): era UNA columna «% HS» con un solo porcentaje, y
     // un día mixto (05:30-12:30 sobre un turno de 06:00 a 12:00: media hora al 100% antes de las 06:00 y
     // media al 50% después de las 12:00) salía como «1 h al 50%».
-    const headers = ["Empleado", "Proyecto", "Área", "Turno", "Fecha", "Día", "Estado", "Motivo", "Hs Extras", "Hs 50%", "Hs 100%", "H. Entrada OT", "H. Salida OT", "Observación", "Comentario del parte"];
+    // Orden pedido: primero cuándo entró y salió, después el total y cómo se reparte.
+    const headers = ["Empleado", "Proyecto", "Área", "Turno", "Fecha", "Día", "Estado", "Motivo", "H. Entrada OT", "H. Salida OT", "Hs Extras Total", "Hs 50%", "Hs 100%", "Observación", "Comentario del parte"];
     const rows: any[] = [];
 
     statsByEmployee.forEach((s) => {
@@ -2084,7 +2094,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         const attendance = s.dailyAttendance[dateKey];
         const shortDay = daysMap[format(date, "EEEE")] || format(date, "eee");
 
-        rows.push([s.employeeName, s.rowProjectName || "S/P", attendance?.area || "-", attendance?.turno || "-", format(date, "dd/MM/yyyy"), shortDay, attendance ? (attendance.status === "present" ? "Presente" : attendance.status === "absent" ? "Ausente" : "Tardanza") : "Sin Registro", attendance?.reason || "-", attendance?.overtimeHours || 0, attendance?.h50 || 0, attendance?.h100 || 0, attendance?.entryTime || "-", attendance?.exitTime || "-", attendance?.nota || "-", attendance?.comentarioParte || "-"]);
+        rows.push([s.employeeName, s.rowProjectName || "S/P", attendance?.area || "-", attendance?.turno || "-", format(date, "dd/MM/yyyy"), shortDay, attendance ? (attendance.status === "present" ? "Presente" : attendance.status === "absent" ? "Ausente" : "Tardanza") : "Sin Registro", attendance?.reason || "-", attendance?.entryTime || "-", attendance?.exitTime || "-", attendance?.overtimeHours || 0, attendance?.h50 || 0, attendance?.h100 || 0, attendance?.nota || "-", attendance?.comentarioParte || "-"]);
       });
       // Add divider row between employees
       rows.push(Array(headers.length).fill(""));
@@ -2097,11 +2107,12 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
     // Styling
     // Los dos de texto libre, anchos: si no, Excel los muestra cortados y hay que abrir cada celda.
-    const colWidths = [25, 20, 18, 26, 12, 8, 12, 25, 10, 9, 9, 12, 12, 40, 40];
+    const colWidths = [25, 20, 18, 26, 12, 8, 12, 25, 12, 12, 14, 9, 9, 40, 40];
     ws["!cols"] = colWidths.map((w) => ({ wch: w }));
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Detalle Diario");
+    XLSX.utils.book_append_sheet(wb, hojaGlosario(), "Glosario");
     XLSX.writeFile(wb, `detalle_diario_consolidado_${dateFrom}_a_${dateTo}.xlsx`);
   };
 
