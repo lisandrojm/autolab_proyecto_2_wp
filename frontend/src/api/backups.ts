@@ -62,6 +62,18 @@ export interface BaseActual {
   bytes: number;
 }
 
+/** El avance de la copia en curso (ver `ProgresoBackup` en `server/src/services/backupService.ts`). */
+export interface ProgresoBackup {
+  disparador: "cron" | "manual";
+  inicio: string;
+  paso: "leyendo" | "subiendo" | "limpiando";
+  hechas: number;
+  total: number;
+  actual: string;
+  bytes: number;
+  bytesTotal?: number;
+}
+
 /** El `_backup.json` de una copia, con el detalle por colección. */
 export interface ManifiestoCopia {
   base: string;
@@ -72,14 +84,18 @@ export interface ManifiestoCopia {
 
 export const backupsAPI = {
   /**
-   * Fuerza un backup y espera a que termine.
-   *
-   * Timeout largo a propósito: el server contesta recién cuando el archivo quedó subido, y recorrer la
-   * base entera con la conexión de Atlas puede tardar varios minutos. Con el timeout por defecto el
-   * navegador cortaría antes y mostraría un error sobre un backup que en realidad terminó bien.
+   * Arranca un backup y vuelve enseguida (202): la copia corre en el servidor (~14 minutos) y el avance
+   * se sigue con `progreso()`. Cómo terminó queda en `config()` (`ultimoBackupAt` / `ultimoError`).
+   * 409 = ya hay uno en curso.
    */
-  async ejecutar(): Promise<ResultadoBackup> {
-    const { data } = await axios.post("/backups/ejecutar", {}, { timeout: 15 * 60 * 1000 });
+  async ejecutar(): Promise<{ iniciado: boolean }> {
+    const { data } = await axios.post("/backups/ejecutar", {});
+    return data;
+  },
+
+  /** Cómo va la copia en curso (manual o automática), para la barra de avance. */
+  async progreso(): Promise<{ enCurso: boolean; progreso: ProgresoBackup | null }> {
+    const { data } = await axios.get("/backups/progreso");
     return data;
   },
 

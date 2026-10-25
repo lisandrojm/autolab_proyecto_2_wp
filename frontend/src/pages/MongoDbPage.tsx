@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDatabase, faGear, faFolderOpen, faSpinner, faCloudArrowUp, faScaleBalanced } from "@fortawesome/free-solid-svg-icons";
@@ -7,7 +7,7 @@ import { InfoModal } from "../components/ui/InfoModal";
 import { MongoDbConfig } from "../components/documents/MongoDbConfig";
 import { ListaCopiasBackup } from "../components/documents/ListaCopiasBackup";
 import { BaseActualVsCopia } from "../components/documents/BaseActualVsCopia";
-import { backupsAPI, ConfigBackup, CopiaBackup } from "../api/backups";
+import { backupsAPI, ConfigBackup, CopiaBackup, ProgresoBackup } from "../api/backups";
 import { sweetAlert } from "../utils/sweetAlert";
 import { mensajeErrorApi } from "../utils/errorApi";
 import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
@@ -29,6 +29,46 @@ const Comando: React.FC<{ children: string }> = ({ children }) => (
   <pre className="mt-1 overflow-x-auto rounded bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-2 text-[11px] leading-relaxed text-gray-800 dark:text-gray-200">{children}</pre>
 );
 
+const mb = (b: number) => `${(b / 1024 / 1024).toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB`;
+
+/**
+ * La barra de la copia en curso: en qué paso va, cuánto lleva de ese paso y qué está haciendo ahora.
+ * Paso 1 se mide en colecciones (no se sabe cuánto pesa la base hasta leerla); paso 2, en MB subidos.
+ */
+function BarraDeAvance({ p, ahora }: { p: ProgresoBackup; ahora: number }) {
+  const seg = Math.max(0, Math.floor((ahora - new Date(p.inicio).getTime()) / 1000));
+  const reloj = `${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, "0")}`;
+  const pct =
+    p.paso === "limpiando" ? 100 : p.paso === "subiendo" && p.bytesTotal ? Math.round((p.bytes / p.bytesTotal) * 100) : p.total ? Math.round((p.hechas / p.total) * 100) : 0;
+  const titulo = p.paso === "leyendo" ? "Paso 1 de 2 · Leyendo la base" : p.paso === "subiendo" ? "Paso 2 de 2 · Subiendo a Dropbox" : "Terminando · Borrando las copias viejas";
+  const detalle =
+    p.paso === "leyendo"
+      ? `${p.hechas} de ${p.total} colecciones · ${mb(p.bytes)} leídos${p.actual ? ` · ahora: ${p.actual}` : ""}`
+      : p.paso === "subiendo"
+        ? `${p.hechas} de ${p.total} archivos · ${mb(p.bytes)} de ${mb(p.bytesTotal || 0)}${p.actual ? ` · ahora: ${p.actual}` : ""}`
+        : "Se conservan las últimas según la configuración.";
+  return (
+    <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-900/60 dark:bg-blue-950/30" role="status" aria-live="polite">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-2 text-sm font-semibold text-blue-900 dark:text-blue-200">
+          <FontAwesomeIcon icon={faSpinner} spin className="h-3.5 w-3.5" />
+          Backup en curso ({p.disparador === "manual" ? "manual" : "automático"}) · {titulo}
+        </p>
+        <span className="text-xs tabular-nums text-blue-800/80 dark:text-blue-300/80">
+          {pct}% · {reloj} transcurridos
+        </span>
+      </div>
+      <div className="mt-2 h-2 w-full overflow-hidden rounded bg-blue-100 dark:bg-blue-900/50">
+        <div className="h-full rounded bg-blue-600 transition-[width] duration-700" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="mt-1.5 truncate text-xs text-blue-900/80 dark:text-blue-200/80" title={detalle}>
+        {detalle}
+      </p>
+      <p className="mt-0.5 text-[11px] text-blue-900/60 dark:text-blue-300/60">Tarda unos 15 minutos. Corre en el servidor: podés cerrar esta pantalla, la copia sigue.</p>
+    </div>
+  );
+}
+
 export const MongoDbPage: React.FC = () => {
   const navigate = useNavigate();
   const puedeAbrir = usePuedeAbrir();
@@ -42,35 +82,76 @@ export const MongoDbPage: React.FC = () => {
     backupsAPI.config().then(setConfig).catch(() => setConfig(null));
   }, []);
 
-  const [generandoBackup, setGenerandoBackup] = useState(false);
-  /** Segundos que lleva la corrida. Un overlay sin nada que se mueva se lee como «se colgó». */
-  const [segundos, setSegundos] = useState(0);
-
-  useEffect(() => {
-    if (!generandoBackup) return;
-    setSegundos(0);
-    const t = setInterval(() => setSegundos((s) => s + 1), 1000);
-
-    /*
-      Aviso del navegador si intentan cerrar la pestaña. El overlay tapa los clicks de la app, pero no
-      la cruz del browser ni un Cmd+W: si se corta a la mitad, la copia queda incompleta en Dropbox —una
-      carpeta sin `_backup.json`— y hay que borrarla a mano.
-    */
-    const avisar = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", avisar);
-    return () => {
-      clearInterval(t);
-      window.removeEventListener("beforeunload", avisar);
-    };
-  }, [generandoBackup]);
   /**
-   * Cambia después de un backup manual para remontar el listado: el tab lee la carpeta al montarse, y
-   * sin esto la copia recién hecha no aparece hasta recargar la página.
+   * Cambia después de un backup para remontar el listado y la configuración: los dos leen al montarse,
+   * y sin esto la copia recién hecha (o el error) no aparece hasta recargar la página.
    */
   const [recarga, setRecarga] = useState(0);
+
+  /*
+    EL AVANCE DE LA COPIA EN CURSO (25/10/2026). La copia corre en el servidor (~14 minutos) y la
+    pantalla pregunta cada 2 s cómo va: paso, cuántas colecciones o archivos lleva, cuál, cuántos MB.
+    Sirve igual para la manual y para la automática —antes, con la automática corriendo, «Backup ahora»
+    sólo decía «Ya hay un backup en curso» y nada más—. Ya no se bloquea la pantalla: cerrar la pestaña
+    no corta nada, la copia es del servidor.
+  */
+  const [estado, setEstado] = useState<{ enCurso: boolean; progreso: ProgresoBackup | null } | null>(null);
+  const [seguir, setSeguir] = useState(0);
+  const enCurso = !!estado?.enCurso;
+  /** Para saber, al terminar, si salió bien: el `ultimoBackupAt` que había cuando se la vio corriendo. */
+  const ultimoAlEmpezar = useRef<string | null | undefined>(undefined);
+  /** Si en la lectura anterior había una en curso: el paso de «sí» a «no» es que terminó. */
+  const estabaEnCurso = useRef(false);
+  const [ahora, setAhora] = useState(Date.now());
+
+  useEffect(() => {
+    let vivo = true;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const leer = async () => {
+      try {
+        const p = await backupsAPI.progreso();
+        if (!vivo) return;
+        if (p.enCurso && ultimoAlEmpezar.current === undefined) ultimoAlEmpezar.current = config?.ultimoBackupAt ?? null;
+        const termino = estabaEnCurso.current && !p.enCurso;
+        estabaEnCurso.current = p.enCurso;
+        setEstado(p);
+        if (termino) void alTerminar();
+        if (p.enCurso) t = setTimeout(leer, 2000);
+      } catch {
+        // Sin respuesta (red, 403): se deja de seguir; la pantalla queda como estaba.
+      }
+    };
+    void leer();
+    return () => {
+      vivo = false;
+      if (t) clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seguir]);
+
+  useEffect(() => {
+    if (!enCurso) return;
+    const t = setInterval(() => setAhora(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [enCurso]);
+
+  /** La copia terminó: se recarga todo y se dice cómo salió (leyendo lo que quedó guardado). */
+  const alTerminar = async () => {
+    const previo = ultimoAlEmpezar.current;
+    ultimoAlEmpezar.current = undefined;
+    setRecarga((n) => n + 1);
+    try {
+      const c = await backupsAPI.config();
+      setConfig(c);
+      const salioBien = !!c.ultimoBackupAt && c.ultimoBackupAt !== previo && !c.ultimoError;
+      if (salioBien) {
+        setTab("backups");
+        sweetAlert.success("Backup generado", "La copia nueva ya está en DDBB Backup.");
+      } else sweetAlert.error("El backup falló", c.ultimoError || "No se pudo generar la copia.");
+    } catch {
+      /* la pantalla se recarga igual con `recarga` */
+    }
+  };
 
   useEffect(() => {
     backupsAPI
@@ -84,22 +165,20 @@ export const MongoDbPage: React.FC = () => {
     espera, y eso ya lo dice el botón —queda deshabilitado y en «Generando…» mientras corre—.
   */
   const forzarBackup = async () => {
-    setGenerandoBackup(true);
+    ultimoAlEmpezar.current = config?.ultimoBackupAt ?? null;
     try {
-      const r = await backupsAPI.ejecutar();
-      setRecarga((n) => n + 1);
-      setTab("backups");
-      sweetAlert.success("Backup generado", `${r.carpeta} · ${r.colecciones} colecciones · ${r.documentos.toLocaleString("es-AR")} documentos · ${(r.bytes / 1024 / 1024).toFixed(1)} MB`);
+      await backupsAPI.ejecutar();
     } catch (e: any) {
-      // El 409 no es un error del usuario: ya hay uno corriendo (el automático, o alguien más).
-      if (e?.response?.status === 409) sweetAlert.warningAlert("Ya hay un backup en curso", "Esperá a que termine y volvé a intentar.");
-      else {
-        const m = mensajeErrorApi(e, "No se pudo generar el backup");
+      // El 409 no es un error del usuario: ya hay uno corriendo (el automático, o alguien más). En vez
+      // de un cartel, se muestra el avance de ése.
+      if (e?.response?.status !== 409) {
+        ultimoAlEmpezar.current = undefined;
+        const m = mensajeErrorApi(e, "No se pudo arrancar el backup");
         sweetAlert.error(m.titulo, m.detalle);
+        return;
       }
-    } finally {
-      setGenerandoBackup(false);
     }
+    setSeguir((n) => n + 1);
   };
 
   const claseTab = (activa: boolean) =>
@@ -116,12 +195,12 @@ export const MongoDbPage: React.FC = () => {
       headerActions={
         <button
           onClick={forzarBackup}
-          disabled={generandoBackup}
-          title="Generar un backup de la base ahora, sin esperar la corrida automática"
+          disabled={enCurso}
+          title={enCurso ? "Hay una copia en curso: el avance está abajo" : "Generar un backup de la base ahora, sin esperar la corrida automática"}
           className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          <FontAwesomeIcon icon={generandoBackup ? faSpinner : faCloudArrowUp} spin={generandoBackup} className="h-4 w-4" />
-          {generandoBackup ? "Generando…" : "Backup ahora"}
+          <FontAwesomeIcon icon={enCurso ? faSpinner : faCloudArrowUp} spin={enCurso} className="h-4 w-4" />
+          {enCurso ? "Backup en curso…" : "Backup ahora"}
         </button>
       }
       searchAndFilters={
@@ -142,41 +221,13 @@ export const MongoDbPage: React.FC = () => {
         </div>
       }
     >
+      {/* La barra va arriba de las pestañas, sin tapar nada: se puede seguir mirando mientras corre. */}
+      {enCurso && estado?.progreso && <BarraDeAvance p={estado.progreso} ahora={ahora} />}
       <div className="animate-in fade-in duration-300">
-        {tab === "config" && <MongoDbConfig />}
+        {tab === "config" && <MongoDbConfig key={recarga} />}
         {tab === "backups" && <ListaCopiasBackup recarga={recarga} frecuenciaHoras={config?.intervaloHoras} retener={config?.retener} />}
         {tab === "base" && <BaseActualVsCopia copias={copias} />}
       </div>
-
-      {/*
-        MIENTRAS CORRE, LA PANTALLA SE BLOQUEA.
-
-        La corrida recorre la base entera y sube 58 archivos: puede tardar minutos. Con la pantalla
-        libre se puede navegar a otra sección, y ahí el componente se desmonta: la petición sigue viva en
-        el servidor —el backup igual termina— pero nadie ve si salió bien ni el error si falló, y el
-        siguiente click en «Backup ahora» choca con un 409 sin explicación.
-
-        `z-[100]` para quedar por encima del navbar, que es `z-20`/`z-30`.
-      */}
-      {generandoBackup && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/70 backdrop-blur-sm" role="alertdialog" aria-busy="true" aria-live="polite">
-          <div className="mx-4 max-w-sm rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl px-6 py-5 text-center">
-            <FontAwesomeIcon icon={faSpinner} spin className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-            <p className="mt-3 font-semibold text-gray-900 dark:text-gray-100">Generando el backup…</p>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Se está recorriendo la base entera y subiendo una copia. Puede tardar varios minutos.</p>
-            {/* Barra indeterminada + contador: dos señales de que sigue vivo. Con el spinner solo, a los
-                treinta segundos parece colgado y alguien recarga la página a mitad de la subida. */}
-            <div className="mt-4 h-1 w-full overflow-hidden rounded bg-gray-200 dark:bg-gray-700">
-              <div className="h-full w-1/3 rounded bg-blue-600 animate-[indeterminado_1.4s_ease-in-out_infinite]" style={{ animationName: "indeterminado" }} />
-            </div>
-            <style>{`@keyframes indeterminado { 0% { margin-left: -35%; } 100% { margin-left: 100%; } }`}</style>
-            <p className="mt-3 text-xs text-gray-500 tabular-nums">
-              {Math.floor(segundos / 60)}:{String(segundos % 60).padStart(2, "0")} transcurridos
-            </p>
-            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">No cierres esta pestaña: si se corta, la copia queda incompleta.</p>
-          </div>
-        </div>
-      )}
 
       <InfoModal isOpen={showInfo} onClose={() => setShowInfo(false)} title="Cómo funciona el backup" size="lg" zIndex={60} actions={[{ label: "Entendido", onClick: () => setShowInfo(false), variant: "primary" }]}>
         <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
