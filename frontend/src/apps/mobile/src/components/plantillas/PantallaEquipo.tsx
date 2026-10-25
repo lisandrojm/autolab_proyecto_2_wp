@@ -12,6 +12,7 @@ import { SelectorPersona } from "./SelectorPersona";
 import { HojaNombre } from "./DetalleGrupo";
 import { categoriasDelNivel, estadoDe, nombreRoles, proyectoDelEquipo, PuestoDelEquipo, puestosDe, rutas, sacadosDe } from "./equipoUtil";
 import { HojaModal } from "./HojaModal";
+import { BotonInfo } from "../ModalInfo";
 import CampoConvenio from "./CampoConvenio";
 import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/ChipValoracion";
 import { CLASE_CAMPO, Pill } from "./comun";
@@ -138,7 +139,17 @@ export default function PantallaEquipo() {
 
       <Seccion titulo="Condiciones del equipo">
         {/* Sin horario: es por persona, con el del turno por defecto (ver `sinHorario`). */}
-        <FilasCondiciones valores={c} areas={areas} catalogos={catalogos} onAbrirContrato={() => setHoja("contrato")} onAbrirTurno={() => setHoja("turno")} onCambio={cambiar} sinHorario />
+        {/* El tipo de contrato del equipo es el que arranca cada puesto; en cada uno se puede cambiar (queda «distinto»). */}
+        <FilasCondiciones
+          valores={c}
+          areas={areas}
+          catalogos={catalogos}
+          onAbrirContrato={() => setHoja("contrato")}
+          onAbrirTurno={() => setHoja("turno")}
+          onCambio={cambiar}
+          sinHorario
+          infoContrato={<BotonInfo titulo="Tipo de contrato" texto="Es el tipo de contrato que aparece por defecto en todos los puestos de este equipo. Se puede cambiar en cada puesto: tocá el puesto del colaborador y elegí otro tipo de contrato para esa persona." />}
+        />
       </Seccion>
 
       <Seccion titulo={`Puestos · ${est.asignados}/${est.total}`} id="puestos">

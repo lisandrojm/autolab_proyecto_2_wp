@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
@@ -100,6 +101,8 @@ interface FilasProps {
    * sí es de esa persona.
    */
   sinHorario?: boolean;
+  /** Algo al lado del rótulo «Tipo de contrato» (el ⓘ del equipo: es el valor por defecto de cada puesto). */
+  infoContrato?: ReactNode;
 }
 
 /**
@@ -107,14 +110,14 @@ interface FilasProps {
  * badge de trámite), y debajo, en su tarjeta, área y turno (abre su hoja), horario y días (se editan
  * acá mismo).
  */
-export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, onAbrirTurno, onCambio, distintas, sinHorario }: FilasProps) {
+export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, onAbrirTurno, onCambio, distintas, sinHorario, infoContrato }: FilasProps) {
   const turno = nombreTurno(areas, valores.areaId, valores.shiftId);
   const sueltos = porDiasSueltos(catalogos, valores.contratoId);
   const dias = valores.diasSemana || [];
   const marca = (k: string) => (distintas?.has(k) ? <span className="ml-1.5 rounded bg-amber-100 px-1 text-[11px] font-bold text-amber-900 dark:bg-amber-500/20 dark:text-amber-200">distinto</span> : null);
   return (
     <div className="space-y-3">
-    <CampoTipoContrato contratos={catalogos.contratos} contratoId={valores.contratoId || ""} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onAbrir={onAbrirContrato} marca={marca("contrato")} />
+    <CampoTipoContrato contratos={catalogos.contratos} contratoId={valores.contratoId || ""} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onAbrir={onAbrirContrato} marca={<>{marca("contrato")}{infoContrato && <span className="font-normal normal-case tracking-normal">{infoContrato}</span>}</>} />
 
     <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-800/70">
       <button type="button" onClick={onAbrirTurno} className="flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left">
