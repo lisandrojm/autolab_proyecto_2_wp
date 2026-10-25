@@ -16,3 +16,5 @@ export function clasificarPantalla(url, texto) {
         return "error";
     return "servicio";
 }
+/** ¿La URL ya está en el dominio del servicio? (sin decir todavía si hay sesión: eso lo dice `clasificarPantalla`). */
+export const esDominioServicio = (url) => DOMINIO_SERVICIO.test(url);

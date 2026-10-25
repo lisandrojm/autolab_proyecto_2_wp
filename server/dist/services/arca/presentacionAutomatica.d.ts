@@ -113,7 +113,7 @@ export declare function correrPresentacionAutomatica(tenantId: string, tenantObj
 }): Promise<{
     fecha: string;
     dia: string;
-    tipo: "cola" | "dia";
+    tipo: "dia" | "cola";
     empresas: ResultadoEmpresa[];
     omitidos: {
         nombre: string;

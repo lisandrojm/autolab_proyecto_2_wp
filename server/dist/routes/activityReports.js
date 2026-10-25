@@ -15,6 +15,7 @@ import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
 import { Area } from "../models/Area.js";
 import { Shift } from "../models/Shift.js";
+import { Holiday } from "../models/Holiday.js";
 const router = Router();
 /** Los nombres que la pantalla muestra de cada parte. `populate` sobre objetos planos: la agregación no los trae sola. */
 const POPULADOS = [
@@ -596,6 +597,43 @@ router.get("/asistencias-del-periodo", async (req, res) => {
     }
     catch (error) {
         console.error("Asistencias del período error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/**
+ * LOS FERIADOS DEL PERÍODO, para el reparto de las horas extra (25/10/2026).
+ *
+ * El glosario dice que en domingos Y FERIADOS todas las extras van al 100%, y el cálculo sólo miraba el
+ * domingo. Los feriados son la tabla de Configuración › Feriados del tenant. Va acá y no en `/holidays`
+ * porque ésa pide el permiso de configurar feriados, y quien carga novedades o mira el reporte no lo
+ * tiene: el dato le hace falta igual para que las horas salgan bien.
+ *
+ * La fecha se devuelve como «AAAA-MM-DD» leyendo la parte UTC: los feriados se guardan como la
+ * medianoche LOCAL de quien los cargó (04:00 o 05:00 UTC en la base), y cualquier medianoche al oeste
+ * de Greenwich cae en el mismo día UTC. Convertirla a hora argentina la correría un día si alguna vez
+ * se guardara a las 00:00 UTC.
+ */
+router.get("/feriados-del-periodo", async (req, res) => {
+    try {
+        const desde = String(req.query.desde || "");
+        const hasta = String(req.query.hasta || "");
+        if (!DATE_RE.test(desde) || !DATE_RE.test(hasta) || desde > hasta) {
+            res.status(400).json({ error: "Parámetros 'desde'/'hasta' inválidos (AAAA-MM-DD, desde<=hasta)" });
+            return;
+        }
+        // Un día de margen a cada lado: el filtro es por instante y la fecha guardada no es medianoche UTC.
+        const ini = new Date(`${desde}T00:00:00Z`);
+        ini.setUTCDate(ini.getUTCDate() - 1);
+        const fin = new Date(`${hasta}T23:59:59Z`);
+        fin.setUTCDate(fin.getUTCDate() + 1);
+        const filas = await Holiday.find({ tenantId: req.tenantObjectId, date: { $gte: ini, $lte: fin } }).select("date name").sort({ date: 1 }).lean();
+        const feriados = filas
+            .map((h) => ({ fecha: new Date(h.date).toISOString().slice(0, 10), nombre: String(h.name || "") }))
+            .filter((h) => h.fecha >= desde && h.fecha <= hasta);
+        res.json({ feriados });
+    }
+    catch (error) {
+        console.error("Feriados del período error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });

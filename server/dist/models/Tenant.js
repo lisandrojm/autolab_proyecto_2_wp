@@ -109,6 +109,8 @@ const tenantSchema = new Schema({
                 meses: { type: Number },
                 ultimoDia: { type: String },
                 ultimaSync: { type: Schema.Types.Mixed },
+                // Declarado a propósito (el esquema es `strict`): el reintento de la automática del día.
+                reintento: { dia: { type: String }, numero: { type: Number }, desde: { type: Date } },
             },
         },
         dropboxSign: {

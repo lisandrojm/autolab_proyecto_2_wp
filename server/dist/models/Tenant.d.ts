@@ -197,6 +197,12 @@ export interface ITenant extends Document {
                 meses?: number;
                 ultimoDia?: string;
                 ultimaSync?: any;
+                /** Reintento de la automática del día cuando falló (ver `sincronizacionRelacionesCronService`). */
+                reintento?: {
+                    dia?: string;
+                    numero?: number;
+                    desde?: Date | null;
+                };
             };
         };
         /**

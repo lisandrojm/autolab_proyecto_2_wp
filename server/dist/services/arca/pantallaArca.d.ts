@@ -20,3 +20,5 @@
  */
 export type PantallaArca = "servicio" | "error" | "login" | "otra";
 export declare function clasificarPantalla(url: string, texto: string): PantallaArca;
+/** ¿La URL ya está en el dominio del servicio? (sin decir todavía si hay sesión: eso lo dice `clasificarPantalla`). */
+export declare const esDominioServicio: (url: string) => boolean;

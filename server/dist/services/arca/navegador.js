@@ -1,10 +1,11 @@
 import { existsSync, readdirSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { decryptSecret, encryptSecret } from "../../utils/secretCrypto.js";
 import { Tenant } from "../../models/Tenant.js";
-import { clasificarPantalla } from "./pantallaArca.js";
+import { clasificarPantalla, esDominioServicio } from "./pantallaArca.js";
 import { cerrarSesionTibia } from "./sesionTibia.js";
 /**
  * Un Chromium en el SERVIDOR que entra a ARCA con clave fiscal y deja la pantalla de altas lista.
@@ -306,11 +307,58 @@ async function abrirServicioDesdeElPortal(ctx, page) {
     }
     if (!enlace)
         return null;
-    // Puede abrir pestaña nueva o navegar en la misma: se espera la nueva sin exigirla.
-    const [nueva] = await Promise.all([ctx.waitForEvent("page", { timeout: 15_000 }).catch(() => null), enlace.click().catch(() => { })]);
-    const destino = nueva || page;
+    /*
+      SE ESPERA AL SERVICIO, NO A «UNA PESTAÑA NUEVA» (25/10/2026).
+  
+      Antes se esperaba 15 s el evento de pestaña nueva y, si no llegaba, se seguía con la del portal. El
+      25/10 a las 06:00 la sincronización automática terminó así: el click salió, la pestaña del servicio
+      no apareció a tiempo (el portal abre el servicio pasando por su propio SSO, y en horario de poca
+      carga igual tarda), y se clasificó la del PORTAL — que es dominio de AFIP — como «login».
+  
+      Ahora se mira TODAS las pestañas del contexto, hasta 45 s, buscando una que ya esté en el dominio
+      del servicio: sirve igual si abre una nueva tarde, si navega en la misma o si pasa por una
+      intermedia. Si ninguna llega, se devuelve la mejor candidata y quien llama decide.
+    */
+    await enlace.click().catch(() => { });
+    const destino = await esperarPestanaDelServicio(ctx, page, 45_000);
     await destino.waitForLoadState("domcontentloaded").catch(() => { });
     return destino;
+}
+/** La pestaña que llegó al dominio del servicio; si ninguna llega en `ms`, la última que se abrió. */
+async function esperarPestanaDelServicio(ctx, page, ms) {
+    const hasta = Date.now() + ms;
+    for (;;) {
+        const enServicio = ctx.pages().find((p) => !p.isClosed() && esDominioServicio(p.url()));
+        if (enServicio)
+            return enServicio;
+        if (Date.now() >= hasta)
+            break;
+        await page.waitForTimeout(500).catch(() => { });
+    }
+    const abiertas = ctx.pages().filter((p) => !p.isClosed());
+    return abiertas[abiertas.length - 1] || page;
+}
+/** Donde quedan el HTML y la captura de cada pestaña cuando no se pudo entrar al servicio. */
+const CARPETA_DIAGNOSTICO = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../server/tmp/arca-login");
+/**
+ * GUARDA QUÉ HABÍA EN PANTALLA cuando no se pudo entrar (25/10/2026). Sin esto, el único dato era una
+ * URL del portal y no había forma de saber si AFIP mostró un aviso, un modal o una pantalla nueva —y
+ * reproducirlo exige loguearse con la clave fiscal de la empresa—. Devuelve la carpeta, o "" si falló.
+ */
+async function guardarDiagnostico(tenantId, ctx) {
+    try {
+        await mkdir(CARPETA_DIAGNOSTICO, { recursive: true });
+        const base = `${new Date().toISOString().replace(/[:.]/g, "-")}_${tenantId}`;
+        for (const [i, p] of ctx.pages().filter((x) => !x.isClosed()).entries()) {
+            const html = await p.content().catch(() => "");
+            await writeFile(resolve(CARPETA_DIAGNOSTICO, `${base}_pestana${i + 1}.html`), `<!-- ${p.url()} -->\n${html}`, "utf8").catch(() => { });
+            await p.screenshot({ path: resolve(CARPETA_DIAGNOSTICO, `${base}_pestana${i + 1}.png`), fullPage: true }).catch(() => { });
+        }
+        return CARPETA_DIAGNOSTICO;
+    }
+    catch {
+        return "";
+    }
 }
 /** Espera a que el servicio aparezca, hasta `ms`. Devuelve `null` recién cuando de verdad no está. */
 async function esperarEnlaceDelServicio(page, ms) {
@@ -450,10 +498,21 @@ export async function abrirSesionArca(tenantId, cred, opciones = {}) {
             throw new Error("Entré a AFIP con ese usuario, pero «Simplificación Registral» no aparece entre sus servicios en el portal. " +
                 "Delegáselo desde Administrador de Relaciones con el CUIT de la empleadora, o revisá que la delegación esté aceptada.");
         }
-        const estadoPantalla = await pantallaDe(destino);
+        let estadoPantalla = await pantallaDe(destino);
         if (estadoPantalla !== "servicio") {
+            /*
+              ÚLTIMO INTENTO: la URL del selector de CUIT en la misma pestaña. Si el click en el portal llegó
+              a abrir la sesión del servicio aunque la pestaña no se viera, esto entra; si no, termina en
+              `FinSession` y se sigue al error con lo que había en pantalla guardado.
+            */
+            await irA(destino, SIMPLIFICACION_URL).catch(() => { });
+            estadoPantalla = await pantallaDe(destino);
+        }
+        if (estadoPantalla !== "servicio") {
+            const carpeta = await guardarDiagnostico(tenantId, ctx);
             // Se dice DÓNDE terminó. Un «no abrió» a secas mandó a revisar la delegación, que estaba bien.
-            throw new Error(`Abrí «Simplificación Registral» desde el portal pero la pantalla que apareció no es la del servicio (${estadoPantalla}): ${destino.url()}`);
+            throw new Error(`Abrí «Simplificación Registral» desde el portal pero la pantalla que apareció no es la del servicio (${estadoPantalla}): ${destino.url()}` +
+                (carpeta ? ` · Captura y HTML de cada pestaña en ${carpeta}` : ""));
         }
         page = destino;
         /*

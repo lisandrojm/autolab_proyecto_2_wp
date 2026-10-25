@@ -57,6 +57,8 @@ export interface ArchivoBackup {
     contenido: Buffer;
     documentos: number;
 }
+export declare const BYTES_POR_TANDA: number;
+export declare function loteParaColeccion(promedioBytes: unknown): number;
 /** Todas las colecciones de la base, cada una en su archivo, más el manifiesto. */
 export declare function generarArchivos(): Promise<{
     archivos: ArchivoBackup[];
