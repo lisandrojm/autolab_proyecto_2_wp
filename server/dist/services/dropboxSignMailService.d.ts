@@ -75,7 +75,7 @@ export declare function yaEstaEnPendbox(entries: {
 }[], archivo: string, _ident?: AnclasNombre): boolean;
 /** Una línea por aviso encontrado: qué se decidió y por qué. Lo consume el modal de Logs. */
 export interface LineaLog {
-    resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error" | "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto";
+    resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error" | "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto" | "firmado-faltante";
     asunto?: string;
     archivo?: string;
     cuit?: string;
@@ -118,6 +118,14 @@ export interface ResultadoLectura {
  */
 export declare function motivoFalloImap(e: any): string;
 export declare function leerCasillaDropboxSign(tenantId: string, soloPrueba?: boolean): Promise<ResultadoLectura>;
+/**
+ * El documento generado del tenant cuyo nombre empieza con `prefijo`, si es UNO solo (si no, null).
+ * Para el aviso de firmado con el código cortado en el asunto (ver `rescatarFirmados`).
+ */
+export declare const documentoPorPrefijo: (tenantId: string) => (prefijo: string) => Promise<{
+    codigo: string;
+    archivo: string;
+} | null>;
 /** Arma el cliente IMAP de la casilla configurada. */
 export declare function clienteImap(cfg: any, extra?: Record<string, unknown>): ImapFlow;
 export declare function registrarLectura(r: ResultadoLectura): any;

@@ -5,7 +5,8 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { adjuntosPdf, esConflictoDeNombre, extraerArchivoFirmado, extraerAvisoFirmado, nombreDestino, rescatarFirmados, TERMINOS_BUSQUEDA_FIRMADO, validarAdjunto, yaEstaEnFirmados } from "./rescateFirmados.js";
+import { adjuntosPdf, esConflictoDeNombre, extraerArchivoFirmado, extraerAvisoFirmado, nombreComoIntegracion, nombreDestino, rescatarFirmados, selloIntegracion, TERMINOS_BUSQUEDA_FIRMADO, validarAdjunto, yaEstaEnFirmados } from "./rescateFirmados.js";
+import { leerAnclas } from "../utils/anclasNombre.js";
 import { extraerArchivoDeAsunto } from "./dropboxSignMailService.js";
 // Asuntos reales de la casilla (anonimizados).
 const FIRMADO_ES = "ALAN AQUINO firmó 426_LN+_AQUINO_Release_Jornada_D-20261012_H-20261012_20463515892_aquinoalan754-ARROBA-gmail.com_Empresa-30710295839_ID-000137.pdf";
@@ -159,5 +160,146 @@ describe("4. la pasada de rescate (idempotente)", () => {
         assert.equal(r.yaEstaban, 1);
         assert.equal(r.faltan, 1);
         assert.equal(bajadas, 0);
+    });
+});
+describe("5. el aviso de completado, con las formas reales de la casilla (diagnóstico del 25/10/2026)", () => {
+    // `npm run dropbox-sign:asuntos`: 177 «<quien> firmó <archivo>.pdf» + 9 con la cola «: Firma solicitada por Frame Zero», todos con el PDF adjunto.
+    const REC = "426_LN+_REC_SUELDO_2026_PERIODO_09_BLANCO_NICOLAS_fulano-ARROBA-hotmail.com_20000000000_ID-000529.pdf";
+    it("reconoce «<quien> firmó <archivo>.pdf» (recibo de sueldo) y «…pdf: Firma solicitada por Frame Zero»", () => {
+        assert.deepEqual(extraerAvisoFirmado(`NICOLAS BLANCO firmó ${REC}`), { archivo: REC, quien: "NICOLAS BLANCO" });
+        assert.deepEqual(extraerAvisoFirmado(`MAXIMILIANO GUIGGI firmó ${REC}: Firma solicitada por Frame Zero`), { archivo: REC, quien: "MAXIMILIANO GUIGGI" });
+    });
+    it("no confunde con firmados los otros mails de Dropbox Sign que también traen el PDF o hablan de firma", () => {
+        for (const a of [
+            `Te agregaron al documento ${REC} - Firma solicitada por Frame Zero`,
+            `Se inició el proceso de firma de ${REC}`,
+            "Resumen diario: Se enviaron 40 documentos para firmar",
+            "No pudimos informar a fulano@mail.com",
+            "Confirma la sincronización de la carpeta de Dropbox",
+            // Contratos viejos, sin .pdf ni código: no se pueden atribuir a un documento de la plataforma.
+            "SUAREZ MARCELO firmó 426_LN_Contrato_2026_SEPTIEMBRE_2009_Suarez_Marcelo",
+        ])
+            assert.equal(extraerAvisoFirmado(a), null, a);
+    });
+});
+describe("6. el nombre como lo deja la integración", () => {
+    const T = "426_LN+_MARTINEZ_Contrato_Plazo-fijo-6x6_D-20261001_H-20261031_20365478792_alvaromartinezjaluf-ARROBA-gmail.com_Empresa-30717068374_ID-000003.pdf";
+    const FIRMADO_EL = new Date("2026-10-07T19:07:43Z");
+    it("sello en UTC con día y mes en inglés", () => {
+        assert.equal(selloIntegracion(FIRMADO_EL), "Wed, 07 Oct 2026 19h07m43s");
+        assert.equal(selloIntegracion(new Date("2026-01-04T03:05:09Z")), "Sun, 04 Jan 2026 03h05m09s");
+    });
+    it("reproduce el nombre real de la carpeta: «<título>.pdf_ Firma solicitada por <sello>.pdf»", () => {
+        assert.equal(nombreComoIntegracion(T, "ID-000003", FIRMADO_EL), `${T}_ Firma solicitada por Wed, 07 Oct 2026 19h07m43s.pdf`);
+    });
+    it("lo lee de vuelta todo lo que la plataforma lee del nombre: el código, el CUIL, el ya-está y la Fecha Firma", () => {
+        const n = nombreComoIntegracion(T, "ID-000003", FIRMADO_EL);
+        assert.equal(leerAnclas(n).codigo, "ID-000003");
+        assert.equal(leerAnclas(n).cuit, "20365478792");
+        assert.ok(yaEstaEnFirmados([{ name: n, path: `/x/${n}` }], T));
+    });
+    it("agrega el código si el título no lo traía", () => {
+        assert.ok(nombreComoIntegracion("426_LN+_X_Contrato.pdf", "ID-000777", FIRMADO_EL).startsWith("426_LN+_X_Contrato_ID-000777.pdf_ Firma solicitada por "));
+    });
+    it("tope de 255 bytes: primero se acorta «Firma solicitada por» y después los campos descriptivos, NUNCA el código ni el CUIL ni las fechas", () => {
+        const largo = `426_LN+_${"APELLIDOLARGUISIMO".repeat(4)}_Contrato_Plazo-fijo-6x6_D-20261001_H-20261031_20365478792_${"x".repeat(40)}-ARROBA-gmail.com_Empresa-30717068374_ID-000123.pdf`;
+        const n = nombreComoIntegracion(largo, "ID-000123", FIRMADO_EL);
+        assert.ok(Buffer.byteLength(n, "utf8") <= 255, `${Buffer.byteLength(n, "utf8")} bytes`);
+        assert.ok(n.endsWith(" Wed, 07 Oct 2026 19h07m43s.pdf"), "el sello queda entero");
+        const a = leerAnclas(n);
+        assert.equal(a.codigo, "ID-000123");
+        assert.equal(a.cuit, "20365478792");
+        assert.ok(n.includes("D-20261001") && n.includes("H-20261031"));
+        assert.ok(n.startsWith("426_LN+_"), "el principio no se corta");
+    });
+    it("si sólo sobra un poco, se recorta el texto y no el título", () => {
+        const base = T.replace(/\.pdf$/, "");
+        // -1: el «_» que separa el relleno del código.
+        const relleno = "Z".repeat(255 - Buffer.byteLength(`${base}.pdf_ Firma solicit Wed, 07 Oct 2026 19h07m43s.pdf`, "utf8") - 1);
+        const titulo = base.replace("_ID-000003", `_${relleno}_ID-000003`) + ".pdf";
+        const n = nombreComoIntegracion(titulo, "ID-000003", FIRMADO_EL);
+        assert.equal(n, `${titulo}_ Firma solicit Wed, 07 Oct 2026 19h07m43s.pdf`);
+    });
+});
+describe("7. la prueba detallada y el tope (backfill)", () => {
+    const PDF = Buffer.concat([Buffer.from("%PDF-1.4\n"), Buffer.alloc(120 * 1024, 7)]);
+    const titulo = (n) => ARCHIVO.replace("000137", String(n).padStart(6, "0"));
+    const aviso = (uid, t = titulo(uid)) => ({ uid, asunto: `ALAN AQUINO firmó ${t}`, titulo: t, quien: "ALAN AQUINO", adjuntos: [{ part: "2", nombre: t, bytes: 170000, tipo: "application/pdf" }], fecha: new Date("2026-10-20T12:00:00Z") });
+    const deps = (extra = {}, subidas = []) => ({
+        carpetaFirmados: "/Requested signatures",
+        enFirmados: [],
+        soloPrueba: false,
+        existeDocumento: async () => true,
+        descargar: async () => PDF,
+        subir: async (p) => void subidas.push(p),
+        verificados: new Set(),
+        ...extra,
+    });
+    it("en seco y detallada no baja ni sube, y dice con qué nombre subiría (con el sello de la fecha del aviso)", async () => {
+        let bajadas = 0;
+        const subidas = [];
+        const r = await rescatarFirmados([aviso(1), aviso(2)], deps({ soloPrueba: true, detallarPrueba: true, descargar: async () => (bajadas++, PDF) }, subidas));
+        assert.equal(bajadas, 0);
+        assert.deepEqual(subidas, []);
+        assert.equal(r.faltan, 2);
+        assert.equal(r.logs[0].resultado, "firmado-faltante");
+        assert.equal(r.logs[0].uid, 1);
+        assert.equal(r.logs[0].archivo, `${titulo(1)}_ Firma solicitada por Tue, 20 Oct 2026 12h00m00s.pdf`);
+    });
+    it("en seco también detecta lo que la corrida real rechazaría (sin documento registrado)", async () => {
+        const r = await rescatarFirmados([aviso(1)], deps({ soloPrueba: true, detallarPrueba: true, existeDocumento: async () => false }));
+        assert.equal(r.logs[0].resultado, "error");
+    });
+    it("--limit: sube N y corta; lo que ya estaba no cuenta para el tope", async () => {
+        const subidas = [];
+        const yaEsta = titulo(1);
+        const r = await rescatarFirmados([aviso(1), aviso(2), aviso(3), aviso(4)], deps({ limite: 2, enFirmados: [{ name: yaEsta, path: "/x" }] }, subidas));
+        assert.equal(r.yaEstaban, 1);
+        assert.equal(r.rescatados, 2);
+        assert.equal(subidas.length, 2);
+        assert.equal(r.cortadoPorLimite, true);
+    });
+    it("una segunda corrida con la carpeta actualizada no vuelve a subir nada (idempotente)", async () => {
+        const subidas = [];
+        const d = deps({}, subidas);
+        await rescatarFirmados([aviso(1), aviso(2)], d);
+        const otra = [];
+        const r = await rescatarFirmados([aviso(1), aviso(2)], deps({ enFirmados: d.enFirmados }, otra));
+        assert.equal(subidas.length, 2);
+        assert.deepEqual(otra, []);
+        assert.equal(r.yaEstaban, 2);
+    });
+});
+describe("8. código cortado en el asunto («…_ID-0.pdf», 2 casos reales del 25/10/2026)", () => {
+    const PDF = Buffer.concat([Buffer.from("%PDF-1.4\n"), Buffer.alloc(120 * 1024, 7)]);
+    const COMPLETO = "426_LN+_REC_SUELDO_2026_PERIODO_09_BLANCO_NICOLAS_fulano-ARROBA-hotmail.com_20350716719_ID-000570.pdf";
+    const CORTADO = "426_LN+_REC_SUELDO_2026_PERIODO_09_BLANCO_NICOLAS_fulano-ARROBA-hotmail.com_20350716719_ID-0.pdf";
+    const aviso = { uid: 9, asunto: `NICOLAS BLANCO firmó ${CORTADO}`, titulo: CORTADO, quien: "NICOLAS BLANCO", adjuntos: [{ part: "2", nombre: "x.pdf", bytes: 170000, tipo: "application/pdf" }], fecha: new Date("2026-10-25T08:02:44Z") };
+    const base = (extra, subidas) => ({ carpetaFirmados: "/F", enFirmados: [], soloPrueba: false, existeDocumento: async () => true, descargar: async () => PDF, subir: async (p) => void subidas.push(p), verificados: new Set(), ...extra });
+    it("con un único documento que empieza así, toma su código y sube con el nombre completo", async () => {
+        const subidas = [];
+        const r = await rescatarFirmados([aviso], base({ documentoPorPrefijo: async (p) => (COMPLETO.startsWith(p) ? { codigo: "ID-000570", archivo: COMPLETO } : null) }, subidas));
+        assert.equal(r.rescatados, 1);
+        assert.deepEqual(subidas, [`/F/${COMPLETO}_ Firma solicitada por Sun, 25 Oct 2026 08h02m44s.pdf`]);
+    });
+    it("si ya está en la carpeta con ese código, no sube", async () => {
+        const subidas = [];
+        const r = await rescatarFirmados([aviso], base({ enFirmados: [{ name: `${COMPLETO}_ Firma solicitada por X.pdf`, path: "/F/x" }], documentoPorPrefijo: async () => ({ codigo: "ID-000570", archivo: COMPLETO }) }, subidas));
+        assert.equal(r.yaEstaban, 1);
+        assert.deepEqual(subidas, []);
+    });
+    it("sin coincidencia única no se adivina: error, como antes", async () => {
+        const subidas = [];
+        const r = await rescatarFirmados([aviso], base({ documentoPorPrefijo: async () => null }, subidas));
+        assert.equal(r.logs[0].resultado, "error");
+        assert.deepEqual(subidas, []);
+    });
+});
+describe("9. firmado sin código en el título, al que la limpieza ya le insertó el código", () => {
+    it("«<título>_ID-000010.pdf_ Firma…» es el firmado de «<título>.pdf»; otro título no", () => {
+        const t = "426_LN+_CASTRO_AltaAFIP_Plazo-fijo-6x6_D-20261001_H-20261031_20412923767_fulano-ARROBA-gmail.com_Empresa-30717068374.pdf";
+        const enCarpeta = [{ name: t.replace(/\.pdf$/, "_ID-000010.pdf_ Firma solicitada po Thu, 08 Oct 2026 14h55m56s.pdf"), path: "/x" }];
+        assert.ok(yaEstaEnFirmados(enCarpeta, t));
+        assert.equal(yaEstaEnFirmados(enCarpeta, t.replace("AltaAFIP", "Contrato")), null);
     });
 });

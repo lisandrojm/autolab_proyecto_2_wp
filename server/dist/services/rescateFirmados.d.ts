@@ -39,6 +39,8 @@ export interface AdjuntoPdf {
     bytes: number | null;
     tipo: string;
 }
+/** La fecha de un mensaje de imapflow: la del encabezado Date (cuándo lo mandó Dropbox Sign) o, si no viene, la de llegada. */
+export declare function fechaDelAviso(m: any): Date | undefined;
 /** Los adjuntos PDF de un `bodyStructure` de imapflow (recorre las partes anidadas). */
 export declare function adjuntosPdf(estructura: any): AdjuntoPdf[];
 /** Límites del adjunto: un recibo o contrato pesa entre ~100 KB y unos pocos MB. */
@@ -57,6 +59,31 @@ export declare function validarAdjunto(buffer: Buffer): {
  * Dropbox y con `.pdf`.
  */
 export declare function nombreDestino(titulo: string, codigo?: string): string;
+/**
+ * El sello de la integración nativa: «Wed, 07 Oct 2026 19h07m43s», EN UTC y con día y mes en inglés.
+ * Medido el 25/10/2026 contra la carpeta: el sello cae 8-10 s después del mail «Fulano firmó …» del
+ * mismo documento, y está en UTC. Con la fecha del mail el rescatado queda a segundos del que habría
+ * depositado la integración, y la columna «Fecha Firma» de Documentos lo lee igual.
+ */
+export declare function selloIntegracion(d: Date): string;
+/** El texto que la integración pone entre el título y el sello (es el título del envío). */
+export declare const TEXTO_INTEGRACION = "Firma solicitada por";
+/**
+ * EL NOMBRE COMO LO DEJA LA INTEGRACIÓN NATIVA (25/10/2026), para que un rescatado no se distinga de
+ * uno depositado por Dropbox Sign:
+ *
+ *   <título con .pdf>_ Firma solicitada por Wed, 07 Oct 2026 19h07m43s.pdf
+ *
+ * (ejemplo real: «…_ID-000003.pdf_ Firma solicitada por Wed, 07 Oct 2026 19h07m43s.pdf»). El «.pdf»
+ * del título queda adentro, como en los reales: `limpiezaPendbox` cuenta con eso.
+ *
+ * TOPE 255 BYTES, Y NUNCA SE CORTA UN ANCLA. La integración nativa corta el título a 160 caracteres y
+ * a veces se come el texto («Firma solicit») — con títulos más largos se comería el código. Acá el
+ * orden es: primero se acorta el texto «Firma solicitada por» (hasta sacarlo), y si todavía no entra
+ * se recortan los campos descriptivos del título con `recortarNombre` (nombre, email, proyecto…),
+ * nunca el `ID-NNNNNN`, el CUIL ni las fechas, que son lo que la plataforma lee de vuelta.
+ */
+export declare function nombreComoIntegracion(titulo: string, codigo: string, firmadoEl: Date): string;
 /** ¿El firmado ya está en la carpeta? Por código si el título lo trae; si no, por nombre (el más largo que coincida). */
 export declare function yaEstaEnFirmados<T extends ArchivoConNombre>(entries: Array<T & {
     tag?: string;
@@ -71,10 +98,15 @@ export interface AvisoFirmado {
     /** Quién firmó, según el asunto. */
     quien?: string;
     adjuntos: AdjuntoPdf[];
+    /** Cuándo mandó Dropbox Sign el aviso (≈ cuándo se firmó). Con esto el nombre lleva el sello de la integración. */
+    fecha?: Date;
 }
-export type ResultadoRescate = "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto" | "error";
+/** «firmado-faltante» sólo sale en una prueba detallada: faltaba y se habría subido con ese nombre. */
+export type ResultadoRescate = "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto" | "firmado-faltante" | "error";
 export interface LineaRescate {
     resultado: ResultadoRescate;
+    /** El mensaje de la casilla del que salió la línea. */
+    uid?: number;
     asunto: string;
     archivo: string;
     cuit?: string;
@@ -104,6 +136,22 @@ export interface DepsRescate {
     /** UIDs ya resueltos en esta vida del proceso (rescatados o sin adjunto): no se vuelven a bajar. */
     verificados: Set<number>;
     cederHilo?: () => Promise<void>;
+    /**
+     * Prueba DETALLADA (el backfill en seco): además de contar, valida código, documento y adjunto como
+     * la corrida real y deja una línea «firmado-faltante» con el nombre con el que se subiría. No baja
+     * ni sube nada. Sin esto, la prueba sólo cuenta (lo que usa «Probar conexión»).
+     */
+    detallarPrueba?: boolean;
+    /**
+     * El documento generado cuyo nombre EMPIEZA con este prefijo, si hay exactamente uno. Lo usa el caso
+     * del código cortado en el asunto («…_ID-0.pdf»). Sin esto, ese aviso es un error como antes.
+     */
+    documentoPorPrefijo?: (prefijo: string) => Promise<{
+        codigo: string;
+        archivo: string;
+    } | null>;
+    /** Tope de subidas (o de faltantes, en prueba). Al llegar se corta y `cortadoPorLimite` lo dice. */
+    limite?: number;
 }
 export interface ResumenRescate {
     avisos: number;
@@ -114,6 +162,8 @@ export interface ResumenRescate {
     faltan: number;
     errores: string[];
     logs: LineaRescate[];
+    /** La pasada se cortó por `limite`: quedaron avisos sin mirar. */
+    cortadoPorLimite?: boolean;
 }
 /** Por cada aviso de firmado: ¿está en la carpeta? Si no, bajar el adjunto, validarlo y subirlo. Idempotente. */
 export declare function rescatarFirmados(avisos: AvisoFirmado[], deps: DepsRescate): Promise<ResumenRescate>;
