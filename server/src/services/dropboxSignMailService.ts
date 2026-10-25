@@ -413,8 +413,11 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
         const r = await client.search({ subject: termino, since: desde }, { uid: true });
         for (const u of r || []) encontrados.add(u);
       }
-      // De más viejo a más nuevo: si un documento tiene varios avisos, gana el primero.
-      const uids = [...encontrados].sort((a, b) => a - b).slice(0, MAX_MENSAJES);
+      // El tope se queda con los MÁS NUEVOS (son los que todavía tienen el PDF en Outbox); después se
+      // recorren de más viejo a más nuevo: si un documento tiene varios avisos, gana el primero. Hasta
+      // el 25/10/2026 el tope cortaba por el otro lado y con 356 avisos en 30 días los 56 más nuevos
+      // (los envíos del día) nunca se leían: «300 leídos · 0 movidos» con Outbox lleno.
+      const uids = [...encontrados].sort((a, b) => b - a).slice(0, MAX_MENSAJES).sort((a, b) => a - b);
 
       // Los asuntos de TODOS los mensajes en un solo FETCH, no uno por mensaje: eran cientos de idas y
       // vueltas a Gmail por lectura, y ahora hay una lectura por cada mail que entra.
