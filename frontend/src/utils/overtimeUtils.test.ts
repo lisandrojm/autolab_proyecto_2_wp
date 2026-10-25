@@ -29,3 +29,17 @@ describe("splitOvertime", () => {
     assert.equal(r.h50, 0);
   });
 });
+
+describe("splitOvertime en feriados (Configuración › Feriados)", () => {
+  it("un feriado de lunes a sábado va todo al 100%, como un domingo", () => {
+    // 01/05/2026 es viernes: sin el feriado sería 0,5/0,5.
+    const r = splitOvertime("2026-05-01", "05:30", "12:30", 1, DEFAULT_GLOSSARY, "06:00", "12:00", { feriado: true });
+    assert.equal(r.h100, 1);
+    assert.equal(r.h50, 0);
+  });
+  it("sin la marca de feriado, el mismo viernes se reparte como un día común", () => {
+    const r = splitOvertime("2026-05-01", "05:30", "12:30", 1, DEFAULT_GLOSSARY, "06:00", "12:00");
+    assert.equal(r.h100, 0.5);
+    assert.equal(r.h50, 0.5);
+  });
+});

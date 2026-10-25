@@ -791,6 +791,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
    * figuraba con 0 asistencias en septiembre teniendo el parte del 18 cargado y presente.
    */
   const [partesDelPeriodo, setPartesDelPeriodo] = useState<ParteConAsistencia[]>([]);
+  /** Los feriados del período (Configuración › Feriados): en esos días todas las extras van al 100%. */
+  const [feriadosDelPeriodo, setFeriadosDelPeriodo] = useState<{ fecha: string; nombre: string }[]>([]);
+  const fechasFeriado = useMemo(() => new Set(feriadosDelPeriodo.map((f) => f.fecha)), [feriadosDelPeriodo]);
   const [cargandoAsistencias, setCargandoAsistencias] = useState(false);
   /**
    * EL REPORTE NO PUEDE DECIR CERO CUANDO LO QUE PASA ES QUE NO SABE.
@@ -1423,7 +1426,13 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         let h100 = record.overtimeHours100 || 0;
         let pct = h100 > h50 ? glossary.pct100 : glossary.pct50;
 
-        if (ot > 0 && h50 === 0 && h100 === 0) {
+        if (ot > 0 && fechasFeriado.has(dateKey)) {
+          /* FERIADO: todo al 100%, como un domingo (Configuración › Feriados). Manda aunque el parte
+             traiga un reparto guardado: el móvil pudo calcularlo antes de que se cargara el feriado. */
+          h50 = 0;
+          h100 = ot;
+          pct = glossary.pct100;
+        } else if (ot > 0 && h50 === 0 && h100 === 0) {
           // Retrieve active contract's schedule on report date to perform schedule-aware split
           // (mismo criterio que arriba: por id de proyecto, y por nombre sólo si el vínculo no tiene id)
           const userProjects = stats.userProjectsData || [];
@@ -1546,7 +1555,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     if (soloConExtras) results = results.filter((s) => s.overtimeHours > 0);
 
     return results.sort((a, b) => a.employeeName.localeCompare(b.employeeName));
-  }, [partesDelPeriodo, dateFrom, dateTo, proyectosSeleccionados, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, tiposSeleccionados, rolesEmpresaSeleccionados, soloConAusencias, soloConExtras, clavesPermitidas, economiaPorFila, areaTurnoDeContratos, areasSeleccionadas, turnosSeleccionados]);
+  }, [partesDelPeriodo, fechasFeriado, dateFrom, dateTo, proyectosSeleccionados, searchTerm, usersMap, glossary, showActiveTableOnly, allUsers, allProjects, tiposSeleccionados, rolesEmpresaSeleccionados, soloConAusencias, soloConExtras, clavesPermitidas, economiaPorFila, areaTurnoDeContratos, areasSeleccionadas, turnosSeleccionados]);
 
   /**
    * LAS OPCIONES SALEN DEL PERÍODO, no del sistema entero.
@@ -1578,10 +1587,18 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     if (!isOpen || !dateFrom || !dateTo) return;
     let vivo = true;
     setCargandoAsistencias(true);
-    activityReportsAPI
-      .asistenciasDelPeriodo(dateFrom, dateTo)
-      .then((p) => {
+    // Los feriados llegan JUNTO con la asistencia: si llegaran después, el reporte mostraría un rato el
+    // reparto sin feriados. Si fallan, el reporte sigue (sin feriados) y queda en la consola.
+    Promise.all([
+      activityReportsAPI.asistenciasDelPeriodo(dateFrom, dateTo),
+      activityReportsAPI.feriadosDelPeriodo(dateFrom, dateTo).catch((e) => {
+        console.error("No se pudieron traer los feriados del período", e);
+        return [] as { fecha: string; nombre: string }[];
+      }),
+    ])
+      .then(([p, feriados]) => {
         if (!vivo) return;
+        setFeriadosDelPeriodo(feriados);
         setPartesDelPeriodo(p);
         setFalloAsistencias(false);
       })
@@ -1886,7 +1903,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
   /** La pestaña «Glosario» de los Excel, con los valores del glosario con que se calculó el archivo. */
   const hojaGlosario = () => {
-    const hoja = XLSX.utils.aoa_to_sheet(filasGlosarioExtras(glossary));
+    const hoja = XLSX.utils.aoa_to_sheet(filasGlosarioExtras(glossary, feriadosDelPeriodo));
     hoja["!cols"] = ANCHOS_GLOSARIO;
     return hoja;
   };
@@ -2521,6 +2538,22 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                   <span className="text-sm text-gray-700 dark:text-gray-300">Recargo Base 100%:</span>
                   <span className="text-sm font-bold text-red-600">{glossary.pct100}%</span>
                 </div>
+              </div>
+
+              {/* Domingos y feriados: todo al 100%. Los feriados son los de Configuración › Feriados. */}
+              <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30">
+                <h4 className="text-[10px] font-black text-red-700 dark:text-red-400 uppercase mb-2 tracking-widest">Domingos y feriados: {glossary.pct100}%</h4>
+                {feriadosDelPeriodo.length > 0 ? (
+                  <ul className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
+                    {feriadosDelPeriodo.map((f) => (
+                      <li key={f.fecha}>
+                        <span className="font-semibold">{f.fecha.split("-").reverse().join("/")}</span> · {f.nombre}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-gray-600 dark:text-gray-400">No hay feriados cargados en este período (se cargan en Configuración › Feriados).</p>
+                )}
               </div>
 
               <div className="flex justify-end pt-2">

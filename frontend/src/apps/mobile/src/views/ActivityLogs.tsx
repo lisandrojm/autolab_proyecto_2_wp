@@ -777,6 +777,21 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   });
+  /**
+   * ¿El día de la novedad es feriado? (Configuración › Feriados, 25/10/2026). En un feriado todas las
+   * horas extra van al 100%, como un domingo; lo que se calcula acá es lo que se guarda en el parte.
+   */
+  const [esFeriado, setEsFeriado] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    activityReportsAPI
+      .feriadosDelPeriodo(reportDate, reportDate)
+      .then((f) => vivo && setEsFeriado(f.length > 0))
+      .catch(() => vivo && setEsFeriado(false));
+    return () => {
+      vivo = false;
+    };
+  }, [reportDate]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [selectedAreaId, setSelectedAreaId] = useState<string>("");
   const [selectedShiftId, setSelectedShiftId] = useState<string>("");
@@ -883,7 +898,8 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
         calculatedTotal,
         glossary,
         startTime || undefined,
-        endTime || undefined
+        endTime || undefined,
+        { feriado: esFeriado }
       );
 
       updateEntryOvertime(entry.tempId, {
@@ -1673,14 +1689,15 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
           calculatedTotal,
           glossary,
           startTime || undefined,
-          endTime || undefined
+          endTime || undefined,
+          { feriado: esFeriado }
         );
         setDraftOvertimeHours50(h50);
         setDraftOvertimeHours100(h100);
         setDraftOvertimeHours(calculatedTotal);
       }
     }
-  }, [draftOutTime, draftInTime, draftTypeId, selectedProjectId, reportDate, userProjects, logTypes, selectedEmployee, glossary]);
+  }, [draftOutTime, draftInTime, draftTypeId, selectedProjectId, reportDate, userProjects, logTypes, selectedEmployee, glossary, esFeriado]);
 
   // Fast-entry REPLACEMENT OT calculation
   useEffect(() => {
@@ -1729,14 +1746,15 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
           calculatedTotal,
           glossary,
           startTime || undefined,
-          endTime || undefined
+          endTime || undefined,
+          { feriado: esFeriado }
         );
         setDraftReplacementOvertimeHours50(h50);
         setDraftReplacementOvertimeHours100(h100);
         setDraftReplacementOvertimeHours(calculatedTotal);
       }
     }
-  }, [draftReplacementOutTime, draftReplacementInTime, draftReplacementId, draftTypeId, selectedProjectId, reportDate, userProjects, glossary]);
+  }, [draftReplacementOutTime, draftReplacementInTime, draftReplacementId, draftTypeId, selectedProjectId, reportDate, userProjects, glossary, esFeriado]);
 
   // Pre-fill Out/In Time for Overtime when employee or type changes
   useEffect(() => {
@@ -1804,7 +1822,8 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
         finalVal,
         glossary,
         startTime || undefined,
-        endTime || undefined
+        endTime || undefined,
+        { feriado: esFeriado }
       );
 
       // Only update if it's different to avoid infinite loops
@@ -1864,7 +1883,8 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
         finalVal,
         glossary,
         startTime || undefined,
-        endTime || undefined
+        endTime || undefined,
+        { feriado: esFeriado }
       );
 
       if (
@@ -1879,7 +1899,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
         });
       }
     }
-  }, [wizardIndex, wizardData, selectedProject, reportDate, glossary]);
+  }, [wizardIndex, wizardData, selectedProject, reportDate, glossary, esFeriado]);
 
   // Derived state to check if Fast Entry is enabled for the current project
   // Derived state to check if Fast Entry is enabled for the current project

@@ -47,13 +47,19 @@ export const splitOvertime = (
   totalHours: number,
   glossary: OvertimeSettings,
   contractStart?: string,
-  contractEnd?: string
+  contractEnd?: string,
+  /**
+   * `feriado`: el día está en Configuración › Feriados (25/10/2026). Como el domingo, todas las extras
+   * van al 100%, que es lo que dice el glosario («Aplicado a Domingos y Feriados»). Antes sólo se
+   * miraba el domingo y un feriado de lunes a sábado se repartía como un día común.
+   */
+  opciones?: { feriado?: boolean }
 ) => {
   const d = new Date(date + "T00:00:00");
   const dayOfWeek = d.getDay(); // 0 Sunday, 1-5 Mon-Fri, 6 Sat
 
-  // Sundays are always 100%
-  if (dayOfWeek === 0) return { h50: 0, h100: totalHours, pct: glossary.pct100 };
+  // Domingos y feriados: todo al 100%.
+  if (dayOfWeek === 0 || opciones?.feriado) return { h50: 0, h100: totalHours, pct: glossary.pct100 };
 
   if (!startTime || !endTime || totalHours <= 0) {
     if (dayOfWeek >= 1 && dayOfWeek <= 5) return { h50: totalHours, h100: 0, pct: glossary.pct50 };

@@ -129,6 +129,15 @@ export const activityReportsAPI = {
     const response = await axiosClient.get<ParteConAsistencia[]>(`/activity-reports/asistencias-del-periodo?desde=${desde}&hasta=${hasta}`);
     return Array.isArray(response.data) ? response.data : [];
   },
+
+  /**
+   * Los feriados de Configuración › Feriados entre dos fechas, como «AAAA-MM-DD»: en un feriado todas
+   * las horas extra van al 100%, como un domingo. No pide el permiso de configurar feriados.
+   */
+  feriadosDelPeriodo: async (desde: string, hasta: string): Promise<{ fecha: string; nombre: string }[]> => {
+    const response = await axiosClient.get<{ feriados: { fecha: string; nombre: string }[] }>(`/activity-reports/feriados-del-periodo?desde=${desde}&hasta=${hasta}`);
+    return Array.isArray(response.data?.feriados) ? response.data.feriados : [];
+  },
 };
 
 /** Un parte del período con su asistencia, tal como la cuenta el reporte de Novedades. */

@@ -13,7 +13,8 @@ const num = (n: number) => n.toLocaleString("es-AR", { maximumFractionDigits: 2 
  *
  * Dice lo que hace el cálculo (`splitOvertime`), ni más ni menos.
  */
-export function filasGlosarioExtras(g: OvertimeSettings): (string | number)[][] {
+/** `feriados`: los del período del archivo (Configuración › Feriados), para listarlos. */
+export function filasGlosarioExtras(g: OvertimeSettings, feriados: { fecha: string; nombre: string }[] = []): (string | number)[][] {
   const pct50 = `${g.pct50}%`;
   const pct100 = `${g.pct100}%`;
   // El ejemplo sale del MISMO cálculo que el reporte: si alguien cambia los rangos, no queda desfasado.
@@ -28,6 +29,12 @@ export function filasGlosarioExtras(g: OvertimeSettings): (string | number)[][] 
     ["Sábados", g.satDayStart, g.satDayEnd, pct50],
     ["Lunes a sábado, fuera de esos rangos", "", "", pct100],
     ["Domingos (todo el día)", "", "", pct100],
+    ["Feriados (todo el día, los de Configuración › Feriados)", "", "", pct100],
+    [],
+    ["FERIADOS DEL PERÍODO (todas las extras de ese día al 100%)"],
+    ...(feriados.length > 0
+      ? [["Fecha", "Feriado"], ...feriados.map((f) => [f.fecha.split("-").reverse().join("/"), f.nombre])]
+      : [["No hay feriados cargados en este período. Se cargan en Configuración › Feriados."]]),
     [],
     ["CÓMO SE REPARTE CADA DÍA"],
     ["1. Sólo son extra las horas trabajadas FUERA del horario del turno de ese día (antes de la entrada o después de la salida)."],
