@@ -30,6 +30,7 @@
     "test:webhook-url": "tsx --test src/utils/urlWebhook.test.ts",
     "test:cbu": "tsx --test src/utils/cbu.test.ts",
     "test:fecha-firma": "tsx --test src/utils/fechaFirmaDropboxSign.test.ts",
+    "test:horas-extra": "tsx --test src/utils/overtimeUtils.test.ts",
     "test:cascada-arca": "tsx --test src/components/contratos/cascadaArca.test.ts",
     "test:dias": "tsx --test src/components/contratos/diasDeTrabajo.test.ts",
     "test:seleccion-categoria": "tsx --test src/utils/seleccionConvenioCategoria.test.ts"

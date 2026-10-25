@@ -605,6 +605,9 @@ router.get("/asistencias-del-periodo", async (req: AuthenticatedRequest & Tenant
           // El reporte los llama «entrada/salida de las extras»; en el parte son `inTime`/`outTime`.
           overtimeEntryTime: a.inTime || undefined,
           overtimeExitTime: a.outTime || undefined,
+          // El horario de ESE día según el parte: contra él se reparten las extras entre 50% y 100%.
+          scheduleInTime: a.scheduleInTime || undefined,
+          scheduleOutTime: a.scheduleOutTime || undefined,
           // Sólo cuando el parte no tiene turno (ver `turnoPorHorario`).
           ...(() => {
             if (p.shiftId) return {};

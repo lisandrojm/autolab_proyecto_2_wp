@@ -162,6 +162,9 @@ export interface ParteConAsistencia {
     overtimeHours100: number;
     overtimeEntryTime?: string;
     overtimeExitTime?: string;
+    /** El horario de ese día según el parte (contra él se reparten las extras entre 50% y 100%). */
+    scheduleInTime?: string;
+    scheduleOutTime?: string;
     /**
      * Si el parte no tiene turno (un coordinador con varios turnos en el área carga uno solo por día),
      * el turno de ESTA persona deducido por su horario. Si el horario no es el de ningún turno, viaja

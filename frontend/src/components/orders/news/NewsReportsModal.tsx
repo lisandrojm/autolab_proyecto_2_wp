@@ -1440,8 +1440,11 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             record.overtimeExitTime || "",
             ot,
             glossary,
-            activeContract?.hora_inicio || undefined,
-            activeContract?.hora_fin || undefined
+            /* El horario de ESE día según el parte manda; el del contrato queda de respaldo. Sin ninguno
+               de los dos, `splitOvertime` reparte el tramo ENTERO de entrada a salida —05:30 a 12:30 daba
+               0,93 h al 50%— en vez de sólo lo que cae fuera del turno (25/10/2026). */
+            record.scheduleInTime || activeContract?.hora_inicio || undefined,
+            record.scheduleOutTime || activeContract?.hora_fin || undefined
           );
           h50 = res.h50;
           h100 = res.h100;
@@ -2069,7 +2072,10 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       Últimos y no al lado del nombre: son texto largo y libre, y en el medio empujan las columnas
       que se leen de un vistazo fuera de la pantalla.
     */
-    const headers = ["Empleado", "Proyecto", "Área", "Turno", "Fecha", "Día", "Estado", "Motivo", "Hs Extras", "H. Entrada OT", "H. Salida OT", "% HS", "Observación", "Comentario del parte"];
+    // «Hs 50%» y «Hs 100%» por separado (25/10/2026): era UNA columna «% HS» con un solo porcentaje, y
+    // un día mixto (05:30-12:30 sobre un turno de 06:00 a 12:00: media hora al 100% antes de las 06:00 y
+    // media al 50% después de las 12:00) salía como «1 h al 50%».
+    const headers = ["Empleado", "Proyecto", "Área", "Turno", "Fecha", "Día", "Estado", "Motivo", "Hs Extras", "Hs 50%", "Hs 100%", "H. Entrada OT", "H. Salida OT", "Observación", "Comentario del parte"];
     const rows: any[] = [];
 
     statsByEmployee.forEach((s) => {
@@ -2078,7 +2084,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         const attendance = s.dailyAttendance[dateKey];
         const shortDay = daysMap[format(date, "EEEE")] || format(date, "eee");
 
-        rows.push([s.employeeName, s.rowProjectName || "S/P", attendance?.area || "-", attendance?.turno || "-", format(date, "dd/MM/yyyy"), shortDay, attendance ? (attendance.status === "present" ? "Presente" : attendance.status === "absent" ? "Ausente" : "Tardanza") : "Sin Registro", attendance?.reason || "-", attendance?.overtimeHours || 0, attendance?.entryTime || "-", attendance?.exitTime || "-", attendance?.pct ? `${attendance.pct}%` : "-", attendance?.nota || "-", attendance?.comentarioParte || "-"]);
+        rows.push([s.employeeName, s.rowProjectName || "S/P", attendance?.area || "-", attendance?.turno || "-", format(date, "dd/MM/yyyy"), shortDay, attendance ? (attendance.status === "present" ? "Presente" : attendance.status === "absent" ? "Ausente" : "Tardanza") : "Sin Registro", attendance?.reason || "-", attendance?.overtimeHours || 0, attendance?.h50 || 0, attendance?.h100 || 0, attendance?.entryTime || "-", attendance?.exitTime || "-", attendance?.nota || "-", attendance?.comentarioParte || "-"]);
       });
       // Add divider row between employees
       rows.push(Array(headers.length).fill(""));
@@ -2091,7 +2097,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
 
     // Styling
     // Los dos de texto libre, anchos: si no, Excel los muestra cortados y hay que abrir cada celda.
-    const colWidths = [25, 20, 18, 26, 12, 8, 12, 25, 10, 12, 12, 8, 40, 40];
+    const colWidths = [25, 20, 18, 26, 12, 8, 12, 25, 10, 9, 9, 12, 12, 40, 40];
     ws["!cols"] = colWidths.map((w) => ({ wch: w }));
 
     const wb = XLSX.utils.book_new();
