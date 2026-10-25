@@ -107,7 +107,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
   const SECCIONES: { id: "historial" | "por_vencer" | "plantillas"; label: string; icon: typeof faClock }[] = [
     { id: "historial", label: "Historial", icon: faClock },
     // Tarjeta propia del permiso «Plantillas de equipo» (`dentroDe` Contratación).
-    ...(puedePlantillas ? [{ id: "plantillas" as const, label: "Plantillas | Equipos", icon: faLayerGroup }] : []),
+    ...(puedePlantillas ? [{ id: "plantillas" as const, label: "Equipos", icon: faLayerGroup }] : []),
     { id: "por_vencer", label: "Vencimientos", icon: faCalendarAlt },
   ];
   const [porVencer, setPorVencer] = useState<ContratoPorVencer[] | null>(null);
