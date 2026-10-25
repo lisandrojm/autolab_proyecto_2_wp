@@ -208,17 +208,9 @@ export default function Registro({ onNavigate }: RegistroProps) {
                 persona no tenga contrato, proyecto ni una solicitud en curso, y si no, dice por qué.
               */}
               {/*
-                «NUEVO», y el botón para marcar leído SÓLO este.
-
-                El banner de arriba marca todo; acá se marca de a uno, que es lo que hace falta cuando
-                entraron tres registros y uno se revisa ahora y los otros después.
+                Sin «NUEVO» por fila (25/10/2026): no decía nada útil. Abrir un registro lo marca leído
+                (ver `verDetalle`) y el aviso de arriba marca todos.
               */}
-              {novedades.esNuevo(r._id) && (
-                <button type="button" onClick={() => void novedades.marcarLeido(r._id)} title="Marcar este registro como leído" className="absolute bottom-3 right-12 flex items-center gap-1.5 rounded-lg border border-orange-300 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-orange-700 active:scale-95 dark:border-orange-800 dark:text-orange-300">
-                  <FontAwesomeIcon icon={faCheck} className="h-2.5 w-2.5" />
-                  Nuevo
-                </button>
-              )}
 
               <button
                 type="button"
