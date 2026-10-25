@@ -73,14 +73,18 @@ export const PresentacionesArcaPage: React.FC = () => {
         quien: k.usuario || "—",
         constancia: x.constancia,
         presentadaDespues: x.presentadaDespues || null,
+        // El desde/hasta del contrato: distingue dos filas de la misma persona (otro contrato o el mismo reintentado).
+        contrato: x.contrato || null,
       })),
     ).filter((r) => !ocultarResueltas || !r.presentadaDespues);
     const q = buscar.trim().toLowerCase();
-    return q ? filas.filter((r) => r.nombre.toLowerCase().includes(q) || r.cuil.includes(q.replace(/\D/g, "")) || r.empresa.toLowerCase().includes(q)) : filas;
+    // También por las fechas del contrato («25/10/2026»): es lo que distingue dos filas de la misma persona.
+    const textoContrato = (r: (typeof filas)[number]) => (r.contrato ? `${fechaCorta(r.contrato.alta)} ${r.contrato.baja ? fechaCorta(r.contrato.baja) : "indeterminado"}` : "");
+    return q ? filas.filter((r) => r.nombre.toLowerCase().includes(q) || r.cuil.includes(q.replace(/\D/g, "")) || r.empresa.toLowerCase().includes(q) || textoContrato(r).includes(q)) : filas;
   }, [corridas, buscar, soloAutomaticas, ocultarResueltas]);
   const { ordenados: presentadasOrdenadas, orden: ordenRegistro, alternar: alternarRegistro } = useOrdenTabla(
     presentadas,
-    { fecha: (r) => r.fecha, persona: (r) => r.nombre, empresa: (r) => r.empresa, resultado: (r) => r.resultado, quien: (r) => r.quien },
+    { fecha: (r) => r.fecha, persona: (r) => r.nombre, contrato: (r) => r.contrato?.alta || "", empresa: (r) => r.empresa, resultado: (r) => r.resultado, quien: (r) => r.quien },
     { columna: "fecha", direccion: "desc" },
   );
   const RESULTADO: Record<string, { texto: string; clase: string }> = {
@@ -501,6 +505,13 @@ export const PresentacionesArcaPage: React.FC = () => {
                             Persona
                           </BotonOrden>
                         </th>
+                        {/* Desde → hasta del contrato: sin esto, dos filas de la misma persona (otro contrato, o el
+                            mismo reintentado) parecían duplicadas y no se sabía cuál había fallado. */}
+                        <th className={th}>
+                          <BotonOrden columna="contrato" orden={ordenRegistro} onAlternar={alternarRegistro}>
+                            Contrato
+                          </BotonOrden>
+                        </th>
                         <th className={th}>
                           <BotonOrden columna="empresa" orden={ordenRegistro} onAlternar={alternarRegistro}>
                             Empresa
@@ -530,6 +541,16 @@ export const PresentacionesArcaPage: React.FC = () => {
                             <td className="px-4 py-3">
                               <p className="text-sm font-semibold text-gray-900 dark:text-white">{r.nombre}</p>
                               <p className="text-xs font-mono text-gray-500">{fmtCuil(r.cuil)}</p>
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap tabular-nums">
+                              {r.contrato ? (
+                                <>
+                                  <p>Desde {fechaCorta(r.contrato.alta)}</p>
+                                  <p className="text-gray-500">Hasta {r.contrato.baja ? fechaCorta(r.contrato.baja) : "indeterminado"}</p>
+                                </>
+                              ) : (
+                                <span className="text-gray-400" title="El contrato ya no está en la ficha de la persona (se borró o se editó)">—</span>
+                              )}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.empresa}</td>
                             <td className="px-4 py-3 text-xs max-w-[280px]">
