@@ -235,6 +235,14 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
 
 import { useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
+import { etiquetaCentroCosto } from "../utils/centroCosto";
+
+/** «426 LN+»: el código del centro de costo delante del nombre del proyecto (si el nombre no lo trae ya). */
+const conCodigoDeCentro = (p: any): string => {
+  const codigo = etiquetaCentroCosto(p?.metadataResolutions?.centroCosto);
+  const nombre = String(p?.name || "");
+  return codigo && !nombre.startsWith(codigo) ? `${codigo} ${nombre}` : nombre;
+};
 
 export const RequestsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -298,9 +306,10 @@ export const RequestsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Filters
-  const [areaFilter, setAreaFilter] = useState("all");
-  const [shiftFilter, setShiftFilter] = useState("all");
-  const [projectFilter, setProjectFilter] = useState("all");
+  // Varios a la vez (25/10/2026): vacío = todos. A la API y a Cumplimiento viajan separados por coma.
+  const [areaFilter, setAreaFilter] = useState<string[]>([]);
+  const [shiftFilter, setShiftFilter] = useState<string[]>([]);
+  const [projectFilter, setProjectFilter] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
@@ -386,7 +395,8 @@ export const RequestsPage: React.FC = () => {
   const fetchProjects = async () => {
     try {
       const data = await projectsAPI.listAll();
-      setAllProjects(data.map((p: any) => ({ id: p._id, name: p.name, areasConfig: p.areasConfig })));
+      // El código del centro de costo delante del nombre («426 LN+»): es como se nombra el proyecto en la oficina.
+      setAllProjects(data.map((p: any) => ({ id: p._id, name: conCodigoDeCentro(p), areasConfig: p.areasConfig })));
     } catch (e) {
       console.error("Error loading projects", e);
     }
@@ -504,9 +514,9 @@ export const RequestsPage: React.FC = () => {
         page: pagina,
         limit: REQUESTS_PAGE_SIZE,
         search: searchTerm.trim() || undefined,
-        projectId: projectFilter !== "all" ? projectFilter : undefined,
-        areaId: areaFilter !== "all" ? areaFilter : undefined,
-        shiftId: shiftFilter !== "all" ? shiftFilter : undefined,
+        projectId: projectFilter.length ? projectFilter.join(",") : undefined,
+        areaId: areaFilter.length ? areaFilter.join(",") : undefined,
+        shiftId: shiftFilter.length ? shiftFilter.join(",") : undefined,
       });
       setReports(resp.rows.map(mapearParte));
       setReqTotalPages(resp.pagination.totalPages);
@@ -1215,62 +1225,77 @@ export const RequestsPage: React.FC = () => {
           onSearchChange={setSearchTerm}
           searchPlaceholder="Buscar por proyecto, supervisor o número..."
           /*
-            Los tres filtros son EN CASCADA: el proyecto define qué áreas existen, y el área define
-            qué turnos. Por eso cada `onChange` limpia los de abajo — si no, quedaba un turno elegido
-            que no pertenece al área nueva y la lista salía vacía sin motivo visible.
-
-            `SearchAndFilters` usa "" para "sin filtrar" y esta pantalla usa "all". La traducción se
-            hace acá, en el borde, para no tener que tocar el filtrado ni lo que recibe ComplianceView.
+            VARIOS A LA VEZ, Y EN CASCADA (25/10/2026). Cada filtro abre la ventana de casillas con
+            buscador —la misma de «Rol/es Empresa»— y deja lo elegido como badges. Los proyectos elegidos
+            definen qué áreas se ofrecen (la unión de sus áreas), y las áreas qué turnos. Al cambiar un
+            nivel se sacan de los de abajo los que ya no corresponden, en vez de borrarlos todos: si no,
+            quedaba un turno de un área que ya no está y la lista salía vacía sin motivo visible.
           */
-          selectFilters={[
-            {
-              label: "Proyecto",
-              value: projectFilter === "all" ? "" : projectFilter,
-              onChange: (v) => {
-                setProjectFilter(v || "all");
-                setAreaFilter("all");
-                setShiftFilter("all");
+          multiSelectFilters={(() => {
+            const idDe = (x: any) => String(typeof x === "object" ? x?._id : x);
+            const proyectosElegidos = projectFilter.length ? allProjects.filter((p) => projectFilter.includes(p.id)) : [];
+            // Áreas que existen en los proyectos elegidos (todas, si no se eligió ninguno).
+            const areasPosibles: { value: string; label: string }[] = proyectosElegidos.length
+              ? [...new Map(proyectosElegidos.flatMap((p) => (p.areasConfig || []).map((ac: any) => idDe(ac.areaId))).map((id) => [id, { value: id, label: allAreas.find((a) => a.id === id)?.name || "Área " + id.slice(-4) }])).values()]
+              : allAreas.map((a) => ({ value: a.id, label: a.name }));
+            // Turnos de las áreas elegidas en esos proyectos (todos, si falta alguno de los dos niveles).
+            const turnosPosibles: { value: string; label: string }[] =
+              proyectosElegidos.length && areaFilter.length
+                ? [
+                    ...new Map(
+                      proyectosElegidos
+                        .flatMap((p) => (p.areasConfig || []).filter((ac: any) => areaFilter.includes(idDe(ac.areaId))).flatMap((ac: any) => (ac.shiftIds || []).map(idDe)))
+                        .map((id) => [id, { value: id, label: allShifts.find((s) => s.id === id)?.name || "Turno " + id.slice(-4) }]),
+                    ).values(),
+                  ]
+                : allShifts.map((s) => ({ value: s.id, label: s.name }));
+            /*
+              PODA EN CASCADA: con los proyectos y áreas nuevos, qué áreas y turnos elegidos siguen
+              valiendo. Se aplica en cada cambio, así el estado nunca guarda —y nunca manda al server—
+              un turno de un área que ya no está elegida (la lista saldría vacía sin motivo visible).
+            */
+            const podar = (proys: string[], areas: string[], turnos: string[]) => {
+              const ps = proys.length ? allProjects.filter((p) => proys.includes(p.id)) : [];
+              const areasOk = ps.length ? areas.filter((a) => ps.some((p) => (p.areasConfig || []).some((ac: any) => idDe(ac.areaId) === a))) : areas;
+              const turnosOk =
+                ps.length && areasOk.length
+                  ? turnos.filter((t) => ps.some((p) => (p.areasConfig || []).some((ac: any) => areasOk.includes(idDe(ac.areaId)) && (ac.shiftIds || []).map(idDe).includes(t))))
+                  : turnos;
+              return { areasOk, turnosOk };
+            };
+            return [
+              {
+                label: "Proyectos",
+                values: projectFilter,
+                onChange: (v: string[]) => {
+                  const r = podar(v, areaFilter, shiftFilter);
+                  setProjectFilter(v);
+                  setAreaFilter(r.areasOk);
+                  setShiftFilter(r.turnosOk);
+                },
+                placeholder: "Todos los proyectos",
+                options: [...allProjects].sort((a, b) => a.name.localeCompare(b.name, "es")).map((p) => ({ value: p.id, label: p.name })),
               },
-              placeholder: "Todos los proyectos",
-              options: allProjects.map((p) => ({ value: p.id, label: p.name })),
-            },
-            {
-              label: "Área",
-              value: areaFilter === "all" ? "" : areaFilter,
-              onChange: (v) => {
-                setAreaFilter(v || "all");
-                setShiftFilter("all");
+              {
+                label: "Áreas",
+                values: areaFilter,
+                onChange: (v: string[]) => {
+                  const r = podar(projectFilter, v, shiftFilter);
+                  setAreaFilter(r.areasOk);
+                  setShiftFilter(r.turnosOk);
+                },
+                placeholder: "Todas las áreas",
+                options: areasPosibles,
               },
-              placeholder: "Todas las áreas",
-              options: (() => {
-                if (projectFilter === "all") return allAreas.map((a) => ({ value: a.id, label: a.name }));
-                const proj = allProjects.find((p) => p.id === projectFilter);
-                if (!proj?.areasConfig) return [];
-                return proj.areasConfig.map((ac: any) => {
-                  const areaId = typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId;
-                  const area = allAreas.find((a) => a.id === areaId);
-                  return { value: areaId, label: area?.name || "Área " + String(areaId).slice(-4) };
-                });
-              })(),
-            },
-            {
-              label: "Turno",
-              value: shiftFilter === "all" ? "" : shiftFilter,
-              onChange: (v) => setShiftFilter(v || "all"),
-              placeholder: "Todos los turnos",
-              options: (() => {
-                if (projectFilter === "all" || areaFilter === "all") return allShifts.map((s) => ({ value: s.id, label: s.name }));
-                const proj = allProjects.find((p) => p.id === projectFilter);
-                const areaCfg = proj?.areasConfig?.find((ac: any) => (typeof ac.areaId === "object" ? ac.areaId?._id : ac.areaId) === areaFilter);
-                if (!areaCfg?.shiftIds) return [];
-                return areaCfg.shiftIds.map((sId: any) => {
-                  const shiftId = typeof sId === "object" ? sId?._id : sId;
-                  const shift = allShifts.find((s) => s.id === shiftId);
-                  return { value: shiftId, label: shift?.name || "Turno " + String(shiftId).slice(-4) };
-                });
-              })(),
-            },
-          ]}
+              {
+                label: "Turnos",
+                values: shiftFilter,
+                onChange: (v: string[]) => setShiftFilter(v),
+                placeholder: "Todos los turnos",
+                options: turnosPosibles,
+              },
+            ];
+          })()}
           extraActions={
             <div className="hidden min-[1200px]:flex items-center gap-2 shrink-0">
               <button onClick={() => setListLayout("cards")} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${listLayout === "cards" ? "bg-blue-500 text-white shadow-sm border-blue-500" : "text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`} title="Vista de tarjetas" aria-label="Vista de tarjetas">
@@ -1535,9 +1560,9 @@ export const RequestsPage: React.FC = () => {
       <Modal isOpen={showCompliance} onClose={() => setShowCompliance(false)} title="Cumplimiento de supervisores" subtitle="Qué novedades se esperaban de cada supervisor y cuáles faltan." size="full">
         <div className="p-4 sm:p-6">
         <ComplianceView
-          projectFilter={projectFilter}
-          areaFilter={areaFilter}
-          shiftFilter={shiftFilter}
+          projectFilter={projectFilter.length ? projectFilter.join(",") : "all"}
+          areaFilter={areaFilter.length ? areaFilter.join(",") : "all"}
+          shiftFilter={shiftFilter.length ? shiftFilter.join(",") : "all"}
           onOpenReport={(reportNumber) => {
             /*
               Se busca por su número contra el server: `reports` es la página que se está viendo, y el

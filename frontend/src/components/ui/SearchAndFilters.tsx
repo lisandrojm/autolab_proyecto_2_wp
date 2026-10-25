@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faChevronDown, faFilter, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "./Modal";
+import { fuzzyMatch } from "../../utils/searchHelpers";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { fechaDeCalendario } from "../../utils/fechas";
 
@@ -169,7 +170,7 @@ const RenderedSelect: React.FC<SelectFilter> = ({ value, onChange, options, plac
 export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, onSearchChange, searchPlaceholder = "Buscar...", filters = [], dateFilter, selectFilters = [], multiSelectFilters = [], switchFilters = [], radioFilters = [], className = "", extraActions }) => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   /** El filtro múltiple que tiene abierto su modal de casillas, y lo que se va marcando hasta «Aplicar». */
-  const [eligiendo, setEligiendo] = useState<{ idx: number; marcados: string[] } | null>(null);
+  const [eligiendo, setEligiendo] = useState<{ idx: number; marcados: string[]; busqueda?: string } | null>(null);
 
   const hasDateFilters = dateFilter && (dateFilter.startDate || dateFilter.endDate);
   const hasSelectFilters = selectFilters.some((sf) => sf.value !== "");
@@ -565,63 +566,82 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
           </div>
         </Modal>
       )}
-      {/* El modal de casillas de un filtro múltiple, ARRIBA del de filtros. */}
-      {eligiendo && multiSelectFilters[eligiendo.idx] && (
-        <Modal
-          isOpen
-          zIndex={70}
-          onClose={() => setEligiendo(null)}
-          title={multiSelectFilters[eligiendo.idx].label}
-          subtitle="Marcá uno o varios. Sin ninguno marcado, se ven todos."
-          size="sm"
-          footer={
-            <div className="flex w-full items-center justify-between gap-2">
-              <div className="flex items-center gap-3 text-xs">
-                <button type="button" onClick={() => setEligiendo({ ...eligiendo, marcados: multiSelectFilters[eligiendo.idx].options.map((o) => o.value) })} className="font-semibold text-blue-600 hover:underline dark:text-blue-400">
-                  Marcar todos
+      {/*
+        EL MODAL DE CASILLAS DE UN FILTRO MÚLTIPLE, ARRIBA DEL DE FILTROS. Con el mismo gesto que
+        «Rol/es Empresa» de la ficha de usuario (25/10/2026): lo elegido arriba como badges, un buscador,
+        la grilla de casillas en tres columnas, y «Limpiar» / «Listo». Era una lista vertical sin
+        buscador, y con decenas de proyectos no se encontraba nada.
+      */}
+      {eligiendo && multiSelectFilters[eligiendo.idx] && (() => {
+        const mf = multiSelectFilters[eligiendo.idx];
+        const busqueda = eligiendo.busqueda || "";
+        const visibles = mf.options.filter((o) => fuzzyMatch(o.label, busqueda));
+        const alternar = (v: string) => setEligiendo({ ...eligiendo, marcados: eligiendo.marcados.includes(v) ? eligiendo.marcados.filter((x) => x !== v) : [...eligiendo.marcados, v] });
+        const aplicar = () => {
+          mf.onChange(eligiendo.marcados);
+          sweetAlert.filtro(`${mf.label}: ${eligiendo.marcados.length === 0 ? mf.placeholder || "Todos" : eligiendo.marcados.map((x) => etiquetaDe(mf, x)).join(", ")}`);
+          setEligiendo(null);
+        };
+        return (
+          <Modal
+            isOpen
+            zIndex={70}
+            onClose={() => setEligiendo(null)}
+            title={mf.label}
+            subtitle={`${eligiendo.marcados.length} seleccionado(s) · sin ninguno, se ven todos`}
+            size="lg"
+            footer={
+              <>
+                <button type="button" onClick={() => setEligiendo({ ...eligiendo, marcados: [] })} className="btn-secondary" disabled={eligiendo.marcados.length === 0}>
+                  Limpiar
                 </button>
-                <button type="button" onClick={() => setEligiendo({ ...eligiendo, marcados: [] })} className="font-semibold text-gray-500 hover:underline dark:text-gray-400">
-                  Ninguno
+                <button type="button" onClick={aplicar} className="btn-primary">
+                  Listo
                 </button>
+              </>
+            }
+          >
+            {/* Alto fijo: con la altura atada al contenido, filtrar encogía el modal y «Listo» se movía. */}
+            <div className="flex h-[60vh] flex-col">
+              {eligiendo.marcados.length > 0 && (
+                <div className="mb-3 flex shrink-0 flex-wrap gap-1.5">
+                  {eligiendo.marcados.map((v) => (
+                    <span key={v} className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 py-1 pl-2.5 pr-1.5 text-[11px] font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                      {etiquetaDe(mf, v)}
+                      <button type="button" onClick={() => alternar(v)} title={`Quitar ${etiquetaDe(mf, v)}`} className="rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-800/60">
+                        <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="relative mb-3 shrink-0">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <FontAwesomeIcon icon={faMagnifyingGlass} className="h-3.5 w-3.5 text-gray-400" />
+                </div>
+                <input type="text" autoFocus value={busqueda} onChange={(e) => setEligiendo({ ...eligiendo, busqueda: e.target.value })} placeholder={`Buscar ${mf.label.toLowerCase()}...`} className="input-field pl-9 pr-8" />
+                {busqueda && (
+                  <button type="button" onClick={() => setEligiendo({ ...eligiendo, busqueda: "" })} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={() => setEligiendo(null)} className="btn-secondary">
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const mf = multiSelectFilters[eligiendo.idx];
-                    mf.onChange(eligiendo.marcados);
-                    sweetAlert.filtro(`${mf.label}: ${eligiendo.marcados.length === 0 ? mf.placeholder || "Todos" : eligiendo.marcados.map((x) => etiquetaDe(mf, x)).join(", ")}`);
-                    setEligiendo(null);
-                  }}
-                  className="btn-primary"
-                >
-                  Aplicar{eligiendo.marcados.length > 0 ? ` (${eligiendo.marcados.length})` : ""}
-                </button>
+              <div className="grid flex-1 grid-cols-1 content-start gap-2 overflow-y-auto pr-1 sm:grid-cols-2 md:grid-cols-3">
+                {visibles.map((o) => {
+                  const marcado = eligiendo.marcados.includes(o.value);
+                  return (
+                    <label key={o.value} title={o.label} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-all ${marcado ? "border-blue-200 bg-blue-50 ring-2 ring-blue-500/20 dark:border-blue-800 dark:bg-blue-900/20" : "border-gray-100 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800"}`}>
+                      <input type="checkbox" checked={marcado} onChange={() => alternar(o.value)} className="h-4 w-4 shrink-0 rounded text-blue-500 focus:ring-blue-500" />
+                      <span className="truncate text-xs font-medium text-gray-700 dark:text-gray-300">{o.label}</span>
+                    </label>
+                  );
+                })}
+                {visibles.length === 0 && <div className="col-span-full py-8 text-center text-xs italic text-gray-500">{busqueda ? `No hay coincidencias con «${busqueda}»` : "No hay opciones."}</div>}
               </div>
             </div>
-          }
-        >
-          <div className="max-h-[55vh] space-y-1 overflow-y-auto">
-            {multiSelectFilters[eligiendo.idx].options.map((o) => {
-              const marcado = eligiendo.marcados.includes(o.value);
-              return (
-                <label key={o.value} className={`flex cursor-pointer items-center gap-3 rounded border px-3 py-2 text-sm transition-colors ${marcado ? "border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30" : "border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"}`}>
-                  <input
-                    type="checkbox"
-                    checked={marcado}
-                    onChange={() => setEligiendo({ ...eligiendo, marcados: marcado ? eligiendo.marcados.filter((x) => x !== o.value) : [...eligiendo.marcados, o.value] })}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-gray-800 dark:text-gray-200">{o.label}</span>
-                </label>
-              );
-            })}
-          </div>
-        </Modal>
-      )}
+          </Modal>
+        );
+      })()}
     </>
   );
 };

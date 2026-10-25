@@ -17,6 +17,9 @@ export interface ComplianceParams {
   coordinatorId?: string;
   areaId?: string;
   shiftId?: string;
+  /** Varias áreas / turnos a la vez (filtros de Novedades, 25/10/2026). Vacío = todos. */
+  areaIds?: string[];
+  shiftIds?: string[];
 }
 
 /**
@@ -156,6 +159,8 @@ export async function computeCompliance(tenantId: Types.ObjectId, params: Compli
       if (params.coordinatorId && userId !== params.coordinatorId) continue;
       if (params.areaId && areaId !== params.areaId) continue;
       if (params.shiftId && shiftId !== params.shiftId) continue;
+      if (params.areaIds?.length && !params.areaIds.includes(areaId)) continue;
+      if (params.shiftIds?.length && !params.shiftIds.includes(shiftId)) continue;
 
       const key = `${userId}|${String(p._id)}`;
       let g = groups.get(key);
