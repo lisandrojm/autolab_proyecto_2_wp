@@ -1,6 +1,6 @@
 import { leerAnclas } from "../utils/anclasNombre.js";
 import { candidatosPorNombre, elMasLargo, type ArchivoConNombre } from "../utils/coincidenciaDeNombre.js";
-import { recortarNombre } from "../utils/nomenclatura.js";
+import { largoEnBytes, MAX_NOMBRE, recortarNombre } from "../utils/nomenclatura.js";
 
 /**
  * RESCATE DE FIRMADOS DESDE EL EMAIL (23/10/2026). Doble validación «Requested signatures» / correo.
@@ -79,6 +79,15 @@ export interface AdjuntoPdf {
   tipo: string;
 }
 
+/** La fecha de un mensaje de imapflow: la del encabezado Date (cuándo lo mandó Dropbox Sign) o, si no viene, la de llegada. */
+export function fechaDelAviso(m: any): Date | undefined {
+  for (const v of [m?.envelope?.date, m?.internalDate]) {
+    const d = v ? new Date(v) : null;
+    if (d && !Number.isNaN(d.getTime())) return d;
+  }
+  return undefined;
+}
+
 /** Los adjuntos PDF de un `bodyStructure` de imapflow (recorre las partes anidadas). */
 export function adjuntosPdf(estructura: any): AdjuntoPdf[] {
   const res: AdjuntoPdf[] = [];
@@ -124,11 +133,60 @@ export function nombreDestino(titulo: string, codigo?: string): string {
   return `${recortarNombre(base, 4)}.pdf`;
 }
 
+const DIAS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MESES_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const dos = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * El sello de la integración nativa: «Wed, 07 Oct 2026 19h07m43s», EN UTC y con día y mes en inglés.
+ * Medido el 25/10/2026 contra la carpeta: el sello cae 8-10 s después del mail «Fulano firmó …» del
+ * mismo documento, y está en UTC. Con la fecha del mail el rescatado queda a segundos del que habría
+ * depositado la integración, y la columna «Fecha Firma» de Documentos lo lee igual.
+ */
+export function selloIntegracion(d: Date): string {
+  return `${DIAS_EN[d.getUTCDay()]}, ${dos(d.getUTCDate())} ${MESES_EN[d.getUTCMonth()]} ${d.getUTCFullYear()} ${dos(d.getUTCHours())}h${dos(d.getUTCMinutes())}m${dos(d.getUTCSeconds())}s`;
+}
+
+/** El texto que la integración pone entre el título y el sello (es el título del envío). */
+export const TEXTO_INTEGRACION = "Firma solicitada por";
+
+/**
+ * EL NOMBRE COMO LO DEJA LA INTEGRACIÓN NATIVA (25/10/2026), para que un rescatado no se distinga de
+ * uno depositado por Dropbox Sign:
+ *
+ *   <título con .pdf>_ Firma solicitada por Wed, 07 Oct 2026 19h07m43s.pdf
+ *
+ * (ejemplo real: «…_ID-000003.pdf_ Firma solicitada por Wed, 07 Oct 2026 19h07m43s.pdf»). El «.pdf»
+ * del título queda adentro, como en los reales: `limpiezaPendbox` cuenta con eso.
+ *
+ * TOPE 255 BYTES, Y NUNCA SE CORTA UN ANCLA. La integración nativa corta el título a 160 caracteres y
+ * a veces se come el texto («Firma solicit») — con títulos más largos se comería el código. Acá el
+ * orden es: primero se acorta el texto «Firma solicitada por» (hasta sacarlo), y si todavía no entra
+ * se recortan los campos descriptivos del título con `recortarNombre` (nombre, email, proyecto…),
+ * nunca el `ID-NNNNNN`, el CUIL ni las fechas, que son lo que la plataforma lee de vuelta.
+ */
+export function nombreComoIntegracion(titulo: string, codigo: string, firmadoEl: Date): string {
+  const base = nombreDestino(titulo, codigo).replace(/\.pdf$/i, "");
+  const sello = selloIntegracion(firmadoEl);
+  const armar = (b: string, texto: string) => `${b}.pdf_ ${texto ? `${texto} ` : ""}${sello}.pdf`;
+  for (let largo = TEXTO_INTEGRACION.length; largo >= 0; largo--) {
+    const texto = TEXTO_INTEGRACION.slice(0, largo).trim();
+    if (largoEnBytes(armar(base, texto)) <= MAX_NOMBRE) return armar(base, texto);
+  }
+  const cola = largoEnBytes(armar("", ""));
+  return armar(recortarNombre(base, cola), "");
+}
+
 /** ¿El firmado ya está en la carpeta? Por código si el título lo trae; si no, por nombre (el más largo que coincida). */
 export function yaEstaEnFirmados<T extends ArchivoConNombre>(entries: Array<T & { tag?: string }>, titulo: string): T | null {
   const pdfs = entries.filter((e) => (e.tag === undefined || e.tag === "file") && !/\.json$/i.test(e.name));
   const codigo = leerAnclas(titulo).codigo;
   if (codigo) return pdfs.find((e) => leerAnclas(e.name).codigo === codigo) || null;
+  // Sin código en el título, pero la limpieza de Pendbox ya le insertó el del original al firmado
+  // («<título>_ID-000010.pdf_ Firma…»): es ése. Visto el 25/10/2026 con 4 envíos del 7 y 8/10.
+  const sinPdf = String(titulo || "").replace(/\.pdf$/i, "");
+  const conCodigoInsertado = sinPdf.length >= 20 ? pdfs.find((e) => e.name.startsWith(`${sinPdf}_ID-`) && leerAnclas(e.name).codigo) : undefined;
+  if (conCodigoInsertado) return conCodigoInsertado;
   return elMasLargo(candidatosPorNombre(pdfs, String(titulo || "").replace(/\.pdf$/i, "")))[0] || null;
 }
 
@@ -148,12 +206,17 @@ export interface AvisoFirmado {
   /** Quién firmó, según el asunto. */
   quien?: string;
   adjuntos: AdjuntoPdf[];
+  /** Cuándo mandó Dropbox Sign el aviso (≈ cuándo se firmó). Con esto el nombre lleva el sello de la integración. */
+  fecha?: Date;
 }
 
-export type ResultadoRescate = "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto" | "error";
+/** «firmado-faltante» sólo sale en una prueba detallada: faltaba y se habría subido con ese nombre. */
+export type ResultadoRescate = "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto" | "firmado-faltante" | "error";
 
 export interface LineaRescate {
   resultado: ResultadoRescate;
+  /** El mensaje de la casilla del que salió la línea. */
+  uid?: number;
   asunto: string;
   archivo: string;
   cuit?: string;
@@ -176,6 +239,19 @@ export interface DepsRescate {
   /** UIDs ya resueltos en esta vida del proceso (rescatados o sin adjunto): no se vuelven a bajar. */
   verificados: Set<number>;
   cederHilo?: () => Promise<void>;
+  /**
+   * Prueba DETALLADA (el backfill en seco): además de contar, valida código, documento y adjunto como
+   * la corrida real y deja una línea «firmado-faltante» con el nombre con el que se subiría. No baja
+   * ni sube nada. Sin esto, la prueba sólo cuenta (lo que usa «Probar conexión»).
+   */
+  detallarPrueba?: boolean;
+  /**
+   * El documento generado cuyo nombre EMPIEZA con este prefijo, si hay exactamente uno. Lo usa el caso
+   * del código cortado en el asunto («…_ID-0.pdf»). Sin esto, ese aviso es un error como antes.
+   */
+  documentoPorPrefijo?: (prefijo: string) => Promise<{ codigo: string; archivo: string } | null>;
+  /** Tope de subidas (o de faltantes, en prueba). Al llegar se corta y `cortadoPorLimite` lo dice. */
+  limite?: number;
 }
 
 export interface ResumenRescate {
@@ -187,6 +263,8 @@ export interface ResumenRescate {
   faltan: number;
   errores: string[];
   logs: LineaRescate[];
+  /** La pasada se cortó por `limite`: quedaron avisos sin mirar. */
+  cortadoPorLimite?: boolean;
 }
 
 /** Por cada aviso de firmado: ¿está en la carpeta? Si no, bajar el adjunto, validarlo y subirlo. Idempotente. */
@@ -198,9 +276,13 @@ export async function rescatarFirmados(avisos: AvisoFirmado[], deps: DepsRescate
 
   for (const [n, a] of avisos.entries()) {
     if (n > 0 && n % 20 === 0) await deps.cederHilo?.();
+    if (deps.limite !== undefined && r.rescatados + (deps.soloPrueba ? r.faltan : 0) >= deps.limite) {
+      r.cortadoPorLimite = true;
+      break;
+    }
     r.avisos++;
     const ident = leerAnclas(a.titulo);
-    const base = { asunto: a.asunto, archivo: a.titulo, cuit: ident.cuit, documento: ident.documento };
+    const base = { uid: a.uid, asunto: a.asunto, archivo: a.titulo, cuit: ident.cuit, documento: ident.documento };
     try {
       const existente = yaEstaEnFirmados(deps.enFirmados, a.titulo);
       if (existente) {
@@ -213,11 +295,31 @@ export async function rescatarFirmados(avisos: AvisoFirmado[], deps: DepsRescate
         r.yaEstaban++;
         continue;
       }
-      if (deps.soloPrueba) {
+      if (deps.soloPrueba && !deps.detallarPrueba) {
         r.faltan++;
         continue;
       }
-      const codigo = ident.codigo || a.adjuntos.map((x) => leerAnclas(x.nombre).codigo).find(Boolean) || "";
+      let codigo = ident.codigo || a.adjuntos.map((x) => leerAnclas(x.nombre).codigo).find(Boolean) || "";
+      /*
+        CÓDIGO CORTADO (25/10/2026): Dropbox Sign a veces manda el título cortado en medio del código
+        («…_20350716719_ID-0.pdf», «…_ID-0005.pdf»). No se adivina: el título es el COMIENZO exacto del
+        nombre del documento generado, y si hay uno solo que empiece así, ése es. Se sube con su nombre.
+      */
+      let titulo = a.titulo;
+      const cortado = /_ID-\d{0,5}$/i.exec(a.titulo.replace(/\.pdf$/i, ""));
+      if (!codigo && cortado && deps.documentoPorPrefijo) {
+        const doc = await deps.documentoPorPrefijo(a.titulo.replace(/\.pdf$/i, ""));
+        if (doc) {
+          codigo = doc.codigo;
+          titulo = doc.archivo;
+          const ya = yaEstaEnFirmados(deps.enFirmados, titulo);
+          if (ya) {
+            r.yaEstaban++;
+            r.logs.push({ ...base, resultado: "firmado-ya-estaba", detalle: `El asunto traía el código cortado; es ${codigo} y ya está en la carpeta de firmados como «${ya.name}».` });
+            continue;
+          }
+        }
+      }
       if (!codigo) {
         r.errores.push(`${a.titulo}: sin código`);
         r.logs.push({ ...base, resultado: "error", detalle: "El título no trae el código ID-NNNNNN: no se puede atribuir a un documento de la plataforma y no se sube." });
@@ -235,7 +337,7 @@ export async function rescatarFirmados(avisos: AvisoFirmado[], deps: DepsRescate
       }
       if (a.adjuntos.length === 0) {
         r.sinAdjunto++;
-        deps.verificados.add(a.uid);
+        if (!deps.soloPrueba) deps.verificados.add(a.uid);
         r.logs.push({ ...base, resultado: "firmado-sin-adjunto", detalle: "El aviso no trae el PDF firmado adjunto y la integración de Dropbox no lo depositó. Activá en Dropbox Sign la opción de adjuntar el documento firmado en los correos (Configuración → documentos completados)." });
         continue;
       }
@@ -246,6 +348,14 @@ export async function rescatarFirmados(avisos: AvisoFirmado[], deps: DepsRescate
         r.logs.push({ ...base, resultado: "error", detalle: `El adjunto es demasiado grande (${Math.round(adjunto.bytes / 1024 / 1024)} MB): no se baja.` });
         continue;
       }
+      const nombre = a.fecha ? nombreComoIntegracion(titulo, codigo, a.fecha) : nombreDestino(titulo, codigo);
+      if (deps.soloPrueba) {
+        r.faltan++;
+        subidos.add(codigo);
+        const kb = adjunto.bytes ? ` (~${Math.round(adjunto.bytes / 1.37 / 1024)} KB)` : "";
+        r.logs.push({ ...base, resultado: "firmado-faltante", archivo: nombre, detalle: `No está en la carpeta de firmados: se subiría el adjunto «${adjunto.nombre}»${kb} como «${nombre}».` });
+        continue;
+      }
       const buffer = await deps.descargar(a.uid, adjunto);
       const v = validarAdjunto(buffer);
       if (v.ok === false) {
@@ -253,7 +363,6 @@ export async function rescatarFirmados(avisos: AvisoFirmado[], deps: DepsRescate
         r.logs.push({ ...base, resultado: "error", detalle: `No se sube: ${v.motivo}.` });
         continue;
       }
-      const nombre = nombreDestino(a.titulo, codigo);
       const path = `${carpeta}/${nombre}`;
       try {
         await deps.subir(path, buffer);

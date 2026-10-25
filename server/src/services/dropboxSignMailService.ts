@@ -5,7 +5,7 @@ import { candidatosPorNombre, elMasLargo } from "../utils/coincidenciaDeNombre.j
 import { leerAnclas, mismoDocumento, AnclasNombre } from "../utils/anclasNombre.js";
 import { resolverCarpetaPorProposito, resolverProposito } from "../utils/estadoCarpetas.js";
 import { getTenantDropboxConfig, listFolder, moveEntry, uploadFileEstricto } from "./dropboxService.js";
-import { adjuntosPdf, extraerAvisoFirmado, rescatarFirmados, REMITENTE_FIRMADO, TERMINOS_BUSQUEDA_FIRMADO, type AvisoFirmado, type ResumenRescate } from "./rescateFirmados.js";
+import { adjuntosPdf, extraerAvisoFirmado, fechaDelAviso, rescatarFirmados, REMITENTE_FIRMADO, TERMINOS_BUSQUEDA_FIRMADO, type AvisoFirmado, type ResumenRescate } from "./rescateFirmados.js";
 import { FirmadoRescatado } from "../models/FirmadoRescatado.js";
 import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
@@ -261,7 +261,7 @@ export function yaEstaEnPendbox(entries: { tag: string; name: string }[], archiv
 
 /** Una línea por aviso encontrado: qué se decidió y por qué. Lo consume el modal de Logs. */
 export interface LineaLog {
-  resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error" | "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto";
+  resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error" | "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto" | "firmado-faltante";
   asunto?: string;
   archivo?: string;
   cuit?: string;
@@ -336,6 +336,18 @@ export function leerCasillaDropboxSign(tenantId: string, soloPrueba = false): Pr
   }).catch(() => {});
   return esta;
 }
+
+/**
+ * El documento generado del tenant cuyo nombre empieza con `prefijo`, si es UNO solo (si no, null).
+ * Para el aviso de firmado con el código cortado en el asunto (ver `rescatarFirmados`).
+ */
+export const documentoPorPrefijo = (tenantId: string) => async (prefijo: string): Promise<{ codigo: string; archivo: string } | null> => {
+  const p = String(prefijo || "").trim();
+  if (p.length < 20) return null;
+  const re = new RegExp(`^${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+  const docs: any[] = await DocumentoGenerado.find({ tenantId, archivo: re }).select("codigo archivo").limit(2).lean();
+  return docs.length === 1 ? { codigo: String(docs[0].codigo), archivo: String(docs[0].archivo) } : null;
+};
 
 /** Arma el cliente IMAP de la casilla configurada. */
 export function clienteImap(cfg: any, extra: Record<string, unknown> = {}): ImapFlow {
@@ -497,11 +509,11 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
         const lista = [...uidsFirmado].sort((a, b) => b - a).slice(0, MAX_FIRMADOS);
         const avisosFirmado: AvisoFirmado[] = [];
         if (lista.length > 0) {
-          for await (const m of client.fetch(lista.join(","), { envelope: true, bodyStructure: true }, { uid: true })) {
+          for await (const m of client.fetch(lista.join(","), { envelope: true, bodyStructure: true, internalDate: true }, { uid: true })) {
             const asunto = String((m as any)?.envelope?.subject || "");
             const aviso = extraerAvisoFirmado(asunto);
             if (!aviso) continue;
-            avisosFirmado.push({ uid: Number((m as any).uid), asunto, titulo: aviso.archivo, quien: aviso.quien, adjuntos: adjuntosPdf((m as any).bodyStructure) });
+            avisosFirmado.push({ uid: Number((m as any).uid), asunto, titulo: aviso.archivo, quien: aviso.quien, adjuntos: adjuntosPdf((m as any).bodyStructure), fecha: fechaDelAviso(m) });
           }
         }
         if (avisosFirmado.length > 0) {
@@ -526,6 +538,7 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
                 enFirmados,
                 soloPrueba,
                 existeDocumento: async (codigo) => !!(await DocumentoGenerado.exists({ tenantId, codigo })),
+                documentoPorPrefijo: documentoPorPrefijo(tenantId),
                 descargar: async (uid, adjunto) => {
                   const r: any = await client.downloadMany(String(uid), [adjunto.part], { uid: true });
                   const contenido = r?.[adjunto.part]?.content;
