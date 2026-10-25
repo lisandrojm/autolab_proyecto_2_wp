@@ -7,6 +7,7 @@ import { dropboxAPI, DropboxEntry, DropboxStatus } from "../../api/dropbox";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { ArchivoParaVer, VisorArchivoDropbox, esArchivoVisible } from "./VisorArchivoDropbox";
 import { BotonOrden, ordenarFilas, useOrden, type ValorOrden } from "../ui/OrdenTabla";
+import { fechaFirmaDeNombre, formatearFechaFirma } from "../../utils/fechaFirmaDropboxSign";
 
 const formatSize = (n?: number): string => {
   if (!n && n !== 0) return "";
@@ -368,6 +369,8 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
   const { orden, alternar } = useOrden({ columna: "fecha", direccion: "desc" });
   const ACCESORES: Record<string, (e: DropboxEntry) => ValorOrden> = {
     fecha: (e) => e.serverModified || "",
+    // La hora de la firma viene en el nombre del firmado (ver `utils/fechaFirmaDropboxSign`); sin sello, vacío.
+    firma: (e) => fechaFirmaDeNombre(e.name)?.getTime() ?? null,
     nombre: (e) => e.name,
     tamanio: (e) => e.size || 0,
   };
@@ -603,10 +606,18 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
                     title="Seleccionar todos los archivos"
                   />
                 </th>
-                {/* La fecha primero: es por lo que se ordena y lo primero que se mira. */}
-                <th className="px-4 py-3 font-semibold whitespace-nowrap">
+                {/* La fecha primero: es por lo que se ordena y lo primero que se mira. Son DOS fechas
+                    distintas (25/10/2026): cuándo entró el archivo a Dropbox («Registro») y cuándo se
+                    firmó, que Dropbox Sign escribe en el nombre del firmado. Con la integración cortada
+                    y rescatado después, el registro es días posterior a la firma. */}
+                <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Cuándo entró el archivo a esta carpeta de Dropbox">
                   <BotonOrden columna="fecha" orden={orden} onAlternar={alternar}>
-                    Fecha
+                    Fecha Registro
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Cuándo se completó la firma, según el sello que Dropbox Sign pone en el nombre del firmado (hora argentina). Vacío si el archivo no es un firmado">
+                  <BotonOrden columna="firma" orden={orden} onAlternar={alternar}>
+                    Fecha Firma
                   </BotonOrden>
                 </th>
                 <th className="px-4 py-3 font-semibold">
@@ -625,12 +636,12 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {busy && filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6">
+                  <td colSpan={6} className="px-4 py-6">
                     <LoadingSpinner size="sm" message="Cargando archivos..." />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">{search ? "No hay resultados para el filtro." : "Carpeta vacía."}</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">{search ? "No hay resultados para el filtro." : "Carpeta vacía."}</td></tr>
               ) : (
                 filtered.map((e) => (
                   <tr key={e.path} className={`hover:bg-gray-50 dark:hover:bg-gray-800/40 ${e.tag === "file" && selected.has(e.path) ? "bg-blue-50/60 dark:bg-blue-900/10" : ""}`}>
@@ -645,6 +656,7 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{e.tag === "file" ? formatDate(e.serverModified) : "—"}</td>
+                    <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{e.tag === "file" ? formatearFechaFirma(fechaFirmaDeNombre(e.name)) || "—" : "—"}</td>
                     <td className="px-4 py-2.5">
                       {e.tag === "folder" ? (
                         <button onClick={() => loadFolder(e.path)} className="flex items-center gap-2 font-medium text-gray-800 dark:text-gray-100 hover:text-blue-600">
