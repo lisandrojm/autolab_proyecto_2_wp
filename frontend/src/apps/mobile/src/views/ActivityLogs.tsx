@@ -163,6 +163,12 @@ interface ActivityLogsProps {
    * pestañas, y repetirlo adentro dibujaría dos títulos.
    */
   embebido?: boolean;
+  /**
+   * Qué historial se muestra, elegido afuera con las tarjetas de Novedades («Mis novedades» o «Las que
+   * superviso», 25/10/2026). Con esto no se dibuja el conmutador Mías | Las que superviso ni se salta
+   * solo a las supervisadas: la persona ya eligió.
+   */
+  alcanceFijo?: AlcanceHistorial;
 }
 
 const getProjectEndTime = (project: Project, dateStr: string): string => {
@@ -425,7 +431,7 @@ const isTwoDaysAgoLocal = (d: Date): boolean => {
          d.getFullYear() === twoDaysAgo.getFullYear();
 };
 
-export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps) {
+export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: ActivityLogsProps) {
   const [showForm, setShowForm] = useState(false);
 
   const resolveEmployeeAreaAndShift = (emp: EmployeeOption) => {
@@ -908,7 +914,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
   const permisoInactivo = usePermisoInactivo();
   // Mismo criterio que `Novedades.tsx`: el permiso tiene que estar Y no estar marcado «en desarrollo».
   const puedeVerSupervisadas = (usuarioActual?.permissions || []).includes(MOBILE_ACTIVITY_COMPLIANCE) && !permisoInactivo(MOBILE_ACTIVITY_COMPLIANCE);
-  const [alcanceHistorial, setAlcanceHistorial] = useState<AlcanceHistorial>("mias");
+  const [alcanceHistorial, setAlcanceHistorial] = useState<AlcanceHistorial>(alcanceFijo || "mias");
   /* El salto automático a «las que superviso» ocurre una sola vez por montaje. */
   const autoSaltoHechoRef = useRef(false);
   const [fullProjectData, setFullProjectData] = useState<Project | null>(null);
@@ -1156,7 +1162,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
         a ver. El salto ocurre UNA vez (`autoSaltoHechoRef`): si después elige «Mías» a mano, se
         respeta.
       */
-      if (alcance === "mias" && data.length === 0 && puedeVerSupervisadas && !autoSaltoHechoRef.current) {
+      if (!alcanceFijo && alcance === "mias" && data.length === 0 && puedeVerSupervisadas && !autoSaltoHechoRef.current) {
         autoSaltoHechoRef.current = true;
         setAlcanceHistorial("supervisadas");
         void fetchReports("supervisadas");
@@ -4050,6 +4056,8 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
           Separados, el título se lee de un saque y los dos botones quedan del mismo ancho, que es lo
           que hace evidente que son las dos caras de una misma elección.
         */}
+        {/* Con el alcance elegido afuera (tarjetas de Novedades), el título lo pone el encabezado y no hay conmutador. */}
+        {!alcanceFijo && (
         <div className="mb-4 space-y-2">
           <h3 className="text-lg font-bold">Historial de Novedades</h3>
           {/* Sólo para quien tiene equipo a cargo: para el resto sería un conmutador de una opción. */}
@@ -4078,6 +4086,7 @@ export default function ActivityLogs({ onNavigate, embebido }: ActivityLogsProps
             </div>
           )}
         </div>
+        )}
 
         {/* List of Reports */}
         <div className="space-y-3">

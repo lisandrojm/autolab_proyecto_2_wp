@@ -13,6 +13,7 @@ import { AIRE, AIRE_DOS_LINEAS_SIN_CRUZ, BadgeRolFijo, MARGEN, Rotulo, pastillaD
 import { textoDeDias } from "../../../../../utils/jerarquiaTurnos";
 import { fuzzyMatch } from "../../../../../utils/searchHelpers";
 import { BotonInfo } from "../ModalInfo";
+import MenuDeTarjetas from "../MenuDeTarjetas";
 
 /*
   PANTALLA 2 · UN GRUPO DE PUESTOS: sus equipos (cada uno con su turno y cómo está), «Nuevo equipo»
@@ -60,7 +61,8 @@ export default function DetalleGrupo() {
   const { catalogos, guardar, areasDe } = usePlantillas();
   const { plantilla: p, noEsta } = usePlantilla(id);
   const [hoja, setHoja] = useState<Hoja>(null);
-  const [pestana, setPestana] = useState<"equipos" | "puestos">("equipos");
+  /** «menu» = las tarjetas Equipos | Puestos; las otras, adentro (la flecha vuelve al menú). */
+  const [pestana, setPestana] = useState<"menu" | "equipos" | "puestos">("menu");
 
   // Recién creado: se abre «Editar puestos» (lo pidió el usuario con «Crear y elegir puestos»).
   useEffect(() => {
@@ -102,9 +104,10 @@ export default function DetalleGrupo() {
 
   return (
     <Pantalla
-      titulo={p.nombre}
-      contexto="Grupo de puestos · para cualquier proyecto"
+      titulo={pestana === "menu" ? p.nombre : pestana === "equipos" ? "Equipos" : "Puestos"}
+      contexto={pestana === "menu" ? "Grupo de puestos · para cualquier proyecto" : p.nombre}
       atras={rutas.lista}
+      onAtras={pestana === "menu" ? undefined : () => setPestana("menu")}
       boton={{
         texto: p.equipos.length > 1 ? `Contratar equipos (${p.equipos.length})` : "Contratar equipo",
         onClick: () => navigate(rutas.contratar(p._id)),
@@ -131,23 +134,24 @@ export default function DetalleGrupo() {
         esta pantalla es que acá NO se edita en el lugar: cada bloque tiene su acción —«Nuevo
         equipo», «Editar puestos»— y lo que se ve es de sólo lectura.
 
-        EN DOS PESTAÑAS. Los equipos y los puestos son dos listas largas, y casi nunca hacen falta las
+        EN DOS PARTES. Los equipos y los puestos son dos listas largas, y casi nunca hacen falta las
         dos a la vez: se entra a contratar (equipos) o a ajustar el molde (puestos). Una debajo de la
-        otra, la de puestos —catorce renglones— empujaba todo lo demás fuera de la pantalla. El mismo
-        selector de pestañas que tenía Contratación hasta el 25/10/2026 (allí pasó a tarjetas como la home).
+        otra, la de puestos —catorce renglones— empujaba todo lo demás fuera de la pantalla.
+
+        Con el MENÚ DE TARJETAS de toda la app (25/10/2026, ver `MenuDeTarjetas`): eran pestañas. Se
+        entra a una y la flecha de arriba vuelve a las tarjetas. La cantidad va en el nombre: el globo
+        verde de la esquina es para cosas nuevas, y éstas no lo son.
       */}
-      <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/60">
-        {(
-          [
-            ["equipos", `Equipos (${p.equipos.length})`],
-            ["puestos", `Puestos (${p.integrantes.length})`],
-          ] as const
-        ).map(([id, etiqueta]) => (
-          <button key={id} type="button" onClick={() => setPestana(id)} aria-pressed={pestana === id} className={`flex items-center justify-center rounded-lg py-2 text-xs font-bold transition-colors ${pestana === id ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}>
-            {etiqueta}
-          </button>
-        ))}
-      </div>
+      {pestana === "menu" && (
+        <MenuDeTarjetas
+          className="mb-4"
+          opciones={[
+            { id: "equipos" as const, label: `Equipos (${p.equipos.length})`, icon: faUsers },
+            { id: "puestos" as const, label: `Puestos (${p.integrantes.length})`, icon: faBriefcase },
+          ]}
+          onElegir={setPestana}
+        />
+      )}
 
       {pestana === "equipos" && (
       <Seccion

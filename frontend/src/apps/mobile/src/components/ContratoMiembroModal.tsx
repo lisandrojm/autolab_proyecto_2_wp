@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faLock } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faFileContract, faLock, faMoneyBillWave } from "@fortawesome/free-solid-svg-icons";
+import MenuDeTarjetas from "./MenuDeTarjetas";
 import { Modal } from "./Modal";
 import { projectsAPI, DetalleContratoMiembro } from "../../../../api/projects";
 import { textoDeDias } from "../../../../utils/jerarquiaTurnos";
@@ -38,7 +39,7 @@ const Fila = ({ label, valor }: { label: string; valor?: React.ReactNode }) => (
  * cargados: una lista llena de «—» esconde lo que sí importa.
  */
 export default function ContratoMiembroModal({ isOpen, onClose, projectId, userId, nombre }: ContratoMiembroModalProps) {
-  const [pestana, setPestana] = useState<"contrato" | "sueldo">("contrato");
+  const [pestana, setPestana] = useState<"menu" | "contrato" | "sueldo">("menu");
   const [contrato, setContrato] = useState<DetalleContratoMiembro | null>(null);
   const [estado, setEstado] = useState<"cargando" | "listo" | "error">("cargando");
   const [error, setError] = useState("");
@@ -46,7 +47,7 @@ export default function ContratoMiembroModal({ isOpen, onClose, projectId, userI
   useEffect(() => {
     if (!isOpen || !projectId || !userId) return;
     let cancelado = false;
-    setPestana("contrato");
+    setPestana("menu");
     setEstado("cargando");
     setContrato(null);
     projectsAPI
@@ -70,7 +71,18 @@ export default function ContratoMiembroModal({ isOpen, onClose, projectId, userI
   const dias = c && c.diasSemana.length > 0 ? `${c.diasRotativos ? "Rota entre " : ""}${textoDeDias(c.diasSemana)}${c.diasPorSemana ? ` · ${c.diasPorSemana} por semana` : ""}` : c?.diasPorSemana ? `${c.diasPorSemana} por semana` : "";
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Contrato" subtitle={c?.proyecto ? `${nombre} · ${c.proyecto}` : nombre} size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title={
+        pestana === "menu" ? (
+          "Contrato y sueldo"
+        ) : (
+          <span className="flex items-center gap-2">
+            <button type="button" onClick={() => setPestana("menu")} aria-label="Volver" className="-ml-1 flex h-8 w-8 items-center justify-center rounded text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700">
+              <FontAwesomeIcon icon={faArrowLeft} className="h-4 w-4" />
+            </button>
+            {pestana === "contrato" ? "Contrato" : "Sueldo"}
+          </span>
+        )
+      } subtitle={c?.proyecto ? `${nombre} · ${c.proyecto}` : nombre} size="md">
       {estado === "cargando" && (
         <div className="space-y-2">
           {[1, 2, 3, 4, 5].map((i) => (
@@ -94,20 +106,18 @@ export default function ContratoMiembroModal({ isOpen, onClose, projectId, userI
             <FontAwesomeIcon icon={faLock} className="h-3 w-3" /> Sólo lectura. Se edita desde Gestionar Equipo en el panel.
           </p>
 
-          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/60">
-            {(
-              [
-                { id: "contrato", label: "Contrato" },
-                { id: "sueldo", label: "Sueldo" },
-              ] as const
-            ).map((t) => (
-              <button key={t.id} type="button" onClick={() => setPestana(t.id)} className={`rounded-lg py-2 text-xs font-bold transition-colors ${pestana === t.id ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}>
-                {t.label}
-              </button>
-            ))}
-          </div>
+          {/* Menú de tarjetas como en toda la app (25/10/2026): se entra a una y la flecha del título vuelve. */}
+          {pestana === "menu" && (
+            <MenuDeTarjetas
+              opciones={[
+                { id: "contrato" as const, label: "Contrato", icon: faFileContract },
+                { id: "sueldo" as const, label: "Sueldo", icon: faMoneyBillWave },
+              ]}
+              onElegir={setPestana}
+            />
+          )}
 
-          {pestana === "contrato" ? (
+          {pestana === "menu" ? null : pestana === "contrato" ? (
             <div className="rounded-xl border border-slate-100 px-3 dark:border-slate-800">
               <Fila label="Empleado" valor={c.empleado} />
               {c.cuil && <Fila label="CUIL" valor={c.cuil} />}

@@ -16,6 +16,7 @@ import { SolicitudDetalleModal } from "../../../../components/solicitudes/Solici
 import { solicitudDesdeUser, useCatalogosDeSolicitudes } from "../../../../components/solicitudes/SolicitudesTable";
 import { User, usersAPI } from "../../../../api/users";
 import SectionHeader from "../components/SectionHeader";
+import MenuDeTarjetas from "../components/MenuDeTarjetas";
 import { contratosPorVencerAPI, ContratoPorVencer, DIAS_DE_AVISO_OPCIONES } from "../../../../api/contratosPorVencer";
 import { sweetAlert } from "../utils/sweetAlert";
 import AvisoNovedades from "../components/AvisoNovedades";
@@ -636,28 +637,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
           la pantalla del celular. Con lugar de tarjeta, «Vencimientos» va con su nombre entero.
         */}
         {pestana === "menu" && (
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          {SECCIONES.map((t) => {
-            const contador = t.id === "por_vencer" ? porVencer?.length || 0 : 0;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setPestana(t.id)}
-                className="relative flex min-h-[68px] items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98] dark:border-slate-600 dark:bg-slate-900/70"
-              >
-                <FontAwesomeIcon icon={t.icon} className="h-4 w-4 shrink-0 text-primary" />
-                <h2 className={`min-w-0 break-words text-[15px] font-bold leading-tight text-slate-900 dark:text-slate-100 ${contador ? "pr-5" : ""}`}>{t.label}</h2>
-                {/* Cuántos vencen, en la esquina y con el mismo globo verde que la home. */}
-                {!!contador && (
-                  <span className="absolute right-2 top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-500/20 px-1 text-[10px] font-black leading-none text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-300">
-                    {contador > 99 ? "99+" : contador}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+          <MenuDeTarjetas className="mb-4" opciones={SECCIONES.map((t) => ({ ...t, contador: t.id === "por_vencer" ? porVencer?.length || 0 : 0 }))} onElegir={setPestana} />
         )}
 
         {pestana === "menu" ? null : pestana === "plantillas" && puedePlantillas ? (

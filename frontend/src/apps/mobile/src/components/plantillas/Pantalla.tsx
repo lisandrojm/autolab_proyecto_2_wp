@@ -52,6 +52,8 @@ interface Props {
    * Sólo el ícono: el texto es del botón que avanza, que es lo que casi siempre se quiere.
    */
   atrasPaso?: () => void;
+  /** La flecha de arriba hace esto en vez de navegar: volver al menú de tarjetas de la misma pantalla (ver `MenuDeTarjetas`). */
+  onAtras?: () => void;
   /**
    * EN QUÉ PASO SE ESTÁ, DEBAJO DEL TÍTULO Y FIJO CON ÉL.
    *
@@ -91,7 +93,7 @@ const claveScroll = (path: string) => `plantillas:scroll:${path}`;
  */
 export const TOPE_PEGADO = "var(--alto-encabezado, 61px)";
 
-export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, listo = true, pie, atrasFijo, atrasPaso, pasos }: Props) {
+export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, listo = true, pie, atrasFijo, atrasPaso, pasos, onAtras }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const { estado } = usePlantillas();
@@ -150,7 +152,7 @@ export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, 
     <div ref={raiz} className="flex min-h-screen flex-col bg-slate-50 pb-16 dark:bg-slate-900">
       <header ref={encabezado} className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-2 py-2 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
         <div className="flex items-center gap-2">
-          <button type="button" onClick={volver} aria-label="Atrás" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800">
+          <button type="button" onClick={onAtras || volver} aria-label="Atrás" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800">
             <FontAwesomeIcon icon={faArrowLeft} />
           </button>
           {/*

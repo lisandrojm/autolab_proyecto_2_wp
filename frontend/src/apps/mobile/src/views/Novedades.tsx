@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faSpinner, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faCalendar, faSpinner, faLayerGroup, faUsers, faClipboardCheck } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import SectionHeader from "../components/SectionHeader";
+import MenuDeTarjetas, { type OpcionDeMenu } from "../components/MenuDeTarjetas";
 import ActivityLogs from "./ActivityLogs";
 import SeguimientoNovedades from "./SeguimientoNovedades";
 import { useAuthStore } from "../../../../stores/authStore";
@@ -20,7 +21,7 @@ import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS } from "../../../../ut
  *
  * Eran DOS TARJETAS DE LA HOME, y eso obligaba a volver al inicio para pasar de una a la otra —justo
  * lo que se hace cuando alguien no cargó: mirás el cumplimiento, le avisás, y volvés a mirar—. Ahora
- * es una pantalla con dos pestañas, igual que Contratación (Historial / Por vencer).
+ * es una pantalla con un menú de tarjetas, igual que Contratación (ver `components/MenuDeTarjetas`).
  *
  * CUMPLIMIENTO VA PRIMERO Y ABRE ACTIVA. Es la pestaña de control: se entra a ver cómo viene el
  * equipo. Cargar las novedades propias es lo que se hace después, y sólo si además se tiene gente a
@@ -33,6 +34,8 @@ import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS } from "../../../../ut
  */
 
 type Pestana = "cumplimiento" | "historial";
+/** Las tarjetas del menú. */
+type Seccion = "mias" | "supervisadas" | "cumplimiento";
 
 interface NovedadesProps {
   onNavigate: (view: ViewType) => void;
@@ -82,58 +85,48 @@ export default function Novedades({ onNavigate, pestanaInicial }: NovedadesProps
   }, [puedeCargar]);
 
   /*
-    EL ORDEN IMPORTA DOS VECES: es el de las pestañas en pantalla y el que decide en cuál se abre
-    (`disponibles[0]`). Por eso se cambian juntos — con la barra en un orden y el default en otro,
-    la pantalla abre en la segunda pestaña y parece que se movió sola.
+    UN MENÚ DE TARJETAS, COMO LA HOME Y CONTRATACIÓN (25/10/2026). Eran dos barras de pestañas una
+    adentro de la otra —«Mis novedades | Cumplimiento» y, dentro de la primera, «Mías | Las que
+    superviso»— y ahora es un solo menú con las tres: tocar una ENTRA (el título pasa a ser el de esa
+    parte) y la flecha vuelve a las tarjetas. Con una sola opción no hay menú: se entra directo.
 
-    «Mis novedades» va primero: es lo que la persona viene a hacer —cargar la suya—, mientras que
-    Cumplimiento es la vista de control, que mira menos gente y con menos frecuencia.
-  */
-  const disponibles: Pestana[] = [...(tieneDondeCargar ? (["historial"] as const) : []), ...(puedeVerCumplimiento ? (["cumplimiento"] as const) : [])];
+    EL ORDEN es el de las tarjetas: «Mis novedades» primero, que es lo que la persona viene a hacer
+    —cargar las suyas—; «Las que superviso» y «Cumplimiento» son de control.
 
-  /*
-    Arranca en la que pidieron si la tiene; si no, en la primera disponible —que es Mis novedades
-    cuando están las dos—. `activa` vuelve a caer en la inicial si la elegida dejó de estar.
+    «Las que superviso» va con el mismo permiso que Cumplimiento (es lo que pedía el conmutador de
+    adentro) y, como antes, dentro de la pantalla de carga: sin áreas ni turnos a cargo no se monta.
   */
-  const inicial: Pestana = pestanaInicial && disponibles.includes(pestanaInicial) ? pestanaInicial : disponibles[0] || "cumplimiento";
-  const [pestana, setPestana] = useState<Pestana | null>(null);
-  const activa: Pestana = pestana && disponibles.includes(pestana) ? pestana : inicial;
+  const opciones: OpcionDeMenu<Seccion>[] = [
+    ...(tieneDondeCargar ? [{ id: "mias" as const, label: "Mis novedades", icon: faCalendar }] : []),
+    ...(tieneDondeCargar && puedeVerCumplimiento ? [{ id: "supervisadas" as const, label: "Las que superviso", icon: faUsers }] : []),
+    ...(puedeVerCumplimiento ? [{ id: "cumplimiento" as const, label: "Cumplimiento", icon: faClipboardCheck }] : []),
+  ];
+  const disponibles = opciones.map((o) => o.id);
+  const conMenu = disponibles.length > 1;
+
+  /* La notificación de cumplimiento abre directo en Cumplimiento; «historial» es el nombre viejo de «Mis novedades». */
+  const pedida: Seccion | undefined = pestanaInicial === "historial" ? "mias" : pestanaInicial;
+  const [elegida, setElegida] = useState<Seccion | "menu" | null>(pedida ?? null);
+  const enMenu = conMenu && (elegida === null || elegida === "menu" || !disponibles.includes(elegida));
+  const activa: Seccion = elegida && elegida !== "menu" && disponibles.includes(elegida) ? elegida : disponibles[0] || "cumplimiento";
 
   const esperandoRespuesta = puedeCargar && tieneDondeCargar === null;
+  const opcionActiva = opciones.find((o) => o.id === activa);
 
   return (
     <div className="flex-1 pb-24">
-      <SectionHeader icon={faCalendar} titulo="Novedades" onBack={() => onNavigate("home")} info={INFO[activa]} />
+      <SectionHeader
+        icon={enMenu ? faCalendar : opcionActiva?.icon ?? faCalendar}
+        titulo={enMenu ? "Novedades" : opcionActiva?.label ?? "Novedades"}
+        onBack={() => (enMenu || !conMenu ? onNavigate("home") : setElegida("menu"))}
+        info={enMenu ? `${INFO.historial}\n\n${INFO.cumplimiento}` : INFO[activa === "cumplimiento" ? "cumplimiento" : "historial"]}
+      />
 
       {/*
-        La barra se dibuja cuando se sabe QUÉ pestañas hay, no antes: apareciendo a medias cambiaría
-        sola bajo el dedo. Y con una sola pestaña no se dibuja: un selector de una opción no es una
-        elección y le come un renglón a la pantalla.
+        Mientras no se sabe QUÉ opciones hay, ni menú ni sección: apareciendo a medias, el menú
+        cambiaría solo bajo el dedo.
       */}
-      {!esperandoRespuesta && disponibles.length > 1 && (
-        <div className="px-4 pt-4">
-          {/* Mismo selector que Contratación: dos mitades, la activa en blanco. */}
-          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/60">
-            {(
-              [
-                { id: "historial", label: "Mis novedades" },
-                { id: "cumplimiento", label: "Cumplimiento" },
-              ] as const
-            ).map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setPestana(t.id)}
-                className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-colors ${activa === t.id ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {esperandoRespuesta && !puedeVerCumplimiento ? (
+      {esperandoRespuesta ? (
         <div className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-slate-500">
           <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
           Buscando tus áreas y turnos…
@@ -150,19 +143,24 @@ export default function Novedades({ onNavigate, pestanaInicial }: NovedadesProps
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Todavía no tenés áreas ni turnos a cargo</p>
           <p className="text-xs text-slate-500 dark:text-slate-400">Las novedades son de la gente de un área y un turno. Cuando te asignen alguno en un proyecto, vas a poder cargarlas desde acá.</p>
         </div>
+      ) : enMenu ? (
+        <div className="px-4 pt-4">
+          <MenuDeTarjetas opciones={opciones} onElegir={setElegida} />
+        </div>
       ) : activa === "cumplimiento" ? (
         <div className="px-4 pt-4">
           <SeguimientoNovedades onNavigate={onNavigate} embebido />
         </div>
       ) : (
         /*
-          La pestaña que no se mira NO SE MONTA.
+          La sección que no se mira NO SE MONTA.
 
           Cada una carga lo suyo al montarse —el calendario del mes, las novedades del día— y son
           consultas distintas contra el server. Montando las dos, quien sólo tiene uno de los dos
           permisos dispararía la consulta de la otra y se comería un 403 que no puede resolver.
+          `key`: pasar de «Mías» a «Las que superviso» monta de nuevo, con su alcance.
         */
-        <ActivityLogs onNavigate={onNavigate} embebido />
+        <ActivityLogs key={activa} onNavigate={onNavigate} embebido alcanceFijo={activa === "supervisadas" ? "supervisadas" : "mias"} />
       )}
     </div>
   );
