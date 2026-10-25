@@ -615,28 +615,48 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
         icon={faUsers}
         titulo="Solicitud de Contratación"
         onBack={() => onNavigate("home")}
-        info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Historial» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Vtos.» (vencimientos) aparecen los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer. Con «Filtrar» elegís con cuánta anticipación verlos (7, 15 o 30 días, y queda guardado) y por qué tipo de contrato."}
+        info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Historial» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Vencimientos» aparecen los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer. Con «Filtrar» elegís con cuánta anticipación verlos (7, 15 o 30 días, y queda guardado) y por qué tipo de contrato."}
       />
 
       <div className="px-4 pt-4">
         <AvisoNovedades tipos={NOVEDADES_CONTRATACION} texto={(n) => (n === 1 ? "1 novedad de contratación" : `${n} novedades de contratación`)} />
         {/* Lo que se pidió, y lo que hay que decidir antes de que venza. */}
-        <div className={`grid ${puedePlantillas ? "grid-cols-3" : "grid-cols-2"} gap-1 p-1 mb-4 rounded-xl bg-slate-100 dark:bg-slate-800/60`}>
+        {/*
+          LAS SECCIONES COMO TARJETAS, IGUAL QUE LA HOME (25/10/2026). Eran pestañas en una barra gris y
+          la app tenía dos lenguajes para lo mismo: elegir adónde ir. Ahora es la misma tarjeta de la home
+          —dos columnas, ícono chico a la izquierda, contador verde en la esquina— y la elegida se marca
+          con el borde y el fondo azul. Siguen cambiando la sección en esta misma pantalla. Con lugar de
+          tarjeta, «Vencimientos» va con su nombre entero (en la barra tenía que ser «Vtos.»).
+        */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
           {(
             [
-              { id: "historial", label: "Historial" },
-              // Pestaña propia del permiso «Plantillas de equipo» (`dentroDe` Contratación).
-              ...(puedePlantillas ? [{ id: "plantillas", label: "Plantillas" }] : []),
-              // «Vtos.»: con el contador al lado, «Vencimientos (20)» no entraba en su tercio de la barra.
-              { id: "por_vencer", label: "Vtos." },
-            ] as { id: "historial" | "por_vencer" | "plantillas"; label: string }[]
-          ).map((t) => (
-            <button key={t.id} type="button" onClick={() => setPestana(t.id)} className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-colors ${pestana === t.id ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400"}`}>
-              {t.label}
-              {/* Entre paréntesis, como texto: un globo de color en la pestaña pesa más que el nombre. */}
-              {t.id === "por_vencer" && porVencer && porVencer.length > 0 && ` (${porVencer.length})`}
-            </button>
-          ))}
+              { id: "historial", label: "Historial", icon: faClock },
+              // Tarjeta propia del permiso «Plantillas de equipo» (`dentroDe` Contratación).
+              ...(puedePlantillas ? [{ id: "plantillas", label: "Plantillas", icon: faLayerGroup }] : []),
+              { id: "por_vencer", label: "Vencimientos", icon: faCalendarAlt, contador: porVencer?.length || 0 },
+            ] as { id: "historial" | "por_vencer" | "plantillas"; label: string; icon: typeof faClock; contador?: number }[]
+          ).map((t) => {
+            const activa = pestana === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setPestana(t.id)}
+                aria-pressed={activa}
+                className={`relative flex min-h-[68px] items-center gap-2.5 rounded-xl border p-4 text-left shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98] ${activa ? "border-blue-500 bg-blue-50 dark:border-blue-500 dark:bg-blue-950/40" : "border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-900/70"}`}
+              >
+                <FontAwesomeIcon icon={t.icon} className="h-4 w-4 shrink-0 text-primary" />
+                <h2 className={`min-w-0 break-words text-[15px] font-bold leading-tight text-slate-900 dark:text-slate-100 ${t.contador ? "pr-5" : ""}`}>{t.label}</h2>
+                {/* Cuántos vencen, en la esquina y con el mismo globo verde que la home. */}
+                {!!t.contador && (
+                  <span className="absolute right-2 top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-500/20 px-1 text-[10px] font-black leading-none text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-300">
+                    {t.contador > 99 ? "99+" : t.contador}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {pestana === "plantillas" && puedePlantillas ? (

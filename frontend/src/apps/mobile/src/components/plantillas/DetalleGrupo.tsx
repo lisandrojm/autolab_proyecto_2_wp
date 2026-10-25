@@ -134,7 +134,7 @@ export default function DetalleGrupo() {
         EN DOS PESTAÑAS. Los equipos y los puestos son dos listas largas, y casi nunca hacen falta las
         dos a la vez: se entra a contratar (equipos) o a ajustar el molde (puestos). Una debajo de la
         otra, la de puestos —catorce renglones— empujaba todo lo demás fuera de la pantalla. El mismo
-        selector de pestañas que Contratación (Historial | Plantillas | Vtos.), así se aprende una vez.
+        selector de pestañas que tenía Contratación hasta el 25/10/2026 (allí pasó a tarjetas como la home).
       */}
       <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/60">
         {(
