@@ -386,6 +386,14 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
 
   // Archivos seleccionables en la vista actual (las carpetas no se tildan).
   const fileEntries = useMemo(() => filtered.filter((e) => e.tag === "file"), [filtered]);
+  /**
+   * «Fecha Firma» sólo en las carpetas que tienen firmados (25/10/2026). En Pendbox y Outbox los
+   * archivos son originales sin firmar: la columna salía entera en «—» y no decía nada. Se decide por
+   * lo que hay en la carpeta (algún nombre con el sello de Dropbox Sign), no por el nombre de la
+   * carpeta, que es configurable por tenant.
+   */
+  const conFechaFirma = useMemo(() => entries.some((e) => e.tag === "file" && fechaFirmaDeNombre(e.name) !== null), [entries]);
+  const columnas = conFechaFirma ? 6 : 5;
   const allFilesSelected = fileEntries.length > 0 && fileEntries.every((e) => selected.has(e.path));
   /**
    * Peso de lo tildado, sumado a medida que se selecciona.
@@ -615,11 +623,13 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
                     Fecha Registro
                   </BotonOrden>
                 </th>
+                {conFechaFirma && (
                 <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Cuándo se completó la firma, según el sello que Dropbox Sign pone en el nombre del firmado (hora argentina). Vacío si el archivo no es un firmado">
                   <BotonOrden columna="firma" orden={orden} onAlternar={alternar}>
                     Fecha Firma
                   </BotonOrden>
                 </th>
+                )}
                 <th className="px-4 py-3 font-semibold">
                   <BotonOrden columna="nombre" orden={orden} onAlternar={alternar}>
                     Nombre
@@ -636,12 +646,12 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {busy && filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6">
+                  <td colSpan={columnas} className="px-4 py-6">
                     <LoadingSpinner size="sm" message="Cargando archivos..." />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">{search ? "No hay resultados para el filtro." : "Carpeta vacía."}</td></tr>
+                <tr><td colSpan={columnas} className="px-4 py-8 text-center text-gray-400 italic">{search ? "No hay resultados para el filtro." : "Carpeta vacía."}</td></tr>
               ) : (
                 filtered.map((e) => (
                   <tr key={e.path} className={`hover:bg-gray-50 dark:hover:bg-gray-800/40 ${e.tag === "file" && selected.has(e.path) ? "bg-blue-50/60 dark:bg-blue-900/10" : ""}`}>
@@ -656,7 +666,7 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{e.tag === "file" ? formatDate(e.serverModified) : "—"}</td>
-                    <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{e.tag === "file" ? formatearFechaFirma(fechaFirmaDeNombre(e.name)) || "—" : "—"}</td>
+                    {conFechaFirma && <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{e.tag === "file" ? formatearFechaFirma(fechaFirmaDeNombre(e.name)) || "—" : "—"}</td>}
                     <td className="px-4 py-2.5">
                       {e.tag === "folder" ? (
                         <button onClick={() => loadFolder(e.path)} className="flex items-center gap-2 font-medium text-gray-800 dark:text-gray-100 hover:text-blue-600">
