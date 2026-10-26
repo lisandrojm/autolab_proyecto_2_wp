@@ -155,7 +155,7 @@ const urlCorta = (u: string) => String(u || "").split(/[?#]/)[0];
  * busca la contraseña antes de que exista. Segundo factor, captcha o autorizar la app cortan con su
  * código (un reintento ciego puede bloquear la cuenta).
  */
-async function loguear(page: Page, cred: { loginEmail: string; loginPassword: string }): Promise<void> {
+export async function loguear(page: Page, cred: { loginEmail: string; loginPassword: string }): Promise<void> {
   if (!cred.loginEmail || !cred.loginPassword) throw new ErrorLogin("login_sin_credenciales", "No hay usuario y contraseña de Dropbox Sign cargados (Configuración → DropboxSign → Envío automático).");
   const hasta = Date.now() + LOGIN_MS;
   let emailCargado = false;

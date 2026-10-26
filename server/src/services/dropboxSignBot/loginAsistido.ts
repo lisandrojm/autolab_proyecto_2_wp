@@ -2,7 +2,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from "playwrig
 import { Tenant } from "../../models/Tenant.js";
 import { rutaChromium, errorDeChromium } from "../arca/navegador.js";
 import { VIEWPORT } from "./reglas.js";
-import { MANAGE_URL, anotarConexion, anotarError, configDelBot, guardarSesion, irA, pantallaDe } from "./navegador.js";
+import { MANAGE_URL, anotarConexion, anotarError, configDelBot, guardarSesion, irA, loguear, pantallaDe } from "./navegador.js";
 import { quienTieneDropboxSign, soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 import type { PantallaDropboxSign } from "./clasificarPantalla.js";
 
@@ -32,6 +32,8 @@ interface Asistido {
   estado: "abierto" | "conectado" | "cerrado";
   detalle: string;
   timer: NodeJS.Timeout | null;
+  /** El bot está entrando solo con las credenciales guardadas: la pantalla no acepta clicks ni texto. */
+  automatico: boolean;
 }
 
 export interface EstadoLoginAsistido {
@@ -41,6 +43,8 @@ export interface EstadoLoginAsistido {
   detalle: string;
   viewport: { width: number; height: number };
   abiertoEl: string | null;
+  /** El bot está entrando solo con las credenciales guardadas. */
+  automatico: boolean;
   /** La captura (JPEG base64), cuando se pide la pantalla. */
   jpeg?: string;
 }
@@ -56,6 +60,7 @@ const estadoDe = (a: Asistido | undefined, extra: Partial<EstadoLoginAsistido> =
   detalle: a?.detalle || "",
   viewport: { ...VIEWPORT },
   abiertoEl: a?.abiertoEl ? a.abiertoEl.toISOString() : null,
+  automatico: !!a?.automatico,
   ...extra,
 });
 
@@ -98,13 +103,39 @@ export async function abrirLoginAsistido(tenantId: string): Promise<EstadoLoginA
     }
     const ctx = await browser.newContext({ ...(cfg.sesion ? { storageState: cfg.sesion } : {}), viewport: { ...VIEWPORT }, locale: "es-AR" });
     const page = await ctx.newPage();
-    const a: Asistido = { tenantId, browser, ctx, page, abiertoEl: new Date(), estado: "abierto", detalle: "Iniciá sesión en la pantalla. Si aparece un captcha o un código, resolvelo acá mismo.", timer: null };
+    const a: Asistido = { tenantId, browser, ctx, page, abiertoEl: new Date(), estado: "abierto", detalle: "Iniciá sesión en la pantalla. Si aparece un captcha o un código, resolvelo acá mismo.", timer: null, automatico: false };
     abiertos.set(tenantId, a);
     reprogramarCierre(a);
     await irA(page, MANAGE_URL).catch(() => {});
     await page.waitForTimeout(2000);
     const pantalla = await pantallaDe(page).catch(() => "desconocida" as const);
     await conectarSiLlego(a, pantalla);
+    /*
+      PRIMERO EL BOT, SOLO (pedido del 26/10/2026): con usuario y contraseña guardados, el navegador
+      entra por su cuenta con el mismo login que usan las corridas (`loguear`), y la pantalla lo muestra
+      mientras tanto. Sólo si Dropbox Sign pide algo que el bot no resuelve a propósito —captcha, código,
+      segundo factor— la pantalla queda para que la persona lo termine.
+    */
+    if (a.estado === "abierto" && cfg.loginEmail && cfg.loginPassword) {
+      a.automatico = true;
+      a.detalle = `Entrando solo con el usuario guardado (${cfg.loginEmail})…`;
+      void (async () => {
+        try {
+          await loguear(page, cfg);
+          if (!/\/home\/manage/i.test(page.url())) await irA(page, MANAGE_URL).catch(() => {});
+          await page.waitForTimeout(1500);
+          const p = await pantallaDe(page).catch(() => "desconocida" as const);
+          if (!(await conectarSiLlego(a, p)) && a.estado === "abierto") a.detalle = "El login automático no llegó al listado de documentos: terminalo en la pantalla.";
+        } catch (e: any) {
+          if (a.estado === "abierto") a.detalle = `${String(e?.message || e).replace(/^[a-z_]+:\s*/, "")} Terminalo en la pantalla: hacé click en el campo, escribí y apretá Enter.`;
+        } finally {
+          a.automatico = false;
+          reprogramarCierre(a);
+        }
+      })();
+    } else if (a.estado === "abierto") {
+      a.detalle = "No hay usuario y contraseña guardados para entrar solo: iniciá sesión en la pantalla (o cargalos en «Envío automático» para la próxima).";
+    }
     return estadoDe(a, { pantalla });
   } catch (e) {
     soltarCandadoDropboxSign(tenantId);
@@ -127,6 +158,8 @@ export async function pantallaLoginAsistido(tenantId: string): Promise<EstadoLog
 export async function accionLoginAsistido(tenantId: string, accion: AccionLoginAsistido): Promise<EstadoLoginAsistido> {
   const a = abiertos.get(tenantId);
   if (!a || a.estado !== "abierto") return estadoDe(a, { detalle: a?.detalle || "No hay un login asistido abierto." });
+  // Mientras el bot entra solo, la pantalla no acepta nada: dos manos tipeando a la vez rompen el login.
+  if (a.automatico) return pantallaLoginAsistido(tenantId);
   reprogramarCierre(a);
   const { page } = a;
   switch (accion.tipo) {

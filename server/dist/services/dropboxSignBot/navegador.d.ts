@@ -64,6 +64,17 @@ export declare class ErrorLogin extends Error {
     constructor(codigo: string, mensaje: string);
 }
 /**
+ * LOGIN CON USUARIO Y CONTRASEÑA, PASO A PASO (26/10/2026). Dropbox Sign redirige a
+ * www.dropbox.com/oauth2/authorize: email → «Continuar» → contraseña → «Iniciar sesión» → de vuelta a
+ * app.sign.dropbox.com. Cada vuelta mira la pantalla (`pasoDeLogin`) y hace lo que corresponde; no se
+ * busca la contraseña antes de que exista. Segundo factor, captcha o autorizar la app cortan con su
+ * código (un reintento ciego puede bloquear la cuenta).
+ */
+export declare function loguear(page: Page, cred: {
+    loginEmail: string;
+    loginPassword: string;
+}): Promise<void>;
+/**
  * Abre el navegador con la sesión lista en /home/manage. Con `sinLogin` (login manual del operador)
  * devuelve la sesión en la pantalla que esté, sin intentar loguearse. Quien llama cierra el browser.
  */

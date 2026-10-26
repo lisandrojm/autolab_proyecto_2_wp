@@ -9,6 +9,8 @@ export interface EstadoLoginAsistido {
         height: number;
     };
     abiertoEl: string | null;
+    /** El bot está entrando solo con las credenciales guardadas. */
+    automatico: boolean;
     /** La captura (JPEG base64), cuando se pide la pantalla. */
     jpeg?: string;
 }

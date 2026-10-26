@@ -100,7 +100,8 @@ export const LoginAsistidoModal: React.FC<{ onClose: () => void; onConectado?: (
     if (e) aplicar(e);
   };
 
-  const abierto = estado?.estado === "abierto";
+  const automatico = !!estado?.automatico;
+  const abierto = estado?.estado === "abierto" && !automatico;
   const conectado = estado?.estado === "conectado";
   const btn = "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50";
 
@@ -118,7 +119,11 @@ export const LoginAsistidoModal: React.FC<{ onClose: () => void; onConectado?: (
         ) : (
           <>
             <div className={`rounded-lg border p-3 ${conectado ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20" : abierto ? "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20" : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40"}`}>
-              {conectado ? (
+              {automatico ? (
+                <p className="flex items-center gap-2 text-sm font-semibold text-blue-800 dark:text-blue-200">
+                  <FontAwesomeIcon icon={faSpinner} spin /> {estado.detalle} No hace falta tocar nada.
+                </p>
+              ) : conectado ? (
                 <p className="flex items-center gap-2 text-sm font-semibold text-green-700 dark:text-green-300">
                   <FontAwesomeIcon icon={faCircleCheck} /> Conectado. {estado.detalle}
                 </p>

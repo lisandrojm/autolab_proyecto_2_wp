@@ -153,6 +153,8 @@ export interface EstadoLoginAsistido {
   detalle: string;
   viewport: { width: number; height: number };
   abiertoEl: string | null;
+  /** El bot está entrando solo con el usuario y la contraseña guardados. */
+  automatico?: boolean;
   jpeg?: string;
 }
 export type AccionLogin = { tipo: "click"; x: number; y: number } | { tipo: "tipear"; texto: string } | { tipo: "tecla"; tecla: string } | { tipo: "scroll"; dy: number };
