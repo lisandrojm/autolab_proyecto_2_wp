@@ -8,17 +8,18 @@ import { DropboxSignEnvio } from "../../models/DropboxSignEnvio.js";
 import { DropboxSignEnvioLog } from "../../models/DropboxSignEnvioLog.js";
 import { leerAnclas } from "../../utils/anclasNombre.js";
 import { abrirOcr } from "../../utils/ocrPaginas.js";
-import { CONFIG_POR_DEFECTO, estimarEnvios, fechaYHoraArgentina, planificar, puedeCorrer, validarEncolado } from "./planificador.js";
+import { CONFIG_POR_DEFECTO, cupoDelDia, estimarEnvios, fechaYHoraArgentina, planificar, puedeCorrer, validarEncolado } from "./planificador.js";
 import { esTextoDeLimite, guardDeEnvio } from "./reglas.js";
 import { motivosDesactualizado, pantallaAPdf, pdfAPantalla, reglaDe } from "../../compartido/reglasColocacionFirma.js";
 import { ContratoFrame } from "../../models/ContratoFrame.js";
+import { agruparTrabados, cupoVentana24h, estadoDelPanel, ordenPorRecientes } from "../../compartido/colaFirma.js";
 import { Release } from "../../models/Release.js";
 import { abrirSesionDropboxSign, anotarError, guardarSesion, probarConexionDropboxSign } from "./navegador.js";
 import { quienTieneDropboxSign, soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 import { MOTOR_DROPBOX_SIGN } from "./motor.js";
 import { leerOutbox, resolverFirmante } from "./outbox.js";
 import { reglasDelTenant } from "./reglasTenant.js";
-import { declaradasDe, detectarParaArchivo, guardarResumen, resumenDeArchivo } from "./colocacion.js";
+import { declaradasDe, detectarParaArchivo, guardarResumen, resumenDeArchivo, verificacionDe } from "./colocacion.js";
 export { leerOutbox, resolverFirmante };
 /**
  * LA CORRIDA DE ENVÍO A LA FIRMA (patrón `arca/corridaAltas.ts`): una tanda de documentos DE LA COLA
@@ -74,10 +75,17 @@ export async function configDelTenant(tenantId) {
         horaDesde: e.horaDesde ?? CONFIG_POR_DEFECTO.horaDesde,
         horaHasta: e.horaHasta ?? CONFIG_POR_DEFECTO.horaHasta,
     };
+    // VENTANA MÓVIL DE 24 H (25/10/2026): lo enviado por el bot con su hora (`enviadoAt`), no un contador
+    // que se resetea a la medianoche. Dropbox Sign libera los lugares a medida que cada envío cumple 24 h.
+    const ahora = new Date();
+    const recientes = await DropboxSignEnvio.find({ tenantId, estado: "enviado", enviadoAt: { $gt: new Date(ahora.getTime() - 24 * 3600_000) } }).select("enviadoAt").lean();
+    const ventana = cupoVentana24h(Number(e.topeDiario) || CONFIG_POR_DEFECTO.topeDiario, recientes.map((r) => r.enviadoAt), ahora);
     const estado = {
         contadorDia: { fecha: bot.contadorDia?.fecha || "", enviados: Number(bot.contadorDia?.enviados) || 0 },
         enfriadoHasta: bot.enfriadoHasta ? new Date(bot.enfriadoHasta) : null,
         ultimaCorridaAt: bot.ultimaCorridaAt ? new Date(bot.ultimaCorridaAt) : null,
+        enviados24h: ventana.usados,
+        liberaAt: ventana.liberaAt,
     };
     return { config, estado, cc: String(ds.email || "").trim(), bot };
 }
@@ -88,7 +96,7 @@ const itemDe = (r) => ({ archivo: r.archivo, codigo: r.codigo, tipo: r.tipo, ema
  * que no se toca). `todosElegibles` recorre el Outbox entero.
  */
 export async function encolar(tenantId, userId, pedido) {
-    const { archivos: enOutbox } = await leerOutbox(tenantId);
+    const { archivos: enOutbox, fechas } = await leerOutbox(tenantId);
     const { reglas } = await reglasDelTenant(tenantId);
     const setOutbox = new Set(enOutbox);
     const pedidos = pedido.todosElegibles ? enOutbox : [...new Set((pedido.archivos || []).map((a) => String(a).trim()).filter(Boolean))];
@@ -123,6 +131,9 @@ export async function encolar(tenantId, userId, pedido) {
     // CONECTARSE SOLO AL ENCOLAR LO PRIMERO (pedido del 23/10/2026): sin sesión guardada pero con usuario
     // y contraseña, el bot intenta entrar en segundo plano unos segundos después. Si «Enviar a la firma»
     // arranca la corrida en el acto, ésa ya se loguea y la prueba se saltea (candado tomado).
+    // Lo nuevo se ubica por su fecha, no al final (salvo orden manual).
+    if (encolados > 0)
+        await aplicarOrdenAutomatico(tenantId, { fechas }).catch((e) => console.warn("[DROPBOX-SIGN-BOT] No se pudo ordenar la cola:", e?.message || e));
     if (encolados > 0) {
         const t = await Tenant.findById(tenantId).select(`${BASE}.sesionEnc ${BASE}.loginPasswordEnc`).lean();
         const b = t?.integrations?.dropboxSign?.bot || {};
@@ -185,7 +196,8 @@ export async function armarCola(tenantId, opciones = {}) {
     const estimados = estimarEnvios(items, config, estado, ahora);
     for (const it of items)
         it.estimadoAt = estimados.get(it.codigo) || null;
-    const plan = planificar(items, new Set(archivos), config, estado, ahora);
+    // «Enviar ahora N» (25/10/2026): la cantidad pedida reemplaza el tamaño de tanda; el cupo de 24 h sigue mandando.
+    const plan = planificar(items, new Set(archivos), opciones.cantidad ? { ...config, tamanoTanda: opciones.cantidad } : config, estado, ahora);
     const puede = puedeCorrer(config, estado, ahora, opciones);
     return { ...plan, outbox, archivosEnOutbox: archivos.length, enCola: enCola.length, motivoNoCorre: puede.ok ? null : puede.motivo || "No se puede correr ahora." };
 }
@@ -201,11 +213,12 @@ export async function arrancarCorridaEnvio(tenantId, opciones = {}) {
         if (!cc)
             throw Object.assign(new Error("Falta la casilla de CC (Configuración → DropboxSign → correo que recibe los avisos)."), { status: 400 });
         const enSeco = enSecoForzado() || !!opciones.enSeco;
-        const corrida = { tenantId, enSeco, automatica, eventos: [], terminada: false, irreversible: false, señal: { cortada: false }, arrancadaEl: new Date(), total: 0, enviados: 0, errores: 0, limite: false, actual: null, lineas: [] };
+        await aplicarOrdenAutomatico(tenantId).catch((e) => console.warn("[DROPBOX-SIGN-BOT] No se pudo ordenar la cola:", e?.message || e));
+        const corrida = { tenantId, enSeco, automatica, eventos: [], terminada: false, irreversible: false, señal: { cortada: false }, arrancadaEl: new Date(), total: 0, enviados: 0, errores: 0, limite: false, actual: null, lineas: [], cantidad: opciones.cantidad ? Math.max(1, Math.floor(opciones.cantidad)) : undefined };
         corridas.set(tenantId, corrida);
         await Tenant.updateOne({ _id: tenantId }, { $set: { [`${BASE}.ultimaCorridaAt`]: corrida.arrancadaEl } });
         void correr(corrida, cc, config);
-        return { enSeco };
+        return { enSeco, cantidad: corrida.cantidad ?? null };
     }
     catch (e) {
         soltarCandadoDropboxSign(tenantId);
@@ -237,7 +250,7 @@ async function correr(corrida, cc, config) {
     fs.mkdirSync(dir, { recursive: true });
     try {
         emitir({ tipo: "cola", texto: "Leyendo la cola y el Outbox…" });
-        const cola = await armarCola(tenantId, { manual: !corrida.automatica });
+        const cola = await armarCola(tenantId, { manual: !corrida.automatica, cantidad: corrida.cantidad });
         for (const f of cola.faltantes) {
             const detalle = "El archivo ya no está en Outbox (¿se movió a Pendbox o se borró?): salió de la cola.";
             corrida.lineas.push({ archivo: f.archivo, codigo: f.codigo, email: f.email, estado: "requiere_revision", detalle });
@@ -400,4 +413,150 @@ async function correr(corrida, cc, config) {
         await Tenant.updateOne({ _id: tenantId }, { $set: { [`${BASE}.ultimaCorrida`]: resumen, ...(error ? {} : { [`${BASE}.ultimoError`]: null }) } }).catch(() => { });
         await DropboxSignEnvioLog.create({ tenantId: new Types.ObjectId(tenantId), inicio: corrida.arrancadaEl, fin: new Date(), resultado, enviados: corrida.enviados, errores: corrida.errores, limite: corrida.limite, enSeco: corrida.enSeco, automatica: corrida.automatica, lineas: corrida.lineas, error: error || undefined, capturaError }).catch((e) => console.warn("[DROPBOX-SIGN-BOT] No se pudo guardar el log:", e?.message || e));
     }
+}
+/* ─────────────────── el ORDEN de la cola, a mano (25/10/2026) ─────────────────── */
+/** ¿Hay una corrida enviando? Mientras tanto la cola no se reordena: el bot la está leyendo. */
+const enviando = (tenantId) => {
+    const c = corridas.get(tenantId);
+    return !!c && !c.terminada;
+};
+const errorEnviando = () => Object.assign(new Error("Hay una corrida enviando: el orden se puede cambiar cuando termine."), { status: 409 });
+/**
+ * Mueve documentos de la cola: al principio, al fondo, o antes de otro (el arrastre). El resto conserva
+ * su orden relativo y se renumera 1..n. Persiste en el servidor (`orden`), así que sobrevive a recargar
+ * y es el que usa el planificador. Deja la cola marcada como «orden manual».
+ */
+export async function reordenarCola(tenantId, codigos, a) {
+    if (enviando(tenantId))
+        throw errorEnviando();
+    const cola = await DropboxSignEnvio.find({ tenantId, estado: { $in: ["en_cola", "limite"] } }).sort({ orden: 1, encoladoAt: 1 }).select("_id codigo").lean();
+    const pedidos = new Set(codigos);
+    const movidos = cola.filter((r) => pedidos.has(r.codigo));
+    if (movidos.length === 0)
+        return { movidos: 0 };
+    const resto = cola.filter((r) => !pedidos.has(r.codigo));
+    let nueva;
+    if (a === "tope")
+        nueva = [...movidos, ...resto];
+    else if (a === "fondo")
+        nueva = [...resto, ...movidos];
+    else {
+        const i = resto.findIndex((r) => r.codigo === a.antesDe);
+        nueva = i < 0 ? [...resto, ...movidos] : [...resto.slice(0, i), ...movidos, ...resto.slice(i)];
+    }
+    await renumerar(nueva);
+    await Tenant.updateOne({ _id: tenantId }, { $set: { [`${BASE}.ordenManual`]: true } });
+    return { movidos: movidos.length };
+}
+/** Vuelve al orden automático: de más reciente a menos reciente (el que usa el bot si nadie lo toca). */
+export async function ordenAutomaticoDeCola(tenantId) {
+    if (enviando(tenantId))
+        throw errorEnviando();
+    await Tenant.updateOne({ _id: tenantId }, { $set: { [`${BASE}.ordenManual`]: false } });
+    return { total: await aplicarOrdenAutomatico(tenantId, { forzar: true }) };
+}
+/**
+ * EL ORDEN AUTOMÁTICO, APLICADO (26/10/2026): la cola de más reciente a menos reciente por la fecha del
+ * archivo en el Outbox (`ordenPorRecientes`). No toca un orden puesto a mano ni una cola que el bot
+ * está enviando, y sólo escribe si el orden cambió. Corre al encolar, al mirar la cola y antes de cada
+ * corrida, así que la cola que ya estaba en la base se reordena sola. Devuelve cuántos hay en la cola.
+ */
+async function aplicarOrdenAutomatico(tenantId, opciones = {}) {
+    if (enviando(tenantId))
+        return 0;
+    if (!opciones.forzar) {
+        const t = await Tenant.findById(tenantId).select(`${BASE}.ordenManual`).lean();
+        if (t?.integrations?.dropboxSign?.bot?.ordenManual)
+            return 0;
+    }
+    const cola = await DropboxSignEnvio.find({ tenantId, estado: { $in: ["en_cola", "limite"] } }).sort({ orden: 1, encoladoAt: 1 }).select("_id codigo archivo encoladoAt orden").lean();
+    if (!cola.length)
+        return 0;
+    const fechas = opciones.fechas || (await leerOutbox(tenantId)).fechas;
+    const ordenada = ordenPorRecientes(cola, fechas);
+    if (!ordenada.every((r, i) => Number(r.orden) === i + 1))
+        await renumerar(ordenada);
+    return cola.length;
+}
+async function renumerar(lista) {
+    if (!lista.length)
+        return;
+    await DropboxSignEnvio.bulkWrite(lista.map((r, i) => ({ updateOne: { filter: { _id: r._id }, update: { $set: { orden: i + 1 } } } })));
+}
+/**
+ * LA COLA DE VERDAD: lo que se va a enviar, en orden, con la línea de corte del cupo; lo trabado,
+ * agrupado por motivo con su salida; y en qué estado está el envío. Lee de los registros (que escribe
+ * «Verificar todos» y la corrida), no de una caché propia.
+ */
+export async function vistaDeCola(tenantId) {
+    const { archivos, fechas: fechasOutbox } = await leerOutbox(tenantId);
+    await aplicarOrdenAutomatico(tenantId, { fechas: fechasOutbox }).catch((e) => console.warn("[DROPBOX-SIGN-BOT] No se pudo ordenar la cola:", e?.message || e));
+    const cola = await armarCola(tenantId, { manual: true });
+    const { config, estado, bot } = await configDelTenant(tenantId);
+    const enOutbox = new Set(archivos);
+    const registros = await DropboxSignEnvio.find({ tenantId, estado: { $in: ["en_cola", "limite"] } }).sort({ orden: 1, encoladoAt: 1 }).lean();
+    const corrida = corridas.get(tenantId);
+    const corriendo = !!corrida && !corrida.terminada;
+    const ahora = new Date();
+    const items = registros.map(itemDe);
+    const estimados = estimarEnvios(items, config, estado, ahora);
+    const cupo = cupoDelDia(config, estado, ahora);
+    let listos = 0;
+    const vista = registros.map((r, i) => {
+        const esta = enOutbox.has(r.archivo);
+        if (esta)
+            listos++;
+        return {
+            posicion: i + 1,
+            archivo: r.archivo,
+            codigo: r.codigo,
+            firmante: r.firmante || "",
+            tipo: r.tipo || "",
+            estado: corriendo && corrida?.actual === r.archivo ? "enviando" : r.estado,
+            enOutbox: esta,
+            entra: esta && listos <= cupo,
+            estimadoAt: estimados.get(r.codigo)?.toISOString() || null,
+        };
+    });
+    const trabadosReg = await DropboxSignEnvio.find({ tenantId, estado: "requiere_revision" }).sort({ updatedAt: -1 }).limit(500).lean();
+    const grupos = agruparTrabados(trabadosReg.map((r) => ({ archivo: r.archivo, codigo: r.codigo, detalle: r.detalle || "", firmante: r.firmante || "", verificadaAt: r.colocacion?.verificadaAt ? new Date(r.colocacion.verificadaAt).toISOString() : null })));
+    // La última verificación: la de «Verificar todos» si la hay en memoria; si no, la más reciente guardada.
+    const v = verificacionDe(tenantId);
+    const fechas = [...registros, ...trabadosReg].map((r) => (r.colocacion?.verificadaAt ? new Date(r.colocacion.verificadaAt).getTime() : 0));
+    const ultima = v?.terminadaEl ? v.terminadaEl.getTime() : fechas.length ? Math.max(...fechas) : 0;
+    const { cambiadasAt } = await reglasDelTenant(tenantId);
+    const desactualizada = !ultima || ahora.getTime() - ultima > 24 * 3600_000 || (!!cambiadasAt && cambiadasAt.getTime() > ultima);
+    const conexionCaida = bot.conexion?.estado === "caida";
+    const proximaTandaAt = vista.find((x) => x.estimadoAt)?.estimadoAt;
+    const panel = estadoDelPanel({
+        corriendo,
+        progreso: corrida ? { hechos: corrida.enviados + corrida.errores, total: corrida.total, actual: corrida.actual } : undefined,
+        tieneSesion: !!bot.sesionEnc,
+        conexionCaida,
+        enfriadoHasta: estado.enfriadoHasta,
+        cupo,
+        liberaAt: estado.liberaAt || null,
+        enCola: listos,
+        trabados: trabadosReg.length,
+        envioAutomatico: config.activo,
+        horaDesde: config.horaDesde,
+        horaHasta: config.horaHasta,
+        horaActual: fechaYHoraArgentina(ahora).hora,
+        proximaTandaAt: proximaTandaAt ? new Date(proximaTandaAt) : null,
+    }, ahora);
+    return {
+        ...cola,
+        items: vista,
+        resumen: { listos, entranAhora: Math.min(listos, cupo), quedan: Math.max(0, listos - cupo), cupo, enviados24h: estado.enviados24h ?? 0, tope: config.topeDiario, liberaAt: estado.liberaAt ? estado.liberaAt.toISOString() : null, tamanoTanda: config.tamanoTanda },
+        ordenManual: !!bot.ordenManual,
+        trabados: grupos,
+        verificacion: { ultimaAt: ultima ? new Date(ultima).toISOString() : null, desactualizada, corriendo: !!v && !v.terminadaEl },
+        estadoPanel: panel,
+        corriendo,
+    };
+}
+/** Saca de la lista de trabados (no se envían; si se vuelven a encolar, se re-evalúan). */
+export async function descartarTrabados(tenantId, codigos) {
+    const r = await DropboxSignEnvio.deleteMany({ tenantId, codigo: { $in: codigos }, estado: "requiere_revision" });
+    return { quitados: r.deletedCount || 0 };
 }

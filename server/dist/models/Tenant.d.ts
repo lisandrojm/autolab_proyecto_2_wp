@@ -252,6 +252,7 @@ export interface ITenant extends Document {
                 reglasColocacionAt?: Date | null;
                 /** Cuándo cambiaron las reglas por última vez (también al volver al catálogo): una verificación anterior queda desactualizada. */
                 reglasCambiadasAt?: Date | null;
+                ordenManual?: boolean;
                 /** Última vez que el bot abrió Dropbox Sign: si llegó al listado y cómo, o por qué no (ver `navegador.ts`). */
                 conexion?: {
                     estado: "ok" | "caida";

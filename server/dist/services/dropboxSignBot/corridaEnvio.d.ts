@@ -30,6 +30,8 @@ export interface CorridaEnvio {
     /** El archivo que está pasando por el wizard ahora. */
     actual: string | null;
     lineas: ILineaEnvio[];
+    /** «Enviar ahora N»: cuántos pidió la persona (si no, el tamaño de tanda). El cupo de 24 h sigue mandando. */
+    cantidad?: number;
 }
 export declare const corridaEnvioDe: (tenantId: string) => CorridaEnvio | undefined;
 export declare const ocupadaPor: (tenantId: string) => {
@@ -101,11 +103,91 @@ export interface Cola extends Plan {
 /** Qué enviaría la próxima tanda: la cola contra el Outbox, planificada. No envía nada. */
 export declare function armarCola(tenantId: string, opciones?: {
     manual?: boolean;
+    cantidad?: number;
 }): Promise<Cola>;
 /** Arranca una corrida y vuelve en el acto. Manual (botón) respeta sólo enfriamiento y cupo. */
 export declare function arrancarCorridaEnvio(tenantId: string, opciones?: {
     automatica?: boolean;
     enSeco?: boolean;
+    cantidad?: number;
 }): Promise<{
     enSeco: boolean;
+    cantidad: number | null;
+}>;
+/**
+ * Mueve documentos de la cola: al principio, al fondo, o antes de otro (el arrastre). El resto conserva
+ * su orden relativo y se renumera 1..n. Persiste en el servidor (`orden`), así que sobrevive a recargar
+ * y es el que usa el planificador. Deja la cola marcada como «orden manual».
+ */
+export declare function reordenarCola(tenantId: string, codigos: string[], a: "tope" | "fondo" | {
+    antesDe: string;
+}): Promise<{
+    movidos: number;
+}>;
+/** Vuelve al orden automático: de más reciente a menos reciente (el que usa el bot si nadie lo toca). */
+export declare function ordenAutomaticoDeCola(tenantId: string): Promise<{
+    total: number;
+}>;
+export interface ItemDeCola {
+    posicion: number;
+    archivo: string;
+    codigo: string;
+    firmante: string;
+    tipo: string;
+    /** en_cola | limite | enviando */
+    estado: string;
+    enOutbox: boolean;
+    /** Entra en el cupo de las próximas 24 h (está arriba de la línea de corte). */
+    entra: boolean;
+    estimadoAt: string | null;
+}
+export interface VistaDeCola extends Cola {
+    items: ItemDeCola[];
+    resumen: {
+        listos: number;
+        entranAhora: number;
+        quedan: number;
+        cupo: number;
+        enviados24h: number;
+        tope: number;
+        liberaAt: string | null;
+        tamanoTanda: number;
+    };
+    ordenManual: boolean;
+    trabados: Array<{
+        tipo: string;
+        titulo: string;
+        accion: {
+            texto: string;
+            destino: string;
+        };
+        cantidad: number;
+        items: Array<{
+            archivo: string;
+            codigo: string;
+            detalle: string;
+            firmante: string;
+            verificadaAt: string | null;
+        }>;
+    }>;
+    verificacion: {
+        ultimaAt: string | null;
+        desactualizada: boolean;
+        corriendo: boolean;
+    };
+    estadoPanel: {
+        tipo: string;
+        texto: string;
+    };
+    corriendo: boolean;
+}
+/**
+ * LA COLA DE VERDAD: lo que se va a enviar, en orden, con la línea de corte del cupo; lo trabado,
+ * agrupado por motivo con su salida; y en qué estado está el envío. Lee de los registros (que escribe
+ * «Verificar todos» y la corrida), no de una caché propia.
+ */
+export declare function vistaDeCola(tenantId: string): Promise<VistaDeCola>;
+/** Saca de la lista de trabados (no se envían; si se vuelven a encolar, se re-evalúan). */
+export declare function descartarTrabados(tenantId: string, codigos: string[]): Promise<{
+    quitados: number;
 }>;

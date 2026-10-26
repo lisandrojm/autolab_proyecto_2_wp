@@ -122,6 +122,8 @@ export interface ResultadoVerificado {
     ms: number;
     /** Cuándo se verificó (ISO): la pantalla lo muestra junto al resultado. */
     verificadaAt: string;
+    /** El email del firmante resuelto (para reencolar con sus datos). */
+    email?: string;
     origen: "plantilla" | "ancla";
 }
 export interface Verificacion {

@@ -9,6 +9,7 @@ export declare function leerOutbox(tenantId: string): Promise<{
     outbox: string;
     archivos: string[];
     cfg: ConfigDropbox;
+    fechas: Map<string, string>;
 }>;
 /**
  * QUIÉN FIRMA, desde la base. El código del nombre («ID-000123») lleva al `DocumentoGenerado` y de ahí

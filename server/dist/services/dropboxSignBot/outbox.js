@@ -17,7 +17,10 @@ export async function leerOutbox(tenantId) {
     if (!outbox)
         throw Object.assign(new Error('No hay ninguna carpeta de Dropbox configurada como "Outbox".'), { status: 400 });
     const { entries } = await listFolder(tenantId, cfg, outbox);
-    return { outbox: outbox.replace(/\/$/, ""), archivos: entries.filter((e) => e.tag === "file" && /\.pdf$/i.test(e.name)).map((e) => e.name), cfg };
+    const pdfs = entries.filter((e) => e.tag === "file" && /\.pdf$/i.test(e.name));
+    // La fecha de cada archivo (la columna «Fecha» de Para Firmar): ordena la cola de más reciente a menos.
+    const fechas = new Map(pdfs.filter((e) => e.serverModified).map((e) => [e.name, String(e.serverModified)]));
+    return { outbox: outbox.replace(/\/$/, ""), archivos: pdfs.map((e) => e.name), cfg, fechas };
 }
 /**
  * QUIÉN FIRMA, desde la base. El código del nombre («ID-000123») lleva al `DocumentoGenerado` y de ahí

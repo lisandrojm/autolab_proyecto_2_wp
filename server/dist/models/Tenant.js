@@ -139,6 +139,8 @@ const tenantSchema = new Schema({
                 reglasColocacion: { type: Schema.Types.Mixed },
                 reglasColocacionAt: { type: Date, default: null },
                 reglasCambiadasAt: { type: Date, default: null },
+                // La cola se reordenó a mano (25/10/2026): la pantalla lo dice y ofrece volver al orden automático.
+                ordenManual: { type: Boolean, default: false },
                 conexion: { type: Schema.Types.Mixed, default: null },
             },
             imapHost: { type: String },

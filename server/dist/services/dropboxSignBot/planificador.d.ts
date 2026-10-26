@@ -24,6 +24,13 @@ export interface EstadoThrottle {
     };
     enfriadoHasta: Date | null;
     ultimaCorridaAt: Date | null;
+    /**
+     * Enviados en las ÚLTIMAS 24 H (ventana móvil, 25/10/2026): Dropbox Sign libera de a poco, no a la
+     * medianoche. Si viene, el cupo se cuenta con esto y no con `contadorDia`.
+     */
+    enviados24h?: number;
+    /** Cuándo se libera el próximo lugar de la ventana, si no queda cupo. */
+    liberaAt?: Date | null;
 }
 /** Un documento en la cola (un `DropboxSignEnvio` en estado `en_cola` o `limite`). */
 export interface ItemEnCola {
@@ -71,6 +78,8 @@ export declare function instanteArgentino(fecha: string, hora: number, minutos?:
  * manual, un cambio de configuración o un freno de Dropbox Sign la mueven.
  */
 export declare function estimarEnvios(enCola: ItemEnCola[], config: ConfigEnvio, estado: EstadoThrottle, ahora: Date): Map<string, Date>;
+/** Lo enviado que cuenta para el tope: las últimas 24 h si se sabe (ventana móvil), si no el día calendario. */
+export declare const enviadosQueCuentan: (estado: EstadoThrottle, ahora: Date) => number;
 export declare const cupoDelDia: (config: ConfigEnvio, estado: EstadoThrottle, ahora: Date) => number;
 /**
  * ¿Le toca correr al scheduler ahora? Devuelve el motivo si no. (El botón «Enviar a la firma» no pasa
