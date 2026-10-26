@@ -57,6 +57,8 @@ export interface DatosDelGuard {
   textoPagina: string;
   /** Las reglas del tenant (sin ellas, el catálogo). */
   reglas?: ReglaColocacion[];
+  /** La posición la declaró la plantilla al generar el documento: no hace falta regla por nombre (25/10/2026). */
+  posicionDeclarada?: boolean;
 }
 
 /**
@@ -64,7 +66,7 @@ export interface DatosDelGuard {
  * distinto o sin CC rompe el circuito IMAP y deja el contrato como no enviado para siempre.
  */
 export function guardDeEnvio(d: DatosDelGuard): { ok: true } | { ok: false; motivo: string } {
-  const sinColocacion = motivoSinColocacion(d.archivo, d.reglas);
+  const sinColocacion = d.posicionDeclarada ? null : motivoSinColocacion(d.archivo, d.reglas);
   if (sinColocacion) return { ok: false, motivo: `${sinColocacion} (${d.archivo})` };
   if (String(d.titulo || "").trim() !== String(d.archivo || "").trim()) return { ok: false, motivo: `El título («${d.titulo}») no es el nombre exacto del archivo («${d.archivo}»).` };
   if (!d.ccEsperado) return { ok: false, motivo: "No hay casilla de CC configurada (Configuración → DropboxSign)." };

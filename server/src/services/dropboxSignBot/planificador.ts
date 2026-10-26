@@ -160,6 +160,8 @@ export interface ContextoDeEncolado {
   motivoSinFirmante?: string;
   /** Las reglas de colocación del tenant (sin ellas, el catálogo de fábrica). */
   reglas?: ReglaColocacion[];
+  /** La posición de la firma la declaró la plantilla al generar el documento: no hace falta regla por nombre (25/10/2026). */
+  posicionDeclarada?: { plantillaNombre: string } | null;
 }
 
 export interface ResultadoEncolado {
@@ -185,10 +187,10 @@ export function validarEncolado(archivo: string, ctx: ContextoDeEncolado): Resul
   if (previo === "enviado") return { ok: false, codigo, motivo: "Ya se envió a la firma: no se vuelve a encolar.", reencolable: false };
   if (previo === "en_cola") return { ok: false, codigo, motivo: "Ya está en la cola.", reencolable: false };
   if (previo === "limite") return { ok: false, codigo, motivo: "Ya está en la cola (frenado por el límite de Dropbox Sign; se reintenta solo).", reencolable: false };
-  const sinColocacion = motivoSinColocacion(archivo, ctx.reglas);
+  const sinColocacion = ctx.posicionDeclarada ? null : motivoSinColocacion(archivo, ctx.reglas);
   if (sinColocacion) return { ok: false, codigo, motivo: sinColocacion, reencolable: true };
   if (!ctx.firmante) return { ok: false, codigo, motivo: ctx.motivoSinFirmante || "No se pudo resolver al firmante en la base.", reencolable: true };
-  return { ok: true, codigo, motivo: "", reencolable: false, tipo: tipoDeDocumento(archivo, ctx.reglas)!, firmante: ctx.firmante };
+  return { ok: true, codigo, motivo: "", reencolable: false, tipo: ctx.posicionDeclarada ? `Plantilla «${ctx.posicionDeclarada.plantillaNombre}»` : tipoDeDocumento(archivo, ctx.reglas)!, firmante: ctx.firmante };
 }
 
 /** La tanda a enviar, a partir de la cola y de lo que sigue en Outbox. */

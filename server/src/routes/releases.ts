@@ -11,6 +11,7 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { buildEmployeeDocData } from "../utils/employeeDocData.js";
 import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
 import { buildDocPdf, getDummyDocVariables, htmlHasText, empresaToMembrete } from "../utils/documentPdf.js";
+import { capturarFirmaDePlantilla, guardarFirmaDelDocumento, probarFirmaDePlantilla } from "../services/colocacionDePlantilla.js";
 import { PLACEHOLDER_RELEASE_CUSTOM, textoCustomDeRelease, textoCustomUsable } from "../compartido/textoCustom.js";
 
 import { asegurarPlantillasCustomSinRomper, MENSAJE_DEL_SISTEMA } from "../services/plantillasCustomSistema.js";
@@ -92,6 +93,18 @@ async function getExampleMembrete(usaMembrete: boolean) {
   if (empresa) return empresaToMembrete(empresa);
   return { razonSocial: "2030 S.R.L.", cuit: "30-71234567-9", domicilio: "Av. Corrientes 1234, Piso 5, CABA, Buenos Aires", firmanteNombre: "María González", firmanteCargo: "Apoderada" };
 }
+
+/** POST /releases/probar-firma {content, usaMembrete} — dónde va a quedar la firma (ver la de contratos-frame). */
+router.post("/probar-firma", authenticateToken, requireTenant, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const content = String(req.body?.content ?? "");
+    const membrete = await getExampleMembrete(req.body?.usaMembrete === true || req.body?.usaMembrete === "true");
+    res.json(await probarFirmaDePlantilla(content, membrete));
+  } catch (error: any) {
+    console.error("Probar firma release error:", error);
+    res.status(500).json({ error: error?.message || "No se pudo probar la firma." });
+  }
+});
 
 // POST /releases/preview — genera un PDF de ejemplo con el contenido del editor (sin guardar).
 router.post("/preview", authenticateToken, requireTenant, async (req: AuthenticatedRequest & TenantRequest, res) => {
@@ -203,8 +216,11 @@ export async function generarReleasePdf(opts: { tenantId: string; releaseId: str
 
   const membrete = release.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
   const buffer = await buildDocPdf(cuerpo, data, membrete);
+  // Dónde va la firma, ubicada en el PDF recién hecho (antes del nombre: si falla, no se gasta un código).
+  const firma = await capturarFirmaDePlantilla(cuerpo, buffer, { tipo: "release", id: String(release._id), nombre: release.name, version: Number((release as any).versionContenido) || 1 });
   // Ver `nomenclaturaService`: el patrón es configurable y el default reproduce el nombre de antes.
   const filename = await nombreArchivoDocumento({ tenantId: opts.tenantId, tipo: "Release", user, up, contract, empresa, docName: release.name, extra: opts.extra });
+  await guardarFirmaDelDocumento(opts.tenantId, filename, firma);
   return { buffer, filename, empresaIdUsado: chosenId || "" };
 }
 
@@ -226,7 +242,7 @@ router.get("/:id/download-filled", authenticateToken, requireTenant, async (req:
   } catch (error: any) {
     console.error("Download filled release error:", error);
     const msg = String(error?.message || "");
-    const status = /no encontrado/i.test(msg) ? 404 : /no tiene contenido redactado|no tiene texto escrito/i.test(msg) ? 400 : 500;
+    const status = /no encontrado/i.test(msg) ? 404 : /no tiene contenido redactado|no tiene texto escrito|declara firma/i.test(msg) ? 400 : 500;
     res.status(status).json({ error: msg || "No se pudo generar el release con los datos." });
   }
 });

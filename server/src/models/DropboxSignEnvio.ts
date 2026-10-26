@@ -31,6 +31,14 @@ export interface ResumenColocacion {
   /** El campo (puntos PDF, y desde arriba). */
   campo: { x: number; y: number; w: number; h: number } | null;
   descartados: number;
+  /** De dónde salió: la plantilla al generar («plantilla») o una regla por ancla («ancla»). Ausente en las anteriores al 25/10/2026. */
+  origen?: "plantilla" | "ancla";
+  /** Hash de Dropbox del PDF que se verificó: si el del Outbox es otro, la verificación ya no vale. */
+  contentHash?: string;
+  /** Con qué reglas se verificó (cuándo habían cambiado por última vez). */
+  reglasAt?: Date | null;
+  plantillaId?: string;
+  plantillaVersion?: number;
 }
 
 export interface IDropboxSignEnvio extends Document {

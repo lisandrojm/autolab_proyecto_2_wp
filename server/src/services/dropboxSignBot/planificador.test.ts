@@ -112,3 +112,21 @@ describe("cuándo corre el scheduler", () => {
     assert.equal(puedeCorrer(config, { ...limpio, enfriadoHasta: new Date(AHORA.getTime() + 3600_000) }, AHORA, { manual: true }).ok, false);
   });
 });
+
+describe("encolar un documento con posición DECLARADA por la plantilla (25/10/2026)", () => {
+  // Plantilla nueva: su nombre no matchea ninguna regla del catálogo.
+  const NUEVA = "426_LN+_PEREZ_Contrato_Eventual-Talento_D-20261010_H-20261010_20273130293_fulano-ARROBA-gmail.com_Empresa-30717068374_ID-000777.pdf";
+  const ok = { enOutbox: true, registroPrevio: null, firmante: FIRMANTE };
+  it("sin posición declarada queda «sin regla»", () => {
+    assert.equal(validarEncolado(NUEVA, ok).ok, false);
+  });
+  it("con posición declarada se encola sin regla por nombre, con el tipo de la plantilla", () => {
+    const r = validarEncolado(NUEVA, { ...ok, posicionDeclarada: { plantillaNombre: "Eventual Talento" } });
+    assert.equal(r.ok, true);
+    assert.equal(r.tipo, "Plantilla «Eventual Talento»");
+  });
+  it("lo demás sigue mandando: sin firmante, o ya enviado, no se encola", () => {
+    assert.equal(validarEncolado(NUEVA, { ...ok, firmante: null, posicionDeclarada: { plantillaNombre: "X" } }).ok, false);
+    assert.equal(validarEncolado(NUEVA, { ...ok, registroPrevio: { estado: "enviado" }, posicionDeclarada: { plantillaNombre: "X" } }).ok, false);
+  });
+});

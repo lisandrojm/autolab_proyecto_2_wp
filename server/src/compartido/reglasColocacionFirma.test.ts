@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { REGLAS_BASE, buscarTexto, coincidencias, contienePalabra, distanciaARect, extenderAPalabra, motivoPorTipo, pdfAPantalla, pantallaAPdf, reglaDe, resolverColocacion, validarPunto, validarReglas, type PaginaPdf, type ReglaColocacion } from "./reglasColocacionFirma.js";
+import { REGLAS_BASE, buscarTexto, coincidencias, colocacionDesdeMarcas, contienePalabra, deteccionDesdeDeclarada, distanciaARect, extenderAPalabra, motivoPorTipo, motivosDesactualizado, pdfAPantalla, pantallaAPdf, reglaDe, resolverColocacion, validarPunto, validarReglas, vecesFirmaEnPlantilla, type ColocacionDeclarada, type PaginaPdf, type ReglaColocacion } from "./reglasColocacionFirma.js";
 
 const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), "../services/dropboxSignBot/fixtures");
 const fixture = (nombre: string): { archivo: string; firmante: string; paginas: PaginaPdf[] } => JSON.parse(readFileSync(resolve(FIXTURES, `${nombre}.json`), "utf8"));
@@ -278,5 +278,68 @@ describe("7. validarReglas (lo que llega del PUT)", () => {
     assert.equal(r?.pagina, "ultima");
     assert.deepEqual(r?.campo, { alto: 45, anchoFijo: 170 });
     assert.equal(motivoPorTipo("1_X_PEREZ_CCM_D-1_H-1_1_a-ARROBA-b.com_ID-000001.pdf", v.ok ? v.reglas : []), "Tipo CCM: falta relevar el PDF");
+  });
+});
+
+describe("8. posición DECLARADA por la plantilla ({{firma}}, 25/10/2026)", () => {
+  it("cuenta {{firma}} con o sin espacios", () => {
+    assert.equal(vecesFirmaEnPlantilla("<p>Firma {{firma}}</p><p>{{ firma }}</p>"), 2);
+    assert.equal(vecesFirmaEnPlantilla("<p>sin firma</p>"), 0);
+  });
+  it("en el contrato de servicios real ubica la línea de guiones y da el MISMO campo que la regla por rótulo", () => {
+    const f = fixture("contrato-servicios");
+    const r = colocacionDesdeMarcas(f.paginas, 1);
+    assert.equal(r.ok, true);
+    if (r.ok !== true) return;
+    assert.equal(r.pagina, f.paginas.length);
+    const regla = resolverColocacion(f.archivo, f.paginas, { nombreFirmante: f.firmante });
+    assert.equal(regla.ok, true);
+    if (regla.ok !== true) return;
+    for (const k of ["x", "y", "w", "h"] as const) assert.ok(cerca(r.campo[k], regla.colocacion.campo[k], 0.5), `${k}: ${r.campo[k]} vs ${regla.colocacion.campo[k]}`);
+  });
+  it("sin la línea de firma en el PDF: no hay posición, con el motivo", () => {
+    const r = colocacionDesdeMarcas([pagina([["Contrato sin línea de firma", 56, 100, 200, 11]])], 1);
+    assert.equal(r.ok, false);
+  });
+  it("con dos líneas toma la última y avisa", () => {
+    const r = colocacionDesdeMarcas([pagina([["Firma: ______________________________", 86, 300, 252, 11]], 1), pagina([["Firma: ______________________________", 86, 500, 252, 11]], 2)], 2);
+    assert.equal(r.ok, true);
+    if (r.ok !== true) return;
+    assert.equal(r.pagina, 2);
+    assert.ok(r.avisos.some((a) => /última/.test(a)));
+  });
+  const declarada = (pagina: number, total: number): ColocacionDeclarada => ({ origen: "plantilla", plantillaTipo: "contrato", plantillaId: "p1", plantillaNombre: "Servicios", plantillaVersion: 3, pagina, totalPaginas: total, campo: { x: 122, y: 340, w: 176, h: 45 }, linea: { x: 122, y: 385, w: 176, h: 0 }, paginaSize: { w: 595, h: 842 }, sha256: "x", avisos: [], capturadaAt: new Date() });
+  it("el bot la usa tal cual: última página, centro del campo, origen «plantilla», sin regla por nombre", () => {
+    const d = deteccionDesdeDeclarada(declarada(6, 6));
+    assert.equal(d.ok, true);
+    if (d.ok !== true) return;
+    assert.equal(d.colocacion.pagina, "ultima");
+    assert.equal(d.colocacion.origen, "plantilla");
+    assert.deepEqual(d.colocacion.puntoPdf, { x: 210, y: 362.5 });
+  });
+  it("en una página del medio no se coloca (el motor sólo navega a la primera o a la última)", () => {
+    const d = deteccionDesdeDeclarada(declarada(2, 3));
+    assert.equal(d.ok, false);
+  });
+});
+
+describe("9. cuándo una verificación guardada quedó desactualizada", () => {
+  const ayer = new Date(Date.now() - 3600 * 1000);
+  it("vigente si nada cambió", () => {
+    assert.deepEqual(motivosDesactualizado({ verificadaAt: ayer, origen: "ancla", contentHash: "h1", reglasAt: ayer }, { contentHash: "h1", reglasAt: ayer }), []);
+  });
+  it("el PDF del Outbox cambió", () => {
+    assert.ok(motivosDesactualizado({ verificadaAt: ayer, origen: "ancla", contentHash: "h1", reglasAt: ayer }, { contentHash: "h2", reglasAt: ayer }).some((m) => /PDF/.test(m)));
+  });
+  it("las reglas cambiaron después de verificar (sólo importa si salió por regla)", () => {
+    const despues = new Date();
+    assert.ok(motivosDesactualizado({ verificadaAt: ayer, origen: "ancla", contentHash: "h1", reglasAt: ayer }, { contentHash: "h1", reglasAt: despues }).some((m) => /reglas/.test(m)));
+    assert.deepEqual(motivosDesactualizado({ verificadaAt: ayer, origen: "plantilla", contentHash: "h1", plantillaVersion: 3 }, { contentHash: "h1", reglasAt: despues, plantillaVersion: 3 }), []);
+  });
+  it("la plantilla tiene una versión nueva", () => {
+    assert.ok(motivosDesactualizado({ verificadaAt: ayer, origen: "plantilla", contentHash: "h1", plantillaVersion: 3 }, { contentHash: "h1", plantillaVersion: 4 }).some((m) => /versión nueva/.test(m)));
+  });
+  it("una de antes de guardar el hash, con más de un día, se avisa por la fecha", () => {
+    assert.ok(motivosDesactualizado({ verificadaAt: new Date(Date.now() - 3 * 86400 * 1000) }, {}).length > 0);
   });
 });

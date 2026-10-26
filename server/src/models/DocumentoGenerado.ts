@@ -40,6 +40,8 @@ export interface IDocumentoGenerado extends Document {
   clase?: string;
   loteRecibosId?: Types.ObjectId | null;
   reciboId?: Types.ObjectId | null;
+  /** Dónde va la firma, declarada por la plantilla y capturada al generar (ver `compartido/reglasColocacionFirma.ts`). Sólo documentos de plantilla con {{firma}}. */
+  colocacionFirma?: import("../compartido/reglasColocacionFirma.js").ColocacionDeclarada | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -63,6 +65,7 @@ const schema = new Schema<IDocumentoGenerado>(
     clase: { type: String, default: undefined },
     loteRecibosId: { type: Schema.Types.ObjectId, default: null },
     reciboId: { type: Schema.Types.ObjectId, default: null },
+    colocacionFirma: { type: Schema.Types.Mixed, default: undefined },
   },
   { timestamps: true, collection: "documentos_generados" },
 );

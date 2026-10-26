@@ -71,3 +71,16 @@ describe("el guard antes de «Enviar para firmar»", () => {
     assert.ok(!esTextoDeLimite("Solicitud de firma enviada"));
   });
 });
+
+describe("el guard con posición declarada por la plantilla (25/10/2026)", () => {
+  const NUEVA = "426_LN+_PEREZ_Contrato_Eventual-Talento_D-20261010_H-20261010_20273130293_fulano-ARROBA-gmail.com_ID-000777.pdf";
+  const base = { archivo: NUEVA, titulo: NUEVA, cc: "framerecursoshumanos@gmail.com", ccEsperado: "framerecursoshumanos@gmail.com", firmanteNombre: "JUAN PEREZ", firmanteEmail: "fulano@gmail.com", textoPagina: "Revisar y enviar\nJUAN PEREZ (fulano@gmail.com)" };
+  it("sin regla por nombre frena; con la posición declarada pasa", () => {
+    assert.equal(guardDeEnvio(base).ok, false);
+    assert.deepEqual(guardDeEnvio({ ...base, posicionDeclarada: true }), { ok: true });
+  });
+  it("el título y el CC siguen siendo obligatorios", () => {
+    assert.equal(guardDeEnvio({ ...base, posicionDeclarada: true, titulo: "otro.pdf" }).ok, false);
+    assert.equal(guardDeEnvio({ ...base, posicionDeclarada: true, cc: "" }).ok, false);
+  });
+});
