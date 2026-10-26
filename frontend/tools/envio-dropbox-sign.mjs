@@ -197,7 +197,7 @@ async function arrastrarFirma(page, destino) {
  *  · el alto de cada página se valida: |altoPx / escala − altoPt| ≤ 2 pt.
  * Devuelve las cajas en coordenadas de la PÁGINA (se suma la caja del iframe del editor).
  */
-export async function paginasDelDocumento(page, proporcion) {
+export async function paginasDelDocumento(page, proporcion, total = 0) {
   /*
     PRIMERO DENTRO DEL EDITOR (26/10/2026, 15:17). Con la ventana agrandada, el IFRAME pasó a medir
     1457×2058 —casi la proporción A4 (1,412 contra 1,415)— y, buscando primero en la página raíz, se lo
@@ -207,24 +207,34 @@ export async function paginasDelDocumento(page, proporcion) {
   */
   const ed = await frameDelEditor(page);
   if (ed) {
-    const adentro = await paginasEn(ed.frame, proporcion);
+    const adentro = await paginasEn(ed.frame, proporcion, geometriaConocida, total);
     if (adentro.paginas.length) {
       const mover = (c) => ({ ...c, x: ed.caja.x + c.x, y: ed.caja.y + c.y });
       return { ...adentro, paginas: adentro.paginas.map(mover), iframe: ed.caja };
     }
   }
-  return { ...(await paginasEn(page, proporcion)), iframe: ed ? ed.caja : null };
+  return { ...(await paginasEn(page, proporcion, geometriaConocida, total)), iframe: ed ? ed.caja : null };
 }
 
-async function paginasEn(raiz, proporcion) {
+/*
+  LA GEOMETRÍA CONOCIDA (26/10 16:39). Con la ventana alta el editor agrega relleno debajo de las páginas
+  (contenedor 937×3369 = 2 × 1326 + 73 + ~644 de relleno) y ya no se puede partir por su alto. El zoom
+  depende sólo del ANCHO, que no cambia al agrandar el alto: lo medido con la ventana chica (alto de
+  página, separación y dónde arranca la primera dentro del contenedor) vale después. Se guarda por
+  documento y se usa cuando el contenedor tiene el mismo ancho.
+*/
+let geometriaConocida = null;
+
+async function paginasEn(raiz, proporcion, pista = null, total = 0) {
   return raiz
-    .evaluate((prop) => {
+    .evaluate(({ prop, pista, total }) => {
       const visible = (el, r) => {
         const e = getComputedStyle(el);
         return e.visibility !== "hidden" && e.display !== "none" && Number(e.opacity) > 0 && r.width >= 300 && r.width <= window.innerWidth;
       };
       const exactas = [];
       let contenedor = null;
+      let conPista = null;
       for (const el of document.querySelectorAll("body *")) {
         if (el.tagName === "IFRAME" || el.querySelector("iframe")) continue;
         const r = el.getBoundingClientRect();
@@ -240,6 +250,8 @@ async function paginasEn(raiz, proporcion) {
           const hp = r.width * prop;
           const gap = n > 1 ? (r.height - n * hp) / (n - 1) : 0;
           if (n >= 2 && gap >= 0 && gap < hp * 0.2 && (!contenedor || r.width * r.height > contenedor.w * contenedor.h)) contenedor = { x: r.left, y: r.top, w: r.width, h: r.height, n, hp, gap };
+          // Con la geometría conocida: mismo ancho → mismas páginas, aunque sobre relleno abajo.
+          if (pista && Math.abs(r.width - pista.w) < 2 && (!conPista || r.width * r.height > conPista.w * conPista.h)) conPista = { x: r.left, y: r.top, w: r.width, h: r.height };
         }
       }
       // Sin cajas repetidas: una página y su canvas/imagen interior miden lo mismo.
@@ -248,19 +260,49 @@ async function paginasEn(raiz, proporcion) {
         if (!unicas.some((u) => Math.abs(u.x - c.x) < 3 && Math.abs(u.y - c.y) < 3 && Math.abs(u.w - c.w) < 3)) unicas.push(c);
       }
       if (unicas.length) return { paginas: unicas, origen: "paginas" };
-      if (contenedor) {
+      if (contenedor && (!total || contenedor.n === total)) {
         const paginas = Array.from({ length: contenedor.n }, (_, i) => ({ x: contenedor.x, y: contenedor.y + i * (contenedor.hp + contenedor.gap), w: contenedor.w, h: contenedor.hp }));
-        return { paginas, origen: "contenedor", contenedor: { w: contenedor.w, h: contenedor.h, n: contenedor.n } };
+        return { paginas, origen: "contenedor", contenedor: { x: contenedor.x, y: contenedor.y, w: contenedor.w, h: contenedor.h, n: contenedor.n, hp: contenedor.hp, gap: contenedor.gap } };
+      }
+      if (conPista) {
+        const n = total || Math.max(1, Math.floor((conPista.h - pista.off + pista.gap) / (pista.hp + pista.gap)));
+        const paginas = Array.from({ length: n }, (_, i) => ({ x: conPista.x, y: conPista.y + pista.off + i * (pista.hp + pista.gap), w: conPista.w, h: pista.hp }));
+        return { paginas, origen: "pista", contenedor: { x: conPista.x, y: conPista.y, w: conPista.w, h: conPista.h, n } };
       }
       return { paginas: [], origen: "nada" };
-    }, proporcion)
+    }, { prop: proporcion, pista, total })
     .catch(() => ({ paginas: [], origen: "nada" }));
 }
 
 /** La caja (px, coordenadas de la página) de la página `indice` del documento (base 0). */
-export async function medirCajaDePagina(page, proporcion = null, indice = 0) {
-  const { paginas } = await paginasDelDocumento(page, proporcion);
+export async function medirCajaDePagina(page, proporcion = null, indice = 0, total = 0) {
+  const { paginas } = await paginasDelDocumento(page, proporcion, total);
   return paginas[indice] || null;
+}
+
+/**
+ * LA ESTRUCTURA DE LAS PÁGINAS para el log: los hijos (dos niveles) de `…__pageContainer…` (o, si no, de
+ * `…__dropTarget…` / `…__document…`) con tag, clase, tamaño y origen. Es lo que falta para ver cómo
+ * dibuja las páginas este editor.
+ */
+async function estructuraDePaginas(raiz) {
+  return raiz
+    .evaluate(() => {
+      const base = document.querySelector('[class*="pageContainer" i]') || document.querySelector('[class*="dropTarget" i]') || document.querySelector('[class*="__document" i]');
+      if (!base) return "no hay pageContainer / dropTarget / document";
+      const desc = (el) => {
+        const r = el.getBoundingClientRect();
+        const cls = typeof el.className === "string" ? el.className.trim().split(/\s+/).slice(0, 1).join(".").replace(/^src-[^_]*?(__)/, "…$1") : "";
+        return `${el.tagName.toLowerCase()}${cls ? "." + cls : ""} ${Math.round(r.width)}×${Math.round(r.height)} en (${Math.round(r.left)}, ${Math.round(r.top)})`;
+      };
+      const filas = [`${desc(base)}:`];
+      for (const h of Array.from(base.children).slice(0, 8)) {
+        filas.push(`  ${desc(h)}`);
+        for (const n of Array.from(h.children).slice(0, 4)) filas.push(`    ${desc(n)}`);
+      }
+      return filas.join(" | ");
+    })
+    .catch(() => "no se pudo leer");
 }
 
 /** Los elementos grandes visibles (para el diagnóstico cuando la hoja no aparece). */
@@ -290,6 +332,7 @@ async function esperarEditorListo(page, onProgreso, proporcion = null, esLimite 
   const desde = Date.now();
   let avisado = false;
   let preparando = false;
+  let listoDesde = null;
   while (Date.now() - desde < ESPERA_PREPARANDO_MS) {
     const t = await texto(page);
     // El límite de la cuenta puede aparecer acá en vez de en «Revisar y enviar»: es un freno, no un timeout.
@@ -301,6 +344,9 @@ async function esperarEditorListo(page, onProgreso, proporcion = null, esLimite 
         await page.waitForTimeout(800);
         return caja;
       }
+      // Ya terminó de preparar: si en 10 s no aparece la hoja, no va a aparecer (antes se esperaban 120 s).
+      if (listoDesde === null) listoDesde = Date.now();
+      if (Date.now() - listoDesde > 10_000) break;
     } else if (!avisado) {
       onProgreso("El editor está «Preparando documentos…»: se espera a que muestre la hoja.");
       avisado = true;
@@ -311,13 +357,14 @@ async function esperarEditorListo(page, onProgreso, proporcion = null, esLimite 
   const grandes = await elementosGrandes(page);
   const ed = await frameDelEditor(page);
   const grandesEditor = ed ? await elementosGrandes(ed.frame) : [];
+  const estructura = ed ? await estructuraDePaginas(ed.frame) : "sin editor";
   const iframes = await iframesDe(page);
   const captura = await page.screenshot({ fullPage: false }).catch(() => undefined);
   throw Object.assign(
     new Error(
       preparando
         ? `editor_no_prepara: el editor siguió «Preparando documentos…» ${ESPERA_PREPARANDO_MS / 1000} s: Dropbox Sign no terminó de procesar el PDF.`
-        : `hoja_no_encontrada: el editor terminó de preparar (ya no dice «Preparando documentos…») pero el bot no reconoce la hoja (${ESPERA_PREPARANDO_MS / 1000} s): es un problema del bot, no del documento. En pantalla: ${grandes.join(" · ") || "ningún elemento grande"}. Dentro del editor: ${ed ? grandesEditor.join(" · ") || "ningún elemento grande" : "no se encontró el iframe del editor"}. Iframes: ${iframes.join(" · ") || "ninguno"}.`,
+        : `hoja_no_encontrada: el editor terminó de preparar (ya no dice «Preparando documentos…») pero el bot no reconoce la hoja (10 s después de terminar): es un problema del bot, no del documento. Estructura de páginas: ${estructura}. En pantalla: ${grandes.join(" · ") || "ningún elemento grande"}. Dentro del editor: ${ed ? grandesEditor.join(" · ") || "ningún elemento grande" : "no se encontró el iframe del editor"}. Iframes: ${iframes.join(" · ") || "ninguno"}.`,
     ),
     { captura },
   );
@@ -435,11 +482,11 @@ async function origenFirma(page) {
 }
 
 /** La caja de la hoja, medida dos veces a 300 ms: el editor la redimensiona al terminar de dibujar. */
-async function medirEstable(page, proporcion, indice = 0) {
-  let previa = await medirCajaDePagina(page, proporcion, indice);
+async function medirEstable(page, proporcion, indice = 0, total = 0) {
+  let previa = await medirCajaDePagina(page, proporcion, indice, total);
   for (let i = 0; i < 5 && previa; i++) {
     await page.waitForTimeout(300);
-    const ahora = await medirCajaDePagina(page, proporcion, indice);
+    const ahora = await medirCajaDePagina(page, proporcion, indice, total);
     if (!ahora) return previa;
     if (Math.abs(ahora.w - previa.w) < 1 && Math.abs(ahora.h - previa.h) < 1 && Math.abs(ahora.y - previa.y) < 1) return ahora;
     previa = ahora;
@@ -462,7 +509,12 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
   const anchoPt = colocacion.tamanoPagina.ancho;
   const altoPt = colocacion.tamanoPagina.alto;
   // Una vez: todas las páginas con su tamaño y origen, y el chequeo del alto.
-  const doc = await paginasDelDocumento(page, prop);
+  const doc = await paginasDelDocumento(page, prop, Number(colocacion.totalPaginas) || 0);
+  if (doc.origen === "contenedor" && doc.contenedor) geometriaConocida = { w: doc.contenedor.w, hp: doc.contenedor.hp, gap: doc.contenedor.gap, off: 0 };
+  else if (doc.origen === "paginas" && doc.paginas.length) geometriaConocida = null; // hay elementos por página: no hace falta
+  if (doc.origen === "pista") onProgreso(`Páginas por la geometría medida antes (mismo ancho ${Math.round(doc.contenedor.w)} px; el contenedor mide ${Math.round(doc.contenedor.h)} de alto con relleno).`);
+  const edEstr = await frameDelEditor(page);
+  onProgreso(`Estructura de páginas: ${await estructuraDePaginas(edEstr ? edEstr.frame : page)}`);
   if (doc.origen === "contenedor") onProgreso(`hoja_medida_es_contenedor: no hay elementos por página; el contenedor ${Math.round(doc.contenedor.w)}×${Math.round(doc.contenedor.h)} px son ${doc.contenedor.n} páginas y se parte en ${doc.contenedor.n}.`);
   doc.paginas.forEach((pg, k) => onProgreso(`página ${k + 1}/${doc.paginas.length}: ${Math.round(pg.w)}×${Math.round(pg.h)} px en (${Math.round(pg.x)}, ${Math.round(pg.y)}); alto ${(pg.h / (pg.w / anchoPt)).toFixed(1)} pt (debe ser ${Math.round(altoPt)}).`));
   if (doc.paginas.length && indice >= doc.paginas.length) return { error: `paginas_no_coinciden: la colocación es en la página ${indice + 1} pero el editor muestra ${doc.paginas.length}` };
@@ -470,7 +522,7 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
   if (total && doc.paginas.length && doc.paginas.length !== total) return { error: `paginas_no_coinciden: el PDF tiene ${total} página(s) y en el editor se midieron ${doc.paginas.length}: ${doc.paginas.map((pg) => `${Math.round(pg.w)}×${Math.round(pg.h)} en (${Math.round(pg.x)}, ${Math.round(pg.y)})`).join(" · ")}` };
   const esIframe = (c) => doc.iframe && Math.abs(c.w - doc.iframe.w) < 2 && Math.abs(c.x - doc.iframe.x) < 2;
   if (doc.paginas.some(esIframe)) return { error: `hoja_medida_es_iframe: la página medida tiene el ancho y el origen del iframe del editor (${Math.round(doc.iframe.w)} px en x ${Math.round(doc.iframe.x)}): no es la hoja` };
-  let caja = await medirEstable(page, prop, indice);
+  let caja = await medirEstable(page, prop, indice, total);
   if (!caja) return { error: "no se encontró la hoja en el editor (ni en la página ni dentro del iframe)" };
   if (Math.abs(caja.h / (caja.w / anchoPt) - altoPt) > 2) return { error: `hoja_medida_es_contenedor: la caja medida (${Math.round(caja.w)}×${Math.round(caja.h)} px) no es una página: ${(caja.h / (caja.w * (altoPt / anchoPt))).toFixed(2)} páginas de alto` };
   let ultimo = null;
@@ -487,7 +539,8 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
     const abajo = Math.min(ed ? ed.caja.y + ed.caja.h : altoAhora, altoAhora) - 40;
     if (ed && Math.abs(caja.w - ed.caja.w) < 2 && Math.abs(caja.x - ed.caja.x) < 2) return { error: `hoja_medida_es_iframe: se midió el iframe del editor (${Math.round(caja.w)}×${Math.round(caja.h)} en (${Math.round(caja.x)}, ${Math.round(caja.y)})), no la hoja` };
     if (i > 0 && ventanaAgrandada) {
-      const docAhora = await paginasDelDocumento(page, prop);
+      const docAhora = await paginasDelDocumento(page, prop, total);
+      if (docAhora.origen === "pista") onProgreso(`(ventana agrandada) páginas por la geometría medida antes: el contenedor ahora mide ${Math.round(docAhora.contenedor.w)}×${Math.round(docAhora.contenedor.h)} (con relleno).`);
       docAhora.paginas.forEach((pg, k) => onProgreso(`(ventana agrandada) página ${k + 1}/${docAhora.paginas.length}: ${Math.round(pg.w)}×${Math.round(pg.h)} px en (${Math.round(pg.x)}, ${Math.round(pg.y)}); escala ${(pg.w / anchoPt).toFixed(3)} px/pt.`));
       if (total && docAhora.paginas.length !== total) return { error: `paginas_no_coinciden: después de agrandar la ventana se midieron ${docAhora.paginas.length} página(s) y el PDF tiene ${total}` };
     }
@@ -511,7 +564,7 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
     const yAntes = caja.y;
     const seMovio = async () => {
       await page.waitForTimeout(350);
-      const c = await medirCajaDePagina(page, prop, indice);
+      const c = await medirCajaDePagina(page, prop, indice, total);
       return c && Math.abs(c.y - yAntes) >= 2 ? c : null;
     };
     let movida = null;
@@ -592,7 +645,7 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
       // Re-medir la hoja con la geometría nueva; el editor puede tardar en redibujarla (hasta 3 s).
       caja = null;
       for (const desdeHoja = Date.now(); !caja && Date.now() - desdeHoja < 3000; ) {
-        caja = await medirEstable(page, prop, indice);
+        caja = await medirEstable(page, prop, indice, total);
         if (!caja) await page.waitForTimeout(400);
       }
       estadoScroll = r.estado;
@@ -607,7 +660,7 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
     if (Number.isFinite(r.movio)) scrolleado += Math.abs(r.movio);
     estadoScroll = r.estado;
     await page.waitForTimeout(600);
-    caja = await medirEstable(page, prop, indice);
+    caja = await medirEstable(page, prop, indice, total);
   }
   return {
     error: ultimo
@@ -647,8 +700,7 @@ async function asegurarVentanaAlta(page, onProgreso = () => {}) {
 let ventanaAgrandada = null;
 async function restaurarVentana(page) {
   if (!ventanaAgrandada) return;
-  // Nunca por debajo del alto de trabajo del editor: la ventana alta queda para toda la tanda.
-  await page.setViewportSize({ width: ventanaAgrandada.width, height: Math.max(ventanaAgrandada.height, ALTO_EDITOR) }).catch(() => {});
+  await page.setViewportSize(ventanaAgrandada).catch(() => {});
   ventanaAgrandada = null;
   await page.waitForTimeout(500);
 }
@@ -829,7 +881,10 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
 
     // LA VENTANA ALTA, DE ENTRADA (26/10 16:21): la hoja del editor no scrollea por ningún contenedor;
     // con la ventana en ALTO_EDITOR la página 1 entra entera y no hay scroll que pelear.
-    await asegurarVentanaAlta(page, onProgreso);
+    // (La ventana alta de entrada se sacó el 26/10 16:39: con 2100 el contenedor de páginas trae relleno y,
+    // sin una medición previa, no se lo puede partir. Se mide con la ventana normal y se agranda sólo si
+    // hace falta, con la geometría ya conocida.)
+    geometriaConocida = null;
     onProgreso("Esperando el editor de campos…");
     await esperarTexto(page, /insertar campos|campos/i, ESPERA_EDITOR_MS, "el editor «Insertar campos»");
     await cerrarAvisoDeCookies(page);
