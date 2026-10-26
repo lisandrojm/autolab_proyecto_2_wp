@@ -69,7 +69,7 @@ test("el título y el CC se escriben por `name` y el documento se carga por inpu
 
 test("la verificación del campo de firma va antes del Siguiente de revisión, y si falla no se envía", () => {
   const c = cuerpo("enviarDocumento");
-  const iVerif = c.indexOf("camposDeFirma(page, firmante.nombre)");
+  const iVerif = c.indexOf("camposDeFirma(page, firmante.nombre");
   const iSinColocar = c.indexOf("if (!colocado)");
   const iIrr = c.indexOf("enviarParaFirmar(page)");
   assert.ok(iVerif >= 0 && iVerif < iSinColocar && iSinColocar < iIrr);

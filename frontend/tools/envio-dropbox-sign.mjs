@@ -49,7 +49,6 @@ export const BOTONES = {
 export const IRREVERSIBLE = { rol: ["button"], nombre: /^enviar para firmar$/i };
 
 /** El campo de firma colocado, tal como lo expone el DOM del editor. */
-const SELECTOR_CAMPO = '[aria-label*="Firma de" i], [title*="Firma de" i]';
 
 const texto = (page) => page.evaluate(() => document.body?.innerText || "").catch(() => "");
 
@@ -186,48 +185,69 @@ async function arrastrarFirma(page, destino) {
  * grande con forma de hoja (más alto que ancho, > 300 px de ancho) entre canvas/imágenes/contenedores
  * de página. Si el editor cambia y no se encuentra, devuelve null y el documento queda en revisión.
  */
-export async function medirCajaDePagina(page, proporcion = null) {
-  const enRaiz = await medirEn(page, proporcion);
-  if (enRaiz) return enRaiz;
+/**
+ * LAS PÁGINAS DEL DOCUMENTO EN EL EDITOR, UNA POR UNA (26/10/2026). Antes se tomaba «el elemento más
+ * grande con forma de hoja» y, cuando ninguno tenía la proporción exacta, el de respaldo era el
+ * CONTENEDOR de las dos páginas (937×2725 px en la corrida de las 12:59): la firma de la página 1 caía
+ * en y 1584, adentro de la 2. Ahora:
+ *  · páginas = elementos visibles con la proporción del PDF (±1,5 %), sin repetir cajas anidadas,
+ *    ordenadas de arriba hacia abajo; cada una con SU caja;
+ *  · si no hay elementos por página pero sí un contenedor cuyo alto son N páginas, se lo parte en N
+ *    con el gap que se deduce de su propio alto (`hoja_medida_es_contenedor` en el log);
+ *  · el alto de cada página se valida: |altoPx / escala − altoPt| ≤ 2 pt.
+ * Devuelve las cajas en coordenadas de la PÁGINA (se suma la caja del iframe del editor).
+ */
+export async function paginasDelDocumento(page, proporcion) {
+  const enRaiz = await paginasEn(page, proporcion);
+  if (enRaiz.paginas.length) return enRaiz;
   const ed = await frameDelEditor(page);
-  if (!ed) return null;
-  const adentro = await medirEn(ed.frame, proporcion);
-  return adentro ? { x: ed.caja.x + adentro.x, y: ed.caja.y + adentro.y, w: adentro.w, h: adentro.h } : null;
+  if (!ed) return enRaiz;
+  const adentro = await paginasEn(ed.frame, proporcion);
+  const mover = (c) => ({ ...c, x: ed.caja.x + c.x, y: ed.caja.y + c.y });
+  return { ...adentro, paginas: adentro.paginas.map(mover) };
 }
 
-async function medirEn(raiz, proporcion) {
+async function paginasEn(raiz, proporcion) {
   return raiz
     .evaluate((prop) => {
-      /*
-        POR LA PROPORCIÓN DE LA HOJA, NO POR NOMBRES DE CLASES (26/10/2026). El editor de Dropbox Sign
-        cambia su HTML y los selectores por clase dejaron de encontrar la hoja («El editor no terminó de
-        preparar el documento en 120 s» con el documento ya dibujado). Se recorre TODO elemento visible
-        de 300 px o más de ancho y se elige el más grande cuya relación alto/ancho sea la del PDF
-        (±6 %): canvas, img, svg, un div con la imagen de fondo… da igual cómo lo dibuje. Sin la
-        proporción (o si nada la cumple) queda el criterio anterior: forma de hoja vertical.
-      */
       const visible = (el, r) => {
         const e = getComputedStyle(el);
-        return e.visibility !== "hidden" && e.display !== "none" && Number(e.opacity) > 0 && r.width >= 300 && r.height >= 300 && r.width <= window.innerWidth;
+        return e.visibility !== "hidden" && e.display !== "none" && Number(e.opacity) > 0 && r.width >= 300 && r.width <= window.innerWidth;
       };
-      let porProporcion = null;
-      let porForma = null;
+      const exactas = [];
+      let contenedor = null;
       for (const el of document.querySelectorAll("body *")) {
         const r = el.getBoundingClientRect();
-        if (r.width < 300 || r.height < 300) continue;
-        if (!visible(el, r)) continue;
-        const area = r.width * r.height;
-        const caja = { x: r.left, y: r.top, w: r.width, h: r.height, area };
-        if (prop && Math.abs(r.height / r.width - prop) / prop <= 0.06) {
-          if (!porProporcion || area > porProporcion.area) porProporcion = caja;
-        } else if (/^(CANVAS|IMG)$/.test(el.tagName) || /page/i.test(`${el.className} ${el.getAttribute("data-testid") || ""}`)) {
-          if (r.height > r.width && (!porForma || area > porForma.area)) porForma = caja;
+        if (r.width < 300 || r.height < 300 || !visible(el, r)) continue;
+        const ratio = r.height / r.width;
+        if (prop && Math.abs(ratio - prop) / prop <= 0.015) exactas.push({ x: r.left, y: r.top, w: r.width, h: r.height });
+        else if (prop && ratio > prop * 1.5) {
+          // Candidato a contenedor de varias páginas: alto ≈ N páginas + gaps.
+          const n = Math.round(ratio / prop);
+          const hp = r.width * prop;
+          const gap = n > 1 ? (r.height - n * hp) / (n - 1) : 0;
+          if (n >= 2 && gap >= 0 && gap < hp * 0.2 && (!contenedor || r.width * r.height > contenedor.w * contenedor.h)) contenedor = { x: r.left, y: r.top, w: r.width, h: r.height, n, hp, gap };
         }
       }
-      const mejor = porProporcion || porForma;
-      return mejor ? { x: mejor.x, y: mejor.y, w: mejor.w, h: mejor.h } : null;
+      // Sin cajas repetidas: una página y su canvas/imagen interior miden lo mismo.
+      const unicas = [];
+      for (const c of exactas.sort((a, b) => a.y - b.y || b.w * b.h - a.w * a.h)) {
+        if (!unicas.some((u) => Math.abs(u.x - c.x) < 3 && Math.abs(u.y - c.y) < 3 && Math.abs(u.w - c.w) < 3)) unicas.push(c);
+      }
+      if (unicas.length) return { paginas: unicas, origen: "paginas" };
+      if (contenedor) {
+        const paginas = Array.from({ length: contenedor.n }, (_, i) => ({ x: contenedor.x, y: contenedor.y + i * (contenedor.hp + contenedor.gap), w: contenedor.w, h: contenedor.hp }));
+        return { paginas, origen: "contenedor", contenedor: { w: contenedor.w, h: contenedor.h, n: contenedor.n } };
+      }
+      return { paginas: [], origen: "nada" };
     }, proporcion)
-    .catch(() => null);
+    .catch(() => ({ paginas: [], origen: "nada" }));
+}
+
+/** La caja (px, coordenadas de la página) de la página `indice` del documento (base 0). */
+export async function medirCajaDePagina(page, proporcion = null, indice = 0) {
+  const { paginas } = await paginasDelDocumento(page, proporcion);
+  return paginas[Math.min(Math.max(indice, 0), paginas.length - 1)] || null;
 }
 
 /** Los elementos grandes visibles (para el diagnóstico cuando la hoja no aparece). */
@@ -332,11 +352,11 @@ async function scrollearEn(raiz, dy) {
 }
 
 /** La caja de la hoja, medida dos veces a 300 ms: el editor la redimensiona al terminar de dibujar. */
-async function medirEstable(page, proporcion) {
-  let previa = await medirCajaDePagina(page, proporcion);
+async function medirEstable(page, proporcion, indice = 0) {
+  let previa = await medirCajaDePagina(page, proporcion, indice);
   for (let i = 0; i < 5 && previa; i++) {
     await page.waitForTimeout(300);
-    const ahora = await medirCajaDePagina(page, proporcion);
+    const ahora = await medirCajaDePagina(page, proporcion, indice);
     if (!ahora) return previa;
     if (Math.abs(ahora.w - previa.w) < 1 && Math.abs(ahora.h - previa.h) < 1 && Math.abs(ahora.y - previa.y) < 1) return ahora;
     previa = ahora;
@@ -355,10 +375,20 @@ async function medirEstable(page, proporcion) {
 export async function traerALaVista(page, colocacion, geometria, onProgreso = () => {}) {
   const prop = colocacion.tamanoPagina ? colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho : null;
   const alto = page.viewportSize()?.height || 812;
-  let caja = await medirEstable(page, prop);
-  if (!caja) return { error: "no se encontró la hoja en el editor (ni en la página ni dentro del iframe)" };
+  const indice = Number(colocacion.paginaIndex) || 0;
   const anchoPt = colocacion.tamanoPagina.ancho;
+  const altoPt = colocacion.tamanoPagina.alto;
+  // Una vez: todas las páginas con su tamaño y origen, y el chequeo del alto.
+  const doc = await paginasDelDocumento(page, prop);
+  if (doc.origen === "contenedor") onProgreso(`hoja_medida_es_contenedor: no hay elementos por página; el contenedor ${Math.round(doc.contenedor.w)}×${Math.round(doc.contenedor.h)} px son ${doc.contenedor.n} páginas y se parte en ${doc.contenedor.n}.`);
+  doc.paginas.forEach((pg, k) => onProgreso(`página ${k + 1}/${doc.paginas.length}: ${Math.round(pg.w)}×${Math.round(pg.h)} px en (${Math.round(pg.x)}, ${Math.round(pg.y)}); alto ${(pg.h / (pg.w / anchoPt)).toFixed(1)} pt (debe ser ${Math.round(altoPt)}).`));
+  if (doc.paginas.length && indice >= doc.paginas.length) return { error: `la colocación es en la página ${indice + 1} pero el editor muestra ${doc.paginas.length}` };
+  let caja = await medirEstable(page, prop, indice);
+  if (!caja) return { error: "no se encontró la hoja en el editor (ni en la página ni dentro del iframe)" };
+  if (Math.abs(caja.h / (caja.w / anchoPt) - altoPt) > 2) return { error: `hoja_medida_es_contenedor: la caja medida (${Math.round(caja.w)}×${Math.round(caja.h)} px) no es una página: ${(caja.h / (caja.w * (altoPt / anchoPt))).toFixed(2)} páginas de alto` };
   let ultimo = null;
+  let scrolleado = 0;
+  let pedido = 0;
   for (let i = 0; i < 6 && caja; i++) {
     const ed = await frameDelEditor(page);
     const arriba = Math.max(ed ? ed.caja.y : 0, 0) + 40;
@@ -369,28 +399,25 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
     if (i === 0) onProgreso(`Hoja medida: ${Math.round(caja.w)}×${Math.round(caja.h)} px en (${Math.round(caja.x)}, ${Math.round(caja.y)}); anchoPx ${Math.round(caja.w)}, anchoPt ${Math.round(anchoPt)}, escala ${escala.toFixed(3)} px/pt.`);
     if (d.y > arriba && d.y < abajo && d.x > 0 && d.x < (page.viewportSize()?.width || 1457)) return { caja, destino: d, escala };
     const dy = Math.round(d.y - (arriba + abajo) / 2);
+    pedido += Math.abs(dy);
     let movio = ed ? await scrollearEn(ed.frame, dy) : 0;
     if (Math.abs(movio) < 2) movio = await scrollearEn(page, dy);
+    scrolleado += Math.abs(movio);
     if (Math.abs(movio) < 2) {
       await page.mouse.move(caja.x + caja.w / 2, Math.min(Math.max(arriba + 20, 150), abajo - 20));
       await page.mouse.wheel(0, dy);
     }
     await page.waitForTimeout(600);
-    caja = await medirEstable(page, prop);
+    caja = await medirEstable(page, prop, indice);
   }
   return {
     error: ultimo
-      ? `el lugar de la firma no se pudo traer a la vista (quedó en y=${Math.round(ultimo.d.y)} px; escala ${ultimo.escala.toFixed(3)} px/pt, anchoPx ${caja ? Math.round(caja.w) : "?"}, anchoPt ${Math.round(anchoPt)})`
+      ? `el lugar de la firma no se pudo traer a la vista (quedó en y=${Math.round(ultimo.d.y)} px; se scrollearon ${Math.round(scrolleado)} px de ${Math.round(pedido)} pedidos; escala ${ultimo.escala.toFixed(3)} px/pt, anchoPx ${caja ? Math.round(caja.w) : "?"}, anchoPt ${Math.round(anchoPt)})`
       : "la hoja dejó de medirse mientras se scrolleaba",
   };
 }
 
 /** La caja (px) del campo de firma colocado, si el DOM lo expone. */
-async function cajaDelCampo(page) {
-  const loc = await locCampo(page);
-  const b = await loc.boundingBox({ timeout: 1500 }).catch(() => null);
-  return b ? { x: b.x, y: b.y, w: b.width, h: b.height } : null;
-}
 
 /** Dónde quedó el campo de firma colocado (centro, px), si el DOM lo expone. */
 async function centroDelCampo(page) {
@@ -399,23 +426,80 @@ async function centroDelCampo(page) {
 }
 
 /** Cuántos campos «Firma de NOMBRE» hay colocados. */
-async function camposDeFirma(page, nombre) {
-  const re = new RegExp(`firma de ${nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i");
-  const t = await textoConEditor(page);
-  const enTexto = (t.match(new RegExp(re.source, "gi")) || []).length;
+/*
+  EL CAMPO COLOCADO SE IDENTIFICA POR LO QUE APARECE, NO POR SU RÓTULO (26/10/2026). El editor lo
+  rotula «Firma» o «Firma empleado», no «Firma de NOMBRE»: buscarlo por ese texto no lo encontraba
+  nunca. Antes de soltarlo se marca todo el DOM (`marcarDom`); después, el campo es lo NUEVO que quedó
+  SOBRE LA HOJA (el elemento exterior, entre 20×10 y 600×300 px). Con un solo firmante en la solicitud,
+  todo campo de firma es de él. El HTML del campo se loguea una vez para poder elegir un selector fijo.
+*/
+let hojaDelCampo = null;
+let htmlLogueado = false;
+
+async function marcarDom(page) {
+  const marcar = (raiz) => raiz.evaluate(() => document.querySelectorAll("*").forEach((e) => e.setAttribute("data-bot-visto", "1"))).catch(() => {});
+  await marcar(page);
   const ed = await frameDelEditor(page);
-  const enAria = (await page.locator(SELECTOR_CAMPO).count().catch(() => 0)) + (ed ? await ed.frame.locator(SELECTOR_CAMPO).count().catch(() => 0) : 0);
-  return Math.max(enTexto, enAria);
+  if (ed) await marcar(ed.frame);
 }
 
-/** El locator del campo de firma colocado: en la página o dentro del editor. */
+/** Los elementos nuevos sobre la hoja (coordenadas de la página), el exterior de cada grupo. Marca el primero con `data-bot-campo`. */
+async function camposNuevos(page) {
+  const buscar = (raiz, off) =>
+    raiz
+      .evaluate(
+        ({ hoja, off }) => {
+          document.querySelectorAll("[data-bot-campo]").forEach((e) => e.removeAttribute("data-bot-campo"));
+          const dentro = (r) => {
+            if (!hoja) return true;
+            const cx = r.left + off.x + r.width / 2;
+            const cy = r.top + off.y + r.height / 2;
+            return cx >= hoja.x && cx <= hoja.x + hoja.w && cy >= hoja.y && cy <= hoja.y + hoja.h;
+          };
+          const nuevos = Array.from(document.querySelectorAll("body *:not([data-bot-visto])")).filter((el) => {
+            const r = el.getBoundingClientRect();
+            const e = getComputedStyle(el);
+            return r.width >= 20 && r.height >= 10 && r.width <= 600 && r.height <= 300 && e.display !== "none" && e.visibility !== "hidden" && dentro(r);
+          });
+          const exteriores = nuevos.filter((el) => !nuevos.some((otro) => otro !== el && otro.contains(el)));
+          // Primero los que parecen campo de firma; si ninguno, todo lo nuevo exterior.
+          const pareceFirma = (el) => /firma|signature|signer|field/i.test(`${el.getAttribute("aria-label") || ""} ${el.getAttribute("title") || ""} ${el.className || ""} ${el.getAttribute("data-testid") || ""} ${Object.keys(el.dataset || {}).join(" ")} ${(el.textContent || "").slice(0, 40)}`);
+          const elegidos = exteriores.some(pareceFirma) ? exteriores.filter(pareceFirma) : exteriores;
+          if (elegidos[0]) elegidos[0].setAttribute("data-bot-campo", "1");
+          return elegidos.map((el) => {
+            const r = el.getBoundingClientRect();
+            return { x: r.left + off.x, y: r.top + off.y, w: r.width, h: r.height, html: el.outerHTML.replace(/\s+/g, " ").slice(0, 500) };
+          });
+        },
+        { hoja: hojaDelCampo, off },
+      )
+      .catch(() => []);
+  const ed = await frameDelEditor(page);
+  const enEditor = ed ? await buscar(ed.frame, { x: ed.caja.x, y: ed.caja.y }) : [];
+  return enEditor.length ? { campos: enEditor, raiz: ed.frame } : { campos: await buscar(page, { x: 0, y: 0 }), raiz: page };
+}
+
+/** Cuántos campos de firma se colocaron (lo nuevo sobre la hoja). `nombre` queda para el log. */
+async function camposDeFirma(page, nombre, onProgreso = () => {}) {
+  const { campos } = await camposNuevos(page);
+  if (campos.length && !htmlLogueado) {
+    htmlLogueado = true;
+    onProgreso(`HTML del campo colocado (una vez, para fijar el selector): ${campos[0].html}`);
+  }
+  if (campos.length > 1) onProgreso(`Aparecieron ${campos.length} elementos nuevos sobre la hoja: ${campos.map((c) => `${Math.round(c.w)}×${Math.round(c.h)} en (${Math.round(c.x)}, ${Math.round(c.y)})`).join(" · ")} (firmante ${nombre}).`);
+  return campos.length;
+}
+
+/** El locator del campo colocado (marcado por `camposNuevos`). */
 async function locCampo(page) {
-  if (await page.locator(SELECTOR_CAMPO).count().catch(() => 0)) return page.locator(SELECTOR_CAMPO).first();
-  const ed = await frameDelEditor(page);
-  return ed ? ed.frame.locator(SELECTOR_CAMPO).first() : page.locator(SELECTOR_CAMPO).first();
+  const { raiz } = await camposNuevos(page);
+  return raiz.locator('[data-bot-campo="1"]').first();
 }
 
-/** El rectángulo del campo (puntos PDF) pasado a píxeles de pantalla, con la caja de la página. */
+async function cajaDelCampo(page) {
+  const { campos } = await camposNuevos(page);
+  return campos[0] ? { x: campos[0].x, y: campos[0].y, w: campos[0].w, h: campos[0].h } : null;
+}
 function campoEnPantalla(colocacion, geometria, caja) {
   const a = geometria.pdfAPantalla({ x: colocacion.campo.x, y: colocacion.campo.y }, colocacion.tamanoPagina, caja);
   const b = geometria.pdfAPantalla({ x: colocacion.campo.x + colocacion.campo.w, y: colocacion.campo.y + colocacion.campo.h }, colocacion.tamanoPagina, caja);
@@ -539,20 +623,23 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
         break;
       }
       const destino = vista.destino;
+      hojaDelCampo = vista.caja;
+      await marcarDom(page);
       onProgreso(`Colocando la firma en (${Math.round(destino.x)}, ${Math.round(destino.y)}) px — ${colocacion.descripcion}`);
       await arrastrarFirma(page, destino);
-      let n = await camposDeFirma(page, firmante.nombre);
+      let n = await camposDeFirma(page, firmante.nombre, onProgreso);
+      const propPag = colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho;
       if (n === 1) {
-        const objetivo = campoEnPantalla(colocacion, geometria, (await medirCajaDePagina(page, colocacion.tamanoPagina ? colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho : null)) || vista.caja);
+        const objetivo = campoEnPantalla(colocacion, geometria, (await medirCajaDePagina(page, propPag, Number(colocacion.paginaIndex) || 0)) || vista.caja);
         await ajustarCampo(page, objetivo, onProgreso).catch((e) => onProgreso(`No se pudo ajustar el campo: ${e?.message || e}`));
-        n = await camposDeFirma(page, firmante.nombre);
+        n = await camposDeFirma(page, firmante.nombre, onProgreso);
       }
-      if (n !== 1) motivoFalla = `Se esperaba 1 campo de firma y hay ${n}.`;
+      if (n !== 1) motivoFalla = n === 0 ? "No apareció ningún campo nuevo sobre la hoja después de soltar «Firma»." : `Aparecieron ${n} campos nuevos sobre la hoja; tiene que ser exactamente 1.`;
       else {
         const centro = await centroDelCampo(page);
-        const cajaAhora = (await medirCajaDePagina(page, colocacion.tamanoPagina ? colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho : null)) || vista.caja;
+        const cajaAhora = (await medirCajaDePagina(page, propPag, Number(colocacion.paginaIndex) || 0)) || vista.caja;
         if (!centro) {
-          onProgreso("El campo quedó colocado pero el DOM no expone dónde: se acepta por conteo.");
+          onProgreso("AVISO: no se pudo verificar la posición; se validó la estructura (exactamente 1 campo nuevo sobre la página esperada, firmante único).");
           colocado = true;
         } else {
           const enPdf = geometria.pantallaAPdf(centro, colocacion.tamanoPagina, cajaAhora);
@@ -573,7 +660,7 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
     if (!colocado) {
       const img = await captura();
       await salirSinEnviar(page);
-      return { resultado: "requiere_revision", detalle: `No se pudo verificar un único campo «Firma de ${firmante.nombre}» en el lugar esperado (${motivoFalla}): no se envió.`, captura: img };
+      return { resultado: "requiere_revision", detalle: `No se pudo verificar un único campo de firma de ${firmante.nombre} en el lugar esperado (${motivoFalla}): no se envió.`, captura: img };
     }
     await apretar(page, "siguiente");
 
@@ -619,3 +706,6 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
     return { resultado: "error", detalle: e?.message || String(e), captura: img };
   }
 }
+
+/** Sólo para pruebas de la geometría y del reconocimiento del campo (no son parte del flujo). */
+export const _paraPruebas = { traerALaVista, marcarDom, arrastrarFirma, camposDeFirma, cajaDelCampo, setHoja: (c) => (hojaDelCampo = c) };
