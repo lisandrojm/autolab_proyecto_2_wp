@@ -334,21 +334,31 @@ async function cerrarAvisoDeCookies(page) {
 }
 
 /** Mueve el visor hasta que el punto de pantalla quede a la vista (la caja de la página cambia con el scroll). */
-/** Scrollea `dy` px el contenedor que de verdad scrollea (el más alto con overflow), dentro de `raiz`. Devuelve cuánto se movió. */
-async function scrollearEn(raiz, dy) {
+/**
+ * Scrollea `dy` px el contenedor que de verdad mueve la hoja: los ANCESTROS del elemento que está bajo
+ * `punto` (coordenadas de `raiz`), del más cercano al más lejano, y el documento al final. Antes se
+ * movía «el contenedor más alto» de la página: dio 290 px y después nada se movía (26/10 13:27).
+ * Devuelve cuánto se movió y el estado del que se movió (scrollTop / scrollHeight / clientHeight).
+ */
+async function scrollearEn(raiz, dy, punto) {
   return raiz
-    .evaluate((delta) => {
-      const candidatos = [document.scrollingElement, ...Array.from(document.querySelectorAll("body *")).filter((el) => {
-        const e = getComputedStyle(el);
-        return /(auto|scroll|overlay)/.test(e.overflowY) && el.scrollHeight > el.clientHeight + 5;
-      })].filter(Boolean);
-      const el = candidatos.sort((a, b) => b.clientHeight - a.clientHeight).find((x) => x.scrollHeight > x.clientHeight + 5);
-      if (!el) return 0;
-      const antes = el.scrollTop;
-      el.scrollTop = antes + delta;
-      return el.scrollTop - antes;
-    }, dy)
-    .catch(() => 0);
+    .evaluate(
+      ({ delta, punto }) => {
+        const scrolleables = [];
+        let n = punto ? document.elementFromPoint(punto.x, punto.y) : null;
+        for (; n; n = n.parentElement) if (n.scrollHeight > n.clientHeight + 5) scrolleables.push(n);
+        if (document.scrollingElement) scrolleables.push(document.scrollingElement);
+        for (const el of scrolleables) {
+          const antes = el.scrollTop;
+          el.scrollTop = antes + delta;
+          const movio = el.scrollTop - antes;
+          if (Math.abs(movio) >= 2) return { movio, estado: `scrollTop ${Math.round(el.scrollTop)} de ${Math.round(el.scrollHeight - el.clientHeight)} (scrollHeight ${Math.round(el.scrollHeight)}, clientHeight ${Math.round(el.clientHeight)})` };
+        }
+        return { movio: 0, estado: `ningún contenedor se movió (${scrolleables.length} candidatos)` };
+      },
+      { delta: dy, punto },
+    )
+    .catch(() => ({ movio: 0, estado: "no se pudo scrollear" }));
 }
 
 /** La caja de la hoja, medida dos veces a 300 ms: el editor la redimensiona al terminar de dibujar. */
@@ -388,31 +398,38 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
   if (Math.abs(caja.h / (caja.w / anchoPt) - altoPt) > 2) return { error: `hoja_medida_es_contenedor: la caja medida (${Math.round(caja.w)}×${Math.round(caja.h)} px) no es una página: ${(caja.h / (caja.w * (altoPt / anchoPt))).toFixed(2)} páginas de alto` };
   let ultimo = null;
   let scrolleado = 0;
-  let pedido = 0;
+  let estadoScroll = "sin scroll";
   for (let i = 0; i < 6 && caja; i++) {
     const ed = await frameDelEditor(page);
     const arriba = Math.max(ed ? ed.caja.y : 0, 0) + 40;
     const abajo = Math.min(ed ? ed.caja.y + ed.caja.h : alto, alto) - 40;
     const d = geometria.pdfAPantalla(colocacion.puntoPdf, colocacion.tamanoPagina, caja);
     const escala = caja.w / anchoPt;
-    ultimo = { d, escala };
+    ultimo = { d, escala, arriba, abajo, frameTop: ed ? ed.caja.y : 0, frameAlto: ed ? ed.caja.h : alto };
     if (i === 0) onProgreso(`Hoja medida: ${Math.round(caja.w)}×${Math.round(caja.h)} px en (${Math.round(caja.x)}, ${Math.round(caja.y)}); anchoPx ${Math.round(caja.w)}, anchoPt ${Math.round(anchoPt)}, escala ${escala.toFixed(3)} px/pt.`);
+    // Éxito = el punto, medido AHORA, está dentro de lo visible del frame (y de la ventana), con margen.
     if (d.y > arriba && d.y < abajo && d.x > 0 && d.x < (page.viewportSize()?.width || 1457)) return { caja, destino: d, escala };
+    // Lo que falta para dejar el punto en el medio de lo visible, sobre la medición ACTUAL de la página destino.
     const dy = Math.round(d.y - (arriba + abajo) / 2);
-    pedido += Math.abs(dy);
-    let movio = ed ? await scrollearEn(ed.frame, dy) : 0;
-    if (Math.abs(movio) < 2) movio = await scrollearEn(page, dy);
-    scrolleado += Math.abs(movio);
-    if (Math.abs(movio) < 2) {
-      await page.mouse.move(caja.x + caja.w / 2, Math.min(Math.max(arriba + 20, 150), abajo - 20));
+    // Un punto de la hoja que está a la vista: ahí se busca qué scrollea.
+    const visibleY = Math.min(Math.max(caja.y + 20, arriba), abajo) ;
+    const enPagina = { x: caja.x + caja.w / 2, y: visibleY };
+    let r = ed ? await scrollearEn(ed.frame, dy, { x: enPagina.x - ed.caja.x, y: enPagina.y - ed.caja.y }) : { movio: 0, estado: "" };
+    if (Math.abs(r.movio) < 2) r = await scrollearEn(page, dy, enPagina);
+    if (Math.abs(r.movio) < 2) {
+      // Nada se movió por scrollTop (puede ser un scroll propio del editor): la rueda, sobre la hoja.
+      await page.mouse.move(enPagina.x, enPagina.y);
       await page.mouse.wheel(0, dy);
+      r = { movio: NaN, estado: "rueda del mouse sobre la hoja" };
     }
+    if (Number.isFinite(r.movio)) scrolleado += Math.abs(r.movio);
+    estadoScroll = r.estado;
     await page.waitForTimeout(600);
     caja = await medirEstable(page, prop, indice);
   }
   return {
     error: ultimo
-      ? `el lugar de la firma no se pudo traer a la vista (quedó en y=${Math.round(ultimo.d.y)} px; se scrollearon ${Math.round(scrolleado)} px de ${Math.round(pedido)} pedidos; escala ${ultimo.escala.toFixed(3)} px/pt, anchoPx ${caja ? Math.round(caja.w) : "?"}, anchoPt ${Math.round(anchoPt)})`
+      ? `el lugar de la firma no quedó a la vista: re-medido, está en y ${Math.round(ultimo.d.y - ultimo.frameTop)} px del frame (alto del frame ${Math.round(ultimo.frameAlto)}; visible entre ${Math.round(ultimo.arriba - ultimo.frameTop)} y ${Math.round(ultimo.abajo - ultimo.frameTop)}); se scrollearon ${Math.round(scrolleado)} px; último scroll: ${estadoScroll}; escala ${ultimo.escala.toFixed(3)} px/pt, anchoPx ${caja ? Math.round(caja.w) : "?"}, anchoPt ${Math.round(anchoPt)}`
       : "la hoja dejó de medirse mientras se scrolleaba",
   };
 }
