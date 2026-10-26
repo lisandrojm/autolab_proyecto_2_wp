@@ -511,7 +511,7 @@ router.post("/bot/colocacion/previsualizar", async (req: AuthenticatedRequest & 
 router.post("/bot/colocacion/verificar-todos", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede verificar la colocación." });
-    const alcance = (["cola", "revision", "cola_y_revision", "outbox"].includes(req.body?.alcance) ? req.body.alcance : "cola_y_revision") as AlcanceVerificacion;
+    const alcance = (["cola", "revision", "cola_y_revision", "outbox"].includes(req.body?.alcance) ? req.body.alcance : "outbox") as AlcanceVerificacion;
     res.json({ arrancada: true, ...(await arrancarVerificacion(String(req.tenantObjectId), alcance)) });
   } catch (error: any) {
     res.status(error?.status || 500).json({ error: error?.message || "No se pudo arrancar la verificación." });
