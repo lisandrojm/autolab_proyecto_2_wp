@@ -22,7 +22,7 @@
  */
 
 /** Qué versión del motor corre: aparece en el log de cada corrida. Se actualiza con cada cambio del motor. */
-export const VERSION_MOTOR = "2026-10-26 d · campo por data-testid=field-signature + data-signer · verificación por porcentaje · img fill = escala por eje";
+export const VERSION_MOTOR = "2026-10-26 e · HTML de una fila «Borrador» en el log · campo por data-testid=field-signature + data-signer · verificación por porcentaje · img fill = escala por eje";
 
 export const MANAGE_URL = "https://app.sign.dropbox.com/home/manage";
 /** Dónde está el ítem «Firma» del panel de campos, en 1457×812. */
@@ -924,6 +924,29 @@ export async function revisarBorradores({ page, onProgreso = () => {} }) {
   const t = await texto(page);
   const encontrados = (t.match(/\bBorrador\b/gi) || []).length;
   if (encontrados) onProgreso(`${encontrados} borrador(es) en el listado de Dropbox Sign.`);
+  /*
+    DIAGNÓSTICO DE LOS BORRADORES (26/10/2026), SÓLO LECTURA: el HTML de la primera fila que dice
+    «Borrador» y de sus botones, para poder escribir «Limpiar borradores» con selectores reales (como
+    pasó con el campo de firma). No hace ningún click.
+  */
+  if (encontrados) {
+    const fila = await page
+      .evaluate(() => {
+        const celdas = Array.from(document.querySelectorAll("body *")).filter((el) => el.children.length === 0 && /^\s*borrador\s*$/i.test(el.textContent || ""));
+        if (!celdas.length) return null;
+        // La fila: el ancestro más cercano que además tiene un botón (el «⋯») y el título del documento.
+        let n = celdas[0];
+        for (let i = 0; i < 10 && n && !(n.querySelector("button, [role='button']") && (n.textContent || "").length > 40); i++) n = n.parentElement;
+        if (!n) return null;
+        const botones = Array.from(n.querySelectorAll("button, [role='button'], [aria-haspopup]")).map((b) => b.outerHTML.replace(/\s+/g, " ").slice(0, 300));
+        return { fila: n.outerHTML.replace(/\s+/g, " ").replace(/<svg[\s\S]*?<\/svg>/g, "<svg/>").slice(0, 1500), botones };
+      })
+      .catch(() => null);
+    if (fila) {
+      onProgreso(`HTML de una fila «Borrador» (diagnóstico, sin clicks): ${fila.fila}`);
+      fila.botones.slice(0, 4).forEach((b, i) => onProgreso(`  botón ${i + 1} de la fila: ${b}`));
+    } else onProgreso("No se pudo ubicar en el DOM una fila «Borrador» para el diagnóstico.");
+  }
   return { encontrados };
 }
 
