@@ -198,13 +198,22 @@ async function arrastrarFirma(page, destino) {
  * Devuelve las cajas en coordenadas de la PÁGINA (se suma la caja del iframe del editor).
  */
 export async function paginasDelDocumento(page, proporcion) {
-  const enRaiz = await paginasEn(page, proporcion);
-  if (enRaiz.paginas.length) return enRaiz;
+  /*
+    PRIMERO DENTRO DEL EDITOR (26/10/2026, 15:17). Con la ventana agrandada, el IFRAME pasó a medir
+    1457×2058 —casi la proporción A4 (1,412 contra 1,415)— y, buscando primero en la página raíz, se lo
+    tomó por la hoja: escala 2,449 en vez de 1,575 y el drop 163 px a la derecha. Ahora se busca en el
+    editor y recién si no hay editor en la raíz; y en ningún lado vale como página un iframe ni algo
+    que contenga uno.
+  */
   const ed = await frameDelEditor(page);
-  if (!ed) return enRaiz;
-  const adentro = await paginasEn(ed.frame, proporcion);
-  const mover = (c) => ({ ...c, x: ed.caja.x + c.x, y: ed.caja.y + c.y });
-  return { ...adentro, paginas: adentro.paginas.map(mover) };
+  if (ed) {
+    const adentro = await paginasEn(ed.frame, proporcion);
+    if (adentro.paginas.length) {
+      const mover = (c) => ({ ...c, x: ed.caja.x + c.x, y: ed.caja.y + c.y });
+      return { ...adentro, paginas: adentro.paginas.map(mover), iframe: ed.caja };
+    }
+  }
+  return { ...(await paginasEn(page, proporcion)), iframe: ed ? ed.caja : null };
 }
 
 async function paginasEn(raiz, proporcion) {
@@ -217,8 +226,12 @@ async function paginasEn(raiz, proporcion) {
       const exactas = [];
       let contenedor = null;
       for (const el of document.querySelectorAll("body *")) {
+        if (el.tagName === "IFRAME" || el.querySelector("iframe")) continue;
         const r = el.getBoundingClientRect();
         if (r.width < 300 || r.height < 300 || !visible(el, r)) continue;
+        // Una página nunca ocupa todo el ancho de su documento (el editor la muestra con márgenes): un
+        // elemento de ancho completo con proporción A4 es la ventana/iframe agrandado, no la hoja.
+        if (r.width >= window.innerWidth - 10) continue;
         const ratio = r.height / r.width;
         if (prop && Math.abs(ratio - prop) / prop <= 0.015) exactas.push({ x: r.left, y: r.top, w: r.width, h: r.height });
         else if (prop && ratio > prop * 1.5) {
@@ -247,7 +260,7 @@ async function paginasEn(raiz, proporcion) {
 /** La caja (px, coordenadas de la página) de la página `indice` del documento (base 0). */
 export async function medirCajaDePagina(page, proporcion = null, indice = 0) {
   const { paginas } = await paginasDelDocumento(page, proporcion);
-  return paginas[Math.min(Math.max(indice, 0), paginas.length - 1)] || null;
+  return paginas[indice] || null;
 }
 
 /** Los elementos grandes visibles (para el diagnóstico cuando la hoja no aparece). */
@@ -448,7 +461,11 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
   const doc = await paginasDelDocumento(page, prop);
   if (doc.origen === "contenedor") onProgreso(`hoja_medida_es_contenedor: no hay elementos por página; el contenedor ${Math.round(doc.contenedor.w)}×${Math.round(doc.contenedor.h)} px son ${doc.contenedor.n} páginas y se parte en ${doc.contenedor.n}.`);
   doc.paginas.forEach((pg, k) => onProgreso(`página ${k + 1}/${doc.paginas.length}: ${Math.round(pg.w)}×${Math.round(pg.h)} px en (${Math.round(pg.x)}, ${Math.round(pg.y)}); alto ${(pg.h / (pg.w / anchoPt)).toFixed(1)} pt (debe ser ${Math.round(altoPt)}).`));
-  if (doc.paginas.length && indice >= doc.paginas.length) return { error: `la colocación es en la página ${indice + 1} pero el editor muestra ${doc.paginas.length}` };
+  if (doc.paginas.length && indice >= doc.paginas.length) return { error: `paginas_no_coinciden: la colocación es en la página ${indice + 1} pero el editor muestra ${doc.paginas.length}` };
+  const total = Number(colocacion.totalPaginas) || 0;
+  if (total && doc.paginas.length && doc.paginas.length !== total) return { error: `paginas_no_coinciden: el PDF tiene ${total} página(s) y en el editor se midieron ${doc.paginas.length}: ${doc.paginas.map((pg) => `${Math.round(pg.w)}×${Math.round(pg.h)} en (${Math.round(pg.x)}, ${Math.round(pg.y)})`).join(" · ")}` };
+  const esIframe = (c) => doc.iframe && Math.abs(c.w - doc.iframe.w) < 2 && Math.abs(c.x - doc.iframe.x) < 2;
+  if (doc.paginas.some(esIframe)) return { error: `hoja_medida_es_iframe: la página medida tiene el ancho y el origen del iframe del editor (${Math.round(doc.iframe.w)} px en x ${Math.round(doc.iframe.x)}): no es la hoja` };
   let caja = await medirEstable(page, prop, indice);
   if (!caja) return { error: "no se encontró la hoja en el editor (ni en la página ni dentro del iframe)" };
   if (Math.abs(caja.h / (caja.w / anchoPt) - altoPt) > 2) return { error: `hoja_medida_es_contenedor: la caja medida (${Math.round(caja.w)}×${Math.round(caja.h)} px) no es una página: ${(caja.h / (caja.w * (altoPt / anchoPt))).toFixed(2)} páginas de alto` };
@@ -461,6 +478,12 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
     const arriba = Math.max(ed ? ed.caja.y : 0, 0) + 40;
     const altoAhora = page.viewportSize()?.height || alto;
     const abajo = Math.min(ed ? ed.caja.y + ed.caja.h : altoAhora, altoAhora) - 40;
+    if (ed && Math.abs(caja.w - ed.caja.w) < 2 && Math.abs(caja.x - ed.caja.x) < 2) return { error: `hoja_medida_es_iframe: se midió el iframe del editor (${Math.round(caja.w)}×${Math.round(caja.h)} en (${Math.round(caja.x)}, ${Math.round(caja.y)})), no la hoja` };
+    if (i > 0 && ventanaAgrandada) {
+      const docAhora = await paginasDelDocumento(page, prop);
+      docAhora.paginas.forEach((pg, k) => onProgreso(`(ventana agrandada) página ${k + 1}/${docAhora.paginas.length}: ${Math.round(pg.w)}×${Math.round(pg.h)} px en (${Math.round(pg.x)}, ${Math.round(pg.y)}); escala ${(pg.w / anchoPt).toFixed(3)} px/pt.`));
+      if (total && docAhora.paginas.length !== total) return { error: `paginas_no_coinciden: después de agrandar la ventana se midieron ${docAhora.paginas.length} página(s) y el PDF tiene ${total}` };
+    }
     const d = geometria.pdfAPantalla(colocacion.puntoPdf, colocacion.tamanoPagina, caja);
     const escala = caja.w / anchoPt;
     ultimo = { d, escala, arriba, abajo, frameTop: ed ? ed.caja.y : 0, frameAlto: ed ? ed.caja.h : alto };
@@ -618,6 +641,22 @@ async function camposDeFirma(page, nombre, onProgreso = () => {}) {
   return campos.length;
 }
 
+/** Qué elemento hay bajo un punto de la página (dentro del iframe del editor si cae ahí), para el log. */
+async function queHayEn(page, punto) {
+  const describir = (raiz, p) =>
+    raiz
+      .evaluate(({ x, y }) => {
+        const el = document.elementFromPoint(x, y);
+        if (!el) return "nada";
+        const cls = typeof el.className === "string" ? el.className.trim().split(/\s+/).slice(0, 2).join(".") : "";
+        return `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}${cls ? "." + cls : ""} «${(el.textContent || "").trim().slice(0, 30)}»`;
+      }, p)
+      .catch(() => "?");
+  const ed = await frameDelEditor(page);
+  if (ed && punto.x >= ed.caja.x && punto.x <= ed.caja.x + ed.caja.w && punto.y >= ed.caja.y && punto.y <= ed.caja.y + ed.caja.h) return `(editor) ${await describir(ed.frame, { x: punto.x - ed.caja.x, y: punto.y - ed.caja.y })}`;
+  return describir(page, punto);
+}
+
 /** El locator del campo colocado (marcado por `camposNuevos`). */
 async function locCampo(page) {
   const { raiz } = await camposNuevos(page);
@@ -752,6 +791,11 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
       }
       const destino = vista.destino;
       hojaDelCampo = vista.caja;
+      const c0 = vista.caja;
+      if (!(destino.x >= c0.x && destino.x <= c0.x + c0.w && destino.y >= c0.y && destino.y <= c0.y + c0.h)) {
+        motivoFalla = `El punto de soltado (${Math.round(destino.x)}, ${Math.round(destino.y)}) no cae sobre la página medida (${Math.round(c0.w)}×${Math.round(c0.h)} en (${Math.round(c0.x)}, ${Math.round(c0.y)})): no se arrastra.`;
+        break;
+      }
       await marcarDom(page);
       onProgreso(`Colocando la firma en (${Math.round(destino.x)}, ${Math.round(destino.y)}) px — ${colocacion.descripcion}`);
       await arrastrarFirma(page, destino);
@@ -762,7 +806,7 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
         await ajustarCampo(page, objetivo, onProgreso).catch((e) => onProgreso(`No se pudo ajustar el campo: ${e?.message || e}`));
         n = await camposDeFirma(page, firmante.nombre, onProgreso);
       }
-      if (n !== 1) motivoFalla = n === 0 ? "No apareció ningún campo nuevo sobre la hoja después de soltar «Firma»." : `Aparecieron ${n} campos nuevos sobre la hoja; tiene que ser exactamente 1.`;
+      if (n !== 1) motivoFalla = n === 0 ? `No apareció ningún campo nuevo sobre la hoja después de soltar «Firma» en (${Math.round(destino.x)}, ${Math.round(destino.y)}); página ${Math.round(vista.caja.w)}×${Math.round(vista.caja.h)} en (${Math.round(vista.caja.x)}, ${Math.round(vista.caja.y)}); bajo el puntero: ${await queHayEn(page, destino)}; el arrastre salió de ${await origenFirma(page).then((o) => `(${Math.round(o.x)}, ${Math.round(o.y)})`)}.` : `Aparecieron ${n} campos nuevos sobre la hoja; tiene que ser exactamente 1.`;
       else {
         const centro = await centroDelCampo(page);
         const cajaAhora = (await medirCajaDePagina(page, propPag, Number(colocacion.paginaIndex) || 0)) || vista.caja;

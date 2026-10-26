@@ -234,6 +234,8 @@ export interface Colocacion {
     /** Adónde tiene que ir el motor. `otra` (una página del medio) no la sabe navegar: requiere_revision. */
     pagina: "primera" | "ultima" | "otra";
     paginaIndex: number;
+    /** Cuántas páginas tiene el PDF: el motor lo compara con las que mide en el editor. */
+    totalPaginas?: number;
     tamanoPagina: {
         ancho: number;
         alto: number;

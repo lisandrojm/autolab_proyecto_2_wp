@@ -509,6 +509,8 @@ export interface Colocacion {
   /** Adónde tiene que ir el motor. `otra` (una página del medio) no la sabe navegar: requiere_revision. */
   pagina: "primera" | "ultima" | "otra";
   paginaIndex: number;
+  /** Cuántas páginas tiene el PDF: el motor lo compara con las que mide en el editor. */
+  totalPaginas?: number;
   tamanoPagina: { ancho: number; alto: number };
   /** El campo de firma, en puntos PDF. Es lo que muestra la previsualización. */
   campo: Rect;
@@ -670,6 +672,7 @@ export function resolverColocacion(nombreArchivo: string, paginas: PaginaPdf[] |
           tipo: regla.tipo,
           pagina: paginaDe(v.paginaIndex, total),
           paginaIndex: v.paginaIndex,
+          totalPaginas: total,
           tamanoPagina: { ancho: v.pagina.ancho, alto: v.pagina.alto },
           campo,
           puntoPdf: punto,
@@ -801,6 +804,7 @@ export function deteccionDesdeDeclarada(d: ColocacionDeclarada): Deteccion {
       tipo: `Plantilla «${d.plantillaNombre}»`,
       pagina,
       paginaIndex,
+      totalPaginas: Number(d.totalPaginas) || undefined,
       tamanoPagina,
       campo: d.campo,
       puntoPdf: punto,
