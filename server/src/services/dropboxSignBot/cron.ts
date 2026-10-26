@@ -24,10 +24,22 @@ async function tick(): Promise<void> {
       if (!puedeCorrer(config, estado, ahora).ok) continue;
       // Candado entre procesos: sólo quien logra escribir `ultimaCorridaAt` corre.
       const limite = new Date(ahora.getTime() - config.intervaloHoras * 3600_000);
-      const marcado = await Tenant.updateOne({ _id: t._id, $or: [{ [`${BASE}.ultimaCorridaAt`]: null }, { [`${BASE}.ultimaCorridaAt`]: { $lt: limite } }] }, { $set: { [`${BASE}.ultimaCorridaAt`]: ahora } });
-      if (marcado.modifiedCount === 0) continue;
-      await arrancarCorridaEnvio(tenantId, { automatica: true });
-      console.log(`[DROPBOX-SIGN-BOT] Tanda automática arrancada para el tenant ${tenantId}.`);
+      const previo: any = await Tenant.findOneAndUpdate(
+        { _id: t._id, $or: [{ [`${BASE}.ultimaCorridaAt`]: null }, { [`${BASE}.ultimaCorridaAt`]: { $lt: limite } }] },
+        { $set: { [`${BASE}.ultimaCorridaAt`]: ahora } },
+        { new: false, projection: { [`${BASE}.ultimaCorridaAt`]: 1 } },
+      ).lean();
+      if (!previo) continue;
+      try {
+        // `yaReservada` adentro: el candado que se acaba de escribir no cuenta como «la última corrida».
+        await arrancarCorridaEnvio(tenantId, { automatica: true });
+        console.log(`[DROPBOX-SIGN-BOT] Tanda automática arrancada para el tenant ${tenantId}.`);
+      } catch (e) {
+        // NO ARRANCÓ (26/10/2026): se devuelve `ultimaCorridaAt` a lo que era. Antes quedaba escrita y el
+        // panel decía «Todavía no pasaron 4 h» para siempre sin que saliera ninguna tanda.
+        await Tenant.updateOne({ _id: t._id, [`${BASE}.ultimaCorridaAt`]: ahora }, { $set: { [`${BASE}.ultimaCorridaAt`]: previo?.integrations?.dropboxSign?.bot?.ultimaCorridaAt ?? null } }).catch(() => {});
+        throw e;
+      }
     } catch (e: any) {
       console.error(`[DROPBOX-SIGN-BOT] No se pudo arrancar la tanda automática del tenant ${tenantId}:`, e?.message || e);
     }

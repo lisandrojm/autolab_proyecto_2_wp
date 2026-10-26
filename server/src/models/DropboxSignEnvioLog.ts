@@ -27,6 +27,8 @@ export interface IDropboxSignEnvioLog extends Document {
   automatica: boolean;
   lineas: ILineaEnvio[];
   error?: string;
+  /** El código del fallo, si lo tiene: login_requiere_2fa, login_clave_incorrecta, login_sin_avance… (26/10/2026). */
+  codigoError?: string;
   capturaError?: string;
   createdAt: Date;
 }
@@ -47,6 +49,7 @@ const schema = new Schema<IDropboxSignEnvioLog>(
       default: [],
     },
     error: { type: String },
+    codigoError: { type: String },
     capturaError: { type: String },
     // TTL: 30 días.
     createdAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 30 },

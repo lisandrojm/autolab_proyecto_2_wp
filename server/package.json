@@ -15,6 +15,7 @@
     "dropbox-sign:login": "dotenv -e .env.production -- tsx src/scripts/loginDropboxSign.ts",
     "dropbox-sign:asuntos": "dotenv -e .env.production -- tsx src/scripts/asuntosDropboxSign.ts",
     "dropbox-sign:backfill-firmados": "dotenv -e .env.production -- tsx src/scripts/backfillFirmadosEmail.ts",
+    "dropbox-sign:devolver-a-la-cola": "dotenv -e .env.production -- tsx src/scripts/dropboxSignDevolverALaCola.ts",
     "arca:diag-relaciones": "dotenv -e .env.production -- tsx src/scripts/diagRelacionesEnDropbox.ts",
     "arca:seed-relaciones:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/seedRelacionesDesdeDropbox.ts",
     "arca:seed-relaciones": "dotenv -e .env.production -- tsx src/scripts/seedRelacionesDesdeDropbox.ts",

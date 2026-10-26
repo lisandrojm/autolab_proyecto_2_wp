@@ -147,6 +147,47 @@ async function medirCajaDePagina(page) {
     .catch(() => null);
 }
 
+/** Cuánto se espera a que el editor termine «Preparando documentos…» y muestre la hoja (26/10/2026). */
+const ESPERA_PREPARANDO_MS = 120_000;
+
+/**
+ * ESPERA A QUE EL EDITOR TENGA LA HOJA DIBUJADA (26/10/2026). Con el PDF todavía subiendo, «Insertar
+ * campos» muestra «Preparando documentos…» y no hay hoja que medir: antes se esperaban 2,5 s fijos y
+ * los 10 documentos de una corrida quedaron «No se pudo medir la página renderizada en el editor»
+ * (captura real del 26/10). Ahora se espera a que el cartel se vaya Y la hoja se pueda medir.
+ */
+async function esperarEditorListo(page, onProgreso) {
+  const desde = Date.now();
+  let avisado = false;
+  while (Date.now() - desde < ESPERA_PREPARANDO_MS) {
+    const preparando = /preparando documentos|preparing documents/i.test(await texto(page));
+    if (!preparando) {
+      const caja = await medirCajaDePagina(page);
+      if (caja) {
+        await page.waitForTimeout(800);
+        return caja;
+      }
+    } else if (!avisado) {
+      onProgreso("El editor está «Preparando documentos…»: se espera a que muestre la hoja.");
+      avisado = true;
+    }
+    await page.waitForTimeout(1000);
+  }
+  throw new Error(`El editor no terminó de preparar el documento en ${ESPERA_PREPARANDO_MS / 1000} s (sigue «Preparando documentos…» o no muestra la hoja).`);
+}
+
+/**
+ * EL AVISO DE COOKIES (26/10/2026): aparece abajo a la izquierda y tapa parte del editor. Se cierra con
+ * «Rechazar» (lo que menos comparte); si no está ese botón, con la cruz del aviso. Si no hay aviso, nada.
+ */
+async function cerrarAvisoDeCookies(page) {
+  const rechazar = page.locator("button:visible").filter({ hasText: /^\s*(rechazar|rechazar todo|reject|reject all|decline)\s*$/i }).first();
+  if (await rechazar.count().catch(() => 0)) {
+    await rechazar.click({ timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(500);
+  }
+}
+
 /** Mueve el visor hasta que el punto de pantalla quede a la vista (la caja de la página cambia con el scroll). */
 async function traerALaVista(page, colocacion, geometria) {
   let caja = await medirCajaDePagina(page);
@@ -259,6 +300,7 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
     cortar(señal, "abrir el wizard");
     await page.goto(MANAGE_URL, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(2000);
+    await cerrarAvisoDeCookies(page);
     onProgreso("Abriendo «Firmar documentos»…");
     await apretar(page, "firmar_documentos");
     await esperarTexto(page, /seleccionar documentos|cargar/i, ESPERA_EDITOR_MS, "el paso «Seleccionar documentos»");
@@ -279,7 +321,8 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
 
     onProgreso("Esperando el editor de campos…");
     await esperarTexto(page, /insertar campos|campos/i, ESPERA_EDITOR_MS, "el editor «Insertar campos»");
-    await page.waitForTimeout(2500);
+    await cerrarAvisoDeCookies(page);
+    await esperarEditorListo(page, onProgreso);
     if (colocacion.pagina === "ultima") {
       await apretar(page, "tab_documentos");
       await page.waitForTimeout(800);

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { CONFIG_POR_DEFECTO, estimarEnvios, instanteArgentino, planificar, puedeCorrer, validarEncolado, type EstadoThrottle, type ItemEnCola } from "./planificador.js";
+import { CONFIG_POR_DEFECTO, cortarPorFallosSeguidos, destinoDelIntento, estimarEnvios, instanteArgentino, intentosTrasLaCorrida, planificar, puedeCorrer, validarEncolado, type EstadoThrottle, type ItemEnCola } from "./planificador.js";
 import { REGLAS_BASE } from "../../compartido/reglasColocacionFirma.js";
 
 const archivo = (n: number, tipo = "Contrato_Jornada", prefijo = "426_LN+") => `${prefijo}_PEREZ_${tipo}_D-20261010_H-20261010_20273130293_fulano-ARROBA-gmail.com_Empresa-30717068374_ID-${String(n).padStart(6, "0")}.pdf`;
@@ -128,5 +128,41 @@ describe("encolar un documento con posición DECLARADA por la plantilla (25/10/2
   it("lo demás sigue mandando: sin firmante, o ya enviado, no se encola", () => {
     assert.equal(validarEncolado(NUEVA, { ...ok, firmante: null, posicionDeclarada: { plantillaNombre: "X" } }).ok, false);
     assert.equal(validarEncolado(NUEVA, { ...ok, registroPrevio: { estado: "enviado" }, posicionDeclarada: { plantillaNombre: "X" } }).ok, false);
+  });
+});
+
+describe("después de intentar enviar (26/10/2026)", () => {
+  it("sólo sale de la cola lo enviado; una falla antes de enviar lo deja en la cola", () => {
+    assert.equal(destinoDelIntento("enviado", true), "enviado");
+    assert.equal(destinoDelIntento("requiere_revision", false), "sigue_en_cola", "la verificación del campo en el editor es pantalla, no colocación");
+    assert.equal(destinoDelIntento("error", false), "sigue_en_cola");
+    assert.equal(destinoDelIntento("limite", false), "limite");
+    assert.equal(destinoDelIntento("seco", false), "seco");
+  });
+  it("una falla después de «Enviar para firmar» no se reintenta sola (pudo haber salido)", () => {
+    assert.equal(destinoDelIntento("error", true), "error_tras_enviar");
+  });
+  it("tres fallas seguidas sin ningún envío cortan la corrida; con algún envío, no", () => {
+    assert.equal(cortarPorFallosSeguidos(2, false), false);
+    assert.equal(cortarPorFallosSeguidos(3, false), true);
+    assert.equal(cortarPorFallosSeguidos(5, true), false);
+  });
+  it("los intentos fallidos sólo se cargan si otro documento salió en la misma corrida", () => {
+    assert.deepEqual(intentosTrasLaCorrida(0, false), { intentos: 0, pasaAError: false });
+    assert.deepEqual(intentosTrasLaCorrida(1, true), { intentos: 2, pasaAError: false });
+    assert.deepEqual(intentosTrasLaCorrida(2, true), { intentos: 3, pasaAError: true });
+  });
+});
+
+describe("el scheduler no se bloquea a sí mismo (26/10/2026)", () => {
+  const config = { ...CONFIG_POR_DEFECTO, activo: true, horaDesde: 0, horaHasta: 24, intervaloHoras: 4 };
+  const ahora = new Date("2026-10-20T15:00:00Z");
+  const recien: EstadoThrottle = { contadorDia: { fecha: "", enviados: 0 }, enfriadoHasta: null, ultimaCorridaAt: ahora };
+  it("con el candado recién escrito por el scheduler, la corrida automática arranca", () => {
+    assert.equal(puedeCorrer(config, recien, ahora).ok, false);
+    assert.equal(puedeCorrer(config, recien, ahora, { yaReservada: true }).ok, true);
+  });
+  it("el motivo dice la hora concreta de la próxima corrida", () => {
+    assert.match(puedeCorrer(config, recien, ahora).motivo || "", /Próxima corrida automática a las 16:00 \(cada 4 h\)/);
   });
 });

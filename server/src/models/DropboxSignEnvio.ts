@@ -58,6 +58,13 @@ export interface IDropboxSignEnvio extends Document {
   probadoEnSecoAt?: Date | null;
   enviadoAt?: Date | null;
   colocacion?: ResumenColocacion | null;
+  /**
+   * El último intento de envío que falló en la pantalla, la red o el login (26/10/2026). NO cambia el
+   * estado: el documento sigue en la cola, en su lugar. Se limpia al enviarse.
+   */
+  ultimoIntento?: { at: Date; detalle: string } | null;
+  /** Intentos fallidos en corridas donde otros documentos sí salieron (al tercero pasa a «error»). */
+  intentosFallidos?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -78,6 +85,8 @@ const schema = new Schema<IDropboxSignEnvio>(
     probadoEnSecoAt: { type: Date, default: null },
     enviadoAt: { type: Date, default: null },
     colocacion: { type: Schema.Types.Mixed, default: null },
+    ultimoIntento: { type: new Schema({ at: Date, detalle: String }, { _id: false }), default: null },
+    intentosFallidos: { type: Number, default: 0 },
   },
   { timestamps: true, collection: "dropbox_sign_envios" },
 );

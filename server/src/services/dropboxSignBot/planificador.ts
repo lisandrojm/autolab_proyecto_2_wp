@@ -145,7 +145,7 @@ export const cupoDelDia = (config: ConfigEnvio, estado: EstadoThrottle, ahora: D
  * ¿Le toca correr al scheduler ahora? Devuelve el motivo si no. (El botón «Enviar a la firma» no pasa
  * por acá salvo por el enfriamiento y el cupo: es una decisión de la persona.)
  */
-export function puedeCorrer(config: ConfigEnvio, estado: EstadoThrottle, ahora: Date, opciones: { manual?: boolean } = {}): { ok: boolean; motivo?: string } {
+export function puedeCorrer(config: ConfigEnvio, estado: EstadoThrottle, ahora: Date, opciones: { manual?: boolean; yaReservada?: boolean } = {}): { ok: boolean; motivo?: string } {
   if (estado.enfriadoHasta && estado.enfriadoHasta.getTime() > ahora.getTime()) {
     return { ok: false, motivo: `Enfriamiento por el freno de Dropbox Sign hasta las ${estado.enfriadoHasta.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}.` };
   }
@@ -154,8 +154,12 @@ export function puedeCorrer(config: ConfigEnvio, estado: EstadoThrottle, ahora: 
   if (!config.activo) return { ok: false, motivo: "El envío automático está desactivado." };
   const { hora } = fechaYHoraArgentina(ahora);
   if (hora < config.horaDesde || hora >= config.horaHasta) return { ok: false, motivo: `Fuera de la ventana horaria (${config.horaDesde} a ${config.horaHasta} h).` };
-  if (estado.ultimaCorridaAt && ahora.getTime() - estado.ultimaCorridaAt.getTime() < config.intervaloHoras * 3600_000) {
-    return { ok: false, motivo: `Todavía no pasaron ${config.intervaloHoras} h desde la última corrida.` };
+  // `yaReservada`: el scheduler ya escribió `ultimaCorridaAt` como candado para ESTA corrida. Sin esto la
+  // corrida automática se rechazaba a sí misma («Todavía no pasaron 4 h») y el candado se renovaba
+  // cada 4 h sin que saliera nada (26/10/2026).
+  if (!opciones.yaReservada && estado.ultimaCorridaAt && ahora.getTime() - estado.ultimaCorridaAt.getTime() < config.intervaloHoras * 3600_000) {
+    const proxima = new Date(estado.ultimaCorridaAt.getTime() + config.intervaloHoras * 3600_000);
+    return { ok: false, motivo: `Próxima corrida automática a las ${proxima.toLocaleTimeString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit", hour12: false })} (cada ${config.intervaloHoras} h).` };
   }
   return { ok: true };
 }
@@ -224,4 +228,40 @@ export function planificar(enCola: ItemEnCola[], archivosEnOutbox: Set<string>, 
     else pendientesDespues++;
   }
   return { tanda, faltantes, pendientesDespues, cupoHoy };
+}
+
+/**
+ * QUÉ PASA CON UN DOCUMENTO DESPUÉS DE INTENTAR ENVIARLO (26/10/2026). Un documento sale de la cola
+ * SÓLO si se envió de verdad. Una falla de pantalla, de red, de login o una detención lo dejan en la
+ * cola, en su lugar, sin marcarlo («requiere revisión» es sólo para cuando la colocación de la firma no
+ * se puede resolver, y eso se decide antes de abrir el navegador). La única excepción: si la falla fue
+ * DESPUÉS de apretar «Enviar para firmar», pudo haber salido; reenviarlo podría duplicar la solicitud,
+ * así que queda como «error» para que una persona lo mire en Dropbox Sign.
+ */
+export type DestinoDelIntento = "enviado" | "limite" | "seco" | "sigue_en_cola" | "error_tras_enviar";
+
+export function destinoDelIntento(resultado: string, pasoElIrreversible: boolean): DestinoDelIntento {
+  if (resultado === "enviado") return "enviado";
+  if (resultado === "limite") return "limite";
+  if (resultado === "seco") return "seco";
+  return pasoElIrreversible ? "error_tras_enviar" : "sigue_en_cola";
+}
+
+/** Tantos documentos seguidos que fallan en la pantalla sin que salga ninguno = el problema es la pantalla o el bot. */
+export const FALLOS_SEGUIDOS_PARA_CORTAR = 3;
+/** Tantos intentos fallidos de UN documento, en corridas donde otros sí salieron = el problema es ese documento. */
+export const INTENTOS_FALLIDOS_MAXIMOS = 3;
+
+export function cortarPorFallosSeguidos(seguidos: number, huboExito: boolean): boolean {
+  return !huboExito && seguidos >= FALLOS_SEGUIDOS_PARA_CORTAR;
+}
+
+/**
+ * Cuántos intentos fallidos le quedan anotados a un documento al cerrar la corrida. Sólo cuentan si en
+ * la misma corrida salió otro (la pantalla anda): si no salió ninguno, la falla no es del documento y
+ * no se le carga. Con `INTENTOS_FALLIDOS_MAXIMOS` pasa a «error» para que alguien lo mire.
+ */
+export function intentosTrasLaCorrida(previos: number, huboExito: boolean): { intentos: number; pasaAError: boolean } {
+  const intentos = huboExito ? (Number(previos) || 0) + 1 : Number(previos) || 0;
+  return { intentos, pasaAError: intentos >= INTENTOS_FALLIDOS_MAXIMOS };
 }
