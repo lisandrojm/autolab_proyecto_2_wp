@@ -188,12 +188,15 @@ const ESPERA_PREPARANDO_MS = 120_000;
  * los 10 documentos de una corrida quedaron «No se pudo medir la página renderizada en el editor»
  * (captura real del 26/10). Ahora se espera a que el cartel se vaya Y la hoja se pueda medir.
  */
-async function esperarEditorListo(page, onProgreso, proporcion = null) {
+async function esperarEditorListo(page, onProgreso, proporcion = null, esLimite = null) {
   const desde = Date.now();
   let avisado = false;
   let preparando = false;
   while (Date.now() - desde < ESPERA_PREPARANDO_MS) {
-    preparando = /preparando documentos|preparing documents/i.test(await texto(page));
+    const t = await texto(page);
+    // El límite de la cuenta puede aparecer acá en vez de en «Revisar y enviar»: es un freno, no un timeout.
+    if (typeof esLimite === "function" && esLimite(t)) throw Object.assign(new Error("limite_cuenta: Dropbox Sign frenó la cuenta mientras preparaba el documento."), { limite: true });
+    preparando = /preparando documentos|preparing documents/i.test(t);
     if (!preparando) {
       const caja = await medirCajaDePagina(page, proporcion);
       if (caja) {
@@ -212,8 +215,8 @@ async function esperarEditorListo(page, onProgreso, proporcion = null) {
   throw Object.assign(
     new Error(
       preparando
-        ? `El editor siguió «Preparando documentos…» ${ESPERA_PREPARANDO_MS / 1000} s: Dropbox Sign no terminó de procesar el PDF.`
-        : `El editor ya no dice «Preparando documentos…» pero no se reconoce la hoja del documento (${ESPERA_PREPARANDO_MS / 1000} s). En pantalla: ${grandes.join(" · ") || "ningún elemento grande"}.`,
+        ? `editor_no_prepara: el editor siguió «Preparando documentos…» ${ESPERA_PREPARANDO_MS / 1000} s: Dropbox Sign no terminó de procesar el PDF.`
+        : `editor_sin_hoja: el editor ya no dice «Preparando documentos…» pero no se reconoce la hoja del documento (${ESPERA_PREPARANDO_MS / 1000} s). En pantalla: ${grandes.join(" · ") || "ningún elemento grande"}.`,
     ),
     { captura },
   );
@@ -367,7 +370,7 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
     await esperarTexto(page, /insertar campos|campos/i, ESPERA_EDITOR_MS, "el editor «Insertar campos»");
     await cerrarAvisoDeCookies(page);
     const proporcion = colocacion.tamanoPagina ? colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho : null;
-    await esperarEditorListo(page, onProgreso, proporcion);
+    await esperarEditorListo(page, onProgreso, proporcion, esLimite);
     if (colocacion.pagina === "ultima") {
       await apretar(page, "tab_documentos");
       await page.waitForTimeout(800);
@@ -463,6 +466,10 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
   } catch (e) {
     if (e?.detenido) throw e;
     const img = e?.captura || (await captura());
+    if (e?.limite) {
+      await salirSinEnviar(page).catch(() => {});
+      return { resultado: "limite", detalle: e.message, captura: img };
+    }
     await salirSinEnviar(page).catch(() => {});
     return { resultado: "error", detalle: e?.message || String(e), captura: img };
   }

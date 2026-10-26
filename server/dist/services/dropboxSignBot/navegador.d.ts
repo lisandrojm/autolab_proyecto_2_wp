@@ -64,6 +64,27 @@ export declare class ErrorLogin extends Error {
     constructor(codigo: string, mensaje: string);
 }
 /**
+ * UN SOLO NAVEGADOR «IDENTIDAD» (26/10/2026): mismo user-agent, viewport, idioma y zona horaria en
+ * cada corrida, en «Probar conexión» y en el login asistido. Chromium headless se anuncia como
+ * «HeadlessChrome»; si el agente cambia entre el login y la corrida, Dropbox invalida la sesión por
+ * seguridad (la guardada a las 01:56 ya no servía a las 08:37).
+ */
+export declare const OPCIONES_CONTEXTO: {
+    readonly viewport: {
+        readonly width: 1457;
+        readonly height: 812;
+    };
+    readonly locale: "es-AR";
+    readonly timezoneId: "America/Argentina/Buenos_Aires";
+    readonly userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36";
+};
+/**
+ * EL AVISO DE COOKIES (26/10/2026) tapa el formulario de login de Dropbox: el click en «Continuar» no
+ * llegaba. Se cierra con «Rechazar» (lo que menos comparte) y, si no está, con su cruz. Idempotente:
+ * se llama en cada vuelta del login porque reaparece después de la redirección OAuth. Devuelve si cerró algo.
+ */
+export declare function cerrarBannerCookies(page: Page): Promise<boolean>;
+/**
  * LOGIN CON USUARIO Y CONTRASEÑA, PASO A PASO (26/10/2026). Dropbox Sign redirige a
  * www.dropbox.com/oauth2/authorize: email → «Continuar» → contraseña → «Iniciar sesión» → de vuelta a
  * app.sign.dropbox.com. Cada vuelta mira la pantalla (`pasoDeLogin`) y hace lo que corresponde; no se

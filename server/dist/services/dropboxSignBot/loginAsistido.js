@@ -2,7 +2,7 @@ import { chromium } from "playwright-core";
 import { Tenant } from "../../models/Tenant.js";
 import { rutaChromium, errorDeChromium } from "../arca/navegador.js";
 import { VIEWPORT } from "./reglas.js";
-import { MANAGE_URL, anotarConexion, anotarError, configDelBot, guardarSesion, irA, loguear, pantallaDe } from "./navegador.js";
+import { MANAGE_URL, OPCIONES_CONTEXTO, anotarConexion, anotarError, configDelBot, guardarSesion, irA, loguear, pantallaDe } from "./navegador.js";
 import { quienTieneDropboxSign, soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 /**
  * EL LOGIN ASISTIDO DESDE LA WEB (pedido del 23/10/2026: «un botón conectarse, nada en consola»).
@@ -69,7 +69,7 @@ export async function abrirLoginAsistido(tenantId) {
             await anotarError(tenantId, err.message);
             throw Object.assign(err, { status: 500 });
         }
-        const ctx = await browser.newContext({ ...(cfg.sesion ? { storageState: cfg.sesion } : {}), viewport: { ...VIEWPORT }, locale: "es-AR" });
+        const ctx = await browser.newContext({ ...(cfg.sesion ? { storageState: cfg.sesion } : {}), ...OPCIONES_CONTEXTO, viewport: { ...VIEWPORT } });
         const page = await ctx.newPage();
         const a = { tenantId, browser, ctx, page, abiertoEl: new Date(), estado: "abierto", detalle: "Iniciá sesión en la pantalla. Si aparece un captcha o un código, resolvelo acá mismo.", timer: null, automatico: false };
         abiertos.set(tenantId, a);

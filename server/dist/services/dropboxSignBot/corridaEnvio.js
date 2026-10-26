@@ -346,25 +346,34 @@ async function correr(corrida, cc, config) {
             let r;
             let pasoElIrreversible = false;
             try {
-                r = await motor.enviarDocumento({
-                    page: sesion.page,
-                    rutaPdf,
-                    archivo: c.archivo,
-                    firmante: { nombre: c.firmante, email: c.email },
-                    cc,
-                    colocacion,
-                    geometria: { pdfAPantalla, pantallaAPdf },
-                    enSeco: corrida.enSeco,
-                    señal: corrida.señal,
-                    onProgreso: (texto) => emitir({ tipo: "info", archivo: c.archivo, texto }),
-                    antesDelIrreversible: () => {
-                        pasoElIrreversible = true;
-                        emitir({ tipo: "irreversible", archivo: c.archivo, codigo: c.codigo, texto: "Apretando «Enviar para firmar»…" });
-                    },
-                    // Con la posición declarada por la plantilla no hace falta regla por nombre (ver `guardDeEnvio`).
-                    guard: (d) => guardDeEnvio({ ...d, archivo: c.archivo, ccEsperado: cc, firmanteNombre: c.firmante, firmanteEmail: c.email, reglas, posicionDeclarada: resueltos.get(c.codigo)?.colocacion?.origen === "plantilla" }),
-                    esLimite: esTextoDeLimite,
-                });
+                // UN REINTENTO si el editor se colgó preparando el documento (26/10/2026): suele ser transitorio.
+                // Sólo antes del irreversible y sólo para `editor_no_prepara` / `editor_sin_hoja`.
+                for (let intentoEditor = 1; intentoEditor <= 2; intentoEditor++) {
+                    r = await motor.enviarDocumento({
+                        page: sesion.page,
+                        rutaPdf,
+                        archivo: c.archivo,
+                        firmante: { nombre: c.firmante, email: c.email },
+                        cc,
+                        colocacion,
+                        geometria: { pdfAPantalla, pantallaAPdf },
+                        enSeco: corrida.enSeco,
+                        señal: corrida.señal,
+                        onProgreso: (texto) => emitir({ tipo: "info", archivo: c.archivo, texto }),
+                        antesDelIrreversible: () => {
+                            pasoElIrreversible = true;
+                            emitir({ tipo: "irreversible", archivo: c.archivo, codigo: c.codigo, texto: "Apretando «Enviar para firmar»…" });
+                        },
+                        // Con la posición declarada por la plantilla no hace falta regla por nombre (ver `guardDeEnvio`).
+                        guard: (d) => guardDeEnvio({ ...d, archivo: c.archivo, ccEsperado: cc, firmanteNombre: c.firmante, firmanteEmail: c.email, reglas, posicionDeclarada: resueltos.get(c.codigo)?.colocacion?.origen === "plantilla" }),
+                        esLimite: esTextoDeLimite,
+                    });
+                    if (intentoEditor === 1 && !pasoElIrreversible && r?.resultado === "error" && /^editor_(no_prepara|sin_hoja)/.test(String(r?.detalle || "")) && !corrida.señal.cortada) {
+                        emitir({ tipo: "info", archivo: c.archivo, texto: `${String(r.detalle).split(":")[0]}: se reintenta el documento una vez.` });
+                        continue;
+                    }
+                    break;
+                }
             }
             catch (e) {
                 r = { resultado: "error", detalle: e?.message || String(e), captura: e?.captura };

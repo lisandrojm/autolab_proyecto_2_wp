@@ -103,7 +103,23 @@ export class ErrorLogin extends Error {
   }
 }
 
+/**
+ * UN SOLO NAVEGADOR «IDENTIDAD» (26/10/2026): mismo user-agent, viewport, idioma y zona horaria en
+ * cada corrida, en «Probar conexión» y en el login asistido. Chromium headless se anuncia como
+ * «HeadlessChrome»; si el agente cambia entre el login y la corrida, Dropbox invalida la sesión por
+ * seguridad (la guardada a las 01:56 ya no servía a las 08:37).
+ */
+export const OPCIONES_CONTEXTO = {
+  viewport: { ...VIEWPORT },
+  locale: "es-AR",
+  timezoneId: "America/Argentina/Buenos_Aires",
+  userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+} as const;
+
 const MENSAJES_LOGIN: Record<string, string> = {
+  login_requiere_verificacion: "Dropbox pidió una verificación que el bot no resuelve a propósito (código, captcha, «¿eras vos?» o confirmación por correo). Usá «Conectarse a Dropbox Sign»: la sesión queda guardada.",
+  login_email_no_avanza: "Se escribió el email y se apretó «Continuar», pero la pantalla siguió en el paso del email (dos intentos, con el aviso de cookies cerrado).",
+  login_password_no_avanza: "Se escribió la contraseña y se apretó «Continuar», pero la pantalla siguió pidiéndola sin decir que fuera incorrecta.",
   login_requiere_2fa: "Dropbox pidió un código de verificación (segundo factor). El bot no lo resuelve a propósito: conectate con «Conectarse» (login asistido) y la sesión queda guardada.",
   login_requiere_captcha: "Dropbox pidió un captcha. El bot no lo resuelve a propósito: conectate con «Conectarse» (login asistido).",
   login_clave_incorrecta: "Dropbox rechazó la contraseña. Corregila antes de volver a correr: varios intentos fallidos pueden bloquear la cuenta.",
@@ -118,13 +134,74 @@ const SELECTORES_CLAVE = ['input[data-testid="password-field"]:visible', "input#
 const SELECTORES_CODIGO = ['input[autocomplete="one-time-code"]:visible', 'input[name*="code" i]:visible', 'input[data-testid*="code" i]:visible'];
 const SELECTORES_CAPTCHA = ['iframe[src*="recaptcha"]:visible', 'iframe[src*="hcaptcha"]:visible', 'iframe[src*="arkose"]:visible', 'iframe[title*="captcha" i]:visible'];
 const LOGIN_MS = 120_000;
+/** Cuánto se espera a que un paso del login cambie la pantalla. */
+const PASO_MS = 15_000;
+
+/**
+ * ¿VISIBLE DE VERDAD? (26/10/2026). El `:visible` de Playwright sólo mira que tenga tamaño y no esté
+ * `visibility:hidden`: un campo de contraseña con OPACIDAD 0 que Dropbox deja en el paso del email
+ * contaba como visible, el bot lo tomaba por el paso de contraseña, escribía ahí y decía «la
+ * contraseña se mandó» con la pantalla todavía en el email (captura real del 26/10). Acá además:
+ * opacidad > 0 en él y sus ancestros, al menos 20×10 px, dentro de la ventana, y que en su centro no
+ * haya otra cosa encima (el aviso de cookies).
+ */
+async function realmenteVisible(loc: ReturnType<Page["locator"]>): Promise<boolean> {
+  return loc
+    .evaluate((el: Element) => {
+      const r = el.getBoundingClientRect();
+      if (r.width < 20 || r.height < 10 || r.bottom <= 0 || r.right <= 0 || r.top >= innerHeight || r.left >= innerWidth) return false;
+      for (let n: Element | null = el; n; n = n.parentElement) {
+        const e = getComputedStyle(n);
+        if (e.display === "none" || e.visibility === "hidden" || Number(e.opacity) === 0) return false;
+        if (n.getAttribute("aria-hidden") === "true") return false;
+      }
+      const arriba = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return !!arriba && (arriba === el || el.contains(arriba) || arriba.contains(el) || (arriba as HTMLElement).closest?.("label") === el.closest("label"));
+    })
+    .catch(() => false);
+}
+
+/**
+ * EL AVISO DE COOKIES (26/10/2026) tapa el formulario de login de Dropbox: el click en «Continuar» no
+ * llegaba. Se cierra con «Rechazar» (lo que menos comparte) y, si no está, con su cruz. Idempotente:
+ * se llama en cada vuelta del login porque reaparece después de la redirección OAuth. Devuelve si cerró algo.
+ */
+export async function cerrarBannerCookies(page: Page): Promise<boolean> {
+  const candidatos = [
+    page.locator('button:visible, [role="button"]:visible').filter({ hasText: /^\s*(rechazar|rechazar todo|rechazar todas|reject|reject all|decline|decline all)\s*$/i }),
+    page.locator('[aria-label*="cerrar" i]:visible, [aria-label*="close" i]:visible').filter({ has: page.locator("xpath=ancestor-or-self::*[contains(translate(., 'COOKIES', 'cookies'), 'cookies')]") }),
+  ];
+  for (const c of candidatos) {
+    const b = c.first();
+    if (await b.count().catch(() => 0)) {
+      await b.click({ timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(600);
+      return true;
+    }
+  }
+  return false;
+}
 
 async function primerVisible(page: Page, selectores: string[]) {
   for (const sel of selectores) {
-    const loc = page.locator(sel).first();
-    if (await loc.count().catch(() => 0)) return loc;
+    const todos = page.locator(sel);
+    const n = Math.min(await todos.count().catch(() => 0), 5);
+    for (let i = 0; i < n; i++) {
+      const loc = todos.nth(i);
+      if (await realmenteVisible(loc)) return loc;
+    }
   }
   return null;
+}
+
+/** Espera hasta `ms` a que `cond()` se cumpla (mirando cada 700 ms). */
+async function esperarQue(page: Page, ms: number, cond: () => Promise<boolean>): Promise<boolean> {
+  const hasta = Date.now() + ms;
+  while (Date.now() < hasta) {
+    if (await cond()) return true;
+    await page.waitForTimeout(700);
+  }
+  return cond();
 }
 
 /** Aprieta el botón del paso (por su texto) o, si no se encuentra, Enter sobre el campo. */
@@ -160,15 +237,20 @@ export async function loguear(page: Page, cred: { loginEmail: string; loginPassw
   const hasta = Date.now() + LOGIN_MS;
   let emailCargado = false;
   let claveEnviada = false;
+  let intentosEmail = 0;
+  let intentosClave = 0;
   let clicksDropbox = 0;
   let volvioAlListado = false;
   while (Date.now() < hasta) {
+    // Primero el aviso de cookies: tapa el formulario y se come los clicks. Reaparece tras cada redirección.
+    await cerrarBannerCookies(page);
     const email = await primerVisible(page, SELECTORES_EMAIL);
     const clave = await primerVisible(page, SELECTORES_CLAVE);
     const url = page.url();
+    const texto = await textoDe(page);
     const paso = pasoDeLogin({
       url,
-      texto: await textoDe(page),
+      texto,
       hayEmail: !!email,
       hayClave: !!clave,
       hayCodigo: !!(await primerVisible(page, SELECTORES_CODIGO)),
@@ -177,16 +259,39 @@ export async function loguear(page: Page, cred: { loginEmail: string; loginPassw
       claveEnviada,
     });
     if (paso === "listo") return;
+    // Lo que necesita una persona corta YA con su código, no con un timeout de 120 s.
+    if (paso === "login_requiere_2fa" || paso === "login_requiere_captcha" || /¿?(eras|fuiste) (vos|t[uú])|was (this|it) you|revis[aá] tu (correo|email)|check your (email|inbox)|confirm(a|á) (tu|que)/i.test(texto)) {
+      throw new ErrorLogin("login_requiere_verificacion", `${MENSAJES_LOGIN.login_requiere_verificacion} (${paso === "login_requiere_captcha" ? "captcha" : paso === "login_requiere_2fa" ? "código / segundo factor" : "confirmación"})`);
+    }
     if (paso.startsWith("login_")) throw new ErrorLogin(paso, MENSAJES_LOGIN[paso] || "El login se frenó.");
+
     if (paso === "email" && email) {
+      // PASO 1: email → «Continuar» → la pantalla TIENE que mostrar la contraseña (o cambiar). Un reintento.
+      intentosEmail++;
       await email.fill(cred.loginEmail);
       emailCargado = true;
-      await enviarPaso(page, email, /continuar|continue|siguiente|next/i);
-    } else if (paso === "clave" && clave) {
+      await enviarPaso(page, email, /^\s*(continuar|continue|siguiente|next)\s*$/i);
+      const avanzo = await esperarQue(page, PASO_MS, async () => !!(await primerVisible(page, SELECTORES_CLAVE)) || !(await primerVisible(page, SELECTORES_EMAIL)));
+      if (!avanzo) {
+        if (intentosEmail >= 2) throw new ErrorLogin("login_email_no_avanza", MENSAJES_LOGIN.login_email_no_avanza);
+        emailCargado = false; // se reintenta el paso entero
+      }
+      continue;
+    }
+    if (paso === "clave" && clave) {
+      // PASO 2: sólo con el campo de contraseña VISIBLE DE VERDAD (lo garantiza `primerVisible`).
+      intentosClave++;
       await clave.fill(cred.loginPassword);
       claveEnviada = true;
-      await enviarPaso(page, clave, /iniciar sesi[oó]n|sign in|log in|ingresar|continuar|continue/i);
-    } else if (paso === "boton_dropbox") {
+      await enviarPaso(page, clave, /^\s*(iniciar sesi[oó]n|sign in|log in|ingresar|continuar|continue)\s*$/i);
+      const avanzo = await esperarQue(page, PASO_MS, async () => !(await primerVisible(page, SELECTORES_CLAVE)) || /contrase[ñn]a incorrecta|incorrect password|wrong password/i.test(await textoDe(page)));
+      if (!avanzo) {
+        if (intentosClave >= 2) throw new ErrorLogin("login_password_no_avanza", MENSAJES_LOGIN.login_password_no_avanza);
+        claveEnviada = false;
+      }
+      continue;
+    }
+    if (paso === "boton_dropbox") {
       if (++clicksDropbox > 2) throw new ErrorLogin("login_sin_avance", "«Iniciar sesión con Dropbox» no lleva al formulario de login.");
       await page.locator('button:visible, a:visible, [role="button"]:visible').filter({ hasText: /iniciar sesi[oó]n con dropbox|sign in with dropbox|continuar con dropbox|continue with dropbox/i }).first().click({ timeout: 10_000 });
     } else if (claveEnviada && !volvioAlListado && /app\.sign\.dropbox\.com/i.test(url) && !/\/home\/manage/i.test(url) && (await pantallaDe(page)) !== "login") {
@@ -196,7 +301,11 @@ export async function loguear(page: Page, cred: { loginEmail: string; loginPassw
     }
     await page.waitForTimeout(1500);
   }
-  throw new ErrorLogin("login_sin_avance", `En ${LOGIN_MS / 1000} s el login no llegó al listado de documentos${claveEnviada ? " (la contraseña se mandó)" : emailCargado ? " (se cargó el email; la contraseña nunca apareció)" : " (no apareció el campo de email)"}.`);
+  // El mensaje dice SÓLO lo que de verdad pasó: «la contraseña se mandó» únicamente si su campo estuvo visible.
+  throw new ErrorLogin(
+    "login_sin_avance",
+    `En ${LOGIN_MS / 1000} s el login no llegó al listado de documentos${claveEnviada ? " (la contraseña se escribió en su campo visible y se mandó)" : emailCargado ? " (se cargó el email; el campo de contraseña nunca apareció)" : " (no apareció el campo de email)"}.`,
+  );
 }
 
 /**
@@ -214,7 +323,7 @@ export async function abrirSesionDropboxSign(tenantId: string, opciones: { visib
     await anotarConexion(tenantId, { estado: "caida", via: "", pantalla: "", detalle: err.message });
     throw err;
   }
-  const ctx = await browser.newContext({ ...(cfg.sesion ? { storageState: cfg.sesion } : {}), viewport: { ...VIEWPORT }, locale: "es-AR" });
+  const ctx = await browser.newContext({ ...(cfg.sesion ? { storageState: cfg.sesion } : {}), ...OPCIONES_CONTEXTO, viewport: { ...VIEWPORT } });
   const page = await ctx.newPage();
 
   // PRIMERO LA SESIÓN GUARDADA (26/10/2026): directo al listado. Se espera a que la pantalla se defina

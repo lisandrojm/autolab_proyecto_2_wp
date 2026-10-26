@@ -413,6 +413,9 @@ async function correr(corrida: CorridaEnvio, cc: string, config: ConfigEnvio): P
       let r: any;
       let pasoElIrreversible = false;
       try {
+        // UN REINTENTO si el editor se colgó preparando el documento (26/10/2026): suele ser transitorio.
+        // Sólo antes del irreversible y sólo para `editor_no_prepara` / `editor_sin_hoja`.
+        for (let intentoEditor = 1; intentoEditor <= 2; intentoEditor++) {
         r = await motor.enviarDocumento({
           page: sesion.page,
           rutaPdf,
@@ -432,6 +435,12 @@ async function correr(corrida: CorridaEnvio, cc: string, config: ConfigEnvio): P
           guard: (d: any) => guardDeEnvio({ ...d, archivo: c.archivo, ccEsperado: cc, firmanteNombre: c.firmante, firmanteEmail: c.email, reglas, posicionDeclarada: resueltos.get(c.codigo)?.colocacion?.origen === "plantilla" }),
           esLimite: esTextoDeLimite,
         });
+          if (intentoEditor === 1 && !pasoElIrreversible && r?.resultado === "error" && /^editor_(no_prepara|sin_hoja)/.test(String(r?.detalle || "")) && !corrida.señal.cortada) {
+            emitir({ tipo: "info", archivo: c.archivo, texto: `${String(r.detalle).split(":")[0]}: se reintenta el documento una vez.` });
+            continue;
+          }
+          break;
+        }
       } catch (e: any) {
         r = { resultado: "error", detalle: e?.message || String(e), captura: e?.captura };
       } finally {
