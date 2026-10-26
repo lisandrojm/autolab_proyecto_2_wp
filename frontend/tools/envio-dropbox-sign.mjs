@@ -21,6 +21,9 @@
  * envía. No hay recetas de pantalla de respaldo: sin caja medible no se coloca nada.
  */
 
+/** Qué versión del motor corre: aparece en el log de cada corrida. Se actualiza con cada cambio del motor. */
+export const VERSION_MOTOR = "2026-10-26 b · medición con ventana normal + geometría previa al agrandar · hoja_no_encontrada a los 10 s";
+
 export const MANAGE_URL = "https://app.sign.dropbox.com/home/manage";
 /** Dónde está el ítem «Firma» del panel de campos, en 1457×812. */
 export const ORIGEN_FIRMA = { x: 69, y: 504 };

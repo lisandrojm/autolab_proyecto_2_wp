@@ -1,7 +1,6 @@
 import os from "node:os";
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { Types } from "mongoose";
 import { Tenant } from "../../models/Tenant.js";
 import { DropboxSignEnvio } from "../../models/DropboxSignEnvio.js";
@@ -16,7 +15,7 @@ import { agruparTrabados, cupoVentana24h, estadoDelPanel, ordenPorRecientes } fr
 import { Release } from "../../models/Release.js";
 import { abrirSesionDropboxSign, anotarError, guardarSesion, probarConexionDropboxSign } from "./navegador.js";
 import { quienTieneDropboxSign, soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
-import { MOTOR_DROPBOX_SIGN } from "./motor.js";
+import { cargarMotor } from "./motor.js";
 import { leerOutbox, resolverFirmante } from "./outbox.js";
 import { reglasDelTenant } from "./reglasTenant.js";
 import { declaradasDe, detectarParaArchivo, guardarResumen, resumenDeArchivo, verificacionDe } from "./colocacion.js";
@@ -314,7 +313,8 @@ async function correr(corrida, cc, config) {
         emitir({ tipo: "abriendo", texto: "Abriendo el navegador con la sesión de Dropbox Sign…" });
         sesion = await abrirSesionDropboxSign(tenantId);
         emitir({ tipo: "sesion", texto: sesion.seLogueo ? "Sesión iniciada con usuario y contraseña." : "Sesión guardada vigente." });
-        const motor = await import(pathToFileURL(MOTOR_DROPBOX_SIGN).href);
+        const { motor, version } = await cargarMotor();
+        emitir({ tipo: "info", texto: `Motor del bot: ${version}${motor.VERSION_MOTOR ? ` · ${motor.VERSION_MOTOR}` : ""}.` });
         // Borradores que dejó un envío frenado por el límite: se informan (eliminarlos desde el menú es frágil).
         try {
             const b = await motor.revisarBorradores({ page: sesion.page, onProgreso: (t) => emitir({ tipo: "info", texto: t }) });
