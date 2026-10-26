@@ -133,6 +133,7 @@ const tenantSchema = new Schema({
                 contadorDia: { fecha: { type: String }, enviados: { type: Number, default: 0 } },
                 enfriadoHasta: { type: Date, default: null },
                 ultimoLoginAt: { type: Date, default: null },
+                limpiezaBorradoresVerificadaAt: { type: Date, default: null },
                 ultimaCorridaAt: { type: Date, default: null },
                 ultimoError: { type: String, default: null },
                 ultimaCorrida: { type: Schema.Types.Mixed },

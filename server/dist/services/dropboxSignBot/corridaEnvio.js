@@ -16,6 +16,7 @@ import { Release } from "../../models/Release.js";
 import { abrirSesionDropboxSign, anotarError, guardarSesion, probarConexionDropboxSign } from "./navegador.js";
 import { quienTieneDropboxSign, soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 import { cargarMotor } from "./motor.js";
+import { descartarBorradoresDeLaCorrida } from "./borradores.js";
 import { leerOutbox, resolverFirmante } from "./outbox.js";
 import { reglasDelTenant } from "./reglasTenant.js";
 import { declaradasDe, detectarParaArchivo, guardarResumen, resumenDeArchivo, verificacionDe } from "./colocacion.js";
@@ -315,11 +316,11 @@ async function correr(corrida, cc, config) {
         emitir({ tipo: "sesion", texto: sesion.seLogueo ? "Sesión iniciada con usuario y contraseña." : "Sesión guardada vigente." });
         const { motor, version } = await cargarMotor();
         emitir({ tipo: "info", texto: `Motor del bot: ${version}${motor.VERSION_MOTOR ? ` · ${motor.VERSION_MOTOR}` : ""}.` });
-        // Borradores que dejó un envío frenado por el límite: se informan (eliminarlos desde el menú es frágil).
+        // Los borradores en Dropbox Sign: se cuentan por el total del listado filtrado (sólo lectura).
         try {
             const b = await motor.revisarBorradores({ page: sesion.page, onProgreso: (t) => emitir({ tipo: "info", texto: t }) });
             if (b?.encontrados)
-                emitir({ tipo: "info", texto: `Hay ${b.encontrados} borrador(es) en Dropbox Sign sin enviar: conviene eliminarlos a mano desde Documentos.` });
+                emitir({ tipo: "info", texto: `Hay ${b.parcial ? "al menos " : ""}${b.encontrados} borrador(es) en Dropbox Sign sin enviar: se limpian desde Envío automático → «Limpiar borradores».` });
         }
         catch (e) {
             emitir({ tipo: "info", texto: `No se pudieron revisar los borradores: ${e?.message || e}` });
@@ -327,6 +328,8 @@ async function correr(corrida, cc, config) {
         // Para decidir qué hacer con lo que falla en la pantalla (ver `destinoDelIntento`).
         let huboExito = false;
         let fallosSeguidos = 0;
+        // Los documentos que pasaron por el wizard y no salieron: cada uno dejó un borrador en Dropbox Sign.
+        const dejaronBorrador = [];
         const fallidos = [];
         for (const c of tanda) {
             if (corrida.señal.cortada) {
@@ -385,6 +388,8 @@ async function correr(corrida, cc, config) {
             }
             const estado = r?.resultado || "error";
             const detalle = String(r?.detalle || "");
+            if (estado !== "enviado" && !pasoElIrreversible)
+                dejaronBorrador.push(c.archivo);
             const destino = destinoDelIntento(estado, pasoElIrreversible);
             if (r?.captura && !capturaError)
                 capturaError = Buffer.from(r.captura).toString("base64");
@@ -438,6 +443,12 @@ async function correr(corrida, cc, config) {
                 corrida.errores++;
                 await actualizarRegistro(tenantId, c.codigo, { estado: "error", detalle: `${detalle} Pasó «Enviar para firmar»: puede haber salido. Revisalo en Dropbox Sign antes de volver a encolarlo.` });
             }
+        }
+        try {
+            await descartarBorradoresDeLaCorrida(tenantId, sesion.page, motor, [...new Set(dejaronBorrador)], (t) => emitir({ tipo: "info", texto: t }));
+        }
+        catch (e) {
+            emitir({ tipo: "info", texto: `No se pudieron descartar los borradores de la corrida: ${e?.message || e}` });
         }
         // Los que fallaron en la pantalla mientras otros salían: se les carga el intento; al tercero, «error».
         for (const f of fallidos) {

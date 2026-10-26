@@ -9,14 +9,14 @@ export interface ILineaEnvio {
     archivo: string;
     codigo: string;
     email: string;
-    estado: "enviado" | "error" | "limite" | "requiere_revision" | "seco" | "salteado";
+    estado: "enviado" | "error" | "limite" | "requiere_revision" | "seco" | "salteado" | "borrado";
     detalle?: string;
 }
 export interface IDropboxSignEnvioLog extends Document {
     tenantId: Types.ObjectId;
     inicio: Date;
     fin?: Date | null;
-    /** `ok` | `limite` | `fallo` | `detenida` | `sin_tanda` */
+    /** `ok` | `limite` | `fallo` | `detenida` | `sin_tanda` | `revision_borradores` | `limpieza_borradores` */
     resultado: string;
     enviados: number;
     errores: number;

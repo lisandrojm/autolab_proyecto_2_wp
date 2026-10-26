@@ -22,7 +22,7 @@
  */
 
 /** Qué versión del motor corre: aparece en el log de cada corrida. Se actualiza con cada cambio del motor. */
-export const VERSION_MOTOR = "2026-10-26 e · HTML de una fila «Borrador» en el log · campo por data-testid=field-signature + data-signer · verificación por porcentaje · img fill = escala por eje";
+export const VERSION_MOTOR = "2026-10-26 f · borradores: total por la paginación con el filtro Borrador + limpieza con lista blanca propia · campo por data-testid=field-signature + data-signer · verificación por porcentaje · img fill = escala por eje";
 
 export const MANAGE_URL = "https://app.sign.dropbox.com/home/manage";
 /** Dónde está el ítem «Firma» del panel de campos, en 1457×812. */
@@ -917,37 +917,278 @@ async function salirSinEnviar(page) {
   await page.waitForTimeout(1500);
 }
 
-/** Cuenta los borradores del listado. No los borra: eliminar desde el menú ⋯ es frágil; se informa. */
-export async function revisarBorradores({ page, onProgreso = () => {} }) {
+/*
+  LOS BORRADORES (26/10/2026). Cada documento que el wizard carga y no se envía —corrida en seco, campo
+  que no se verificó, límite— deja un BORRADOR en Dropbox Sign. Eran ~194 (el texto del listado sólo
+  mostraba los 17 de la primera página): se cuentan por el total de la paginación con el filtro
+  «Estado → Borrador» aplicado.
+
+  BORRAR ES PERMANENTE (no hay papelera), así que la limpieza tiene su PROPIA lista blanca (`LIMPIEZA`,
+  fuera de `BOTONES`) y su propio click (`apretarEnLimpieza`), y cada click destructivo va detrás de
+  verificaciones que, si fallan, CORTAN la limpieza entera:
+    · el filtro Borrador aplicado: aparece «Restablecer filtros» y ninguna fila dice otro estado;
+    · la fila dice «Borrador» y ningún otro estado (nunca un Firmado);
+    · el título COMPLETO sale del DOM (atributo title/aria-label o texto sin «…») y es EXACTAMENTE el
+      nombre de un archivo del bot (con o sin «.pdf»); truncado o desconocido → se saltea;
+    · el ítem del menú dice exactamente «Eliminar para ti» (nunca «Eliminar para todos»);
+    · el modal se titula «Eliminar para ti» y avisa «No podrás recuperar…»; recién ahí, «Eliminar».
+  Después de cada borrado el total tiene que bajar en uno; si no baja 3 veces, se corta. Tope por corrida.
+  `enSeco` (el default) no aprieta nada destructivo: sólo filtra, pagina y lista candidatos y salteados.
+*/
+export const LIMPIEZA = {
+  filtro_estado: { rol: ["button", "combobox"], nombre: /^\s*estado\s*[▾▼⌄]?\s*$/i, descripcion: "abre el filtro «Estado» del listado" },
+  opcion_borrador: { rol: ["option", "menuitem", "menuitemcheckbox", "menuitemradio", "checkbox", "radio"], nombre: /^\s*borrador\s*$/i, descripcion: "la opción «Borrador» del filtro" },
+  pagina_siguiente: { rol: ["button", "link"], nombre: /^\s*(p[aá]gina siguiente|siguiente p[aá]gina|next page|next|›|»|>)\s*$/i, descripcion: "la página siguiente del listado" },
+  menu_fila: { css: 'button[aria-haspopup], [role="button"][aria-haspopup], button[aria-label*="más" i], button[aria-label*="opciones" i], button[aria-label*="acciones" i], button[aria-label*="more" i]', descripcion: "el «⋯» de la fila" },
+  eliminar_para_ti: { rol: ["menuitem", "button", "option"], nombre: /^\s*eliminar para ti\s*$/i, descripcion: "«Eliminar para ti» del menú de la fila", destructivo: true },
+  confirmar_eliminar: { rol: ["button"], nombre: /^\s*eliminar\s*$/i, descripcion: "«Eliminar» del modal «Eliminar para ti»", destructivo: true },
+};
+const TOPE_LIMPIEZA = 250;
+const PAGINAS_MAXIMAS = 30;
+const OTRO_ESTADO = /\b(firmado|firmada|completado|completada|enviado|enviada|esperando|pendiente|cancelado|cancelada|rechazado|rechazada|declinado|vencido)\b/i;
+
+/** Un elemento de la lista blanca de la limpieza dentro de `raiz` (la página, la fila, el menú, el modal). */
+function ubicarEnLimpieza(raiz, clave) {
+  const def = LIMPIEZA[clave];
+  if (!def) throw new Error(`«${clave}» no está en la lista blanca de la limpieza.`);
+  if (def.css) return { loc: raiz.locator(def.css).filter({ visible: true }), def };
+  let loc = null;
+  for (const rol of def.rol) {
+    const l = raiz.getByRole(rol, { name: def.nombre, exact: false });
+    loc = loc ? loc.or(l) : l;
+  }
+  return { loc: loc.filter({ visible: true }), def };
+}
+
+/** El click de la limpieza: exige que el elemento sea ÚNICO en `raiz` (nunca «el primero de varios»). */
+async function apretarEnLimpieza(raiz, clave) {
+  const { loc, def } = ubicarEnLimpieza(raiz, clave);
+  const n = await loc.count();
+  if (n !== 1) throw Object.assign(new Error(`«${def.descripcion}»: se esperaba exactamente 1 y hay ${n}.`), { corta: true });
+  const btn = loc.first();
+  await btn.click();
+}
+
+const normalizarTitulo = (s) => String(s || "").replace(/\s+/g, " ").trim();
+const TRUNCADO = /…|\.\.\./;
+
+/** «Mostrando 17 de 194 resultados» → { mostrados: 17, total: 194 }. */
+export function totalDelListado(t) {
+  const m = String(t || "").match(/mostrando\s+(\d+)(?:\s*[-–a]\s*(\d+))?\s+de\s+(\d+)\s+resultados?/i);
+  if (!m) return null;
+  return { mostrados: Number(m[2] || m[1]), total: Number(m[3]) };
+}
+
+/** ¿El título leído del DOM es el de un archivo del bot? Exacto, con o sin «.pdf». */
+export function tituloDelBot(titulo, titulos) {
+  const t = normalizarTitulo(titulo);
+  if (!t || TRUNCADO.test(t)) return null;
+  for (const a of titulos) {
+    const n = normalizarTitulo(a);
+    if (t === n || t === n.replace(/\.pdf$/i, "") || `${t}.pdf` === n) return a;
+  }
+  return null;
+}
+
+/**
+ * Las filas del listado que dicen «Borrador»: las marca con `data-weprodu-borrador=i` (para ubicarlas
+ * después sin depender del texto) y devuelve, por fila, los candidatos a título que hay en el DOM.
+ */
+async function filasBorrador(page) {
+  return page
+    .evaluate(() => {
+      document.querySelectorAll("[data-weprodu-borrador]").forEach((e) => e.removeAttribute("data-weprodu-borrador"));
+      const hojas = Array.from(document.querySelectorAll("body *")).filter((el) => el.children.length === 0 && /^\s*borrador\s*$/i.test(el.textContent || "") && !el.closest('[role="menu"], [role="listbox"], [role="dialog"], [role="option"], [role="menuitemcheckbox"], [role="menuitemradio"]'));
+      // La fila: el ancestro MÁS ALTO que contiene un único rótulo de estado (el suyo). Subir «hasta que
+      // tenga un botón y texto» se pasaba a la tabla entera cuando la fila tenía poco texto.
+      const ESTADO = /^\s*(borrador|firmado|firmada|completado|enviado|esperando.*|pendiente|cancelado|rechazado|declinado|vencido)\s*$/i;
+      const estados = (el) => Array.from(el.querySelectorAll("*")).filter((x) => x.children.length === 0 && ESTADO.test(x.textContent || "")).length;
+      const filas = [];
+      for (const h of hojas) {
+        let n = h;
+        while (n.parentElement && n.parentElement !== document.body && estados(n.parentElement) === 1) n = n.parentElement;
+        if (!n.querySelector("button, [role='button']") || filas.includes(n)) continue;
+        filas.push(n);
+      }
+      return filas.map((f, i) => {
+        f.setAttribute("data-weprodu-borrador", String(i));
+        const attrs = [];
+        for (const el of [f, ...f.querySelectorAll("*")]) {
+          for (const a of ["title", "aria-label", "data-title", "data-tooltip", "data-original-title"]) {
+            const v = el.getAttribute(a);
+            if (v && v.trim().length > 3) attrs.push(v.trim());
+          }
+        }
+        const textos = Array.from(f.querySelectorAll("*"))
+          .filter((el) => el.children.length === 0)
+          .map((el) => (el.textContent || "").trim())
+          .filter((s) => s.length > 3);
+        return { indice: i, attrs, textos, texto: (f.innerText || f.textContent || "").replace(/\s+/g, " ").trim().slice(0, 300) };
+      });
+    })
+    .catch(() => []);
+}
+
+/** Decide qué hacer con una fila: candidato (título del bot) o salteado con el motivo. */
+export function clasificarFila(fila, titulos) {
+  const sinBorrador = fila.texto.replace(/\bborrador\b/gi, "");
+  if (OTRO_ESTADO.test(sinBorrador)) return { salteado: true, motivo: `la fila dice otro estado («${sinBorrador.match(OTRO_ESTADO)[0]}»): no se toca`, texto: fila.texto };
+  for (const v of [...fila.attrs, ...fila.textos]) {
+    const archivo = tituloDelBot(v, titulos);
+    if (archivo) return { salteado: false, titulo: normalizarTitulo(v), archivo, texto: fila.texto };
+  }
+  const truncado = [...fila.textos].find((s) => TRUNCADO.test(s));
+  return { salteado: true, motivo: truncado ? `título truncado en pantalla («${truncado}») y sin el completo en el DOM` : "el título no coincide con ningún archivo del bot", texto: fila.texto };
+}
+
+/** Aplica «Estado → Borrador» y verifica que quedó aplicado. Devuelve el total, o lanza (corta). */
+async function filtrarBorradores(page, onProgreso) {
   await page.goto(MANAGE_URL, { waitUntil: "domcontentloaded" }).catch(() => {});
+  await page.waitForTimeout(2500);
+  await cerrarAvisoDeCookies(page);
+  await apretarEnLimpieza(page, "filtro_estado");
+  await page.waitForTimeout(800);
+  try {
+    await apretarEnLimpieza(page, "opcion_borrador");
+  } catch (e) {
+    const html = await page
+      .evaluate(() => Array.from(document.querySelectorAll('[role="menu"], [role="listbox"], [role="dialog"], [class*="popover" i], [class*="dropdown" i]')).map((el) => el.outerHTML.replace(/\s+/g, " ").replace(/<svg[\s\S]*?<\/svg>/g, "<svg/>").slice(0, 800)).join(" ‖ "))
+      .catch(() => "");
+    onProgreso(`No se encontró una única opción «Borrador» en el filtro. Lo que hay abierto: ${html || "(nada)"}`);
+    throw e;
+  }
+  await page.keyboard.press("Escape").catch(() => {});
   await page.waitForTimeout(2000);
   const t = await texto(page);
-  const encontrados = (t.match(/\bBorrador\b/gi) || []).length;
-  if (encontrados) onProgreso(`${encontrados} borrador(es) en el listado de Dropbox Sign.`);
-  /*
-    DIAGNÓSTICO DE LOS BORRADORES (26/10/2026), SÓLO LECTURA: el HTML de la primera fila que dice
-    «Borrador» y de sus botones, para poder escribir «Limpiar borradores» con selectores reales (como
-    pasó con el campo de firma). No hace ningún click.
-  */
-  if (encontrados) {
-    const fila = await page
-      .evaluate(() => {
-        const celdas = Array.from(document.querySelectorAll("body *")).filter((el) => el.children.length === 0 && /^\s*borrador\s*$/i.test(el.textContent || ""));
-        if (!celdas.length) return null;
-        // La fila: el ancestro más cercano que además tiene un botón (el «⋯») y el título del documento.
-        let n = celdas[0];
-        for (let i = 0; i < 10 && n && !(n.querySelector("button, [role='button']") && (n.textContent || "").length > 40); i++) n = n.parentElement;
-        if (!n) return null;
-        const botones = Array.from(n.querySelectorAll("button, [role='button'], [aria-haspopup]")).map((b) => b.outerHTML.replace(/\s+/g, " ").slice(0, 300));
-        return { fila: n.outerHTML.replace(/\s+/g, " ").replace(/<svg[\s\S]*?<\/svg>/g, "<svg/>").slice(0, 1500), botones };
-      })
-      .catch(() => null);
-    if (fila) {
-      onProgreso(`HTML de una fila «Borrador» (diagnóstico, sin clicks): ${fila.fila}`);
-      fila.botones.slice(0, 4).forEach((b, i) => onProgreso(`  botón ${i + 1} de la fila: ${b}`));
-    } else onProgreso("No se pudo ubicar en el DOM una fila «Borrador» para el diagnóstico.");
+  if (!/restablecer filtros/i.test(t)) throw Object.assign(new Error("El filtro «Borrador» no quedó aplicado (no aparece «Restablecer filtros»): no se sigue."), { corta: true });
+  const tot = totalDelListado(t);
+  return tot;
+}
+
+/** Cuenta los borradores: total de la paginación con el filtro aplicado. Sólo filtra: no borra nada. */
+export async function revisarBorradores({ page, onProgreso = () => {} }) {
+  try {
+    const tot = await filtrarBorradores(page, onProgreso);
+    const encontrados = tot ? tot.total : (await filasBorrador(page)).length;
+    if (encontrados) onProgreso(`${encontrados} borrador(es) en Dropbox Sign${tot ? ` (según «Mostrando ${tot.mostrados} de ${tot.total} resultados»)` : ""}.`);
+    return { encontrados };
+  } catch (e) {
+    // Sin el filtro, el conteo de la primera página (como antes), avisando que es parcial.
+    await page.goto(MANAGE_URL, { waitUntil: "domcontentloaded" }).catch(() => {});
+    await page.waitForTimeout(2000);
+    const t = await texto(page);
+    const encontrados = (t.match(/\bBorrador\b/gi) || []).length;
+    onProgreso(`No se pudo filtrar por «Borrador» (${e?.message || e}): ${encontrados} en la primera página del listado, puede haber más.`);
+    return { encontrados, parcial: true };
   }
-  return { encontrados };
+}
+
+/**
+ * Revisa (enSeco) o limpia los borradores cuyo título es exactamente un archivo del bot.
+ * `titulos`: los nombres de archivo del bot. `soloTitulos` (opcional): sólo éstos (los confirmados en
+ * el panel, o los que dejó la corrida). Devuelve { total, candidatos, salteados, borrados, cortada? }.
+ */
+export async function limpiarBorradores({ page, titulos, soloTitulos = null, enSeco = true, tope = TOPE_LIMPIEZA, onProgreso = () => {} }) {
+  const permitidos = soloTitulos ? new Set(soloTitulos.map(normalizarTitulo)) : null;
+  const elegible = (c) => !c.salteado && (!permitidos || permitidos.has(normalizarTitulo(c.archivo)) || permitidos.has(c.titulo));
+  const candidatos = [];
+  const salteados = [];
+  const borrados = [];
+  const tope0 = Math.max(0, Math.min(TOPE_LIMPIEZA, Number(tope) || 0));
+  let tot = await filtrarBorradores(page, onProgreso);
+  const totalInicial = tot?.total ?? null;
+  onProgreso(`Borradores en Dropbox Sign: ${totalInicial ?? "?"}${enSeco ? " · revisión EN SECO: no se borra nada" : ` · se borran hasta ${tope0}`}.`);
+
+  const leerPagina = async () => {
+    const filas = await filasBorrador(page);
+    return filas.map((f) => ({ ...f, ...clasificarFila(f, titulos) }));
+  };
+  const siguientePagina = async () => {
+    const { loc } = ubicarEnLimpieza(page, "pagina_siguiente");
+    if ((await loc.count()) !== 1 || !(await loc.first().isEnabled().catch(() => false))) return false;
+    const antes = (await filasBorrador(page)).map((f) => f.texto).join("|");
+    await apretarEnLimpieza(page, "pagina_siguiente");
+    await page.waitForTimeout(2000);
+    const despues = (await filasBorrador(page)).map((f) => f.texto).join("|");
+    return despues !== antes;
+  };
+
+  if (enSeco) {
+    const vistos = new Set();
+    for (let p = 1; p <= PAGINAS_MAXIMAS; p++) {
+      for (const f of await leerPagina()) {
+        if (vistos.has(f.texto)) continue;
+        vistos.add(f.texto);
+        if (elegible(f)) candidatos.push({ titulo: f.titulo, archivo: f.archivo });
+        else salteados.push({ texto: f.texto, motivo: f.salteado ? f.motivo : "no está entre los confirmados" });
+      }
+      if (!(await siguientePagina())) break;
+    }
+    onProgreso(`En seco: ${candidatos.length} borrador(es) del bot para eliminar, ${salteados.length} salteado(s).`);
+    return { total: totalInicial, candidatos, salteados, borrados };
+  }
+
+  // REAL: siempre desde la página 1 (al borrar, el listado se corre); si en la página no queda ningún
+  // candidato, se pasa a la siguiente. Cada borrado se verifica con el total.
+  let fallos = 0;
+  let cortada = null;
+  const yaSalteados = new Set();
+  let vueltas = 0;
+  while (borrados.length < tope0 && vueltas++ < tope0 + PAGINAS_MAXIMAS * 2) {
+    const filas = await leerPagina();
+    for (const f of filas) if (!elegible(f) && !yaSalteados.has(f.texto)) (yaSalteados.add(f.texto), salteados.push({ texto: f.texto, motivo: f.salteado ? f.motivo : "no está entre los confirmados" }));
+    const c = filas.find(elegible);
+    if (!c) {
+      if (!(await siguientePagina())) break;
+      continue;
+    }
+    try {
+      const fila = page.locator(`[data-weprodu-borrador="${c.indice}"]`);
+      if ((await fila.count()) !== 1) throw Object.assign(new Error("la fila marcada no es única"), { corta: true });
+      const textoFila = normalizarTitulo(await fila.innerText());
+      if (!/\bborrador\b/i.test(textoFila) || OTRO_ESTADO.test(textoFila.replace(/\bborrador\b/gi, ""))) throw Object.assign(new Error(`la fila ya no dice sólo «Borrador» («${textoFila.slice(0, 120)}»)`), { corta: true });
+      await apretarEnLimpieza(fila, "menu_fila");
+      await page.waitForTimeout(700);
+      const menu = page.locator('[role="menu"]').filter({ visible: true });
+      const raizMenu = (await menu.count()) === 1 ? menu : page;
+      const textoMenu = await raizMenu.innerText().catch(() => "");
+      if (!/cambiar nombre|ver informaci[oó]n/i.test(textoMenu)) throw Object.assign(new Error(`el menú abierto no es el de la fila (no tiene «Cambiar nombre» ni «Ver información»): «${normalizarTitulo(textoMenu).slice(0, 160)}»`), { corta: true });
+      await apretarEnLimpieza(raizMenu, "eliminar_para_ti");
+      await page.waitForTimeout(800);
+      const modal = page.locator('[role="dialog"], [role="alertdialog"]').filter({ visible: true }).filter({ hasText: /eliminar para ti/i });
+      if ((await modal.count()) !== 1) throw Object.assign(new Error("no apareció un único modal «Eliminar para ti»"), { corta: true });
+      const textoModal = await modal.innerText();
+      if (!/no podr[aá]s recuperar/i.test(textoModal) || /eliminar para todos/i.test(textoModal)) throw Object.assign(new Error(`el modal no es el esperado: «${normalizarTitulo(textoModal).slice(0, 200)}»`), { corta: true });
+      await apretarEnLimpieza(modal, "confirmar_eliminar");
+      await page.waitForTimeout(2500);
+      const ahora = totalDelListado(await texto(page));
+      const bajo = tot && ahora ? ahora.total === tot.total - 1 : !(await leerPagina()).some((f) => f.titulo === c.titulo);
+      if (bajo) {
+        borrados.push({ titulo: c.titulo, archivo: c.archivo });
+        onProgreso(`Eliminado el borrador «${c.titulo}»${ahora ? ` (quedan ${ahora.total})` : ""}.`);
+        fallos = 0;
+      } else {
+        fallos++;
+        onProgreso(`Después de eliminar «${c.titulo}» el total no bajó (${tot?.total ?? "?"} → ${ahora?.total ?? "?"}). Falla ${fallos} de 3.`);
+        if (fallos >= 3) {
+          cortada = "el total no bajó tres veces seguidas";
+          break;
+        }
+        // Se vuelve a la página 1 con el filtro, por si el listado quedó en otro estado.
+        await page.keyboard.press("Escape").catch(() => {});
+      }
+      tot = ahora || tot;
+      if (!bajo || !ahora) tot = (await filtrarBorradores(page, onProgreso)) || tot;
+    } catch (e) {
+      await page.keyboard.press("Escape").catch(() => {});
+      cortada = e?.message || String(e);
+      onProgreso(`Limpieza cortada: ${cortada}. No se borra nada más.`);
+      break;
+    }
+  }
+  if (!cortada && borrados.length >= tope0 && tope0 > 0) onProgreso(`Se llegó al tope de ${tope0} borrados por corrida.`);
+  onProgreso(`Limpieza: ${borrados.length} borrador(es) eliminado(s), ${salteados.length} salteado(s)${cortada ? `, cortada (${cortada})` : ""}.`);
+  return { total: totalInicial, candidatos: borrados, salteados, borrados, cortada };
 }
 
 /** EL ÚNICO CLICK IRREVERSIBLE: «Enviar para firmar». Una vez, sin reintentos. */

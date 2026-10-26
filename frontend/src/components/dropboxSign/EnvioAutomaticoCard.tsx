@@ -37,8 +37,11 @@ const ESTADO_LINEA: Record<BotLinea["estado"], { label: string; clase: string }>
   error: { label: "Error", clase: "text-red-600 dark:text-red-400" },
   limite: { label: "Límite de Dropbox Sign", clase: "text-amber-600 dark:text-amber-400" },
   requiere_revision: { label: "Requiere revisión", clase: "text-amber-600 dark:text-amber-400" },
-  salteado: { label: "Ya enviado", clase: "text-gray-500" },
+  salteado: { label: "Salteado", clase: "text-gray-500" },
+  borrado: { label: "Borrador eliminado", clase: "text-red-600 dark:text-red-400" },
 };
+/** Las corridas que terminaron bien (las de borradores también, salvo que se hayan cortado). */
+const corridaOk = (l: { resultado: string; errores: number }) => l.resultado === "ok" || l.resultado === "sin_tanda" || (/_borradores$/.test(l.resultado) && !l.errores);
 
 export const EnvioAutomaticoCard: React.FC = () => {
   const [cfg, setCfg] = useState<BotConfig | null>(null);
@@ -505,7 +508,7 @@ export const EnvioAutomaticoCard: React.FC = () => {
             {logs.datos.logs.map((l) => (
               <div key={l._id} className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 text-xs">
                 <p className="flex items-center gap-2 font-semibold text-gray-700 dark:text-gray-200">
-                  <FontAwesomeIcon icon={l.resultado === "ok" || l.resultado === "sin_tanda" ? faCircleCheck : faCircleXmark} className={l.resultado === "ok" || l.resultado === "sin_tanda" ? "text-green-600" : l.limite ? "text-amber-600" : "text-red-600"} />
+                  <FontAwesomeIcon icon={corridaOk(l) ? faCircleCheck : faCircleXmark} className={corridaOk(l) ? "text-green-600" : l.limite ? "text-amber-600" : "text-red-600"} />
                   {fmt(l.inicio)} · {l.resultado}{l.enSeco ? " · seco" : ""}{l.automatica ? " · automática" : " · manual"} · {l.enviados} enviado(s) · {l.errores} error(es)
                   {l.tieneCaptura && (
                     <button

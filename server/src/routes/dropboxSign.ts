@@ -14,6 +14,7 @@ import { guardarReglasDelTenant, reglasDelTenant } from "../services/dropboxSign
 import { arrancarVerificacion, detenerVerificacion, previsualizarColocacion, verificacionDe, type AlcanceVerificacion } from "../services/dropboxSignBot/colocacion.js";
 import { REGLAS_BASE, TIPOS_ANCLA } from "../compartido/reglasColocacionFirma.js";
 import { probarConexionDropboxSign } from "../services/dropboxSignBot/navegador.js";
+import { estadoBorradores, limpiarBorradoresDelBot, revisarBorradoresDelBot } from "../services/dropboxSignBot/borradores.js";
 import { abrirLoginAsistido, accionLoginAsistido, cerrarLoginAsistido, hayLoginAsistido, pantallaLoginAsistido, type AccionLoginAsistido } from "../services/dropboxSignBot/loginAsistido.js";
 
 /**
@@ -447,6 +448,38 @@ router.get("/bot/corrida", async (req: AuthenticatedRequest & TenantRequest, res
   const c = corridaEnvioDe(tenantId);
   if (!c) return res.json({ hay: false, corriendo: false, eventos: [], enSecoForzado: enSecoForzado() });
   res.json({ hay: true, corriendo: !c.terminada, enSeco: c.enSeco, automatica: c.automatica, arrancadaEl: c.arrancadaEl, total: c.total, enviados: c.enviados, errores: c.errores, limite: c.limite, irreversible: c.irreversible, detenerPedido: c.señal.cortada, actual: c.actual, cantidad: c.cantidad ?? null, eventos: c.eventos, lineas: c.lineas, enSecoForzado: enSecoForzado() });
+});
+
+/*
+  «LIMPIAR BORRADORES» (26/10/2026), dos pasos y sólo admin: POST /bot/borradores/revisar (en seco, no
+  borra) y POST /bot/borradores/limpiar { confirmados: N } con N = candidatos de la última revisión.
+  GET /bot/borradores devuelve el progreso y la última revisión, para el polling del panel.
+*/
+router.get("/bot/borradores", (req: AuthenticatedRequest & TenantRequest, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede ver los borradores." });
+  res.json(estadoBorradores(String(req.tenantObjectId)));
+});
+
+router.post("/bot/borradores/revisar", (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede revisar los borradores." });
+    revisarBorradoresDelBot(String(req.tenantObjectId));
+    res.json({ arrancada: true });
+  } catch (error: any) {
+    res.status(error?.status || 400).json({ error: error?.message || "No se pudo revisar." });
+  }
+});
+
+router.post("/bot/borradores/limpiar", (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede eliminar borradores." });
+    const confirmados = Number(req.body?.confirmados);
+    if (!Number.isInteger(confirmados) || confirmados <= 0) return res.status(400).json({ error: "Falta confirmar cuántos borradores se eliminan." });
+    limpiarBorradoresDelBot(String(req.tenantObjectId), confirmados);
+    res.json({ arrancada: true });
+  } catch (error: any) {
+    res.status(error?.status || 400).json({ error: error?.message || "No se pudo limpiar." });
+  }
 });
 
 /** GET /bot/logs — las últimas 50 corridas (solo admin). Sin la captura, que pesa: va por id. */

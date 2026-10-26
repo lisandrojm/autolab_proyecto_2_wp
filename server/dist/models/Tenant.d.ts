@@ -242,6 +242,8 @@ export interface ITenant extends Document {
                 /** Hasta cuándo no se reintenta después del freno antiabuso de Dropbox Sign. */
                 enfriadoHasta?: Date | null;
                 ultimoLoginAt?: Date | null;
+                /** Cuándo una «Limpiar borradores» confirmada borró sin cortarse: desde ahí las corridas descartan solas sus borradores. */
+                limpiezaBorradoresVerificadaAt?: Date | null;
                 /** Cuándo arrancó la última corrida (es el candado entre procesos del scheduler). */
                 ultimaCorridaAt?: Date | null;
                 ultimoError?: string | null;

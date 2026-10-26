@@ -9,6 +9,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { sweetAlert } from "../utils/sweetAlert";
 import { EnvioAutomaticoCard } from "../components/dropboxSign/EnvioAutomaticoCard";
 import { ReglasColocacionCard } from "../components/dropboxSign/ReglasColocacionCard";
+import { BorradoresCard } from "../components/dropboxSign/BorradoresCard";
 import { RegistroRescatados } from "../components/dropboxSign/RegistroRescatados";
 
 const fmtFechaHora = (iso?: string | null): string => {
@@ -190,6 +191,8 @@ export const DropboxSignConfigPage: React.FC = () => {
           <EnvioAutomaticoCard />
           {/* Dónde va la firma en cada tipo de documento, y la verificación visual antes de enviar. */}
           <ReglasColocacionCard />
+          {/* Los borradores que dejan los documentos cargados y no enviados: revisar en seco y limpiar. */}
+          <BorradoresCard />
         </div>
       ) : (
         <div className="space-y-4 max-w-3xl">

@@ -204,7 +204,7 @@ export interface BotLinea {
   archivo: string;
   codigo: string;
   email: string;
-  estado: "enviado" | "error" | "limite" | "requiere_revision" | "seco" | "salteado";
+  estado: "enviado" | "error" | "limite" | "requiere_revision" | "seco" | "salteado" | "borrado";
   detalle?: string;
 }
 
@@ -466,7 +466,41 @@ export interface BotEnvioRegistro {
   colocacion?: ResumenColocacion | null;
 }
 
+/** «Limpiar borradores» (26/10/2026): revisión en seco y limpieza confirmada. */
+export interface ResultadoBorradores {
+  tipo: "revision" | "limpieza";
+  corriendo: boolean;
+  arrancadaEl: string;
+  terminadaEl: string | null;
+  total: number | null;
+  candidatos: Array<{ titulo: string; archivo: string }>;
+  salteados: Array<{ texto: string; motivo: string }>;
+  borrados: Array<{ titulo: string; archivo: string }>;
+  cortada: string | null;
+  error: string | null;
+  eventos: Array<{ at: string; texto: string }>;
+}
+export interface EstadoBorradores {
+  ultimo: ResultadoBorradores | null;
+  revision: ResultadoBorradores | null;
+  vigenciaMin: number;
+}
+
 class DropboxSignBotAPI {
+  async borradores(): Promise<EstadoBorradores> {
+    const { data } = await axios.get("/dropbox-sign/bot/borradores");
+    return data;
+  }
+  /** Paso 1, en seco: filtra «Borrador» en Dropbox Sign y lista qué se eliminaría. No borra nada. */
+  async revisarBorradores(): Promise<{ arrancada: boolean }> {
+    const { data } = await axios.post("/dropbox-sign/bot/borradores/revisar");
+    return data;
+  }
+  /** Paso 2: elimina los candidatos de la última revisión; `confirmados` tiene que ser su número. */
+  async limpiarBorradores(confirmados: number): Promise<{ arrancada: boolean }> {
+    const { data } = await axios.post("/dropbox-sign/bot/borradores/limpiar", { confirmados });
+    return data;
+  }
   async config(): Promise<BotConfig> {
     const { data } = await axios.get("/dropbox-sign/bot/config");
     return data;
