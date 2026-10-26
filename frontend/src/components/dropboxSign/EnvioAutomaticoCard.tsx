@@ -7,6 +7,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { PrevisualizacionColocacion } from "./PrevisualizacionColocacion";
 import { IndicadorColocacion } from "./ReglasColocacionCard";
 import { LoginAsistidoModal } from "./LoginAsistidoModal";
+import { TrabadosPorMotivo } from "../contratos/ColaDeEnvioFirma";
 
 /*
   «ENVÍO AUTOMÁTICO A LA FIRMA» (22/10/2026): el bot que manda a firmar, por la web de Dropbox Sign,
@@ -52,6 +53,8 @@ export const EnvioAutomaticoCard: React.FC = () => {
   const [cola, setCola] = useState<{ abierta: boolean; cargando: boolean; datos: BotCola | null }>({ abierta: false, cargando: false, datos: null });
   const [logs, setLogs] = useState<{ abiertos: boolean; cargando: boolean; datos: { logs: BotLog[]; requierenRevision: BotEnvioRegistro[] } | null }>({ abiertos: false, cargando: false, datos: null });
   const [revision, setRevision] = useState<BotEnvioRegistro[]>([]);
+  // Los trabados agrupados por motivo (de la vista de la cola). Si el server todavía no los da, queda la lista plana.
+  const [vistaCola, setVistaCola] = useState<BotCola | null>(null);
   /** El archivo cuya colocación de firma se está previsualizando. */
   const [preview, setPreview] = useState<string | null>(null);
   const intervalo = useRef<number | null>(null);
@@ -67,6 +70,8 @@ export const EnvioAutomaticoCard: React.FC = () => {
         // Se guardan ya: el botón «Logs» muestra cuántas corridas hay sin esperar a abrirlo.
         setLogs((x) => ({ ...x, datos: l }));
       }
+      const v = await dropboxSignBotAPI.cola().catch(() => null);
+      setVistaCola(v?.trabados ? v : null);
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo cargar el envío automático.");
     }
@@ -404,7 +409,19 @@ export const EnvioAutomaticoCard: React.FC = () => {
       )}
 
       {/* Lo que requiere revisión */}
-      {revision.length > 0 && (
+      {vistaCola?.trabados ? (
+        <TrabadosPorMotivo
+          grupos={vistaCola.trabados}
+          verificacion={vistaCola.verificacion}
+          onVerificar={() => {
+            dropboxSignBotAPI
+              .verificarTodos("cola_y_revision")
+              .then(() => sweetAlert.success("Verificando", "Se están verificando la cola y lo trabado. Al terminar, recargá para ver el resultado."))
+              .catch((e: any) => sweetAlert.error("No se pudo verificar", e?.response?.data?.error || e?.message || ""));
+          }}
+          onCambio={cargar}
+        />
+      ) : revision.length > 0 && (
         <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
           <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-2">
             <FontAwesomeIcon icon={faTriangleExclamation} /> {revision.length} documento(s) que el bot no envía: requieren revisión

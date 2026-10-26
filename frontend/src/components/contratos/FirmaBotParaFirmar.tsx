@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faPaperPlane, faStop, faGear, faRobot, faTriangleExclamation, faCircleCheck, faClock, faHourglassHalf, faListCheck, faCrosshairs, faRightToBracket } from "@fortawesome/free-solid-svg-icons";
-import { dropboxSignAPI, dropboxSignBotAPI, type BotConfig, type BotCorrida, type EstadoArchivoFirma } from "../../api/dropboxSign";
+import { dropboxSignAPI, dropboxSignBotAPI, type BotCola, type BotConfig, type BotCorrida, type EstadoArchivoFirma } from "../../api/dropboxSign";
+import { ColaDeEnvioFirma, TrabadosPorMotivo } from "./ColaDeEnvioFirma";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { LoginAsistidoModal } from "../dropboxSign/LoginAsistidoModal";
 
@@ -53,6 +54,18 @@ export function useBotFirma(archivos: string[], activo: boolean, hashes: Record<
   const [ahora, setAhora] = useState(Date.now());
   const intervalo = useRef<number | null>(null);
   const nombres = useMemo(() => archivos.join("\n"), [archivos]);
+  /**
+   * LA COLA COMO LA VE LA PERSONA (25/10/2026): el orden, la línea de corte del cupo, lo trabado por
+   * motivo y el estado del envío en castellano (`GET /bot/cola`). Lee el Outbox, así que no se pide en
+   * cada tick: al abrir, al cambiar algo y cuando la corrida avanza un documento.
+   */
+  const [vista, setVista] = useState<BotCola | null>(null);
+  const avance = useRef(-1);
+  const cargarVista = useCallback(async () => {
+    if (!activo) return;
+    const v = await dropboxSignBotAPI.cola().catch(() => null);
+    if (v) setVista(v);
+  }, [activo]);
   useEffect(() => {
     const t = window.setInterval(() => setAhora(Date.now()), 30_000);
     return () => window.clearInterval(t);
@@ -86,11 +99,18 @@ export function useBotFirma(archivos: string[], activo: boolean, hashes: Record<
     setCorrida(r);
     // Fila por fila: cada documento que termina cambia su badge.
     void cargarEstados();
+    // La cola, cuando la corrida avanza un documento (los enviados salen de la cola).
+    const hechos = (r.enviados || 0) + (r.errores || 0);
+    if (hechos !== avance.current) {
+      avance.current = hechos;
+      void cargarVista();
+    }
     if (!r.corriendo) {
       parar();
       void cargarCfg();
+      void cargarVista();
     }
-  }, [cargarEstados, cargarCfg, parar]);
+  }, [cargarEstados, cargarCfg, cargarVista, parar]);
   const seguir = useCallback(() => {
     parar();
     void consultar();
@@ -99,16 +119,17 @@ export function useBotFirma(archivos: string[], activo: boolean, hashes: Record<
 
   useEffect(() => {
     void cargarCfg();
+    void cargarVista();
     void cargarEstados();
     return parar;
-  }, [cargarCfg, cargarEstados, parar]);
+  }, [cargarCfg, cargarEstados, cargarVista, parar]);
   useEffect(() => {
     if (cfg?.corriendo && !intervalo.current) seguir();
   }, [cfg?.corriendo, seguir]);
 
   const refrescar = useCallback(async () => {
-    await Promise.all([cargarCfg(), cargarEstados()]);
-  }, [cargarCfg, cargarEstados]);
+    await Promise.all([cargarCfg(), cargarEstados(), cargarVista()]);
+  }, [cargarCfg, cargarEstados, cargarVista]);
 
   /** Resumen de un encolado: cuántos entraron y, agrupado por motivo, cuántos quedaron afuera. */
   const informar = (titulo: string, r: { encolados: number; porMotivo: Record<string, number> }) => {
@@ -199,7 +220,62 @@ export function useBotFirma(archivos: string[], activo: boolean, hashes: Record<
     if (!r.ok) sweetAlert.info("No hay nada que detener", r.motivo || "");
   };
 
-  return { cfg, estados, corrida, ocupado, ahora, enviarALaFirma, encolarTodo, quitarDeLaCola, enviarTandaAhora, detener, refrescar };
+  /**
+   * «ENVIAR AHORA N» (25/10/2026). Si se pide más de lo que queda en el cupo de 24 h, se avisa ANTES
+   * («Pediste 50 y quedan 48. ¿Enviar 48?»): no se trunca callado. Descuenta del mismo cupo.
+   */
+  const enviarAhora = async (pedidos: number) => {
+    if (!cfg) return;
+    const cupo = vista?.resumen?.cupo ?? cfg.cupoHoy;
+    const enCola = vista?.resumen?.listos ?? 0;
+    const n = Math.max(1, Math.floor(pedidos));
+    if (cupo <= 0) {
+      sweetAlert.info("Sin cupo", "Se llegó al tope estimado de las últimas 24 h. Dropbox Sign libera lugares de a poco.");
+      return;
+    }
+    const tope = Math.min(cupo, enCola || n);
+    let cantidad = n;
+    if (n > tope) {
+      const motivo = n > cupo ? `quedan ${cupo} en el cupo de las últimas 24 h` : `hay ${enCola} en la cola`;
+      const r = await sweetAlert.confirm(`Pediste ${n}`, `Pediste ${n} y ${motivo}. ¿Enviar ${tope}?`, `Sí, enviar ${tope}`);
+      if (!r.isConfirmed) return;
+      cantidad = tope;
+    } else {
+      const r = await sweetAlert.confirm(`Enviar ${n} ahora`, `El bot manda los primeros ${n} de la cola, en orden${cfg.enSecoForzado ? ". En este servidor corre en MODO SECO: no se aprieta «Enviar para firmar»" : ""}.`, "Sí, enviar");
+      if (!r.isConfirmed) return;
+    }
+    setOcupado("arrancando");
+    try {
+      await dropboxSignBotAPI.arrancar(false, cantidad);
+      seguir();
+    } catch (e: any) {
+      sweetAlert.error("No se pudo arrancar", e?.response?.data?.error || e?.message || "");
+    } finally {
+      setOcupado(null);
+    }
+  };
+
+  /** «Verificar de nuevo»: corre la verificación (que escribe el estado de cada documento) y sigue la cola hasta que termine. */
+  const verificar = async () => {
+    try {
+      await dropboxSignBotAPI.verificarTodos("cola_y_revision");
+    } catch (e: any) {
+      if (e?.response?.status !== 409) {
+        sweetAlert.error("No se pudo verificar", e?.response?.data?.error || e?.message || "");
+        return;
+      }
+    }
+    await cargarVista();
+    // Se sigue cada 5 s mientras verifica (hasta 15 min).
+    for (let i = 0; i < 180; i++) {
+      await new Promise((r) => window.setTimeout(r, 5000));
+      const v = await dropboxSignBotAPI.verificacion().catch(() => null);
+      if (!v || !v.corriendo) break;
+    }
+    await refrescar();
+  };
+
+  return { cfg, estados, corrida, ocupado, ahora, enviarALaFirma, encolarTodo, quitarDeLaCola, enviarTandaAhora, detener, refrescar, vista, cargarVista, enviarAhora, verificar };
 }
 
 /**
@@ -263,9 +339,11 @@ const badgeDe = (e: EstadoArchivoFirma, ahora: number): React.ReactNode => {
 
 /** El panel compacto arriba del listado: estado del bot y la corrida en vivo. */
 export const PanelBotFirma: React.FC<{ bot: ReturnType<typeof useBotFirma>; enCola: number }> = ({ bot, enCola }) => {
-  const { cfg, corrida, ocupado } = bot;
+  const { cfg, corrida, ocupado, vista } = bot;
   const [ahora, setAhora] = useState(Date.now());
   const [login, setLogin] = useState(false);
+  /** «Enviar ahora N»: arranca con el tamaño de tanda. */
+  const [cantidad, setCantidad] = useState<number | null>(null);
   useEffect(() => {
     const t = window.setInterval(() => setAhora(Date.now()), 30_000);
     return () => window.clearInterval(t);
@@ -274,6 +352,13 @@ export const PanelBotFirma: React.FC<{ bot: ReturnType<typeof useBotFirma>; enCo
   const corriendo = !!corrida?.corriendo;
   const enfriando = faltan(cfg.enfriadoHasta, ahora);
   const ultimo = corrida?.eventos?.length ? corrida.eventos[corrida.eventos.length - 1] : null;
+  const r = vista?.resumen;
+  const cupo = r?.cupo ?? cfg.cupoHoy;
+  const enviados24 = r?.enviados24h ?? cfg.enviadosHoy;
+  const n = cantidad ?? cfg.envio.tamanoTanda;
+  // El estado del envío, en castellano y con qué va a pasar (lo arma el server: `estadoDelPanel`).
+  const estado = vista?.estadoPanel;
+  const colorEstado = !estado ? "" : estado.tipo === "enviando" ? "text-purple-700 dark:text-purple-300" : ["enfriamiento", "tope", "sin_sesion"].includes(estado.tipo) ? "text-amber-700 dark:text-amber-300" : estado.tipo === "lista" || estado.tipo === "manual" ? "text-green-700 dark:text-green-400" : "text-gray-700 dark:text-gray-200";
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 space-y-2">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-300">
@@ -281,16 +366,20 @@ export const PanelBotFirma: React.FC<{ bot: ReturnType<typeof useBotFirma>; enCo
           <FontAwesomeIcon icon={faRobot} /> Envío a la firma
           {cfg.enSecoForzado && <span className="rounded-full border border-blue-300 bg-blue-50 px-1.5 text-[10px] text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">modo seco</span>}
         </span>
-        <span>
-          Hoy <strong>{cfg.enviadosHoy}</strong> / {cfg.envio.topeDiario} enviados
+        {/* El cupo es de las ÚLTIMAS 24 H y es una estimación nuestra: Dropbox Sign libera de a poco, no a la medianoche. */}
+        <span title="Dropbox Sign no corta por día calendario: libera los lugares a medida que cada envío cumple 24 h. El tope es una estimación nuestra.">
+          Últimas 24 h: <strong>{enviados24}</strong> enviados · <strong>{cupo}</strong> disponibles · tope estimado {cfg.envio.topeDiario}/día
+          {r?.liberaAt && cupo === 0 ? ` · se libera un lugar ${fmt(r.liberaAt)}` : ""}
         </span>
         <span>
-          En cola <strong>{enCola}</strong>
+          En cola <strong>{r?.listos ?? enCola}</strong>
         </span>
-        <span className="inline-flex items-center gap-1" title={cfg.envio.activo ? `${cfg.proximaCorrida} ${cfg.proximaCorridaAt ? EXPLICACION_ESTIMADO : ""}` : undefined}>
-          <FontAwesomeIcon icon={faClock} className="text-gray-400" />{" "}
-          {!cfg.envio.activo ? "Envío automático desactivado" : cfg.proximaCorridaAt ? `Próxima tanda ${faltan(cfg.proximaCorridaAt, ahora) ? `en ${faltan(cfg.proximaCorridaAt, ahora)}` : "en el próximo minuto"} (${fmt(cfg.proximaCorridaAt)})` : cfg.proximaCorrida}
-        </span>
+        {!estado && (
+          <span className="inline-flex items-center gap-1" title={cfg.envio.activo ? `${cfg.proximaCorrida} ${cfg.proximaCorridaAt ? EXPLICACION_ESTIMADO : ""}` : undefined}>
+            <FontAwesomeIcon icon={faClock} className="text-gray-400" />{" "}
+            {!cfg.envio.activo ? "Envío automático desactivado" : cfg.proximaCorridaAt ? `Próxima tanda ${faltan(cfg.proximaCorridaAt, ahora) ? `en ${faltan(cfg.proximaCorridaAt, ahora)}` : "en el próximo minuto"} (${fmt(cfg.proximaCorridaAt)})` : cfg.proximaCorrida}
+          </span>
+        )}
         {enfriando && (
           <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300 font-semibold">
             <FontAwesomeIcon icon={faHourglassHalf} /> Enfriamiento: {enfriando}
@@ -305,6 +394,17 @@ export const PanelBotFirma: React.FC<{ bot: ReturnType<typeof useBotFirma>; enCo
           <FontAwesomeIcon icon={faGear} /> Configuración
         </Link>
       </div>
+      {estado && (
+        <p className={`flex items-center gap-1.5 text-sm font-semibold ${colorEstado}`}>
+          {estado.tipo === "enviando" ? <FontAwesomeIcon icon={faSpinner} spin /> : estado.tipo === "enfriamiento" || estado.tipo === "tope" ? <FontAwesomeIcon icon={faHourglassHalf} /> : <FontAwesomeIcon icon={faClock} />}
+          {estado.texto}
+        </p>
+      )}
+      {estado?.tipo === "enviando" && corrida?.total ? (
+        <div className="h-1.5 w-full overflow-hidden rounded bg-purple-100 dark:bg-purple-900/40">
+          <div className="h-full bg-purple-600 transition-[width] duration-500" style={{ width: `${Math.round((((corrida.enviados || 0) + (corrida.errores || 0)) / corrida.total) * 100)}%` }} />
+        </div>
+      ) : null}
       {(!cfg.tieneSesion || cfg.conexion?.estado === "caida") && (
         <div className="flex flex-wrap items-center gap-2 text-[11px] text-red-600 dark:text-red-400">
           <span>{cfg.conexion?.estado === "caida" ? "La conexión con Dropbox Sign está caída: el bot no puede enviar." : "Sin sesión de Dropbox Sign el bot no puede enviar."}</span>
@@ -336,8 +436,25 @@ export const PanelBotFirma: React.FC<{ bot: ReturnType<typeof useBotFirma>; enCo
           </>
         ) : (
           <>
-            <button type="button" onClick={bot.enviarTandaAhora} disabled={!!ocupado || enCola === 0 || cfg.cupoHoy === 0 || !!enfriando} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" title={enCola === 0 ? "No hay nada en la cola" : `Manda hasta ${cfg.envio.tamanoTanda} de la cola`}>
-              <FontAwesomeIcon icon={ocupado === "arrancando" ? faSpinner : faPaperPlane} spin={ocupado === "arrancando"} /> Enviar tanda ahora
+            {/* «Enviar ahora N»: la cantidad es editable; si pasa el cupo, se avisa antes de mandar. */}
+            <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-200">
+              Enviar ahora:
+              <input
+                type="number"
+                min={1}
+                max={Math.max(1, cupo)}
+                value={n}
+                onChange={(e) => setCantidad(Math.max(1, Number(e.target.value) || 1))}
+                disabled={!!ocupado || !!enfriando}
+                className="w-16 rounded border border-gray-300 bg-white px-1.5 py-0.5 text-right text-xs dark:border-gray-600 dark:bg-gray-800"
+              />
+              documentos
+            </span>
+            <button type="button" onClick={() => void bot.enviarAhora(n)} disabled={!!ocupado || (r?.listos ?? enCola) === 0 || cupo === 0 || !!enfriando} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50" title={(r?.listos ?? enCola) === 0 ? "No hay nada en la cola" : `Manda los primeros ${n} de la cola (descuenta del cupo de 24 h)`}>
+              <FontAwesomeIcon icon={ocupado === "arrancando" ? faSpinner : faPaperPlane} spin={ocupado === "arrancando"} /> Enviar
+            </button>
+            <button type="button" onClick={bot.enviarTandaAhora} disabled={!!ocupado || (r?.listos ?? enCola) === 0 || cupo === 0 || !!enfriando} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-300 disabled:opacity-50" title={`Atajo: manda el tamaño de tanda configurado (${cfg.envio.tamanoTanda})`}>
+              Enviar tanda ahora ({cfg.envio.tamanoTanda})
             </button>
             <button type="button" onClick={bot.encolarTodo} disabled={!!ocupado} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50" title="Encola todo lo del Outbox con tipo soportado, código y firmante (excluye enviados y requiere revisión)">
               <FontAwesomeIcon icon={ocupado === "encolando" ? faSpinner : faListCheck} spin={ocupado === "encolando"} /> Encolar todo lo elegible
@@ -346,6 +463,9 @@ export const PanelBotFirma: React.FC<{ bot: ReturnType<typeof useBotFirma>; enCo
         )}
         {ultimo && <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400 truncate max-w-[60ch]" title={ultimo.texto}>{ultimo.texto}</span>}
       </div>
+      {/* La cola de verdad (orden, línea de corte) y lo trabado por motivo. Servidores viejos no mandan `items`. */}
+      {vista?.items && <ColaDeEnvioFirma vista={vista} actual={corrida?.actual || null} onCambio={bot.refrescar} />}
+      {vista?.trabados && <TrabadosPorMotivo grupos={vista.trabados} verificacion={vista.verificacion} onVerificar={() => void bot.verificar()} onCambio={bot.refrescar} />}
     </div>
   );
 };

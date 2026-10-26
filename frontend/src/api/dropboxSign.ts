@@ -221,6 +221,9 @@ export interface BotCorrida {
   eventos: BotEvento[];
   lineas?: BotLinea[];
   enSecoForzado: boolean;
+  /** El documento que está pasando por Dropbox Sign ahora. */
+  actual?: string | null;
+  cantidad?: number | null;
 }
 
 /*
@@ -377,6 +380,37 @@ export interface BotCola {
   archivosEnOutbox: number;
   enCola: number;
   motivoNoCorre: string | null;
+  // La cola como la ve la persona (25/10/2026). Ausente en servidores anteriores.
+  items?: ItemDeColaFirma[];
+  resumen?: { listos: number; entranAhora: number; quedan: number; cupo: number; enviados24h: number; tope: number; liberaAt: string | null; tamanoTanda: number };
+  ordenManual?: boolean;
+  trabados?: GrupoTrabados[];
+  verificacion?: { ultimaAt: string | null; desactualizada: boolean; corriendo: boolean };
+  estadoPanel?: { tipo: string; texto: string };
+  corriendo?: boolean;
+}
+
+export interface ItemDeColaFirma {
+  posicion: number;
+  archivo: string;
+  codigo: string;
+  firmante: string;
+  tipo: string;
+  /** en_cola · limite · enviando */
+  estado: string;
+  enOutbox: boolean;
+  /** Entra en el cupo (arriba de la línea de corte). */
+  entra: boolean;
+  estimadoAt: string | null;
+}
+
+/** Los trabados de un mismo motivo, con su salida. `accion.destino`: ruta, «previsualizar» o «descartar». */
+export interface GrupoTrabados {
+  tipo: string;
+  titulo: string;
+  accion: { texto: string; destino: string };
+  cantidad: number;
+  items: Array<{ archivo: string; codigo: string; detalle: string; firmante: string; verificadaAt: string | null }>;
 }
 
 /** El estado de un archivo del listado «Para Firmar» frente al bot. */
@@ -467,8 +501,24 @@ class DropboxSignBotAPI {
     const { data } = await axios.post("/dropbox-sign/bot/login/cerrar");
     return data;
   }
-  async arrancar(enSeco = false): Promise<{ arrancada: boolean; enSeco: boolean }> {
-    const { data } = await axios.post("/dropbox-sign/bot/corrida", { enSeco });
+  /** `cantidad`: «Enviar ahora N» (si no, el tamaño de tanda). El cupo de 24 h sigue mandando. */
+  async arrancar(enSeco = false, cantidad?: number): Promise<{ arrancada: boolean; enSeco: boolean; cantidad?: number | null }> {
+    const { data } = await axios.post("/dropbox-sign/bot/corrida", { enSeco, ...(cantidad ? { cantidad } : {}) });
+    return data;
+  }
+  /** Mueve documentos de la cola: al principio, al fondo o antes de otro. 409 si hay una corrida enviando. */
+  async moverEnCola(codigos: string[], a: "tope" | "fondo" | "antes", antesDe?: string): Promise<{ movidos: number }> {
+    const { data } = await axios.post("/dropbox-sign/bot/cola/mover", { codigos, a, ...(antesDe ? { antesDe } : {}) });
+    return data;
+  }
+  /** Vuelve al orden automático (el de encolado). */
+  async ordenAutomatico(): Promise<{ total: number }> {
+    const { data } = await axios.post("/dropbox-sign/bot/cola/orden-automatico");
+    return data;
+  }
+  /** Saca documentos de la lista de trabados (no se envían). */
+  async descartarTrabados(codigos: string[]): Promise<{ quitados: number }> {
+    const { data } = await axios.post("/dropbox-sign/bot/trabados/descartar", { codigos });
     return data;
   }
   async detener(): Promise<{ ok: boolean; motivo?: string }> {
