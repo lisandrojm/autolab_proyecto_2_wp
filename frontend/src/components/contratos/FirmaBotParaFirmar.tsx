@@ -313,6 +313,33 @@ export const BadgeFirma: React.FC<{ e?: EstadoArchivoFirma; ahora?: number }> = 
   );
 };
 
+/**
+ * PARA ORDENAR LA COLUMNA «FIRMA» (26/10/2026): ascendente = lo que sale antes primero. Primero lo que
+ * se está enviando; después la cola por su posición (#1, #2…), que es el orden en que sale; los que
+ * esperan un reintento por límite van por su hora estimada detrás de la cola; después lo trabado, los
+ * errores y lo ya enviado. Sin estado (sin encolar) devuelve null y queda siempre al final.
+ */
+export const ordenDeFirma = (e?: EstadoArchivoFirma): number | null => {
+  if (!e || !e.estado) return null;
+  switch (e.estado) {
+    case "enviando":
+      return 0;
+    case "en_cola":
+    case "seco":
+    case "limite":
+      if (e.posicion) return 1 + e.posicion;
+      return e.estimadoAt ? 1e6 + Math.floor(new Date(e.estimadoAt).getTime() / 60000) : 1e9;
+    case "requiere_revision":
+      return 2e9;
+    case "error":
+      return 3e9;
+    case "enviado":
+      return 4e9;
+    default:
+      return null;
+  }
+};
+
 const badgeDe = (e: EstadoArchivoFirma, ahora: number): React.ReactNode => {
   const base = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap";
   const sale = cuandoSale(e.estimadoAt, ahora);

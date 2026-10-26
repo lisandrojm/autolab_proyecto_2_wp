@@ -4,7 +4,7 @@ import { faArrowUpRightFromSquare, faCircleInfo, faDownload, faFilePdf, faFileZi
 import { dropboxAPI, DropboxEntry } from "../../api/dropbox";
 import { dropboxSignBotAPI } from "../../api/dropboxSign";
 import { firmaDigitalAPI } from "../../api/firmaDigital";
-import { useBotFirma, PanelBotFirma, BadgeFirma, InstructivoParaFirmar } from "./FirmaBotParaFirmar";
+import { useBotFirma, PanelBotFirma, BadgeFirma, InstructivoParaFirmar, ordenDeFirma } from "./FirmaBotParaFirmar";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { EmptyState } from "../ui/EmptyState";
 import { Modal } from "../ui/Modal";
@@ -163,9 +163,11 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
   const [zipRecibidos, setZipRecibidos] = useState<number | null>(null);
   const [zipTotal, setZipTotal] = useState<number | undefined>(undefined);
 
+  // Una copia nueva cuando llegan los estados de la firma: si se ordena por «Firma», se reordena solo.
+  const filasParaOrdenar = useMemo(() => filtradas.slice(), [filtradas, bot.estados]);
   const { ordenados, orden, alternar } = useOrdenTabla(
-    filtradas,
-    { fecha: (e) => e.serverModified || "", contrato: (e) => e.name, tamanio: (e) => e.size || 0 },
+    filasParaOrdenar,
+    { fecha: (e) => e.serverModified || "", contrato: (e) => e.name, tamanio: (e) => e.size || 0, firma: (e) => ordenDeFirma(bot.estados.get(e.name)) },
     { columna: "fecha", direccion: "desc" },
   );
 
@@ -498,7 +500,13 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
                       Tamaño
                     </BotonOrden>
                   </th>
-                  {tipo === "para_firmar" && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Firma</th>}
+                  {tipo === "para_firmar" && (
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                      <BotonOrden columna="firma" orden={orden} onAlternar={alternar} title={orden?.columna === "firma" && !orden.porDefecto ? (orden.direccion === "asc" ? "De lo que sale antes a lo que sale después. Click: al revés." : "De lo que sale después a lo que sale antes. Click: quitar el orden.") : "Ordenar por cuándo sale a la firma: lo más cercano primero"}>
+                        Firma
+                      </BotonOrden>
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right bg-gray-50 dark:bg-gray-900">Acciones</th>
                 </tr>
               </thead>
