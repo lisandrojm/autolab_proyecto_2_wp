@@ -1,6 +1,7 @@
 import { GRUPO_FIRMA, GrupoVariables } from "./variableFirma";
 import axios from "./axiosConfig";
 import { relanzarErrorDeBlob } from "../utils/errorDeBlob";
+import type { PruebaFirmaPlantilla } from "./pruebaFirma";
 
 export interface ContratoFrameItem {
   _id: string;
@@ -173,6 +174,12 @@ class ContratoFrameAPI {
   async preview(content: string, usaMembrete?: boolean): Promise<Blob> {
     const { data } = await axios.post("/contratos-frame/preview", { content, usaMembrete }, { responseType: "blob" });
     return data as Blob;
+  }
+
+  /** Dónde va a quedar la firma con este contenido (sin guardar). Ver `api/pruebaFirma.ts`. */
+  async probarFirma(content: string, usaMembrete?: boolean): Promise<PruebaFirmaPlantilla> {
+    const { data } = await axios.post("/contratos-frame/probar-firma", { content, usaMembrete }, { timeout: 120000 });
+    return data;
   }
 
   /** Descarga el PDF del contrato con valores de ejemplo. */

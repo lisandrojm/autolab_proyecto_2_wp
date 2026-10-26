@@ -54,10 +54,17 @@ export const PrevisualizacionColocacion: React.FC<{ archivo: string; onClose: ()
             <p className={`flex items-start gap-2 font-semibold ${ok ? "text-green-700 dark:text-green-300" : "text-amber-800 dark:text-amber-300"}`}>
               <FontAwesomeIcon icon={ok ? faCircleCheck : faCircleXmark} className="mt-0.5" />
               <span>
-                {det.ok === true ? `Ancla encontrada: «${det.ancla.texto}» (${det.ancla.fuente === "ocr" ? "leída por OCR" : "capa de texto"}) en la página ${det.ancla.pagina} de ${pagina.total}. El bot coloca la firma donde marca el recuadro azul.` : `No se envía: ${det.motivo}`}
+                {det.ok === true
+                  ? datos.origen === "plantilla"
+                    ? `Posición declarada por la plantilla, en la página ${det.ancla.pagina} de ${pagina.total}: el bot no busca rótulo ni hace OCR. Coloca la firma donde marca el recuadro azul.`
+                    : `Ancla encontrada: «${det.ancla.texto}» (${det.ancla.fuente === "ocr" ? "leída por OCR" : "capa de texto"}) en la página ${det.ancla.pagina} de ${pagina.total}. El bot coloca la firma donde marca el recuadro azul.`
+                  : `No se envía: ${det.motivo}`}
               </span>
             </p>
             {det.ok === true && <p className="mt-1 text-gray-600 dark:text-gray-300">{det.colocacion.nota}</p>}
+            {(datos.avisos || []).map((a) => (
+              <p key={a} className="mt-1 text-amber-700 dark:text-amber-300">{a}</p>
+            ))}
             <p className="mt-1 text-gray-600 dark:text-gray-300">
               Tipo <strong>{datos.tipo || "sin regla"}</strong>
               {datos.regla ? ` · ${datos.regla.descripcion}` : ""} · Firmante <strong>{datos.firmante ? `${datos.firmante.nombre} (${datos.firmante.email})` : datos.motivoSinFirmante || "no resuelto"}</strong>

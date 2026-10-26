@@ -44,7 +44,7 @@ const cuandoSale = (iso: string | null | undefined, ahora: number): string => {
 };
 
 /** Todo lo que el tab necesita del bot: config, estados por archivo, corrida en vivo y las acciones. */
-export function useBotFirma(archivos: string[], activo: boolean) {
+export function useBotFirma(archivos: string[], activo: boolean, hashes: Record<string, string> = {}) {
   const [cfg, setCfg] = useState<BotConfig | null>(null);
   const [estados, setEstados] = useState<Map<string, EstadoArchivoFirma>>(new Map());
   const [corrida, setCorrida] = useState<BotCorrida | null>(null);
@@ -64,7 +64,7 @@ export function useBotFirma(archivos: string[], activo: boolean) {
       return;
     }
     try {
-      const r = await dropboxSignBotAPI.estadoArchivos(archivos);
+      const r = await dropboxSignBotAPI.estadoArchivos(archivos, hashes);
       setEstados(new Map(r.map((e) => [e.archivo, e])));
     } catch {
       /* sin estados: la columna queda en «—» */
@@ -209,7 +209,21 @@ export function useBotFirma(archivos: string[], activo: boolean) {
 const IndicadorAncla: React.FC<{ e: EstadoArchivoFirma }> = ({ e }) => {
   const c = e.colocacion;
   if (!c) return null;
-  return <FontAwesomeIcon icon={faCrosshairs} className={`h-3 w-3 ${c.ok ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`} title={c.ok ? `Firma sobre «${c.rotulo}» en la pág. ${c.pagina} (verificado ${fmt(c.verificadaAt)})` : `Sin ancla: ${c.motivo}`} />;
+  /*
+    DESACTUALIZADA (25/10/2026): el resultado guardado es de otro PDF, de otras reglas o de otra versión
+    de la plantilla. Se muestra en gris y con el motivo, no como el estado actual: antes una
+    verificación de días atrás se leía como si fuera de hoy.
+  */
+  const viejo = (c.desactualizado || []).length > 0;
+  const deDonde = c.origen === "plantilla" ? "posición declarada por la plantilla" : `sobre «${c.rotulo}»`;
+  const titulo = c.ok ? `Firma ${deDonde} en la pág. ${c.pagina} (verificado ${fmt(c.verificadaAt)})` : `Sin ubicar la firma (verificado ${fmt(c.verificadaAt)}): ${c.motivo}`;
+  return (
+    <FontAwesomeIcon
+      icon={faCrosshairs}
+      className={`h-3 w-3 ${viejo ? "text-gray-400 dark:text-gray-500" : c.ok ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+      title={viejo ? `Verificación desactualizada: ${c.desactualizado!.join("; ")}. Volvé a verificar. Lo último que dio: ${titulo}` : titulo}
+    />
+  );
 };
 
 /** El badge de la columna «Firma», con la cuenta regresiva y el ✓/✗ del ancla al lado. */

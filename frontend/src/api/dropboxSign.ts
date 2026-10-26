@@ -287,6 +287,8 @@ export interface ColocacionResuelta {
   linea: RectPdf | null;
   descripcion: string;
   nota: string;
+  /** «plantilla» = la posición la declaró la plantilla al generar el documento ({{firma}}). Ausente = por regla. */
+  origen?: "plantilla" | "ancla";
 }
 export type DeteccionColocacion =
   | { ok: true; colocacion: ColocacionResuelta; ancla: CandidatoAncla; descartados: CandidatoAncla[] }
@@ -302,6 +304,9 @@ export interface PrevisualizacionColocacion {
   pagina: { numero: number; total: number; ancho: number; alto: number };
   imagen: { base64: string; ancho: number; alto: number };
   ocrMs: number;
+  /** «plantilla» = posición declarada por la plantilla; «ancla» = por regla (servidores anteriores al 25/10/2026 no lo mandan). */
+  origen?: "plantilla" | "ancla";
+  avisos?: string[];
 }
 /** La última detección guardada en el registro de un archivo (el ✓/✗ de la cola y del tab). */
 export interface ResumenColocacion {
@@ -313,6 +318,9 @@ export interface ResumenColocacion {
   motivo: string;
   campo: RectPdf | null;
   descartados: number;
+  origen?: "plantilla" | "ancla";
+  /** Por qué ya no es el estado actual (el PDF cambió, las reglas o la plantilla). Vacío o ausente = vigente. */
+  desactualizado?: string[];
 }
 export type AlcanceVerificacion = "cola" | "revision" | "cola_y_revision" | "outbox";
 export interface ResultadoVerificado {
@@ -327,6 +335,8 @@ export interface ResultadoVerificado {
   fuente: string;
   motivo: string;
   ms: number;
+  verificadaAt?: string;
+  origen?: "plantilla" | "ancla";
 }
 export interface Verificacion {
   hay: boolean;
@@ -483,9 +493,10 @@ class DropboxSignBotAPI {
     return data;
   }
   /** El estado de cada archivo del listado: una query, sin tocar Dropbox. */
-  async estadoArchivos(archivos: string[]): Promise<EstadoArchivoFirma[]> {
+  /** `hashes`: el contentHash del listado, para que la verificación de otro PDF salga como desactualizada. */
+  async estadoArchivos(archivos: string[], hashes: Record<string, string> = {}): Promise<EstadoArchivoFirma[]> {
     if (archivos.length === 0) return [];
-    const { data } = await axios.post("/dropbox-sign/bot/estado-archivos", { archivos });
+    const { data } = await axios.post("/dropbox-sign/bot/estado-archivos", { archivos, hashes });
     return data;
   }
 

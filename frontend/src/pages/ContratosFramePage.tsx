@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFileContract, faDownload, faPlus, faEdit, faTrash, faEye, faCircleInfo, faCopy } from '@fortawesome/free-solid-svg-icons';
+import { faFileContract, faDownload, faPlus, faEdit, faTrash, faEye, faCircleInfo, faCopy, faCrosshairs } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -18,6 +18,8 @@ import { SeleccionMultiple } from '../components/ui/SeleccionMultiple';
 import { contratosAPI, ContratoItem, tiposDeContratoActivos } from '../api/contratos';
 import { RichTextEditor } from '../components/ui/RichTextEditor';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
+import { PruebaFirmaPlantillaModal } from '../components/plantillas/PruebaFirmaPlantilla';
+import { declaraFirma } from '../api/pruebaFirma';
 import { BadgeCustom, CuerpoPlantillaCustom, TildePlantillaCustom } from '../components/contratacion/PlantillaCustom';
 import { PLACEHOLDER_CONTRATO_CUSTOM } from '@compartido/textoCustom';
 
@@ -85,6 +87,8 @@ export const ContratosFramePage: React.FC = () => {
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  /** «Dónde va la firma»: el contenido y el membrete con que se prueba (null = cerrada). */
+  const [probandoFirma, setProbandoFirma] = useState<{ content: string; usaMembrete: boolean; titulo: string } | null>(null);
 
   // Contratos (ABM Configuración → Contratos): cada Plantilla elige a cuál pertenece.
   const [contratos, setContratos] = useState<ContratoItem[]>([]);
@@ -205,6 +209,12 @@ export const ContratosFramePage: React.FC = () => {
       }
       setShowModal(false);
       await load();
+      /*
+        AL GUARDAR, LA PRUEBA DE LA FIRMA (25/10/2026): si la plantilla tiene {{firma}}, se genera un PDF
+        de prueba y se muestra dónde cae, con el recuadro azul. Si no se puede ubicar, los documentos de
+        esta plantilla no se van a poder generar (la generación falla con el motivo): mejor saberlo acá.
+      */
+      if (!esCustom && declaraFirma(form.content)) setProbandoFirma({ content: form.content, usaMembrete, titulo: `Dónde va la firma · ${form.nombre.trim()}` });
     } catch {
       sweetAlert.error('Error', 'No se pudo guardar el contrato.');
     } finally {
@@ -522,10 +532,19 @@ export const ContratosFramePage: React.FC = () => {
         size="lg"
         footer={
           <div className="flex justify-between gap-2 w-full">
-            <button type="button" onClick={handlePreview} disabled={previewing} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
-              <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
-              {previewing ? 'Generando...' : 'Previsualizar'}
-            </button>
+            <div className="flex gap-2">
+              <button type="button" onClick={handlePreview} disabled={previewing} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
+                <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+                {previewing ? 'Generando...' : 'Previsualizar'}
+              </button>
+              {/* Dónde va a quedar la firma: la plantilla manda (25/10/2026). En una custom el texto se escribe en cada trámite. */}
+              {!esCustom && (
+                <button type="button" onClick={() => setProbandoFirma({ content: form.content, usaMembrete, titulo: 'Dónde va la firma' })} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700" title="Genera un PDF de prueba y muestra dónde cae {{firma}}: es donde el bot de Dropbox Sign coloca el campo de firma">
+                  <FontAwesomeIcon icon={faCrosshairs} className="h-4 w-4" />
+                  Dónde va la firma
+                </button>
+              )}
+            </div>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -650,6 +669,7 @@ export const ContratosFramePage: React.FC = () => {
           </ul>
         </div>
       </InfoModal>
+      {probandoFirma && <PruebaFirmaPlantillaModal titulo={probandoFirma.titulo} probar={() => contratoFrameAPI.probarFirma(probandoFirma.content, probandoFirma.usaMembrete)} onClose={() => setProbandoFirma(null)} />}
     </PageLayout>
   );
 };

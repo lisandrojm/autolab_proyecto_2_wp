@@ -114,7 +114,9 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
   const [infoOpen, setInfoOpen] = useState(false);
   // El bot de envío a la firma: estado por archivo, corrida en vivo y acciones (sólo en «Para Firmar»).
   const nombresDeArchivos = useMemo(() => entries.map((e) => e.name), [entries]);
-  const bot = useBotFirma(nombresDeArchivos, tipo === "para_firmar");
+  // El hash de cada archivo: con eso, una verificación de un PDF que después cambió sale como desactualizada.
+  const hashesDeArchivos = useMemo(() => Object.fromEntries(entries.filter((e) => e.contentHash).map((e) => [e.name, e.contentHash as string])), [entries]);
+  const bot = useBotFirma(nombresDeArchivos, tipo === "para_firmar", hashesDeArchivos);
   const enColaTotal = useMemo(() => [...bot.estados.values()].filter((e) => e.estado === "en_cola" || e.estado === "seco" || e.estado === "limite").length, [bot.estados]);
   const seleccionadosNombres = useMemo(() => entries.filter((e) => selected.has(e.path)).map((e) => e.name), [entries, selected]);
 

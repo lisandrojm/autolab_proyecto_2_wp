@@ -1,6 +1,7 @@
 import { GRUPO_FIRMA, GrupoVariables } from "./variableFirma";
 import axios from "./axiosConfig";
 import { relanzarErrorDeBlob } from "../utils/errorDeBlob";
+import type { PruebaFirmaPlantilla } from "./pruebaFirma";
 
 export interface Release {
   _id: string;
@@ -160,6 +161,12 @@ export const releasesAPI = {
   preview: async (content: string, usaMembrete?: boolean): Promise<Blob> => {
     const response = await axios.post("/releases/preview", { content, usaMembrete }, { responseType: "blob" });
     return response.data as Blob;
+  },
+
+  /** Dónde va a quedar la firma con este contenido (sin guardar). Ver `api/pruebaFirma.ts`. */
+  probarFirma: async (content: string, usaMembrete?: boolean): Promise<PruebaFirmaPlantilla> => {
+    const response = await axios.post("/releases/probar-firma", { content, usaMembrete }, { timeout: 120000 });
+    return response.data;
   },
 
   /** Descarga el PDF del release con valores de ejemplo. */

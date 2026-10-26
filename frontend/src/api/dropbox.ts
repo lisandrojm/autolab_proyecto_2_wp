@@ -7,6 +7,8 @@ export interface DropboxEntry {
   id?: string;
   size?: number;
   serverModified?: string;
+  /** El content_hash de Dropbox: cambia si cambia el contenido (servidores anteriores al 25/10/2026 no lo mandan). */
+  contentHash?: string;
   isDownloadable?: boolean;
 }
 

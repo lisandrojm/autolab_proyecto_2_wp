@@ -8,7 +8,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faEdit, faTrash, faRocket, faDownload, faEye } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faEdit, faTrash, faRocket, faDownload, faEye, faCrosshairs } from "@fortawesome/free-solid-svg-icons";
 
 import { releasesAPI, Release, releaseVariables } from "../api/release";
 import { releaseTiposAPI, ReleaseTipoItem } from "../api/releaseTipos";
@@ -22,6 +22,8 @@ import { MembreteToggle } from "../components/MembreteToggle";
 import { RichTextEditor } from "../components/ui/RichTextEditor";
 import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
 import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
+import { PruebaFirmaPlantillaModal } from "../components/plantillas/PruebaFirmaPlantilla";
+import { declaraFirma } from "../api/pruebaFirma";
 import { BadgeCustom, CuerpoPlantillaCustom, TildePlantillaCustom } from "../components/contratacion/PlantillaCustom";
 import { PLACEHOLDER_RELEASE_CUSTOM } from "@compartido/textoCustom";
 
@@ -104,6 +106,8 @@ export function ReleasesPage() {
   const [formData, setFormData] = useState<ReleaseFormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [previewing, setPreviewing] = useState(false);
+  /** «Dónde va la firma»: el contenido y el membrete con que se prueba (null = cerrada). */
+  const [probandoFirma, setProbandoFirma] = useState<{ content: string; usaMembrete: boolean; titulo: string } | null>(null);
 
   // Los tipos de contrato, para asignar el release (como las plantillas de contrato).
   const [contratos, setContratos] = useState<ContratoItem[]>([]);
@@ -310,6 +314,8 @@ export function ReleasesPage() {
       setShowModal(false);
       setEditingRelease(null);
       loadReleases();
+      // Al guardar, la prueba de la firma (ver la de Contratos): con {{firma}}, dónde cae y si se puede ubicar.
+      if (!formData.esCustom && declaraFirma(formData.content)) setProbandoFirma({ content: formData.content, usaMembrete: formData.usaMembrete, titulo: `Dónde va la firma · ${formData.name}` });
     } catch (error: any) {
       Swal.fire("Error", error.response?.data?.error || "No se pudo guardar", "error");
     } finally {
@@ -551,10 +557,19 @@ export function ReleasesPage() {
         size="lg"
         footer={
           <div className="flex justify-between gap-2 w-full">
-            <button type="button" onClick={handlePreview} disabled={previewing} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
-              <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
-              {previewing ? "Generando..." : "Previsualizar"}
-            </button>
+            <div className="flex gap-2">
+              <button type="button" onClick={handlePreview} disabled={previewing} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
+                <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+                {previewing ? "Generando..." : "Previsualizar"}
+              </button>
+              {/* Dónde va a quedar la firma: la plantilla manda (25/10/2026). En una custom el texto se escribe en cada trámite. */}
+              {!formData.esCustom && (
+                <button type="button" onClick={() => setProbandoFirma({ content: formData.content, usaMembrete: formData.usaMembrete, titulo: "Dónde va la firma" })} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700" title="Genera un PDF de prueba y muestra dónde cae {{firma}}: es donde el bot de Dropbox Sign coloca el campo de firma">
+                  <FontAwesomeIcon icon={faCrosshairs} className="h-4 w-4" />
+                  Dónde va la firma
+                </button>
+              )}
+            </div>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -664,6 +679,7 @@ export function ReleasesPage() {
           </div>
         </form>
       </Modal>
+      {probandoFirma && <PruebaFirmaPlantillaModal titulo={probandoFirma.titulo} probar={() => releasesAPI.probarFirma(probandoFirma.content, probandoFirma.usaMembrete)} onClose={() => setProbandoFirma(null)} />}
     </PageLayout>
   );
 }
