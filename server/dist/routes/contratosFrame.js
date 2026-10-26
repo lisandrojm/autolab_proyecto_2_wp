@@ -12,6 +12,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { buildEmployeeDocData } from "../utils/employeeDocData.js";
 import { nombreArchivoDocumento } from "../services/nomenclaturaService.js";
 import { buildDocPdf, getDummyDocVariables, htmlHasText, empresaToMembrete } from "../utils/documentPdf.js";
+import { capturarFirmaDePlantilla, guardarFirmaDelDocumento, probarFirmaDePlantilla } from "../services/colocacionDePlantilla.js";
 import { ensureContratosBackfilled } from "./contratos.js";
 import { PLACEHOLDER_CONTRATO_CUSTOM, textoCustomUsable } from "../compartido/textoCustom.js";
 import { asegurarPlantillasCustomSinRomper, MENSAJE_DEL_SISTEMA } from "../services/plantillasCustomSistema.js";
@@ -101,6 +102,22 @@ router.post("/preview", authenticateToken, async (req, res) => {
         res.status(500).json({ error: "No se pudo generar la previsualización" });
     }
 });
+/*
+  POST /probar-firma {content, usaMembrete} — DÓNDE VA A QUEDAR LA FIRMA (25/10/2026): genera la
+  plantilla con datos de ejemplo, ubica {{firma}} en el PDF como al generar un documento real, y
+  devuelve la página con el campo para dibujar el recuadro. Con el contenido del editor (sin guardar).
+*/
+router.post("/probar-firma", authenticateToken, async (req, res) => {
+    try {
+        const content = String(req.body?.content ?? "");
+        const membrete = await getExampleMembrete(req.body?.usaMembrete === true || req.body?.usaMembrete === "true");
+        res.json(await probarFirmaDePlantilla(content, membrete));
+    }
+    catch (error) {
+        console.error("Probar firma contrato error:", error);
+        res.status(500).json({ error: error?.message || "No se pudo probar la firma." });
+    }
+});
 // GET /:id/download - PDF del contrato con valores de ejemplo (sin persona asociada)
 router.get("/:id/download", authenticateToken, async (req, res) => {
     try {
@@ -167,9 +184,12 @@ export async function generarContratoPdf(opts) {
     const data = await buildEmployeeDocData(user, up, contract, empresa);
     const membrete = item.usaMembrete && empresa ? empresaToMembrete(empresa) : undefined;
     const buffer = await buildDocPdf(cuerpo, data, membrete);
+    // Dónde va la firma, ubicada en el PDF recién hecho (antes del nombre: si falla, no se gasta un código).
+    const firma = await capturarFirmaDePlantilla(cuerpo, buffer, { tipo: "contrato", id: String(item._id), nombre: item.name, version: Number(item.versionContenido) || 1 });
     // El nombre sale del patrón que el tenant tenga configurado (Plantillas → Nomenclatura de
     // archivos). Sin configurar, rige el de fábrica, que es exactamente el de antes.
     const filename = await nombreArchivoDocumento({ tenantId: opts.tenantId, tipo: "Contrato", user, up, contract, empresa, extra: opts.extra });
+    await guardarFirmaDelDocumento(opts.tenantId, filename, firma);
     return { buffer, filename, empresaIdUsado: chosenId || "" };
 }
 // GET /:id/download-filled?userId=&projectId=&contractIndex=
@@ -191,7 +211,7 @@ router.get("/:id/download-filled", authenticateToken, async (req, res) => {
     catch (error) {
         console.error("Download filled ContratoFrame error:", error);
         const msg = String(error?.message || "");
-        const status = /no encontrado/i.test(msg) ? 404 : /no tiene contenido redactado|no tiene texto escrito/i.test(msg) ? 400 : 500;
+        const status = /no encontrado/i.test(msg) ? 404 : /no tiene contenido redactado|no tiene texto escrito|declara firma/i.test(msg) ? 400 : 500;
         res.status(status).json({ error: msg || "No se pudo generar el contrato con los datos." });
     }
 });

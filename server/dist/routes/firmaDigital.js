@@ -67,7 +67,7 @@ router.get("/config", async (_req, res) => {
 */
 const YA_ENVIADO = "Este trámite ya se envió a firmar: sus documentos quedan como se enviaron.";
 /** Errores de generarContratoPdf / generarReleasePdf que son culpa del pedido, no del server. */
-const statusDeErrorDePdf = (msg) => (/no encontrad/i.test(msg) ? 404 : /no tiene texto escrito|no tiene contenido redactado|no es custom/i.test(msg) ? 400 : 500);
+const statusDeErrorDePdf = (msg) => (/no encontrad/i.test(msg) ? 404 : /no tiene texto escrito|no tiene contenido redactado|no es custom|declara firma/i.test(msg) ? 400 : 500);
 const generarContratoSchema = z.object({
     projectId: z.string().min(1),
     userId: z.string().min(1),

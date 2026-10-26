@@ -26,6 +26,8 @@ export interface IDocumentoGenerado extends Document {
     clase?: string;
     loteRecibosId?: Types.ObjectId | null;
     reciboId?: Types.ObjectId | null;
+    /** Dónde va la firma, declarada por la plantilla y capturada al generar (ver `compartido/reglasColocacionFirma.ts`). Sólo documentos de plantilla con {{firma}}. */
+    colocacionFirma?: import("../compartido/reglasColocacionFirma.js").ColocacionDeclarada | null;
     createdAt: Date;
     updatedAt: Date;
 }

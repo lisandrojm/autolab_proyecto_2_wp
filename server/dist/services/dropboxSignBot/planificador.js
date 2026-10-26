@@ -111,12 +111,12 @@ export function validarEncolado(archivo, ctx) {
         return { ok: false, codigo, motivo: "Ya está en la cola.", reencolable: false };
     if (previo === "limite")
         return { ok: false, codigo, motivo: "Ya está en la cola (frenado por el límite de Dropbox Sign; se reintenta solo).", reencolable: false };
-    const sinColocacion = motivoSinColocacion(archivo, ctx.reglas);
+    const sinColocacion = ctx.posicionDeclarada ? null : motivoSinColocacion(archivo, ctx.reglas);
     if (sinColocacion)
         return { ok: false, codigo, motivo: sinColocacion, reencolable: true };
     if (!ctx.firmante)
         return { ok: false, codigo, motivo: ctx.motivoSinFirmante || "No se pudo resolver al firmante en la base.", reencolable: true };
-    return { ok: true, codigo, motivo: "", reencolable: false, tipo: tipoDeDocumento(archivo, ctx.reglas), firmante: ctx.firmante };
+    return { ok: true, codigo, motivo: "", reencolable: false, tipo: ctx.posicionDeclarada ? `Plantilla «${ctx.posicionDeclarada.plantillaNombre}»` : tipoDeDocumento(archivo, ctx.reglas), firmante: ctx.firmante };
 }
 /** La tanda a enviar, a partir de la cola y de lo que sigue en Outbox. */
 export function planificar(enCola, archivosEnOutbox, config, estado, ahora) {

@@ -42,6 +42,30 @@ export declare const INTERVALOS_VALIDOS: readonly [6, 12, 24, 48];
 /** ¿Hay un backup en curso? Lo usa el endpoint para no arrancar uno encima. */
 export declare const backupEnCurso: () => boolean;
 /**
+ * EL AVANCE DE LA CORRIDA EN CURSO (25/10/2026), para la barra de la pantalla. La copia tarda ~14
+ * minutos (la base se lee de Atlas a ~100 KB/s) y con un spinner solo, o con «Ya hay un backup en
+ * curso», no había forma de saber si iba por la mitad o estaba colgada.
+ *
+ * Dos pasos, cada uno con su cuenta: leer la base (colecciones) y subir a Dropbox (archivos). Vive en
+ * memoria: es del proceso que corre la copia, y si el proceso se reinicia la corrida se cortó igual.
+ */
+export interface ProgresoBackup {
+    disparador: "cron" | "manual";
+    inicio: string;
+    paso: "leyendo" | "subiendo" | "limpiando";
+    hechas: number;
+    total: number;
+    /** La colección que se está leyendo o el archivo que se está subiendo. */
+    actual: string;
+    /** Bytes leídos (paso 1) o subidos (paso 2). */
+    bytes: number;
+    /** En el paso 2, el total a subir. */
+    bytesTotal?: number;
+}
+export declare const progresoBackup: () => ProgresoBackup | null;
+/** Deja el error de la última corrida en el tenant, para que la pantalla lo muestre en rojo. */
+export declare function registrarErrorDeBackup(mensaje: string): Promise<void>;
+/**
  * El nombre de la copia: EL MISMO para la carpeta de Dropbox y para la base clonada en Mongo.
  *
  *   weprodu_2026_09_10_04-34

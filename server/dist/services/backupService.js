@@ -66,6 +66,16 @@ const EXCLUIDAS = new Set([
 let corriendo = false;
 /** ¿Hay un backup en curso? Lo usa el endpoint para no arrancar uno encima. */
 export const backupEnCurso = () => corriendo;
+let progreso = null;
+export const progresoBackup = () => progreso;
+const avanzar = (cambios) => {
+    if (progreso)
+        progreso = { ...progreso, ...cambios };
+};
+/** Deja el error de la última corrida en el tenant, para que la pantalla lo muestre en rojo. */
+export async function registrarErrorDeBackup(mensaje) {
+    await Tenant.updateOne({ "integrations.dropbox.refreshTokenEnc": { $exists: true } }, { $set: { "integrations.backup.ultimoError": mensaje } }).catch(() => { });
+}
 /**
  * El nombre de la copia: EL MISMO para la carpeta de Dropbox y para la base clonada en Mongo.
  *
@@ -145,8 +155,15 @@ export async function generarArchivos() {
         .filter((n) => !n.startsWith("system.") && !EXCLUIDAS.has(n))
         .sort();
     const archivos = [];
-    for (const nombre of nombres)
-        archivos.push(await volcarColeccion(nombre));
+    let leidos = 0;
+    avanzar({ paso: "leyendo", hechas: 0, total: nombres.length, actual: nombres[0] || "", bytes: 0 });
+    for (const [i, nombre] of nombres.entries()) {
+        avanzar({ hechas: i, actual: nombre });
+        const archivo = await volcarColeccion(nombre);
+        leidos += archivo.contenido.length;
+        archivos.push(archivo);
+        avanzar({ hechas: i + 1, bytes: leidos });
+    }
     const documentos = archivos.reduce((a, f) => a + f.documentos, 0);
     /*
       El manifiesto se llama `_backup.json` con guion bajo adelante: ordena primero en cualquier listado,
@@ -230,6 +247,7 @@ export async function correrBackup(disparador = "cron") {
     if (corriendo)
         throw new Error("Ya hay un backup en curso.");
     corriendo = true;
+    progreso = { disparador, inicio: new Date().toISOString(), paso: "leyendo", hechas: 0, total: 0, actual: "", bytes: 0 };
     try {
         const tenants = await Tenant.find({ "integrations.dropbox.refreshTokenEnc": { $exists: true } }).sort({ createdAt: 1 });
         const tenant = tenants.find((t) => !!getTenantDropboxConfig(t));
@@ -265,8 +283,15 @@ export async function correrBackup(disparador = "cron") {
             await asegurarCarpeta(tenantId, cfg, ruta);
             // El manifiesto va ÚLTIMO —es el último del array—, así que su presencia es la señal de que la
             // copia está completa. Una carpeta sin `_backup.json` es una copia a medias.
-            for (const archivo of archivos)
+            let subidos = 0;
+            avanzar({ paso: "subiendo", hechas: 0, total: archivos.length, actual: "", bytes: 0, bytesTotal: bytes });
+            for (const [i, archivo] of archivos.entries()) {
+                avanzar({ hechas: i, actual: archivo.nombre });
                 await subir(tenantId, cfg, `${ruta}/${archivo.nombre}`, archivo.contenido);
+                subidos += archivo.contenido.length;
+                avanzar({ hechas: i + 1, bytes: subidos });
+            }
+            avanzar({ paso: "limpiando", actual: "" });
             borrados = await limpiarViejos(tenantId, cfg, baseDatos, retener);
             dropbox.ok = true;
         }
@@ -294,6 +319,7 @@ export async function correrBackup(disparador = "cron") {
     }
     finally {
         corriendo = false;
+        progreso = null;
     }
 }
 /**

@@ -123,6 +123,8 @@ const mapEntry = (e) => ({
     id: e.id,
     size: e.size,
     serverModified: e.server_modified,
+    // El hash de Dropbox (su propio algoritmo, no SHA-256): cambia si cambia el contenido. Sirve para saber, sin bajar el archivo, si una verificación vieja sigue valiendo.
+    contentHash: e.content_hash,
     isDownloadable: e.is_downloadable,
 });
 /**

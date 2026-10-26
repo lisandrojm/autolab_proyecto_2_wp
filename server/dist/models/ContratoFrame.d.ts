@@ -45,6 +45,8 @@ export interface IContratoFrame extends Document {
      * `services/plantillasCustomSistema.ts`) y no se pueden eliminar.
      */
     delSistema?: boolean;
+    /** Sube con cada cambio de contenido: la posición de la firma guardada con cada documento dice con qué versión se generó. */
+    versionContenido?: number;
     createdAt: Date;
     updatedAt: Date;
 }

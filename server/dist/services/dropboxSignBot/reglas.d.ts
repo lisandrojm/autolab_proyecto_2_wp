@@ -40,6 +40,8 @@ export interface DatosDelGuard {
     textoPagina: string;
     /** Las reglas del tenant (sin ellas, el catálogo). */
     reglas?: ReglaColocacion[];
+    /** La posición la declaró la plantilla al generar el documento: no hace falta regla por nombre (25/10/2026). */
+    posicionDeclarada?: boolean;
 }
 /**
  * EL GUARD ANTES DE «ENVIAR PARA FIRMAR». Si algo no cierra, no se envía: un envío con título

@@ -5,6 +5,7 @@ export interface DropboxEntry {
     id?: string;
     size?: number;
     serverModified?: string;
+    contentHash?: string;
     isDownloadable?: boolean;
 }
 interface TenantDropboxConfig {

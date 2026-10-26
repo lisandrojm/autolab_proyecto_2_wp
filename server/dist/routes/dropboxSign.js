@@ -382,10 +382,11 @@ router.post("/bot/desencolar", async (req, res) => {
 /** POST /bot/estado-archivos {archivos: string[]} — el estado de cada archivo del listado (una query, sin Dropbox). */
 router.post("/bot/estado-archivos", async (req, res) => {
     try {
-        const parsed = z.object({ archivos: z.array(z.string()).max(5000) }).safeParse(req.body || {});
+        // `hashes`: el contentHash del listado del Outbox, para marcar las verificaciones de otro PDF como desactualizadas.
+        const parsed = z.object({ archivos: z.array(z.string()).max(5000), hashes: z.record(z.string()).optional() }).safeParse(req.body || {});
         if (!parsed.success)
             return res.status(400).json({ error: "Datos inválidos" });
-        res.json(await estadoDeArchivos(String(req.tenantObjectId), parsed.data.archivos));
+        res.json(await estadoDeArchivos(String(req.tenantObjectId), parsed.data.archivos, parsed.data.hashes || {}));
     }
     catch (error) {
         res.status(500).json({ error: error?.message || "Internal server error" });

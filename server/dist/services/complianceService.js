@@ -54,6 +54,10 @@ export async function computeCompliance(tenantId, params) {
                 continue;
             if (params.shiftId && shiftId !== params.shiftId)
                 continue;
+            if (params.areaIds?.length && !params.areaIds.includes(areaId))
+                continue;
+            if (params.shiftIds?.length && !params.shiftIds.includes(shiftId))
+                continue;
             const key = `${userId}|${String(p._id)}`;
             let g = groups.get(key);
             if (!g) {

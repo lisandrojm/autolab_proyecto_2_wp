@@ -542,3 +542,107 @@ export function resolverColocacion(nombreArchivo, paginas, contexto = {}, reglas
         tamanoPagina: idx === null ? null : { ancho: paginas[idx].ancho, alto: paginas[idx].alto },
     };
 }
+/* ─────────────────── posición DECLARADA por la plantilla (25/10/2026) ─────────────────── */
+/*
+  DOS FAMILIAS DE DOCUMENTOS.
+
+  A) GENERADOS POR WEPRODU DESDE UNA PLANTILLA (contratos y releases del ABM). La plantilla declara
+     dónde se firma con `{{firma}}`, que se imprime como la línea `MARCA_FIRMA` («Firma: ____»). Esa
+     línea se ubica EN EL MOMENTO DE GENERAR, en el PDF recién hecho, y la posición viaja con el
+     documento (`DocumentoGenerado.colocacionFirma`). El bot la usa tal cual: no busca rótulos ni hace
+     OCR, y no depende del nombre del archivo ni de una regla mantenida a mano.
+
+  B) PDFs EXTERNOS (AltaAFIP de ARCA, REC_SUELDO de MEMOSOFT). No salen de ninguna plantilla: siguen
+     con el catálogo de reglas por ancla de arriba, sin cambios.
+
+  Por qué se ubica en el PDF y no en el HTML: el motor (html-pdf-node) no devuelve cajas, y con los
+  saltos de página la posición en el HTML no dice en qué página cae. El PDF generado es la verdad, y
+  leerlo recién hecho es leer EXACTAMENTE lo que se va a firmar.
+*/
+/** Alto del campo de firma de una plantilla (pt): el mismo de las reglas de contratos, validado con envíos reales. */
+export const ALTO_CAMPO_PLANTILLA = 45;
+/** La línea que imprime `{{firma}}`: «Firma:» seguido de la línea de guiones (`MARCA_FIRMA` en `utils/employeeDocData.ts`). */
+const PATRON_MARCA_FIRMA = /Firma:\s*_{10,}/i;
+/** Cuántas veces declara la plantilla dónde firmar (`{{firma}}`, con o sin espacios adentro). */
+export const vecesFirmaEnPlantilla = (contenido) => (String(contenido || "").match(/\{\{\s*firma\s*\}\}/gi) || []).length;
+/** Todas las líneas de firma de la plantilla en el PDF, en orden de lectura. */
+export function marcasDeFirma(paginas) {
+    const res = [];
+    for (const [paginaIndex, pagina] of paginas.entries()) {
+        for (const c of coincidencias(pagina, PATRON_MARCA_FIRMA)) {
+            const guiones = c.texto.indexOf("_", c.desde);
+            const linea = rectDeTramo(c.renglon, guiones >= 0 ? guiones : c.desde, c.hasta);
+            res.push({ paginaIndex, linea: { x: linea.x, y: linea.y + linea.h, w: linea.w, h: 0 }, renglon: c.texto });
+        }
+    }
+    return res;
+}
+/**
+ * De las marcas del PDF a la posición declarada. Con varias se toma la ÚLTIMA (y se avisa), igual que
+ * las reglas de contratos. El campo va SOBRE la línea de guiones, con el ancho de la línea.
+ */
+export function colocacionDesdeMarcas(paginas, vecesDeclarada) {
+    const marcas = marcasDeFirma(paginas);
+    if (marcas.length === 0)
+        return { ok: false, motivo: "la línea de firma («Firma: ____» que imprime {{firma}}) no aparece en el PDF generado" };
+    const avisos = [];
+    if (vecesDeclarada > 1 || marcas.length > 1)
+        avisos.push(`La plantilla tiene ${Math.max(vecesDeclarada, marcas.length)} líneas de firma: se toma la última (página ${marcas[marcas.length - 1].paginaIndex + 1}). El bot coloca un solo campo.`);
+    const m = marcas[marcas.length - 1];
+    const pag = paginas[m.paginaIndex];
+    const campo = { x: m.linea.x, y: m.linea.y - ALTO_CAMPO_PLANTILLA, w: m.linea.w, h: ALTO_CAMPO_PLANTILLA };
+    if (campo.x < 0 || campo.y < 0 || campo.x + campo.w > pag.ancho || campo.y + campo.h > pag.alto)
+        return { ok: false, motivo: `el campo de firma (${resumenDeRect(campo)}) se sale de la página ${m.paginaIndex + 1}` };
+    if (m.paginaIndex !== 0 && m.paginaIndex !== paginas.length - 1)
+        avisos.push(`La firma cae en la página ${m.paginaIndex + 1} de ${paginas.length}: el bot sólo coloca en la primera o la última, así que estos documentos quedan en revisión. Conviene que la línea de firma sea lo último del documento.`);
+    return { ok: true, pagina: m.paginaIndex + 1, totalPaginas: paginas.length, campo, linea: m.linea, paginaSize: { w: pag.ancho, h: pag.alto }, avisos };
+}
+/** La detección que consume el bot, armada desde la posición declarada: sin rótulo, sin OCR. */
+export function deteccionDesdeDeclarada(d) {
+    const paginaIndex = d.pagina - 1;
+    const tamanoPagina = { ancho: d.paginaSize.w, alto: d.paginaSize.h };
+    const pagina = paginaDe(paginaIndex, d.totalPaginas);
+    if (pagina === "otra") {
+        return { ok: false, motivo: `La plantilla «${d.plantillaNombre}» pone la firma en la página ${d.pagina} de ${d.totalPaginas}: el bot sólo sabe colocar en la primera o la última página.`, descartados: [], paginaIndex, tamanoPagina };
+    }
+    const punto = centroDe(d.campo);
+    const ancla = { pagina: d.pagina, paginaIndex, texto: "Firma: ____ ({{firma}})", renglon: "", rect: d.linea, fuente: "texto", ancla: "derechaDelRotulo", rotulo: "{{firma}}" };
+    return {
+        ok: true,
+        ancla,
+        descartados: [],
+        colocacion: {
+            tipo: `Plantilla «${d.plantillaNombre}»`,
+            pagina,
+            paginaIndex,
+            tamanoPagina,
+            campo: d.campo,
+            puntoPdf: punto,
+            rectEsperado: { x: punto.x - TOLERANCIA.x, y: punto.y - TOLERANCIA.y, w: TOLERANCIA.x * 2, h: TOLERANCIA.y * 2 },
+            linea: d.linea,
+            descripcion: `Posición declarada por la plantilla «${d.plantillaNombre}» (v${d.plantillaVersion}) con {{firma}}: se capturó al generar el documento`,
+            nota: `Declarada por la plantilla «${d.plantillaNombre}» v${d.plantillaVersion}: página ${d.pagina} de ${d.totalPaginas}, campo ${resumenDeRect(d.campo)}. Sin búsqueda de rótulo ni OCR.`,
+            origen: "plantilla",
+        },
+    };
+}
+/**
+ * POR QUÉ UNA VERIFICACIÓN GUARDADA YA NO ES EL ESTADO ACTUAL (25/10/2026). El panel mostraba el
+ * resultado de días atrás como si fuera de hoy. Vale mientras el PDF del Outbox sea el mismo, las
+ * reglas no hayan cambiado (si salió por regla) y la plantilla no tenga una versión nueva (si salió de
+ * la plantilla). Vacío = vigente. Las anteriores a este dato no se pueden comparar: se avisa por la fecha.
+ */
+export function motivosDesactualizado(r, actual, ahora = new Date()) {
+    if (!r?.verificadaAt)
+        return [];
+    const m = [];
+    if (r.contentHash && actual.contentHash && r.contentHash !== actual.contentHash)
+        m.push("el PDF del Outbox cambió");
+    if (r.origen !== "plantilla" && actual.reglasAt && (!r.reglasAt || new Date(actual.reglasAt).getTime() > new Date(r.reglasAt).getTime()) && new Date(actual.reglasAt).getTime() > new Date(r.verificadaAt).getTime())
+        m.push("las reglas de colocación cambiaron");
+    if (r.origen === "plantilla" && actual.plantillaVersion && r.plantillaVersion && actual.plantillaVersion > r.plantillaVersion)
+        m.push(`la plantilla tiene una versión nueva (v${r.plantillaVersion} → v${actual.plantillaVersion}): regenerá el documento para usarla`);
+    if (!r.contentHash && ahora.getTime() - new Date(r.verificadaAt).getTime() > 24 * 3600 * 1000)
+        m.push("es anterior a que se guardara con qué PDF se verificó");
+    return m;
+}

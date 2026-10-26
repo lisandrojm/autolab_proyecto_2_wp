@@ -1,25 +1,86 @@
+import { createHash } from "node:crypto";
 import { DropboxSignEnvio } from "../../models/DropboxSignEnvio.js";
 import { downloadFileContent } from "../dropboxService.js";
 import { leerAnclas } from "../../utils/anclasNombre.js";
 import { abrirOcr } from "../../utils/ocrPaginas.js";
-import { reglaDe, resolverColocacion } from "../../compartido/reglasColocacionFirma.js";
+import { deteccionDesdeDeclarada, reglaDe, resolverColocacion } from "../../compartido/reglasColocacionFirma.js";
+import { Types } from "mongoose";
+import { DocumentoGenerado } from "../../models/DocumentoGenerado.js";
+import { sha256 } from "../colocacionDePlantilla.js";
 import { paginasParaColocacion, renderizarPaginaPng } from "./ocrAnclas.js";
 import { reglasDelTenant } from "./reglasTenant.js";
 import { leerOutbox, resolverFirmante } from "./outbox.js";
-/** Baja el PDF y resuelve la colocación con las reglas dadas. El firmante, si no viene, se resuelve desde la base. */
+/** La posición de la firma declarada por la plantilla al generar ese documento, si la hay. */
+export async function declaradaDe(tenantId, codigo) {
+    if (!codigo || !Types.ObjectId.isValid(tenantId))
+        return null;
+    const doc = await DocumentoGenerado.findOne({ tenantId: new Types.ObjectId(tenantId), codigo }).select("colocacionFirma").lean().catch(() => null);
+    const c = doc?.colocacionFirma;
+    return c && c.origen === "plantilla" && c.campo && c.sha256 ? c : null;
+}
+/** Los códigos (de esta lista) cuyos documentos traen posición declarada, con el nombre de la plantilla. */
+export async function declaradasDe(tenantId, codigos) {
+    const res = new Map();
+    if (!codigos.length || !Types.ObjectId.isValid(tenantId))
+        return res;
+    const docs = await DocumentoGenerado.find({ tenantId: new Types.ObjectId(tenantId), codigo: { $in: codigos }, "colocacionFirma.origen": "plantilla" }).select("codigo colocacionFirma.plantillaNombre").lean().catch(() => []);
+    for (const d of docs)
+        res.set(d.codigo, { plantillaNombre: String(d.colocacionFirma?.plantillaNombre || "") });
+    return res;
+}
+/**
+ * Baja el PDF y resuelve la colocación. El firmante, si no viene, se resuelve desde la base.
+ *
+ * PRIMERO LA POSICIÓN DECLARADA (25/10/2026): si el documento se generó desde una plantilla con
+ * `{{firma}}`, la posición se capturó al generarlo y se usa tal cual —sin leer texto ni hacer OCR,
+ * que es más lento y podría dar distinto—, siempre que el PDF del Outbox sea EXACTAMENTE el generado
+ * (mismo SHA-256). Si no lo es (alguien lo reemplazó), la posición no vale y se sigue por regla.
+ */
 export async function detectarParaArchivo(tenantId, ctx, archivo, reglas, opciones = {}) {
     const { codigo } = leerAnclas(archivo);
-    const regla = reglaDe(archivo, reglas);
     const buffer = await downloadFileContent(tenantId, ctx.cfg, `${ctx.outbox}/${archivo}`);
     const f = opciones.firmante === undefined ? await resolverFirmante(tenantId, archivo) : { firmante: opciones.firmante, motivoSinFirmante: undefined };
+    const declarada = await declaradaDe(tenantId, codigo);
+    let notaOrigen;
+    if (declarada) {
+        if (sha256(buffer) === declarada.sha256) {
+            return { archivo, codigo, tipo: `Plantilla «${declarada.plantillaNombre}»`, firmante: f.firmante, motivoSinFirmante: f.motivoSinFirmante, deteccion: deteccionDesdeDeclarada(declarada), paginas: null, buffer, ocrMs: 0, origen: "plantilla", totalPaginas: declarada.totalPaginas, declarada };
+        }
+        notaOrigen = "El PDF del Outbox no es el que se generó con la plantilla (cambió después): la posición declarada no vale y se ubica por regla.";
+    }
+    const regla = reglaDe(archivo, reglas);
     const { paginas, ocrMs } = regla && regla.estado === "activo" ? await paginasParaColocacion(buffer, regla, opciones.worker) : { paginas: null, ocrMs: 0 };
-    const deteccion = resolverColocacion(archivo, paginas, { nombreFirmante: f.firmante?.nombre }, reglas);
-    return { archivo, codigo, tipo: regla?.tipo || null, firmante: f.firmante, motivoSinFirmante: f.motivoSinFirmante, deteccion, paginas, buffer, ocrMs };
+    let deteccion = resolverColocacion(archivo, paginas, { nombreFirmante: f.firmante?.nombre }, reglas);
+    if (notaOrigen && deteccion.ok === false)
+        deteccion = { ...deteccion, motivo: `${notaOrigen} ${deteccion.motivo}` };
+    return { archivo, codigo, tipo: regla?.tipo || null, firmante: f.firmante, motivoSinFirmante: f.motivoSinFirmante, deteccion, paginas, buffer, ocrMs, origen: "ancla", totalPaginas: paginas?.length || 0, declarada, notaOrigen };
 }
 export function resumenDe(d) {
     if (d.ok === true)
         return { verificadaAt: new Date(), ok: true, pagina: d.ancla.pagina, rotulo: d.ancla.texto, fuente: d.ancla.fuente, motivo: "", campo: d.colocacion.campo, descartados: d.descartados.length };
     return { verificadaAt: new Date(), ok: false, pagina: d.paginaIndex === null ? null : d.paginaIndex + 1, rotulo: "", fuente: "", motivo: d.motivo, campo: null, descartados: d.descartados.length };
+}
+/**
+ * El hash de contenido de Dropbox (`content_hash`): SHA-256 de cada bloque de 4 MB, y SHA-256 de esos
+ * hashes concatenados. Calculado sobre el PDF verificado, se compara después con el que lista Dropbox
+ * sin volver a bajar el archivo.
+ */
+export function hashDropbox(b) {
+    const BLOQUE = 4 * 1024 * 1024;
+    const partes = [];
+    for (let i = 0; i < b.length; i += BLOQUE)
+        partes.push(createHash("sha256").update(b.subarray(i, i + BLOQUE)).digest());
+    return createHash("sha256").update(Buffer.concat(partes)).digest("hex");
+}
+/** El resumen con lo necesario para saber después si sigue valiendo (PDF, reglas, plantilla). */
+export function resumenDeArchivo(d, reglasAt) {
+    return {
+        ...resumenDe(d.deteccion),
+        origen: d.origen,
+        contentHash: hashDropbox(d.buffer),
+        reglasAt: d.origen === "ancla" ? reglasAt : null,
+        ...(d.origen === "plantilla" && d.declarada ? { plantillaId: d.declarada.plantillaId, plantillaVersion: d.declarada.plantillaVersion } : {}),
+    };
 }
 /** Deja el resumen en el registro del archivo, si lo hay (no crea registros: eso lo hace el encolado). */
 export async function guardarResumen(tenantId, codigo, resumen) {
@@ -30,20 +91,23 @@ export async function guardarResumen(tenantId, codigo, resumen) {
 const ESCALA_IMAGEN = 2;
 /** La detección más la página renderizada, para dibujar encima el campo, el ancla y lo descartado. */
 export async function previsualizarColocacion(tenantId, archivo) {
-    const { reglas } = await reglasDelTenant(tenantId);
+    const { reglas, cambiadasAt } = await reglasDelTenant(tenantId);
     const { cfg, outbox, archivos } = await leerOutbox(tenantId);
     if (!archivos.includes(archivo))
         throw Object.assign(new Error("Ese archivo no está en Outbox."), { status: 404 });
     const d = await detectarParaArchivo(tenantId, { cfg, outbox }, archivo, reglas);
-    const total = d.paginas?.length || 0;
-    const regla = reglaDe(archivo, reglas);
+    const total = d.totalPaginas || d.paginas?.length || 0;
+    // Con la posición declarada, lo que se muestra como «regla» es la plantilla (no hay regla por nombre).
+    const regla = d.origen === "plantilla" && d.declarada
+        ? { tipo: `Plantilla «${d.declarada.plantillaNombre}»`, descripcion: `Posición declarada por la plantilla (v${d.declarada.plantillaVersion}) con {{firma}}, capturada al generar el documento. Se define en el ABM de Plantillas.`, pagina: "declarada" }
+        : reglaDe(archivo, reglas);
     // Qué página mostrar: la del campo; si no hubo, la que la regla miraba o la del primer descartado.
     const det = d.deteccion;
     const idx = det.ok === true ? det.colocacion.paginaIndex : det.paginaIndex ?? (det.descartados[0] ? det.descartados[0].paginaIndex : 0);
     const numero = Math.min(Math.max(idx + 1, 1), Math.max(total, 1));
     const pag = d.paginas?.[numero - 1];
     const { png, ancho, alto } = await renderizarPaginaPng(d.buffer, numero, ESCALA_IMAGEN);
-    await guardarResumen(tenantId, d.codigo, resumenDe(d.deteccion));
+    await guardarResumen(tenantId, d.codigo, resumenDeArchivo(d, cambiadasAt));
     return {
         archivo,
         codigo: d.codigo,
@@ -52,7 +116,9 @@ export async function previsualizarColocacion(tenantId, archivo) {
         firmante: d.firmante,
         motivoSinFirmante: d.motivoSinFirmante,
         deteccion: d.deteccion,
-        pagina: { numero, total, ancho: pag?.ancho || 595, alto: pag?.alto || 842 },
+        pagina: { numero, total, ancho: pag?.ancho || d.declarada?.paginaSize.w || 595, alto: pag?.alto || d.declarada?.paginaSize.h || 842 },
+        origen: d.origen,
+        avisos: d.origen === "plantilla" ? d.declarada?.avisos || [] : d.notaOrigen ? [d.notaOrigen] : [],
         imagen: { base64: png.toString("base64"), ancho, alto },
         ocrMs: d.ocrMs,
     };
@@ -73,7 +139,7 @@ export async function arrancarVerificacion(tenantId, alcance = "cola_y_revision"
     const previa = verificaciones.get(tenantId);
     if (previa && !previa.terminadaEl)
         throw Object.assign(new Error("Ya hay una verificación en curso."), { status: 409 });
-    const { reglas } = await reglasDelTenant(tenantId);
+    const { reglas, cambiadasAt } = await reglasDelTenant(tenantId);
     const { cfg, outbox, archivos } = await leerOutbox(tenantId);
     const enOutbox = new Set(archivos);
     const estados = alcance === "cola" ? ["en_cola", "limite"] : alcance === "revision" ? ["requiere_revision", "error"] : ["en_cola", "limite", "requiere_revision", "error"];
@@ -97,14 +163,14 @@ export async function arrancarVerificacion(tenantId, alcance = "cola_y_revision"
                 try {
                     const firmantePrevio = registro?.firmante && registro?.email ? { nombre: registro.firmante, email: registro.email } : undefined;
                     const d = await detectarParaArchivo(tenantId, { cfg, outbox }, archivo, reglas, { firmante: firmantePrevio, worker: worker || undefined });
-                    const resumen = resumenDe(d.deteccion);
+                    const resumen = resumenDeArchivo(d, cambiadasAt);
                     await guardarResumen(tenantId, d.codigo, resumen);
                     const det = d.deteccion;
                     const motivo = det.ok === true ? (d.firmante ? "" : d.motivoSinFirmante || "No se pudo resolver al firmante en la base.") : det.motivo;
-                    resultado = { archivo, codigo: d.codigo, tipo: d.tipo, estado: registro?.estado || "", firmante: d.firmante?.nombre || "", ok: !motivo, pagina: resumen.pagina, rotulo: resumen.rotulo, fuente: resumen.fuente, motivo, ms: Date.now() - t0 };
+                    resultado = { archivo, codigo: d.codigo, tipo: d.tipo, estado: registro?.estado || "", firmante: d.firmante?.nombre || "", ok: !motivo, pagina: resumen.pagina, rotulo: resumen.rotulo, fuente: resumen.fuente, motivo, ms: Date.now() - t0, verificadaAt: new Date().toISOString(), origen: d.origen };
                 }
                 catch (e) {
-                    resultado = { archivo, codigo: leerAnclas(archivo).codigo, tipo: reglaDe(archivo, reglas)?.tipo || null, estado: registro?.estado || "", firmante: registro?.firmante || "", ok: false, pagina: null, rotulo: "", fuente: "", motivo: `No se pudo bajar o leer el PDF: ${e?.message || e}`, ms: Date.now() - t0 };
+                    resultado = { archivo, codigo: leerAnclas(archivo).codigo, tipo: reglaDe(archivo, reglas)?.tipo || null, estado: registro?.estado || "", firmante: registro?.firmante || "", ok: false, pagina: null, rotulo: "", fuente: "", motivo: `No se pudo bajar o leer el PDF: ${e?.message || e}`, ms: Date.now() - t0, verificadaAt: new Date().toISOString(), origen: "ancla" };
                 }
                 v.resultados.push(resultado);
                 v.hechos++;

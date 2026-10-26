@@ -8,6 +8,9 @@ export interface ComplianceParams {
     coordinatorId?: string;
     areaId?: string;
     shiftId?: string;
+    /** Varias áreas / turnos a la vez (filtros de Novedades, 25/10/2026). Vacío = todos. */
+    areaIds?: string[];
+    shiftIds?: string[];
 }
 /**
  * Cumplimiento de un coordinador en UN proyecto. Nota de modelado: las novedades reales

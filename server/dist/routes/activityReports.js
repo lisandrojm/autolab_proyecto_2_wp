@@ -57,6 +57,8 @@ async function alcanceCumplimiento(req) {
 }
 const MAX_RANGE_DAYS = 92;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** Ids de un filtro que puede traer varios («a,b,c»): los válidos, sin repetir. Uno solo o vacío también. */
+export const listaIds = (v) => [...new Set(String(v ?? "").split(",").map((s) => s.trim()).filter((s) => mongoose.Types.ObjectId.isValid(s)))];
 const attendanceSchema = z.object({
     employeeId: z.string(),
     status: z.string().optional(),
@@ -156,16 +158,25 @@ router.get("/", async (req, res) => {
           espacios, y exige todas las palabras. Es el que ya usaba el buscador de esta pantalla del lado
           del cliente, así que buscar lo mismo sigue trayendo lo mismo.
         */
-        const soloId = (v) => (typeof v === "string" && mongoose.Types.ObjectId.isValid(v) ? new mongoose.Types.ObjectId(v) : null);
-        const proyectoPedido = soloId(req.query.projectId);
-        const areaPedida = soloId(req.query.areaId);
-        const turnoPedido = soloId(req.query.shiftId);
-        if (proyectoPedido)
-            filter.projectId = proyectoPedido;
-        if (areaPedida)
-            filter.areaId = areaPedida;
-        if (turnoPedido)
-            filter.shiftId = turnoPedido;
+        /*
+          VARIOS PROYECTOS, ÁREAS Y TURNOS (25/10/2026): cada filtro llega como una lista separada por
+          comas (uno solo sigue llegando igual). Los proyectos pedidos se cruzan con el alcance de quien
+          pregunta: antes el proyecto pedido PISABA ese alcance.
+        */
+        const ids = (v) => listaIds(v).map((id) => new mongoose.Types.ObjectId(id));
+        const unoOVarios = (lista) => (lista.length === 1 ? lista[0] : { $in: lista });
+        const proyectosPedidos = ids(req.query.projectId);
+        const areasPedidas = ids(req.query.areaId);
+        const turnosPedidos = ids(req.query.shiftId);
+        if (proyectosPedidos.length) {
+            const permitidos = filter.projectId?.$in || null;
+            const cruce = permitidos ? proyectosPedidos.filter((p) => permitidos.some((x) => x.equals(p))) : proyectosPedidos;
+            filter.projectId = cruce.length ? unoOVarios(cruce) : { $in: [] };
+        }
+        if (areasPedidas.length)
+            filter.areaId = unoOVarios(areasPedidas);
+        if (turnosPedidos.length)
+            filter.shiftId = unoOVarios(turnosPedidos);
         const busqueda = String(req.query.search || "").trim();
         if (busqueda) {
             const patron = createFuzzySearchRegex(busqueda);
@@ -330,8 +341,9 @@ router.post("/", async (req, res) => {
 router.get("/compliance", async (req, res) => {
     try {
         const alcance = await alcanceCumplimiento(req);
-        const projectIdPedido = req.query.projectId ? String(req.query.projectId) : undefined;
-        if (!alcance || (projectIdPedido && alcance.projectIds && !alcance.projectIds.includes(projectIdPedido))) {
+        // Uno o varios proyectos (lista separada por comas); todos tienen que estar en el alcance.
+        const proyectosPedidos = listaIds(req.query.projectId);
+        if (!alcance || (alcance.projectIds && proyectosPedidos.some((p) => !alcance.projectIds.includes(p)))) {
             res.status(403).json({ error: "No autorizado" });
             return;
         }
@@ -350,11 +362,10 @@ router.get("/compliance", async (req, res) => {
         const data = await computeCompliance(req.tenantObjectId, {
             from,
             to,
-            projectId: projectIdPedido,
-            projectIds: alcance.projectIds,
+            projectIds: proyectosPedidos.length ? proyectosPedidos : alcance.projectIds,
             coordinatorId: req.query.coordinatorId ? String(req.query.coordinatorId) : undefined,
-            areaId: req.query.areaId ? String(req.query.areaId) : undefined,
-            shiftId: req.query.shiftId ? String(req.query.shiftId) : undefined,
+            areaIds: listaIds(req.query.areaId),
+            shiftIds: listaIds(req.query.shiftId),
         });
         res.json(data);
     }
@@ -368,7 +379,9 @@ router.post("/compliance/remind", async (req, res) => {
     try {
         const { from, to, projectId, coordinatorIds, message } = req.body || {};
         const alcance = await alcanceCumplimiento(req);
-        if (!alcance || (projectId && alcance.projectIds && !alcance.projectIds.includes(String(projectId)))) {
+        // Uno o varios proyectos (string, lista separada por comas o array); todos dentro del alcance.
+        const proyectosPedidos = listaIds(Array.isArray(projectId) ? projectId.join(",") : projectId);
+        if (!alcance || (alcance.projectIds && proyectosPedidos.some((p) => !alcance.projectIds.includes(p)))) {
             res.status(403).json({ error: "No autorizado" });
             return;
         }
@@ -378,7 +391,7 @@ router.post("/compliance/remind", async (req, res) => {
         }
         // Recalcular server-side (nunca confiar en una lista del cliente).
         // Con el mismo alcance que la consulta: un supervisor sólo puede recordarle a los de sus proyectos.
-        const data = await computeCompliance(req.tenantObjectId, { from, to, projectId, projectIds: alcance.projectIds });
+        const data = await computeCompliance(req.tenantObjectId, { from, to, projectIds: proyectosPedidos.length ? proyectosPedidos : alcance.projectIds });
         const idSet = Array.isArray(coordinatorIds) && coordinatorIds.length ? new Set(coordinatorIds.map(String)) : null;
         const behind = data.coordinators.filter((c) => c.missingCount > 0 && (!idSet || idSet.has(c.userId)));
         // Dedupe: no crear un segundo recordatorio no-leído del mismo tipo el mismo día.

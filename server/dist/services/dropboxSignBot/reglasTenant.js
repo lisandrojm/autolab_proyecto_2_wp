@@ -7,27 +7,28 @@ import { REGLAS_BASE, validarReglas } from "../../compartido/reglasColocacionFir
  */
 const BASE = "integrations.dropboxSign.bot";
 export async function reglasDelTenant(tenantId) {
-    const t = await Tenant.findById(tenantId).select(`${BASE}.reglasColocacion ${BASE}.reglasColocacionAt`).lean();
+    const t = await Tenant.findById(tenantId).select(`${BASE}.reglasColocacion ${BASE}.reglasColocacionAt ${BASE}.reglasCambiadasAt`).lean();
     const bot = t?.integrations?.dropboxSign?.bot || {};
+    const cambiadasAt = bot.reglasCambiadasAt ? new Date(bot.reglasCambiadasAt) : bot.reglasColocacionAt ? new Date(bot.reglasColocacionAt) : null;
     const guardadas = bot.reglasColocacion;
     if (Array.isArray(guardadas) && guardadas.length > 0) {
         const v = validarReglas(guardadas);
         if (v.ok === true)
-            return { reglas: v.reglas, personalizadas: true, actualizadasAt: bot.reglasColocacionAt ? new Date(bot.reglasColocacionAt) : null };
+            return { reglas: v.reglas, personalizadas: true, actualizadasAt: bot.reglasColocacionAt ? new Date(bot.reglasColocacionAt) : null, cambiadasAt };
         console.warn(`[DROPBOX-SIGN-BOT] Las reglas de colocación guardadas del tenant ${tenantId} no pasan la validación (${v.error}): rige el catálogo.`);
     }
-    return { reglas: REGLAS_BASE, personalizadas: false, actualizadasAt: null };
+    return { reglas: REGLAS_BASE, personalizadas: false, actualizadasAt: null, cambiadasAt };
 }
 /** Guarda la lista entera (validada). Con `null` se vuelve al catálogo de fábrica. */
 export async function guardarReglasDelTenant(tenantId, entrada) {
+    const ahora = new Date();
     if (entrada === null) {
-        await Tenant.updateOne({ _id: tenantId }, { $unset: { [`${BASE}.reglasColocacion`]: "", [`${BASE}.reglasColocacionAt`]: "" } });
-        return { reglas: REGLAS_BASE, personalizadas: false, actualizadasAt: null };
+        await Tenant.updateOne({ _id: tenantId }, { $unset: { [`${BASE}.reglasColocacion`]: "", [`${BASE}.reglasColocacionAt`]: "" }, $set: { [`${BASE}.reglasCambiadasAt`]: ahora } });
+        return { reglas: REGLAS_BASE, personalizadas: false, actualizadasAt: null, cambiadasAt: ahora };
     }
     const v = validarReglas(entrada);
     if (v.ok === false)
         throw Object.assign(new Error(v.error), { status: 400 });
-    const ahora = new Date();
-    await Tenant.updateOne({ _id: tenantId }, { $set: { [`${BASE}.reglasColocacion`]: v.reglas, [`${BASE}.reglasColocacionAt`]: ahora } });
-    return { reglas: v.reglas, personalizadas: true, actualizadasAt: ahora };
+    await Tenant.updateOne({ _id: tenantId }, { $set: { [`${BASE}.reglasColocacion`]: v.reglas, [`${BASE}.reglasColocacionAt`]: ahora, [`${BASE}.reglasCambiadasAt`]: ahora } });
+    return { reglas: v.reglas, personalizadas: true, actualizadasAt: ahora, cambiadasAt: ahora };
 }

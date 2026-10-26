@@ -22,6 +22,8 @@ export interface IRelease extends Document {
      * `services/plantillasCustomSistema.ts`) y no se pueden eliminar.
      */
     delSistema?: boolean;
+    /** Sube con cada cambio de contenido: la posición de la firma guardada con cada documento dice con qué versión se generó. */
+    versionContenido?: number;
     /**
      * LOS TIPOS DE CONTRATO A LOS QUE PERTENECE (`Contrato._id`), como `ContratoFrame.contratoIds`
      * (16/10/2026). VACÍO o ausente = vale para TODOS los tipos, como antes de existir el campo: los

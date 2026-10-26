@@ -10,13 +10,15 @@ import { leerAnclas } from "../../utils/anclasNombre.js";
 import { abrirOcr } from "../../utils/ocrPaginas.js";
 import { CONFIG_POR_DEFECTO, estimarEnvios, fechaYHoraArgentina, planificar, puedeCorrer, validarEncolado } from "./planificador.js";
 import { esTextoDeLimite, guardDeEnvio } from "./reglas.js";
-import { pantallaAPdf, pdfAPantalla, reglaDe } from "../../compartido/reglasColocacionFirma.js";
+import { motivosDesactualizado, pantallaAPdf, pdfAPantalla, reglaDe } from "../../compartido/reglasColocacionFirma.js";
+import { ContratoFrame } from "../../models/ContratoFrame.js";
+import { Release } from "../../models/Release.js";
 import { abrirSesionDropboxSign, anotarError, guardarSesion, probarConexionDropboxSign } from "./navegador.js";
 import { quienTieneDropboxSign, soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 import { MOTOR_DROPBOX_SIGN } from "./motor.js";
 import { leerOutbox, resolverFirmante } from "./outbox.js";
 import { reglasDelTenant } from "./reglasTenant.js";
-import { detectarParaArchivo, guardarResumen, resumenDe } from "./colocacion.js";
+import { declaradasDe, detectarParaArchivo, guardarResumen, resumenDeArchivo } from "./colocacion.js";
 export { leerOutbox, resolverFirmante };
 /**
  * LA CORRIDA DE ENVÍO A LA FIRMA (patrón `arca/corridaAltas.ts`): una tanda de documentos DE LA COLA
@@ -92,6 +94,8 @@ export async function encolar(tenantId, userId, pedido) {
     const pedidos = pedido.todosElegibles ? enOutbox : [...new Set((pedido.archivos || []).map((a) => String(a).trim()).filter(Boolean))];
     const codigos = pedidos.map((a) => leerAnclas(a).codigo).filter(Boolean);
     const previos = new Map((await DropboxSignEnvio.find({ tenantId, codigo: { $in: codigos } }).lean()).map((r) => [r.codigo, r]));
+    // Los generados desde una plantilla con {{firma}} traen su posición: no necesitan regla por nombre.
+    const declaradas = await declaradasDe(tenantId, codigos);
     const ultimo = await DropboxSignEnvio.findOne({ tenantId, orden: { $ne: null } }).sort({ orden: -1 }).select("orden").lean();
     let orden = Number(ultimo?.orden) || 0;
     const tid = new Types.ObjectId(tenantId);
@@ -102,7 +106,7 @@ export async function encolar(tenantId, userId, pedido) {
     for (const archivo of pedidos) {
         const { codigo } = leerAnclas(archivo);
         const { firmante, motivoSinFirmante } = setOutbox.has(archivo) ? await resolverFirmante(tenantId, archivo) : { firmante: null, motivoSinFirmante: undefined };
-        const r = validarEncolado(archivo, { enOutbox: setOutbox.has(archivo), registroPrevio: codigo ? previos.get(codigo) || null : null, firmante, motivoSinFirmante, reglas });
+        const r = validarEncolado(archivo, { enOutbox: setOutbox.has(archivo), registroPrevio: codigo ? previos.get(codigo) || null : null, firmante, motivoSinFirmante, reglas, posicionDeclarada: codigo ? declaradas.get(codigo) || null : null });
         if (r.ok && r.firmante) {
             orden++;
             await DropboxSignEnvio.updateOne({ tenantId: tid, codigo: r.codigo }, { $set: { archivo, email: r.firmante.email, firmante: r.firmante.nombre, tipo: r.tipo || "", estado: "en_cola", detalle: "", orden, encoladoAt: new Date(), encoladoPor: quien, probadoEnSecoAt: null }, $setOnInsert: { tenantId: tid, codigo: r.codigo } }, { upsert: true });
@@ -136,11 +140,26 @@ export async function desencolar(tenantId, codigos) {
     const r = await DropboxSignEnvio.deleteMany({ tenantId, codigo: { $in: codigos }, estado: "en_cola" });
     return { quitados: r.deletedCount || 0 };
 }
-/** El estado de cada archivo del listado del tab: una query por lote, sin tocar Dropbox. */
-export async function estadoDeArchivos(tenantId, archivos) {
+/**
+ * El estado de cada archivo del listado del tab: una query por lote, sin tocar Dropbox.
+ *
+ * `hashes` (opcional): el `contentHash` que la pantalla ya tiene del listado del Outbox. Con eso, y con
+ * la fecha de las reglas y la versión de la plantilla, cada colocación guardada dice si quedó
+ * DESACTUALIZADA (25/10/2026): antes se mostraba la de días atrás como si fuera el estado actual.
+ */
+export async function estadoDeArchivos(tenantId, archivos, hashes = {}) {
     const codigoDe = new Map(archivos.map((a) => [a, leerAnclas(a).codigo]));
     const codigos = [...new Set([...codigoDe.values()].filter(Boolean))];
     const registros = new Map((await DropboxSignEnvio.find({ tenantId, codigo: { $in: codigos } }).lean()).map((r) => [r.codigo, r]));
+    const { cambiadasAt } = await reglasDelTenant(tenantId);
+    const plantillaIds = [...new Set([...registros.values()].map((r) => r.colocacion?.plantillaId).filter((id) => id && Types.ObjectId.isValid(id)))];
+    const versionDe = new Map();
+    if (plantillaIds.length) {
+        const [contratos, releases] = await Promise.all([ContratoFrame.find({ _id: { $in: plantillaIds } }).select("versionContenido").lean(), Release.find({ _id: { $in: plantillaIds } }).select("versionContenido").lean()]);
+        for (const p of [...contratos, ...releases])
+            versionDe.set(String(p._id), Number(p.versionContenido) || 1);
+    }
+    const conVigencia = (archivo, c) => c ? { ...c, desactualizado: motivosDesactualizado(c, { contentHash: hashes[archivo], reglasAt: cambiadasAt, plantillaVersion: c.plantillaId ? versionDe.get(String(c.plantillaId)) ?? null : null }) } : null;
     const enCola = await DropboxSignEnvio.find({ tenantId, estado: { $in: ["en_cola", "limite"] } }).sort({ orden: 1 }).select("codigo archivo orden").lean();
     const posicion = new Map(enCola.map((r, i) => [r.codigo, i + 1]));
     const { config, estado: throttle } = await configDelTenant(tenantId);
@@ -153,7 +172,7 @@ export async function estadoDeArchivos(tenantId, archivos) {
         if (!r)
             return { archivo, codigo, estado: "", detalle: "", enviadoAt: null, posicion: null, colocacion: null, estimadoAt: null };
         const estado = archivo === actual ? "enviando" : r.estado === "en_cola" && r.probadoEnSecoAt ? "seco" : r.estado;
-        return { archivo, codigo, estado, detalle: r.detalle || "", enviadoAt: r.enviadoAt ? new Date(r.enviadoAt).toISOString() : null, posicion: posicion.get(codigo) ?? null, colocacion: r.colocacion || null, estimadoAt: estimados.get(codigo)?.toISOString() || null };
+        return { archivo, codigo, estado, detalle: r.detalle || "", enviadoAt: r.enviadoAt ? new Date(r.enviadoAt).toISOString() : null, posicion: posicion.get(codigo) ?? null, colocacion: conVigencia(archivo, r.colocacion), estimadoAt: estimados.get(codigo)?.toISOString() || null };
     });
 }
 /** Qué enviaría la próxima tanda: la cola contra el Outbox, planificada. No envía nada. */
@@ -234,7 +253,7 @@ async function correr(corrida, cc, config) {
         // previsualización): los que no tienen dónde firmar salen como requiere_revision sin gastar un
         // intento de pantalla. Un solo worker de OCR para toda la tanda, sólo si algún tipo lo necesita.
         const { cfg } = await leerOutbox(tenantId);
-        const { reglas } = await reglasDelTenant(tenantId);
+        const { reglas, cambiadasAt } = await reglasDelTenant(tenantId);
         const resueltos = new Map();
         const worker = cola.tanda.some((c) => reglaDe(c.archivo, reglas)?.ocr) ? await abrirOcr() : null;
         try {
@@ -242,7 +261,7 @@ async function correr(corrida, cc, config) {
                 const rutaPdf = path.join(dir, c.archivo);
                 try {
                     const d = await detectarParaArchivo(tenantId, { cfg, outbox: cola.outbox || "" }, c.archivo, reglas, { firmante: { nombre: c.firmante, email: c.email }, worker: worker || undefined });
-                    await guardarResumen(tenantId, c.codigo, resumenDe(d.deteccion));
+                    await guardarResumen(tenantId, c.codigo, resumenDeArchivo(d, cambiadasAt));
                     if (d.deteccion.ok === false) {
                         const motivo = d.deteccion.motivo;
                         corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: "requiere_revision", detalle: motivo });
@@ -315,7 +334,8 @@ async function correr(corrida, cc, config) {
                     señal: corrida.señal,
                     onProgreso: (texto) => emitir({ tipo: "info", archivo: c.archivo, texto }),
                     antesDelIrreversible: () => emitir({ tipo: "irreversible", archivo: c.archivo, codigo: c.codigo, texto: "Apretando «Enviar para firmar»…" }),
-                    guard: (d) => guardDeEnvio({ ...d, archivo: c.archivo, ccEsperado: cc, firmanteNombre: c.firmante, firmanteEmail: c.email, reglas }),
+                    // Con la posición declarada por la plantilla no hace falta regla por nombre (ver `guardDeEnvio`).
+                    guard: (d) => guardDeEnvio({ ...d, archivo: c.archivo, ccEsperado: cc, firmanteNombre: c.firmante, firmanteEmail: c.email, reglas, posicionDeclarada: resueltos.get(c.codigo)?.colocacion?.origen === "plantilla" }),
                     esLimite: esTextoDeLimite,
                 });
             }

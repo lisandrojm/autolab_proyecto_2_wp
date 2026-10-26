@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
-import { correrBackup, backupEnCurso, CARPETA_BACKUPS, INTERVALO_HORAS_DEFAULT, RETENER_DEFAULT, INTERVALOS_VALIDOS } from "../services/backupService.js";
+import { correrBackup, backupEnCurso, progresoBackup, registrarErrorDeBackup, CARPETA_BACKUPS, INTERVALO_HORAS_DEFAULT, RETENER_DEFAULT, INTERVALOS_VALIDOS } from "../services/backupService.js";
 import { getTenantDropboxConfig, listFolder, downloadFileContent, deleteEntry, downloadFolderZip, getTemporaryLink } from "../services/dropboxService.js";
 import mongoose from "mongoose";
 import { Tenant } from "../models/Tenant.js";
@@ -118,18 +118,30 @@ router.post("/ejecutar", async (req, res) => {
         res.status(409).json({ error: "Ya hay un backup en curso. Esperá a que termine." });
         return;
     }
-    try {
-        const resultado = await correrBackup("manual");
-        if (!resultado) {
-            res.status(400).json({ error: "Dropbox no está conectado: no hay dónde guardar el backup." });
-            return;
-        }
-        res.json(resultado);
-    }
-    catch (error) {
+    /*
+      SE ARRANCA Y SE CONTESTA YA (25/10/2026). La copia tarda ~14 minutos y el pedido esperaba hasta el
+      final, con el navegador a 15 minutos de cortar. Ahora corre en el servidor y la pantalla sigue el
+      avance con `GET /backups/progreso`; cómo terminó queda en `ultimoBackupAt` / `ultimoError`, igual
+      que la automática.
+    */
+    void correrBackup("manual")
+        .then(async (r) => {
+        if (!r)
+            await registrarErrorDeBackup("Dropbox no está conectado: no hay dónde guardar el backup.");
+    })
+        .catch(async (error) => {
         console.error("Backup manual falló:", error);
-        res.status(500).json({ error: String(error?.message || "No se pudo generar el backup.") });
+        await registrarErrorDeBackup(String(error?.message || "No se pudo generar el backup."));
+    });
+    res.status(202).json({ iniciado: true });
+});
+/** GET /backups/progreso — cómo va la copia en curso (la manual o la automática), para la barra. */
+router.get("/progreso", async (req, res) => {
+    if (!isAdmin(req)) {
+        res.status(403).json({ error: "Solo un administrador puede ver los backups." });
+        return;
     }
+    res.json({ enCurso: backupEnCurso(), progreso: progresoBackup() });
 });
 /**
  * GET /backups/copias — el listado de la pestaña «DDBB Backup», con fecha y tamaño de cada copia.

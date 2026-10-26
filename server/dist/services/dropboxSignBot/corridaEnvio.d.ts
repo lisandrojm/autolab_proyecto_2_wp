@@ -83,8 +83,14 @@ export interface EstadoArchivo {
     /** Cuándo saldría según el scheduler (ISO), si está en la cola y el envío automático está activo. */
     estimadoAt: string | null;
 }
-/** El estado de cada archivo del listado del tab: una query por lote, sin tocar Dropbox. */
-export declare function estadoDeArchivos(tenantId: string, archivos: string[]): Promise<EstadoArchivo[]>;
+/**
+ * El estado de cada archivo del listado del tab: una query por lote, sin tocar Dropbox.
+ *
+ * `hashes` (opcional): el `contentHash` que la pantalla ya tiene del listado del Outbox. Con eso, y con
+ * la fecha de las reglas y la versión de la plantilla, cada colocación guardada dice si quedó
+ * DESACTUALIZADA (25/10/2026): antes se mostraba la de días atrás como si fuera el estado actual.
+ */
+export declare function estadoDeArchivos(tenantId: string, archivos: string[], hashes?: Record<string, string>): Promise<EstadoArchivo[]>;
 export interface Cola extends Plan {
     outbox: string | null;
     archivosEnOutbox: number;

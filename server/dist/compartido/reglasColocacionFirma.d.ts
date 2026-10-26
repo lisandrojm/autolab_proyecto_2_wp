@@ -249,6 +249,8 @@ export interface Colocacion {
     descripcion: string;
     /** Qué pasó al resolver, para el log. */
     nota: string;
+    /** «plantilla»: la posición la declaró la plantilla al generar el documento (familia A). Ausente = por ancla (familia B). */
+    origen?: "plantilla" | "ancla";
 }
 export type Deteccion = {
     ok: true;
@@ -273,3 +275,76 @@ export type Deteccion = {
 export declare function resolverColocacion(nombreArchivo: string, paginas: PaginaPdf[] | null, contexto?: {
     nombreFirmante?: string;
 }, reglas?: ReglaColocacion[]): Deteccion;
+/** Alto del campo de firma de una plantilla (pt): el mismo de las reglas de contratos, validado con envíos reales. */
+export declare const ALTO_CAMPO_PLANTILLA = 45;
+/** Cuántas veces declara la plantilla dónde firmar (`{{firma}}`, con o sin espacios adentro). */
+export declare const vecesFirmaEnPlantilla: (contenido: string) => number;
+export interface MarcaDeFirma {
+    /** Base 0. */
+    paginaIndex: number;
+    /** La línea de guiones, en puntos PDF (y desde arriba). */
+    linea: Rect;
+    renglon: string;
+}
+/** Todas las líneas de firma de la plantilla en el PDF, en orden de lectura. */
+export declare function marcasDeFirma(paginas: PaginaPdf[]): MarcaDeFirma[];
+export interface ColocacionDeclarada {
+    origen: "plantilla";
+    plantillaTipo: "contrato" | "release";
+    plantillaId: string;
+    plantillaNombre: string;
+    /** La versión de la plantilla con la que se generó (sube con cada cambio de contenido). */
+    plantillaVersion: number;
+    /** Base 1: la página real donde cayó la firma. */
+    pagina: number;
+    totalPaginas: number;
+    /** El campo de firma, en puntos PDF (origen arriba a la izquierda, como el resto de este módulo). */
+    campo: Rect;
+    linea: Rect;
+    paginaSize: {
+        w: number;
+        h: number;
+    };
+    /** SHA-256 del PDF generado: si el del Outbox no es éste, la posición no se usa. */
+    sha256: string;
+    avisos: string[];
+    capturadaAt: Date | string;
+}
+/**
+ * De las marcas del PDF a la posición declarada. Con varias se toma la ÚLTIMA (y se avisa), igual que
+ * las reglas de contratos. El campo va SOBRE la línea de guiones, con el ancho de la línea.
+ */
+export declare function colocacionDesdeMarcas(paginas: PaginaPdf[], vecesDeclarada: number): {
+    ok: true;
+    pagina: number;
+    totalPaginas: number;
+    campo: Rect;
+    linea: Rect;
+    paginaSize: {
+        w: number;
+        h: number;
+    };
+    avisos: string[];
+} | {
+    ok: false;
+    motivo: string;
+};
+/** La detección que consume el bot, armada desde la posición declarada: sin rótulo, sin OCR. */
+export declare function deteccionDesdeDeclarada(d: ColocacionDeclarada): Deteccion;
+/**
+ * POR QUÉ UNA VERIFICACIÓN GUARDADA YA NO ES EL ESTADO ACTUAL (25/10/2026). El panel mostraba el
+ * resultado de días atrás como si fuera de hoy. Vale mientras el PDF del Outbox sea el mismo, las
+ * reglas no hayan cambiado (si salió por regla) y la plantilla no tenga una versión nueva (si salió de
+ * la plantilla). Vacío = vigente. Las anteriores a este dato no se pueden comparar: se avisa por la fecha.
+ */
+export declare function motivosDesactualizado(r: {
+    verificadaAt?: Date | string;
+    origen?: "plantilla" | "ancla";
+    contentHash?: string;
+    reglasAt?: Date | string | null;
+    plantillaVersion?: number;
+} | null | undefined, actual: {
+    contentHash?: string;
+    reglasAt?: Date | null;
+    plantillaVersion?: number | null;
+}, ahora?: Date): string[];

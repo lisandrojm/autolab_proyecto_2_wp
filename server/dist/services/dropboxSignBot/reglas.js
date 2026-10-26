@@ -37,7 +37,7 @@ const normalizar = (s) => String(s || "").replace(/\s+/g, " ").trim().toLowerCas
  * distinto o sin CC rompe el circuito IMAP y deja el contrato como no enviado para siempre.
  */
 export function guardDeEnvio(d) {
-    const sinColocacion = motivoSinColocacion(d.archivo, d.reglas);
+    const sinColocacion = d.posicionDeclarada ? null : motivoSinColocacion(d.archivo, d.reglas);
     if (sinColocacion)
         return { ok: false, motivo: `${sinColocacion} (${d.archivo})` };
     if (String(d.titulo || "").trim() !== String(d.archivo || "").trim())

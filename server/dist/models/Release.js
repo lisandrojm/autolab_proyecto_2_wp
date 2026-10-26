@@ -38,7 +38,13 @@ const releaseSchema = new Schema({
     },
     esCustom: { type: Boolean, default: false },
     delSistema: { type: Boolean, default: false },
+    versionContenido: { type: Number, default: 1 },
     contratoIds: { type: [String], default: undefined },
 }, { timestamps: true, collection: "release" });
 releaseSchema.index({ tenantId: 1, isActive: 1 });
+/** Cada cambio de contenido sube la versión (la posición de la firma guardada con cada documento dice con cuál se generó). */
+releaseSchema.pre("save", function () {
+    if (!this.isNew && this.isModified("content"))
+        this.versionContenido = (Number(this.versionContenido) || 1) + 1;
+});
 export const Release = mongoose.model("Release", releaseSchema);

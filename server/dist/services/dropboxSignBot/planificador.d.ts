@@ -98,6 +98,10 @@ export interface ContextoDeEncolado {
     motivoSinFirmante?: string;
     /** Las reglas de colocación del tenant (sin ellas, el catálogo de fábrica). */
     reglas?: ReglaColocacion[];
+    /** La posición de la firma la declaró la plantilla al generar el documento: no hace falta regla por nombre (25/10/2026). */
+    posicionDeclarada?: {
+        plantillaNombre: string;
+    } | null;
 }
 export interface ResultadoEncolado {
     ok: boolean;
