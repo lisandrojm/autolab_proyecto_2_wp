@@ -425,6 +425,8 @@ export interface EstadoArchivoFirma {
   colocacion?: ResumenColocacion | null;
   /** Cuándo saldría según el scheduler (ISO): la cuenta regresiva del badge. Null sin envío automático. */
   estimadoAt?: string | null;
+  /** El último intento que falló en la pantalla o la red; el documento sigue en la cola (26/10/2026). */
+  ultimoIntento?: { at: string; detalle: string } | null;
 }
 
 export interface ResultadoEncolado {

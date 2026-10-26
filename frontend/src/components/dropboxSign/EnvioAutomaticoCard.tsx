@@ -415,7 +415,7 @@ export const EnvioAutomaticoCard: React.FC = () => {
           verificacion={vistaCola.verificacion}
           onVerificar={() => {
             dropboxSignBotAPI
-              .verificarTodos("cola_y_revision")
+              .verificarTodos("outbox")
               .then(() => sweetAlert.success("Verificando", "Se están verificando la cola y lo trabado. Al terminar, recargá para ver el resultado."))
               .catch((e: any) => sweetAlert.error("No se pudo verificar", e?.response?.data?.error || e?.message || ""));
           }}

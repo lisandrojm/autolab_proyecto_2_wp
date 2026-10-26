@@ -18,7 +18,9 @@ const POLL_MS = 2000;
 const fmt = (iso?: string | null) => (iso ? new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
 const PAGINAS: Record<ReglaColocacion["pagina"], string> = { primera: "Primera", ultima: "Última", cualquiera: "Cualquiera" };
 const OCURRENCIAS: Record<AnclaRegla["ocurrencia"], string> = { ultima: "la última válida", primera: "la primera válida" };
-const ALCANCES: Record<AlcanceVerificacion, string> = { cola_y_revision: "La cola y lo que requiere revisión", cola: "Sólo la cola", revision: "Sólo lo que requiere revisión", outbox: "Todo el Outbox (menos lo enviado)" };
+// TODO EL OUTBOX POR DEFECTO (26/10/2026): con «la cola y lo que requiere revisión» se re-verificaban
+// siempre los mismos y lo demás del Outbox nunca se miraba. Los otros alcances quedan como atajo.
+const ALCANCES: Record<AlcanceVerificacion, string> = { outbox: "Todo el Outbox (menos lo enviado)", cola_y_revision: "La cola y lo que requiere revisión", cola: "Sólo la cola", revision: "Sólo lo que requiere revisión" };
 const POSICION: Record<TipoAncla, string> = { derechaDelRotulo: "A la derecha del rótulo, sobre la línea", sobreRotulo: "Encima de la línea, centrada en el rótulo", columnaDelFirmante: "Sobre la línea de la columna del firmante" };
 
 const anclaNueva = (): AnclaRegla => ({ tipo: "derechaDelRotulo", rotulo: "Firma:", ocurrencia: "ultima", excluir: ["Empleador"], offset: { dx: 0, dy: 0 } });
@@ -52,7 +54,7 @@ export const ReglasColocacionCard: React.FC = () => {
   const [sucias, setSucias] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [editor, setEditor] = useState<{ indice: number | null; borrador: ReglaColocacion; validaciones: string } | null>(null);
-  const [alcance, setAlcance] = useState<AlcanceVerificacion>("cola_y_revision");
+  const [alcance, setAlcance] = useState<AlcanceVerificacion>("outbox");
   const [verif, setVerif] = useState<Verificacion | null>(null);
   const [arrancando, setArrancando] = useState(false);
   const [soloNo, setSoloNo] = useState(true);
@@ -322,7 +324,7 @@ export const ReglasColocacionCard: React.FC = () => {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-semibold text-gray-700 dark:text-gray-200">
             {corriendo && <FontAwesomeIcon icon={faSpinner} spin />}
             <span>
-              {corriendo ? "Verificando" : "Última verificación"} · {verif.hechos ?? 0} de {verif.total ?? 0} · {ALCANCES[verif.alcance || "cola_y_revision"].toLowerCase()} · {fmt(verif.arrancadaEl)}
+              {corriendo ? "Verificando" : "Última verificación"} · {verif.hechos ?? 0} de {verif.total ?? 0} · {ALCANCES[verif.alcance || "outbox"].toLowerCase()} · {fmt(verif.arrancadaEl)}
             </span>
             <span className="text-green-600 dark:text-green-400">
               <FontAwesomeIcon icon={faCircleCheck} /> {verif.enviables ?? 0} enviable{(verif.enviables ?? 0) === 1 ? "" : "s"}

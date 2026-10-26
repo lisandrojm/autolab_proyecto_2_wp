@@ -6,6 +6,8 @@ import { dropboxSignAPI, dropboxSignBotAPI, type BotCola, type BotConfig, type B
 import { ColaDeEnvioFirma, TrabadosPorMotivo } from "./ColaDeEnvioFirma";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { LoginAsistidoModal } from "../dropboxSign/LoginAsistidoModal";
+import { PrevisualizacionColocacion } from "../dropboxSign/PrevisualizacionColocacion";
+import { categoriaDeTrabado } from "@compartido/colaFirma";
 
 /*
   EL «ENVIAR A LA FIRMA» DESDE EL TAB «PARA FIRMAR» (22/10/2026). El envío es por COLA: desde el tab se
@@ -258,7 +260,7 @@ export function useBotFirma(archivos: string[], activo: boolean, hashes: Record<
   /** «Verificar de nuevo»: corre la verificación (que escribe el estado de cada documento) y sigue la cola hasta que termine. */
   const verificar = async () => {
     try {
-      await dropboxSignBotAPI.verificarTodos("cola_y_revision");
+      await dropboxSignBotAPI.verificarTodos("outbox");
     } catch (e: any) {
       if (e?.response?.status !== 409) {
         sweetAlert.error("No se pudo verificar", e?.response?.data?.error || e?.message || "");
@@ -302,13 +304,67 @@ const IndicadorAncla: React.FC<{ e: EstadoArchivoFirma }> = ({ e }) => {
   );
 };
 
-/** El badge de la columna «Firma», con la cuenta regresiva y el ✓/✗ del ancla al lado. */
+/**
+ * El badge de la columna «Firma», con la cuenta regresiva y el ✓/✗ del ancla al lado.
+ *
+ * DEBAJO, EL PORQUÉ (26/10/2026): antes un trabado decía sólo «Requiere revisión» y no había forma de
+ * saber qué pasó ni cómo salir. Ahora se ve el motivo concreto, cuándo se verificó y la acción que
+ * corresponde (definir o ajustar la regla, abrir la plantilla, completar la ficha, ver el PDF). En la
+ * cola, si el último intento falló en la pantalla, se avisa sin sacarlo de su lugar.
+ */
 export const BadgeFirma: React.FC<{ e?: EstadoArchivoFirma; ahora?: number }> = ({ e, ahora }) => {
+  const [preview, setPreview] = useState(false);
   if (!e || !e.estado) return <span className="text-xs text-gray-400">—</span>;
+  const linea = "mt-0.5 block max-w-[300px] truncate text-[10px]";
+  let debajo: React.ReactNode = null;
+  if (e.estado === "requiere_revision") {
+    const cat = categoriaDeTrabado(e.detalle);
+    const verificada = e.colocacion?.verificadaAt;
+    const accion = cat.accion.destino.startsWith("/") ? (
+      <Link to={cat.accion.destino} className="font-semibold text-blue-700 underline underline-offset-2 dark:text-blue-300">
+        {cat.accion.texto}
+      </Link>
+    ) : cat.accion.destino === "previsualizar" ? (
+      <button type="button" onClick={() => setPreview(true)} className="font-semibold text-blue-700 underline underline-offset-2 dark:text-blue-300">
+        {cat.accion.texto}
+      </button>
+    ) : (
+      <Link to="/dropbox-sign?tab=envio" className="font-semibold text-blue-700 underline underline-offset-2 dark:text-blue-300">
+        {cat.accion.texto}
+      </Link>
+    );
+    debajo = (
+      <>
+        <span className={`${linea} text-amber-800 dark:text-amber-300`} title={e.detalle}>
+          {e.detalle || cat.titulo}
+        </span>
+        <span className={`${linea} text-gray-500 dark:text-gray-400`}>
+          {verificada ? `verificado ${fmt(verificada)}` : "sin verificar"} · {accion}
+        </span>
+      </>
+    );
+  } else if (e.estado === "error" && e.detalle) {
+    debajo = (
+      <span className={`${linea} text-red-700 dark:text-red-300`} title={e.detalle}>
+        {e.detalle}
+      </span>
+    );
+  } else if ((e.estado === "en_cola" || e.estado === "limite") && e.ultimoIntento) {
+    debajo = (
+      <span className={`${linea} text-gray-500 dark:text-gray-400`} title={`Último intento (${fmt(e.ultimoIntento.at)}): ${e.ultimoIntento.detalle}. No se envió y sigue en la cola, en su lugar.`}>
+        <FontAwesomeIcon icon={faTriangleExclamation} className="mr-1 h-2.5 w-2.5 text-amber-500" />
+        último intento {fmt(e.ultimoIntento.at)} no salió: {e.ultimoIntento.detalle}
+      </span>
+    );
+  }
   return (
-    <span className="inline-flex items-center gap-1.5">
-      {badgeDe(e, ahora ?? Date.now())}
-      <IndicadorAncla e={e} />
+    <span className="inline-flex flex-col">
+      <span className="inline-flex items-center gap-1.5">
+        {badgeDe(e, ahora ?? Date.now())}
+        <IndicadorAncla e={e} />
+      </span>
+      {debajo}
+      {preview && <PrevisualizacionColocacion archivo={e.archivo} onClose={() => setPreview(false)} />}
     </span>
   );
 };
