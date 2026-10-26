@@ -98,7 +98,7 @@ export const ColaDeEnvioFirma: React.FC<{ vista: BotCola; actual: string | null;
         <span className="text-gray-600 dark:text-gray-300">
           <strong>{r.listos}</strong> listos · <strong className="text-green-700 dark:text-green-400">{r.entranAhora}</strong> entran en las próximas 24 h · <strong>{r.quedan}</strong> quedan para después
         </span>
-        {vista.ordenManual && <span className="rounded-full border border-blue-300 bg-blue-50 px-1.5 text-[10px] font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">orden manual</span>}
+        {vista.ordenManual ? <span className="rounded-full border border-blue-300 bg-blue-50 px-1.5 text-[10px] font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">orden manual</span> : <span className="rounded-full border border-gray-300 bg-gray-50 px-1.5 text-[10px] font-semibold text-gray-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300" title="Orden automático: por la fecha del archivo en el Outbox">más reciente primero</span>}
       </button>
       {abierta && (
         <div className="space-y-2 border-t border-gray-100 px-3 py-2 dark:border-gray-700">
@@ -116,7 +116,7 @@ export const ColaDeEnvioFirma: React.FC<{ vista: BotCola; actual: string | null;
               <FontAwesomeIcon icon={faArrowDown} /> Al fondo
             </button>
             {vista.ordenManual && (
-              <button type="button" className={btn} disabled={bloqueada || moviendo} onClick={() => void ordenAutomatico()} title="El orden en que se encolaron">
+              <button type="button" className={btn} disabled={bloqueada || moviendo} onClick={() => void ordenAutomatico()} title="De más reciente a menos reciente, por la fecha del archivo en el Outbox">
                 <FontAwesomeIcon icon={faRotateLeft} /> Volver al orden automático
               </button>
             )}

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { agruparTrabados, categoriaDeTrabado, cupoVentana24h, estadoDelPanel, type EntradaPanel } from "./colaFirma.js";
+import { agruparTrabados, categoriaDeTrabado, cupoVentana24h, estadoDelPanel, ordenPorRecientes, type EntradaPanel } from "./colaFirma.js";
 import { cupoDelDia, CONFIG_POR_DEFECTO } from "../services/dropboxSignBot/planificador.js";
 
 /** La cola de envío explicada (25/10/2026). Motivos tal como los escribe hoy el bot. */
@@ -58,4 +58,31 @@ describe("estado del panel, en castellano y con qué va a pasar", () => {
   it("nada para enviar: lleva a los trabados", () => assert.match(estadoDelPanel({ ...base, enCola: 0 }, ahora).texto, /6 trabado\(s\) → Revisar/));
   it("fuera de horario", () => assert.equal(estadoDelPanel({ ...base, horaDesde: 8, horaHasta: 22, horaActual: 23 }, ahora).tipo, "fuera_de_horario"));
   it("con el automático apagado: salen con «Enviar ahora»", () => assert.equal(estadoDelPanel({ ...base, envioAutomatico: false }, ahora).tipo, "manual"));
+});
+
+describe("ordenPorRecientes: la cola de más reciente a menos reciente", () => {
+  const it_ = (archivo: string, codigo: string, encoladoAt?: string) => ({ archivo, codigo, encoladoAt });
+  const fechas = new Map<string, string>([
+    ["viejo.pdf", "2026-10-12T10:00:00Z"],
+    ["nuevo.pdf", "2026-10-20T10:00:00Z"],
+    ["medio.pdf", "2026-10-17T10:00:00Z"],
+    ["gemelo-a.pdf", "2026-10-17T10:00:00Z"],
+  ]);
+  it("por fecha del archivo, la más nueva primero", () => {
+    const r = ordenPorRecientes([it_("viejo.pdf", "ID-000001"), it_("nuevo.pdf", "ID-000002"), it_("medio.pdf", "ID-000003")], fechas);
+    assert.deepEqual(r.map((x) => x.archivo), ["nuevo.pdf", "medio.pdf", "viejo.pdf"]);
+  });
+  it("a igual fecha, el código más alto primero", () => {
+    const r = ordenPorRecientes([it_("medio.pdf", "ID-000003"), it_("gemelo-a.pdf", "ID-000009")], fechas);
+    assert.deepEqual(r.map((x) => x.codigo), ["ID-000009", "ID-000003"]);
+  });
+  it("lo que no está en el Outbox va al final, por encolado más nuevo", () => {
+    const r = ordenPorRecientes([it_("fuera1.pdf", "ID-000050", "2026-10-01T00:00:00Z"), it_("viejo.pdf", "ID-000001"), it_("fuera2.pdf", "ID-000040", "2026-10-05T00:00:00Z")], fechas);
+    assert.deepEqual(r.map((x) => x.archivo), ["viejo.pdf", "fuera2.pdf", "fuera1.pdf"]);
+  });
+  it("no toca la lista original", () => {
+    const orig = [it_("viejo.pdf", "ID-000001"), it_("nuevo.pdf", "ID-000002")];
+    ordenPorRecientes(orig, fechas);
+    assert.equal(orig[0].archivo, "viejo.pdf");
+  });
 });

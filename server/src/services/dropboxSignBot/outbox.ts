@@ -16,14 +16,17 @@ import { nombreDeFirmante } from "./reglas.js";
 export type ConfigDropbox = NonNullable<ReturnType<typeof getTenantDropboxConfig>>;
 
 /** El Outbox del tenant: la carpeta y los PDFs que hay. */
-export async function leerOutbox(tenantId: string): Promise<{ outbox: string; archivos: string[]; cfg: ConfigDropbox }> {
+export async function leerOutbox(tenantId: string): Promise<{ outbox: string; archivos: string[]; cfg: ConfigDropbox; fechas: Map<string, string> }> {
   const tenant = await Tenant.findById(tenantId).lean();
   const cfg = getTenantDropboxConfig(tenant);
   if (!cfg) throw Object.assign(new Error("Dropbox no está conectado para esta organización."), { status: 400 });
   const outbox = await resolverCarpetaPorProposito("outbox");
   if (!outbox) throw Object.assign(new Error('No hay ninguna carpeta de Dropbox configurada como "Outbox".'), { status: 400 });
   const { entries } = await listFolder(tenantId, cfg, outbox);
-  return { outbox: outbox.replace(/\/$/, ""), archivos: entries.filter((e) => e.tag === "file" && /\.pdf$/i.test(e.name)).map((e) => e.name), cfg };
+  const pdfs = entries.filter((e) => e.tag === "file" && /\.pdf$/i.test(e.name));
+  // La fecha de cada archivo (la columna «Fecha» de Para Firmar): ordena la cola de más reciente a menos.
+  const fechas = new Map<string, string>(pdfs.filter((e) => e.serverModified).map((e) => [e.name, String(e.serverModified)]));
+  return { outbox: outbox.replace(/\/$/, ""), archivos: pdfs.map((e) => e.name), cfg, fechas };
 }
 
 /**

@@ -123,3 +123,19 @@ export function cupoVentana24h(tope: number, enviados: Date[], ahora = new Date(
   const liberaAt = cupo > 0 || recientes.length === 0 ? null : new Date(recientes[Math.max(0, recientes.length - tope)] + 24 * 3600_000);
   return { usados: recientes.length, cupo, liberaAt };
 }
+
+/**
+ * EL ORDEN AUTOMÁTICO DE LA COLA: DE MÁS RECIENTE A MENOS RECIENTE (pedido del 26/10/2026). Manda la
+ * fecha del archivo en el Outbox (la columna «Fecha» de Para Firmar). Lo que ya no está en el Outbox
+ * no tiene fecha y va al final, por encolado más nuevo. A igual fecha, el código más alto primero.
+ */
+export function ordenPorRecientes<T extends { archivo: string; codigo: string; encoladoAt?: Date | string | null }>(items: T[], fechas: Map<string, Date | string>): T[] {
+  const ms = (d: unknown) => (d ? new Date(d as any).getTime() || 0 : 0);
+  const num = (c: string) => Number(String(c || "").replace(/\D/g, "")) || 0;
+  return [...items].sort((a, b) => {
+    const fa = ms(fechas.get(a.archivo));
+    const fb = ms(fechas.get(b.archivo));
+    if (!!fa !== !!fb) return fa ? -1 : 1;
+    return fb - fa || (fa ? 0 : ms(b.encoladoAt) - ms(a.encoladoAt)) || num(b.codigo) - num(a.codigo);
+  });
+}
