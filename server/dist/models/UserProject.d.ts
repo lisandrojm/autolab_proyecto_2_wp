@@ -50,6 +50,8 @@ interface IContract {
     sueldo_bruto: number;
     reemplazo: boolean | null;
     empleado_id_reemplezado: number | null;
+    /** El motivo del reemplazo (catálogo de Novedades, `RequestConfig`), si `reemplazo`. */
+    motivoReemplazoId?: Types.ObjectId | null;
     observaciones: string;
     sede_id: number;
     rol_frame_id: number;

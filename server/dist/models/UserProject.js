@@ -22,6 +22,7 @@ const contractSchema = new Schema({
     sueldo_bruto: { type: Number },
     reemplazo: { type: Boolean },
     empleado_id_reemplezado: { type: Number },
+    motivoReemplazoId: { type: Schema.Types.ObjectId, ref: "RequestConfig", default: null },
     observaciones: { type: String },
     sede_id: { type: Number },
     rol_frame_id: { type: Number },

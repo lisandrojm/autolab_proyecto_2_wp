@@ -42,6 +42,7 @@ import { copiaParaOtroProyecto } from '../utils/copiaContratoVigente';
 import { useColorDeEstado } from '../components/EstadoSelect';
 import { CampoTipoContrato, ModalTipoContrato } from '../components/contratos/ModalTipoContrato';
 import { contratoFrameAPI, ContratoFrameItem, plantillaEsDeContrato, plantillaActivaParaFiltrar } from '../api/contratosFrame';
+import { activityLogTypesAPI, RequestConfig } from '../api/requestConfig';
 import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoDePlantilla, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from '../utils/tramiteImpositivo';
 // «Coordinador» pasó a ser un permiso (cargar novedades), no el nombre de un rol. Ver ese módulo.
 import { coordinaAreas, PROJECT_COORDINATOR } from '../utils/permisosMobile';
@@ -293,6 +294,17 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const [allEstados, setAllEstados] = useState<InfoItem[]>([]);
   const [allTiposContrato, setAllTiposContrato] = useState<InfoItem[]>([]);
   const [allRoleFrames, setAllRoleFrames] = useState<RoleFrameItem[]>([]);
+  /*
+    LOS MOTIVOS DEL REEMPLAZO (pedido del 26/10/2026), en Agregar, Configurar y Renovar miembro. Son los
+    de Novedades (`request-config`), con el mismo filtro que la app: activos y sin «horas extra».
+  */
+  const [motivosReemplazo, setMotivosReemplazo] = useState<RequestConfig[]>([]);
+  useEffect(() => {
+    activityLogTypesAPI
+      .getAll()
+      .then((tipos) => setMotivosReemplazo(tipos.filter((t) => t.isActive && !t.name.toLowerCase().includes('horas extra'))))
+      .catch(() => setMotivosReemplazo([]));
+  }, []);
   // Contratos (tipo real: jornadas/multiplicador/tiempo indeterminado) — lo que elige el wizard como
   // "Tipo de Contrato". Cada uno resuelve a una Plantilla (`contratoFrames`) para generar el PDF.
   const [contratos, setContratos] = useState<ContratoItem[]>([]);
@@ -444,6 +456,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     sede_id: '',
     reemplazo: false,
     empleado_id_reemplezado: '',
+    // El motivo del reemplazo: los MISMOS motivos de Novedades, igual que en la app (ver `motivosReemplazo`).
+    motivoReemplazoId: '',
     // Puesto desempeñado elegido para ESTE contrato (registro de 85). Vacío = hereda el que le toca.
     puestoDesempenado: '',
     observaciones: '',
@@ -2427,6 +2441,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           ...(Number(metaSolicitud.dailyRate) ? { sueldo_jornada: Number(metaSolicitud.dailyRate) } : {}),
           ...(metaSolicitud.isReplacement !== undefined ? { reemplazo: !!metaSolicitud.isReplacement } : {}),
           ...(metaSolicitud.empleado_id_reemplezado ? { empleado_id_reemplezado: String(metaSolicitud.empleado_id_reemplezado) } : {}),
+          // El motivo que eligió quien pidió el alta.
+          ...((metaSolicitud as any).motivoReemplazoId ? { motivoReemplazoId: String((metaSolicitud as any).motivoReemplazoId) } : {}),
         };
 
     /*
@@ -2510,6 +2526,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       sede_id: initialSedeId,
       reemplazo: lastContract?.reemplazo || false,
       empleado_id_reemplezado: lastContract?.empleado_id_reemplezado || '',
+      motivoReemplazoId: (lastContract as any)?.motivoReemplazoId ? String((lastContract as any).motivoReemplazoId) : '',
       // Un contrato NUEVO no arrastra la excepción del anterior: arranca heredando el que le toca.
       // Renovar sí lo conserva: es el mismo puesto, con otro período.
       puestoDesempenado: esContratoNuevo && !renovar ? '' : String((lastContract as any)?.puestoDesempenado || ''),
@@ -2646,6 +2663,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     if (erroresJornadasWizard.motivo || erroresJornadasWizard.nota) faltan.push('Motivo del ajuste de jornadas');
     // Lo exige el server; frenarlo acá dice QUÉ falta en vez de mostrar el 422 después de guardar.
     if (categoriaElegidaDeOtraValoracion && !motivoValoracion.trim()) faltan.push('Motivo de la categoría de otra valoración');
+    // Igual que en la app: un reemplazo dice a quién y por qué.
+    if (wizardData.reemplazo && motivosReemplazo.length > 0 && !wizardData.motivoReemplazoId) faltan.push('Motivo del reemplazo');
     /*
       LOS DÍAS QUE TRABAJA SON OBLIGATORIOS, no una sugerencia.
 
@@ -2753,6 +2772,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           */
           valoracionOverride: categoriaElegidaDeOtraValoracion && motivoValoracion.trim() ? { motivo: motivoValoracion.trim() } : undefined,
           empleado_id_reemplezado: wizardData.empleado_id_reemplezado ? Number(wizardData.empleado_id_reemplezado) : null,
+          // null (no "") para que Mongoose no falle al castear a ObjectId; sin reemplazo no hay motivo.
+          motivoReemplazoId: wizardData.reemplazo && wizardData.motivoReemplazoId ? wizardData.motivoReemplazoId : null,
           // Vacío = hereda. Sólo viaja un código cuando se eligió uno distinto del que le toca.
           puestoDesempenado: wizardData.puestoDesempenado || '',
           dias_por_semana: wizardData.dias_por_semana,
@@ -5164,7 +5185,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       checked={wizardData.reemplazo}
                       onChange={(e) => {
                         const checked = e.target.checked;
-                        setWizardData((prev) => ({ ...prev, reemplazo: checked, empleado_id_reemplezado: checked ? prev.empleado_id_reemplezado : '' }));
+                        setWizardData((prev) => ({ ...prev, reemplazo: checked, empleado_id_reemplezado: checked ? prev.empleado_id_reemplezado : '', motivoReemplazoId: checked ? prev.motivoReemplazoId : '' }));
                         if (!checked) setHerenciaReemplazo(null);
                       }}
                     />
@@ -5218,6 +5239,30 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         )}
                         <FontAwesomeIcon icon={faSearch} className="h-3 w-3 shrink-0 text-gray-400" />
                       </button>
+                    </div>
+                  )}
+
+                  {/* EL MOTIVO DEL REEMPLAZO: obligatorio cuando es reemplazo (como en la app). */}
+                  {wizardData.reemplazo && (
+                    <div className="space-y-1.5">
+                      <label htmlFor="motivoReemplazo" className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                        Motivo del reemplazo {motivosReemplazo.length > 0 && <span className="text-red-500">*</span>}
+                      </label>
+                      <select
+                        id="motivoReemplazo"
+                        value={wizardData.motivoReemplazoId}
+                        onChange={(e) => setWizardData((prev) => ({ ...prev, motivoReemplazoId: e.target.value }))}
+                        className={`input-field w-full py-2.5 ${!wizardData.motivoReemplazoId && motivosReemplazo.length > 0 ? 'border-red-400 dark:border-red-500' : ''}`}
+                      >
+                        <option value="">{motivosReemplazo.length ? 'Elegí el motivo…' : 'No hay motivos cargados en Novedades'}</option>
+                        {/* Un motivo guardado que ya no está activo se sigue mostrando, para no perderlo al guardar. */}
+                        {wizardData.motivoReemplazoId && !motivosReemplazo.some((m) => m._id === wizardData.motivoReemplazoId) && <option value={wizardData.motivoReemplazoId}>(motivo inactivo)</option>}
+                        {motivosReemplazo.map((m) => (
+                          <option key={m._id} value={m._id}>
+                            {m.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   )}
 
