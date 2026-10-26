@@ -381,7 +381,6 @@ async function scrollersEn(raiz) {
       [document.scrollingElement, ...document.querySelectorAll("body *")]
         .filter((el) => el && el.scrollHeight - el.clientHeight > 20)
         .map((el, i) => {
-          el.setAttribute("data-bot-scroller", String(i));
           const cls = typeof el.className === "string" ? el.className.trim().split(/\s+/).slice(0, 2).join(".") : "";
           return { i, desc: `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}${cls ? "." + cls : ""}`, scrollTop: Math.round(el.scrollTop), scrollHeight: Math.round(el.scrollHeight), clientHeight: Math.round(el.clientHeight) };
         })
@@ -390,20 +389,25 @@ async function scrollersEn(raiz) {
     .catch(() => []);
 }
 
-/** Mueve `dy` px el scroller marcado `i` por propiedad. Devuelve cuánto cambió su scrollTop. */
-async function moverScroller(raiz, i, dy) {
+/**
+ * Mueve `dy` px, por propiedad, el contenedor que está en el puesto `k` de `scrollersEn` (mismo filtro
+ * y mismo orden, recalculados acá: antes se lo marcaba con un atributo y, si React re-renderizaba el
+ * nodo, la marca se perdía y no se movía nada). Devuelve scrollTop antes y después.
+ */
+async function moverScroller(raiz, k, dy) {
   return raiz
     .evaluate(
-      ({ i, dy }) => {
-        const el = document.querySelector(`[data-bot-scroller="${i}"]`) || (i === 0 ? document.scrollingElement : null);
-        if (!el) return 0;
+      ({ k, dy }) => {
+        const lista = [document.scrollingElement, ...document.querySelectorAll("body *")].filter((el) => el && el.scrollHeight - el.clientHeight > 20).sort((a, b) => b.scrollHeight - b.clientHeight - (a.scrollHeight - a.clientHeight));
+        const el = lista[k];
+        if (!el) return { antes: 0, despues: 0 };
         const antes = el.scrollTop;
         el.scrollTop = antes + dy;
-        return el.scrollTop - antes;
+        return { antes: Math.round(antes), despues: Math.round(el.scrollTop) };
       },
-      { i, dy },
+      { k, dy },
     )
-    .catch(() => 0);
+    .catch(() => ({ antes: 0, despues: 0 }));
 }
 
 /**
@@ -473,6 +477,7 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
   let scrolleado = 0;
   let estadoScroll = "sin scroll";
   let scrollerLogueado = false;
+  let scrollExplicado = false;
   for (let i = 0; i < 6 && caja; i++) {
     const ed = await frameDelEditor(page);
     const arriba = Math.max(ed ? ed.caja.y : 0, 0) + 40;
@@ -486,7 +491,7 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
     }
     const d = geometria.pdfAPantalla(colocacion.puntoPdf, colocacion.tamanoPagina, caja);
     const escala = caja.w / anchoPt;
-    ultimo = { d, escala, arriba, abajo, frameTop: ed ? ed.caja.y : 0, frameAlto: ed ? ed.caja.h : alto };
+    ultimo = { d, escala, arriba, abajo, frameTop: ed ? ed.caja.y : 0, frameAlto: ed ? ed.caja.h : alto, anchoPx: caja.w, ventana: page.viewportSize()?.height || alto };
     if (i === 0) onProgreso(`Hoja medida: ${Math.round(caja.w)}×${Math.round(caja.h)} px en (${Math.round(caja.x)}, ${Math.round(caja.y)}); anchoPx ${Math.round(caja.w)}, anchoPt ${Math.round(anchoPt)}, escala ${escala.toFixed(3)} px/pt.`);
     // Éxito = el punto, medido AHORA, está dentro de lo visible del frame (y de la ventana), con margen.
     if (d.y > arriba && d.y < abajo && d.x > 0 && d.x < (page.viewportSize()?.width || 1457)) return { caja, destino: d, escala };
@@ -516,16 +521,27 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
         scrollerLogueado = true;
         onProgreso(`Contenedores con recorrido en ${donde}: ${sc.slice(0, 4).map((x) => `${x.desc} (scrollTop ${x.scrollTop}, scrollHeight ${x.scrollHeight}, clientHeight ${x.clientHeight})`).join(" · ")}`);
       }
-      for (const x of sc) {
-        const m = await moverScroller(raiz, x.i, dy);
-        if (Math.abs(m) < 2) continue;
+      const resultados = [];
+      for (const [k, x] of sc.entries()) {
+        const { antes, despues } = await moverScroller(raiz, k, dy);
+        const m = despues - antes;
+        if (Math.abs(m) < 2) {
+          resultados.push(`${x.desc}: scrollTop ${antes}→${despues} (no aceptó el cambio)`);
+          continue;
+        }
         const c = await seMovio();
         if (c) {
           movida = c;
-          r = { movio: m, estado: `por propiedad: ${x.desc} en ${donde} (scrollTop ${x.scrollTop + Math.round(m)} de ${x.scrollHeight - x.clientHeight})` };
+          r = { movio: m, estado: `por propiedad: ${x.desc} en ${donde} (scrollTop ${antes}→${despues} de ${x.scrollHeight - x.clientHeight})` };
           break;
         }
-        await moverScroller(raiz, x.i, -m); // no movió la hoja: se deja como estaba
+        // Se movió el contenedor pero la hoja no (o el editor lo devolvió): se deja como estaba.
+        const ahora = await moverScroller(raiz, k, -m);
+        resultados.push(`${x.desc}: scrollTop ${antes}→${despues} pero la hoja no se movió${ahora.antes !== despues ? ` (el editor lo devolvió a ${ahora.antes})` : ""}`);
+      }
+      if (!movida && resultados.length && !scrollExplicado) {
+        scrollExplicado = true;
+        onProgreso(`Scroll por propiedad en ${donde}, sin efecto: ${resultados.slice(0, 4).join(" · ")}`);
       }
     }
     if (!movida && ed) {
@@ -542,11 +558,34 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
     if (!movida && !ventanaAgrandada) {
       const vp = page.viewportSize() || { width: 1457, height: 812 };
       const nuevoAlto = Math.min(4000, Math.round(vp.height + Math.max(dy, 0) * 2 + 400));
+      const altoFrameAntes = ed ? ed.caja.h : vp.height;
       await page.setViewportSize({ width: vp.width, height: nuevoAlto });
       ventanaAgrandada = { ...vp };
-      await page.waitForTimeout(900);
       r = { movio: NaN, estado: `ventana agrandada de ${vp.height} a ${nuevoAlto} px de alto para que la página entre sin scrollear` };
       onProgreso(`Ningún scroll movió la hoja: ${r.estado}.`);
+      /*
+        EL RELAYOUT TARDA (26/10 15:54): se leía el frame con 674 px después de agrandar a 2058. Se espera
+        a que el iframe cambie de alto Y se estabilice (dos lecturas iguales a 300 ms), hasta 4 s; después
+        se re-miden frame y páginas, y esta vuelta no cuenta como intento.
+      */
+      const desde = Date.now();
+      let previo = null;
+      let estable = null;
+      while (Date.now() - desde < 4000) {
+        await page.waitForTimeout(300);
+        const e = await frameDelEditor(page);
+        const h = e ? e.caja.h : page.viewportSize()?.height || 0;
+        if (Math.abs(h - altoFrameAntes) >= 20 && previo !== null && Math.abs(h - previo) < 1) {
+          estable = h;
+          break;
+        }
+        previo = h;
+      }
+      if (estable === null) onProgreso(`resize_sin_efecto: en 4 s el editor siguió midiendo ${Math.round(previo ?? altoFrameAntes)} px de alto (antes ${Math.round(altoFrameAntes)}).`);
+      else onProgreso(`El editor se estiró: de ${Math.round(altoFrameAntes)} a ${Math.round(estable)} px de alto.`);
+      caja = await medirEstable(page, prop, indice);
+      i--; // la vuelta del agrandado no cuenta como intento: la que sigue mide con la geometría nueva
+      continue;
     } else if (!movida) r = { movio: 0, estado: "nada movió la hoja (propiedad, AvPág, rueda y ventana agrandada)" };
     if (Number.isFinite(r.movio)) scrolleado += Math.abs(r.movio);
     estadoScroll = r.estado;
@@ -555,7 +594,7 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
   }
   return {
     error: ultimo
-      ? `el lugar de la firma no quedó a la vista: re-medido, está en y ${Math.round(ultimo.d.y - ultimo.frameTop)} px del frame (alto del frame ${Math.round(ultimo.frameAlto)}; visible entre ${Math.round(ultimo.arriba - ultimo.frameTop)} y ${Math.round(ultimo.abajo - ultimo.frameTop)}); se scrollearon ${Math.round(scrolleado)} px; último scroll: ${estadoScroll}; escala ${ultimo.escala.toFixed(3)} px/pt, anchoPx ${caja ? Math.round(caja.w) : "?"}, anchoPt ${Math.round(anchoPt)}`
+      ? `el lugar de la firma no quedó a la vista: re-medido, está en y ${Math.round(ultimo.d.y - ultimo.frameTop)} px del frame (alto del frame ${Math.round(ultimo.frameAlto)}; visible entre ${Math.round(ultimo.arriba - ultimo.frameTop)} y ${Math.round(ultimo.abajo - ultimo.frameTop)}); se scrollearon ${Math.round(scrolleado)} px; último scroll: ${estadoScroll}; escala ${ultimo.escala.toFixed(3)} px/pt, anchoPx ${Math.round(ultimo.anchoPx)}, anchoPt ${Math.round(anchoPt)}; ventana ${Math.round(ultimo.ventana)} px de alto`
       : "la hoja dejó de medirse mientras se scrolleaba",
   };
 }
@@ -787,6 +826,27 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
       const vista = vista0 && !vista0.error ? vista0 : null;
       if (!vista) {
         motivoFalla = `No se pudo ubicar el lugar de la firma en el editor: ${vista0?.error || "sin detalle"}.`;
+        /*
+          DIAGNÓSTICO, SÓLO EN SECO (26/10/2026): aunque no se pueda llegar al lugar de la firma, se suelta
+          un campo de PRUEBA en el centro visible de la hoja, se loguea su HTML (para fijar el selector) y
+          se deshace. No se envía nada: es una corrida en seco y el documento sale igual sin enviarse.
+        */
+        if (enSeco && !htmlLogueado) {
+          const hoja = await medirCajaDePagina(page, colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho, 0);
+          const ed = await frameDelEditor(page);
+          if (hoja) {
+            const altoVisible = Math.min(ed ? ed.caja.y + ed.caja.h : 812, page.viewportSize()?.height || 812);
+            const y = Math.max(hoja.y + 60, Math.min(hoja.y + hoja.h / 2, altoVisible - 80));
+            const prueba = { x: hoja.x + hoja.w / 2, y };
+            hojaDelCampo = hoja;
+            await marcarDom(page);
+            onProgreso(`(diagnóstico en seco) Se suelta un campo de prueba en (${Math.round(prueba.x)}, ${Math.round(prueba.y)}) para ver su HTML; después se deshace.`);
+            await arrastrarFirma(page, prueba);
+            const n = await camposDeFirma(page, firmante.nombre, onProgreso);
+            if (n === 0) onProgreso(`(diagnóstico en seco) Tampoco apareció un campo en el centro de la hoja; bajo el puntero: ${await queHayEn(page, prueba)}.`);
+            else await apretar(page, "deshacer").catch(() => onProgreso("(diagnóstico en seco) No se encontró «Deshacer»: el campo de prueba queda en el borrador, que no se envía."));
+          }
+        }
         break;
       }
       const destino = vista.destino;
