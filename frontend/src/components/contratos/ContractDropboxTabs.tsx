@@ -117,6 +117,21 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
   // El hash de cada archivo: con eso, una verificación de un PDF que después cambió sale como desactualizada.
   const hashesDeArchivos = useMemo(() => Object.fromEntries(entries.filter((e) => e.contentHash).map((e) => [e.name, e.contentHash as string])), [entries]);
   const bot = useBotFirma(nombresDeArchivos, tipo === "para_firmar", hashesDeArchivos);
+  /** El archivo que se está volviendo a encolar desde su fila. */
+  const [reencolando, setReencolando] = useState<string | null>(null);
+  const reencolar = async (nombre: string) => {
+    setReencolando(nombre);
+    try {
+      const r = await dropboxSignBotAPI.encolar({ archivos: [nombre] });
+      if (r.encolados > 0) sweetAlert.success("De vuelta en la cola", nombre);
+      else sweetAlert.warning("No se pudo encolar", r.rechazados[0]?.motivo || "");
+      await bot.refrescar();
+    } catch (err: any) {
+      sweetAlert.error("No se pudo encolar", err?.response?.data?.error || err?.message || "");
+    } finally {
+      setReencolando(null);
+    }
+  };
   const enColaTotal = useMemo(() => [...bot.estados.values()].filter((e) => e.estado === "en_cola" || e.estado === "seco" || e.estado === "limite").length, [bot.estados]);
   const seleccionadosNombres = useMemo(() => entries.filter((e) => selected.has(e.path)).map((e) => e.name), [entries, selected]);
 
@@ -539,6 +554,12 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
                           sacar un archivo que se mandó mal.
                         */}
                         <>
+                            {/* VOLVER A ENCOLAR (26/10/2026): un documento en «Error» o «Requiere revisión» vuelve a la cola desde su fila. */}
+                            {tipo === "para_firmar" && ["error", "requiere_revision"].includes(bot.estados.get(e.name)?.estado || "") && (
+                              <button type="button" onClick={() => void reencolar(e.name)} disabled={reencolando === e.name} title="Volver a encolar (lo valida otra vez: tipo, firmante, que siga en Outbox)" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900/40 hover:text-green-700 dark:hover:text-green-400 transition-colors disabled:opacity-50">
+                                <FontAwesomeIcon icon={reencolando === e.name ? faSpinner : faRotateRight} spin={reencolando === e.name} className="h-4 w-4" />
+                              </button>
+                            )}
                             <button type="button" onClick={() => descargar(e)} disabled={descargando === e.path} title="Descargar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50">
                               <FontAwesomeIcon icon={descargando === e.path ? faSpinner : faDownload} spin={descargando === e.path} className="h-4 w-4" />
                             </button>

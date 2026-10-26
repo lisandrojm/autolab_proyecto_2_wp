@@ -314,18 +314,75 @@ async function cerrarAvisoDeCookies(page) {
 }
 
 /** Mueve el visor hasta que el punto de pantalla quede a la vista (la caja de la página cambia con el scroll). */
-async function traerALaVista(page, colocacion, geometria) {
-  let caja = await medirCajaDePagina(page, colocacion.tamanoPagina ? colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho : null);
-  for (let i = 0; i < 4 && caja; i++) {
-    const d = geometria.pdfAPantalla(colocacion.puntoPdf, colocacion.tamanoPagina, caja);
-    const alto = page.viewportSize()?.height || 812;
-    if (d.y > 120 && d.y < alto - 80) return { caja, destino: d };
-    await page.mouse.move(caja.x + caja.w / 2, Math.min(Math.max(caja.y + 50, 150), alto - 100));
-    await page.mouse.wheel(0, d.y - alto / 2);
-    await page.waitForTimeout(700);
-    caja = await medirCajaDePagina(page, colocacion.tamanoPagina ? colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho : null);
+/** Scrollea `dy` px el contenedor que de verdad scrollea (el más alto con overflow), dentro de `raiz`. Devuelve cuánto se movió. */
+async function scrollearEn(raiz, dy) {
+  return raiz
+    .evaluate((delta) => {
+      const candidatos = [document.scrollingElement, ...Array.from(document.querySelectorAll("body *")).filter((el) => {
+        const e = getComputedStyle(el);
+        return /(auto|scroll|overlay)/.test(e.overflowY) && el.scrollHeight > el.clientHeight + 5;
+      })].filter(Boolean);
+      const el = candidatos.sort((a, b) => b.clientHeight - a.clientHeight).find((x) => x.scrollHeight > x.clientHeight + 5);
+      if (!el) return 0;
+      const antes = el.scrollTop;
+      el.scrollTop = antes + delta;
+      return el.scrollTop - antes;
+    }, dy)
+    .catch(() => 0);
+}
+
+/** La caja de la hoja, medida dos veces a 300 ms: el editor la redimensiona al terminar de dibujar. */
+async function medirEstable(page, proporcion) {
+  let previa = await medirCajaDePagina(page, proporcion);
+  for (let i = 0; i < 5 && previa; i++) {
+    await page.waitForTimeout(300);
+    const ahora = await medirCajaDePagina(page, proporcion);
+    if (!ahora) return previa;
+    if (Math.abs(ahora.w - previa.w) < 1 && Math.abs(ahora.h - previa.h) < 1 && Math.abs(ahora.y - previa.y) < 1) return ahora;
+    previa = ahora;
   }
-  return null;
+  return previa;
+}
+
+/**
+ * TRAE EL LUGAR DE LA FIRMA A LA VISTA (26/10/2026). Antes se scrolleaba con la rueda del mouse y, si
+ * el editor (dentro de un iframe) no se movía, a los 4 intentos salía «No se pudo medir la página
+ * renderizada» con la hoja ya encontrada. Ahora: medición estable; el área visible es la del IFRAME
+ * del editor (no la ventana entera); se scrollea el contenedor que realmente scrollea, dentro del
+ * editor o de la página, y la rueda queda de respaldo. Devuelve `{ caja, destino, escala }` o
+ * `{ error }` con los números (anchoPx, anchoPt, escala, dónde quedó el punto) para el log.
+ */
+export async function traerALaVista(page, colocacion, geometria, onProgreso = () => {}) {
+  const prop = colocacion.tamanoPagina ? colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho : null;
+  const alto = page.viewportSize()?.height || 812;
+  let caja = await medirEstable(page, prop);
+  if (!caja) return { error: "no se encontró la hoja en el editor (ni en la página ni dentro del iframe)" };
+  const anchoPt = colocacion.tamanoPagina.ancho;
+  let ultimo = null;
+  for (let i = 0; i < 6 && caja; i++) {
+    const ed = await frameDelEditor(page);
+    const arriba = Math.max(ed ? ed.caja.y : 0, 0) + 40;
+    const abajo = Math.min(ed ? ed.caja.y + ed.caja.h : alto, alto) - 40;
+    const d = geometria.pdfAPantalla(colocacion.puntoPdf, colocacion.tamanoPagina, caja);
+    const escala = caja.w / anchoPt;
+    ultimo = { d, escala };
+    if (i === 0) onProgreso(`Hoja medida: ${Math.round(caja.w)}×${Math.round(caja.h)} px en (${Math.round(caja.x)}, ${Math.round(caja.y)}); anchoPx ${Math.round(caja.w)}, anchoPt ${Math.round(anchoPt)}, escala ${escala.toFixed(3)} px/pt.`);
+    if (d.y > arriba && d.y < abajo && d.x > 0 && d.x < (page.viewportSize()?.width || 1457)) return { caja, destino: d, escala };
+    const dy = Math.round(d.y - (arriba + abajo) / 2);
+    let movio = ed ? await scrollearEn(ed.frame, dy) : 0;
+    if (Math.abs(movio) < 2) movio = await scrollearEn(page, dy);
+    if (Math.abs(movio) < 2) {
+      await page.mouse.move(caja.x + caja.w / 2, Math.min(Math.max(arriba + 20, 150), abajo - 20));
+      await page.mouse.wheel(0, dy);
+    }
+    await page.waitForTimeout(600);
+    caja = await medirEstable(page, prop);
+  }
+  return {
+    error: ultimo
+      ? `el lugar de la firma no se pudo traer a la vista (quedó en y=${Math.round(ultimo.d.y)} px; escala ${ultimo.escala.toFixed(3)} px/pt, anchoPx ${caja ? Math.round(caja.w) : "?"}, anchoPt ${Math.round(anchoPt)})`
+      : "la hoja dejó de medirse mientras se scrolleaba",
+  };
 }
 
 /** La caja (px) del campo de firma colocado, si el DOM lo expone. */
@@ -475,9 +532,10 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
     let colocado = false;
     let motivoFalla = "";
     for (let intento = 1; intento <= 2 && !colocado; intento++) {
-      const vista = await traerALaVista(page, colocacion, geometria);
+      const vista0 = await traerALaVista(page, colocacion, geometria, onProgreso);
+      const vista = vista0 && !vista0.error ? vista0 : null;
       if (!vista) {
-        motivoFalla = "No se pudo medir la página renderizada en el editor.";
+        motivoFalla = `No se pudo ubicar el lugar de la firma en el editor: ${vista0?.error || "sin detalle"}.`;
         break;
       }
       const destino = vista.destino;
@@ -515,7 +573,7 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
     if (!colocado) {
       const img = await captura();
       await salirSinEnviar(page);
-      return { resultado: "requiere_revision", detalle: `No se pudo verificar un único campo «Firma de <NOMBRE>» en el lugar esperado (${motivoFalla}): no se envió.`, captura: img };
+      return { resultado: "requiere_revision", detalle: `No se pudo verificar un único campo «Firma de ${firmante.nombre}» en el lugar esperado (${motivoFalla}): no se envió.`, captura: img };
     }
     await apretar(page, "siguiente");
 
