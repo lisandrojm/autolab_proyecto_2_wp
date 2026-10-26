@@ -22,7 +22,7 @@
  */
 
 /** Qué versión del motor corre: aparece en el log de cada corrida. Se actualiza con cada cambio del motor. */
-export const VERSION_MOTOR = "2026-10-26 c · páginas por «page--» con la hoja encajada (A4 en caja Letter) · campo + envoltorio = 1 · captura de la colocación en seco";
+export const VERSION_MOTOR = "2026-10-26 d · campo por data-testid=field-signature + data-signer · verificación por porcentaje · img fill = escala por eje";
 
 export const MANAGE_URL = "https://app.sign.dropbox.com/home/manage";
 /** Dónde está el ítem «Firma» del panel de campos, en 1457×812. */
@@ -252,9 +252,17 @@ async function paginasEn(raiz, proporcion, pista = null, total = 0) {
         if (medios[0]) {
           const { m, r } = medios[0];
           const caja = { x: r.left, y: r.top, w: r.width, h: r.height };
-          const nat = m.tagName === "IMG" && m.naturalWidth ? m.naturalHeight / m.naturalWidth : m.tagName === "CANVAS" && m.width ? m.height / m.width : null;
-          const fit = getComputedStyle(m).objectFit;
-          return { ...(nat && (fit === "contain" || fit === "scale-down") ? encajar(caja, nat) : caja), via: `${m.tagName.toLowerCase()} interior${nat ? ` (${fit || "fill"})` : ""}` };
+          const natW = m.tagName === "IMG" ? m.naturalWidth : m.tagName === "CANVAS" ? m.width : 0;
+          const natH = m.tagName === "IMG" ? m.naturalHeight : m.tagName === "CANVAS" ? m.height : 0;
+          const nat = natW ? natH / natW : null;
+          const fit = getComputedStyle(m).objectFit || "fill";
+          const contiene = nat && (fit === "contain" || fit === "scale-down");
+          /*
+            `fill` (26/10 17:49): la imagen ocupa la caja entera y el editor guarda la posición del campo en
+            PORCENTAJES DE ESA CAJA (left/top/width/height): la caja completa es la página, con escala
+            distinta en cada eje. `contain`: la hoja va encajada con márgenes.
+          */
+          return { ...(contiene ? encajar(caja, nat) : caja), via: `${m.tagName.toLowerCase()} interior (${fit}${natW ? `, natural ${natW}×${natH}` : ""})`, anisotropica: !contiene };
         }
         return { ...encajar(marco, prop), via: "PDF encajado en la caja" };
       };
@@ -265,7 +273,7 @@ async function paginasEn(raiz, proporcion, pista = null, total = 0) {
         const marco = { x: r.left, y: r.top, w: r.width, h: r.height };
         if (porElemento.some((u) => Math.abs(u.marco.x - marco.x) < 3 && Math.abs(u.marco.y - marco.y) < 3)) continue;
         const c = contenidoDe(marco, el);
-        porElemento.push({ x: c.x, y: c.y, w: c.w, h: c.h, marco, via: c.via });
+        porElemento.push({ x: c.x, y: c.y, w: c.w, h: c.h, marco, via: c.via, anisotropica: !!c.anisotropica });
       }
       if (porElemento.length) return { paginas: porElemento.sort((a, b) => a.y - b.y), origen: "elementos-pagina" };
       const visible = (el, r) => {
@@ -566,8 +574,9 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
   let caja = await medirEstable(page, prop, indice, total);
   if (!caja) return { error: "no se encontró la hoja en el editor (ni en la página ni dentro del iframe)" };
   // La escala tiene que cerrar en los DOS ejes contra el tamaño real del PDF (±1 %).
-  if (Math.abs(caja.w / anchoPt - caja.h / altoPt) / (caja.w / anchoPt) > 0.01) return { error: `escala_no_cierra: el contenido medido (${Math.round(caja.w)}×${Math.round(caja.h)} px, proporción ${(caja.w / caja.h).toFixed(3)}) no corresponde a una página de ${Math.round(anchoPt)}×${Math.round(altoPt)} pt (proporción ${(anchoPt / altoPt).toFixed(3)}): escala ${(caja.w / anchoPt).toFixed(3)} en x y ${(caja.h / altoPt).toFixed(3)} en y` };
-  if (Math.abs(caja.h / (caja.w / anchoPt) - altoPt) > 2) return { error: `hoja_medida_es_contenedor: la caja medida (${Math.round(caja.w)}×${Math.round(caja.h)} px) no es una página: ${(caja.h / (caja.w * (altoPt / anchoPt))).toFixed(2)} páginas de alto` };
+  if (caja.anisotropica) onProgreso(`La imagen de la página está en «fill»: se usa la escala de cada eje (${(caja.w / anchoPt).toFixed(3)} en x, ${(caja.h / altoPt).toFixed(3)} en y), igual que los porcentajes con que el editor guarda el campo.`);
+  else if (Math.abs(caja.w / anchoPt - caja.h / altoPt) / (caja.w / anchoPt) > 0.01) return { error: `escala_no_cierra: el contenido medido (${Math.round(caja.w)}×${Math.round(caja.h)} px, proporción ${(caja.w / caja.h).toFixed(3)}) no corresponde a una página de ${Math.round(anchoPt)}×${Math.round(altoPt)} pt (proporción ${(anchoPt / altoPt).toFixed(3)}): escala ${(caja.w / anchoPt).toFixed(3)} en x y ${(caja.h / altoPt).toFixed(3)} en y` };
+  if (!caja.anisotropica && Math.abs(caja.h / (caja.w / anchoPt) - altoPt) > 2) return { error: `hoja_medida_es_contenedor: la caja medida (${Math.round(caja.w)}×${Math.round(caja.h)} px) no es una página: ${(caja.h / (caja.w * (altoPt / anchoPt))).toFixed(2)} páginas de alto` };
   let ultimo = null;
   let scrolleado = 0;
   let estadoScroll = "sin scroll";
@@ -769,7 +778,23 @@ async function camposNuevos(page) {
             const cy = r.top + off.y + r.height / 2;
             return cx >= hoja.x && cx <= hoja.x + hoja.w && cy >= hoja.y && cy <= hoja.y + hoja.h;
           };
+          /*
+            POR SU NATURALEZA PRIMERO (17:49): el editor marca el campo con data-testid="field-signature"
+            (y el firmante con data-signer). Si hay alguno NUEVO, son ésos y nada más; los tooltips
+            («dig-Tooltip») nunca cuentan.
+          */
+          const porTestid = Array.from(document.querySelectorAll('[data-testid="field-signature"]:not([data-bot-visto]), [data-qa-ref="field-signature"]:not([data-bot-visto])')).filter((el, i, arr) => arr.indexOf(el) === i && !el.closest('[class*="Tooltip"]'));
+          if (porTestid.length) {
+            porTestid[0].setAttribute("data-bot-campo", "1");
+            return porTestid.map((el) => {
+              const r = el.getBoundingClientRect();
+              const st = el.style;
+              const num = (v) => (v === "" ? null : parseFloat(v));
+              return { x: r.left + off.x, y: r.top + off.y, w: r.width, h: r.height, html: el.outerHTML.replace(/\s+/g, " ").slice(0, 600), envoltorio: "", firmante: el.getAttribute("data-signer") || "", pct: { left: num(st.left), top: num(st.top), width: num(st.width), height: num(st.height) } };
+            });
+          }
           const nuevos = Array.from(document.querySelectorAll("body *:not([data-bot-visto])")).filter((el) => {
+            if (el.closest('[class*="Tooltip"]') || /tooltip/i.test(String(el.className || ""))) return false;
             const r = el.getBoundingClientRect();
             const e = getComputedStyle(el);
             return r.width >= 20 && r.height >= 10 && r.width <= 600 && r.height <= 300 && e.display !== "none" && e.visibility !== "hidden" && dentro(r);
@@ -812,8 +837,10 @@ async function camposNuevos(page) {
 }
 
 /** Cuántos campos de firma se colocaron (lo nuevo sobre la hoja). `nombre` queda para el log. */
+let ultimosCampos = [];
 async function camposDeFirma(page, nombre, onProgreso = () => {}) {
   const { campos } = await camposNuevos(page);
+  ultimosCampos = campos;
   if (campos.length && !htmlLogueado) {
     htmlLogueado = true;
     campos.slice(0, 2).forEach((c, k) => onProgreso(`HTML del campo colocado${campos.length > 1 ? ` (${k + 1}/${campos.length})` : ""}: ${c.html}${c.envoltorio ? ` · ENVOLTORIO: ${c.envoltorio}` : ""}`));
@@ -1017,7 +1044,26 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
         n = await camposDeFirma(page, firmante.nombre, onProgreso);
       }
       if (n !== 1) motivoFalla = n === 0 ? `No apareció ningún campo nuevo sobre la hoja después de soltar «Firma» en (${Math.round(destino.x)}, ${Math.round(destino.y)}); página ${Math.round(vista.caja.w)}×${Math.round(vista.caja.h)} en (${Math.round(vista.caja.x)}, ${Math.round(vista.caja.y)}); bajo el puntero: ${await queHayEn(page, destino)}; el arrastre salió de ${await origenFirma(page).then((o) => `(${Math.round(o.x)}, ${Math.round(o.y)})`)}.` : `Aparecieron ${n} campos nuevos sobre la hoja; tiene que ser exactamente 1.`;
-      else {
+      else if (ultimosCampos[0]?.pct && Number.isFinite(ultimosCampos[0].pct.left) && Number.isFinite(ultimosCampos[0].pct.top)) {
+        /*
+          VERIFICACIÓN POR PORCENTAJE (17:49): el editor guarda el campo en % de la página (left/top/width/
+          height del style). Se compara el CENTRO con el del campo pedido en el PDF (y desde arriba), con
+          ±1 % de tolerancia: exacto, no depende del render, del zoom ni de que el campo esté a la vista.
+        */
+        const { pct, firmante: signer } = ultimosCampos[0];
+        const tp = colocacion.tamanoPagina;
+        const cx = pct.left + (pct.width || 0) / 2;
+        const cy = pct.top + (pct.height || 0) / 2;
+        const ex = ((colocacion.campo.x + colocacion.campo.w / 2) / tp.ancho) * 100;
+        const ey = ((colocacion.campo.y + colocacion.campo.h / 2) / tp.alto) * 100;
+        const dx = Math.abs(cx - ex);
+        const dyp = Math.abs(cy - ey);
+        const detallePct = `centro (${cx.toFixed(2)} %, ${cy.toFixed(2)} %) contra lo pedido (${ex.toFixed(2)} %, ${ey.toFixed(2)} %); ancho ${pct.width?.toFixed(2)} % (pedido ${((colocacion.campo.w / tp.ancho) * 100).toFixed(2)} %)${signer ? `; firmante ${signer}` : ""}`;
+        if (dx <= 1 && dyp <= 1) {
+          onProgreso(`Campo verificado por porcentaje: ${detallePct}.`);
+          colocado = true;
+        } else motivoFalla = `El campo quedó fuera de lo pedido: ${detallePct} (tolerancia ±1 %).`;
+      } else {
         const centro = await centroDelCampo(page);
         const cajaAhora = (await medirCajaDePagina(page, propPag, Number(colocacion.paginaIndex) || 0)) || vista.caja;
         if (!centro) {
@@ -1109,4 +1155,4 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
 }
 
 /** Sólo para pruebas de la geometría y del reconocimiento del campo (no son parte del flujo). */
-export const _paraPruebas = { traerALaVista, marcarDom, arrastrarFirma, camposDeFirma, cajaDelCampo, setHoja: (c) => (hojaDelCampo = c) };
+export const _paraPruebas = { traerALaVista, marcarDom, arrastrarFirma, camposDeFirma, cajaDelCampo, setHoja: (c) => (hojaDelCampo = c), ultimos: () => ultimosCampos };
