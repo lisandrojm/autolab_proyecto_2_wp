@@ -478,8 +478,10 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
   let estadoScroll = "sin scroll";
   let scrollerLogueado = false;
   let scrollExplicado = false;
+  let scrollProbado = false;
   for (let i = 0; i < 6 && caja; i++) {
     const ed = await frameDelEditor(page);
+    onProgreso(`intento ${i + 1}: ventana ${page.viewportSize()?.height || "?"} px de alto, frame ${ed ? `${Math.round(ed.caja.h)} px en y ${Math.round(ed.caja.y)}` : "sin iframe"}, hoja ${Math.round(caja.w)}×${Math.round(caja.h)} en (${Math.round(caja.x)}, ${Math.round(caja.y)}).`);
     const arriba = Math.max(ed ? ed.caja.y : 0, 0) + 40;
     const altoAhora = page.viewportSize()?.height || alto;
     const abajo = Math.min(ed ? ed.caja.y + ed.caja.h : altoAhora, altoAhora) - 40;
@@ -514,7 +516,11 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
     };
     let movida = null;
     let r = { movio: 0, estado: "" };
-    for (const [raiz, donde] of [[ed?.frame, "editor"], [page, "página"]]) {
+    // UNA sola pasada de scroll (16:21: la hoja no scrollea por ningún contenedor; sólo el panel izquierdo
+    // acepta moverse): si no sirvió la primera vez, directo al agrandado, sin gastar vueltas.
+    const probarScroll = !scrollProbado;
+    scrollProbado = true;
+    for (const [raiz, donde] of probarScroll ? [[ed?.frame, "editor"], [page, "página"]] : []) {
       if (!raiz || movida) continue;
       const sc = await scrollersEn(raiz);
       if (!scrollerLogueado && sc.length) {
@@ -544,12 +550,12 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
         onProgreso(`Scroll por propiedad en ${donde}, sin efecto: ${resultados.slice(0, 4).join(" · ")}`);
       }
     }
-    if (!movida && ed) {
+    if (!movida && ed && probarScroll) {
       await ed.frame.locator("body").press(dy > 0 ? "PageDown" : "PageUp").catch(() => {});
       movida = await seMovio();
       if (movida) r = { movio: NaN, estado: `tecla ${dy > 0 ? "AvPág" : "RePág"} en el editor` };
     }
-    if (!movida) {
+    if (!movida && probarScroll) {
       await page.mouse.move(enPagina.x, enPagina.y);
       await page.mouse.wheel(0, dy);
       movida = await seMovio();
@@ -583,7 +589,18 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
       }
       if (estable === null) onProgreso(`resize_sin_efecto: en 4 s el editor siguió midiendo ${Math.round(previo ?? altoFrameAntes)} px de alto (antes ${Math.round(altoFrameAntes)}).`);
       else onProgreso(`El editor se estiró: de ${Math.round(altoFrameAntes)} a ${Math.round(estable)} px de alto.`);
-      caja = await medirEstable(page, prop, indice);
+      // Re-medir la hoja con la geometría nueva; el editor puede tardar en redibujarla (hasta 3 s).
+      caja = null;
+      for (const desdeHoja = Date.now(); !caja && Date.now() - desdeHoja < 3000; ) {
+        caja = await medirEstable(page, prop, indice);
+        if (!caja) await page.waitForTimeout(400);
+      }
+      estadoScroll = r.estado;
+      if (!caja) {
+        const ed2 = await frameDelEditor(page);
+        const grandes = ed2 ? await elementosGrandes(ed2.frame) : await elementosGrandes(page);
+        return { error: `hoja_perdida_tras_estirar: después de agrandar la ventana (${page.viewportSize()?.height} px) y de que el editor se estirara (${ed2 ? Math.round(ed2.caja.h) : "?"} px), no se volvió a encontrar la hoja. Dentro del editor: ${grandes.join(" · ") || "ningún elemento grande"}` };
+      }
       i--; // la vuelta del agrandado no cuenta como intento: la que sigue mide con la geometría nueva
       continue;
     } else if (!movida) r = { movio: 0, estado: "nada movió la hoja (propiedad, AvPág, rueda y ventana agrandada)" };
@@ -616,11 +633,22 @@ async function centroDelCampo(page) {
   todo campo de firma es de él. El HTML del campo se loguea una vez para poder elegir un selector fijo.
 */
 let hojaDelCampo = null;
+/** Alto de ventana con el que se trabaja en el editor: la página 1 de una A4 (~1326 px a escala 1,575) entra entera. */
+const ALTO_EDITOR = 2100;
+async function asegurarVentanaAlta(page, onProgreso = () => {}) {
+  const vp = page.viewportSize() || { width: 1457, height: 812 };
+  if (vp.height >= ALTO_EDITOR) return;
+  await page.setViewportSize({ width: vp.width, height: ALTO_EDITOR });
+  await page.waitForTimeout(500);
+  onProgreso(`Ventana del navegador en ${vp.width}×${ALTO_EDITOR} (antes ${vp.height} de alto) para que la hoja entre sin scrollear; queda así para toda la tanda.`);
+}
+
 /** Si se agrandó la ventana para que la hoja entrara: el tamaño original, para restaurarlo. */
 let ventanaAgrandada = null;
 async function restaurarVentana(page) {
   if (!ventanaAgrandada) return;
-  await page.setViewportSize(ventanaAgrandada).catch(() => {});
+  // Nunca por debajo del alto de trabajo del editor: la ventana alta queda para toda la tanda.
+  await page.setViewportSize({ width: ventanaAgrandada.width, height: Math.max(ventanaAgrandada.height, ALTO_EDITOR) }).catch(() => {});
   ventanaAgrandada = null;
   await page.waitForTimeout(500);
 }
@@ -799,6 +827,9 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
     if (nombreLeido !== firmante.nombre || emailLeido.toLowerCase() !== firmante.email.toLowerCase()) throw new Error("El formulario de firmantes no tomó el nombre o el email.");
     await apretar(page, "siguiente");
 
+    // LA VENTANA ALTA, DE ENTRADA (26/10 16:21): la hoja del editor no scrollea por ningún contenedor;
+    // con la ventana en ALTO_EDITOR la página 1 entra entera y no hay scroll que pelear.
+    await asegurarVentanaAlta(page, onProgreso);
     onProgreso("Esperando el editor de campos…");
     await esperarTexto(page, /insertar campos|campos/i, ESPERA_EDITOR_MS, "el editor «Insertar campos»");
     await cerrarAvisoDeCookies(page);
@@ -834,6 +865,7 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
         if (enSeco && !htmlLogueado) {
           const hoja = await medirCajaDePagina(page, colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho, 0);
           const ed = await frameDelEditor(page);
+          if (!hoja) onProgreso(`(diagnóstico en seco) No se pudo soltar el campo de prueba: no se encuentra la hoja. Dentro del editor: ${ed ? (await elementosGrandes(ed.frame)).join(" · ") || "ningún elemento grande" : "sin iframe"}.`);
           if (hoja) {
             const altoVisible = Math.min(ed ? ed.caja.y + ed.caja.h : 812, page.viewportSize()?.height || 812);
             const y = Math.max(hoja.y + 60, Math.min(hoja.y + hoja.h / 2, altoVisible - 80));
