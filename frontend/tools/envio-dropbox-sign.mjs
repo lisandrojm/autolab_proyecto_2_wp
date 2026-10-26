@@ -41,7 +41,7 @@ export const BOTONES = {
   tab_campos: { rol: ["tab", "button"], nombre: /^campos$/i, descripcion: "panel de campos en el editor" },
   ultima_miniatura: { css: '[class*="thumbnail" i], [data-testid*="thumbnail" i], [data-qa*="thumbnail" i], [class*="page-preview" i]', ultimo: true, descripcion: "la última página del documento" },
   deshacer: { rol: ["button"], nombre: /^(deshacer|undo)$/i, descripcion: "deshace el último campo colocado" },
-  rechazar_cookies: { rol: ["button"], nombre: /^\s*(rechazar|rechazar todo|reject|reject all|decline)\s*$/i, descripcion: "cierra el aviso de cookies (lo que menos comparte)" },
+  rechazar_cookies: { rol: ["button"], nombre: /^\s*(rechazar|rechazar todo|rechazar todas|reject|reject all|decline|decline all)\s*$/i, descripcion: "cierra el aviso de cookies (lo que menos comparte)" },
   agregar_cc: { rol: ["button"], nombre: /agregar un destinatario en cc/i, descripcion: "abre el campo de CC en «Revisar y enviar»" },
 };
 
@@ -52,6 +52,54 @@ export const IRREVERSIBLE = { rol: ["button"], nombre: /^enviar para firmar$/i }
 const SELECTOR_CAMPO = '[aria-label*="Firma de" i], [title*="Firma de" i]';
 
 const texto = (page) => page.evaluate(() => document.body?.innerText || "").catch(() => "");
+
+/*
+  EL EDITOR VIVE EN UN IFRAME (26/10/2026, volcado real: «iframe.iframe 1457×674» dentro de
+  «…prep-and-send-index__pageContent…», y aparte «iframe#ccpa-iframe 600×260», el banner de cookies).
+  La hoja, el campo «Firma de …» y los botones del editor están ADENTRO: buscarlos en el documento
+  raíz esperaba 120 s por algo que estaba listo. `frameDelEditor` elige el iframe grande (≥ 600 px de
+  ancho), nunca el del banner, y devuelve su Frame. Las coordenadas que dan `boundingBox()` y las de
+  `medirCajaDePagina` quedan en el sistema de la PÁGINA (se suma la caja del iframe), así el mouse
+  sigue funcionando igual.
+*/
+const NO_ES_EDITOR = /ccpa|cookie|consent|onetrust|captcha|recaptcha/i;
+async function frameDelEditor(page) {
+  const iframes = await page.$$("iframe").catch(() => []);
+  let mejor = null;
+  for (const el of iframes) {
+    const id = `${(await el.getAttribute("id").catch(() => "")) || ""} ${(await el.getAttribute("class").catch(() => "")) || ""} ${(await el.getAttribute("src").catch(() => "")) || ""}`;
+    if (NO_ES_EDITOR.test(id)) continue;
+    const b = await el.boundingBox().catch(() => null);
+    if (!b || b.width < 600 || b.height < 300) continue;
+    if (!mejor || b.width * b.height > mejor.area) mejor = { el, b, area: b.width * b.height };
+  }
+  if (!mejor) return null;
+  const frame = await mejor.el.contentFrame().catch(() => null);
+  if (!frame) return null;
+  await frame.waitForLoadState("domcontentloaded", { timeout: 10000 }).catch(() => {});
+  return { frame, caja: { x: mejor.b.x, y: mejor.b.y, w: mejor.b.width, h: mejor.b.height } };
+}
+
+/** El texto de la página MÁS el del editor (los rótulos «Firma de …» están adentro del iframe). */
+const textoConEditor = async (page) => {
+  const ed = await frameDelEditor(page);
+  const deEditor = ed ? await ed.frame.evaluate(() => document.body?.innerText || "").catch(() => "") : "";
+  return `${await texto(page)}\n${deEditor}`;
+};
+
+/** Los iframes de la pantalla (para el diagnóstico): src, tamaño y si se ven. */
+async function iframesDe(page) {
+  return page
+    .evaluate(() =>
+      Array.from(document.querySelectorAll("iframe")).map((f) => {
+        const r = f.getBoundingClientRect();
+        const e = getComputedStyle(f);
+        const visible = r.width > 0 && r.height > 0 && e.display !== "none" && e.visibility !== "hidden" && Number(e.opacity) > 0;
+        return `iframe${f.id ? "#" + f.id : ""}${f.className ? "." + String(f.className).trim().split(/\s+/)[0] : ""} ${Math.round(r.width)}×${Math.round(r.height)} ${visible ? "visible" : "oculto"} src=${(f.getAttribute("src") || "(sin src)").split("?")[0].slice(0, 80)}`;
+      }),
+    )
+    .catch(() => []);
+}
 const cortar = (señal, paso) => {
   if (señal?.cortada) throw Object.assign(new Error(`Detenida por pedido antes de ${paso}.`), { detenido: true });
 };
@@ -73,9 +121,17 @@ function ubicar(page, clave) {
 }
 
 /** Aprieta un botón de la lista blanca. ÚNICO click no irreversible del motor. */
-async function apretar(page, clave) {
-  const { loc, def } = ubicar(page, clave);
-  const n = await loc.count();
+async function apretar(page, clave, raiz = null) {
+  let { loc, def } = raiz ? ubicar(raiz, clave) : ubicar(page, clave);
+  let n = await loc.count();
+  if (n === 0 && !raiz) {
+    // Los botones del editor (pestañas, miniaturas, deshacer) están dentro del iframe.
+    const ed = await frameDelEditor(page);
+    if (ed) {
+      ({ loc } = ubicar(ed.frame, clave));
+      n = await loc.count();
+    }
+  }
   if (n === 0) throw new Error(`No encuentro «${clave}» (${def.descripcion}) en la pantalla.`);
   const btn = def.ultimo ? loc : loc.first();
   await btn.click();
@@ -131,7 +187,16 @@ async function arrastrarFirma(page, destino) {
  * de página. Si el editor cambia y no se encuentra, devuelve null y el documento queda en revisión.
  */
 export async function medirCajaDePagina(page, proporcion = null) {
-  return page
+  const enRaiz = await medirEn(page, proporcion);
+  if (enRaiz) return enRaiz;
+  const ed = await frameDelEditor(page);
+  if (!ed) return null;
+  const adentro = await medirEn(ed.frame, proporcion);
+  return adentro ? { x: ed.caja.x + adentro.x, y: ed.caja.y + adentro.y, w: adentro.w, h: adentro.h } : null;
+}
+
+async function medirEn(raiz, proporcion) {
+  return raiz
     .evaluate((prop) => {
       /*
         POR LA PROPORCIÓN DE LA HOJA, NO POR NOMBRES DE CLASES (26/10/2026). El editor de Dropbox Sign
@@ -211,12 +276,15 @@ async function esperarEditorListo(page, onProgreso, proporcion = null, esLimite 
   }
   // Con captura y con lo que había en pantalla: es lo que hace falta para ver por qué no apareció la hoja.
   const grandes = await elementosGrandes(page);
+  const ed = await frameDelEditor(page);
+  const grandesEditor = ed ? await elementosGrandes(ed.frame) : [];
+  const iframes = await iframesDe(page);
   const captura = await page.screenshot({ fullPage: false }).catch(() => undefined);
   throw Object.assign(
     new Error(
       preparando
         ? `editor_no_prepara: el editor siguió «Preparando documentos…» ${ESPERA_PREPARANDO_MS / 1000} s: Dropbox Sign no terminó de procesar el PDF.`
-        : `editor_sin_hoja: el editor ya no dice «Preparando documentos…» pero no se reconoce la hoja del documento (${ESPERA_PREPARANDO_MS / 1000} s). En pantalla: ${grandes.join(" · ") || "ningún elemento grande"}.`,
+        : `hoja_no_encontrada: el editor terminó de preparar (ya no dice «Preparando documentos…») pero el bot no reconoce la hoja (${ESPERA_PREPARANDO_MS / 1000} s): es un problema del bot, no del documento. En pantalla: ${grandes.join(" · ") || "ningún elemento grande"}. Dentro del editor: ${ed ? grandesEditor.join(" · ") || "ningún elemento grande" : "no se encontró el iframe del editor"}. Iframes: ${iframes.join(" · ") || "ninguno"}.`,
     ),
     { captura },
   );
@@ -232,6 +300,16 @@ async function cerrarAvisoDeCookies(page) {
   if (await loc.count().catch(() => 0)) {
     await apretar(page, "rechazar_cookies").catch(() => {});
     await page.waitForTimeout(500);
+  }
+  // El banner CCPA es OTRO iframe (`#ccpa-iframe`, 600×260, clase «_banner-visible_»): se entra y se rechaza ahí.
+  const el = await page.$('iframe#ccpa-iframe, iframe[id*="ccpa" i], iframe[class*="ccpa" i]').catch(() => null);
+  const frame = el ? await el.contentFrame().catch(() => null) : null;
+  if (frame) {
+    const { loc: enBanner } = ubicar(frame, "rechazar_cookies");
+    if (await enBanner.count().catch(() => 0)) {
+      await apretar(page, "rechazar_cookies", frame).catch(() => {});
+      await page.waitForTimeout(500);
+    }
   }
 }
 
@@ -252,7 +330,7 @@ async function traerALaVista(page, colocacion, geometria) {
 
 /** La caja (px) del campo de firma colocado, si el DOM lo expone. */
 async function cajaDelCampo(page) {
-  const loc = page.locator(SELECTOR_CAMPO).first();
+  const loc = await locCampo(page);
   const b = await loc.boundingBox({ timeout: 1500 }).catch(() => null);
   return b ? { x: b.x, y: b.y, w: b.width, h: b.height } : null;
 }
@@ -266,10 +344,18 @@ async function centroDelCampo(page) {
 /** Cuántos campos «Firma de NOMBRE» hay colocados. */
 async function camposDeFirma(page, nombre) {
   const re = new RegExp(`firma de ${nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i");
-  const t = await texto(page);
+  const t = await textoConEditor(page);
   const enTexto = (t.match(new RegExp(re.source, "gi")) || []).length;
-  const enAria = await page.locator(SELECTOR_CAMPO).count().catch(() => 0);
+  const ed = await frameDelEditor(page);
+  const enAria = (await page.locator(SELECTOR_CAMPO).count().catch(() => 0)) + (ed ? await ed.frame.locator(SELECTOR_CAMPO).count().catch(() => 0) : 0);
   return Math.max(enTexto, enAria);
+}
+
+/** El locator del campo de firma colocado: en la página o dentro del editor. */
+async function locCampo(page) {
+  if (await page.locator(SELECTOR_CAMPO).count().catch(() => 0)) return page.locator(SELECTOR_CAMPO).first();
+  const ed = await frameDelEditor(page);
+  return ed ? ed.frame.locator(SELECTOR_CAMPO).first() : page.locator(SELECTOR_CAMPO).first();
 }
 
 /** El rectángulo del campo (puntos PDF) pasado a píxeles de pantalla, con la caja de la página. */
@@ -288,7 +374,7 @@ function campoEnPantalla(colocacion, geometria, caja) {
 async function ajustarCampo(page, objetivo, onProgreso) {
   let caja = await cajaDelCampo(page);
   if (!caja) return { ajustado: false, motivo: "el DOM no expone el campo" };
-  const campo = page.locator(SELECTOR_CAMPO).first();
+  const campo = await locCampo(page);
   const manijon = campo.locator('[class*="resize" i], [class*="handle" i], [data-qa*="resize" i], [data-testid*="resize" i]');
   let desde;
   if ((await manijon.count().catch(() => 0)) > 0) {
@@ -371,6 +457,7 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
     await cerrarAvisoDeCookies(page);
     const proporcion = colocacion.tamanoPagina ? colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho : null;
     await esperarEditorListo(page, onProgreso, proporcion, esLimite);
+    await cerrarAvisoDeCookies(page);
     if (colocacion.pagina === "ultima") {
       await apretar(page, "tab_documentos");
       await page.waitForTimeout(800);

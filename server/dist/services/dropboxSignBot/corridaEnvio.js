@@ -368,7 +368,7 @@ async function correr(corrida, cc, config) {
                         guard: (d) => guardDeEnvio({ ...d, archivo: c.archivo, ccEsperado: cc, firmanteNombre: c.firmante, firmanteEmail: c.email, reglas, posicionDeclarada: resueltos.get(c.codigo)?.colocacion?.origen === "plantilla" }),
                         esLimite: esTextoDeLimite,
                     });
-                    if (intentoEditor === 1 && !pasoElIrreversible && r?.resultado === "error" && /^editor_(no_prepara|sin_hoja)/.test(String(r?.detalle || "")) && !corrida.señal.cortada) {
+                    if (intentoEditor === 1 && !pasoElIrreversible && r?.resultado === "error" && /^(editor_no_prepara|hoja_no_encontrada)/.test(String(r?.detalle || "")) && !corrida.señal.cortada) {
                         emitir({ tipo: "info", archivo: c.archivo, texto: `${String(r.detalle).split(":")[0]}: se reintenta el documento una vez.` });
                         continue;
                     }
