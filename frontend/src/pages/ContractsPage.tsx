@@ -108,7 +108,7 @@ interface TotalesGestion {
   dropboxCounts: { para_firmar: number | null; enviado_firma: number | null; firmados: number | null };
 }
 
-const PASOS_GESTION: { numero: number; label: string; descripcion: string; tabs: MgmtTab[]; total: (c: TotalesGestion) => number | null }[] = [
+const PASOS_GESTION: { numero: number; label: string; carpeta?: string; descripcion: string; tabs: MgmtTab[]; total: (c: TotalesGestion) => number | null }[] = [
   {
     numero: 1,
     label: 'Trámite impositivo',
@@ -117,9 +117,9 @@ const PASOS_GESTION: { numero: number; label: string; descripcion: string; tabs:
     total: ({ mgmtCounts }) => mgmtCounts.alta + mgmtCounts.cuit + mgmtCounts.sinCuit,
   },
   { numero: 2, label: 'Generar Documentos', descripcion: 'Se generan los PDF de Contrato y Release, que quedan en la carpeta Outbox.', tabs: ['firma'], total: ({ mgmtCounts }) => mgmtCounts.firma },
-  { numero: 3, label: 'Para Firmar', descripcion: 'Documentos listos para importar en Dropbox Sign y enviarlos a firmar.', tabs: ['para_firmar'], total: ({ dropboxCounts }) => dropboxCounts.para_firmar },
-  { numero: 4, label: 'Enviado a la firma', descripcion: 'La solicitud ya se envió desde Dropbox Sign y se espera la firma.', tabs: ['enviado_firma'], total: ({ dropboxCounts }) => dropboxCounts.enviado_firma },
-  { numero: 5, label: 'Firmados', descripcion: 'Contratos que ya volvieron firmados.', tabs: ['firmados'], total: ({ dropboxCounts }) => dropboxCounts.firmados },
+  { numero: 3, label: 'Para Firmar', carpeta: 'Outbox', descripcion: 'Documentos listos para importar en Dropbox Sign y enviarlos a firmar.', tabs: ['para_firmar'], total: ({ dropboxCounts }) => dropboxCounts.para_firmar },
+  { numero: 4, label: 'Enviado a la firma', carpeta: 'Pendbox', descripcion: 'La solicitud ya se envió desde Dropbox Sign y se espera la firma.', tabs: ['enviado_firma'], total: ({ dropboxCounts }) => dropboxCounts.enviado_firma },
+  { numero: 5, label: 'Firmados', carpeta: 'Requested signatures', descripcion: 'Contratos que ya volvieron firmados.', tabs: ['firmados'], total: ({ dropboxCounts }) => dropboxCounts.firmados },
 ];
 
 /** Clases de un botón de pestaña (mismo estilo que el resto de los tabs de la app). */
@@ -610,7 +610,11 @@ export const ContractsPage: React.FC = () => {
                       {i > 0 && <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-gray-300 dark:text-gray-600 shrink-0" />}
                       <button type="button" onClick={() => setMgmtTab(paso.tabs[0])} title={paso.descripcion} className={`group flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors whitespace-nowrap shrink-0 ${activo ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                         <span className={`flex items-center justify-center h-5 w-5 rounded-full text-[11px] font-bold shrink-0 ${activo ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>{paso.numero}</span>
-                        <span className={`text-sm font-medium ${activo ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>{paso.label}</span>
+                        <span className={`text-sm font-medium ${activo ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                          {paso.label}
+                          {/* La carpeta de Dropbox de cada paso (pedido del 26/10/2026): «Para Firmar | Outbox». */}
+                          {paso.carpeta && <span className="font-normal opacity-70"> | {paso.carpeta}</span>}
+                        </span>
                         {total !== null && <span className="text-xs text-gray-400">({total})</span>}
                       </button>
                       {/* Estos pasos se alimentan de carpetas de Dropbox: el ícono muestra cuáles. */}
