@@ -177,7 +177,7 @@ async function arrastrar(page, desde, hasta, pasos = 12) {
 
 /** Arrastre del campo «Firma» desde el panel hasta un punto de pantalla. Sin DOM estable para el drop. */
 async function arrastrarFirma(page, destino) {
-  await arrastrar(page, ORIGEN_FIRMA, destino);
+  await arrastrar(page, await origenFirma(page), destino);
 }
 
 /**
@@ -361,6 +361,62 @@ async function scrollearEn(raiz, dy, punto) {
     .catch(() => ({ movio: 0, estado: "no se pudo scrollear" }));
 }
 
+/** Todos los contenedores con recorrido (> 20 px) de `raiz`, del de más recorrido al de menos, con su descripción. */
+async function scrollersEn(raiz) {
+  return raiz
+    .evaluate(() =>
+      [document.scrollingElement, ...document.querySelectorAll("body *")]
+        .filter((el) => el && el.scrollHeight - el.clientHeight > 20)
+        .map((el, i) => {
+          el.setAttribute("data-bot-scroller", String(i));
+          const cls = typeof el.className === "string" ? el.className.trim().split(/\s+/).slice(0, 2).join(".") : "";
+          return { i, desc: `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}${cls ? "." + cls : ""}`, scrollTop: Math.round(el.scrollTop), scrollHeight: Math.round(el.scrollHeight), clientHeight: Math.round(el.clientHeight) };
+        })
+        .sort((a, b) => b.scrollHeight - b.clientHeight - (a.scrollHeight - a.clientHeight)),
+    )
+    .catch(() => []);
+}
+
+/** Mueve `dy` px el scroller marcado `i` por propiedad. Devuelve cuánto cambió su scrollTop. */
+async function moverScroller(raiz, i, dy) {
+  return raiz
+    .evaluate(
+      ({ i, dy }) => {
+        const el = document.querySelector(`[data-bot-scroller="${i}"]`) || (i === 0 ? document.scrollingElement : null);
+        if (!el) return 0;
+        const antes = el.scrollTop;
+        el.scrollTop = antes + dy;
+        return el.scrollTop - antes;
+      },
+      { i, dy },
+    )
+    .catch(() => 0);
+}
+
+/**
+ * DÓNDE EMPIEZA EL ARRASTRE: el ítem «Firma» del panel de campos, buscado en pantalla (en el editor o
+ * en la página: el elemento chico, a la izquierda, cuyo texto es «Firma»). Si no aparece, la
+ * coordenada validada en 1457×812. Hace falta buscarlo porque, si la ventana se agranda para que la
+ * hoja entre entera, el panel se mueve.
+ */
+async function origenFirma(page) {
+  const buscar = (raiz, off) =>
+    raiz
+      .evaluate(() => {
+        const c = Array.from(document.querySelectorAll("body *")).find((el) => {
+          const r = el.getBoundingClientRect();
+          return /^\s*firma\s*$/i.test(el.textContent || "") && r.width > 20 && r.width < 320 && r.height > 10 && r.height < 80 && r.left < 400 && el.children.length <= 3;
+        });
+        if (!c) return null;
+        const r = c.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      })
+      .then((p) => (p ? { x: p.x + off.x, y: p.y + off.y } : null))
+      .catch(() => null);
+  const ed = await frameDelEditor(page);
+  return (ed && (await buscar(ed.frame, { x: ed.caja.x, y: ed.caja.y }))) || (await buscar(page, { x: 0, y: 0 })) || { ...ORIGEN_FIRMA };
+}
+
 /** La caja de la hoja, medida dos veces a 300 ms: el editor la redimensiona al terminar de dibujar. */
 async function medirEstable(page, proporcion, indice = 0) {
   let previa = await medirCajaDePagina(page, proporcion, indice);
@@ -399,10 +455,12 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
   let ultimo = null;
   let scrolleado = 0;
   let estadoScroll = "sin scroll";
+  let scrollerLogueado = false;
   for (let i = 0; i < 6 && caja; i++) {
     const ed = await frameDelEditor(page);
     const arriba = Math.max(ed ? ed.caja.y : 0, 0) + 40;
-    const abajo = Math.min(ed ? ed.caja.y + ed.caja.h : alto, alto) - 40;
+    const altoAhora = page.viewportSize()?.height || alto;
+    const abajo = Math.min(ed ? ed.caja.y + ed.caja.h : altoAhora, altoAhora) - 40;
     const d = geometria.pdfAPantalla(colocacion.puntoPdf, colocacion.tamanoPagina, caja);
     const escala = caja.w / anchoPt;
     ultimo = { d, escala, arriba, abajo, frameTop: ed ? ed.caja.y : 0, frameAlto: ed ? ed.caja.h : alto };
@@ -411,17 +469,62 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
     if (d.y > arriba && d.y < abajo && d.x > 0 && d.x < (page.viewportSize()?.width || 1457)) return { caja, destino: d, escala };
     // Lo que falta para dejar el punto en el medio de lo visible, sobre la medición ACTUAL de la página destino.
     const dy = Math.round(d.y - (arriba + abajo) / 2);
-    // Un punto de la hoja que está a la vista: ahí se busca qué scrollea.
-    const visibleY = Math.min(Math.max(caja.y + 20, arriba), abajo) ;
+    /*
+      CÓMO SE MUEVE (26/10/2026, «se scrollearon 0 px · rueda del mouse»). En orden, y cada uno se da
+      por bueno sólo si la hoja RE-MEDIDA se movió: (1) por propiedad, cada contenedor con recorrido
+      del editor (del de más recorrido al de menos) y después los de la página; (2) AvPág / RePág con
+      el editor enfocado; (3) la rueda sobre la hoja; (4) agrandar la ventana del navegador para que
+      la página entera entre sin scrollear (la medición y el origen del arrastre se recalculan solos).
+    */
+    const visibleY = Math.min(Math.max(caja.y + 20, arriba), abajo);
     const enPagina = { x: caja.x + caja.w / 2, y: visibleY };
-    let r = ed ? await scrollearEn(ed.frame, dy, { x: enPagina.x - ed.caja.x, y: enPagina.y - ed.caja.y }) : { movio: 0, estado: "" };
-    if (Math.abs(r.movio) < 2) r = await scrollearEn(page, dy, enPagina);
-    if (Math.abs(r.movio) < 2) {
-      // Nada se movió por scrollTop (puede ser un scroll propio del editor): la rueda, sobre la hoja.
+    const yAntes = caja.y;
+    const seMovio = async () => {
+      await page.waitForTimeout(350);
+      const c = await medirCajaDePagina(page, prop, indice);
+      return c && Math.abs(c.y - yAntes) >= 2 ? c : null;
+    };
+    let movida = null;
+    let r = { movio: 0, estado: "" };
+    for (const [raiz, donde] of [[ed?.frame, "editor"], [page, "página"]]) {
+      if (!raiz || movida) continue;
+      const sc = await scrollersEn(raiz);
+      if (!scrollerLogueado && sc.length) {
+        scrollerLogueado = true;
+        onProgreso(`Contenedores con recorrido en ${donde}: ${sc.slice(0, 4).map((x) => `${x.desc} (scrollTop ${x.scrollTop}, scrollHeight ${x.scrollHeight}, clientHeight ${x.clientHeight})`).join(" · ")}`);
+      }
+      for (const x of sc) {
+        const m = await moverScroller(raiz, x.i, dy);
+        if (Math.abs(m) < 2) continue;
+        const c = await seMovio();
+        if (c) {
+          movida = c;
+          r = { movio: m, estado: `por propiedad: ${x.desc} en ${donde} (scrollTop ${x.scrollTop + Math.round(m)} de ${x.scrollHeight - x.clientHeight})` };
+          break;
+        }
+        await moverScroller(raiz, x.i, -m); // no movió la hoja: se deja como estaba
+      }
+    }
+    if (!movida && ed) {
+      await ed.frame.locator("body").press(dy > 0 ? "PageDown" : "PageUp").catch(() => {});
+      movida = await seMovio();
+      if (movida) r = { movio: NaN, estado: `tecla ${dy > 0 ? "AvPág" : "RePág"} en el editor` };
+    }
+    if (!movida) {
       await page.mouse.move(enPagina.x, enPagina.y);
       await page.mouse.wheel(0, dy);
-      r = { movio: NaN, estado: "rueda del mouse sobre la hoja" };
+      movida = await seMovio();
+      if (movida) r = { movio: NaN, estado: "rueda del mouse sobre la hoja" };
     }
+    if (!movida && !ventanaAgrandada) {
+      const vp = page.viewportSize() || { width: 1457, height: 812 };
+      const nuevoAlto = Math.min(4000, Math.round(vp.height + Math.max(dy, 0) * 2 + 400));
+      await page.setViewportSize({ width: vp.width, height: nuevoAlto });
+      ventanaAgrandada = { ...vp };
+      await page.waitForTimeout(900);
+      r = { movio: NaN, estado: `ventana agrandada de ${vp.height} a ${nuevoAlto} px de alto para que la página entre sin scrollear` };
+      onProgreso(`Ningún scroll movió la hoja: ${r.estado}.`);
+    } else if (!movida) r = { movio: 0, estado: "nada movió la hoja (propiedad, AvPág, rueda y ventana agrandada)" };
     if (Number.isFinite(r.movio)) scrolleado += Math.abs(r.movio);
     estadoScroll = r.estado;
     await page.waitForTimeout(600);
@@ -451,6 +554,14 @@ async function centroDelCampo(page) {
   todo campo de firma es de él. El HTML del campo se loguea una vez para poder elegir un selector fijo.
 */
 let hojaDelCampo = null;
+/** Si se agrandó la ventana para que la hoja entrara: el tamaño original, para restaurarlo. */
+let ventanaAgrandada = null;
+async function restaurarVentana(page) {
+  if (!ventanaAgrandada) return;
+  await page.setViewportSize(ventanaAgrandada).catch(() => {});
+  ventanaAgrandada = null;
+  await page.waitForTimeout(500);
+}
 let htmlLogueado = false;
 
 async function marcarDom(page) {
@@ -674,6 +785,8 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
         await page.waitForTimeout(600);
       }
     }
+    // La ventana vuelve a su tamaño (si se agrandó para que entrara la hoja) antes de seguir o de salir.
+    await restaurarVentana(page);
     if (!colocado) {
       const img = await captura();
       await salirSinEnviar(page);
@@ -713,6 +826,7 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
     }
     return { resultado: "error", detalle: `Sin confirmación a los ${ESPERA_RESULTADO_MS / 1000} s de apretar «Enviar para firmar»: revisar en Dropbox Sign si salió.`, captura: await captura() };
   } catch (e) {
+    await restaurarVentana(page).catch(() => {});
     if (e?.detenido) throw e;
     const img = e?.captura || (await captura());
     if (e?.limite) {
