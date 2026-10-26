@@ -41,6 +41,7 @@ export const BOTONES = {
   tab_campos: { rol: ["tab", "button"], nombre: /^campos$/i, descripcion: "panel de campos en el editor" },
   ultima_miniatura: { css: '[class*="thumbnail" i], [data-testid*="thumbnail" i], [data-qa*="thumbnail" i], [class*="page-preview" i]', ultimo: true, descripcion: "la última página del documento" },
   deshacer: { rol: ["button"], nombre: /^(deshacer|undo)$/i, descripcion: "deshace el último campo colocado" },
+  rechazar_cookies: { rol: ["button"], nombre: /^\s*(rechazar|rechazar todo|reject|reject all|decline)\s*$/i, descripcion: "cierra el aviso de cookies (lo que menos comparte)" },
   agregar_cc: { rol: ["button"], nombre: /agregar un destinatario en cc/i, descripcion: "abre el campo de CC en «Revisar y enviar»" },
 };
 
@@ -129,22 +130,53 @@ async function arrastrarFirma(page, destino) {
  * grande con forma de hoja (más alto que ancho, > 300 px de ancho) entre canvas/imágenes/contenedores
  * de página. Si el editor cambia y no se encuentra, devuelve null y el documento queda en revisión.
  */
-async function medirCajaDePagina(page) {
+export async function medirCajaDePagina(page, proporcion = null) {
   return page
-    .evaluate(() => {
-      const candidatos = Array.from(document.querySelectorAll('canvas, img, [class*="page" i], [data-testid*="page" i]'));
-      let mejor = null;
-      for (const el of candidatos) {
+    .evaluate((prop) => {
+      /*
+        POR LA PROPORCIÓN DE LA HOJA, NO POR NOMBRES DE CLASES (26/10/2026). El editor de Dropbox Sign
+        cambia su HTML y los selectores por clase dejaron de encontrar la hoja («El editor no terminó de
+        preparar el documento en 120 s» con el documento ya dibujado). Se recorre TODO elemento visible
+        de 300 px o más de ancho y se elige el más grande cuya relación alto/ancho sea la del PDF
+        (±6 %): canvas, img, svg, un div con la imagen de fondo… da igual cómo lo dibuje. Sin la
+        proporción (o si nada la cumple) queda el criterio anterior: forma de hoja vertical.
+      */
+      const visible = (el, r) => {
+        const e = getComputedStyle(el);
+        return e.visibility !== "hidden" && e.display !== "none" && Number(e.opacity) > 0 && r.width >= 300 && r.height >= 300 && r.width <= window.innerWidth;
+      };
+      let porProporcion = null;
+      let porForma = null;
+      for (const el of document.querySelectorAll("body *")) {
         const r = el.getBoundingClientRect();
-        if (r.width < 300 || r.height <= r.width || r.width > window.innerWidth) continue;
-        const estilo = getComputedStyle(el);
-        if (estilo.visibility === "hidden" || estilo.display === "none") continue;
+        if (r.width < 300 || r.height < 300) continue;
+        if (!visible(el, r)) continue;
         const area = r.width * r.height;
-        if (!mejor || area > mejor.area) mejor = { x: r.left, y: r.top, w: r.width, h: r.height, area };
+        const caja = { x: r.left, y: r.top, w: r.width, h: r.height, area };
+        if (prop && Math.abs(r.height / r.width - prop) / prop <= 0.06) {
+          if (!porProporcion || area > porProporcion.area) porProporcion = caja;
+        } else if (/^(CANVAS|IMG)$/.test(el.tagName) || /page/i.test(`${el.className} ${el.getAttribute("data-testid") || ""}`)) {
+          if (r.height > r.width && (!porForma || area > porForma.area)) porForma = caja;
+        }
       }
+      const mejor = porProporcion || porForma;
       return mejor ? { x: mejor.x, y: mejor.y, w: mejor.w, h: mejor.h } : null;
-    })
+    }, proporcion)
     .catch(() => null);
+}
+
+/** Los elementos grandes visibles (para el diagnóstico cuando la hoja no aparece). */
+async function elementosGrandes(page) {
+  return page
+    .evaluate(() =>
+      Array.from(document.querySelectorAll("body *"))
+        .map((el) => ({ el, r: el.getBoundingClientRect() }))
+        .filter(({ el, r }) => r.width >= 250 && r.height >= 250 && getComputedStyle(el).display !== "none")
+        .sort((a, b) => b.r.width * b.r.height - a.r.width * a.r.height)
+        .slice(0, 6)
+        .map(({ el, r }) => `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}${typeof el.className === "string" && el.className ? "." + el.className.trim().split(/\s+/).slice(0, 2).join(".") : ""} ${Math.round(r.width)}×${Math.round(r.height)}`),
+    )
+    .catch(() => []);
 }
 
 /** Cuánto se espera a que el editor termine «Preparando documentos…» y muestre la hoja (26/10/2026). */
@@ -156,13 +188,14 @@ const ESPERA_PREPARANDO_MS = 120_000;
  * los 10 documentos de una corrida quedaron «No se pudo medir la página renderizada en el editor»
  * (captura real del 26/10). Ahora se espera a que el cartel se vaya Y la hoja se pueda medir.
  */
-async function esperarEditorListo(page, onProgreso) {
+async function esperarEditorListo(page, onProgreso, proporcion = null) {
   const desde = Date.now();
   let avisado = false;
+  let preparando = false;
   while (Date.now() - desde < ESPERA_PREPARANDO_MS) {
-    const preparando = /preparando documentos|preparing documents/i.test(await texto(page));
+    preparando = /preparando documentos|preparing documents/i.test(await texto(page));
     if (!preparando) {
-      const caja = await medirCajaDePagina(page);
+      const caja = await medirCajaDePagina(page, proporcion);
       if (caja) {
         await page.waitForTimeout(800);
         return caja;
@@ -173,7 +206,17 @@ async function esperarEditorListo(page, onProgreso) {
     }
     await page.waitForTimeout(1000);
   }
-  throw new Error(`El editor no terminó de preparar el documento en ${ESPERA_PREPARANDO_MS / 1000} s (sigue «Preparando documentos…» o no muestra la hoja).`);
+  // Con captura y con lo que había en pantalla: es lo que hace falta para ver por qué no apareció la hoja.
+  const grandes = await elementosGrandes(page);
+  const captura = await page.screenshot({ fullPage: false }).catch(() => undefined);
+  throw Object.assign(
+    new Error(
+      preparando
+        ? `El editor siguió «Preparando documentos…» ${ESPERA_PREPARANDO_MS / 1000} s: Dropbox Sign no terminó de procesar el PDF.`
+        : `El editor ya no dice «Preparando documentos…» pero no se reconoce la hoja del documento (${ESPERA_PREPARANDO_MS / 1000} s). En pantalla: ${grandes.join(" · ") || "ningún elemento grande"}.`,
+    ),
+    { captura },
+  );
 }
 
 /**
@@ -181,16 +224,17 @@ async function esperarEditorListo(page, onProgreso) {
  * «Rechazar» (lo que menos comparte); si no está ese botón, con la cruz del aviso. Si no hay aviso, nada.
  */
 async function cerrarAvisoDeCookies(page) {
-  const rechazar = page.locator("button:visible").filter({ hasText: /^\s*(rechazar|rechazar todo|reject|reject all|decline)\s*$/i }).first();
-  if (await rechazar.count().catch(() => 0)) {
-    await rechazar.click({ timeout: 5000 }).catch(() => {});
+  // Por la lista blanca, como todo click (ver `BOTONES.rechazar_cookies`). Sin aviso, no hace nada.
+  const { loc } = ubicar(page, "rechazar_cookies");
+  if (await loc.count().catch(() => 0)) {
+    await apretar(page, "rechazar_cookies").catch(() => {});
     await page.waitForTimeout(500);
   }
 }
 
 /** Mueve el visor hasta que el punto de pantalla quede a la vista (la caja de la página cambia con el scroll). */
 async function traerALaVista(page, colocacion, geometria) {
-  let caja = await medirCajaDePagina(page);
+  let caja = await medirCajaDePagina(page, colocacion.tamanoPagina ? colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho : null);
   for (let i = 0; i < 4 && caja; i++) {
     const d = geometria.pdfAPantalla(colocacion.puntoPdf, colocacion.tamanoPagina, caja);
     const alto = page.viewportSize()?.height || 812;
@@ -198,7 +242,7 @@ async function traerALaVista(page, colocacion, geometria) {
     await page.mouse.move(caja.x + caja.w / 2, Math.min(Math.max(caja.y + 50, 150), alto - 100));
     await page.mouse.wheel(0, d.y - alto / 2);
     await page.waitForTimeout(700);
-    caja = await medirCajaDePagina(page);
+    caja = await medirCajaDePagina(page, colocacion.tamanoPagina ? colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho : null);
   }
   return null;
 }
@@ -322,7 +366,8 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
     onProgreso("Esperando el editor de campos…");
     await esperarTexto(page, /insertar campos|campos/i, ESPERA_EDITOR_MS, "el editor «Insertar campos»");
     await cerrarAvisoDeCookies(page);
-    await esperarEditorListo(page, onProgreso);
+    const proporcion = colocacion.tamanoPagina ? colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho : null;
+    await esperarEditorListo(page, onProgreso, proporcion);
     if (colocacion.pagina === "ultima") {
       await apretar(page, "tab_documentos");
       await page.waitForTimeout(800);
@@ -350,14 +395,14 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
       await arrastrarFirma(page, destino);
       let n = await camposDeFirma(page, firmante.nombre);
       if (n === 1) {
-        const objetivo = campoEnPantalla(colocacion, geometria, (await medirCajaDePagina(page)) || vista.caja);
+        const objetivo = campoEnPantalla(colocacion, geometria, (await medirCajaDePagina(page, colocacion.tamanoPagina ? colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho : null)) || vista.caja);
         await ajustarCampo(page, objetivo, onProgreso).catch((e) => onProgreso(`No se pudo ajustar el campo: ${e?.message || e}`));
         n = await camposDeFirma(page, firmante.nombre);
       }
       if (n !== 1) motivoFalla = `Se esperaba 1 campo de firma y hay ${n}.`;
       else {
         const centro = await centroDelCampo(page);
-        const cajaAhora = (await medirCajaDePagina(page)) || vista.caja;
+        const cajaAhora = (await medirCajaDePagina(page, colocacion.tamanoPagina ? colocacion.tamanoPagina.alto / colocacion.tamanoPagina.ancho : null)) || vista.caja;
         if (!centro) {
           onProgreso("El campo quedó colocado pero el DOM no expone dónde: se acepta por conteo.");
           colocado = true;
@@ -417,7 +462,7 @@ export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, co
     return { resultado: "error", detalle: `Sin confirmación a los ${ESPERA_RESULTADO_MS / 1000} s de apretar «Enviar para firmar»: revisar en Dropbox Sign si salió.`, captura: await captura() };
   } catch (e) {
     if (e?.detenido) throw e;
-    const img = await captura();
+    const img = e?.captura || (await captura());
     await salirSinEnviar(page).catch(() => {});
     return { resultado: "error", detalle: e?.message || String(e), captura: img };
   }

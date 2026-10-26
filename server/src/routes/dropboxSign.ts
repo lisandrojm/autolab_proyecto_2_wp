@@ -453,7 +453,10 @@ router.get("/bot/corrida", async (req: AuthenticatedRequest & TenantRequest, res
 router.get("/bot/logs", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede ver los logs." });
-    const logs = await DropboxSignEnvioLog.find({ tenantId: req.tenantObjectId }).select("-capturaError").sort({ createdAt: -1 }).limit(50).lean();
+    const logs: any[] = await DropboxSignEnvioLog.find({ tenantId: req.tenantObjectId }).select("-capturaError").sort({ createdAt: -1 }).limit(50).lean();
+    // Qué corridas tienen captura de lo que vio el navegador (la imagen va aparte, por id).
+    const conCaptura = new Set(((await DropboxSignEnvioLog.find({ _id: { $in: logs.map((l) => l._id) }, capturaError: { $exists: true, $ne: "" } }).select("_id").lean()) as any[]).map((l) => String(l._id)));
+    for (const l of logs) l.tieneCaptura = conCaptura.has(String(l._id));
     const revision = await DropboxSignEnvio.find({ tenantId: req.tenantObjectId, estado: { $in: ["requiere_revision", "error", "limite"] } }).sort({ updatedAt: -1 }).limit(200).lean();
     res.json({ logs, requierenRevision: revision });
   } catch (error: any) {

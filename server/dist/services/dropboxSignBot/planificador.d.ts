@@ -87,6 +87,7 @@ export declare const cupoDelDia: (config: ConfigEnvio, estado: EstadoThrottle, a
  */
 export declare function puedeCorrer(config: ConfigEnvio, estado: EstadoThrottle, ahora: Date, opciones?: {
     manual?: boolean;
+    yaReservada?: boolean;
 }): {
     ok: boolean;
     motivo?: string;
@@ -132,3 +133,27 @@ export interface ResultadoEncolado {
 export declare function validarEncolado(archivo: string, ctx: ContextoDeEncolado): ResultadoEncolado;
 /** La tanda a enviar, a partir de la cola y de lo que sigue en Outbox. */
 export declare function planificar(enCola: ItemEnCola[], archivosEnOutbox: Set<string>, config: ConfigEnvio, estado: EstadoThrottle, ahora: Date): Plan;
+/**
+ * QUÉ PASA CON UN DOCUMENTO DESPUÉS DE INTENTAR ENVIARLO (26/10/2026). Un documento sale de la cola
+ * SÓLO si se envió de verdad. Una falla de pantalla, de red, de login o una detención lo dejan en la
+ * cola, en su lugar, sin marcarlo («requiere revisión» es sólo para cuando la colocación de la firma no
+ * se puede resolver, y eso se decide antes de abrir el navegador). La única excepción: si la falla fue
+ * DESPUÉS de apretar «Enviar para firmar», pudo haber salido; reenviarlo podría duplicar la solicitud,
+ * así que queda como «error» para que una persona lo mire en Dropbox Sign.
+ */
+export type DestinoDelIntento = "enviado" | "limite" | "seco" | "sigue_en_cola" | "error_tras_enviar";
+export declare function destinoDelIntento(resultado: string, pasoElIrreversible: boolean): DestinoDelIntento;
+/** Tantos documentos seguidos que fallan en la pantalla sin que salga ninguno = el problema es la pantalla o el bot. */
+export declare const FALLOS_SEGUIDOS_PARA_CORTAR = 3;
+/** Tantos intentos fallidos de UN documento, en corridas donde otros sí salieron = el problema es ese documento. */
+export declare const INTENTOS_FALLIDOS_MAXIMOS = 3;
+export declare function cortarPorFallosSeguidos(seguidos: number, huboExito: boolean): boolean;
+/**
+ * Cuántos intentos fallidos le quedan anotados a un documento al cerrar la corrida. Sólo cuentan si en
+ * la misma corrida salió otro (la pantalla anda): si no salió ninguno, la falla no es del documento y
+ * no se le carga. Con `INTENTOS_FALLIDOS_MAXIMOS` pasa a «error» para que alguien lo mire.
+ */
+export declare function intentosTrasLaCorrida(previos: number, huboExito: boolean): {
+    intentos: number;
+    pasaAError: boolean;
+};

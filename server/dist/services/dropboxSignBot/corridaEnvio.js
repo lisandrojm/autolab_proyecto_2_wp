@@ -8,7 +8,7 @@ import { DropboxSignEnvio } from "../../models/DropboxSignEnvio.js";
 import { DropboxSignEnvioLog } from "../../models/DropboxSignEnvioLog.js";
 import { leerAnclas } from "../../utils/anclasNombre.js";
 import { abrirOcr } from "../../utils/ocrPaginas.js";
-import { CONFIG_POR_DEFECTO, cupoDelDia, estimarEnvios, fechaYHoraArgentina, planificar, puedeCorrer, validarEncolado } from "./planificador.js";
+import { CONFIG_POR_DEFECTO, cortarPorFallosSeguidos, cupoDelDia, destinoDelIntento, estimarEnvios, fechaYHoraArgentina, intentosTrasLaCorrida, planificar, puedeCorrer, validarEncolado, INTENTOS_FALLIDOS_MAXIMOS } from "./planificador.js";
 import { esTextoDeLimite, guardDeEnvio } from "./reglas.js";
 import { motivosDesactualizado, pantallaAPdf, pdfAPantalla, reglaDe } from "../../compartido/reglasColocacionFirma.js";
 import { ContratoFrame } from "../../models/ContratoFrame.js";
@@ -181,9 +181,9 @@ export async function estadoDeArchivos(tenantId, archivos, hashes = {}) {
         const codigo = codigoDe.get(archivo) || "";
         const r = registros.get(codigo);
         if (!r)
-            return { archivo, codigo, estado: "", detalle: "", enviadoAt: null, posicion: null, colocacion: null, estimadoAt: null };
+            return { archivo, codigo, estado: "", detalle: "", enviadoAt: null, posicion: null, colocacion: null, estimadoAt: null, ultimoIntento: null };
         const estado = archivo === actual ? "enviando" : r.estado === "en_cola" && r.probadoEnSecoAt ? "seco" : r.estado;
-        return { archivo, codigo, estado, detalle: r.detalle || "", enviadoAt: r.enviadoAt ? new Date(r.enviadoAt).toISOString() : null, posicion: posicion.get(codigo) ?? null, colocacion: conVigencia(archivo, r.colocacion), estimadoAt: estimados.get(codigo)?.toISOString() || null };
+        return { archivo, codigo, estado, detalle: r.detalle || "", enviadoAt: r.enviadoAt ? new Date(r.enviadoAt).toISOString() : null, posicion: posicion.get(codigo) ?? null, colocacion: conVigencia(archivo, r.colocacion), estimadoAt: estimados.get(codigo)?.toISOString() || null, ultimoIntento: r.ultimoIntento?.detalle ? { at: new Date(r.ultimoIntento.at || Date.now()).toISOString(), detalle: String(r.ultimoIntento.detalle) } : null };
     });
 }
 /** Qué enviaría la próxima tanda: la cola contra el Outbox, planificada. No envía nada. */
@@ -207,7 +207,7 @@ export async function arrancarCorridaEnvio(tenantId, opciones = {}) {
     tomarCandadoDropboxSign(tenantId, automatica);
     try {
         const { config, estado, cc } = await configDelTenant(tenantId);
-        const puede = puedeCorrer(config, estado, new Date(), { manual: !automatica });
+        const puede = puedeCorrer(config, estado, new Date(), { manual: !automatica, yaReservada: automatica });
         if (!puede.ok)
             throw Object.assign(new Error(puede.motivo || "No se puede correr ahora."), { status: 409 });
         if (!cc)
@@ -232,6 +232,10 @@ async function sumarAlContador(tenantId) {
     if (r.modifiedCount === 0)
         await Tenant.updateOne({ _id: tenantId }, { $set: { [`${BASE}.contadorDia`]: { fecha, enviados: 1 } } });
 }
+/** El último intento fallido, sin tocar el estado ni el orden: el documento sigue en la cola, en su lugar. */
+async function anotarIntento(tenantId, codigo, detalle) {
+    await DropboxSignEnvio.updateOne({ tenantId, codigo }, { $set: { ultimoIntento: { at: new Date(), detalle } } }).catch((e) => console.warn("[DROPBOX-SIGN-BOT] No se pudo anotar el intento:", e?.message || e));
+}
 async function actualizarRegistro(tenantId, codigo, set) {
     await DropboxSignEnvio.updateOne({ tenantId, codigo }, { $set: set }).catch((e) => console.warn("[DROPBOX-SIGN-BOT] No se pudo actualizar el registro:", e?.message || e));
 }
@@ -245,16 +249,17 @@ async function correr(corrida, cc, config) {
     let sesion = null;
     let error = null;
     let capturaError;
+    let codigoError = null;
     let resultado = "ok";
     const dir = dirTemporal(tenantId);
     fs.mkdirSync(dir, { recursive: true });
     try {
         emitir({ tipo: "cola", texto: "Leyendo la cola y el Outbox…" });
         const cola = await armarCola(tenantId, { manual: !corrida.automatica, cantidad: corrida.cantidad });
+        // Los que ya no están en el Outbox NO se marcan (26/10/2026): siguen en la cola, la pantalla los
+        // muestra como «ya no está en el Outbox» y se pueden sacar desde ahí. Sólo se anotan en el log.
         for (const f of cola.faltantes) {
-            const detalle = "El archivo ya no está en Outbox (¿se movió a Pendbox o se borró?): salió de la cola.";
-            corrida.lineas.push({ archivo: f.archivo, codigo: f.codigo, email: f.email, estado: "requiere_revision", detalle });
-            await actualizarRegistro(tenantId, f.codigo, { estado: "requiere_revision", detalle });
+            corrida.lineas.push({ archivo: f.archivo, codigo: f.codigo, email: f.email, estado: "salteado", detalle: "No está en el Outbox (¿se movió a Pendbox o se borró?): sigue en la cola sin enviarse." });
         }
         corrida.total = cola.tanda.length;
         emitir({ tipo: "cola", texto: `${cola.enCola} en la cola · ${cola.tanda.length} en esta tanda · ${cola.pendientesDespues} quedan para después · ${cola.faltantes.length} ya no están en Outbox · cupo hoy ${cola.cupoHoy}${corrida.enSeco ? " · MODO SECO: no se envía nada" : ""}` });
@@ -288,11 +293,12 @@ async function correr(corrida, cc, config) {
                 }
                 catch (e) {
                     fs.rmSync(rutaPdf, { force: true });
+                    // Red o Dropbox, no el documento: sigue en la cola, en su lugar (26/10/2026).
                     const detalle = `No se pudo bajar o leer el PDF: ${e?.message || e}`;
                     corrida.errores++;
-                    corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: "error", detalle });
-                    emitir({ tipo: "resultado", archivo: c.archivo, codigo: c.codigo, estado: "error", texto: `error: ${detalle}` });
-                    await actualizarRegistro(tenantId, c.codigo, { estado: "error", detalle });
+                    corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: "error", detalle: `${detalle} Sigue en la cola.` });
+                    emitir({ tipo: "resultado", archivo: c.archivo, codigo: c.codigo, estado: "error", texto: `error: ${detalle} (sigue en la cola)` });
+                    await anotarIntento(tenantId, c.codigo, detalle);
                 }
             }
         }
@@ -318,6 +324,10 @@ async function correr(corrida, cc, config) {
         catch (e) {
             emitir({ tipo: "info", texto: `No se pudieron revisar los borradores: ${e?.message || e}` });
         }
+        // Para decidir qué hacer con lo que falla en la pantalla (ver `destinoDelIntento`).
+        let huboExito = false;
+        let fallosSeguidos = 0;
+        const fallidos = [];
         for (const c of tanda) {
             if (corrida.señal.cortada) {
                 resultado = "detenida";
@@ -334,6 +344,7 @@ async function correr(corrida, cc, config) {
             emitir({ tipo: "documento", archivo: c.archivo, codigo: c.codigo, texto: `${c.archivo} → ${c.firmante} (${c.email})` });
             const { rutaPdf, colocacion } = resueltos.get(c.codigo);
             let r;
+            let pasoElIrreversible = false;
             try {
                 r = await motor.enviarDocumento({
                     page: sesion.page,
@@ -346,7 +357,10 @@ async function correr(corrida, cc, config) {
                     enSeco: corrida.enSeco,
                     señal: corrida.señal,
                     onProgreso: (texto) => emitir({ tipo: "info", archivo: c.archivo, texto }),
-                    antesDelIrreversible: () => emitir({ tipo: "irreversible", archivo: c.archivo, codigo: c.codigo, texto: "Apretando «Enviar para firmar»…" }),
+                    antesDelIrreversible: () => {
+                        pasoElIrreversible = true;
+                        emitir({ tipo: "irreversible", archivo: c.archivo, codigo: c.codigo, texto: "Apretando «Enviar para firmar»…" });
+                    },
                     // Con la posición declarada por la plantilla no hace falta regla por nombre (ver `guardDeEnvio`).
                     guard: (d) => guardDeEnvio({ ...d, archivo: c.archivo, ccEsperado: cc, firmanteNombre: c.firmante, firmanteEmail: c.email, reglas, posicionDeclarada: resueltos.get(c.codigo)?.colocacion?.origen === "plantilla" }),
                     esLimite: esTextoDeLimite,
@@ -362,16 +376,41 @@ async function correr(corrida, cc, config) {
             }
             const estado = r?.resultado || "error";
             const detalle = String(r?.detalle || "");
-            corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado, detalle });
-            emitir({ tipo: estado === "limite" ? "limite" : "resultado", archivo: c.archivo, codigo: c.codigo, estado, texto: `${estado}: ${detalle}` });
+            const destino = destinoDelIntento(estado, pasoElIrreversible);
             if (r?.captura && !capturaError)
                 capturaError = Buffer.from(r.captura).toString("base64");
-            if (estado === "enviado") {
+            if (destino === "sigue_en_cola") {
+                // Pantalla, red o detención: NO se marca. Sigue en la cola, en su lugar, con el último intento anotado.
+                if (corrida.señal.cortada) {
+                    corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: "salteado", detalle: "Detenida en este documento: sigue en la cola." });
+                    emitir({ tipo: "info", archivo: c.archivo, texto: "Detenida: el documento sigue en la cola." });
+                    continue;
+                }
+                corrida.errores++;
+                fallosSeguidos++;
+                fallidos.push({ codigo: c.codigo, detalle });
+                corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: "error", detalle: `${detalle} Sigue en la cola.` });
+                emitir({ tipo: "resultado", archivo: c.archivo, codigo: c.codigo, estado: "error", texto: `no se envió: ${detalle} (sigue en la cola)` });
+                await anotarIntento(tenantId, c.codigo, detalle);
+                if (cortarPorFallosSeguidos(fallosSeguidos, huboExito)) {
+                    resultado = "fallo";
+                    error = `${fallosSeguidos} documentos seguidos fallaron en la pantalla de Dropbox Sign sin que saliera ninguno (último: ${detalle}). Se cortó la corrida: el problema es la pantalla o el bot, no los documentos. Siguen todos en la cola.`;
+                    emitir({ tipo: "fallo", texto: error });
+                    await anotarError(tenantId, error);
+                    break;
+                }
+                continue;
+            }
+            corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: destino === "error_tras_enviar" ? "error" : estado, detalle });
+            emitir({ tipo: estado === "limite" ? "limite" : "resultado", archivo: c.archivo, codigo: c.codigo, estado, texto: `${estado}: ${detalle}` });
+            if (destino === "enviado") {
                 corrida.enviados++;
-                await actualizarRegistro(tenantId, c.codigo, { estado: "enviado", detalle, enviadoAt: new Date() });
+                huboExito = true;
+                fallosSeguidos = 0;
+                await DropboxSignEnvio.updateOne({ tenantId, codigo: c.codigo }, { $set: { estado: "enviado", detalle, enviadoAt: new Date(), ultimoIntento: null, intentosFallidos: 0 } }).catch((e) => console.warn("[DROPBOX-SIGN-BOT] No se pudo actualizar el registro:", e?.message || e));
                 await sumarAlContador(tenantId);
             }
-            else if (estado === "limite") {
+            else if (destino === "limite") {
                 corrida.limite = true;
                 resultado = "limite";
                 const hasta = new Date(Date.now() + config.enfriamientoHoras * 3600_000);
@@ -380,22 +419,38 @@ async function correr(corrida, cc, config) {
                 emitir({ tipo: "limite", texto: `Dropbox Sign frenó los envíos. Enfriamiento hasta ${hasta.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}. Quedó un borrador en Dropbox Sign.` });
                 break;
             }
-            else if (estado === "seco") {
+            else if (destino === "seco") {
+                huboExito = true;
+                fallosSeguidos = 0;
                 await actualizarRegistro(tenantId, c.codigo, { detalle, probadoEnSecoAt: new Date() });
             }
-            else if (estado === "requiere_revision") {
-                await actualizarRegistro(tenantId, c.codigo, { estado: "requiere_revision", detalle });
-            }
             else {
+                // error_tras_enviar: pasó «Enviar para firmar» y no hubo confirmación. Pudo haber salido.
                 corrida.errores++;
-                await actualizarRegistro(tenantId, c.codigo, { estado: "error", detalle });
+                await actualizarRegistro(tenantId, c.codigo, { estado: "error", detalle: `${detalle} Pasó «Enviar para firmar»: puede haber salido. Revisalo en Dropbox Sign antes de volver a encolarlo.` });
             }
+        }
+        // Los que fallaron en la pantalla mientras otros salían: se les carga el intento; al tercero, «error».
+        for (const f of fallidos) {
+            const reg = await DropboxSignEnvio.findOne({ tenantId, codigo: f.codigo }).select("intentosFallidos estado").lean();
+            if (!reg || !["en_cola", "limite"].includes(reg.estado))
+                continue;
+            const { intentos, pasaAError } = intentosTrasLaCorrida(reg.intentosFallidos, huboExito);
+            if (intentos === (Number(reg.intentosFallidos) || 0))
+                continue;
+            await DropboxSignEnvio.updateOne({ tenantId, codigo: f.codigo }, { $set: pasaAError ? { intentosFallidos: intentos, estado: "error", detalle: `Falló ${intentos} veces en la pantalla de Dropbox Sign mientras otros documentos salían bien: revisalo a mano. Último intento: ${f.detalle}` } : { intentosFallidos: intentos } });
+            if (pasaAError)
+                emitir({ tipo: "info", texto: `Sale de la cola después de ${INTENTOS_FALLIDOS_MAXIMOS} intentos fallidos: ${f.codigo}.` });
         }
         if (resultado === "ok" && corrida.errores > 0)
             resultado = "con_errores";
     }
     catch (e) {
+        // Un fallo de la corrida (login, red, Dropbox) NO toca ningún documento: la cola queda como estaba.
         error = e?.message || String(e);
+        codigoError = e?.codigo || null;
+        if (e?.captura && !capturaError)
+            capturaError = String(e.captura);
         resultado = "fallo";
         emitir({ tipo: "fallo", texto: error });
         await anotarError(tenantId, error);
@@ -409,9 +464,9 @@ async function correr(corrida, cc, config) {
         corrida.actual = null;
         corrida.terminada = true;
         emitir({ tipo: "fin", texto: `Fin: ${corrida.enviados} enviado(s), ${corrida.errores} error(es)${corrida.limite ? ", frenada por el límite" : ""}.` });
-        const resumen = { arrancadaEl: corrida.arrancadaEl, fin: new Date(), resultado, enviados: corrida.enviados, errores: corrida.errores, limite: corrida.limite, enSeco: corrida.enSeco, total: corrida.total, automatica: corrida.automatica };
+        const resumen = { arrancadaEl: corrida.arrancadaEl, fin: new Date(), resultado, enviados: corrida.enviados, errores: corrida.errores, limite: corrida.limite, enSeco: corrida.enSeco, total: corrida.total, automatica: corrida.automatica, codigoError };
         await Tenant.updateOne({ _id: tenantId }, { $set: { [`${BASE}.ultimaCorrida`]: resumen, ...(error ? {} : { [`${BASE}.ultimoError`]: null }) } }).catch(() => { });
-        await DropboxSignEnvioLog.create({ tenantId: new Types.ObjectId(tenantId), inicio: corrida.arrancadaEl, fin: new Date(), resultado, enviados: corrida.enviados, errores: corrida.errores, limite: corrida.limite, enSeco: corrida.enSeco, automatica: corrida.automatica, lineas: corrida.lineas, error: error || undefined, capturaError }).catch((e) => console.warn("[DROPBOX-SIGN-BOT] No se pudo guardar el log:", e?.message || e));
+        await DropboxSignEnvioLog.create({ tenantId: new Types.ObjectId(tenantId), inicio: corrida.arrancadaEl, fin: new Date(), resultado, enviados: corrida.enviados, errores: corrida.errores, limite: corrida.limite, enSeco: corrida.enSeco, automatica: corrida.automatica, lineas: corrida.lineas, error: error || undefined, codigoError: codigoError || undefined, capturaError }).catch((e) => console.warn("[DROPBOX-SIGN-BOT] No se pudo guardar el log:", e?.message || e));
     }
 }
 /* ─────────────────── el ORDEN de la cola, a mano (25/10/2026) ─────────────────── */

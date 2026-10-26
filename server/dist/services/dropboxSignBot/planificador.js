@@ -93,8 +93,12 @@ export function puedeCorrer(config, estado, ahora, opciones = {}) {
     const { hora } = fechaYHoraArgentina(ahora);
     if (hora < config.horaDesde || hora >= config.horaHasta)
         return { ok: false, motivo: `Fuera de la ventana horaria (${config.horaDesde} a ${config.horaHasta} h).` };
-    if (estado.ultimaCorridaAt && ahora.getTime() - estado.ultimaCorridaAt.getTime() < config.intervaloHoras * 3600_000) {
-        return { ok: false, motivo: `Todavía no pasaron ${config.intervaloHoras} h desde la última corrida.` };
+    // `yaReservada`: el scheduler ya escribió `ultimaCorridaAt` como candado para ESTA corrida. Sin esto la
+    // corrida automática se rechazaba a sí misma («Todavía no pasaron 4 h») y el candado se renovaba
+    // cada 4 h sin que saliera nada (26/10/2026).
+    if (!opciones.yaReservada && estado.ultimaCorridaAt && ahora.getTime() - estado.ultimaCorridaAt.getTime() < config.intervaloHoras * 3600_000) {
+        const proxima = new Date(estado.ultimaCorridaAt.getTime() + config.intervaloHoras * 3600_000);
+        return { ok: false, motivo: `Próxima corrida automática a las ${proxima.toLocaleTimeString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit", hour12: false })} (cada ${config.intervaloHoras} h).` };
     }
     return { ok: true };
 }
@@ -145,4 +149,29 @@ export function planificar(enCola, archivosEnOutbox, config, estado, ahora) {
             pendientesDespues++;
     }
     return { tanda, faltantes, pendientesDespues, cupoHoy };
+}
+export function destinoDelIntento(resultado, pasoElIrreversible) {
+    if (resultado === "enviado")
+        return "enviado";
+    if (resultado === "limite")
+        return "limite";
+    if (resultado === "seco")
+        return "seco";
+    return pasoElIrreversible ? "error_tras_enviar" : "sigue_en_cola";
+}
+/** Tantos documentos seguidos que fallan en la pantalla sin que salga ninguno = el problema es la pantalla o el bot. */
+export const FALLOS_SEGUIDOS_PARA_CORTAR = 3;
+/** Tantos intentos fallidos de UN documento, en corridas donde otros sí salieron = el problema es ese documento. */
+export const INTENTOS_FALLIDOS_MAXIMOS = 3;
+export function cortarPorFallosSeguidos(seguidos, huboExito) {
+    return !huboExito && seguidos >= FALLOS_SEGUIDOS_PARA_CORTAR;
+}
+/**
+ * Cuántos intentos fallidos le quedan anotados a un documento al cerrar la corrida. Sólo cuentan si en
+ * la misma corrida salió otro (la pantalla anda): si no salió ninguno, la falla no es del documento y
+ * no se le carga. Con `INTENTOS_FALLIDOS_MAXIMOS` pasa a «error» para que alguien lo mire.
+ */
+export function intentosTrasLaCorrida(previos, huboExito) {
+    const intentos = huboExito ? (Number(previos) || 0) + 1 : Number(previos) || 0;
+    return { intentos, pasaAError: intentos >= INTENTOS_FALLIDOS_MAXIMOS };
 }

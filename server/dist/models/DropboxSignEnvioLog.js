@@ -14,6 +14,7 @@ const schema = new Schema({
         default: [],
     },
     error: { type: String },
+    codigoError: { type: String },
     capturaError: { type: String },
     // TTL: 30 días.
     createdAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 30 },

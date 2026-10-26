@@ -55,6 +55,15 @@ export declare function textoDe(page: Page): Promise<string>;
 export declare function pantallaDe(page: Page): Promise<PantallaDropboxSign>;
 export declare function irA(page: Page, url: string): Promise<void>;
 /**
+ * UN ERROR DE LOGIN CON NOMBRE (26/10/2026): `login_requiere_2fa`, `login_requiere_captcha`, `login_clave_incorrecta`,
+ * `login_requiere_autorizacion`, `login_sin_credenciales`, `login_sin_avance`. Antes todo terminaba en un timeout de
+ * Playwright o en «pantalla: login», que no decía qué pasó ni qué hacer.
+ */
+export declare class ErrorLogin extends Error {
+    codigo: string;
+    constructor(codigo: string, mensaje: string);
+}
+/**
  * Abre el navegador con la sesión lista en /home/manage. Con `sinLogin` (login manual del operador)
  * devuelve la sesión en la pantalla que esté, sin intentar loguearse. Quien llama cierra el browser.
  */

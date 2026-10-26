@@ -84,6 +84,11 @@ export interface EstadoArchivo {
     colocacion: ResumenColocacion | null;
     /** Cuándo saldría según el scheduler (ISO), si está en la cola y el envío automático está activo. */
     estimadoAt: string | null;
+    /** El último intento que falló en la pantalla o la red, sin sacarlo de la cola (26/10/2026). */
+    ultimoIntento?: {
+        at: string;
+        detalle: string;
+    } | null;
 }
 /**
  * El estado de cada archivo del listado del tab: una query por lote, sin tocar Dropbox.

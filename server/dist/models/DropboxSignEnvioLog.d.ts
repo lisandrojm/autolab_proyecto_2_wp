@@ -25,6 +25,8 @@ export interface IDropboxSignEnvioLog extends Document {
     automatica: boolean;
     lineas: ILineaEnvio[];
     error?: string;
+    /** El código del fallo, si lo tiene: login_requiere_2fa, login_clave_incorrecta, login_sin_avance… (26/10/2026). */
+    codigoError?: string;
     capturaError?: string;
     createdAt: Date;
 }

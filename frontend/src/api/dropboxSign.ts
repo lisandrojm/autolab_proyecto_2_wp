@@ -447,6 +447,8 @@ export interface BotLog {
   automatica: boolean;
   lineas: BotLinea[];
   error?: string;
+  /** Hay captura de lo que vio el navegador (GET /bot/logs/:id/captura). */
+  tieneCaptura?: boolean;
 }
 
 export interface BotEnvioRegistro {
@@ -482,6 +484,11 @@ class DropboxSignBotAPI {
     return data;
   }
   /** Lo que vio el navegador cuando no pudo entrar (JPEG). */
+  /** Lo que vio el navegador en una corrida que falló (JPEG/PNG). */
+  async capturaLog(id: string): Promise<Blob> {
+    const { data } = await axios.get(`/dropbox-sign/bot/logs/${id}/captura`, { responseType: "blob" });
+    return data;
+  }
   async capturaConexion(): Promise<Blob> {
     const { data } = await axios.get("/dropbox-sign/bot/conexion/captura", { responseType: "blob" });
     return data;

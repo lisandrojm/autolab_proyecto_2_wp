@@ -507,6 +507,22 @@ export const EnvioAutomaticoCard: React.FC = () => {
                 <p className="flex items-center gap-2 font-semibold text-gray-700 dark:text-gray-200">
                   <FontAwesomeIcon icon={l.resultado === "ok" || l.resultado === "sin_tanda" ? faCircleCheck : faCircleXmark} className={l.resultado === "ok" || l.resultado === "sin_tanda" ? "text-green-600" : l.limite ? "text-amber-600" : "text-red-600"} />
                   {fmt(l.inicio)} · {l.resultado}{l.enSeco ? " · seco" : ""}{l.automatica ? " · automática" : " · manual"} · {l.enviados} enviado(s) · {l.errores} error(es)
+                  {l.tieneCaptura && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          setCaptura(URL.createObjectURL(await dropboxSignBotAPI.capturaLog(l._id)));
+                        } catch (e: any) {
+                          sweetAlert.error("Sin captura", e?.response?.data?.error || "");
+                        }
+                      }}
+                      className="ml-auto inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                      title="La pantalla de Dropbox Sign en el momento del primer error de esta corrida"
+                    >
+                      <FontAwesomeIcon icon={faImage} /> Ver qué vio el navegador
+                    </button>
+                  )}
                 </p>
                 {l.error && <pre className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap break-all font-mono text-[11px] text-red-600 dark:text-red-400">{limpiarAnsi(l.error)}</pre>}
                 <ul className="mt-2 space-y-1">

@@ -473,6 +473,10 @@ router.get("/bot/logs", async (req, res) => {
         if (!isAdmin(req))
             return res.status(403).json({ error: "Solo un administrador puede ver los logs." });
         const logs = await DropboxSignEnvioLog.find({ tenantId: req.tenantObjectId }).select("-capturaError").sort({ createdAt: -1 }).limit(50).lean();
+        // Qué corridas tienen captura de lo que vio el navegador (la imagen va aparte, por id).
+        const conCaptura = new Set((await DropboxSignEnvioLog.find({ _id: { $in: logs.map((l) => l._id) }, capturaError: { $exists: true, $ne: "" } }).select("_id").lean()).map((l) => String(l._id)));
+        for (const l of logs)
+            l.tieneCaptura = conCaptura.has(String(l._id));
         const revision = await DropboxSignEnvio.find({ tenantId: req.tenantObjectId, estado: { $in: ["requiere_revision", "error", "limite"] } }).sort({ updatedAt: -1 }).limit(200).lean();
         res.json({ logs, requierenRevision: revision });
     }
@@ -533,7 +537,7 @@ router.post("/bot/colocacion/verificar-todos", async (req, res) => {
     try {
         if (!isAdmin(req))
             return res.status(403).json({ error: "Solo un administrador puede verificar la colocación." });
-        const alcance = (["cola", "revision", "cola_y_revision", "outbox"].includes(req.body?.alcance) ? req.body.alcance : "cola_y_revision");
+        const alcance = (["cola", "revision", "cola_y_revision", "outbox"].includes(req.body?.alcance) ? req.body.alcance : "outbox");
         res.json({ arrancada: true, ...(await arrancarVerificacion(String(req.tenantObjectId), alcance)) });
     }
     catch (error) {

@@ -23,3 +23,30 @@ test("manage, editor y revisar", () => {
 test("lo que no se reconoce es desconocida, no manage", () => {
     assert.equal(clasificarPantalla("https://app.sign.dropbox.com/otra", "Página no encontrada"), "desconocida");
 });
+import { pasoDeLogin } from "./clasificarPantalla.js";
+const OAUTH = "https://www.dropbox.com/oauth2/authorize?client_id=x&response_type=code";
+const vista = (v) => ({ url: OAUTH, texto: "", hayEmail: false, hayClave: false, hayCodigo: false, hayCaptcha: false, emailCargado: false, claveEnviada: false, ...v });
+test("la página de OAuth es login", () => {
+    assert.equal(clasificarPantalla(OAUTH, "Iniciar sesión\nCorreo electrónico\nContinuar"), "login");
+});
+test("login en dos pasos: primero el email, después la contraseña", () => {
+    assert.equal(pasoDeLogin(vista({ hayEmail: true, texto: "Iniciar sesión\nCorreo electrónico\nContinuar" })), "email");
+    assert.equal(pasoDeLogin(vista({ hayEmail: true, emailCargado: true })), "esperar");
+    assert.equal(pasoDeLogin(vista({ hayEmail: true, hayClave: true, emailCargado: true })), "clave");
+    assert.equal(pasoDeLogin(vista({ hayClave: true, claveEnviada: true, emailCargado: true })), "esperar");
+});
+test("llegar al listado es listo", () => {
+    assert.equal(pasoDeLogin(vista({ url: MANAGE, texto: TEXTO_MANAGE })), "listo");
+});
+test("segundo factor, captcha y contraseña incorrecta cortan con su código", () => {
+    assert.equal(pasoDeLogin(vista({ texto: "Verificación en dos pasos\nIngresá el código que te enviamos", claveEnviada: true })), "login_requiere_2fa");
+    assert.equal(pasoDeLogin(vista({ hayCodigo: true, claveEnviada: true })), "login_requiere_2fa");
+    assert.equal(pasoDeLogin(vista({ hayCaptcha: true, hayClave: true })), "login_requiere_captcha");
+    assert.equal(pasoDeLogin(vista({ hayClave: true, claveEnviada: true, texto: "Contraseña incorrecta. Volvé a intentarlo." })), "login_clave_incorrecta");
+});
+test("el consentimiento de OAuth no se acepta solo", () => {
+    assert.equal(pasoDeLogin(vista({ texto: "Dropbox Sign quiere acceso a tu cuenta\nPermitir\nCancelar" })), "login_requiere_autorizacion");
+});
+test("el login de Dropbox Sign con «Iniciar sesión con Dropbox»", () => {
+    assert.equal(pasoDeLogin(vista({ url: "https://app.sign.dropbox.com/account/logIn", texto: "Iniciar sesión con Dropbox" })), "boton_dropbox");
+});
