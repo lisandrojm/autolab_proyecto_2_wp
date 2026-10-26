@@ -5,7 +5,7 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { Tenant } from "../models/Tenant.js";
 import { encryptSecret } from "../utils/secretCrypto.js";
 import { leerCasillaDropboxSign, registrarLectura } from "../services/dropboxSignMailService.js";
-import { armarCola, arrancarCorridaEnvio, configDelTenant, corridaEnvioDe, desencolar, detenerCorridaEnvio, enSecoForzado, encolar, estadoDeArchivos } from "../services/dropboxSignBot/corridaEnvio.js";
+import { arrancarCorridaEnvio, configDelTenant, corridaEnvioDe, desencolar, descartarTrabados, detenerCorridaEnvio, enSecoForzado, encolar, estadoDeArchivos, ordenAutomaticoDeCola, reordenarCola, vistaDeCola } from "../services/dropboxSignBot/corridaEnvio.js";
 import { cupoDelDia, estimarEnvios, fechaYHoraArgentina, puedeCorrer } from "../services/dropboxSignBot/planificador.js";
 import { DropboxSignEnvio } from "../models/DropboxSignEnvio.js";
 import { DropboxSignEnvioLog } from "../models/DropboxSignEnvioLog.js";
@@ -217,7 +217,9 @@ async function configDelBotParaUi(tenantId: string) {
     ultimoLoginAt: bot.ultimoLoginAt || null,
     cc,
     envio: config,
-    enviadosHoy: estado.contadorDia.fecha === fechaYHoraArgentina(ahora).fecha ? estado.contadorDia.enviados : 0,
+    // Las últimas 24 h (ventana móvil): así cuenta Dropbox Sign, no por día calendario.
+    enviadosHoy: estado.enviados24h ?? (estado.contadorDia.fecha === fechaYHoraArgentina(ahora).fecha ? estado.contadorDia.enviados : 0),
+    liberaAt: estado.liberaAt || null,
     cupoHoy: cupoDelDia(config, estado, ahora),
     enfriadoHasta: estado.enfriadoHasta,
     ultimaCorridaAt: estado.ultimaCorridaAt,
@@ -335,7 +337,8 @@ router.post("/bot/login/cerrar", async (req: AuthenticatedRequest & TenantReques
 /** GET /bot/cola — qué enviaría la próxima tanda (lee el Outbox; no envía nada). */
 router.get("/bot/cola", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    res.json(await armarCola(String(req.tenantObjectId), { manual: true }));
+    // La cola completa, en orden, con la línea de corte del cupo, los trabados por motivo y el estado del envío.
+    res.json(await vistaDeCola(String(req.tenantObjectId)));
   } catch (error: any) {
     res.status(400).json({ error: error?.message || "No se pudo armar la cola." });
   }
@@ -353,6 +356,45 @@ router.post("/bot/encolar", async (req: AuthenticatedRequest & TenantRequest, re
     res.json(await encolar(String(req.tenantObjectId), req.user?.userId, parsed.data));
   } catch (error: any) {
     res.status(error?.status || 500).json({ error: error?.message || "No se pudo encolar." });
+  }
+});
+
+/*
+  EL ORDEN DE LA COLA, A MANO (25/10/2026). Persiste en el servidor. Mientras una corrida envía, 409:
+  no alcanza con deshabilitar el botón (otra pestaña podría reordenar igual).
+*/
+/** POST /bot/cola/mover {codigos: string[], a: "tope" | "fondo" | "antes", antesDe?: string} */
+router.post("/bot/cola/mover", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede ordenar la cola." });
+    const parsed = z.object({ codigos: z.array(z.string().min(1)).min(1).max(2000), a: z.enum(["tope", "fondo", "antes"]), antesDe: z.string().optional() }).safeParse(req.body || {});
+    if (!parsed.success || (parsed.data.a === "antes" && !parsed.data.antesDe)) return res.status(400).json({ error: "Indicá qué mover y adónde." });
+    const destino = parsed.data.a === "antes" ? { antesDe: parsed.data.antesDe! } : parsed.data.a;
+    res.json(await reordenarCola(String(req.tenantObjectId), parsed.data.codigos, destino));
+  } catch (error: any) {
+    res.status(error?.status || 500).json({ error: error?.message || "No se pudo ordenar la cola." });
+  }
+});
+
+/** POST /bot/cola/orden-automatico — vuelve al orden de encolado. */
+router.post("/bot/cola/orden-automatico", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede ordenar la cola." });
+    res.json(await ordenAutomaticoDeCola(String(req.tenantObjectId)));
+  } catch (error: any) {
+    res.status(error?.status || 500).json({ error: error?.message || "No se pudo ordenar la cola." });
+  }
+});
+
+/** POST /bot/trabados/descartar {codigos} — saca de la lista de trabados (no se envían). */
+router.post("/bot/trabados/descartar", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede sacar documentos de la lista." });
+    const parsed = z.object({ codigos: z.array(z.string().min(1)).min(1).max(2000) }).safeParse(req.body || {});
+    if (!parsed.success) return res.status(400).json({ error: "Indicá qué códigos sacar." });
+    res.json(await descartarTrabados(String(req.tenantObjectId), parsed.data.codigos));
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "No se pudo sacar de la lista." });
   }
 });
 
@@ -384,7 +426,9 @@ router.post("/bot/estado-archivos", async (req: AuthenticatedRequest & TenantReq
 router.post("/bot/corrida", async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede enviar a firmar." });
-    const r = await arrancarCorridaEnvio(String(req.tenantObjectId), { automatica: false, enSeco: req.body?.enSeco === true });
+    // «Enviar ahora N»: cuántos (si no, el tamaño de tanda). El cupo de las últimas 24 h sigue mandando.
+    const cantidad = Number(req.body?.cantidad);
+    const r = await arrancarCorridaEnvio(String(req.tenantObjectId), { automatica: false, enSeco: req.body?.enSeco === true, cantidad: Number.isInteger(cantidad) && cantidad > 0 && cantidad <= 500 ? cantidad : undefined });
     res.json({ arrancada: true, ...r });
   } catch (error: any) {
     res.status(error?.status || 400).json({ error: error?.message || "No se pudo arrancar la corrida." });
@@ -402,7 +446,7 @@ router.get("/bot/corrida", async (req: AuthenticatedRequest & TenantRequest, res
   const tenantId = String(req.tenantObjectId);
   const c = corridaEnvioDe(tenantId);
   if (!c) return res.json({ hay: false, corriendo: false, eventos: [], enSecoForzado: enSecoForzado() });
-  res.json({ hay: true, corriendo: !c.terminada, enSeco: c.enSeco, automatica: c.automatica, arrancadaEl: c.arrancadaEl, total: c.total, enviados: c.enviados, errores: c.errores, limite: c.limite, irreversible: c.irreversible, detenerPedido: c.señal.cortada, eventos: c.eventos, lineas: c.lineas, enSecoForzado: enSecoForzado() });
+  res.json({ hay: true, corriendo: !c.terminada, enSeco: c.enSeco, automatica: c.automatica, arrancadaEl: c.arrancadaEl, total: c.total, enviados: c.enviados, errores: c.errores, limite: c.limite, irreversible: c.irreversible, detenerPedido: c.señal.cortada, actual: c.actual, cantidad: c.cantidad ?? null, eventos: c.eventos, lineas: c.lineas, enSecoForzado: enSecoForzado() });
 });
 
 /** GET /bot/logs — las últimas 50 corridas (solo admin). Sin la captura, que pesa: va por id. */

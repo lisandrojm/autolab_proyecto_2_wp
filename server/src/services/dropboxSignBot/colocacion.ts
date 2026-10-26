@@ -198,6 +198,8 @@ export interface ResultadoVerificado {
   ms: number;
   /** Cuándo se verificó (ISO): la pantalla lo muestra junto al resultado. */
   verificadaAt: string;
+  /** El email del firmante resuelto (para reencolar con sus datos). */
+  email?: string;
   origen: "plantilla" | "ancla";
 }
 
@@ -261,10 +263,12 @@ export async function arrancarVerificacion(tenantId: string, alcance: AlcanceVer
           await guardarResumen(tenantId, d.codigo, resumen);
           const det = d.deteccion;
           const motivo = det.ok === true ? (d.firmante ? "" : d.motivoSinFirmante || "No se pudo resolver al firmante en la base.") : det.motivo;
-          resultado = { archivo, codigo: d.codigo, tipo: d.tipo, estado: registro?.estado || "", firmante: d.firmante?.nombre || "", ok: !motivo, pagina: resumen.pagina, rotulo: resumen.rotulo, fuente: resumen.fuente, motivo, ms: Date.now() - t0, verificadaAt: new Date().toISOString(), origen: d.origen };
+          resultado = { archivo, codigo: d.codigo, tipo: d.tipo, estado: registro?.estado || "", firmante: d.firmante?.nombre || "", email: d.firmante?.email || "", ok: !motivo, pagina: resumen.pagina, rotulo: resumen.rotulo, fuente: resumen.fuente, motivo, ms: Date.now() - t0, verificadaAt: new Date().toISOString(), origen: d.origen };
         } catch (e: any) {
           resultado = { archivo, codigo: leerAnclas(archivo).codigo, tipo: reglaDe(archivo, reglas)?.tipo || null, estado: registro?.estado || "", firmante: registro?.firmante || "", ok: false, pagina: null, rotulo: "", fuente: "", motivo: `No se pudo bajar o leer el PDF: ${e?.message || e}`, ms: Date.now() - t0, verificadaAt: new Date().toISOString(), origen: "ancla" };
         }
+        // La verificación ESCRIBE el estado (25/10/2026): la cola y los trabados leen del registro, no de otra caché.
+        if (registro) await aplicarVerificacion(tenantId, registro, resultado).catch((e) => console.warn("[DROPBOX-SIGN-BOT] No se pudo aplicar la verificación:", e?.message || e));
         v.resultados.push(resultado);
         v.hechos++;
         if (resultado.ok) v.enviables++;
@@ -283,4 +287,29 @@ export async function arrancarVerificacion(tenantId: string, alcance: AlcanceVer
     }
   })();
   return { total: lista.length };
+}
+
+/**
+ * LO QUE DIJO LA VERIFICACIÓN, AL REGISTRO DEL DOCUMENTO (25/10/2026). Antes «Verificar todos» sólo
+ * dejaba el ✓/✗ y la lista de «requiere revisión» seguía mostrando lo de días atrás: 59/59 enviables
+ * y 79 trabados a la vez.
+ *  · trabado que ahora sale bien → vuelve a la cola, al final (alguien ya lo había mandado a firmar);
+ *  · en la cola y ahora sale mal → «requiere revisión» con el motivo nuevo (no se va a enviar igual);
+ *  · trabado que sigue mal → se actualiza el motivo.
+ * Un «error» de envío NO se toca: pudo haber quedado a medio enviar y eso lo decide una persona.
+ */
+async function aplicarVerificacion(tenantId: string, registro: any, r: ResultadoVerificado): Promise<void> {
+  const estado = String(registro.estado || "");
+  if (r.ok && estado === "requiere_revision") {
+    const ultimo: any = await DropboxSignEnvio.findOne({ tenantId, orden: { $ne: null } }).sort({ orden: -1 }).select("orden").lean();
+    await DropboxSignEnvio.updateOne({ tenantId, codigo: registro.codigo, estado: "requiere_revision" }, { $set: { estado: "en_cola", detalle: "", orden: (Number(ultimo?.orden) || 0) + 1, ...(registro.encoladoAt ? {} : { encoladoAt: new Date() }), ...(r.firmante && r.email ? { firmante: r.firmante, email: r.email } : {}), ...(r.tipo ? { tipo: r.tipo } : {}) } });
+    return;
+  }
+  if (!r.ok && (estado === "en_cola" || estado === "limite")) {
+    await DropboxSignEnvio.updateOne({ tenantId, codigo: registro.codigo, estado }, { $set: { estado: "requiere_revision", detalle: r.motivo, orden: null } });
+    return;
+  }
+  if (!r.ok && estado === "requiere_revision" && r.motivo && r.motivo !== registro.detalle) {
+    await DropboxSignEnvio.updateOne({ tenantId, codigo: registro.codigo, estado }, { $set: { detalle: r.motivo } });
+  }
 }

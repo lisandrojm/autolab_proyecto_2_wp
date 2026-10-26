@@ -27,6 +27,13 @@ export interface EstadoThrottle {
   contadorDia: { fecha: string; enviados: number };
   enfriadoHasta: Date | null;
   ultimaCorridaAt: Date | null;
+  /**
+   * Enviados en las ÚLTIMAS 24 H (ventana móvil, 25/10/2026): Dropbox Sign libera de a poco, no a la
+   * medianoche. Si viene, el cupo se cuenta con esto y no con `contadorDia`.
+   */
+  enviados24h?: number;
+  /** Cuándo se libera el próximo lugar de la ventana, si no queda cupo. */
+  liberaAt?: Date | null;
 }
 
 /** Un documento en la cola (un `DropboxSignEnvio` en estado `en_cola` o `limite`). */
@@ -93,7 +100,8 @@ export function estimarEnvios(enCola: ItemEnCola[], config: ConfigEnvio, estado:
   const intervaloMs = Math.max(0.5, config.intervaloHoras) * 3600_000;
   // Enviados por día, arrancando con los de hoy.
   const hoy = fechaYHoraArgentina(ahora);
-  const enviadosPorDia = new Map<string, number>([[hoy.fecha, estado.contadorDia?.fecha === hoy.fecha ? estado.contadorDia.enviados || 0 : 0]]);
+  // Lo ya enviado (últimas 24 h si se sabe) cuenta para el primer día de la simulación: es una estimación.
+  const enviadosPorDia = new Map<string, number>([[hoy.fecha, enviadosQueCuentan(estado, ahora)]]);
 
   let t = new Date(ahora.getTime());
   if (estado.enfriadoHasta && estado.enfriadoHasta.getTime() > t.getTime()) t = new Date(estado.enfriadoHasta.getTime());
@@ -124,11 +132,14 @@ export function estimarEnvios(enCola: ItemEnCola[], config: ConfigEnvio, estado:
   return res;
 }
 
-export const cupoDelDia = (config: ConfigEnvio, estado: EstadoThrottle, ahora: Date): number => {
+/** Lo enviado que cuenta para el tope: las últimas 24 h si se sabe (ventana móvil), si no el día calendario. */
+export const enviadosQueCuentan = (estado: EstadoThrottle, ahora: Date): number => {
+  if (typeof estado.enviados24h === "number") return estado.enviados24h;
   const { fecha } = fechaYHoraArgentina(ahora);
-  const enviadosHoy = estado.contadorDia?.fecha === fecha ? estado.contadorDia.enviados || 0 : 0;
-  return Math.max(0, config.topeDiario - enviadosHoy);
+  return estado.contadorDia?.fecha === fecha ? estado.contadorDia.enviados || 0 : 0;
 };
+
+export const cupoDelDia = (config: ConfigEnvio, estado: EstadoThrottle, ahora: Date): number => Math.max(0, config.topeDiario - enviadosQueCuentan(estado, ahora));
 
 /**
  * ¿Le toca correr al scheduler ahora? Devuelve el motivo si no. (El botón «Enviar a la firma» no pasa
@@ -138,7 +149,7 @@ export function puedeCorrer(config: ConfigEnvio, estado: EstadoThrottle, ahora: 
   if (estado.enfriadoHasta && estado.enfriadoHasta.getTime() > ahora.getTime()) {
     return { ok: false, motivo: `Enfriamiento por el freno de Dropbox Sign hasta las ${estado.enfriadoHasta.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}.` };
   }
-  if (cupoDelDia(config, estado, ahora) <= 0) return { ok: false, motivo: `Se alcanzó el tope diario (${config.topeDiario}).` };
+  if (cupoDelDia(config, estado, ahora) <= 0) return { ok: false, motivo: `Se alcanzó el tope estimado de ${config.topeDiario} envíos en 24 h${estado.liberaAt ? `: se libera un lugar a las ${estado.liberaAt.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit" })}` : ""}.` };
   if (opciones.manual) return { ok: true };
   if (!config.activo) return { ok: false, motivo: "El envío automático está desactivado." };
   const { hora } = fechaYHoraArgentina(ahora);
