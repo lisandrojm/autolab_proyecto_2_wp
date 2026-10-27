@@ -40,3 +40,6 @@ frontend/cuils.txt
 
 # Recibos de sueldo: los PDFs de cada tenant NO van al repo (datos de personas); el idioma del OCR (server/tessdata) sí.
 server/storage/*/recibos-sueldo/
+
+# Respaldos de scripts que corrigen datos (valores viejos para deshacer): no van al repo.
+server/respaldos/

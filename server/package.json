@@ -33,6 +33,7 @@
     "indice:userproject-frame": "dotenv -e .env.production -- tsx src/scripts/indiceUserProjectFrame.ts",
     "backfill:roles-frame:dry": "dotenv -e .env.production -v DRY=true -- tsx src/scripts/backfillUserRolesFrame.ts",
     "backfill:roles-frame": "dotenv -e .env.production -- tsx src/scripts/backfillUserRolesFrame.ts",
+    "proyectos:nombres-en-vinculos": "dotenv -e .env.production -- tsx src/scripts/nombresProyectoEnVinculos.ts",
     "valorar:funciones:dry": "dotenv -e .env.production -- tsx src/scripts/valorarFuncionesPorBruto.ts",
     "valorar:funciones": "dotenv -e .env.production -v APLICAR=true -- tsx src/scripts/valorarFuncionesPorBruto.ts",
     "limpiar:alcance:dry": "dotenv -e .env.production -- tsx src/scripts/limpiarAlcancePuesto.ts",

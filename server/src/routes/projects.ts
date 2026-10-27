@@ -1417,6 +1417,7 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
 
     // 1. Fetch current project state explicitly to manage User.projectIds sync
     const currentProject = await Project.findOne(filter);
+    const nombreAntes = currentProject?.name;
 
     if (!currentProject) {
       res.status(404).json({ error: "Project not found" });
@@ -1568,6 +1569,16 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
 
 
     await currentProject.save();
+
+    /*
+      EL NOMBRE EN LOS VÍNCULOS (27/10/2026). Cada vínculo persona-proyecto (`users_&_projects`) guarda
+      una copia del nombre (`nombre_proyecto`, y otra en cada contrato), que es lo que muestran el
+      reporte de Novedades, sus filtros y los documentos. Nadie la actualizaba al renombrar: seguían
+      los nombres de FRAME con el centro de costo («705_TOB_NOVELA_GRAFICA»). Ahora se copia el nombre nuevo.
+    */
+    if (nombreAntes !== undefined && currentProject.name && currentProject.name !== nombreAntes) {
+      await UserProject.updateMany({ projectId: currentProject._id }, { $set: { nombre_proyecto: currentProject.name, "contracts.$[].nombre_proyecto": currentProject.name } }).catch((e: any) => console.warn("[PROJECTS] No se pudo copiar el nombre nuevo a los vínculos:", e?.message || e));
+    }
 
     const projectObj = currentProject.toObject();
     await resolveProjectGlobalConfig(projectObj, req.tenantObjectId);
