@@ -49,6 +49,8 @@ const normalizar = (s: string): string =>
 
 interface FormState {
   name: string;
+  /** En qué casos se usa este tipo de contrato (ayudamemoria para quien lo elige). */
+  descripcion: string;
   cantidadJornadas: string;
   multiplicadorDiario: string;
   /** Límites de la jornada: vacío = sin límite. */
@@ -69,7 +71,7 @@ interface FormState {
   generaAlta: boolean;
 }
 
-const FORM_VACIO: FormState = { name: '', cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, modoFechas: 'periodo', requiereFirma: true, requiereFirmaRelease: true, requiereFirmaAlta: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
+const FORM_VACIO: FormState = { name: '', descripcion: '', cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, modoFechas: 'periodo', requiereFirma: true, requiereFirmaRelease: true, requiereFirmaAlta: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
 
 const BadgeTiempoIndeterminado: React.FC = () => (
   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
@@ -656,6 +658,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
     setEditando(contrato);
     setForm({
       name: contrato.name,
+      descripcion: contrato.data?.descripcion || '',
       cantidadJornadas: String(contrato.data?.cantidadJornadas ?? ''),
       multiplicadorDiario: String(contrato.data?.multiplicadorDiario ?? ''),
       horasPorJornada: contrato.data?.horasPorJornada != null ? String(contrato.data.horasPorJornada) : '',
@@ -844,6 +847,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
 
     const payload = {
       nombre: name,
+      descripcion: form.descripcion,
       cantidadJornadas: form.cantidadJornadas,
       multiplicadorDiario: form.multiplicadorDiario,
       horasPorJornada: form.horasPorJornada,
@@ -1130,6 +1134,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                     {contrato.isActive === false ? 'Inactivo' : 'Activo'}
                   </span>
                   <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{contrato.name}</span>
+                  {contrato.data?.descripcion && <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 whitespace-pre-line" title={contrato.data.descripcion}>{contrato.data.descripcion}</span>}
                   {tienePlantillaCustom(contrato._id) && <BadgeCustom className="w-fit" />}
                 </div>
 
@@ -1293,6 +1298,13 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Nombre *</label>
               <input ref={nombreRef} className="input-field w-full" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ej: Plazo fijo 5x7" />
+            </div>
+
+            {/* DESCRIPCIÓN (27/10/2026): en qué casos se usa. Se le muestra a quien elige el tipo al dar de alta. */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Descripción</label>
+              <textarea className="input-field w-full min-h-[72px]" rows={3} maxLength={2000} value={form.descripcion} onChange={(e) => setForm((p) => ({ ...p, descripcion: e.target.value }))} placeholder="Ej: para coberturas de un solo día en rodaje; no usar para quien trabaja toda la temporada." />
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">En qué casos se usa este tipo de contrato. Es un ayudamemoria: se ve al elegirlo en Agregar / Configurar miembro.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

@@ -12,6 +12,11 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IContrato extends Document {
   name: string;
   data: {
+    /**
+     * DESCRIPCIÓN (27/10/2026): en qué casos se usa este tipo de contrato. Un ayudamemoria para quien
+     * lo elige al dar de alta a alguien; se muestra al lado del selector. Texto libre, opcional.
+     */
+    descripcion?: string;
     cantidadJornadas: number;
     multiplicadorDiario: number;
     esTiempoIndeterminado: boolean;
@@ -98,6 +103,7 @@ const contratoSchema = new Schema<IContrato>(
     // tiempo (ver `ensureContratosBackfilled` en routes/contratos.ts).
     name: { type: String, required: true, unique: true },
     data: {
+      descripcion: { type: String, default: "" },
       cantidadJornadas: { type: Number, default: 0 },
       multiplicadorDiario: { type: Number, default: 0 },
       esTiempoIndeterminado: { type: Boolean, default: false },

@@ -4,6 +4,7 @@ const contratoSchema = new Schema({
     // tiempo (ver `ensureContratosBackfilled` en routes/contratos.ts).
     name: { type: String, required: true, unique: true },
     data: {
+        descripcion: { type: String, default: "" },
         cantidadJornadas: { type: Number, default: 0 },
         multiplicadorDiario: { type: Number, default: 0 },
         esTiempoIndeterminado: { type: Boolean, default: false },

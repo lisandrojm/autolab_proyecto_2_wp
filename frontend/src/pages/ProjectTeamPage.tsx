@@ -4586,6 +4586,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       <span className="text-gray-400">Limitan el horario y los días.</span>
                     </p>
                   )}
+                  {/* El ayudamemoria del tipo (Configuración → Contratos → Descripción): en qué casos se usa. */}
+                  {contratoDelWizard?.data?.descripcion && (
+                    <p className="ml-1 flex items-start gap-1.5 rounded-md bg-blue-50 px-2 py-1.5 text-[11px] text-blue-800 whitespace-pre-line dark:bg-blue-900/20 dark:text-blue-200">
+                      <FontAwesomeIcon icon={faInfoCircle} className="mt-0.5 h-3 w-3 shrink-0" />
+                      <span>{contratoDelWizard.data.descripcion}</span>
+                    </p>
+                  )}
                 </div>
 
                 {/* El Estado, a la DERECHA del Tipo de contrato y en su misma fila (27/10/2026): sale de él y así se aprovecha el ancho. */}

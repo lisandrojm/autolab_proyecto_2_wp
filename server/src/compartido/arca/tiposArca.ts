@@ -248,6 +248,8 @@ export interface ContratoItem {
   orden?: number;
 
   data: {
+    /** En qué casos se usa este tipo de contrato: ayudamemoria para quien lo elige (27/10/2026). */
+    descripcion?: string;
     cantidadJornadas: number;
     multiplicadorDiario: number;
     esTiempoIndeterminado: boolean;

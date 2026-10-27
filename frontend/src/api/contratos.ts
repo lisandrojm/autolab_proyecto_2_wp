@@ -10,6 +10,8 @@ export type { ContratoItem } from "@compartido/arca/tiposArca";
 
 export interface ContratoInput {
   nombre: string;
+  /** En qué casos se usa: ayudamemoria para quien lo elige. */
+  descripcion?: string;
   cantidadJornadas?: string | number;
   multiplicadorDiario?: string | number;
   esTiempoIndeterminado?: boolean;
