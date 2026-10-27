@@ -474,11 +474,16 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
     return tiposServicio.filter((t) => String(t.grupo || '') === grupoTipoServicio);
   }, [tiposServicio, grupoTipoServicio, hayGruposCargados]);
 
+  /*
+    FILTRO POR ESTADO (27/10/2026): por defecto sólo los ACTIVOS —los inactivos son tipos que ya no se
+    eligen y llenaban la grilla—. Se ve como badge con X arriba, como en el resto de la plataforma;
+    sacarlo muestra todos.
+  */
+  const [filtroActivo, setFiltroActivo] = useState<'' | 'activo' | 'inactivo'>('activo');
   const filtrados = useMemo(() => {
     const q = normalizar(searchTerm);
-    if (!q) return contratos;
-    return contratos.filter((c) => normalizar(c.name).includes(q));
-  }, [contratos, searchTerm]);
+    return contratos.filter((c) => (!q || normalizar(c.name).includes(q)) && (!filtroActivo || (filtroActivo === 'activo') === (c.isActive !== false)));
+  }, [contratos, searchTerm, filtroActivo]);
 
   // Cuántas Plantillas ("Plantillas | Contratos") tiene asignadas cada Contrato.
   const plantillasPorContrato = useMemo(() => {
@@ -945,7 +950,23 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
         <div className="flex-1 w-full">
-          <SearchAndFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} searchPlaceholder="Buscar contrato..." />
+          <SearchAndFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Buscar contrato..."
+            selectFilters={[
+              {
+                label: 'Estado',
+                value: filtroActivo,
+                onChange: (v) => setFiltroActivo(v as '' | 'activo' | 'inactivo'),
+                placeholder: 'Activos e inactivos',
+                options: [
+                  { value: 'activo', label: 'Activos' },
+                  { value: 'inactivo', label: 'Inactivos' },
+                ],
+              },
+            ]}
+          />
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {isReorderMode ? (
