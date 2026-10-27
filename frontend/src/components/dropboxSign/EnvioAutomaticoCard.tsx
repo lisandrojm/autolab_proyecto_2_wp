@@ -372,7 +372,7 @@ export const EnvioAutomaticoCard: React.FC = () => {
         </div>
         <div>
           <label className={labelClass}>Tope por día</label>
-          <input type="number" min={1} max={60} value={form.topeDiario} onChange={num("topeDiario")} className={inputClass} />
+          <input type="number" min={1} value={form.topeDiario} onChange={num("topeDiario")} className={inputClass} />
         </div>
         <div>
           <label className={labelClass}>Enfriamiento (h)</label>

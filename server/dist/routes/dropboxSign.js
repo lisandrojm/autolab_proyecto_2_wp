@@ -190,7 +190,7 @@ const botConfigSchema = z.object({
         activo: z.boolean().optional(),
         tamanoTanda: z.number().int().min(1).max(50).optional(),
         intervaloHoras: z.number().min(0.5).max(48).optional(),
-        topeDiario: z.number().int().min(1).max(60).optional(),
+        topeDiario: z.number().int().min(1).optional(), // sin máximo (27/10/2026): lo decide la persona
         enfriamientoHoras: z.number().min(1).max(48).optional(),
         horaDesde: z.number().int().min(0).max(23).optional(),
         horaHasta: z.number().int().min(1).max(24).optional(),
