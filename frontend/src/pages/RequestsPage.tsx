@@ -300,7 +300,7 @@ export const RequestsPage: React.FC = () => {
     Atlas, así que la ventana es larga y se ve siempre.
   */
   const [cargandoUsuarios, setCargandoUsuarios] = useState(true);
-  const [allProjects, setAllProjects] = useState<{ id: string; name: string; areasConfig?: any[] }[]>([]);
+  const [allProjects, setAllProjects] = useState<{ id: string; name: string; areasConfig?: any[]; centroCosto?: string }[]>([]);
   const [allAreas, setAllAreas] = useState<{ id: string; name: string }[]>([]);
   const [allShifts, setAllShifts] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -396,7 +396,7 @@ export const RequestsPage: React.FC = () => {
     try {
       const data = await projectsAPI.listAll();
       // El código del centro de costo delante del nombre («426 LN+»): es como se nombra el proyecto en la oficina.
-      setAllProjects(data.map((p: any) => ({ id: p._id, name: conCodigoDeCentro(p), areasConfig: p.areasConfig })));
+      setAllProjects(data.map((p: any) => ({ id: p._id, name: conCodigoDeCentro(p), areasConfig: p.areasConfig, centroCosto: etiquetaCentroCosto(p?.metadataResolutions?.centroCosto) || undefined })));
     } catch (e) {
       console.error("Error loading projects", e);
     }

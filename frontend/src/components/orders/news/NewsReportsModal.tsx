@@ -26,7 +26,8 @@ interface NewsReportsModalProps {
   isOpen: boolean;
   onClose: () => void;
   allUsers: User[];
-  allProjects: { id: string; name: string }[];
+  /** `centroCosto`: el código del centro de costo del proyecto («705»), para su insignia y su columna. */
+  allProjects: { id: string; name: string; centroCosto?: string }[];
   /** Si se provee, al abrir el modal se preselecciona este proyecto (por _id) en el filtro de Proyecto. */
   initialProjectFilter?: string;
   /**
@@ -1730,6 +1731,9 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
    * Los partes suman sólo los proyectos que NINGÚN vínculo trae: un parte puede existir para un
    * proyecto en el que nadie del padrón tiene contrato, y esa fila igual aparece.
    */
+  /** El código del centro de costo por id de proyecto (27/10/2026: el nombre ya no lo trae adelante). */
+  const centroPorProyecto = useMemo(() => new Map((allProjects || []).filter((p) => p.centroCosto).map((p) => [String(p.id), String(p.centroCosto)])), [allProjects]);
+
   const proyectosDelReporte = useMemo(() => {
     const porClave = new Map<string, { clave: string; nombre: string; id?: string }>();
     const clavesPorId = new Map<string, string>();
@@ -2355,7 +2359,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 placeholder="Buscar proyecto…"
                 permitirTodos
                 zIndex={110}
-                items={proyectosDelReporte.map((p) => ({ id: p.clave, nombre: p.nombre }))}
+                items={proyectosDelReporte.map((p) => ({ id: p.clave, nombre: p.nombre, insignia: p.id ? centroPorProyecto.get(p.id) : undefined }))}
                 value={proyectosSeleccionados}
                 onChange={setProyectosSeleccionados}
                 textoVacio={proyectosDelReporte.length === 0 ? "No hay proyectos para el período." : "Elegir proyectos…"}
@@ -2719,6 +2723,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                   </th>
                   <th className="py-2.5 px-3 text-center whitespace-nowrap">Jornadas</th>
                   <th className="py-2.5 px-3 text-left">Proyectos</th>
+                  <th className="py-2.5 px-3 text-left whitespace-nowrap">Centro de costo</th>
                   {/* Pegada a Proyectos y con los mismos badges que el listado de Novedades: es el
                       mismo dato leído desde otra pantalla. */}
                   <th className="py-2.5 px-3 text-left whitespace-nowrap">Área | Turno</th>
@@ -2795,6 +2800,14 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                               <span className="text-gray-300 dark:text-gray-600 text-xs">-</span>
                             )}
                           </div>
+                        </td>
+                        {/* Centro de costo: el código del proyecto de la fila («705»). */}
+                        <td className="py-2.5 px-3">
+                          {s.rowProjectId && centroPorProyecto.get(String(s.rowProjectId)) ? (
+                            <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">{centroPorProyecto.get(String(s.rowProjectId))}</span>
+                          ) : (
+                            <span className="text-gray-300 dark:text-gray-600 text-xs">-</span>
+                          )}
                         </td>
                         {/*
                           ÁREA | TURNO: lo que dicen los PARTES del período, no la ficha.
@@ -2995,7 +3008,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 {statsByEmployee.length === 0 && (
                   <tr>
                     {/* 18 = las columnas que dibuja el thead, contando la del chevron. */}
-                    <td colSpan={18} className="py-12 text-center text-gray-500 dark:text-gray-400 italic">
+                    <td colSpan={19} className="py-12 text-center text-gray-500 dark:text-gray-400 italic">
                       {cargando || cargandoAsistencias ? (
                         <span className="inline-flex items-center gap-2 not-italic">
                           <FontAwesomeIcon icon={faSpinner} spin />

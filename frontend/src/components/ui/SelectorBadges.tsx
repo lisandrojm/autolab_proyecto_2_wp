@@ -33,6 +33,8 @@ export interface OpcionSelector {
    * probando clicks contra algo que no responde. Acá el motivo se muestra en la fila y en el tooltip.
    */
   bloqueadoPor?: string;
+  /** Un dato corto que va como insignia delante del nombre (el código del centro de costo de un proyecto). También se busca por él. */
+  insignia?: string;
 }
 
 interface Props {
@@ -72,7 +74,7 @@ export const SelectorBadges: React.FC<Props> = ({ etiqueta, items, value, onChan
   const [busqueda, setBusqueda] = useState('');
 
   const elegidos = value.map((id) => items.find((i) => i.id === id)).filter(Boolean) as OpcionSelector[];
-  const filtrados = items.filter((i) => fuzzyMatch(i.nombre, busqueda));
+  const filtrados = items.filter((i) => fuzzyMatch(i.insignia ? `${i.insignia} ${i.nombre}` : i.nombre, busqueda));
   const seleccionables = items.filter((i) => !i.bloqueadoPor);
 
   const abrir = () => {
@@ -186,7 +188,10 @@ export const SelectorBadges: React.FC<Props> = ({ etiqueta, items, value, onChan
                 >
                   <input type="checkbox" checked={value.includes(o.id)} disabled={!!o.bloqueadoPor} onChange={() => alternar(o.id)} className="rounded text-blue-500 focus:ring-blue-500 h-4 w-4 shrink-0 disabled:cursor-not-allowed" />
                   <span className="min-w-0">
-                    <span className="block text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{o.nombre}</span>
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      {o.insignia && <span className="shrink-0 rounded border border-amber-200 bg-amber-50 px-1.5 py-px font-mono text-[10px] font-semibold text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">{o.insignia}</span>}
+                      <span className="block text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{o.nombre}</span>
+                    </span>
                     {/* El motivo va EN la fila, no solo en el tooltip: una opción gris sin
                         explicación deja probando clicks contra algo que no responde. */}
                     {o.bloqueadoPor && <span className="block text-[10px] text-gray-500 dark:text-gray-400 truncate">{o.bloqueadoPor}</span>}
