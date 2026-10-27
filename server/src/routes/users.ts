@@ -1879,6 +1879,28 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
     // Para la columna «Solicitó» (ver `solicitantesDe`).
     const solicitantes = await solicitantesDe(req.tenantObjectId as Types.ObjectId, docs);
 
+    /*
+      EL ÚLTIMO CONTRATO DE LA PERSONA (27/10/2026), en cualquier proyecto: el de alta más reciente (a
+      igual alta, el cargado después). Es lo que pregunta quien aprueba: si ya trabaja, hasta cuándo, o
+      si viene de un contrato vencido. Las solicitudes de alguien nuevo no tienen.
+    */
+    const personasIds = [...new Set([...personaDe.values()].filter((id) => Types.ObjectId.isValid(id)))].map((id) => new Types.ObjectId(id));
+    const ultimoContratoDe = new Map<string, { alta: string; baja: string | null; nombre: string; proyecto: string }>();
+    if (personasIds.length > 0) {
+      const vinculos: any[] = await UserProject.find({ userId: { $in: personasIds } }).select("userId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.nombre_contrato contracts.fecha_carga").lean();
+      const clave = (c: any) => `${fechaISO(c.fecha_alta_contrato) || ""}|${String(c.fecha_carga || "")}`;
+      const mejor = new Map<string, { c: any; proyecto: string }>();
+      for (const v of vinculos) {
+        for (const c of v.contracts || []) {
+          if (!fechaISO(c?.fecha_alta_contrato)) continue;
+          const uid = String(v.userId);
+          const previo = mejor.get(uid);
+          if (!previo || clave(c) > clave(previo.c)) mejor.set(uid, { c, proyecto: String(v.nombre_proyecto || "") });
+        }
+      }
+      for (const [uid, { c, proyecto }] of mejor) ultimoContratoDe.set(uid, { alta: fechaISO(c.fecha_alta_contrato)!, baja: fechaISO(c.fecha_baja_contrato) || null, nombre: String(c.nombre_contrato || ""), proyecto });
+    }
+
     const rows = docs.map((u: any) => {
       const m = u.metadata || {};
       const personaId = personaDe.get(String(u._id)) || String(u._id);
@@ -1922,6 +1944,7 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
         empresaContratoId: m.empresaContratoId ? String(m.empresaContratoId) : null,
         // Sólo las aprobadas: la obra social del contrato que dejó su aprobación.
         obraSocial: obraSocialPorSolicitud.get(String(u._id)) || null,
+        ultimoContrato: ultimoContratoDe.get(personaId) || null,
       };
     });
 
@@ -3259,7 +3282,8 @@ router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePe
         hora_inicio: horaInicio || "",
         hora_fin: horaFin || "",
         calificacion: null,
-        fecha_carga: new Date().toISOString().split("T")[0],
+        // Con hora (27/10/2026): «Fecha de creación» en Contratos muestra día y hora, como Solicitudes.
+        fecha_carga: new Date().toISOString(),
         puede_renovar_contrato: true,
         nombre_proyecto: nombreProyecto,
         nombre_estado_empleado: "Activo",

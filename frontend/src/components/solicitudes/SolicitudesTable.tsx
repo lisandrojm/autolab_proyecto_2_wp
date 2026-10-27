@@ -8,6 +8,8 @@ import type { ObraSocialDeSolicitud, ResultadoEliminarSolicitud } from "../../ap
 import { EstadoBadge } from "../EstadoSelect";
 import { estadoImpositivoPorTipo, esTipoImpositivo } from "../../utils/tramiteImpositivo";
 import { NombreArca, estadoNombreArca } from "../arca/NombreArca";
+import { FechaHoraCelda } from "../ui/FechaHoraCelda";
+import { isContractVigente, formatDate } from "../team/ContractCard";
 
 /*
  * LA TABLA DE SOLICITUDES, UNA SOLA, PARA LOS DOS LUGARES DONDE SE MIRAN.
@@ -89,6 +91,8 @@ export interface SolicitudVista {
   nombreValidadoArcaAt?: string | null;
   empresaContratoId?: string | null;
   obraSocial?: ObraSocialDeSolicitud | null;
+  /** El último contrato de la persona, en cualquier proyecto. null = no tiene (alguien nuevo). */
+  ultimoContrato?: { alta: string; baja: string | null; nombre: string; proyecto: string } | null;
 }
 
 /** Roles del solicitante que se muestran como badge en la columna «Solicitó». */
@@ -324,7 +328,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 </th>
               )}
               <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] border-r border-gray-200 dark:border-gray-700 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]`}>Nombre</th>
-              <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">F. Solicitud</th>
+              <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">Fecha de creación</th>
               <th className="px-4 py-3 font-semibold">Solicitó</th>
               {mostrarProyectos && (
                 <>
@@ -334,6 +338,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
               )}
               <th className="px-4 py-3 font-semibold">Rol/es Empresa</th>
               <th className="px-4 py-3 font-semibold">Tipo de alta</th>
+              <th className="px-4 py-3 font-semibold whitespace-nowrap" title="El último contrato de la persona, en cualquier proyecto">Último contrato</th>
               <th className="px-4 py-3 font-semibold">Fechas</th>
               <th className="px-4 py-3 font-semibold">Horario</th>
               <th className="px-4 py-3 font-semibold text-center">Estado</th>
@@ -427,19 +432,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                     no se distinguía), y en una tanda del mismo día sólo la hora dice cuál se pidió primero.
                   */}
                   <td className="px-4 py-3 whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">
-                    {(() => {
-                      const f = fechaHoraSolicitud(s.creadaEl);
-                      return f ? (
-                        <div className="text-xs leading-tight">
-                          <p className="text-gray-500 dark:text-gray-400">{f.diaSemana}</p>
-                          <p className="text-gray-900 dark:text-white">
-                            {f.fecha} <span className="text-gray-500 dark:text-gray-400">· {f.hora} h</span>
-                          </p>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400">N/A</span>
-                      );
-                    })()}
+                    <FechaHoraCelda valor={s.creadaEl} />
                   </td>
 
                   {/*
@@ -512,6 +505,25 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                     inventar el dato del que depende el TXT de ARCA.
                   */}
                   <td className="px-4 py-3">{tramite ? <EstadoBadge name={tramite.name} /> : <span className="text-xs text-gray-400 italic">Sin definir</span>}</td>
+                  {/* El último contrato de la PERSONA (en cualquier proyecto), como la columna de Contratos. */}
+                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos: es alguien nuevo"}>
+                    {s.ultimoContrato ? (
+                      (() => {
+                        const vigente = isContractVigente(s.ultimoContrato.alta, s.ultimoContrato.baja || undefined);
+                        return (
+                          <div className="flex flex-col gap-1">
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
+                            <div className="flex flex-col gap-0.5 text-xs">
+                              <span><span className="text-gray-400">Alta:</span> {formatDate(s.ultimoContrato.alta)}</span>
+                              <span><span className="text-gray-400">Baja:</span> {s.ultimoContrato.baja ? formatDate(s.ultimoContrato.baja) : "—"}</span>
+                            </div>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <span className="text-gray-300 dark:text-gray-600">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                       <span>{formatDiaSolicitud(s.startDate)}</span>

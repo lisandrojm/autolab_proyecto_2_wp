@@ -140,6 +140,8 @@ export interface SolicitudOverviewRow {
   empresaContratoId?: string | null;
   /** Sólo las aprobadas: la obra social del contrato que dejó la aprobación. */
   obraSocial?: ObraSocialDeSolicitud | null;
+  /** El último contrato de la persona, en cualquier proyecto (fechas YYYY-MM-DD). null = no tiene. */
+  ultimoContrato?: { alta: string; baja: string | null; nombre: string; proyecto: string } | null;
 }
 
 /**

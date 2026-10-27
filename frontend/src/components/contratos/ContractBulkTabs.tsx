@@ -23,6 +23,7 @@ import { firmaDigitalAPI, FirmaDigitalConfig } from '../../api/firmaDigital';
 import { afipAPI } from '../../api/afip';
 import { SinCuitValidacionModal, TIPO_DOC_SIN_CUIT_LABEL } from './SinCuitValidacionModal';
 import { claveEstado, EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../EstadoSelect';
+import { FechaHoraCelda } from '../ui/FechaHoraCelda';
 import { isContractVigente, formatDate, estadoImpositivoDelContrato, findTemplate, templateHasContent, EmpresaOption } from '../team/ContractCard';
 import { getImageUrl, downloadFileFromUrl } from '../../utils/imageHelpers';
 import { SearchAndFilters } from '../ui/SearchAndFilters';
@@ -907,20 +908,6 @@ const FIRMA_FIN_DE_FIJAS = 'border-r-2 border-gray-300 dark:border-gray-600 shad
  * que sumarla acá o el agujero vuelve.
  */
 const COLUMNAS_DESPUES_DEL_GRUPO = 7;
-
-/**
- * `fecha_carga` llega en dos formatos según quién creó el contrato: ISO completo (alta desde el
- * proyecto) o "YYYY-MM-DD" (alta desde el usuario). El ISO va a hora local: cortarlo por la «T»
- * mostraría el día siguiente para lo cargado después de las 21 h.
- */
-const fechaDeCarga = (s?: string): string => {
-  if (!s) return '';
-  if (s.includes('T')) {
-    const d = new Date(s);
-    if (!isNaN(d.getTime())) return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  }
-  return formatDate(s);
-};
 
 const FlechaEncuadre = () => <span className="text-blue-500/70 dark:text-blue-400/70 font-normal ml-1">→</span>;
 
@@ -2603,7 +2590,7 @@ export const ContractBulkAfipTab: React.FC<{
                       <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {fechaDeCarga(r.fecha_carga) || <span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>}
+                      <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>} />
                     </td>
                     {filterTipo === 'sin_cuit' && (
                       <td className="px-4 py-3">
@@ -4254,7 +4241,7 @@ export const ContractBulkFirmaTab: React.FC<{
                         <FirmaEnviarCell record={r} contratoAplica={contratoAplica} releasesAplicables={releasesFila} altaAplica={altaVaAFirma(r, template, tipo)} tipoImpositivo={tipo} onEnviado={(patch) => aplicarCambio(r, patch)} />
                       </td>
                       <td className={`sticky ${FIRMA_IZQ_FECHA} z-[5] px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_FECHA} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
-                        {fechaDeCarga(r.fecha_carga) || <span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>}
+                        <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>} />
                       </td>
                       <td className={`sticky ${FIRMA_IZQ_USUARIO} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${FIRMA_FIN_DE_FIJAS} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
                         <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
