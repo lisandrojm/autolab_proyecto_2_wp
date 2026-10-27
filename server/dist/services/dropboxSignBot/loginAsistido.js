@@ -3,7 +3,7 @@ import { Tenant } from "../../models/Tenant.js";
 import { rutaChromium, errorDeChromium } from "../arca/navegador.js";
 import { VIEWPORT } from "./reglas.js";
 import { MANAGE_URL, OPCIONES_CONTEXTO, anotarConexion, anotarError, configDelBot, guardarSesion, irA, loguear, pantallaDe } from "./navegador.js";
-import { quienTieneDropboxSign, soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
+import { soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 /**
  * EL LOGIN ASISTIDO DESDE LA WEB (pedido del 23/10/2026: «un botón conectarse, nada en consola»).
  *
@@ -55,9 +55,7 @@ export async function abrirLoginAsistido(tenantId) {
         reprogramarCierre(previo);
         return estadoDe(previo, { pantalla: await pantallaDe(previo.page).catch(() => "") });
     }
-    if (quienTieneDropboxSign(tenantId))
-        throw Object.assign(new Error("Hay una tanda de envío en curso: esperá a que termine para conectarte."), { status: 409 });
-    tomarCandadoDropboxSign(tenantId, false);
+    tomarCandadoDropboxSign(tenantId, false, "login");
     let browser;
     try {
         const cfg = await configDelBot(tenantId);

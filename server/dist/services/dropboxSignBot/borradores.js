@@ -3,7 +3,7 @@ import { Tenant } from "../../models/Tenant.js";
 import { DropboxSignEnvio } from "../../models/DropboxSignEnvio.js";
 import { DropboxSignEnvioLog } from "../../models/DropboxSignEnvioLog.js";
 import { abrirSesionDropboxSign, guardarSesion } from "./navegador.js";
-import { quienTieneDropboxSign, soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
+import { soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 import { cargarMotor } from "./motor.js";
 const BASE = "integrations.dropboxSign.bot";
 const VIGENCIA_REVISION_MS = 60 * 60_000;
@@ -17,9 +17,7 @@ async function titulosDelBot(tenantId) {
     return archivos.filter((a) => typeof a === "string" && a.trim().length > 5);
 }
 function arrancar(tenantId, tipo, trabajo) {
-    if (quienTieneDropboxSign(tenantId))
-        throw Object.assign(new Error("El bot de Dropbox Sign está ocupado (una tanda de envío o el login): esperá a que termine."), { status: 409 });
-    tomarCandadoDropboxSign(tenantId, false);
+    tomarCandadoDropboxSign(tenantId, false, "borradores");
     const r = { tipo, corriendo: true, arrancadaEl: new Date(), terminadaEl: null, total: null, candidatos: [], salteados: [], borrados: [], cortada: null, error: null, eventos: [] };
     ultimos.set(tenantId, r);
     void (async () => {

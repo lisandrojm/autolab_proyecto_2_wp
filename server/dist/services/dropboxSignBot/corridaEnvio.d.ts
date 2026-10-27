@@ -37,6 +37,7 @@ export declare const corridaEnvioDe: (tenantId: string) => CorridaEnvio | undefi
 export declare const ocupadaPor: (tenantId: string) => {
     desde: Date;
     automatica: boolean;
+    motivo: import("./candado.js").MotivoCandado;
 };
 /** Seco salvo que se diga lo contrario fuera de producción; en producción, real salvo que se fuerce seco. */
 export declare function enSecoForzado(): boolean;

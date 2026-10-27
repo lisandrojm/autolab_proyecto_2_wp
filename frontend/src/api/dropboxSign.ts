@@ -177,6 +177,8 @@ export interface BotConfig {
   conexion: ConexionBot | null;
   /** Hay un login asistido abierto en el servidor. */
   loginAsistidoAbierto: boolean;
+  /** Qué tiene tomado el bot ahora (la prueba automática al encolar, el login, los borradores, una tanda). */
+  ocupadoPor?: { motivo: "envio" | "prueba" | "login" | "borradores"; desde: string; mensaje: string } | null;
   proximaCorrida: string;
   /** Cuándo arrancaría la próxima tanda automática (ISO), si el envío automático está activo y hay cola. */
   proximaCorridaAt: string | null;

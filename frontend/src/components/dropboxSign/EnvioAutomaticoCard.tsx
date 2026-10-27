@@ -50,14 +50,9 @@ export const EnvioAutomaticoCard: React.FC = () => {
   const [corrida, setCorrida] = useState<BotCorrida | null>(null);
   const [arrancando, setArrancando] = useState(false);
   const [probandoConexion, setProbandoConexion] = useState(false);
-  /** Segundos desde que arrancó «Probar conexión», para mostrar que sigue trabajando (tarda 15 s – 1 min). */
-  const [segundosProbando, setSegundosProbando] = useState(0);
-  useEffect(() => {
-    if (!probandoConexion) return;
-    setSegundosProbando(0);
-    const t = window.setInterval(() => setSegundosProbando((n) => n + 1), 1000);
-    return () => window.clearInterval(t);
-  }, [probandoConexion]);
+  /** Desde cuándo se está probando la conexión, para mostrar que sigue trabajando (tarda 15 s – 1 min). */
+  const [probandoDesde, setProbandoDesde] = useState<number | null>(null);
+  const [, setTic] = useState(0);
   /** El login asistido (el navegador del servidor en pantalla) y la captura de lo que vio cuando falló. */
   const [login, setLogin] = useState(false);
   const [captura, setCaptura] = useState<string | null>(null);
@@ -153,9 +148,40 @@ export const EnvioAutomaticoCard: React.FC = () => {
     }
   };
 
+  /*
+    EL BOT OCUPADO (27/10/2026): la prueba de conexión también arranca SOLA al encolar, y el login o los
+    borradores toman el mismo navegador. Mientras el server diga que está ocupado, el recuadro lo muestra
+    en curso y se consulta sólo la configuración cada 3 s; al liberarse, se recarga todo una vez.
+  */
+  const ocupado = cfg?.ocupadoPor || null;
+  const probando = probandoConexion || ocupado?.motivo === "prueba";
+  const desdeProbando = probandoDesde ?? (ocupado?.motivo === "prueba" ? new Date(ocupado.desde).getTime() : null);
+  const segundosProbando = desdeProbando ? Math.max(0, Math.round((Date.now() - desdeProbando) / 1000)) : 0;
+  useEffect(() => {
+    if (!probando) return;
+    const t = window.setInterval(() => setTic((n) => n + 1), 1000);
+    return () => window.clearInterval(t);
+  }, [probando]);
+  const estabaOcupado = useRef(false);
+  useEffect(() => {
+    if (!ocupado || probandoConexion) {
+      if (estabaOcupado.current && !ocupado) void cargar();
+      estabaOcupado.current = !!ocupado;
+      return;
+    }
+    estabaOcupado.current = true;
+    const t = window.setInterval(async () => {
+      const c = await dropboxSignBotAPI.config().catch(() => null);
+      if (c) setCfg(c);
+    }, 3000);
+    return () => window.clearInterval(t);
+  }, [ocupado, probandoConexion, cargar]);
+
   /** «Probar conexión»: el navegador del servidor entra a Dropbox Sign y se cierra. No envía nada. */
   const probarConexion = async () => {
+    if (ocupado) return sweetAlert.info("El bot está ocupado", ocupado.mensaje, 4000);
     setProbandoConexion(true);
+    setProbandoDesde(Date.now());
     try {
       const { conexion } = await dropboxSignBotAPI.probarConexion();
       if (conexion.estado === "ok") sweetAlert.success("Conectado", conexion.detalle);
@@ -164,6 +190,7 @@ export const EnvioAutomaticoCard: React.FC = () => {
       sweetAlert.error("No se pudo probar", e?.response?.data?.error || e?.message || "");
     } finally {
       setProbandoConexion(false);
+      setProbandoDesde(null);
       void cargar();
     }
   };
@@ -243,12 +270,12 @@ export const EnvioAutomaticoCard: React.FC = () => {
       </div>
       {/* EL ESTADO DE LA CONEXIÓN (23/10/2026): lo que pasó la última vez que el bot abrió Dropbox Sign, y un botón para probarlo ahora. */}
       {cfg && (
-        <div className={`rounded-lg border p-3 text-xs space-y-1 ${probandoConexion ? "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20" : cfg.conexion?.estado === "ok" ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20" : cfg.conexion?.estado === "caida" ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20" : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40"}`}>
+        <div className={`rounded-lg border p-3 text-xs space-y-1 ${probando ? "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20" : cfg.conexion?.estado === "ok" ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20" : cfg.conexion?.estado === "caida" ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20" : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40"}`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="flex items-center gap-2 text-sm font-bold">
               <FontAwesomeIcon icon={faPlug} className={cfg.conexion?.estado === "ok" ? "text-green-600 dark:text-green-400" : cfg.conexion?.estado === "caida" ? "text-red-600 dark:text-red-400" : "text-gray-400"} />
               <span className="text-gray-700 dark:text-gray-200">Conexión con Dropbox Sign:</span>
-              {probandoConexion ? (
+              {probando ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-blue-300 bg-white px-2 py-0.5 text-[11px] text-blue-700 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-300">
                   <FontAwesomeIcon icon={faSpinner} spin /> Probando…
                 </span>
@@ -265,14 +292,14 @@ export const EnvioAutomaticoCard: React.FC = () => {
                   <FontAwesomeIcon icon={faCircleQuestion} /> Sin probar
                 </span>
               )}
-              {cfg.conexion && !probandoConexion && <span className="font-normal text-gray-500">· probada {fmt(cfg.conexion.probadaAt)}{cfg.conexion.via === "sesion" ? " · con la sesión guardada" : cfg.conexion.via === "login" ? " · con usuario y contraseña" : ""}</span>}
+              {cfg.conexion && !probando && <span className="font-normal text-gray-500">· probada {fmt(cfg.conexion.probadaAt)}{cfg.conexion.via === "sesion" ? " · con la sesión guardada" : cfg.conexion.via === "login" ? " · con usuario y contraseña" : ""}</span>}
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => setLogin(true)} disabled={corriendo || probandoConexion} title="El navegador del servidor aparece en tu pantalla para iniciar sesión y resolver captcha o código. La sesión queda guardada para el bot." className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+              <button type="button" onClick={() => setLogin(true)} disabled={corriendo || probando || (!!ocupado && ocupado.motivo !== "login")} title="El navegador del servidor aparece en tu pantalla para iniciar sesión y resolver captcha o código. La sesión queda guardada para el bot." className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
                 <FontAwesomeIcon icon={faRightToBracket} /> {cfg.loginAsistidoAbierto ? "Seguir conectándose" : "Conectarse a Dropbox Sign"}
               </button>
-              <button type="button" onClick={probarConexion} disabled={probandoConexion || corriendo || cfg.loginAsistidoAbierto || (!cfg.tieneSesion && !cfg.tienePassword)} title="Abre el navegador del servidor, entra a Dropbox Sign y lo cierra. No envía nada. Tarda entre 15 s y 1 min." className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
-                <FontAwesomeIcon icon={probandoConexion ? faSpinner : faPlug} spin={probandoConexion} /> {probandoConexion ? "Probando…" : "Probar conexión"}
+              <button type="button" onClick={probarConexion} disabled={probando || !!ocupado || corriendo || cfg.loginAsistidoAbierto || (!cfg.tieneSesion && !cfg.tienePassword)} title="Abre el navegador del servidor, entra a Dropbox Sign y lo cierra. No envía nada. Tarda entre 15 s y 1 min." className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
+                <FontAwesomeIcon icon={probando ? faSpinner : faPlug} spin={probando} /> {probando ? "Probando…" : "Probar conexión"}
               </button>
               {cfg.conexion?.tieneCaptura && (
                 <button type="button" onClick={verCaptura} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700" title="La pantalla en la que quedó el navegador cuando no pudo entrar">
@@ -281,10 +308,15 @@ export const EnvioAutomaticoCard: React.FC = () => {
               )}
             </div>
           </div>
-          {probandoConexion && (
+          {ocupado && !probando && (
+            <p className="flex items-center gap-2 pt-1 font-semibold text-blue-800 dark:text-blue-200">
+              <FontAwesomeIcon icon={faSpinner} spin /> {ocupado.mensaje}
+            </p>
+          )}
+          {probando && (
             <div className="space-y-1.5 pt-1">
               <p className="flex items-center gap-2 font-semibold text-blue-800 dark:text-blue-200">
-                <FontAwesomeIcon icon={faSpinner} spin /> El navegador del servidor está entrando a Dropbox Sign… {segundosProbando} s
+                <FontAwesomeIcon icon={faSpinner} spin /> {probandoConexion ? "El navegador del servidor está entrando a Dropbox Sign…" : "Probando la conexión con Dropbox Sign (la arrancó el servidor, por ejemplo al encolar)…"} {segundosProbando} s
                 <span className="font-normal text-blue-700/80 dark:text-blue-300/80">(suele tardar entre 15 s y 1 min; no envía nada)</span>
               </p>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-blue-100 dark:bg-blue-950">
@@ -292,8 +324,8 @@ export const EnvioAutomaticoCard: React.FC = () => {
               </div>
             </div>
           )}
-          {!probandoConexion && cfg.conexion?.estado === "caida" && <p className="break-words text-red-700 dark:text-red-300">{resumenDelError(cfg.conexion.detalle)}</p>}
-          {!probandoConexion && cfg.conexion?.estado === "ok" && <p className="text-green-700 dark:text-green-300">{cfg.conexion.detalle}</p>}
+          {!probando && cfg.conexion?.estado === "caida" && <p className="break-words text-red-700 dark:text-red-300">{resumenDelError(cfg.conexion.detalle)}</p>}
+          {!probando && cfg.conexion?.estado === "ok" && <p className="text-green-700 dark:text-green-300">{cfg.conexion.detalle}</p>}
           {!cfg.tieneSesion && (
             <p className="text-gray-600 dark:text-gray-300">
               {cfg.tienePassword ? "Sin sesión guardada, el bot intenta entrar con usuario y contraseña; si Dropbox Sign pide un captcha o un código, " : "No hay sesión guardada: "}

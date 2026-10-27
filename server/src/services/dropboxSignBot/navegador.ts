@@ -302,9 +302,11 @@ export async function loguear(page: Page, cred: { loginEmail: string; loginPassw
     await page.waitForTimeout(1500);
   }
   // El mensaje dice SÓLO lo que de verdad pasó: «la contraseña se mandó» únicamente si su campo estuvo visible.
+  // Y QUÉ DICE la pantalla donde quedó (27/10/2026: quedó en oauth2/authorize sin campos y sin saber qué pedía).
+  const queDice = (await textoDe(page).catch(() => "")).replace(/\s+/g, " ").trim().slice(0, 300);
   throw new ErrorLogin(
     "login_sin_avance",
-    `En ${LOGIN_MS / 1000} s el login no llegó al listado de documentos${claveEnviada ? " (la contraseña se escribió en su campo visible y se mandó)" : emailCargado ? " (se cargó el email; el campo de contraseña nunca apareció)" : " (no apareció el campo de email)"}.`,
+    `En ${LOGIN_MS / 1000} s el login no llegó al listado de documentos${claveEnviada ? " (la contraseña se escribió en su campo visible y se mandó)" : emailCargado ? " (se cargó el email; el campo de contraseña nunca apareció)" : " (no apareció el campo de email)"}.${queDice ? ` La pantalla dice: «${queDice}».` : ""}`,
   );
 }
 
@@ -370,7 +372,7 @@ export async function abrirSesionDropboxSign(tenantId: string, opciones: { visib
  * corrida más. Pide el candado: no corre mientras hay una tanda en curso.
  */
 export async function probarConexionDropboxSign(tenantId: string): Promise<ConexionDropboxSign> {
-  tomarCandadoDropboxSign(tenantId, false);
+  tomarCandadoDropboxSign(tenantId, false, "prueba");
   try {
     const sesion = await abrirSesionDropboxSign(tenantId);
     await guardarSesion(tenantId, sesion.ctx).catch(() => {});

@@ -204,7 +204,7 @@ export async function armarCola(tenantId, opciones = {}) {
 /** Arranca una corrida y vuelve en el acto. Manual (botón) respeta sólo enfriamiento y cupo. */
 export async function arrancarCorridaEnvio(tenantId, opciones = {}) {
     const automatica = !!opciones.automatica;
-    tomarCandadoDropboxSign(tenantId, automatica);
+    tomarCandadoDropboxSign(tenantId, automatica, "envio");
     try {
         const { config, estado, cc } = await configDelTenant(tenantId);
         const puede = puedeCorrer(config, estado, new Date(), { manual: !automatica, yaReservada: automatica });

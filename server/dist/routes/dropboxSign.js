@@ -14,6 +14,7 @@ import { guardarReglasDelTenant, reglasDelTenant } from "../services/dropboxSign
 import { arrancarVerificacion, detenerVerificacion, previsualizarColocacion, verificacionDe } from "../services/dropboxSignBot/colocacion.js";
 import { REGLAS_BASE, TIPOS_ANCLA } from "../compartido/reglasColocacionFirma.js";
 import { probarConexionDropboxSign } from "../services/dropboxSignBot/navegador.js";
+import { mensajeOcupado, quienTieneDropboxSign } from "../services/dropboxSignBot/candado.js";
 import { estadoBorradores, limpiarBorradoresDelBot, revisarBorradoresDelBot } from "../services/dropboxSignBot/borradores.js";
 import { abrirLoginAsistido, accionLoginAsistido, cerrarLoginAsistido, hayLoginAsistido, pantallaLoginAsistido } from "../services/dropboxSignBot/loginAsistido.js";
 /**
@@ -224,6 +225,11 @@ async function configDelBotParaUi(tenantId) {
         // Sin la captura (pesa): se pide aparte con GET /bot/conexion/captura.
         conexion: bot.conexion ? { ...bot.conexion, captura: undefined, tieneCaptura: !!bot.conexion.captura } : null,
         loginAsistidoAbierto: hayLoginAsistido(tenantId),
+        // Qué tiene tomado el bot ahora (prueba de conexión automática al encolar, login, borradores, tanda).
+        ocupadoPor: (() => {
+            const o = quienTieneDropboxSign(tenantId);
+            return o ? { motivo: o.motivo, desde: o.desde, mensaje: mensajeOcupado(o) } : null;
+        })(),
         proximaCorrida: puede.ok ? "Le toca en el próximo minuto del scheduler." : puede.motivo || "",
         proximaCorridaAt,
         corriendo: !!corrida && !corrida.terminada,
