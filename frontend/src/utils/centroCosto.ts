@@ -260,3 +260,9 @@ export const cargarCentrosCosto = async (apiUrl: string, headers: Record<string,
   */
   return conId.sort((a: any, b: any) => etiquetaCentroCosto(a).localeCompare(etiquetaCentroCosto(b), "es", { numeric: true }) || String(a?.empresaNombre || "").localeCompare(String(b?.empresaNombre || "")));
 };
+
+/**
+ * EL BADGE DEL CENTRO DE COSTO, igual en toda la plataforma (27/10/2026): el de la tarjeta de
+ * Proyectos (violeta, código en monoespaciada). Lo usan esa tarjeta, Novedades y sus Reportes.
+ */
+export const CLASE_BADGE_CENTRO_COSTO = "inline-flex items-center rounded-md border border-purple-100 bg-purple-50 font-mono font-bold text-purple-700 dark:border-purple-800/50 dark:bg-purple-900/20 dark:text-purple-400 w-fit";

@@ -5,7 +5,7 @@ import { CampoValoracion, cambiosDeValoracion, valorInicialValoracion } from '..
 import { ValoracionesPorRol } from '../components/proyectos/ValoracionesPorRol';
 import { BadgeCoordinador } from '../components/proyectos/BadgeCoordinador';
 import { RotuloConInfo } from '../components/proyectos/RotuloConInfo';
-import { nombreCentroCosto, idOpcional } from '../utils/centroCosto';
+import { nombreCentroCosto, idOpcional, CLASE_BADGE_CENTRO_COSTO } from '../utils/centroCosto';
 import { SelectorCentroCosto } from '../components/proyectos/SelectorCentroCosto';
 import { fuzzyMatch } from '../utils/searchHelpers';
 import { BloqueEstado } from '../components/ui/BloqueEstado';
@@ -563,7 +563,7 @@ export const ProjectsPage: React.FC = () => {
                           Centro de costo
                         </label>
                         {/* El código, en mono: es un número y se compara de un vistazo entre tarjetas. */}
-                        <span className="inline-flex items-center px-2 py-1 rounded-md font-mono text-xs font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 w-fit" title={project.metadataResolutions?.centroCosto?.descAuxiliar || undefined}>
+                        <span className={`${CLASE_BADGE_CENTRO_COSTO} px-2 py-1 text-xs`} title={project.metadataResolutions?.centroCosto?.descAuxiliar || undefined}>
                           {centroCostoTarjeta}
                         </span>
                       </div>

@@ -235,7 +235,7 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
 
 import { useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
-import { etiquetaCentroCosto } from "../utils/centroCosto";
+import { etiquetaCentroCosto, CLASE_BADGE_CENTRO_COSTO } from "../utils/centroCosto";
 
 /** «426 LN+»: el código del centro de costo delante del nombre del proyecto (si el nombre no lo trae ya). */
 const conCodigoDeCentro = (p: any): string => {
@@ -1339,8 +1339,8 @@ export const RequestsPage: React.FC = () => {
                   <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">No Registro</th>
                   <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Carga</th>
                   <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Novedad</th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
                   <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Centro de costo</th>
+                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
                   <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Área | Turno</th>
                   <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Total Registros de Asistencia">
                     Registros
@@ -1409,19 +1409,19 @@ export const RequestsPage: React.FC = () => {
                         }
                       })()}
                     </td>
+                    {/* El código del centro de costo del proyecto («705»): el nombre ya no lo trae adelante. */}
+                    <td className="py-3 px-4">
+                      {centroPorProyecto.get(String(report.projectIdRaw || "")) ? (
+                        <span className={`${CLASE_BADGE_CENTRO_COSTO} px-2 py-0.5 text-xs`}>{centroPorProyecto.get(String(report.projectIdRaw || ""))}</span>
+                      ) : (
+                        <span className="text-gray-300 dark:text-gray-600">-</span>
+                      )}
+                    </td>
                     <td className="py-3 px-4">
                       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800 w-fit">
                         <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-[10px]" />
                         {report.projectName}
                       </span>
-                    </td>
-                    {/* El código del centro de costo del proyecto («705»): el nombre ya no lo trae adelante. */}
-                    <td className="py-3 px-4">
-                      {centroPorProyecto.get(String(report.projectIdRaw || "")) ? (
-                        <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-mono text-xs font-semibold text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">{centroPorProyecto.get(String(report.projectIdRaw || ""))}</span>
-                      ) : (
-                        <span className="text-gray-300 dark:text-gray-600">-</span>
-                      )}
                     </td>
                     {/* `whitespace-nowrap` en la celda: sin esto la columna se sigue encogiendo hasta
                         el ancho del texto más corto y los badges, que ya no se parten, se desbordan. */}

@@ -11,6 +11,7 @@ import { categoriaSatAPI } from "../../../api/categoriasSat";
 import { roleFrameAPI } from "../../../api/roleFrames";
 import { areasAPI } from "../../../api/areas";
 import { projectsAPI } from "../../../api/projects";
+import { CLASE_BADGE_CENTRO_COSTO } from "../../../utils/centroCosto";
 import { shiftsAPI } from "../../../api/shifts";
 import { activityReportsAPI, FiltrosDePersonas, ParteConAsistencia } from "../../../api/request";
 import { isContractVigente } from "../../team/ContractCard";
@@ -2722,8 +2723,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                     </div>
                   </th>
                   <th className="py-2.5 px-3 text-center whitespace-nowrap">Jornadas</th>
-                  <th className="py-2.5 px-3 text-left">Proyectos</th>
                   <th className="py-2.5 px-3 text-left whitespace-nowrap">Centro de costo</th>
+                  <th className="py-2.5 px-3 text-left">Proyectos</th>
                   {/* Pegada a Proyectos y con los mismos badges que el listado de Novedades: es el
                       mismo dato leído desde otra pantalla. */}
                   <th className="py-2.5 px-3 text-left whitespace-nowrap">Área | Turno</th>
@@ -2789,6 +2790,14 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                         </td>
                         {/* Jornadas */}
                         <td className="py-2.5 px-3 text-center text-xs font-medium text-gray-600 dark:text-gray-400">{s.cantidadJornadasLaborales || <span className="text-gray-300 dark:text-gray-600">-</span>}</td>
+                        {/* Centro de costo: el código del proyecto de la fila («705»). */}
+                        <td className="py-2.5 px-3">
+                          {s.rowProjectId && centroPorProyecto.get(String(s.rowProjectId)) ? (
+                            <span className={`${CLASE_BADGE_CENTRO_COSTO} px-1.5 py-0.5 text-[10px]`}>{centroPorProyecto.get(String(s.rowProjectId))}</span>
+                          ) : (
+                            <span className="text-gray-300 dark:text-gray-600 text-xs">-</span>
+                          )}
+                        </td>
                         {/* Proyectos */}
                         <td className="py-2.5 px-3">
                           <div className="flex flex-wrap gap-1 max-w-[160px]">
@@ -2800,14 +2809,6 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                               <span className="text-gray-300 dark:text-gray-600 text-xs">-</span>
                             )}
                           </div>
-                        </td>
-                        {/* Centro de costo: el código del proyecto de la fila («705»). */}
-                        <td className="py-2.5 px-3">
-                          {s.rowProjectId && centroPorProyecto.get(String(s.rowProjectId)) ? (
-                            <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">{centroPorProyecto.get(String(s.rowProjectId))}</span>
-                          ) : (
-                            <span className="text-gray-300 dark:text-gray-600 text-xs">-</span>
-                          )}
                         </td>
                         {/*
                           ÁREA | TURNO: lo que dicen los PARTES del período, no la ficha.

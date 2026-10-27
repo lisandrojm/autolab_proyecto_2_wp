@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faSearch, faTimes, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { Modal } from './Modal';
 import { fuzzyMatch } from '../../utils/searchHelpers';
+import { CLASE_BADGE_CENTRO_COSTO } from '../../utils/centroCosto';
 
 /**
  * ELEGIR VARIOS DE UNA LISTA LARGA: badges arriba, buscador en una ventana aparte.
@@ -189,7 +190,7 @@ export const SelectorBadges: React.FC<Props> = ({ etiqueta, items, value, onChan
                   <input type="checkbox" checked={value.includes(o.id)} disabled={!!o.bloqueadoPor} onChange={() => alternar(o.id)} className="rounded text-blue-500 focus:ring-blue-500 h-4 w-4 shrink-0 disabled:cursor-not-allowed" />
                   <span className="min-w-0">
                     <span className="flex items-center gap-1.5 min-w-0">
-                      {o.insignia && <span className="shrink-0 rounded border border-amber-200 bg-amber-50 px-1.5 py-px font-mono text-[10px] font-semibold text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">{o.insignia}</span>}
+                      {o.insignia && <span className={`${CLASE_BADGE_CENTRO_COSTO} shrink-0 px-1.5 py-px text-[10px]`}>{o.insignia}</span>}
                       <span className="block text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{o.nombre}</span>
                     </span>
                     {/* El motivo va EN la fila, no solo en el tooltip: una opción gris sin
