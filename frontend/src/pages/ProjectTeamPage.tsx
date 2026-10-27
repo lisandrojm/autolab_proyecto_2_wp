@@ -4475,8 +4475,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     {sedeFijadaPorArea ? `La fija el área elegida (${nombreDeSedeId(sedeFijadaPorArea)}). Para cambiarla, elegí el área en otra sede.` : 'Las sedes del proyecto. Viene elegida la principal.'}
                   </p>
                 </div>
-                {/* La otra mitad de la fila queda libre: el Tipo de contrato y el Estado van juntos abajo. */}
-                <div className="hidden md:block" />
+                {/* Puesto | Sede, y debajo Tipo de contrato | Estado, en la misma fila (27/10/2026). */}
 
                 <div className="space-y-1.5">
                   {/*
@@ -4589,6 +4588,45 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   )}
                 </div>
 
+                {/* El Estado, a la DERECHA del Tipo de contrato y en su misma fila (27/10/2026): sale de él y así se aprovecha el ancho. */}
+                <div className="space-y-1.5">
+                  {esAltaNueva ? (
+                    <>
+                      {/* `h-6`, el mismo alto fijo que el rótulo de «Tipo de contrato» que está a
+                          la izquierda en esta fila: es lo que hace que los dos campos arranquen a
+                          la misma altura. Sin esto el rótulo mide lo que mida su contenido —acá,
+                          un botón de info; allá, un badge que aparece o no— y la desalineación
+                          cambia sola según el caso. */}
+                      <div className="h-6 flex items-center gap-1.5 ml-1">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                          Estado <span className="text-red-500">*</span>
+                        </label>
+                        <button type="button" onClick={() => setShowEstadoInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Dónde se configura?" aria-label="Información sobre el Estado">
+                          <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <div className="input-field w-full flex items-center">{estadoImpositivoAuto ? <EstadoBadge name={estadoImpositivoAuto.name} /> : <span className="text-gray-400 dark:text-gray-500 text-sm">{wizardData.contrato_frame_id ? 'Este tipo de contrato no tiene un estado impositivo configurado' : 'Elegí primero el Tipo de contrato'}</span>}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-6 flex items-center ml-1">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
+                          Estado <span className="text-red-500">*</span>
+                        </label>
+                      </div>
+                      {/*
+                        SE MUESTRA, NO SE ELIGE — igual que en el alta.
+
+                        El estado sale del Tipo de Contrato: al cambiarlo, este valor se recalcula
+                        solo. Mientras fue un selector, elegir a mano acá dejaba un estado que el
+                        siguiente cambio de tipo pisaba sin avisar, y no había forma de saber si el
+                        que se veía era el elegido o el derivado.
+                      */}
+                      <div className="input-field w-full flex items-center">{estadoElegido ? <EstadoBadge name={estadoElegido.name} /> : <span className="text-gray-400 dark:text-gray-500 text-sm">{wizardData.contrato_id ? 'Este tipo de contrato no tiene un estado configurado' : 'Elegí primero el Tipo de contrato'}</span>}</div>
+                    </>
+                  )}
+                </div>
+
                 {(() => {
                   if (!wizardData.contrato_id) return null;
                   const plantillasDelContrato = contratoFrames.filter((cf) => plantillaEsDeContrato(cf, wizardData.contrato_id));
@@ -4639,44 +4677,6 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
                   return null;
                 })()}
-
-                <div className="space-y-1.5">
-                  {esAltaNueva ? (
-                    <>
-                      {/* `h-6`, el mismo alto fijo que el rótulo de «Tipo de contrato» que está a
-                          la izquierda en esta fila: es lo que hace que los dos campos arranquen a
-                          la misma altura. Sin esto el rótulo mide lo que mida su contenido —acá,
-                          un botón de info; allá, un badge que aparece o no— y la desalineación
-                          cambia sola según el caso. */}
-                      <div className="h-6 flex items-center gap-1.5 ml-1">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
-                          Estado <span className="text-red-500">*</span>
-                        </label>
-                        <button type="button" onClick={() => setShowEstadoInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Dónde se configura?" aria-label="Información sobre el Estado">
-                          <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      <div className="input-field w-full flex items-center">{estadoImpositivoAuto ? <EstadoBadge name={estadoImpositivoAuto.name} /> : <span className="text-gray-400 dark:text-gray-500 text-sm">{wizardData.contrato_frame_id ? 'Este tipo de contrato no tiene un estado impositivo configurado' : 'Elegí primero el Tipo de contrato'}</span>}</div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="h-6 flex items-center ml-1">
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest">
-                          Estado <span className="text-red-500">*</span>
-                        </label>
-                      </div>
-                      {/*
-                        SE MUESTRA, NO SE ELIGE — igual que en el alta.
-
-                        El estado sale del Tipo de Contrato: al cambiarlo, este valor se recalcula
-                        solo. Mientras fue un selector, elegir a mano acá dejaba un estado que el
-                        siguiente cambio de tipo pisaba sin avisar, y no había forma de saber si el
-                        que se veía era el elegido o el derivado.
-                      */}
-                      <div className="input-field w-full flex items-center">{estadoElegido ? <EstadoBadge name={estadoElegido.name} /> : <span className="text-gray-400 dark:text-gray-500 text-sm">{wizardData.contrato_id ? 'Este tipo de contrato no tiene un estado configurado' : 'Elegí primero el Tipo de contrato'}</span>}</div>
-                    </>
-                  )}
-                </div>
 
                 {/*
                   Alta y baja del contrato, juntas: son los dos extremos del mismo período.
