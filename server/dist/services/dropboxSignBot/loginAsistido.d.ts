@@ -11,6 +11,8 @@ export interface EstadoLoginAsistido {
     abiertoEl: string | null;
     /** El bot está entrando solo con las credenciales guardadas. */
     automatico: boolean;
+    /** Se puede ofrecer «Entrar con el usuario guardado». */
+    puedeAutomatico: boolean;
     /** La captura (JPEG base64), cuando se pide la pantalla. */
     jpeg?: string;
     /** Sólo cuando la página no muestra texto: qué devolvió el servidor de Dropbox (27/10/2026, «queda en blanco»). */
@@ -33,12 +35,15 @@ export type AccionLoginAsistido = {
     tipo: "recargar";
 } | {
     tipo: "reiniciar";
+} | {
+    tipo: "automatico";
+} | {
+    tipo: "tomar_control";
 };
 /** Abre el navegador en el login (o reusa el que ya está abierto). Si entra directo con la sesión guardada, conecta y cierra. */
 export declare function abrirLoginAsistido(tenantId: string): Promise<EstadoLoginAsistido>;
 /** La captura actual más el estado. Si el navegador llegó al listado, conecta. */
 export declare function pantallaLoginAsistido(tenantId: string): Promise<EstadoLoginAsistido>;
-/** Un click, texto o tecla del usuario, reenviados al navegador. Devuelve la captura resultante. */
 export declare function accionLoginAsistido(tenantId: string, accion: AccionLoginAsistido): Promise<EstadoLoginAsistido>;
 export declare function cerrarLoginAsistido(tenantId: string, motivo?: string): Promise<{
     ok: boolean;

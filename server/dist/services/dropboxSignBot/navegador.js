@@ -1,7 +1,7 @@
-import { chromium } from "playwright-core";
 import { Tenant } from "../../models/Tenant.js";
 import { decryptSecret, encryptSecret } from "../../utils/secretCrypto.js";
-import { rutaChromium, errorDeChromium } from "../arca/navegador.js";
+import { errorDeChromium } from "../arca/navegador.js";
+import { abrirContextoDropboxSign, liberarContexto } from "./perfil.js";
 import { clasificarPantalla, pasoDeLogin } from "./clasificarPantalla.js";
 import { VIEWPORT } from "./reglas.js";
 import { soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
@@ -9,8 +9,9 @@ import { soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js"
  * UN CHROMIUM EN EL SERVIDOR CON LA SESIÓN DE DROPBOX SIGN (patrón `arca/navegador.ts`).
  *
  * El plan Essentials de Dropbox Sign no incluye la API, así que el bot opera la web como una persona.
- * La sesión (`storageState`) se guarda cifrada y se renueva en cada corrida; el login con usuario y
- * contraseña es el respaldo cuando vence. Ante captcha o segundo factor NO se insiste: se corta con
+ * Desde el 27/10/2026 el navegador usa un PERFIL PERSISTENTE por tenant, con identidad coherente, y
+ * queda tibio entre usos (`perfil.ts`); el `storageState` cifrado sigue guardándose como respaldo. El
+ * login con usuario y contraseña es el respaldo cuando la sesión vence. Ante captcha o segundo factor NO se insiste: se corta con
  * `bot.ultimoError` y la UI pide repetir el login manual (`scripts/loginDropboxSign.ts`).
  *
  * El viewport es FIJO (1457×812): las coordenadas de colocación de la firma se validaron con ése.
@@ -69,16 +70,14 @@ export class ErrorLogin extends Error {
     }
 }
 /**
- * UN SOLO NAVEGADOR «IDENTIDAD» (26/10/2026): mismo user-agent, viewport, idioma y zona horaria en
- * cada corrida, en «Probar conexión» y en el login asistido. Chromium headless se anuncia como
- * «HeadlessChrome»; si el agente cambia entre el login y la corrida, Dropbox invalida la sesión por
- * seguridad (la guardada a las 01:56 ya no servía a las 08:37).
+ * UN SOLO NAVEGADOR «IDENTIDAD»: mismo viewport, idioma y zona horaria en cada uso. El user-agent ya
+ * no es fijo a mano (era de Mac y Chrome/139 sobre un Linux con otra versión, 27/10/2026): lo arma
+ * `perfil.ts` con el SO y la versión reales, igual en todos los usos.
  */
 export const OPCIONES_CONTEXTO = {
     viewport: { ...VIEWPORT },
     locale: "es-AR",
     timezoneId: "America/Argentina/Buenos_Aires",
-    userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
 };
 const MENSAJES_LOGIN = {
     login_requiere_verificacion: "Dropbox pidió una verificación que el bot no resuelve a propósito (código, captcha, «¿eras vos?» o confirmación por correo). Usá «Conectarse a Dropbox Sign»: la sesión queda guardada.",
@@ -96,9 +95,12 @@ const SELECTORES_EMAIL = ['input[data-testid="email-field"]:visible', 'input[typ
 const SELECTORES_CLAVE = ['input[data-testid="password-field"]:visible', "input#password-field:visible", 'input[type="password"]:visible:not([name="autofill-password"]):not(#credential-autofill-hint)'];
 const SELECTORES_CODIGO = ['input[autocomplete="one-time-code"]:visible', 'input[name*="code" i]:visible', 'input[data-testid*="code" i]:visible'];
 const SELECTORES_CAPTCHA = ['iframe[src*="recaptcha"]:visible', 'iframe[src*="hcaptcha"]:visible', 'iframe[src*="arkose"]:visible', 'iframe[title*="captcha" i]:visible'];
-const LOGIN_MS = 120_000;
+/** Cuando funciona tarda ~15 s: con 45 el diagnóstico llega antes (eran 120, 27/10/2026). */
+const LOGIN_MS = 45_000;
 /** Cuánto se espera a que un paso del login cambie la pantalla. */
-const PASO_MS = 15_000;
+const PASO_MS = 12_000;
+/** Cuánto se tolera «esperar» seguido sobre dropbox.com sin que cambie nada antes de cortar con lo que dice la pantalla. */
+const ESPERA_MUDA_MS = 20_000;
 /**
  * ¿VISIBLE DE VERDAD? (26/10/2026). El `:visible` de Playwright sólo mira que tenga tamaño y no esté
  * `visibility:hidden`: un campo de contraseña con OPACIDAD 0 que Dropbox deja en el paso del email
@@ -158,9 +160,11 @@ async function primerVisible(page, selectores) {
     return null;
 }
 /** Espera hasta `ms` a que `cond()` se cumpla (mirando cada 700 ms). */
-async function esperarQue(page, ms, cond) {
+async function esperarQue(page, ms, cond, señal) {
     const hasta = Date.now() + ms;
     while (Date.now() < hasta) {
+        if (señal?.cortada)
+            return false;
         if (await cond())
             return true;
         await page.waitForTimeout(700);
@@ -194,7 +198,7 @@ const urlCorta = (u) => String(u || "").split(/[?#]/)[0];
  * busca la contraseña antes de que exista. Segundo factor, captcha o autorizar la app cortan con su
  * código (un reintento ciego puede bloquear la cuenta).
  */
-export async function loguear(page, cred) {
+export async function loguear(page, cred, señal = { cortada: false }) {
     if (!cred.loginEmail || !cred.loginPassword)
         throw new ErrorLogin("login_sin_credenciales", "No hay usuario y contraseña de Dropbox Sign cargados (Configuración → DropboxSign → Envío automático).");
     const hasta = Date.now() + LOGIN_MS;
@@ -204,7 +208,11 @@ export async function loguear(page, cred) {
     let intentosClave = 0;
     let clicksDropbox = 0;
     let volvioAlListado = false;
+    let esperandoDesde = null;
     while (Date.now() < hasta) {
+        // «Tomar el control» del login asistido: se corta en el acto, sin tocar nada más.
+        if (señal.cortada)
+            throw new ErrorLogin("login_cancelado", "Se tomó el control a mano: el login automático se detuvo.");
         // Primero el aviso de cookies: tapa el formulario y se come los clicks. Reaparece tras cada redirección.
         await cerrarBannerCookies(page);
         const email = await primerVisible(page, SELECTORES_EMAIL);
@@ -223,6 +231,17 @@ export async function loguear(page, cred) {
         });
         if (paso === "listo")
             return;
+        // EL «ESPERAR» MUDO (27/10/2026): sobre dropbox.com, sin campos ni nada reconocible, más de 20 s
+        // seguidos → se corta diciendo qué muestra la pantalla, en vez de agotar el presupuesto.
+        if (paso === "esperar" && /(^|\.)dropbox\.com\//i.test(url.replace(/^https?:\/\//, ""))) {
+            esperandoDesde ??= Date.now();
+            if (Date.now() - esperandoDesde > ESPERA_MUDA_MS) {
+                const queDice = texto.replace(/\s+/g, " ").trim().slice(0, 300);
+                throw new ErrorLogin("login_sin_avance", `La pantalla de Dropbox quedó ${Math.round(ESPERA_MUDA_MS / 1000)} s sin nada que el bot sepa completar${claveEnviada ? " (después de mandar la contraseña)" : ""}. ${queDice ? `Dice: «${queDice}».` : "No muestra texto (página en blanco)."}`);
+            }
+        }
+        else
+            esperandoDesde = null;
         // Lo que necesita una persona corta YA con su código, no con un timeout de 120 s.
         if (paso === "login_requiere_2fa" || paso === "login_requiere_captcha" || /¿?(eras|fuiste) (vos|t[uú])|was (this|it) you|revis[aá] tu (correo|email)|check your (email|inbox)|confirm(a|á) (tu|que)/i.test(texto)) {
             throw new ErrorLogin("login_requiere_verificacion", `${MENSAJES_LOGIN.login_requiere_verificacion} (${paso === "login_requiere_captcha" ? "captcha" : paso === "login_requiere_2fa" ? "código / segundo factor" : "confirmación"})`);
@@ -235,7 +254,9 @@ export async function loguear(page, cred) {
             await email.fill(cred.loginEmail);
             emailCargado = true;
             await enviarPaso(page, email, /^\s*(continuar|continue|siguiente|next)\s*$/i);
-            const avanzo = await esperarQue(page, PASO_MS, async () => !!(await primerVisible(page, SELECTORES_CLAVE)) || !(await primerVisible(page, SELECTORES_EMAIL)));
+            const avanzo = await esperarQue(page, PASO_MS, async () => !!(await primerVisible(page, SELECTORES_CLAVE)) || !(await primerVisible(page, SELECTORES_EMAIL)), señal);
+            if (señal.cortada)
+                continue;
             if (!avanzo) {
                 if (intentosEmail >= 2)
                     throw new ErrorLogin("login_email_no_avanza", MENSAJES_LOGIN.login_email_no_avanza);
@@ -249,7 +270,9 @@ export async function loguear(page, cred) {
             await clave.fill(cred.loginPassword);
             claveEnviada = true;
             await enviarPaso(page, clave, /^\s*(iniciar sesi[oó]n|sign in|log in|ingresar|continuar|continue)\s*$/i);
-            const avanzo = await esperarQue(page, PASO_MS, async () => !(await primerVisible(page, SELECTORES_CLAVE)) || /contrase[ñn]a incorrecta|incorrect password|wrong password/i.test(await textoDe(page)));
+            const avanzo = await esperarQue(page, PASO_MS, async () => !(await primerVisible(page, SELECTORES_CLAVE)) || /contrase[ñn]a incorrecta|incorrect password|wrong password/i.test(await textoDe(page)), señal);
+            if (señal.cortada)
+                continue;
             if (!avanzo) {
                 if (intentosClave >= 2)
                     throw new ErrorLogin("login_password_no_avanza", MENSAJES_LOGIN.login_password_no_avanza);
@@ -280,9 +303,9 @@ export async function loguear(page, cred) {
  */
 export async function abrirSesionDropboxSign(tenantId, opciones = {}) {
     const cfg = await configDelBot(tenantId);
-    let browser;
+    let abierto;
     try {
-        browser = await chromium.launch({ headless: !opciones.visible, executablePath: rutaChromium() });
+        abierto = await abrirContextoDropboxSign(tenantId, { headless: !opciones.visible, sesionRespaldo: cfg.sesion });
     }
     catch (e) {
         const err = errorDeChromium(e);
@@ -290,15 +313,15 @@ export async function abrirSesionDropboxSign(tenantId, opciones = {}) {
         await anotarConexion(tenantId, { estado: "caida", via: "", pantalla: "", detalle: err.message });
         throw err;
     }
-    const ctx = await browser.newContext({ ...(cfg.sesion ? { storageState: cfg.sesion } : {}), ...OPCIONES_CONTEXTO, viewport: { ...VIEWPORT } });
-    const page = await ctx.newPage();
+    const { ctx, page } = abierto;
+    const browser = abierto.browser;
     // PRIMERO LA SESIÓN GUARDADA (26/10/2026): directo al listado. Se espera a que la pantalla se defina
     // (listado o login) en vez de 2,5 s fijos: con la página lenta caía en «desconocida» y se logueaba de más.
     await irA(page, MANAGE_URL).catch(() => { });
     let pantalla = await esperarPantalla(page, 25_000);
     if (pantalla === "manage") {
         void guardarSesion(tenantId, ctx).catch(() => { });
-        await anotarConexion(tenantId, { estado: "ok", via: "sesion", pantalla, detalle: cfg.sesion ? "Entró con la sesión guardada." : "Entró sin sesión guardada (ya estaba logueado)." });
+        await anotarConexion(tenantId, { estado: "ok", via: "sesion", pantalla, detalle: abierto.tibia ? "Entró con el navegador que había quedado abierto (sesión tibia)." : "Entró con la sesión del perfil guardado." });
         return { browser, ctx, page, seLogueo: false, pantalla };
     }
     if (opciones.sinLogin)
@@ -341,7 +364,8 @@ export async function probarConexionDropboxSign(tenantId) {
     try {
         const sesion = await abrirSesionDropboxSign(tenantId);
         await guardarSesion(tenantId, sesion.ctx).catch(() => { });
-        await sesion.browser.close().catch(() => { });
+        // Queda tibia: la corrida o la prueba siguiente no vuelven a entrar.
+        await liberarSesionDropboxSign(tenantId, sesion, true);
     }
     catch {
         /* el motivo ya quedó anotado en `conexion` y en `ultimoError` */
@@ -351,4 +375,10 @@ export async function probarConexionDropboxSign(tenantId) {
     }
     const t = await Tenant.findById(tenantId).select(`${BASE}.conexion`).lean();
     return t?.integrations?.dropboxSign?.bot?.conexion || { estado: "caida", probadaAt: new Date(), via: "", pantalla: "", detalle: "No se pudo registrar el resultado." };
+}
+/** Al terminar de usar la sesión: si quedó sana, el navegador queda tibio (`perfil.ts`); si no, se cierra. */
+export async function liberarSesionDropboxSign(tenantId, sesion, sana) {
+    if (!sesion)
+        return;
+    await liberarContexto(tenantId, { ...sesion, perfilNuevo: false, tibia: false }, sana && !sesion.page.isClosed());
 }

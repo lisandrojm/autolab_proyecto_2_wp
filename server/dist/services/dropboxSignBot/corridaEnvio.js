@@ -13,7 +13,7 @@ import { motivosDesactualizado, pantallaAPdf, pdfAPantalla, reglaDe } from "../.
 import { ContratoFrame } from "../../models/ContratoFrame.js";
 import { agruparTrabados, cupoVentana24h, estadoDelPanel, ordenPorRecientes } from "../../compartido/colaFirma.js";
 import { Release } from "../../models/Release.js";
-import { abrirSesionDropboxSign, anotarError, guardarSesion, probarConexionDropboxSign } from "./navegador.js";
+import { abrirSesionDropboxSign, anotarError, guardarSesion, liberarSesionDropboxSign, probarConexionDropboxSign } from "./navegador.js";
 import { quienTieneDropboxSign, soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 import { cargarMotor } from "./motor.js";
 import { descartarBorradoresDeLaCorrida } from "./borradores.js";
@@ -479,7 +479,8 @@ async function correr(corrida, cc, config) {
         fs.rmSync(dir, { recursive: true, force: true });
         if (sesion && !error)
             await guardarSesion(tenantId, sesion.ctx).catch(() => { });
-        await sesion?.browser.close().catch(() => { });
+        // Sana (sin fallo de la corrida) queda tibia para la próxima tanda o prueba; si no, se cierra.
+        await liberarSesionDropboxSign(tenantId, sesion, !error).catch(() => { });
         soltarCandadoDropboxSign(tenantId);
         corrida.actual = null;
         corrida.terminada = true;

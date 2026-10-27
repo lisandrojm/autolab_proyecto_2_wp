@@ -147,7 +147,7 @@
     "test:puestos": "tsx --test src/compartido/puestosDesempenados.test.ts",
     "puestos:migrar:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/migrarPuestosDesempenados.ts",
     "puestos:migrar": "dotenv -e .env.production -- tsx src/scripts/migrarPuestosDesempenados.ts",
-    "test:dropbox-sign-bot": "tsx --test src/services/dropboxSignBot/reglas.test.ts src/services/dropboxSignBot/clasificarPantalla.test.ts src/services/dropboxSignBot/planificador.test.ts src/compartido/colaFirma.test.ts",
+    "test:dropbox-sign-bot": "tsx --test src/services/dropboxSignBot/reglas.test.ts src/services/dropboxSignBot/clasificarPantalla.test.ts src/services/dropboxSignBot/planificador.test.ts src/services/dropboxSignBot/perfil.test.ts src/compartido/colaFirma.test.ts",
     "test:colocacion-firma": "tsx --test src/compartido/reglasColocacionFirma.test.ts",
     "test:arca-corrida": "tsx --test src/services/arca/corridaServidor.test.ts src/services/arca/sesionTibia.test.ts src/services/arca/colaObrasSociales.test.ts",
     "test:nombre-arca": "tsx --test src/services/arca/nombreArca.test.ts",

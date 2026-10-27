@@ -335,6 +335,8 @@ router.post("/bot/login/accion", async (req, res) => {
             z.object({ tipo: z.literal("scroll"), dy: z.number() }),
             z.object({ tipo: z.literal("recargar") }),
             z.object({ tipo: z.literal("reiniciar") }),
+            z.object({ tipo: z.literal("automatico") }),
+            z.object({ tipo: z.literal("tomar_control") }),
         ])
             .safeParse(req.body || {});
         if (!parsed.success)

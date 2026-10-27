@@ -1,18 +1,22 @@
-import { Browser, BrowserContext, Page } from "playwright-core";
+import { BrowserContext, Page } from "playwright-core";
 import { type PantallaDropboxSign } from "./clasificarPantalla.js";
 /**
  * UN CHROMIUM EN EL SERVIDOR CON LA SESIÓN DE DROPBOX SIGN (patrón `arca/navegador.ts`).
  *
  * El plan Essentials de Dropbox Sign no incluye la API, así que el bot opera la web como una persona.
- * La sesión (`storageState`) se guarda cifrada y se renueva en cada corrida; el login con usuario y
- * contraseña es el respaldo cuando vence. Ante captcha o segundo factor NO se insiste: se corta con
+ * Desde el 27/10/2026 el navegador usa un PERFIL PERSISTENTE por tenant, con identidad coherente, y
+ * queda tibio entre usos (`perfil.ts`); el `storageState` cifrado sigue guardándose como respaldo. El
+ * login con usuario y contraseña es el respaldo cuando la sesión vence. Ante captcha o segundo factor NO se insiste: se corta con
  * `bot.ultimoError` y la UI pide repetir el login manual (`scripts/loginDropboxSign.ts`).
  *
  * El viewport es FIJO (1457×812): las coordenadas de colocación de la firma se validaron con ése.
  */
 export declare const MANAGE_URL = "https://app.sign.dropbox.com/home/manage";
 export interface SesionDropboxSign {
-    browser: Browser;
+    /** Cerrar a secas. Al terminar, mejor `liberarSesionDropboxSign` (deja el navegador tibio si quedó sano). */
+    browser: {
+        close(): Promise<unknown>;
+    };
     ctx: BrowserContext;
     page: Page;
     seLogueo: boolean;
@@ -64,10 +68,9 @@ export declare class ErrorLogin extends Error {
     constructor(codigo: string, mensaje: string);
 }
 /**
- * UN SOLO NAVEGADOR «IDENTIDAD» (26/10/2026): mismo user-agent, viewport, idioma y zona horaria en
- * cada corrida, en «Probar conexión» y en el login asistido. Chromium headless se anuncia como
- * «HeadlessChrome»; si el agente cambia entre el login y la corrida, Dropbox invalida la sesión por
- * seguridad (la guardada a las 01:56 ya no servía a las 08:37).
+ * UN SOLO NAVEGADOR «IDENTIDAD»: mismo viewport, idioma y zona horaria en cada uso. El user-agent ya
+ * no es fijo a mano (era de Mac y Chrome/139 sobre un Linux con otra versión, 27/10/2026): lo arma
+ * `perfil.ts` con el SO y la versión reales, igual en todos los usos.
  */
 export declare const OPCIONES_CONTEXTO: {
     readonly viewport: {
@@ -76,7 +79,6 @@ export declare const OPCIONES_CONTEXTO: {
     };
     readonly locale: "es-AR";
     readonly timezoneId: "America/Argentina/Buenos_Aires";
-    readonly userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36";
 };
 /**
  * EL AVISO DE COOKIES (26/10/2026) tapa el formulario de login de Dropbox: el click en «Continuar» no
@@ -94,6 +96,8 @@ export declare function cerrarBannerCookies(page: Page): Promise<boolean>;
 export declare function loguear(page: Page, cred: {
     loginEmail: string;
     loginPassword: string;
+}, señal?: {
+    cortada: boolean;
 }): Promise<void>;
 /**
  * Abre el navegador con la sesión lista en /home/manage. Con `sinLogin` (login manual del operador)
@@ -109,3 +113,11 @@ export declare function abrirSesionDropboxSign(tenantId: string, opciones?: {
  * corrida más. Pide el candado: no corre mientras hay una tanda en curso.
  */
 export declare function probarConexionDropboxSign(tenantId: string): Promise<ConexionDropboxSign>;
+/** Al terminar de usar la sesión: si quedó sana, el navegador queda tibio (`perfil.ts`); si no, se cierra. */
+export declare function liberarSesionDropboxSign(tenantId: string, sesion: {
+    ctx: BrowserContext;
+    page: Page;
+    browser: {
+        close(): Promise<unknown>;
+    };
+} | null | undefined, sana: boolean): Promise<void>;
