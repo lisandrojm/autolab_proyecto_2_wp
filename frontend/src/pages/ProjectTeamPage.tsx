@@ -4772,7 +4772,31 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       // Las áreas se identifican por fila (área + sede): la misma área puede estar una vez por sede.
                       const areaAbierta = areaExpandida === undefined ? (seleccionActual ? claveFilaArea(seleccionActual) : null) : areaExpandida;
 
-                      return (project?.areasConfig || []).map((ac: any) => {
+                      /*
+                        SÓLO LAS ÁREAS DEL ROL (27/10/2026). Cada área del catálogo dice qué roles empresa
+                        trabajan en ella (Áreas → «Roles empresa»): con el rol elegido arriba se ofrecen sólo
+                        las del proyecto donde ese rol trabaja. Quedan siempre: las de sistema (coordinación,
+                        con su propia regla) y la que el contrato ya tiene elegida (no se esconde lo guardado).
+                        Si el rol no trabaja en ninguna área del proyecto, se muestran todas con un aviso.
+                      */
+                      const rolElegido = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id) || String(rf._id) === String(wizardData.rol_frame_id));
+                      const elegidas = new Set(wizardData.areaShiftAssignments.map((a) => String(a.areaId)));
+                      const todasLasFilas = (project?.areasConfig || []) as any[];
+                      const delRol = (ac: any) => {
+                        const id = String(typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId);
+                        const area = allAreas.find((a) => a._id === id);
+                        return !!area?.isSystem || elegidas.has(id) || (!!rolElegido && (area?.rolesFrame || []).map(String).includes(String(rolElegido._id)));
+                      };
+                      const filtradas = rolElegido ? todasLasFilas.filter(delRol) : todasLasFilas;
+                      const sinCoincidencias = !!rolElegido && !filtradas.some((ac) => !allAreas.find((a) => a._id === String(typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId))?.isSystem && !elegidas.has(String(typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId)));
+                      const filasVisibles = sinCoincidencias ? todasLasFilas : filtradas;
+                      const avisoRol = rolElegido && todasLasFilas.length > 0 ? (
+                        <p key="aviso-rol" className={`text-[11px] ml-1 ${sinCoincidencias ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                          {sinCoincidencias ? `«${rolElegido.name}» no figura en ninguna área de este proyecto (Áreas → Roles empresa): se muestran todas.` : `Sólo las áreas donde trabaja «${rolElegido.name}»: ${filasVisibles.length} de ${todasLasFilas.length}.`}
+                        </p>
+                      ) : null;
+
+                      return [avisoRol, ...filasVisibles.map((ac: any) => {
                         const aId = typeof ac.areaId === 'object' ? ac.areaId?._id : ac.areaId;
                         const sedeFila = sedeDe(ac.sedeId);
                         const filaKey = claveFilaArea({ areaId: aId, sedeId: sedeFila });
@@ -4886,7 +4910,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                             )}
                           </div>
                         );
-                      });
+                      })];
                     })()}
                   </div>
 
