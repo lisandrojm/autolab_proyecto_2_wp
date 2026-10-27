@@ -17,6 +17,12 @@ export interface IContrato extends Document {
      * lo elige al dar de alta a alguien; se muestra al lado del selector. Texto libre, opcional.
      */
     descripcion?: string;
+    /**
+     * IMPORTES EN 0 (27/10/2026): para quien CAMBIA un día de franco por uno de trabajo (trabaja de lunes a
+     * sábado y en vez del sábado va el domingo). Ese día no se paga: todos los importes del contrato van
+     * en cero y no se pueden editar.
+     */
+    importesEnCero?: boolean;
     cantidadJornadas: number;
     multiplicadorDiario: number;
     esTiempoIndeterminado: boolean;
@@ -104,6 +110,7 @@ const contratoSchema = new Schema<IContrato>(
     name: { type: String, required: true, unique: true },
     data: {
       descripcion: { type: String, default: "" },
+      importesEnCero: { type: Boolean, default: false },
       cantidadJornadas: { type: Number, default: 0 },
       multiplicadorDiario: { type: Number, default: 0 },
       esTiempoIndeterminado: { type: Boolean, default: false },

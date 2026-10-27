@@ -1703,6 +1703,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       escala pisaba el importe que se acababa de escribir.
     */
     if (!formData.categoriaSatId) return;
+    // Un tipo «importes en 0» (cambio de franco) no se paga: no hay importe que proponer.
+    if ((contratoElegido as any)?.data?.importesEnCero) return;
     const clave = `${formData.categoriaSatId}::${formData.contratoId}`;
     if (propuestaAnterior.current === clave) return;
     propuestaAnterior.current = clave;
@@ -1712,7 +1714,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       jornadasDelTipo,
     );
     if (propuesto > 0) setFormData((p) => ({ ...p, dailyRate: String(propuesto) }));
-  }, [formData.categoriaSatId, formData.contratoId, categoriasSat, multiplicadorDiario, jornadasDelTipo]);
+  }, [formData.categoriaSatId, formData.contratoId, categoriasSat, multiplicadorDiario, jornadasDelTipo, contratoElegido]);
 
   /*
     AL ELEGIR UN TIPO DE SERVICIOS SE SUELTA LA CATEGORÍA, y el importe se queda… EN NETO.
@@ -1918,7 +1920,16 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     categoría va a pisar apenas se elija (y que, si no, viaja sin encuadre). Todos, incluido el total,
     porque editar cualquiera cambia la jornada. Un servicio no tiene categoría: ahí van libres.
   */
-  const importesBloqueados = !esServicios && !formData.categoriaSatId;
+  /*
+    IMPORTES EN 0 (27/10/2026): el tipo es un cambio de franco (el día trabajado reemplaza a uno de franco
+    y no se paga). El importe queda en 0 y bloqueado; el server también guarda el contrato en cero.
+  */
+  const importesEnCero = !!(contratoElegido as any)?.data?.importesEnCero;
+  useEffect(() => {
+    if (importesEnCero && formData.dailyRate !== "0") setFormData((p) => ({ ...p, dailyRate: "0" }));
+  }, [importesEnCero, formData.dailyRate]);
+  const importesBloqueados = importesEnCero || (!esServicios && !formData.categoriaSatId);
+  const textoImportesBloqueados = importesEnCero ? "En 0: este tipo de contrato es un cambio de franco (el día no se paga)." : "Se habilita al elegir la categoría.";
 
   /** Qué días cubre el contrato, dicho para el aviso del motivo de reemplazo. */
   const alcanceDelContrato = (() => {
@@ -2070,7 +2081,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       return;
     }
     // Un servicio no tiene categoría que proponga el importe: si no se carga, la solicitud no dice cuánto se paga.
-    if (esServicios && !(Number(formData.dailyRate) > 0)) {
+    if (esServicios && !importesEnCero && !(Number(formData.dailyRate) > 0)) {
       sweetAlert.warning("Falta el importe por jornada", "Es un servicio: no sale de ninguna categoría, así que hay que cargarlo a mano.");
       return;
     }
@@ -2861,7 +2872,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             bloqueado={importesBloqueados}
             soloNeto={soloNeto}
             resumenTotal={resumenDelTotal}
-            textoBloqueado="Se habilita al elegir la categoría."
+            textoBloqueado={textoImportesBloqueados}
             ayudaJornada={<AyudaImportes bloqueado={importesBloqueados} esServicios={esServicios} categoria={categoriaElegida?.name} cct={convenioElegido?.externalId} multiplicador={multiplicadorDiario} contrato={contratoElegido?.name} escalaBase={importePorJornadaDeCategoria(categoriaElegida || undefined, 1, jornadasDelTipo)} diferencia={diferenciaContraEscala} />}
             {...PROPS_IMPORTES_MOVIL}
           />

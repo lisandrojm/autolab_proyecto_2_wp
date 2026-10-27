@@ -325,12 +325,17 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
   const jornadasDelTipo = Number(contratoDoc?.data?.cantidadJornadas) > 0 ? Number(contratoDoc.data.cantidadJornadas) : null;
   const escalaBase = importePorJornadaDeCategoria(categoriaActual || undefined, 1, jornadasDelTipo);
   const escala = importePorJornadaDeCategoria(categoriaActual || undefined, mult, jornadasDelTipo);
-  const importesBloqueados = !esServicios && !categoriaIdActual;
+  // Cambio de franco (tipo «importes en 0», 27/10/2026): el día no se paga; importe en 0 y bloqueado.
+  const importesEnCero = !!contratoDoc?.data?.importesEnCero;
+  const importesBloqueados = importesEnCero || (!esServicios && !categoriaIdActual);
   const diasDeSemana = sueltos ? [...new Set(fechas.map((s) => new Date(`${s}T12:00:00Z`).getUTCDay()))] : x.efectivo.diasSemana || [];
   const mesesEq = mesesEquivalentes(periodo.desde, periodo.hasta, diasDeSemana, sueltos ? fechas : undefined);
   const jornadas = fila?.jornadas || (sueltos ? fechas.length : 0);
   const tocoImporte = useRef(false);
   const [valorJornada, setValorJornada] = useState(() => (d.dailyRate ? String(d.dailyRate) : fila?.importes.jornada != null ? String(fila.importes.jornada) : ""));
+  useEffect(() => {
+    if (importesEnCero && valorJornada !== "0") setValorJornada("0");
+  }, [importesEnCero, valorJornada]);
   const diferencia = diferenciaContraEscala(escala, valorJornada);
 
   /** Sólo lo distinto de lo que rige. Lo igual se borra: no es un puntual, es lo de siempre. */
@@ -512,7 +517,7 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
                       dias: sueltos ? `${fechas.length} ${fechas.length === 1 ? "día marcado" : "días marcados"}` : textoDeDias(diasDeSemana),
                     }}
                     bloqueado={importesBloqueados}
-                    textoBloqueado="Se habilita al elegir la categoría."
+                    textoBloqueado={importesEnCero ? "En 0: este tipo de contrato es un cambio de franco (el día no se paga)." : "Se habilita al elegir la categoría."}
                     ayudaJornada={<AyudaImportes bloqueado={importesBloqueados} esServicios={esServicios} categoria={categoriaActual?.name} cct={cct} multiplicador={mult} contrato={contratoDoc?.name} escalaBase={escalaBase} diferencia={diferencia} />}
                     {...PROPS_IMPORTES_MOVIL}
                   />

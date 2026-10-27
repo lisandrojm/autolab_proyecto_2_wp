@@ -51,6 +51,8 @@ interface FormState {
   name: string;
   /** En qué casos se usa este tipo de contrato (ayudamemoria para quien lo elige). */
   descripcion: string;
+  /** Cambio de franco: todos los importes del contrato en cero. */
+  importesEnCero: boolean;
   cantidadJornadas: string;
   multiplicadorDiario: string;
   /** Límites de la jornada: vacío = sin límite. */
@@ -71,7 +73,7 @@ interface FormState {
   generaAlta: boolean;
 }
 
-const FORM_VACIO: FormState = { name: '', descripcion: '', cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, modoFechas: 'periodo', requiereFirma: true, requiereFirmaRelease: true, requiereFirmaAlta: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
+const FORM_VACIO: FormState = { name: '', descripcion: '', importesEnCero: false, cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, modoFechas: 'periodo', requiereFirma: true, requiereFirmaRelease: true, requiereFirmaAlta: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
 
 const BadgeTiempoIndeterminado: React.FC = () => (
   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
@@ -664,6 +666,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
     setForm({
       name: contrato.name,
       descripcion: contrato.data?.descripcion || '',
+      importesEnCero: !!contrato.data?.importesEnCero,
       cantidadJornadas: String(contrato.data?.cantidadJornadas ?? ''),
       multiplicadorDiario: String(contrato.data?.multiplicadorDiario ?? ''),
       horasPorJornada: contrato.data?.horasPorJornada != null ? String(contrato.data.horasPorJornada) : '',
@@ -853,6 +856,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
     const payload = {
       nombre: name,
       descripcion: form.descripcion,
+      importesEnCero: form.importesEnCero,
       cantidadJornadas: form.cantidadJornadas,
       multiplicadorDiario: form.multiplicadorDiario,
       horasPorJornada: form.horasPorJornada,
@@ -921,6 +925,25 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
     temprana (Pedido de ARCA)— el alta de ARCA. Van entre los estados impositivos (y sus códigos de
     ARCA) y los no impositivos: dependen del trámite elegido arriba, y el del alta sólo existe con él.
   */
+  /*
+    IMPORTES (27/10/2026), entre los estados impositivos y el envío a firmar: «Importes en 0» es para quien
+    CAMBIA un día de franco por uno de trabajo —trabaja de lunes a sábado y en vez del sábado va el
+    domingo—. Ese día no se paga: al elegir este tipo, todos los importes del contrato quedan en cero y
+    bloqueados (y el server los guarda en cero aunque llegue otra cosa).
+  */
+  const bloqueImportes = (
+    <div className="space-y-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5">
+      <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Importes</span>
+      <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+        <input type="checkbox" checked={form.importesEnCero} onChange={(e) => setForm((p) => ({ ...p, importesEnCero: e.target.checked }))} className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+        <span>
+          Importes en 0
+          <span className="block text-[11px] text-gray-500 dark:text-gray-400">Para quien cambia un día de franco por uno de trabajo (por ejemplo, trabaja de lunes a sábado y en vez del sábado va el domingo): ese día no se paga. Todos los importes del contrato van en cero y no se pueden editar.</span>
+        </span>
+      </label>
+    </div>
+  );
+
   const bloqueFirma = (
     <div className="space-y-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5">
       <div className="flex items-center gap-2">
@@ -1156,6 +1179,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                     {contrato.isActive === false ? 'Inactivo' : 'Activo'}
                   </span>
                   <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{contrato.name}</span>
+                  {contrato.data?.importesEnCero && <span className="inline-flex w-fit items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="Cambio de franco: todos los importes en cero">Importes en 0</span>}
                   {contrato.data?.descripcion && <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 whitespace-pre-line" title={contrato.data.descripcion}>{contrato.data.descripcion}</span>}
                   {tienePlantillaCustom(contrato._id) && <BadgeCustom className="w-fit" />}
                 </div>
@@ -1564,6 +1588,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                     /* por qué esta sección está vacía y qué la va a llenar. */
                     <div className="space-y-3">
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Vas a poder elegir sus Estados una vez que le asignes una Plantilla.</p>
+                      {bloqueImportes}
                       {bloqueFirma}
                     </div>
                   ) : (
@@ -1759,6 +1784,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                         )
                       )}
 
+                      {bloqueImportes}
                       {bloqueFirma}
 
                       <div>

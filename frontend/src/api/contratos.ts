@@ -12,6 +12,8 @@ export interface ContratoInput {
   nombre: string;
   /** En qué casos se usa: ayudamemoria para quien lo elige. */
   descripcion?: string;
+  /** Cambio de franco: todos los importes en cero. */
+  importesEnCero?: boolean;
   cantidadJornadas?: string | number;
   multiplicadorDiario?: string | number;
   esTiempoIndeterminado?: boolean;

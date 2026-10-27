@@ -57,6 +57,11 @@ export default function DetallePuesto() {
     del alta individual, y es lo que muestra el campo cuando nadie fijó un importe a mano.
   */
   const contratoDelPuesto = catalogos.contratos.find((c) => c._id === x?.efectivo.contratoId) as any;
+  // Cambio de franco (tipo «importes en 0», 27/10/2026): el día no se paga; importe en 0 y bloqueado.
+  const importesEnCero = !!contratoDelPuesto?.data?.importesEnCero;
+  useEffect(() => {
+    if (importesEnCero && importe !== "0") setImporte("0");
+  }, [importesEnCero, importe]);
   const multDelPuesto = Number(contratoDelPuesto?.data?.multiplicadorDiario) > 0 ? Number(contratoDelPuesto.data.multiplicadorDiario) : 1;
   const categoriaDelPuesto = catalogos.categoriasSat.find((c) => c._id === x?.efectivo.categoriaSatId);
   const jornadasDelPuesto = Number(contratoDelPuesto?.data?.cantidadJornadas) > 0 ? Number(contratoDelPuesto.data.cantidadJornadas) : null;
@@ -301,8 +306,8 @@ export default function DetallePuesto() {
                 proporcionNeto={proporcionNetoDeCategoria(categoriaDelPuesto)}
                 soloNeto={efectivo.tipoImpositivo === "constancia_cuit"}
                 diasSemana={diasRef.length}
-                bloqueado={!categoriaActual}
-                textoBloqueado="Se habilita al elegir la categoría."
+                bloqueado={importesEnCero || !categoriaActual}
+                textoBloqueado={importesEnCero ? "En 0: este tipo de contrato es un cambio de franco (el día no se paga)." : "Se habilita al elegir la categoría."}
                 ayudaJornada={
                   <>
                     <AyudaImportes bloqueado={!categoriaActual} esServicios={false} categoria={categoriaActual?.name} cct={cct} multiplicador={multDelPuesto} contrato={contratoDelPuesto?.name} escalaBase={escalaBase} diferencia={diferencia} />

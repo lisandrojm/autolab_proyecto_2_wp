@@ -1172,6 +1172,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   */
   useEffect(() => {
     if (!selectedUserForWizard || !esAltaNueva || esServicios || !wizardData.categoria_sat_id) return;
+    // Un tipo «importes en 0» (cambio de franco) no se paga: no hay importe que proponer.
+    if (contratos.find((c) => c._id === wizardData.contrato_id)?.data?.importesEnCero) return;
     const clave = `${wizardData.categoria_sat_id}::${wizardData.contrato_id}`;
     if (propuestaWizard.current === clave) return;
     propuestaWizard.current = clave;
@@ -1281,6 +1283,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     guardado, porque cuál de las dos puntas corregir lo decide quien carga.
   */
   const contratoDelWizard = contratos.find((c) => c._id === wizardData.contrato_id) || null;
+  /*
+    IMPORTES EN 0 (27/10/2026): el tipo es un cambio de franco —el día trabajado reemplaza a uno de
+    franco y no se paga—. El importe por jornada queda en 0 (de él salen todos los demás, que quedan en
+    0 solos) y los campos se bloquean. El server también los guarda en cero.
+  */
+  const importesEnCeroWizard = !!contratoDelWizard?.data?.importesEnCero;
+  useEffect(() => {
+    if (importesEnCeroWizard && Number(wizardData.sueldo_jornada) !== 0) setWizardData((prev) => ({ ...prev, sueldo_jornada: 0 }));
+  }, [importesEnCeroWizard, wizardData.sueldo_jornada]);
   const limiteHorasWizard = contratoDelWizard?.data?.horasPorJornada ?? null;
   const limiteDiasWizard = contratoDelWizard?.data?.diasPorSemana ?? null;
   const duracionHorarioWizard = horasDelHorario(wizardData.hora_inicio, wizardData.hora_fin);
@@ -5143,7 +5154,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   Lo que se guarda sigue siendo el sueldo por jornada.
                 */}
                 <div className="md:col-span-2 space-y-4 pt-6 border-t border-gray-100 dark:border-gray-700">
-                  <ImportesDelContrato conservarJornadaExterna className="grid grid-cols-1 md:grid-cols-2 gap-4" valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ''} onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))} mesesEq={mesesEqWizard} indeterminado={indeterminadoWizard} jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0} jornadasDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.cantidadJornadas) || null} diasPorSemanaDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.diasPorSemana) || null} proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id)))} diasSemana={diasSemanaWizard} soloNeto={soloNetoWizard} estadoReferencia={nombreEstadoWizard} resumenTotal={resumenDelTotalWizard} bloqueado={!esServicios && !wizardData.categoria_sat_id} textoBloqueado="Se habilita al elegir la categoría: el importe sale de su escala." claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1" claseCampo="input-field w-full" claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300" claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1" />
+                  <ImportesDelContrato conservarJornadaExterna className="grid grid-cols-1 md:grid-cols-2 gap-4" valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ''} onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))} mesesEq={mesesEqWizard} indeterminado={indeterminadoWizard} jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0} jornadasDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.cantidadJornadas) || null} diasPorSemanaDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.diasPorSemana) || null} proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id)))} diasSemana={diasSemanaWizard} soloNeto={soloNetoWizard} estadoReferencia={nombreEstadoWizard} resumenTotal={resumenDelTotalWizard} bloqueado={importesEnCeroWizard || (!esServicios && !wizardData.categoria_sat_id)} textoBloqueado={importesEnCeroWizard ? "En 0: este tipo de contrato es un cambio de franco (el día no se paga)." : "Se habilita al elegir la categoría: el importe sale de su escala."} claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1" claseCampo="input-field w-full" claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300" claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1" />
 
                   {/* Lo que se deriva de la categoría y de las jornadas: se muestra, no se carga. */}
                   <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">

@@ -261,6 +261,8 @@ export interface ContratoItem {
     data: {
         /** En qué casos se usa este tipo de contrato: ayudamemoria para quien lo elige (27/10/2026). */
         descripcion?: string;
+        /** Cambio de franco: todos los importes del contrato en cero y bloqueados (27/10/2026). */
+        importesEnCero?: boolean;
         cantidadJornadas: number;
         multiplicadorDiario: number;
         esTiempoIndeterminado: boolean;

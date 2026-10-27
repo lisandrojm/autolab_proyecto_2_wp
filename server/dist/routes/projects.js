@@ -1727,7 +1727,14 @@ const contratoIdDeContrato = async (c) => {
  * su categoría: la cuenta de `sueldosDelContrato`, la misma del móvil y del formulario. Sin categoría
  * (un servicio) neto = bruto. Devuelve los cinco campos más el sueldo en mano en letras.
  */
+/**
+ * LOS IMPORTES DE UN TIPO «IMPORTES EN 0» (cambio de franco, 27/10/2026): todos en cero, digan lo que
+ * digan el formulario o la escala. El día trabajado reemplaza a uno de franco y no se paga.
+ */
+const IMPORTES_EN_CERO = { sueldo_jornada: 0, sueldo_mano: 0, sueldo_mano_texto: "CERO 00/100", sueldo_neto: 0, sueldo_bruto: 0, sueldo_diario_neto: 0, diferencia_diaria_neto: 0 };
 const sueldosConEscala = async (contrato, tipoContrato) => {
+    if (tipoContrato?.data?.importesEnCero)
+        return { ...IMPORTES_EN_CERO };
     const cat = contrato?.categoria_sat_id != null && contrato.categoria_sat_id !== "" ? await buscarCategoriaCompatPorLegacyId(Number(contrato.categoria_sat_id)) : null;
     const bruto = Number(cat?.data?.sueldoBruto) || 0;
     const neto = Number(cat?.data?.neto) || 0;
@@ -2172,12 +2179,12 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             }
             contract.puestoDesempenado = puesto.valor || "";
         }
-        const tipoContrato = isValidId(contract.contrato_id) ? await Contrato.findById(contract.contrato_id).select("data.cantidadJornadas data.modoFechas data.multiplicadorDiario").lean() : null;
+        const tipoContrato = isValidId(contract.contrato_id) ? await Contrato.findById(contract.contrato_id).select("data.cantidadJornadas data.modoFechas data.multiplicadorDiario data.importesEnCero").lean() : null;
         const fijas = Math.trunc(Number(tipoContrato?.data?.cantidadJornadas) || 0);
         if (fijas > 0 && tipoContrato?.data?.modoFechas !== "dias" && Number(contract.cantidad_jornadas_laborales) !== fijas)
             contract.cantidad_jornadas_laborales = fijas;
         // Los sueldos, con la misma cuenta que la solicitud del móvil y el formulario (ver `sueldosConEscala`).
-        if (Number(contract.sueldo_jornada) > 0)
+        if (Number(contract.sueldo_jornada) > 0 || tipoContrato?.data?.importesEnCero)
             Object.assign(contract, await sueldosConEscala(contract, tipoContrato));
         const enrichedContract = {
             ...contract,
@@ -4008,7 +4015,7 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/categoria-sa
         }
         const camposDeValoracion = veredicto.aGuardar(req.user.userId);
         // Los sueldos con la escala de la categoría NUEVA y el importe por jornada que ya tenía el contrato.
-        const tipoDelContrato = Types.ObjectId.isValid(String(contrato.contrato_id || "")) ? await Contrato.findById(contrato.contrato_id).select("data.cantidadJornadas data.multiplicadorDiario").lean() : null;
+        const tipoDelContrato = Types.ObjectId.isValid(String(contrato.contrato_id || "")) ? await Contrato.findById(contrato.contrato_id).select("data.cantidadJornadas data.multiplicadorDiario data.importesEnCero").lean() : null;
         const sueldos = await sueldosConEscala({ ...contrato.toObject(), categoria_sat_id: categoriaSatId }, tipoDelContrato);
         const { sueldo_neto, sueldo_bruto, sueldo_diario_neto, diferencia_diaria_neto } = sueldos;
         up.contracts[idx] = {

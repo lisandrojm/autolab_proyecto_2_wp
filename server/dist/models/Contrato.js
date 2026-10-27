@@ -5,6 +5,7 @@ const contratoSchema = new Schema({
     name: { type: String, required: true, unique: true },
     data: {
         descripcion: { type: String, default: "" },
+        importesEnCero: { type: Boolean, default: false },
         cantidadJornadas: { type: Number, default: 0 },
         multiplicadorDiario: { type: Number, default: 0 },
         esTiempoIndeterminado: { type: Boolean, default: false },
