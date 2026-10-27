@@ -1882,24 +1882,29 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
     /*
       EL ÚLTIMO CONTRATO DE LA PERSONA (27/10/2026), en cualquier proyecto: el de alta más reciente (a
       igual alta, el cargado después). Es lo que pregunta quien aprueba: si ya trabaja, hasta cuándo, o
-      si viene de un contrato vencido. Las solicitudes de alguien nuevo no tienen.
+      si viene de un contrato vencido; la pantalla avisa si el período pedido se le superpone. NO cuenta
+      el contrato que dejó la propia solicitud al aprobarse (`contracts.solicitudId`): si no, toda
+      aprobada se «superpondría» consigo misma. Las solicitudes de alguien nuevo no tienen.
     */
     const personasIds = [...new Set([...personaDe.values()].filter((id) => Types.ObjectId.isValid(id)))].map((id) => new Types.ObjectId(id));
-    const ultimoContratoDe = new Map<string, { alta: string; baja: string | null; nombre: string; proyecto: string }>();
+    const contratosDe = new Map<string, Array<{ c: any; proyecto: string }>>();
     if (personasIds.length > 0) {
-      const vinculos: any[] = await UserProject.find({ userId: { $in: personasIds } }).select("userId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.nombre_contrato contracts.fecha_carga").lean();
-      const clave = (c: any) => `${fechaISO(c.fecha_alta_contrato) || ""}|${String(c.fecha_carga || "")}`;
-      const mejor = new Map<string, { c: any; proyecto: string }>();
+      const vinculos: any[] = await UserProject.find({ userId: { $in: personasIds } }).select("userId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.nombre_contrato contracts.fecha_carga contracts.solicitudId").lean();
       for (const v of vinculos) {
-        for (const c of v.contracts || []) {
-          if (!fechaISO(c?.fecha_alta_contrato)) continue;
-          const uid = String(v.userId);
-          const previo = mejor.get(uid);
-          if (!previo || clave(c) > clave(previo.c)) mejor.set(uid, { c, proyecto: String(v.nombre_proyecto || "") });
-        }
+        const lista = contratosDe.get(String(v.userId)) || [];
+        for (const c of v.contracts || []) if (fechaISO(c?.fecha_alta_contrato)) lista.push({ c, proyecto: String(v.nombre_proyecto || "") });
+        contratosDe.set(String(v.userId), lista);
       }
-      for (const [uid, { c, proyecto }] of mejor) ultimoContratoDe.set(uid, { alta: fechaISO(c.fecha_alta_contrato)!, baja: fechaISO(c.fecha_baja_contrato) || null, nombre: String(c.nombre_contrato || ""), proyecto });
     }
+    const claveContrato = (c: any) => `${fechaISO(c.fecha_alta_contrato) || ""}|${String(c.fecha_carga || "")}`;
+    const ultimoContratoDe = (personaId: string, solicitudId: string) => {
+      let mejor: { c: any; proyecto: string } | null = null;
+      for (const x of contratosDe.get(personaId) || []) {
+        if (String(x.c.solicitudId || "") === solicitudId) continue;
+        if (!mejor || claveContrato(x.c) > claveContrato(mejor.c)) mejor = x;
+      }
+      return mejor ? { alta: fechaISO(mejor.c.fecha_alta_contrato), baja: fechaISO(mejor.c.fecha_baja_contrato) || null, nombre: String(mejor.c.nombre_contrato || ""), proyecto: mejor.proyecto } : null;
+    };
 
     const rows = docs.map((u: any) => {
       const m = u.metadata || {};
@@ -1944,7 +1949,7 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
         empresaContratoId: m.empresaContratoId ? String(m.empresaContratoId) : null,
         // Sólo las aprobadas: la obra social del contrato que dejó su aprobación.
         obraSocial: obraSocialPorSolicitud.get(String(u._id)) || null,
-        ultimoContrato: ultimoContratoDe.get(personaId) || null,
+        ultimoContrato: ultimoContratoDe(personaId, String(u._id)),
       };
     });
 

@@ -242,6 +242,14 @@ export const formatDiaSolicitud = (dateStr?: string | null) => {
   return new Date(y, m - 1, d).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
 };
 
+/** ¿El período pedido [inicio, fin] se pisa con el contrato [alta, baja]? Sin fin o sin baja = abierto. Fechas AAAA-MM-DD. */
+export const seSuperpone = (inicio?: string | null, fin?: string | null, alta?: string | null, baja?: string | null): boolean => {
+  const d = (x?: string | null) => (/^\d{4}-\d{2}-\d{2}/.test(String(x || "")) ? String(x).slice(0, 10) : "");
+  const [i, f, a, b] = [d(inicio), d(fin), d(alta), d(baja)];
+  if (!i || !a) return false;
+  return i <= (b || "9999-12-31") && a <= (f || "9999-12-31");
+};
+
 interface SolicitudesTableProps {
   solicitudes: SolicitudVista[];
   catalogos: ReturnType<typeof useCatalogosDeSolicitudes>;
@@ -330,9 +338,8 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
               <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] border-r border-gray-200 dark:border-gray-700 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]`}>Nombre</th>
               <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">Fecha de creación</th>
               {/* Las columnas que comparte con Contratos → Alta temprana de ARCA van en SU orden (27/10/2026):
-                  Nombre, Fecha de creación, Último contrato, Obra social, Cliente, Proyecto, Estado y Tipo de
-                  alta (allá, «Estado Impositivo»). Las propias de Solicitudes quedan intercaladas. */}
-              <th className="px-4 py-3 font-semibold whitespace-nowrap" title="El último contrato de la persona, en cualquier proyecto">Último contrato</th>
+                  Nombre, Fecha de creación, Obra social, Cliente, Proyecto, Estado y Tipo de alta (allá, «Estado
+                  Impositivo»). «Último contrato» va pegado a «Fechas», para ver si se superponen. */}
               <th className="px-4 py-3 font-semibold">Solicitó</th>
               {renderObraSocial && <th className="px-4 py-3 font-semibold">Obra social</th>}
               {mostrarProyectos && (
@@ -342,6 +349,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 </>
               )}
               <th className="px-4 py-3 font-semibold">Rol/es Empresa</th>
+              <th className="px-4 py-3 font-semibold whitespace-nowrap" title="El último contrato de la persona, en cualquier proyecto (sin el que dejó esta solicitud). Avisa si se superpone con las fechas pedidas.">Último contrato</th>
               <th className="px-4 py-3 font-semibold">Fechas</th>
               <th className="px-4 py-3 font-semibold">Horario</th>
               <th className="px-4 py-3 font-semibold text-center">Estado</th>
@@ -438,25 +446,6 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                     <FechaHoraCelda valor={s.creadaEl} />
                   </td>
 
-                  {/* El último contrato de la PERSONA (en cualquier proyecto), como la columna de Contratos. */}
-                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos: es alguien nuevo"}>
-                    {s.ultimoContrato ? (
-                      (() => {
-                        const vigente = isContractVigente(s.ultimoContrato.alta, s.ultimoContrato.baja || undefined);
-                        return (
-                          <div className="flex flex-col gap-1">
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
-                            <div className="flex flex-col gap-0.5 text-xs">
-                              <span><span className="text-gray-400">Alta:</span> {formatDate(s.ultimoContrato.alta)}</span>
-                              <span><span className="text-gray-400">Baja:</span> {s.ultimoContrato.baja ? formatDate(s.ultimoContrato.baja) : "—"}</span>
-                            </div>
-                          </div>
-                        );
-                      })()
-                    ) : (
-                      <span className="text-gray-300 dark:text-gray-600">—</span>
-                    )}
-                  </td>
                   {/*
                     QUIÉN LA PIDIÓ, con sus roles de coordinación o supervisión debajo: es lo que dice
                     con qué autoridad se pidió el alta. Los demás roles (administrativos, etc.) no
@@ -522,6 +511,31 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   )}
 
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{resolverRolFrame(s)}</td>
+                  {/* El último contrato de la PERSONA (en cualquier proyecto, sin el que dejó esta solicitud), pegado a «Fechas» para compararlos. */}
+                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos: es alguien nuevo"}>
+                    {s.ultimoContrato ? (
+                      (() => {
+                        const vigente = isContractVigente(s.ultimoContrato.alta, s.ultimoContrato.baja || undefined);
+                        return (
+                          <div className="flex flex-col gap-1">
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
+                            <div className="flex flex-col gap-0.5 text-xs">
+                              <span><span className="text-gray-400">Alta:</span> {formatDate(s.ultimoContrato.alta)}</span>
+                              <span><span className="text-gray-400">Baja:</span> {s.ultimoContrato.baja ? formatDate(s.ultimoContrato.baja) : "—"}</span>
+                            </div>
+                            {/* El período pedido (columna «Fechas», al lado) se pisa con este contrato. */}
+                            {seSuperpone(s.startDate, s.dueDate, s.ultimoContrato.alta, s.ultimoContrato.baja) && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400" title="Las fechas pedidas se superponen con este contrato">
+                                <FontAwesomeIcon icon={faTriangleExclamation} /> Se superpone con lo pedido
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <span className="text-gray-300 dark:text-gray-600">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                       <span>{formatDiaSolicitud(s.startDate)}</span>
