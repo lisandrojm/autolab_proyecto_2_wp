@@ -7,7 +7,7 @@ import { NombreArca, estadoNombreArca } from "../arca/NombreArca";
 import { esperaCuentaBancaria, esperaDatosDeCuenta, motivoSinBancoDe, resumenSinBanco } from "../../utils/bancarios";
 import { User } from "../../api/users";
 import { Project } from "../../api/projects";
-import { nombreCentroCosto } from "../../utils/centroCosto";
+import { nombreCentroCosto, CLASE_BADGE_CENTRO_COSTO } from "../../utils/centroCosto";
 import { Client } from "../../api/clients";
 import { Vacation } from "../../api/vacations";
 import { RoleFrameItem } from "../../api/roleFrames";
@@ -618,11 +618,14 @@ export const UserCard: React.FC<UserCardProps> = ({ user, allProjects, allClient
                         group.projects.map((p, pIdx) => {
                           // El centro de costo al lado del proyecto, con la misma etiqueta que en toda la plataforma (el código de Tango).
                           const cc = nombreCentroCosto(p);
+                          // El código del centro de costo va ANTES del proyecto, sólo el número, con el badge violeta de toda la plataforma.
                           return (
-                            <span key={pIdx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 shadow-sm" title={cc ? `${p.name} · Centro de costo ${cc}` : p.name}>
-                              <FontAwesomeIcon icon={faBriefcase} className="mr-1 opacity-50" />
-                              {p.name}
-                              {cc && <span className="ml-1.5 pl-1.5 border-l border-gray-200 dark:border-gray-700 font-mono font-semibold text-indigo-600 dark:text-indigo-400">CC {cc}</span>}
+                            <span key={pIdx} className="inline-flex items-center gap-1" title={cc ? `${p.name} · Centro de costo ${cc}` : p.name}>
+                              {cc && <span className={`${CLASE_BADGE_CENTRO_COSTO} px-1.5 py-0.5 text-[10px]`}>{cc}</span>}
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 shadow-sm">
+                                <FontAwesomeIcon icon={faBriefcase} className="mr-1 opacity-50" />
+                                {p.name}
+                              </span>
                             </span>
                           );
                         })
