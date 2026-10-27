@@ -3,7 +3,7 @@ import { errorDeChromium } from "../arca/navegador.js";
 import { VIEWPORT } from "./reglas.js";
 import { MANAGE_URL, anotarConexion, anotarError, configDelBot, guardarSesion, irA, loguear, pantallaDe } from "./navegador.js";
 import { abrirContextoDropboxSign, liberarContexto } from "./perfil.js";
-import { soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
+import { quienTieneDropboxSign, soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 /**
  * EL LOGIN ASISTIDO DESDE LA WEB (pedido del 23/10/2026: «un botón conectarse, nada en consola»).
  *
@@ -28,6 +28,13 @@ const TECLAS_PERMITIDAS = new Set(["Enter", "Tab", "Backspace", "Escape", "Arrow
 const SIN_AUTOMATICO_TRAS_FRENO_MS = 6 * 3600_000;
 const FRENO = /login_requiere|login_sin_avance|login_password_no_avanza|login_email_no_avanza|captcha|2fa|verificaci[oó]n/i;
 const abiertos = new Map();
+/**
+ * Las aperturas EN CURSO (27/10/2026): dos «abrir» casi juntos —React StrictMode monta el modal dos
+ * veces en desarrollo, o un doble click— comparten la misma apertura. Antes el segundo chocaba con el
+ * candado del primero («ocupado con el login asistido») y el navegador del primero quedaba huérfano,
+ * con el candado tomado, hasta el cierre por inactividad.
+ */
+const abriendo = new Map();
 const estadoDe = (a, extra = {}) => ({
     estado: a?.estado || "cerrado",
     pantalla: "",
@@ -87,11 +94,25 @@ function arrancarAutomatico(a, cfg) {
 }
 /** Abre el navegador en el login (o reusa el que ya está abierto). Si entra directo con la sesión guardada, conecta y cierra. */
 export async function abrirLoginAsistido(tenantId) {
+    const enCurso = abriendo.get(tenantId);
+    if (enCurso)
+        return enCurso;
+    // Un candado de login sin login vivo (ni abierto ni abriéndose) es un resto: se suelta.
+    if (quienTieneDropboxSign(tenantId)?.motivo === "login" && !abiertos.has(tenantId))
+        soltarCandadoDropboxSign(tenantId);
+    const p = abrirLoginAsistidoDeVerdad(tenantId).finally(() => abriendo.delete(tenantId));
+    abriendo.set(tenantId, p);
+    return p;
+}
+async function abrirLoginAsistidoDeVerdad(tenantId) {
     const previo = abiertos.get(tenantId);
     if (previo && previo.estado === "abierto") {
         reprogramarCierre(previo);
         return estadoDe(previo, { pantalla: await pantallaDe(previo.page).catch(() => "") });
     }
+    // Recién conectado (se cierra en 1,5 s): no es «ocupado», es «listo».
+    if (previo && previo.estado === "conectado")
+        return estadoDe(previo);
     tomarCandadoDropboxSign(tenantId, false, "login");
     try {
         const cfg = await configDelBot(tenantId);
@@ -250,9 +271,14 @@ export async function cerrarLoginAsistido(tenantId, motivo) {
     }
     abiertos.delete(tenantId);
     // Conectado, el navegador queda tibio con su perfil para la próxima corrida; si no, se cierra.
+    // El candado se suelta SIEMPRE, aunque cerrar el navegador falle.
     a.señal.cortada = true;
-    await liberarContexto(tenantId, a.sesion, estadoFinal === "conectado");
-    soltarCandadoDropboxSign(tenantId);
+    try {
+        await liberarContexto(tenantId, a.sesion, estadoFinal === "conectado");
+    }
+    finally {
+        soltarCandadoDropboxSign(tenantId);
+    }
     return { ok: true, estado: estadoFinal };
 }
 export const hayLoginAsistido = (tenantId) => abiertos.get(tenantId)?.estado === "abierto";
