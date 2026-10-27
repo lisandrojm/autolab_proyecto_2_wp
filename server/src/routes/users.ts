@@ -1882,9 +1882,11 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
     /*
       EL ÚLTIMO CONTRATO DE LA PERSONA (27/10/2026), en cualquier proyecto: el de alta más reciente (a
       igual alta, el cargado después). Es lo que pregunta quien aprueba: si ya trabaja, hasta cuándo, o
-      si viene de un contrato vencido; la pantalla avisa si el período pedido se le superpone. NO cuenta
-      el contrato que dejó la propia solicitud al aprobarse (`contracts.solicitudId`): si no, toda
-      aprobada se «superpondría» consigo misma. Las solicitudes de alguien nuevo no tienen.
+      si viene de un contrato vencido; la pantalla avisa si el período pedido se le superpone.
+      Es el último ANTERIOR a lo pedido: alta antes del inicio de la solicitud (pedido del 27/10/2026).
+      Si no, una vez aprobada, su propio contrato pasaba a ser «el último» y siempre se superponía con
+      lo pedido. Además nunca cuenta el que dejó la propia solicitud (`contracts.solicitudId`). Las
+      solicitudes de alguien nuevo no tienen.
     */
     const personasIds = [...new Set([...personaDe.values()].filter((id) => Types.ObjectId.isValid(id)))].map((id) => new Types.ObjectId(id));
     const contratosDe = new Map<string, Array<{ c: any; proyecto: string }>>();
@@ -1897,10 +1899,12 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
       }
     }
     const claveContrato = (c: any) => `${fechaISO(c.fecha_alta_contrato) || ""}|${String(c.fecha_carga || "")}`;
-    const ultimoContratoDe = (personaId: string, solicitudId: string) => {
+    const ultimoContratoDe = (personaId: string, solicitudId: string, inicioPedido?: string | null) => {
+      const inicio = fechaISO(inicioPedido);
       let mejor: { c: any; proyecto: string } | null = null;
       for (const x of contratosDe.get(personaId) || []) {
         if (String(x.c.solicitudId || "") === solicitudId) continue;
+        if (inicio && fechaISO(x.c.fecha_alta_contrato) >= inicio) continue;
         if (!mejor || claveContrato(x.c) > claveContrato(mejor.c)) mejor = x;
       }
       return mejor ? { alta: fechaISO(mejor.c.fecha_alta_contrato), baja: fechaISO(mejor.c.fecha_baja_contrato) || null, nombre: String(mejor.c.nombre_contrato || ""), proyecto: mejor.proyecto } : null;
@@ -1949,7 +1953,7 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
         empresaContratoId: m.empresaContratoId ? String(m.empresaContratoId) : null,
         // Sólo las aprobadas: la obra social del contrato que dejó su aprobación.
         obraSocial: obraSocialPorSolicitud.get(String(u._id)) || null,
-        ultimoContrato: ultimoContratoDe(personaId, String(u._id)),
+        ultimoContrato: ultimoContratoDe(personaId, String(u._id), m.startDate),
       };
     });
 

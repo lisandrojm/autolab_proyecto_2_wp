@@ -349,7 +349,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 </>
               )}
               <th className="px-4 py-3 font-semibold">Rol/es Empresa</th>
-              <th className="px-4 py-3 font-semibold whitespace-nowrap" title="El último contrato de la persona, en cualquier proyecto (sin el que dejó esta solicitud). Avisa si se superpone con las fechas pedidas.">Último contrato</th>
+              <th className="px-4 py-3 font-semibold whitespace-nowrap" title="El último contrato de la persona ANTERIOR a lo pedido (alta antes del inicio de la solicitud), en cualquier proyecto. Avisa si se superpone con las fechas pedidas.">Último contrato</th>
               <th className="px-4 py-3 font-semibold">Fechas</th>
               <th className="px-4 py-3 font-semibold">Horario</th>
               <th className="px-4 py-3 font-semibold text-center">Estado</th>
@@ -511,8 +511,8 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   )}
 
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{resolverRolFrame(s)}</td>
-                  {/* El último contrato de la PERSONA (en cualquier proyecto, sin el que dejó esta solicitud), pegado a «Fechas» para compararlos. */}
-                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos: es alguien nuevo"}>
+                  {/* El último contrato de la PERSONA anterior a lo pedido (en cualquier proyecto), pegado a «Fechas» para compararlos. */}
+                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos anteriores a lo pedido"}>
                     {s.ultimoContrato ? (
                       (() => {
                         const vigente = isContractVigente(s.ultimoContrato.alta, s.ultimoContrato.baja || undefined);
