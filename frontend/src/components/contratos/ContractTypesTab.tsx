@@ -948,7 +948,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
+      {/* Arriba, no al centro: con el badge del filtro debajo del buscador, centrar dejaba los botones a media altura. */}
+      <div className="flex flex-col md:flex-row gap-4 items-center md:items-start justify-between w-full">
         <div className="flex-1 w-full">
           <SearchAndFilters
             searchTerm={searchTerm}
