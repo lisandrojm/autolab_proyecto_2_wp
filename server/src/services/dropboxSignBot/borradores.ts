@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { Tenant } from "../../models/Tenant.js";
 import { DropboxSignEnvio } from "../../models/DropboxSignEnvio.js";
 import { DropboxSignEnvioLog, type ILineaEnvio } from "../../models/DropboxSignEnvioLog.js";
-import { abrirSesionDropboxSign, guardarSesion, type SesionDropboxSign } from "./navegador.js";
+import { abrirSesionDropboxSign, guardarSesion, liberarSesionDropboxSign, type SesionDropboxSign } from "./navegador.js";
 import { soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 import { cargarMotor } from "./motor.js";
 
@@ -68,7 +68,7 @@ function arrancar(tenantId: string, tipo: ResultadoBorradores["tipo"], trabajo: 
       r.eventos.push({ at: new Date(), texto: `Error: ${r.error}` });
     } finally {
       if (sesion && !r.error) await guardarSesion(tenantId, sesion.ctx).catch(() => {});
-      await sesion?.browser.close().catch(() => {});
+      await liberarSesionDropboxSign(tenantId, sesion, !r.error && !r.cortada).catch(() => {});
       soltarCandadoDropboxSign(tenantId);
       r.corriendo = false;
       r.terminadaEl = new Date();

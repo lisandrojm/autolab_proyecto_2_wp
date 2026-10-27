@@ -1,8 +1,9 @@
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
+import { type BrowserContext, type Page } from "playwright-core";
 import { Tenant } from "../../models/Tenant.js";
-import { rutaChromium, errorDeChromium } from "../arca/navegador.js";
+import { errorDeChromium } from "../arca/navegador.js";
 import { VIEWPORT } from "./reglas.js";
-import { MANAGE_URL, OPCIONES_CONTEXTO, anotarConexion, anotarError, configDelBot, guardarSesion, irA, loguear, pantallaDe } from "./navegador.js";
+import { MANAGE_URL, anotarConexion, anotarError, configDelBot, guardarSesion, irA, loguear, pantallaDe } from "./navegador.js";
+import { abrirContextoDropboxSign, liberarContexto, type ContextoDropboxSign } from "./perfil.js";
 import { soltarCandadoDropboxSign, tomarCandadoDropboxSign } from "./candado.js";
 import type { PantallaDropboxSign } from "./clasificarPantalla.js";
 
@@ -17,15 +18,23 @@ import type { PantallaDropboxSign } from "./clasificarPantalla.js";
  *
  * Mientras está abierto tiene el CANDADO del bot: no arranca ninguna tanda. Se cierra solo a los 10
  * minutos sin actividad.
+ *
+ * LA PANTALLA PRIMERO (27/10/2026). Usa el MISMO perfil en disco que las corridas (`perfil.ts`): lo que
+ * se resuelve acá a mano queda para el bot. Y no pelea con la persona: el intento automático con el
+ * usuario guardado NO corre si hace poco Dropbox pidió verificación o el login no avanzó (insistir
+ * empeora el freno); en ese caso es un botón. Cuando corre, «Tomar el control» lo corta en el acto.
  */
 
 const BASE = "integrations.dropboxSign.bot";
 const INACTIVIDAD_MS = 10 * 60_000;
-const TECLAS_PERMITIDAS = new Set(["Enter", "Tab", "Backspace", "Escape", "ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Space", "Delete"]);
+const TECLAS_PERMITIDAS = new Set(["Enter", "Tab", "Backspace", "Escape", "ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "Space", "Delete", "Home", "End"]);
+/** Cuánto tiempo después de un freno de Dropbox (verificación, login sin avance) no se intenta el login automático solo. */
+const SIN_AUTOMATICO_TRAS_FRENO_MS = 6 * 3600_000;
+const FRENO = /login_requiere|login_sin_avance|login_password_no_avanza|login_email_no_avanza|captcha|2fa|verificaci[oó]n/i;
 
 interface Asistido {
   tenantId: string;
-  browser: Browser;
+  sesion: ContextoDropboxSign;
   ctx: BrowserContext;
   page: Page;
   abiertoEl: Date;
@@ -34,6 +43,10 @@ interface Asistido {
   timer: NodeJS.Timeout | null;
   /** El bot está entrando solo con las credenciales guardadas: la pantalla no acepta clicks ni texto. */
   automatico: boolean;
+  /** «Tomar el control»: corta el login automático en curso. */
+  señal: { cortada: boolean };
+  /** Hay usuario y contraseña guardados (para ofrecer «Entrar con el usuario guardado»). */
+  hayCredenciales: boolean;
   /** La última respuesta del documento principal (para diagnosticar la página en blanco). */
   ultimaRespuesta: { status: number; url: string } | null;
 }
@@ -47,13 +60,15 @@ export interface EstadoLoginAsistido {
   abiertoEl: string | null;
   /** El bot está entrando solo con las credenciales guardadas. */
   automatico: boolean;
+  /** Se puede ofrecer «Entrar con el usuario guardado». */
+  puedeAutomatico: boolean;
   /** La captura (JPEG base64), cuando se pide la pantalla. */
   jpeg?: string;
   /** Sólo cuando la página no muestra texto: qué devolvió el servidor de Dropbox (27/10/2026, «queda en blanco»). */
   diagnostico?: string;
 }
 
-export type AccionLoginAsistido = { tipo: "click"; x: number; y: number } | { tipo: "tipear"; texto: string } | { tipo: "tecla"; tecla: string } | { tipo: "scroll"; dy: number } | { tipo: "recargar" } | { tipo: "reiniciar" };
+export type AccionLoginAsistido = { tipo: "click"; x: number; y: number } | { tipo: "tipear"; texto: string } | { tipo: "tecla"; tecla: string } | { tipo: "scroll"; dy: number } | { tipo: "recargar" } | { tipo: "reiniciar" } | { tipo: "automatico" } | { tipo: "tomar_control" };
 
 const abiertos = new Map<string, Asistido>();
 
@@ -65,6 +80,7 @@ const estadoDe = (a: Asistido | undefined, extra: Partial<EstadoLoginAsistido> =
   viewport: { ...VIEWPORT },
   abiertoEl: a?.abiertoEl ? a.abiertoEl.toISOString() : null,
   automatico: !!a?.automatico,
+  puedeAutomatico: !!a?.hayCredenciales && !a?.automatico && a?.estado === "abierto",
   ...extra,
 });
 
@@ -86,6 +102,29 @@ async function conectarSiLlego(a: Asistido, pantalla: PantallaDropboxSign): Prom
   return true;
 }
 
+/** El login automático con el usuario guardado, en segundo plano e interrumpible con «Tomar el control». */
+function arrancarAutomatico(a: Asistido, cfg: { loginEmail: string; loginPassword: string }): void {
+  if (a.automatico || a.estado !== "abierto") return;
+  a.automatico = true;
+  a.señal = { cortada: false };
+  a.detalle = `Entrando solo con el usuario guardado (${cfg.loginEmail})… Si preferís hacerlo vos, «Tomar el control».`;
+  const { page } = a;
+  void (async () => {
+    try {
+      await loguear(page, cfg, a.señal);
+      if (!/\/home\/manage/i.test(page.url())) await irA(page, MANAGE_URL).catch(() => {});
+      await page.waitForTimeout(1500);
+      const p = await pantallaDe(page).catch(() => "desconocida" as const);
+      if (!(await conectarSiLlego(a, p)) && a.estado === "abierto") a.detalle = "El login automático no llegó al listado de documentos: terminalo en la pantalla.";
+    } catch (e: any) {
+      if (a.estado === "abierto") a.detalle = a.señal.cortada ? "Tenés el control: hacé click en el campo, escribí y apretá Enter." : `${String(e?.message || e).replace(/^[a-z_]+:\s*/, "")} Terminalo en la pantalla: hacé click en el campo, escribí y apretá Enter.`;
+    } finally {
+      a.automatico = false;
+      reprogramarCierre(a);
+    }
+  })();
+}
+
 /** Abre el navegador en el login (o reusa el que ya está abierto). Si entra directo con la sesión guardada, conecta y cierra. */
 export async function abrirLoginAsistido(tenantId: string): Promise<EstadoLoginAsistido> {
   const previo = abiertos.get(tenantId);
@@ -94,19 +133,18 @@ export async function abrirLoginAsistido(tenantId: string): Promise<EstadoLoginA
     return estadoDe(previo, { pantalla: await pantallaDe(previo.page).catch(() => "" as const) });
   }
   tomarCandadoDropboxSign(tenantId, false, "login");
-  let browser: Browser;
   try {
     const cfg = await configDelBot(tenantId);
+    let sesion: ContextoDropboxSign;
     try {
-      browser = await chromium.launch({ headless: true, executablePath: rutaChromium() });
+      sesion = await abrirContextoDropboxSign(tenantId, { sesionRespaldo: cfg.sesion });
     } catch (e: any) {
       const err = errorDeChromium(e);
       await anotarError(tenantId, err.message);
       throw Object.assign(err, { status: 500 });
     }
-    const ctx = await browser.newContext({ ...(cfg.sesion ? { storageState: cfg.sesion } : {}), ...OPCIONES_CONTEXTO, viewport: { ...VIEWPORT } });
-    const page = await ctx.newPage();
-    const a: Asistido = { tenantId, browser, ctx, page, abiertoEl: new Date(), estado: "abierto", detalle: "Iniciá sesión en la pantalla. Si aparece un captcha o un código, resolvelo acá mismo.", timer: null, automatico: false, ultimaRespuesta: null };
+    const { ctx, page } = sesion;
+    const a: Asistido = { tenantId, sesion, ctx, page, abiertoEl: new Date(), estado: "abierto", detalle: "Iniciá sesión en la pantalla. Si aparece un captcha o un código, resolvelo acá mismo.", timer: null, automatico: false, señal: { cortada: false }, hayCredenciales: !!(cfg.loginEmail && cfg.loginPassword), ultimaRespuesta: null };
     page.on("response", (r) => {
       if (r.request().isNavigationRequest() && r.frame() === page.mainFrame()) a.ultimaRespuesta = { status: r.status(), url: r.url().split("?")[0] };
     });
@@ -116,31 +154,15 @@ export async function abrirLoginAsistido(tenantId: string): Promise<EstadoLoginA
     await page.waitForTimeout(2000);
     const pantalla = await pantallaDe(page).catch(() => "desconocida" as const);
     await conectarSiLlego(a, pantalla);
-    /*
-      PRIMERO EL BOT, SOLO (pedido del 26/10/2026): con usuario y contraseña guardados, el navegador
-      entra por su cuenta con el mismo login que usan las corridas (`loguear`), y la pantalla lo muestra
-      mientras tanto. Sólo si Dropbox Sign pide algo que el bot no resuelve a propósito —captcha, código,
-      segundo factor— la pantalla queda para que la persona lo termine.
-    */
-    if (a.estado === "abierto" && cfg.loginEmail && cfg.loginPassword) {
-      a.automatico = true;
-      a.detalle = `Entrando solo con el usuario guardado (${cfg.loginEmail})…`;
-      void (async () => {
-        try {
-          await loguear(page, cfg);
-          if (!/\/home\/manage/i.test(page.url())) await irA(page, MANAGE_URL).catch(() => {});
-          await page.waitForTimeout(1500);
-          const p = await pantallaDe(page).catch(() => "desconocida" as const);
-          if (!(await conectarSiLlego(a, p)) && a.estado === "abierto") a.detalle = "El login automático no llegó al listado de documentos: terminalo en la pantalla.";
-        } catch (e: any) {
-          if (a.estado === "abierto") a.detalle = `${String(e?.message || e).replace(/^[a-z_]+:\s*/, "")} Terminalo en la pantalla: hacé click en el campo, escribí y apretá Enter.`;
-        } finally {
-          a.automatico = false;
-          reprogramarCierre(a);
-        }
-      })();
-    } else if (a.estado === "abierto") {
-      a.detalle = "No hay usuario y contraseña guardados para entrar solo: iniciá sesión en la pantalla (o cargalos en «Envío automático» para la próxima).";
+    if (a.estado === "abierto") {
+      if (!a.hayCredenciales) a.detalle = "No hay usuario y contraseña guardados para entrar solo: iniciá sesión en la pantalla (o cargalos en «Envío automático» para la próxima).";
+      else {
+        const t: any = await Tenant.findById(tenantId).select("integrations.dropboxSign.bot.conexion").lean();
+        const c = t?.integrations?.dropboxSign?.bot?.conexion;
+        const frenoReciente = c?.estado === "caida" && c?.probadaAt && Date.now() - new Date(c.probadaAt).getTime() < SIN_AUTOMATICO_TRAS_FRENO_MS && FRENO.test(String(c.detalle || ""));
+        if (frenoReciente) a.detalle = "Hace poco Dropbox frenó el login automático (pidió verificación o no avanzó): para no insistir, la pantalla es tuya. Iniciá sesión acá, o probá «Entrar con el usuario guardado».";
+        else arrancarAutomatico(a, cfg);
+      }
     }
     return estadoDe(a, { pantalla });
   } catch (e) {
@@ -156,14 +178,33 @@ export async function pantallaLoginAsistido(tenantId: string): Promise<EstadoLog
   if (!a) return estadoDe(undefined, { detalle: "No hay un login asistido abierto." });
   const pantalla = await pantallaDe(a.page).catch(() => "desconocida" as const);
   await conectarSiLlego(a, pantalla);
-  const jpeg = await a.page.screenshot({ type: "jpeg", quality: 55 }).then((b) => b.toString("base64")).catch(() => undefined);
+  const jpeg = await a.page.screenshot({ type: "jpeg", quality: 80 }).then((b) => b.toString("base64")).catch(() => undefined);
   return estadoDe(a, { pantalla, jpeg, diagnostico: await diagnosticoSiVacia(a) });
 }
 
 /** Un click, texto o tecla del usuario, reenviados al navegador. Devuelve la captura resultante. */
+/** Espera (hasta 5 s) a que el login automático termine de cortarse después de «Tomar el control». */
+async function esperarCorte(a: Asistido): Promise<void> {
+  for (let i = 0; i < 25 && a.automatico; i++) await new Promise((r) => setTimeout(r, 200));
+}
+
 export async function accionLoginAsistido(tenantId: string, accion: AccionLoginAsistido): Promise<EstadoLoginAsistido> {
   const a = abiertos.get(tenantId);
   if (!a || a.estado !== "abierto") return estadoDe(a, { detalle: a?.detalle || "No hay un login asistido abierto." });
+  // «Tomar el control»: corta el login automático en el acto (lo mira en cada vuelta y en cada espera).
+  if (accion.tipo === "tomar_control") {
+    a.señal.cortada = true;
+    a.detalle = "Tomaste el control: el login automático se detiene.";
+    await esperarCorte(a);
+    return pantallaLoginAsistido(tenantId);
+  }
+  if (accion.tipo === "automatico") {
+    if (a.automatico) return pantallaLoginAsistido(tenantId);
+    const cfg = await configDelBot(tenantId);
+    if (!cfg.loginEmail || !cfg.loginPassword) throw Object.assign(new Error("No hay usuario y contraseña guardados."), { status: 400 });
+    arrancarAutomatico(a, cfg);
+    return pantallaLoginAsistido(tenantId);
+  }
   // Mientras el bot entra solo, la pantalla no acepta nada: dos manos tipeando a la vez rompen el login.
   if (a.automatico) return pantallaLoginAsistido(tenantId);
   reprogramarCierre(a);
@@ -235,7 +276,9 @@ export async function cerrarLoginAsistido(tenantId: string, motivo?: string): Pr
     a.detalle = motivo || "Se cerró sin llegar al listado de documentos: no se guardó ninguna sesión.";
   }
   abiertos.delete(tenantId);
-  await a.browser.close().catch(() => {});
+  // Conectado, el navegador queda tibio con su perfil para la próxima corrida; si no, se cierra.
+  a.señal.cortada = true;
+  await liberarContexto(tenantId, a.sesion, estadoFinal === "conectado");
   soltarCandadoDropboxSign(tenantId);
   return { ok: true, estado: estadoFinal };
 }
