@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { faDownload, faUpload, faPlus, faEdit, faTrash, faTimes, faFileExcel, faTriangleExclamation, faFilter, faCheck, faCircleInfo, faGripVertical, faMultiply } from '@fortawesome/free-solid-svg-icons';
+import { faDownload, faUpload, faPlus, faEdit, faTrash, faTimes, faFileExcel, faTriangleExclamation, faFilter, faCheck, faCircleInfo, faGripVertical, faMultiply, faToggleOn, faToggleOff } from '@fortawesome/free-solid-svg-icons';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -117,6 +117,18 @@ export interface CatalogExtraField {
    * `pestana` agrega un botón para ir a la pestaña donde se resuelve.
    */
   avisoOculta?: { titulo: string; texto: (etiqueta: string) => string; pestana?: { id: string; label: string } };
+  /** Con qué valores arranca marcado en el modal «Filtrar» (ej. Formas de pago abre en «Activas»). Se saca con su X. */
+  filtroInicial?: string[];
+  /** Sólo `text`: tope de caracteres, con el contador debajo del campo. */
+  maxLength?: number;
+  /** Sólo `text`: varias líneas (un `textarea`), para una descripción. */
+  multilinea?: boolean;
+  /**
+   * Cómo aparece en la TARJETA (por defecto, como badge si tiene `showColumn`). `ocultar`: no va (una
+   * descripción larga no es un badge). `siEncendido`: sólo `estado`, un badge con el `label` cuando está
+   * en sí y nada cuando está en no (ej. «Requiere comprobante»), aunque no sea columna.
+   */
+  enTarjeta?: 'ocultar' | 'siEncendido';
 }
 
 interface SimpleCatalogManagerProps {
@@ -320,6 +332,23 @@ interface SimpleCatalogManagerProps {
    * listado, no a la configuración.
    */
   pestanas?: Array<{ id: string; label: string; icon?: IconDefinition; render: (items: SimpleCatalogItem[], recargar: () => Promise<void>) => React.ReactNode }>;
+  /**
+   * El ID externo se ARMA DEL NOMBRE al crear (ej. Formas de pago: «Transferencia bancaria» →
+   * TRANSFERENCIA_BANCARIA) mientras nadie lo toque; escribirlo a mano lo desengancha. Al editar no se toca.
+   */
+  externalIdDesdeNombre?: (nombre: string) => string;
+  /** El ID externo es obligatorio (el rótulo pierde el «(opcional)»). */
+  externalIdObligatorio?: boolean;
+  /**
+   * VALIDACIÓN INLINE: los errores por campo (`nombre`, `externalId` o la `key` del campo extra), que se
+   * muestran debajo de cada uno y frenan el «Guardar». El server valida lo mismo: esto es para enterarse
+   * antes.
+   */
+  validarFormulario?: (v: { nombre: string; externalId: string; extras: Record<string, string> }) => Record<string, string>;
+  /** Texto bajo el título de cada tarjeta (ej. la descripción). */
+  subtituloTarjeta?: (item: SimpleCatalogItem) => string | undefined;
+  /** La `key` de un campo `estado` que se prende y apaga también desde la tarjeta (acción Activar/Desactivar). */
+  estadoEnTarjeta?: string;
 }
 
 /**
@@ -465,7 +494,7 @@ const RefField: React.FC<{ campo: CatalogExtraField; valor: string; onChange: (v
   );
 };
 
-export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, badge, icon, entityLabel, api, templateBaseName, extraFields = [], busquedaInicial, filtroServidor, extraSeccion, nombreLabel = 'Nombre', permiteImportExcel = true, accionesEncabezado, helpKey, showExternalId = true, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen, ordenable, recarga }) => {
+export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ title, subtitle, badge, icon, entityLabel, api, templateBaseName, extraFields = [], busquedaInicial, filtroServidor, extraSeccion, nombreLabel = 'Nombre', permiteImportExcel = true, accionesEncabezado, helpKey, showExternalId = true, externalIdLabel = 'ID Externo', externalIdPlaceholder = 'ID de FRAME', formatExternalId, sanitizeExternalId, externalIdNumerico, pestanas, columnasCalculadas = [], filtroDestacado, tablaPropia, extraSuperior, resumen, ordenable, recarga, externalIdDesdeNombre, externalIdObligatorio, validarFormulario, subtituloTarjeta, estadoEnTarjeta }) => {
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [filtroServidorValor, setFiltroServidorValor] = useState(filtroServidor?.valorInicial || '');
   const [tabActiva, setTabActiva] = useState<string>('catalogo');
@@ -504,6 +533,16 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
   const [externalId, setExternalId] = useState('');
   const [extraValues, setExtraValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  // Con `externalIdDesdeNombre`: el id sigue al nombre hasta que alguien lo escribe a mano.
+  const [externalIdAMano, setExternalIdAMano] = useState(false);
+  const [intentoGuardar, setIntentoGuardar] = useState(false);
+  const erroresForm = validarFormulario ? validarFormulario({ nombre, externalId, extras: extraValues }) : {};
+  // Se muestran al escribir en el campo o después de intentar guardar, no apenas se abre el formulario.
+  const errorDe = (campo: string, valor: string) => (intentoGuardar || valor.trim() ? erroresForm[campo] : undefined);
+  const cambiarNombre = (v: string) => {
+    setNombre(v);
+    if (externalIdDesdeNombre && !editing && !externalIdAMano) setExternalId(externalIdDesdeNombre(v));
+  };
 
   // Valor por defecto de un campo extra al crear (primer option del select, o "").
   const defaultExtra = (f: CatalogExtraField): string => (f.valorInicial !== undefined ? f.valorInicial : f.type === 'estado' ? 'true' : f.type === 'select' && f.options && f.options.length > 0 ? (f.options.find((o) => !o.oculta) || f.options[0]).value : '');
@@ -535,7 +574,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
   const [importing, setImporting] = useState(false);
 
   // Filtros por campo (modal «Filtrar»): por cada campo, los valores marcados. Vacío = sin filtro.
-  const [filtrosCampo, setFiltrosCampo] = useState<Record<string, string[]>>({});
+  const [filtrosCampo, setFiltrosCampo] = useState<Record<string, string[]>>(() => Object.fromEntries(extraFields.filter((f) => f.filtroInicial?.length).map((f) => [f.key, f.filtroInicial as string[]])));
   const [showFiltros, setShowFiltros] = useState(false);
   const [cambiandoEstado, setCambiandoEstado] = useState<string | null>(null);
   // El aviso de «opción inactiva» abierto (ver `avisoOculta`).
@@ -768,6 +807,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
     setEditing(null);
     setNombre('');
     setExternalId('');
+    setExternalIdAMano(false);
+    setIntentoGuardar(false);
     setExtraValues(Object.fromEntries(extraFields.map((f) => [f.key, defaultExtra(f)])));
     setShowModal(true);
   };
@@ -775,6 +816,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
   const openEdit = (item: SimpleCatalogItem) => {
     setEditing(item);
     setNombre(item.name || '');
+    setIntentoGuardar(false);
     setExternalId((formatExternalId ? formatExternalId(item.externalId || '') : item.externalId) || '');
     /*
       Una `ref` poblada llega como `{_id, name, sigla}`, no como un id: `String(objeto)` daría
@@ -786,6 +828,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
   };
 
   const handleSave = async () => {
+    setIntentoGuardar(true);
+    if (Object.keys(erroresForm).length > 0) return; // ya se ven debajo de cada campo
     if (!nombre.trim()) {
       sweetAlert.error('Falta el nombre', 'El nombre es obligatorio.');
       return;
@@ -1200,7 +1244,11 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                 // Los nombres de catálogo son largos y se parecen entre sí: ver `titleLines` en Card.
                 titleLines: 2 as const,
                 icon,
-                badges: [...extraFields.filter((f) => f.showColumn && f.type !== 'color' && (f.type === 'estado' || item[f.key])).map((f) => ({ text: `${extraDisplay(f, item[f.key])}${opcionOcultaDe(f, item) ? ' (inactivo)' : ''}`, variant: 'cyan' as const })), ...(showExternalId && item.externalId ? [{ text: `${externalIdLabel} ${formatExternalId ? formatExternalId(item.externalId) : item.externalId}`, variant: 'blue' as const }] : [])],
+                subtitle: subtituloTarjeta?.(item),
+                badges: [
+                  ...extraFields.filter((f) => f.showColumn && f.type !== 'color' && !f.enTarjeta && (f.type === 'estado' || item[f.key])).map((f) => ({ text: `${extraDisplay(f, item[f.key])}${opcionOcultaDe(f, item) ? ' (inactivo)' : ''}`, variant: 'cyan' as const })),
+                  ...extraFields.filter((f) => f.enTarjeta === 'siEncendido' && item[f.key] === true).map((f) => ({ text: f.label, variant: 'warning' as const })),
+                  ...(showExternalId && item.externalId ? [{ text: `${externalIdLabel} ${formatExternalId ? formatExternalId(item.externalId) : item.externalId}`, variant: 'blue' as const }] : [])],
               }}
               footer={{
                 actions: [
@@ -1213,6 +1261,22 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                     title: 'Editar',
                     variant: 'default',
                   },
+                  ...(() => {
+                    const fe = estadoEnTarjeta ? extraFields.find((f) => f.key === estadoEnTarjeta && f.type === 'estado') : undefined;
+                    if (!fe) return [];
+                    const encendido = item[fe.key] !== false;
+                    return [
+                      {
+                        icon: encendido ? faToggleOn : faToggleOff,
+                        onClick: (e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          if (cambiandoEstado !== item._id) void cambiarEstado(item, fe);
+                        },
+                        title: encendido ? 'Desactivar' : 'Activar',
+                        variant: (encendido ? 'success' : 'default') as 'success' | 'default',
+                      },
+                    ];
+                  })(),
                   {
                     icon: faTrash,
                     onClick: (e) => {
@@ -1391,7 +1455,8 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
         <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{nombreLabel} *</label>
-                <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} autoFocus className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />
+                <input type="text" value={nombre} onChange={(e) => cambiarNombre(e.target.value)} autoFocus className={`w-full px-3 py-2 rounded-lg border ${errorDe('nombre', nombre) ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white`} />
+                {errorDe('nombre', nombre) && <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">{errorDe('nombre', nombre)}</p>}
               </div>
               {extraFields.map((f) => (
                 <div key={f.key}>
@@ -1446,9 +1511,13 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                       placeholder={f.placeholder}
                       className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white"
                     />
+                  ) : f.multilinea ? (
+                    <textarea rows={3} maxLength={f.maxLength} value={extraValues[f.key] ?? ''} onChange={(e) => setExtraValues((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder} className={`w-full px-3 py-2 rounded-lg border ${errorDe(f.key, extraValues[f.key] ?? '') ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white`} />
                   ) : (
-                    <input type="text" value={extraValues[f.key] ?? ''} onChange={(e) => setExtraValues((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder} className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white" />
+                    <input type="text" maxLength={f.maxLength} value={extraValues[f.key] ?? ''} onChange={(e) => setExtraValues((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder} className={`w-full px-3 py-2 rounded-lg border ${errorDe(f.key, extraValues[f.key] ?? '') ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white`} />
                   )}
+                  {f.maxLength && (f.type ?? 'text') === 'text' && <p className="mt-1 text-right text-[10px] text-gray-400">{(extraValues[f.key] ?? '').length}/{f.maxLength}</p>}
+                  {errorDe(f.key, extraValues[f.key] ?? '') && <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">{errorDe(f.key, extraValues[f.key] ?? '')}</p>}
                   {f.ayuda && <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{f.ayuda}</p>}
                   {f.type === 'select' && f.avisoOculta && f.options?.find((o) => o.value === extraValues[f.key])?.oculta && (
                     <p className="mt-1.5 flex items-start gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
@@ -1460,7 +1529,9 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
               ))}
               {showExternalId && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{externalIdLabel} (opcional)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {externalIdLabel} {externalIdObligatorio ? '*' : '(opcional)'}
+                </label>
                 {/*
                   Se filtra al ESCRIBIR y no al guardar: `type="number"` deja pegar «22a» y muestra el
                   valor vacío sin decir por qué, y validar recién al guardar obliga a descubrir el
@@ -1471,10 +1542,15 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
                   type="text"
                   inputMode={externalIdNumerico ? 'numeric' : undefined}
                   value={externalId}
-                  onChange={(e) => setExternalId(externalIdNumerico ? e.target.value.replace(/\D/g, '') : e.target.value)}
+                  onChange={(e) => {
+                    setExternalId(externalIdNumerico ? e.target.value.replace(/\D/g, '') : e.target.value);
+                    setExternalIdAMano(true);
+                  }}
                   placeholder={externalIdPlaceholder}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white"
+                  className={`w-full px-3 py-2 rounded-lg border ${errorDe('externalId', externalId) ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white`}
                 />
+                {errorDe('externalId', externalId) && <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">{errorDe('externalId', externalId)}</p>}
+                {externalIdDesdeNombre && !editing && !externalIdAMano && <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Se arma solo con el nombre; podés cambiarlo.</p>}
                 {externalIdNumerico && <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Solo números: es el id con el que FRAME lo identifica, y se compara como número.</p>}
               </div>
               )}

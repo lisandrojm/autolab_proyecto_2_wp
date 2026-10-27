@@ -106,6 +106,8 @@ export const REGLAS_RUTAS: ReglaRuta[] = [
   { path: "/convenios", permisos: ["config_convenios:view"] },
   { path: "/sindicatos", permisos: ["config_sindicatos:view", "config_convenios:view"] },
   { path: "/paises-residencia", permisos: ["config_paises_residencia:view", "config_bancos:view"] },
+  // `config_formas_pago:view` es nuevo: hasta que se tilde, la ve quien administra los tipos de contrato, que son los que la usan.
+  { path: "/formas-de-pago", permisos: ["config_formas_pago:view", "config_contratos:view", "config_contratos_frame:view"] },
   { path: "/centros-costo", permisos: ["config_centros_costo:view"] },
   { path: "/contratos-frame", permisos: ["config_contratos_frame:view"] },
   { path: "/contratos", permisos: ["config_contratos:view", "config_estados:view", "config_contratos_frame:view"] },

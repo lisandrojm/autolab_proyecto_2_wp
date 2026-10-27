@@ -23,6 +23,13 @@ export interface IContrato extends Document {
      * en cero y no se pueden editar.
      */
     importesEnCero?: boolean;
+    /**
+     * FORMAS DE PAGO (27/10/2026): las que se ofrecen al contratar con este tipo (`FormaPago._id`) y la
+     * que se precarga. Sin ninguna habilitada se ofrecen todas las activas. La predeterminada siempre es
+     * una de las habilitadas (ver `compartido/formasPago.ts`).
+     */
+    formasPagoIds?: mongoose.Types.ObjectId[];
+    formaPagoDefaultId?: mongoose.Types.ObjectId | null;
     cantidadJornadas: number;
     multiplicadorDiario: number;
     esTiempoIndeterminado: boolean;
@@ -111,6 +118,8 @@ const contratoSchema = new Schema<IContrato>(
     data: {
       descripcion: { type: String, default: "" },
       importesEnCero: { type: Boolean, default: false },
+      formasPagoIds: { type: [Schema.Types.ObjectId], ref: "FormaPago", default: [] },
+      formaPagoDefaultId: { type: Schema.Types.ObjectId, ref: "FormaPago", default: null },
       cantidadJornadas: { type: Number, default: 0 },
       multiplicadorDiario: { type: Number, default: 0 },
       esTiempoIndeterminado: { type: Boolean, default: false },

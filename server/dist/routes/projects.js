@@ -107,6 +107,8 @@ import { esContratoVigente, hoyArgentina } from "../utils/contratoVigencia.js";
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { quitarContrato } from "../services/contratoDeSolicitud.js";
 import { Contrato } from "../models/Contrato.js";
+import { FormaPago } from "../models/FormaPago.js";
+import { rechazoDeFormaPago } from "../compartido/formasPago.js";
 import { registrarAltaDeContrato } from "../services/altaTempranaService.js";
 import { arrancarDescargaConstancias, descargaConstanciasDe, pendientesDeConstancia } from "../services/arca/constanciasAltas.js";
 import { numeroALetras } from "../utils/numeroALetras.js";
@@ -2053,7 +2055,7 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         const esContratoNuevo = !hayIndice && !isUpdate;
         let contratoPrevio = null;
         if (!esContratoNuevo) {
-            const up = await UserProject.findOne({ userId, projectId: project._id }).select("contracts.valoracion_regla_id").lean();
+            const up = await UserProject.findOne({ userId, projectId: project._id }).select("contracts.valoracion_regla_id contracts.forma_pago_id").lean();
             const lista = up?.contracts || [];
             contratoPrevio = hayIndice ? lista[Number(contractIndex)] : lista[lista.length - 1];
         }
@@ -2102,6 +2104,21 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         contract.areaId = sanitizeId(contract.areaId);
         // El tipo de contrato elegido (ver `contrato_id` en UserProject): vacío o inválido no se guarda.
         contract.contrato_id = isValidId(contract.contrato_id) ? new Types.ObjectId(String(contract.contrato_id)) : undefined;
+        /*
+          LA FORMA DE PAGO (27/10/2026), revalidada acá y no sólo en el formulario: activa, habilitada por el
+          tipo de contrato (si el tipo acota) y, si pide datos bancarios, con CBU/alias y entidad financiera de
+          la persona. La que el contrato ya tenía no se vuelve a juzgar (ver `rechazoDeFormaPago`). Opcional:
+          sin forma elegida el alta pasa como siempre.
+        */
+        if (isValidId(contract.forma_pago_id)) {
+            const [forma, tipoDePago] = await Promise.all([FormaPago.findById(contract.forma_pago_id).lean(), contract.contrato_id ? Contrato.findById(contract.contrato_id).select("data.formasPagoIds").lean() : Promise.resolve(null)]);
+            const rechazo = rechazoDeFormaPago({ forma: forma ? { ...forma, _id: String(forma._id) } : null, tipo: tipoDePago?.data, previaId: contratoPrevio?.forma_pago_id ? String(contratoPrevio.forma_pago_id) : null, metadata: user.metadata });
+            if (rechazo)
+                return res.status(422).json({ error: rechazo });
+            contract.forma_pago_id = new Types.ObjectId(String(contract.forma_pago_id));
+        }
+        else
+            contract.forma_pago_id = null;
         contract.shiftId = sanitizeId(contract.shiftId);
         if (contract.shiftId && contract.fecha_alta_contrato) {
             const newStart = new Date(contract.fecha_alta_contrato);

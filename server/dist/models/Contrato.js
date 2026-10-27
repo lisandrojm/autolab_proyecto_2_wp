@@ -6,6 +6,8 @@ const contratoSchema = new Schema({
     data: {
         descripcion: { type: String, default: "" },
         importesEnCero: { type: Boolean, default: false },
+        formasPagoIds: { type: [Schema.Types.ObjectId], ref: "FormaPago", default: [] },
+        formaPagoDefaultId: { type: Schema.Types.ObjectId, ref: "FormaPago", default: null },
         cantidadJornadas: { type: Number, default: 0 },
         multiplicadorDiario: { type: Number, default: 0 },
         esTiempoIndeterminado: { type: Boolean, default: false },

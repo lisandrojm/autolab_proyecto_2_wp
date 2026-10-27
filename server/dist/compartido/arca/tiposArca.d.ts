@@ -263,6 +263,9 @@ export interface ContratoItem {
         descripcion?: string;
         /** Cambio de franco: todos los importes del contrato en cero y bloqueados (27/10/2026). */
         importesEnCero?: boolean;
+        /** Formas de pago habilitadas (`FormaPago._id`) y la predeterminada, una de ellas (27/10/2026). */
+        formasPagoIds?: string[];
+        formaPagoDefaultId?: string | null;
         cantidadJornadas: number;
         multiplicadorDiario: number;
         esTiempoIndeterminado: boolean;

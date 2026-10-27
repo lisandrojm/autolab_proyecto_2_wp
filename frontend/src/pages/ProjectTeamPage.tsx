@@ -47,6 +47,9 @@ import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoD
 // «Coordinador» pasó a ser un permiso (cargar novedades), no el nombre de un rol. Ver ese módulo.
 import { coordinaAreas, PROJECT_COORDINATOR } from '../utils/permisosMobile';
 import { contratosAPI, ContratoItem, tiposDeContratoActivos } from '../api/contratos';
+import { formasPagoAPI, FormaPagoItem } from '../api/formasPago';
+import { claveCacheCatalogo } from '../api/simpleCatalog';
+import { faltanDatosBancarios, formaActiva, formasParaSelector, rechazoDeFormaPago } from '@compartido/formasPago';
 import { releasesAPI, Release } from '../api/release';
 import { companiesAPI, Company } from '../api/companies';
 import { CampoPuestoConDefaultDelServer } from '../components/contratos/CampoPuestoDesempenado';
@@ -308,6 +311,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   // Contratos (tipo real: jornadas/multiplicador/tiempo indeterminado) — lo que elige el wizard como
   // "Tipo de Contrato". Cada uno resuelve a una Plantilla (`contratoFrames`) para generar el PDF.
   const [contratos, setContratos] = useState<ContratoItem[]>([]);
+  // Configuración → Formas de pago (todas: la de un contrato viejo puede estar inactiva). Ver `formasParaSelector`.
+  const [formasPago, setFormasPago] = useState<FormaPagoItem[]>([]);
+  // La forma de pago que el contrato editado ya tenía: no se vuelve a juzgar al guardar (misma regla que el server).
+  const formaPagoPrevia = useRef<string | null>(null);
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [userLookup, setUserLookup] = useState<Map<number | string, string>>(new Map());
 
@@ -420,6 +427,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     nombre_contrato: '', // nombre de la Plantilla resuelta (identificador estable / match PDF)
     tipo_contrato_id: '', // ID Externo numérico, solo si la contratos-frame lo tiene
     estado_id: '',
+    // La forma de pago (`FormaPago._id`), entre las que habilita el tipo de contrato. '' = sin elegir.
+    forma_pago_id: '',
     // Empresas del proyecto elegidas para el contrato / release de este miembro (ObjectId o "")
     empresaContratoId: '',
     empresaReleaseId: '',
@@ -791,6 +800,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         setAllRoleFrames(rf);
         setContratoFrames(cfs);
         setContratos(contratosData);
+        // Aparte y sin frenar la pantalla: sin formas de pago el alta sigue (el campo es opcional).
+        cachedFetch(claveCacheCatalogo('/formas-de-pago'), () => formasPagoAPI.list())
+          .then((l) => setFormasPago(l as FormaPagoItem[]))
+          .catch(() => setFormasPago([]));
       };
 
       /*
@@ -1289,6 +1302,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     0 solos) y los campos se bloquean. El server también los guarda en cero.
   */
   const importesEnCeroWizard = !!contratoDelWizard?.data?.importesEnCero;
+  /*
+    FORMA DE PAGO (27/10/2026): las que habilita el tipo de contrato (todas las activas si no habilita
+    ninguna) más la que el contrato ya tenía. Si la elegida pide datos bancarios y la persona no tiene
+    CBU/alias y entidad financiera, no se puede guardar (el server aplica la misma regla).
+  */
+  const selectorFormaPago = formasParaSelector(formasPago, contratoDelWizard?.data, formaPagoPrevia.current);
+  const formaPagoElegida = formasPago.find((f) => String(f._id) === wizardData.forma_pago_id) || null;
+  const rechazoFormaPago = formaPagoElegida ? rechazoDeFormaPago({ forma: formaPagoElegida, tipo: contratoDelWizard?.data, previaId: formaPagoPrevia.current, metadata: (selectedUserForWizard?.metadata as any) || null }) : null;
   useEffect(() => {
     if (importesEnCeroWizard && Number(wizardData.sueldo_jornada) !== 0) setWizardData((prev) => ({ ...prev, sueldo_jornada: 0 }));
   }, [importesEnCeroWizard, wizardData.sueldo_jornada]);
@@ -2548,7 +2569,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       // Lo de la solicitud, último: es lo que pidió quien la cargó.
       ...deLaSolicitud,
       ...(esContratoNuevo ? { estado_id: estadoDelContratoNuevo ? String(estadoDelContratoNuevo.data.id) : '' } : {}),
+      /*
+        LA FORMA DE PAGO: al editar, la que tiene (aunque esté inactiva). En un contrato nuevo, la
+        predeterminada del tipo; al renovar, la del vencido si el tipo la sigue ofreciendo.
+      */
+      forma_pago_id: (() => {
+        const tenia = String((lastContract as any)?.forma_pago_id || '');
+        if (!esContratoNuevo) return tenia;
+        const { opciones, predeterminada } = formasParaSelector(formasPago, contratoInicial?.data);
+        return renovar && tenia && opciones.some((f) => String(f._id) === tenia) ? tenia : predeterminada || '';
+      })(),
     });
+    formaPagoPrevia.current = esContratoNuevo ? null : String((lastContract as any)?.forma_pago_id || '') || null;
 
     /*
       LAS JORNADAS AJUSTADAS A MANO EN LA SOLICITUD SIGUEN AJUSTADAS.
@@ -2716,6 +2748,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const faltan = faltantesPaso1();
     if (faltan.length > 0) {
       sweetAlert.error('Faltan campos obligatorios', `Completá: ${faltan.join(', ')}.`);
+      setWizardStep(1);
+      return;
+    }
+    // La forma de pago elegida pide datos bancarios que la persona no tiene (o ya no se ofrece).
+    if (rechazoFormaPago) {
+      sweetAlert.error('Forma de pago', rechazoFormaPago);
       setWizardStep(1);
       return;
     }
@@ -4576,6 +4614,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         nombre_contrato: unicaPlantilla?.name || '',
                         tipo_contrato_id: unicaPlantilla?.data?.id != null ? String(unicaPlantilla.data.id) : '',
                         fecha_baja_contrato: contrato?.data.esTiempoIndeterminado && contrato?.data.modoFechas !== 'dias' ? '' : prev.fecha_baja_contrato,
+                        // Otro tipo, otras formas de pago: se conserva la elegida si la sigue ofreciendo; si no, su predeterminada.
+                        forma_pago_id: (() => {
+                          const { opciones, predeterminada } = formasParaSelector(formasPago, contrato?.data, formaPagoPrevia.current);
+                          return prev.forma_pago_id && opciones.some((f) => String(f._id) === prev.forma_pago_id) ? prev.forma_pago_id : predeterminada || '';
+                        })(),
                         };
                       });
                     }}
@@ -4695,6 +4738,30 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
                   return null;
                 })()}
+
+                {/* FORMA DE PAGO: limitada a las que habilita el tipo, con su predeterminada precargada. Opcional. */}
+                {wizardData.contrato_id && formasPago.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Forma de pago</label>
+                    <select className={`input-field w-full ${rechazoFormaPago ? 'border-red-500' : ''}`} value={wizardData.forma_pago_id} onChange={(e) => setWizardData((prev) => ({ ...prev, forma_pago_id: e.target.value }))}>
+                      <option value="">Sin especificar</option>
+                      {selectorFormaPago.opciones.map((f) => (
+                        <option key={String(f._id)} value={String(f._id)}>
+                          {f.name}
+                          {String(f._id) === selectorFormaPago.predeterminada ? ' (predeterminada)' : ''}
+                          {!formaActiva(f) ? ' (inactiva)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {rechazoFormaPago ? (
+                      <p className="text-[11px] text-red-600 dark:text-red-400 ml-1">{rechazoFormaPago}</p>
+                    ) : formaPagoElegida?.requiereDatosBancarios && faltanDatosBancarios(selectedUserForWizard?.metadata as any).length === 0 ? (
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Se paga a la cuenta que la persona tiene cargada en su ficha.</p>
+                    ) : !selectorFormaPago.restringido ? (
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">Este tipo de contrato no limita las formas de pago: se ofrecen todas las activas.</p>
+                    ) : null}
+                  </div>
+                )}
 
                 {/*
                   Alta y baja del contrato, juntas: son los dos extremos del mismo período.

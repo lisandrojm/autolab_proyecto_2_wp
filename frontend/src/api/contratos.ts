@@ -14,6 +14,9 @@ export interface ContratoInput {
   descripcion?: string;
   /** Cambio de franco: todos los importes en cero. */
   importesEnCero?: boolean;
+  /** Formas de pago habilitadas y la predeterminada (una de ellas). */
+  formasPagoIds?: string[];
+  formaPagoDefaultId?: string | null;
   cantidadJornadas?: string | number;
   multiplicadorDiario?: string | number;
   esTiempoIndeterminado?: boolean;

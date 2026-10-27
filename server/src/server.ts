@@ -22,6 +22,7 @@ import { seedOnStart, ensureSuperAdmin } from "./scripts/seedOnStart.js";
 import { asegurarPlantillasCustomEnTodos } from "./services/plantillasCustomSistema.js";
 import { ensureAllTenantsHaveDefaultRoles } from "./services/roleInitService.js";
 import { sembrarPaisesResidenciaUnaVez } from "./services/paisesResidenciaSeed.js";
+import { sembrarFormasPagoUnaVez } from "./services/formasPagoSeed.js";
 import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { initCronScheduler } from "./services/cronService.js";
@@ -67,6 +68,7 @@ import { escalasConvenioRoutes } from "./routes/escalasConvenio.js";
 import { paritariasRoutes } from "./routes/paritarias.js";
 import { bancoRoutes } from "./routes/bancos.js";
 import { tiposEntidadFinancieraRoutes } from "./routes/tiposEntidadFinanciera.js";
+import { formaPagoRoutes } from "./routes/formasPago.js";
 import { obraSocialRoutes } from "./routes/obrasSociales.js";
 import { sindicatoRoutes } from "./routes/sindicatos.js";
 import { valoracionRoutes } from "./routes/valoraciones.js";
@@ -297,6 +299,7 @@ app.use("/api/v1/role-frames", roleFrameRoutes);
 app.use("/api/v1/categorias-sat", categoriasSatRoutes);
 app.use("/api/v1/bancos", bancoRoutes);
 app.use("/api/v1/tipos-entidad-financiera", tiposEntidadFinancieraRoutes);
+app.use("/api/v1/formas-de-pago", formaPagoRoutes);
 app.use("/api/v1/obras-sociales", obraSocialRoutes);
 app.use("/api/v1/sindicatos", sindicatoRoutes);
 app.use("/api/v1/valoraciones", valoracionRoutes);
@@ -415,6 +418,13 @@ connectDB()
       await sembrarPaisesResidenciaUnaVez();
     } catch (error) {
       console.error("❌ No se pudo cargar el catálogo de Países de residencia:", error);
+    }
+
+    // Las formas de pago iniciales (y «Servicios Intercambio» → Compensación), UNA sola vez (ver el servicio).
+    try {
+      await sembrarFormasPagoUnaVez();
+    } catch (error) {
+      console.error("❌ No se pudo cargar el catálogo de Formas de pago:", error);
     }
 
     /*

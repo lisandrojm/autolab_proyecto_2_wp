@@ -16,6 +16,8 @@ interface IContract {
    * tienen y se siguen deduciendo de la plantilla.
    */
   contrato_id?: Types.ObjectId | null;
+  /** La forma de pago (`FormaPago._id`), acotada por las que habilita el tipo de contrato. Opcional. */
+  forma_pago_id?: Types.ObjectId | null;
   cantidad_jornadas_laborales: number;
   /**
    * Los días de la semana del contrato (0 = domingo … 6 = sábado).
@@ -389,6 +391,7 @@ const contractSchema = new Schema<IContract>(
     fecha_baja_contrato: { type: String },
     tipo_contrato_id: { type: Number },
     contrato_id: { type: Schema.Types.ObjectId, ref: "Contrato" },
+    forma_pago_id: { type: Schema.Types.ObjectId, ref: "FormaPago", default: null },
     cantidad_jornadas_laborales: { type: Number },
     dias_por_semana: { type: Number },
     dias_semana: { type: [Number], default: undefined },
@@ -566,6 +569,9 @@ userProjectSchema.index({ projectId: 1, userId: 1 }, { unique: true });
 
 // Contratos por vencer: busca por fecha de baja en vez de leer todas las asignaciones de un proyecto.
 userProjectSchema.index({ "contracts.fecha_baja_contrato": 1 });
+
+// Formas de pago: contar los contratos que usan una antes de dejar borrarla. Sólo los que tienen una.
+userProjectSchema.index({ "contracts.forma_pago_id": 1 }, { partialFilterExpression: { "contracts.forma_pago_id": { $type: "objectId" } } });
 
 /*
   EL PAR DE FRAME (proyecto, empleado) ES ÚNICO SÓLO CUANDO LOS DOS EXISTEN.

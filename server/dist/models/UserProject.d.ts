@@ -14,6 +14,8 @@ interface IContract {
      * tienen y se siguen deduciendo de la plantilla.
      */
     contrato_id?: Types.ObjectId | null;
+    /** La forma de pago (`FormaPago._id`), acotada por las que habilita el tipo de contrato. Opcional. */
+    forma_pago_id?: Types.ObjectId | null;
     cantidad_jornadas_laborales: number;
     /**
      * Los días de la semana del contrato (0 = domingo … 6 = sábado).

@@ -67,6 +67,7 @@ import { ObrasSocialesPage } from "./pages/ObrasSocialesPage";
 import { SindicatosPage } from "./pages/SindicatosPage";
 import { ValoracionesPage } from "./pages/ValoracionesPage";
 import { PaisesResidenciaPage } from "./pages/PaisesResidenciaPage";
+import { FormasPagoPage } from "./pages/FormasPagoPage";
 import { ArcaSucursalesPage } from "./pages/ArcaSucursalesPage";
 import { ArcaComoFuncionaPage } from "./pages/ArcaComoFuncionaPage";
 import { GuiaObrasSocialesPage } from "./pages/GuiaObrasSocialesPage";
@@ -682,6 +683,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ValoracionesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/formas-de-pago"
+                element={
+                  <ProtectedRoute>
+                    <FormasPagoPage />
                   </ProtectedRoute>
                 }
               />

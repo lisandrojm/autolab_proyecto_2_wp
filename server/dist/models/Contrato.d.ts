@@ -1,4 +1,4 @@
-import { Document, Model } from "mongoose";
+import mongoose, { Document, Model } from "mongoose";
 /**
  * Contrato: el tipo de contrato real (Jornada, Plazo fijo 5x7, Tiempo Indeterminado, ...), con su
  * configuración de jornadas/multiplicador/vigencia. Es la unidad que se elige en el wizard de
@@ -22,6 +22,13 @@ export interface IContrato extends Document {
          * en cero y no se pueden editar.
          */
         importesEnCero?: boolean;
+        /**
+         * FORMAS DE PAGO (27/10/2026): las que se ofrecen al contratar con este tipo (`FormaPago._id`) y la
+         * que se precarga. Sin ninguna habilitada se ofrecen todas las activas. La predeterminada siempre es
+         * una de las habilitadas (ver `compartido/formasPago.ts`).
+         */
+        formasPagoIds?: mongoose.Types.ObjectId[];
+        formaPagoDefaultId?: mongoose.Types.ObjectId | null;
         cantidadJornadas: number;
         multiplicadorDiario: number;
         esTiempoIndeterminado: boolean;

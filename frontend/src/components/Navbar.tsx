@@ -6,7 +6,7 @@ import { EmpresaSelector } from './EmpresaSelector';
 import { EmpresaContextMenu } from './EmpresaContextMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faEarthAmericas, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature, faToggleOn, faRankingStar, faCalendarXmark, faRotateRight, faFileArrowDown, faReceipt } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faEarthAmericas, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature, faToggleOn, faRankingStar, faCalendarXmark, faRotateRight, faFileArrowDown, faReceipt, faMoneyBillTransfer } from '@fortawesome/free-solid-svg-icons';
 import { usePermisoInactivo } from '../stores/permisosInactivosStore';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
@@ -475,6 +475,8 @@ export const MobileNavbar: React.FC = () => {
       if (puedeAbrir('/shifts')) base.push({ permiso: 'config_shifts:view', path: '/shifts', icon: faClock, label: 'Turnos', scope: 'global' });
       if (puedeAbrir('/vacations-rules')) base.push({ permiso: 'config_vacations:view', path: '/vacations-rules', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
       if (puedeAbrir('/holidays')) base.push({ permiso: 'config_holidays:view', path: '/holidays', icon: faCalendar, label: 'Feriados', scope: 'global' });
+      // Junto a Feriados por el orden alfabético. Las usan los tipos de contrato (cuáles habilita cada uno).
+      if (puedeAbrir('/formas-de-pago')) base.push({ path: '/formas-de-pago', icon: faMoneyBillTransfer, label: 'Formas de pago', scope: 'global' });
       if (puedeAbrir('/pdfs')) base.push({ permiso: 'config_pdf_templates:view', path: '/pdfs', icon: faFilePdf, label: 'Pedidos', scope: 'global' });
       if (puedeAbrir('/pdfs-vacaciones')) base.push({ permiso: 'config_pdf_templates:view', path: '/pdfs-vacaciones', icon: faFilePdf, label: 'Vacaciones', scope: 'global' });
       if (puedeAbrir('/releases')) base.push({ permiso: 'config_releases:view', path: '/releases', icon: faFilePdf, label: 'Releases', scope: 'global' });
@@ -676,7 +678,7 @@ export const MobileNavbar: React.FC = () => {
     // Ojo: los paths de los grupos (Plantillas, ARCA, Documentos, Usuarios) NO van acá: se sacan
     // del listado plano para meterlos adentro de su subgrupo, y dejarlos también acá los duplicaría.
     // «/clients» y «/centros-costo» ya NO están acá: se mudaron a Admin GENERAL (ver `generalAlFinal`).
-    const configPaths = ['/requests/config', '/order-types', '/vacations-rules', '/holidays', '/bancos', '/sindicatos', '/paises-residencia', '/contratos', '/releases-tipos', '/admin/sedes'];
+    const configPaths = ['/requests/config', '/order-types', '/vacations-rules', '/holidays', '/formas-de-pago', '/bancos', '/sindicatos', '/paises-residencia', '/contratos', '/releases-tipos', '/admin/sedes'];
     // "Mi Perfil" está en los DOS lados a propósito: como atajo en la barra de arriba (junto al
     // usuario) y acá, para quien lo busca recorriendo el menú. Entra en el orden alfabético.
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const, permiso: 'config_profile:view' };

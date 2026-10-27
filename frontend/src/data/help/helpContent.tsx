@@ -9,7 +9,7 @@ import React from 'react';
  * referenciaba. La comprobación es que ningún archivo las nombre — TypeScript no avisa de una clave
  * de más, solo de una que falte.
  */
-export type HelpKey = 'fichas' | 'clients' | 'users' | 'roles' | 'tenants' | 'clientDetail' | 'clientProjects' | 'orders' | 'orderCategories' | 'positions' | 'levels' | 'pdfTemplates' | 'vacations' | 'vacationsRules' | 'activityLogs' | 'projectTeam' | 'projects' | 'sedes' | 'contracts' | 'solicitudes' | 'categoriasSat' | 'centrosCosto' | 'contratosFrame' | 'empresas' | 'membretes' | 'bancos' | 'paisesResidencia' | 'holidays' | 'funcionesFrame' | 'miPerfil' | 'requestsConfig' | 'obrasSociales' | 'convenios' | 'areas' | 'documents' | 'empresaFicha' | 'empresaObrasSociales' | 'empresaConvenios' | 'empresaDomicilios' | 'empresaCategorias' | 'empresaDefaults' | 'empresaGruposTipoServicio' | 'empresaContratos' | 'orderTypes' | 'releases' | 'importUsersWp' | 'arcaSucursales' | 'arcaActividades' | 'arcaModalidadContratacion' | 'arcaTipoServicio' | 'arcaGrupoTipoServicio' | 'arcaModalidadLiquidacion' | 'fuentesParitaria' | 'valoraciones';
+export type HelpKey = 'fichas' | 'clients' | 'users' | 'roles' | 'tenants' | 'clientDetail' | 'clientProjects' | 'orders' | 'orderCategories' | 'positions' | 'levels' | 'pdfTemplates' | 'vacations' | 'vacationsRules' | 'activityLogs' | 'projectTeam' | 'projects' | 'sedes' | 'contracts' | 'solicitudes' | 'categoriasSat' | 'centrosCosto' | 'contratosFrame' | 'empresas' | 'membretes' | 'bancos' | 'formasPago' | 'paisesResidencia' | 'holidays' | 'funcionesFrame' | 'miPerfil' | 'requestsConfig' | 'obrasSociales' | 'convenios' | 'areas' | 'documents' | 'empresaFicha' | 'empresaObrasSociales' | 'empresaConvenios' | 'empresaDomicilios' | 'empresaCategorias' | 'empresaDefaults' | 'empresaGruposTipoServicio' | 'empresaContratos' | 'orderTypes' | 'releases' | 'importUsersWp' | 'arcaSucursales' | 'arcaActividades' | 'arcaModalidadContratacion' | 'arcaTipoServicio' | 'arcaGrupoTipoServicio' | 'arcaModalidadLiquidacion' | 'fuentesParitaria' | 'valoraciones';
 
 export type HelpEntry = {
   title: string;
@@ -162,6 +162,11 @@ const helpResources = {
       'bancos.title': 'Información de Entidades Financieras',
       'bancos.description': 'Catálogo de bancos y entidades financieras para los datos bancarios del personal.',
       'bancos.items': ['**Entidad financiera**: Banco o entidad donde el personal cobra sus haberes.', '**Uso**: Se selecciona al cargar los datos bancarios (CBU/alias) de cada usuario.', '**Gestión**: Crear, editar y eliminar entidades, o importarlas desde un Excel.'],
+
+      // Formas de pago
+      'formasPago.title': 'Información de Formas de pago',
+      'formasPago.description': 'Cómo se le paga a una persona: efectivo, transferencia, cheque… Cada tipo de contrato dice cuáles habilita y cuál se precarga.',
+      'formasPago.items': ['**Código**: Identifica a la forma de pago (EFECTIVO, TRANSFERENCIA_BANCARIA). Se arma solo con el nombre y se puede cambiar. Nombre y código no se repiten.', '**Requiere datos bancarios**: Al elegirla en un contrato, la persona tiene que tener CBU o alias y entidad financiera cargados; si no, no se puede guardar.', '**Requiere comprobante**: Marca las formas que necesitan un comprobante del pago (por ejemplo, un cheque).', '**Tipos de contrato**: En Configuración → Contratos se eligen las formas habilitadas de cada tipo y la predeterminada. Sin ninguna habilitada, el contrato ofrece todas las activas.', '**Estado**: Una forma inactiva no se ofrece más, pero los contratos que ya la tienen la conservan. Sólo se puede eliminar una forma que ningún contrato ni tipo de contrato usa.'],
 
       // Países de residencia
       'paisesResidencia.title': 'Información de Países de residencia',
@@ -468,6 +473,7 @@ const HELP_CONTENT: Record<HelpKey, HelpEntry> = {
   contratosFrame: { title: 'Información de Contratos', size: 'sm', content: buildHelpContent('contratosFrame') },
   empresas: { title: 'Información de Empresas', size: 'sm', content: buildHelpContent('empresas') },
   bancos: { title: 'Información de Entidades Financieras', size: 'sm', content: buildHelpContent('bancos') },
+  formasPago: { title: 'Información de Formas de pago', size: 'sm', content: buildHelpContent('formasPago') },
   paisesResidencia: { title: 'Información de Países de residencia', size: 'sm', content: buildHelpContent('paisesResidencia') },
   holidays: { title: 'Información de Feriados', size: 'sm', content: buildHelpContent('holidays') },
   funcionesFrame: { title: 'Información de Roles Empresa', size: 'sm', content: buildHelpContent('funcionesFrame') },

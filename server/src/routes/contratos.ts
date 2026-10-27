@@ -1,6 +1,9 @@
 import { Router, Response } from "express";
 import { Contrato } from "../models/Contrato.js";
 import { ContratoFrame } from "../models/ContratoFrame.js";
+import { FormaPago } from "../models/FormaPago.js";
+import { normalizarFormasDelTipo } from "../compartido/formasPago.js";
+import { Types } from "mongoose";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 
 import { asegurarPlantillasCustomSinRomper, MENSAJE_DEL_SISTEMA } from "../services/plantillasCustomSistema.js";
@@ -11,6 +14,21 @@ const parseNum = (val: any): number => {
   const n = Number(val);
   return isNaN(n) ? 0 : n;
 };
+
+/**
+ * LAS FORMAS DE PAGO DEL TIPO, del body: habilitadas que existen y predeterminada entre ellas (ver
+ * `compartido/formasPago.ts`). Una inactiva que ya estaba se conserva: desactivarla no le cambia el tipo.
+ * Sin `valor` = no vino en el body (no se toca).
+ */
+async function leerFormasDePago(body: any): Promise<{ error?: string; valor?: { formasPagoIds: Types.ObjectId[]; formaPagoDefaultId: Types.ObjectId | null } }> {
+  if (body?.formasPagoIds === undefined && body?.formaPagoDefaultId === undefined) return {};
+  const crudas = Array.isArray(body?.formasPagoIds) ? body.formasPagoIds.map(String) : [];
+  if (crudas.some((id: string) => !Types.ObjectId.isValid(id))) return { error: "Hay una forma de pago con un id inválido." };
+  const existentes = await FormaPago.find({ _id: { $in: crudas } }).select("_id").lean();
+  if (existentes.length !== new Set(crudas).size) return { error: "Una de las formas de pago elegidas ya no existe." };
+  const n = normalizarFormasDelTipo(crudas, body?.formaPagoDefaultId || null);
+  return { valor: { formasPagoIds: n.formasPagoIds.map((id) => new Types.ObjectId(id)), formaPagoDefaultId: n.formaPagoDefaultId ? new Types.ObjectId(n.formaPagoDefaultId) : null } };
+}
 
 /**
  * Busca el Contrato por nombre o lo crea, de forma atómica (findOneAndUpdate + upsert): dos
@@ -142,6 +160,11 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
       res.status(400).json({ error: "El nombre es obligatorio" });
       return;
     }
+    const formas = await leerFormasDePago(req.body);
+    if (formas.error) {
+      res.status(400).json({ error: formas.error });
+      return;
+    }
 
     const existente = await Contrato.findOne({ name }).lean();
     if (existente) {
@@ -157,6 +180,8 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
       data: {
         descripcion: String(descripcion ?? "").trim().slice(0, 2000),
         importesEnCero: importesEnCero === "true" || importesEnCero === true,
+        formasPagoIds: formas.valor?.formasPagoIds ?? [],
+        formaPagoDefaultId: formas.valor?.formaPagoDefaultId ?? null,
         cantidadJornadas: parseNum(cantidadJornadas),
         multiplicadorDiario: parseNum(multiplicadorDiario),
         horasPorJornada: limites.horasPorJornada,
@@ -200,6 +225,11 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Res
       res.status(404).json({ error: "Contrato no encontrado" });
       return;
     }
+    const formas = await leerFormasDePago(req.body);
+    if (formas.error) {
+      res.status(400).json({ error: formas.error });
+      return;
+    }
 
     if (nombre !== undefined) {
       const name = String(nombre).trim();
@@ -216,6 +246,10 @@ router.put("/:id", authenticateToken, async (req: AuthenticatedRequest, res: Res
     }
     if (descripcion !== undefined) item.data.descripcion = String(descripcion ?? "").trim().slice(0, 2000);
     if (importesEnCero !== undefined) item.data.importesEnCero = importesEnCero === "true" || importesEnCero === true;
+    if (formas.valor) {
+      item.data.formasPagoIds = formas.valor.formasPagoIds;
+      item.data.formaPagoDefaultId = formas.valor.formaPagoDefaultId;
+    }
     if (cantidadJornadas !== undefined) item.data.cantidadJornadas = parseNum(cantidadJornadas);
     if (multiplicadorDiario !== undefined) item.data.multiplicadorDiario = parseNum(multiplicadorDiario);
     if (horasPorJornada !== undefined) item.data.horasPorJornada = limites.horasPorJornada;
