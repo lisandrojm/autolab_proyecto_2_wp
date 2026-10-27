@@ -50,6 +50,14 @@ export const EnvioAutomaticoCard: React.FC = () => {
   const [corrida, setCorrida] = useState<BotCorrida | null>(null);
   const [arrancando, setArrancando] = useState(false);
   const [probandoConexion, setProbandoConexion] = useState(false);
+  /** Segundos desde que arrancó «Probar conexión», para mostrar que sigue trabajando (tarda 15 s – 1 min). */
+  const [segundosProbando, setSegundosProbando] = useState(0);
+  useEffect(() => {
+    if (!probandoConexion) return;
+    setSegundosProbando(0);
+    const t = window.setInterval(() => setSegundosProbando((n) => n + 1), 1000);
+    return () => window.clearInterval(t);
+  }, [probandoConexion]);
   /** El login asistido (el navegador del servidor en pantalla) y la captura de lo que vio cuando falló. */
   const [login, setLogin] = useState(false);
   const [captura, setCaptura] = useState<string | null>(null);
@@ -235,12 +243,16 @@ export const EnvioAutomaticoCard: React.FC = () => {
       </div>
       {/* EL ESTADO DE LA CONEXIÓN (23/10/2026): lo que pasó la última vez que el bot abrió Dropbox Sign, y un botón para probarlo ahora. */}
       {cfg && (
-        <div className={`rounded-lg border p-3 text-xs space-y-1 ${cfg.conexion?.estado === "ok" ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20" : cfg.conexion?.estado === "caida" ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20" : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40"}`}>
+        <div className={`rounded-lg border p-3 text-xs space-y-1 ${probandoConexion ? "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20" : cfg.conexion?.estado === "ok" ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20" : cfg.conexion?.estado === "caida" ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20" : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40"}`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="flex items-center gap-2 text-sm font-bold">
               <FontAwesomeIcon icon={faPlug} className={cfg.conexion?.estado === "ok" ? "text-green-600 dark:text-green-400" : cfg.conexion?.estado === "caida" ? "text-red-600 dark:text-red-400" : "text-gray-400"} />
               <span className="text-gray-700 dark:text-gray-200">Conexión con Dropbox Sign:</span>
-              {cfg.conexion?.estado === "ok" ? (
+              {probandoConexion ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-blue-300 bg-white px-2 py-0.5 text-[11px] text-blue-700 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                  <FontAwesomeIcon icon={faSpinner} spin /> Probando…
+                </span>
+              ) : cfg.conexion?.estado === "ok" ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-green-300 bg-white px-2 py-0.5 text-[11px] text-green-700 dark:border-green-700 dark:bg-green-950 dark:text-green-300">
                   <FontAwesomeIcon icon={faCircleCheck} /> Conectada
                 </span>
@@ -253,7 +265,7 @@ export const EnvioAutomaticoCard: React.FC = () => {
                   <FontAwesomeIcon icon={faCircleQuestion} /> Sin probar
                 </span>
               )}
-              {cfg.conexion && <span className="font-normal text-gray-500">· probada {fmt(cfg.conexion.probadaAt)}{cfg.conexion.via === "sesion" ? " · con la sesión guardada" : cfg.conexion.via === "login" ? " · con usuario y contraseña" : ""}</span>}
+              {cfg.conexion && !probandoConexion && <span className="font-normal text-gray-500">· probada {fmt(cfg.conexion.probadaAt)}{cfg.conexion.via === "sesion" ? " · con la sesión guardada" : cfg.conexion.via === "login" ? " · con usuario y contraseña" : ""}</span>}
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => setLogin(true)} disabled={corriendo || probandoConexion} title="El navegador del servidor aparece en tu pantalla para iniciar sesión y resolver captcha o código. La sesión queda guardada para el bot." className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
@@ -269,8 +281,19 @@ export const EnvioAutomaticoCard: React.FC = () => {
               )}
             </div>
           </div>
-          {cfg.conexion?.estado === "caida" && <p className="break-words text-red-700 dark:text-red-300">{resumenDelError(cfg.conexion.detalle)}</p>}
-          {cfg.conexion?.estado === "ok" && <p className="text-green-700 dark:text-green-300">{cfg.conexion.detalle}</p>}
+          {probandoConexion && (
+            <div className="space-y-1.5 pt-1">
+              <p className="flex items-center gap-2 font-semibold text-blue-800 dark:text-blue-200">
+                <FontAwesomeIcon icon={faSpinner} spin /> El navegador del servidor está entrando a Dropbox Sign… {segundosProbando} s
+                <span className="font-normal text-blue-700/80 dark:text-blue-300/80">(suele tardar entre 15 s y 1 min; no envía nada)</span>
+              </p>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-blue-100 dark:bg-blue-950">
+                <div className="h-full rounded-full bg-blue-500 transition-all duration-1000 ease-linear" style={{ width: `${Math.min(95, (segundosProbando / 60) * 100)}%` }} />
+              </div>
+            </div>
+          )}
+          {!probandoConexion && cfg.conexion?.estado === "caida" && <p className="break-words text-red-700 dark:text-red-300">{resumenDelError(cfg.conexion.detalle)}</p>}
+          {!probandoConexion && cfg.conexion?.estado === "ok" && <p className="text-green-700 dark:text-green-300">{cfg.conexion.detalle}</p>}
           {!cfg.tieneSesion && (
             <p className="text-gray-600 dark:text-gray-300">
               {cfg.tienePassword ? "Sin sesión guardada, el bot intenta entrar con usuario y contraseña; si Dropbox Sign pide un captcha o un código, " : "No hay sesión guardada: "}
