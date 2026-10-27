@@ -338,7 +338,8 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
               <th className="px-4 py-3 font-semibold">Horario</th>
               <th className="px-4 py-3 font-semibold text-center">Estado</th>
               {renderObraSocial && <th className="px-4 py-3 font-semibold">Obra social</th>}
-              <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+              {/* Las acciones quedan FIJAS a la derecha (27/10/2026): con la tabla ancha, «Editar para Aprobar» y «Rechazar» quedaban fuera de la vista. */}
+              <th className="sticky right-0 z-[6] px-4 py-3 font-semibold text-right bg-gray-50 dark:bg-[#18202f] border-l border-gray-200 dark:border-gray-700 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -530,7 +531,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                       {renderObraSocial(s)}
                     </td>
                   )}
-                  <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                  <td className={`sticky right-0 z-[5] px-4 py-3 text-right border-l border-gray-200 dark:border-gray-700 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.25)] ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
                     {/* Una solicitud rechazada o cancelada no se aprueba de una: primero se reabre,
                         así queda explícito que se está deshaciendo la decisión. */}
                     <div className="flex items-center justify-end gap-1.5">
