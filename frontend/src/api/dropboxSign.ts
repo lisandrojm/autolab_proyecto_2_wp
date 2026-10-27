@@ -155,11 +155,13 @@ export interface EstadoLoginAsistido {
   abiertoEl: string | null;
   /** El bot está entrando solo con el usuario y la contraseña guardados. */
   automatico?: boolean;
+  /** Se puede ofrecer «Entrar con el usuario guardado». */
+  puedeAutomatico?: boolean;
   jpeg?: string;
   /** Sólo si la página no muestra texto: qué devolvió Dropbox (HTTP, título, HTML). */
   diagnostico?: string;
 }
-export type AccionLogin = { tipo: "click"; x: number; y: number } | { tipo: "tipear"; texto: string } | { tipo: "tecla"; tecla: string } | { tipo: "scroll"; dy: number } | { tipo: "recargar" } | { tipo: "reiniciar" };
+export type AccionLogin = { tipo: "click"; x: number; y: number } | { tipo: "tipear"; texto: string } | { tipo: "tecla"; tecla: string } | { tipo: "scroll"; dy: number } | { tipo: "recargar" } | { tipo: "reiniciar" } | { tipo: "automatico" } | { tipo: "tomar_control" };
 
 export interface BotConfig {
   loginEmail: string;

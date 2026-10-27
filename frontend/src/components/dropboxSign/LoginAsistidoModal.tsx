@@ -69,7 +69,7 @@ export const LoginAsistidoModal: React.FC<{ onClose: () => void; onConectado?: (
   };
 
   const accion = async (a: AccionLogin) => {
-    if (ocupadoRef.current || estado?.estado !== "abierto") return;
+    if ((ocupadoRef.current && a.tipo !== "tomar_control") || estado?.estado !== "abierto") return;
     ocupadoRef.current = true;
     setOcupado(true);
     try {
@@ -120,15 +120,22 @@ export const LoginAsistidoModal: React.FC<{ onClose: () => void; onConectado?: (
           <>
             <div className={`rounded-lg border p-3 ${conectado ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20" : abierto ? "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20" : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40"}`}>
               {automatico ? (
-                <p className="flex items-center gap-2 text-sm font-semibold text-blue-800 dark:text-blue-200">
-                  <FontAwesomeIcon icon={faSpinner} spin /> {estado.detalle} No hace falta tocar nada.
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-blue-800 dark:text-blue-200">
+                    <FontAwesomeIcon icon={faSpinner} spin /> {estado.detalle}
+                  </p>
+                  {/* Cortar el intento automático en el acto y escribir uno mismo (27/10/2026). */}
+                  <button type="button" onClick={() => void accion({ tipo: "tomar_control" })} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
+                    Tomar el control
+                  </button>
+                </div>
               ) : conectado ? (
                 <p className="flex items-center gap-2 text-sm font-semibold text-green-700 dark:text-green-300">
                   <FontAwesomeIcon icon={faCircleCheck} /> Conectado. {estado.detalle}
                 </p>
               ) : abierto ? (
                 <p className="text-sm text-blue-800 dark:text-blue-200">
+                  {estado.detalle && <span className="mb-1 block">{estado.detalle}</span>}
                   <strong>Hacé click en un campo de la imagen, escribí abajo y mandalo con Enter.</strong> Si aparece un captcha o un código, resolvelo acá mismo. Cuando el navegador llegue al listado de documentos, la sesión se guarda sola y esto se cierra.
                 </p>
               ) : (
@@ -204,6 +211,11 @@ export const LoginAsistidoModal: React.FC<{ onClose: () => void; onConectado?: (
                 <button type="button" onClick={refrescar} disabled={ocupado} className={btn} title="Volver a capturar la pantalla">
                   <FontAwesomeIcon icon={faRotateRight} />
                 </button>
+                {estado.puedeAutomatico && (
+                  <button type="button" onClick={() => void accion({ tipo: "automatico" })} disabled={ocupado} className={btn} title="El bot completa email y contraseña guardados; lo podés cortar con «Tomar el control»">
+                    Entrar con el usuario guardado
+                  </button>
+                )}
                 <button type="button" onClick={() => void accion({ tipo: "recargar" })} disabled={ocupado} className={btn} title="Recarga la página en el navegador del servidor (como F5)">
                   Recargar página
                 </button>
