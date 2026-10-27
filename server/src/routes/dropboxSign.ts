@@ -327,6 +327,8 @@ router.post("/bot/login/accion", async (req: AuthenticatedRequest & TenantReques
         z.object({ tipo: z.literal("tipear"), texto: z.string().max(500) }),
         z.object({ tipo: z.literal("tecla"), tecla: z.string().max(20) }),
         z.object({ tipo: z.literal("scroll"), dy: z.number() }),
+        z.object({ tipo: z.literal("recargar") }),
+        z.object({ tipo: z.literal("reiniciar") }),
       ])
       .safeParse(req.body || {});
     if (!parsed.success) return res.status(400).json({ error: "Acción inválida." });

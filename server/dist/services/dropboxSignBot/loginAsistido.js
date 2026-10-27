@@ -69,7 +69,11 @@ export async function abrirLoginAsistido(tenantId) {
         }
         const ctx = await browser.newContext({ ...(cfg.sesion ? { storageState: cfg.sesion } : {}), ...OPCIONES_CONTEXTO, viewport: { ...VIEWPORT } });
         const page = await ctx.newPage();
-        const a = { tenantId, browser, ctx, page, abiertoEl: new Date(), estado: "abierto", detalle: "Iniciá sesión en la pantalla. Si aparece un captcha o un código, resolvelo acá mismo.", timer: null, automatico: false };
+        const a = { tenantId, browser, ctx, page, abiertoEl: new Date(), estado: "abierto", detalle: "Iniciá sesión en la pantalla. Si aparece un captcha o un código, resolvelo acá mismo.", timer: null, automatico: false, ultimaRespuesta: null };
+        page.on("response", (r) => {
+            if (r.request().isNavigationRequest() && r.frame() === page.mainFrame())
+                a.ultimaRespuesta = { status: r.status(), url: r.url().split("?")[0] };
+        });
         abiertos.set(tenantId, a);
         reprogramarCierre(a);
         await irA(page, MANAGE_URL).catch(() => { });
@@ -124,7 +128,7 @@ export async function pantallaLoginAsistido(tenantId) {
     const pantalla = await pantallaDe(a.page).catch(() => "desconocida");
     await conectarSiLlego(a, pantalla);
     const jpeg = await a.page.screenshot({ type: "jpeg", quality: 55 }).then((b) => b.toString("base64")).catch(() => undefined);
-    return estadoDe(a, { pantalla, jpeg });
+    return estadoDe(a, { pantalla, jpeg, diagnostico: await diagnosticoSiVacia(a) });
 }
 /** Un click, texto o tecla del usuario, reenviados al navegador. Devuelve la captura resultante. */
 export async function accionLoginAsistido(tenantId, accion) {
@@ -159,10 +163,41 @@ export async function accionLoginAsistido(tenantId, accion) {
         case "scroll":
             await page.mouse.wheel(0, Math.max(-2000, Math.min(2000, Number(accion.dy) || 0)));
             break;
+        case "recargar":
+            await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 }).catch(() => { });
+            await page.waitForTimeout(2500);
+            break;
+        case "reiniciar":
+            // Empezar de nuevo SIN la sesión vieja: se borran las cookies y se vuelve a Dropbox Sign (arranca el OAuth limpio).
+            await a.ctx.clearCookies().catch(() => { });
+            await irA(page, MANAGE_URL).catch(() => { });
+            await page.waitForTimeout(3000);
+            a.detalle = "Se empezó de nuevo sin la sesión vieja: iniciá sesión en la pantalla.";
+            break;
     }
     await page.waitForTimeout(700);
     await page.waitForLoadState("domcontentloaded", { timeout: 5000 }).catch(() => { });
     return pantallaLoginAsistido(tenantId);
+}
+/**
+ * LA PÁGINA EN BLANCO (27/10/2026): oauth2/authorize quedó blanca y sin texto. Si la página no muestra
+ * nada, se dice qué devolvió Dropbox: código HTTP, título, tamaño y comienzo del HTML, e iframes.
+ */
+async function diagnosticoSiVacia(a) {
+    const d = await a.page
+        .evaluate(() => {
+        const texto = (document.body?.innerText || "").trim();
+        if (texto.length > 0)
+            return null;
+        const html = document.documentElement?.outerHTML || "";
+        const iframes = Array.from(document.querySelectorAll("iframe")).map((f) => `${(f.getAttribute("src") || "(sin src)").split("?")[0].slice(0, 80)} ${Math.round(f.getBoundingClientRect().width)}×${Math.round(f.getBoundingClientRect().height)}`);
+        return { titulo: document.title, largo: html.length, inicio: html.replace(/\s+/g, " ").replace(/<script[\s\S]*?<\/script>/gi, "<script/>").slice(0, 400), iframes, listo: document.readyState };
+    })
+        .catch(() => null);
+    if (!d)
+        return undefined;
+    const r = a.ultimaRespuesta;
+    return `Página sin texto · respuesta ${r ? `HTTP ${r.status}` : "sin datos"} · título «${d.titulo || "(vacío)"}» · ${d.largo} caracteres de HTML · readyState ${d.listo}${d.iframes.length ? ` · iframes: ${d.iframes.join(", ")}` : ""} · HTML: ${d.inicio}`;
 }
 export async function cerrarLoginAsistido(tenantId, motivo) {
     const a = abiertos.get(tenantId);

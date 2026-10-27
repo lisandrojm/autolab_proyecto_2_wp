@@ -13,6 +13,8 @@ export interface EstadoLoginAsistido {
     automatico: boolean;
     /** La captura (JPEG base64), cuando se pide la pantalla. */
     jpeg?: string;
+    /** Sólo cuando la página no muestra texto: qué devolvió el servidor de Dropbox (27/10/2026, «queda en blanco»). */
+    diagnostico?: string;
 }
 export type AccionLoginAsistido = {
     tipo: "click";
@@ -27,6 +29,10 @@ export type AccionLoginAsistido = {
 } | {
     tipo: "scroll";
     dy: number;
+} | {
+    tipo: "recargar";
+} | {
+    tipo: "reiniciar";
 };
 /** Abre el navegador en el login (o reusa el que ya está abierto). Si entra directo con la sesión guardada, conecta y cierra. */
 export declare function abrirLoginAsistido(tenantId: string): Promise<EstadoLoginAsistido>;

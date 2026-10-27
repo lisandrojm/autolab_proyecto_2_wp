@@ -162,6 +162,12 @@ export const LoginAsistidoModal: React.FC<{ onClose: () => void; onConectado?: (
               )}
             </div>
 
+            {abierto && estado.diagnostico && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                <p className="font-semibold">La página está en blanco. Probá «Recargar página» o «Empezar de nuevo». Si sigue igual, copiá esto:</p>
+                <p className="mt-1 select-all break-all font-mono">{estado.diagnostico}</p>
+              </div>
+            )}
             {abierto && (
               <div className="flex flex-wrap items-center gap-2">
                 <input
@@ -197,6 +203,12 @@ export const LoginAsistidoModal: React.FC<{ onClose: () => void; onConectado?: (
                 </button>
                 <button type="button" onClick={refrescar} disabled={ocupado} className={btn} title="Volver a capturar la pantalla">
                   <FontAwesomeIcon icon={faRotateRight} />
+                </button>
+                <button type="button" onClick={() => void accion({ tipo: "recargar" })} disabled={ocupado} className={btn} title="Recarga la página en el navegador del servidor (como F5)">
+                  Recargar página
+                </button>
+                <button type="button" onClick={() => void accion({ tipo: "reiniciar" })} disabled={ocupado} className={btn} title="Borra las cookies de la sesión vieja y vuelve a entrar a Dropbox Sign desde cero">
+                  Empezar de nuevo
                 </button>
               </div>
             )}

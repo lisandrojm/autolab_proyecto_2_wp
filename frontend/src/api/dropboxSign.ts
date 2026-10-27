@@ -156,8 +156,10 @@ export interface EstadoLoginAsistido {
   /** El bot está entrando solo con el usuario y la contraseña guardados. */
   automatico?: boolean;
   jpeg?: string;
+  /** Sólo si la página no muestra texto: qué devolvió Dropbox (HTTP, título, HTML). */
+  diagnostico?: string;
 }
-export type AccionLogin = { tipo: "click"; x: number; y: number } | { tipo: "tipear"; texto: string } | { tipo: "tecla"; tecla: string } | { tipo: "scroll"; dy: number };
+export type AccionLogin = { tipo: "click"; x: number; y: number } | { tipo: "tipear"; texto: string } | { tipo: "tecla"; tecla: string } | { tipo: "scroll"; dy: number } | { tipo: "recargar" } | { tipo: "reiniciar" };
 
 export interface BotConfig {
   loginEmail: string;

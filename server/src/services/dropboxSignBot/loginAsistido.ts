@@ -34,6 +34,8 @@ interface Asistido {
   timer: NodeJS.Timeout | null;
   /** El bot está entrando solo con las credenciales guardadas: la pantalla no acepta clicks ni texto. */
   automatico: boolean;
+  /** La última respuesta del documento principal (para diagnosticar la página en blanco). */
+  ultimaRespuesta: { status: number; url: string } | null;
 }
 
 export interface EstadoLoginAsistido {
@@ -47,9 +49,11 @@ export interface EstadoLoginAsistido {
   automatico: boolean;
   /** La captura (JPEG base64), cuando se pide la pantalla. */
   jpeg?: string;
+  /** Sólo cuando la página no muestra texto: qué devolvió el servidor de Dropbox (27/10/2026, «queda en blanco»). */
+  diagnostico?: string;
 }
 
-export type AccionLoginAsistido = { tipo: "click"; x: number; y: number } | { tipo: "tipear"; texto: string } | { tipo: "tecla"; tecla: string } | { tipo: "scroll"; dy: number };
+export type AccionLoginAsistido = { tipo: "click"; x: number; y: number } | { tipo: "tipear"; texto: string } | { tipo: "tecla"; tecla: string } | { tipo: "scroll"; dy: number } | { tipo: "recargar" } | { tipo: "reiniciar" };
 
 const abiertos = new Map<string, Asistido>();
 
@@ -102,7 +106,10 @@ export async function abrirLoginAsistido(tenantId: string): Promise<EstadoLoginA
     }
     const ctx = await browser.newContext({ ...(cfg.sesion ? { storageState: cfg.sesion } : {}), ...OPCIONES_CONTEXTO, viewport: { ...VIEWPORT } });
     const page = await ctx.newPage();
-    const a: Asistido = { tenantId, browser, ctx, page, abiertoEl: new Date(), estado: "abierto", detalle: "Iniciá sesión en la pantalla. Si aparece un captcha o un código, resolvelo acá mismo.", timer: null, automatico: false };
+    const a: Asistido = { tenantId, browser, ctx, page, abiertoEl: new Date(), estado: "abierto", detalle: "Iniciá sesión en la pantalla. Si aparece un captcha o un código, resolvelo acá mismo.", timer: null, automatico: false, ultimaRespuesta: null };
+    page.on("response", (r) => {
+      if (r.request().isNavigationRequest() && r.frame() === page.mainFrame()) a.ultimaRespuesta = { status: r.status(), url: r.url().split("?")[0] };
+    });
     abiertos.set(tenantId, a);
     reprogramarCierre(a);
     await irA(page, MANAGE_URL).catch(() => {});
@@ -150,7 +157,7 @@ export async function pantallaLoginAsistido(tenantId: string): Promise<EstadoLog
   const pantalla = await pantallaDe(a.page).catch(() => "desconocida" as const);
   await conectarSiLlego(a, pantalla);
   const jpeg = await a.page.screenshot({ type: "jpeg", quality: 55 }).then((b) => b.toString("base64")).catch(() => undefined);
-  return estadoDe(a, { pantalla, jpeg });
+  return estadoDe(a, { pantalla, jpeg, diagnostico: await diagnosticoSiVacia(a) });
 }
 
 /** Un click, texto o tecla del usuario, reenviados al navegador. Devuelve la captura resultante. */
@@ -182,10 +189,40 @@ export async function accionLoginAsistido(tenantId: string, accion: AccionLoginA
     case "scroll":
       await page.mouse.wheel(0, Math.max(-2000, Math.min(2000, Number(accion.dy) || 0)));
       break;
+    case "recargar":
+      await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 }).catch(() => {});
+      await page.waitForTimeout(2500);
+      break;
+    case "reiniciar":
+      // Empezar de nuevo SIN la sesión vieja: se borran las cookies y se vuelve a Dropbox Sign (arranca el OAuth limpio).
+      await a.ctx.clearCookies().catch(() => {});
+      await irA(page, MANAGE_URL).catch(() => {});
+      await page.waitForTimeout(3000);
+      a.detalle = "Se empezó de nuevo sin la sesión vieja: iniciá sesión en la pantalla.";
+      break;
   }
   await page.waitForTimeout(700);
   await page.waitForLoadState("domcontentloaded", { timeout: 5000 }).catch(() => {});
   return pantallaLoginAsistido(tenantId);
+}
+
+/**
+ * LA PÁGINA EN BLANCO (27/10/2026): oauth2/authorize quedó blanca y sin texto. Si la página no muestra
+ * nada, se dice qué devolvió Dropbox: código HTTP, título, tamaño y comienzo del HTML, e iframes.
+ */
+async function diagnosticoSiVacia(a: Asistido): Promise<string | undefined> {
+  const d = await a.page
+    .evaluate(() => {
+      const texto = (document.body?.innerText || "").trim();
+      if (texto.length > 0) return null;
+      const html = document.documentElement?.outerHTML || "";
+      const iframes = Array.from(document.querySelectorAll("iframe")).map((f) => `${(f.getAttribute("src") || "(sin src)").split("?")[0].slice(0, 80)} ${Math.round(f.getBoundingClientRect().width)}×${Math.round(f.getBoundingClientRect().height)}`);
+      return { titulo: document.title, largo: html.length, inicio: html.replace(/\s+/g, " ").replace(/<script[\s\S]*?<\/script>/gi, "<script/>").slice(0, 400), iframes, listo: document.readyState };
+    })
+    .catch(() => null);
+  if (!d) return undefined;
+  const r = a.ultimaRespuesta;
+  return `Página sin texto · respuesta ${r ? `HTTP ${r.status}` : "sin datos"} · título «${d.titulo || "(vacío)"}» · ${d.largo} caracteres de HTML · readyState ${d.listo}${d.iframes.length ? ` · iframes: ${d.iframes.join(", ")}` : ""} · HTML: ${d.inicio}`;
 }
 
 export async function cerrarLoginAsistido(tenantId: string, motivo?: string): Promise<{ ok: boolean; estado: EstadoLoginAsistido["estado"] }> {
