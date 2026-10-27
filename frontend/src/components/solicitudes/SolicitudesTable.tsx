@@ -329,7 +329,12 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
               )}
               <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] border-r border-gray-200 dark:border-gray-700 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]`}>Nombre</th>
               <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">Fecha de creación</th>
+              {/* Las columnas que comparte con Contratos → Alta temprana de ARCA van en SU orden (27/10/2026):
+                  Nombre, Fecha de creación, Último contrato, Obra social, Cliente, Proyecto, Estado y Tipo de
+                  alta (allá, «Estado Impositivo»). Las propias de Solicitudes quedan intercaladas. */}
+              <th className="px-4 py-3 font-semibold whitespace-nowrap" title="El último contrato de la persona, en cualquier proyecto">Último contrato</th>
               <th className="px-4 py-3 font-semibold">Solicitó</th>
+              {renderObraSocial && <th className="px-4 py-3 font-semibold">Obra social</th>}
               {mostrarProyectos && (
                 <>
                   <th className="px-4 py-3 font-semibold">Cliente</th>
@@ -337,12 +342,10 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 </>
               )}
               <th className="px-4 py-3 font-semibold">Rol/es Empresa</th>
-              <th className="px-4 py-3 font-semibold">Tipo de alta</th>
-              <th className="px-4 py-3 font-semibold whitespace-nowrap" title="El último contrato de la persona, en cualquier proyecto">Último contrato</th>
               <th className="px-4 py-3 font-semibold">Fechas</th>
               <th className="px-4 py-3 font-semibold">Horario</th>
               <th className="px-4 py-3 font-semibold text-center">Estado</th>
-              {renderObraSocial && <th className="px-4 py-3 font-semibold">Obra social</th>}
+              <th className="px-4 py-3 font-semibold">Tipo de alta</th>
               {/* Las acciones quedan FIJAS a la derecha (27/10/2026): con la tabla ancha, «Editar para Aprobar» y «Rechazar» quedaban fuera de la vista. */}
               <th className="sticky right-0 z-[6] px-4 py-3 font-semibold text-right bg-gray-50 dark:bg-[#18202f] border-l border-gray-200 dark:border-gray-700 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
             </tr>
@@ -435,6 +438,25 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                     <FechaHoraCelda valor={s.creadaEl} />
                   </td>
 
+                  {/* El último contrato de la PERSONA (en cualquier proyecto), como la columna de Contratos. */}
+                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos: es alguien nuevo"}>
+                    {s.ultimoContrato ? (
+                      (() => {
+                        const vigente = isContractVigente(s.ultimoContrato.alta, s.ultimoContrato.baja || undefined);
+                        return (
+                          <div className="flex flex-col gap-1">
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
+                            <div className="flex flex-col gap-0.5 text-xs">
+                              <span><span className="text-gray-400">Alta:</span> {formatDate(s.ultimoContrato.alta)}</span>
+                              <span><span className="text-gray-400">Baja:</span> {s.ultimoContrato.baja ? formatDate(s.ultimoContrato.baja) : "—"}</span>
+                            </div>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <span className="text-gray-300 dark:text-gray-600">—</span>
+                    )}
+                  </td>
                   {/*
                     QUIÉN LA PIDIÓ, con sus roles de coordinación o supervisión debajo: es lo que dice
                     con qué autoridad se pidió el alta. Los demás roles (administrativos, etc.) no
@@ -455,6 +477,11 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                     </div>
                   </td>
 
+                  {renderObraSocial && (
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      {renderObraSocial(s)}
+                    </td>
+                  )}
                   {/*
                     CLIENTE Y PROYECTO SON DOS COLUMNAS, NO UN TEXTO CON UN PUNTO EN EL MEDIO.
 
@@ -495,35 +522,6 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   )}
 
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{resolverRolFrame(s)}</td>
-                  {/*
-                    POR QUÉ VÍA SE PIDIÓ CONTRATAR: alta temprana ante ARCA o servicios. Con el mismo
-                    badge que se ve en Contratos, para que quien aprueba lo reconozca como lo mismo
-                    que después va a ver en el contrato.
-
-                    «Sin definir» es literal y no un valor por defecto: las solicitudes cargadas antes
-                    de que este campo existiera no lo declararon, y suponerles un trámite sería
-                    inventar el dato del que depende el TXT de ARCA.
-                  */}
-                  <td className="px-4 py-3">{tramite ? <EstadoBadge name={tramite.name} /> : <span className="text-xs text-gray-400 italic">Sin definir</span>}</td>
-                  {/* El último contrato de la PERSONA (en cualquier proyecto), como la columna de Contratos. */}
-                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos: es alguien nuevo"}>
-                    {s.ultimoContrato ? (
-                      (() => {
-                        const vigente = isContractVigente(s.ultimoContrato.alta, s.ultimoContrato.baja || undefined);
-                        return (
-                          <div className="flex flex-col gap-1">
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
-                            <div className="flex flex-col gap-0.5 text-xs">
-                              <span><span className="text-gray-400">Alta:</span> {formatDate(s.ultimoContrato.alta)}</span>
-                              <span><span className="text-gray-400">Baja:</span> {s.ultimoContrato.baja ? formatDate(s.ultimoContrato.baja) : "—"}</span>
-                            </div>
-                          </div>
-                        );
-                      })()
-                    ) : (
-                      <span className="text-gray-300 dark:text-gray-600">—</span>
-                    )}
-                  </td>
                   <td className="px-4 py-3">
                     <div className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                       <span>{formatDiaSolicitud(s.startDate)}</span>
@@ -538,11 +536,16 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                       {ESTADO_SOLICITUD[s.estado].texto}
                     </span>
                   </td>
-                  {renderObraSocial && (
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      {renderObraSocial(s)}
-                    </td>
-                  )}
+                  {/*
+                    POR QUÉ VÍA SE PIDIÓ CONTRATAR: alta temprana ante ARCA o servicios. Con el mismo
+                    badge que se ve en Contratos, para que quien aprueba lo reconozca como lo mismo
+                    que después va a ver en el contrato.
+
+                    «Sin definir» es literal y no un valor por defecto: las solicitudes cargadas antes
+                    de que este campo existiera no lo declararon, y suponerles un trámite sería
+                    inventar el dato del que depende el TXT de ARCA.
+                  */}
+                  <td className="px-4 py-3">{tramite ? <EstadoBadge name={tramite.name} /> : <span className="text-xs text-gray-400 italic">Sin definir</span>}</td>
                   <td className={`sticky right-0 z-[5] px-4 py-3 text-right border-l border-gray-200 dark:border-gray-700 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.25)] ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
                     {/* Una solicitud rechazada o cancelada no se aprueba de una: primero se reabre,
                         así queda explícito que se está deshaciendo la decisión. */}
