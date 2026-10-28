@@ -16,7 +16,7 @@ import { BadgeCustom } from '../contratacion/PlantillaCustom';
 import { infoAPI, InfoItem } from '../../api/info';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { formasPagoAPI, FormaPagoItem } from '../../api/formasPago';
-import { CODIGO_POR_DEFECTO, formaActiva, formasDelTipo, normalizarFormasDelTipo } from '@compartido/formasPago';
+import { CODIGO_POR_DEFECTO, formaActiva, formasDelTipo, normalizarFormasDelTipo, ordenarFormas } from '@compartido/formasPago';
 import { SelectorCodigoArca } from '../arca/SelectorCodigoArca';
 import { MODALIDADES_OFRECIDAS } from './afipCompleteness';
 import { EstadoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
@@ -271,6 +271,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showFirmaInfo, setShowFirmaInfo] = useState(false);
+  const [showImportesInfo, setShowImportesInfo] = useState(false);
   /** Para enfocar el nombre cuando falta: sin pestañas, el error se resuelve en la misma vista. */
   const nombreRef = React.useRef<HTMLInputElement | null>(null);
   const [showTiempoIndetInfo, setShowTiempoIndetInfo] = useState(false);
@@ -957,13 +958,16 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   const bloqueImportes = (
     <div className="space-y-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5">
       <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Importes</span>
-      <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-        <input type="checkbox" checked={form.importesEnCero} onChange={(e) => setForm((p) => ({ ...p, importesEnCero: e.target.checked }))} className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-        <span>
+      {/* La explicación va en el (i), como en «Envío a firmar»: debajo del tilde ocupaba tres renglones. */}
+      <div className="flex items-center gap-2">
+        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+          <input type="checkbox" checked={form.importesEnCero} onChange={(e) => setForm((p) => ({ ...p, importesEnCero: e.target.checked }))} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
           Importes en 0
-          <span className="block text-[11px] text-gray-500 dark:text-gray-400">Para quien cambia un día de franco por uno de trabajo (por ejemplo, trabaja de lunes a sábado y en vez del sábado va el domingo): ese día no se paga. Todos los importes del contrato van en cero y no se pueden editar.</span>
-        </span>
-      </label>
+        </label>
+        <button type="button" onClick={() => setShowImportesInfo(true)} className="text-gray-400 hover:text-blue-500 transition-colors" title="¿Qué significa?" aria-label="Información sobre Importes en 0">
+          <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+        </button>
+      </div>
     </div>
   );
 
@@ -1937,6 +1941,18 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
         </div>
       </Modal>
 
+      <InfoModal
+        isOpen={showImportesInfo}
+        onClose={() => setShowImportesInfo(false)}
+        title="Importes en 0"
+        size="sm"
+        zIndex={120}
+        actions={[{ label: 'Entendido', onClick: () => setShowImportesInfo(false), variant: 'primary' }]}
+      >
+        <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          <p>Para quien cambia un día de franco por uno de trabajo (por ejemplo, trabaja de lunes a sábado y en vez del sábado va el domingo): ese día no se paga. Todos los importes del contrato van en cero y no se pueden editar.</p>
+        </div>
+      </InfoModal>
       <InfoModal
         isOpen={showTiempoIndetInfo}
         onClose={() => setShowTiempoIndetInfo(false)}
