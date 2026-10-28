@@ -439,7 +439,9 @@ router.post("/bot/corrida", async (req: AuthenticatedRequest & TenantRequest, re
     if (!isAdmin(req)) return res.status(403).json({ error: "Solo un administrador puede enviar a firmar." });
     // «Enviar ahora N»: cuántos (si no, el tamaño de tanda). El cupo de las últimas 24 h sigue mandando.
     const cantidad = Number(req.body?.cantidad);
-    const r = await arrancarCorridaEnvio(String(req.tenantObjectId), { automatica: false, enSeco: req.body?.enSeco === true, cantidad: Number.isInteger(cantidad) && cantidad > 0 && cantidad <= 500 ? cantidad : undefined });
+    // «Enviar los marcados»: códigos elegidos de la cola (van al principio y se manda sólo eso).
+    const codigos = Array.isArray(req.body?.codigos) ? req.body.codigos.map(String).filter((c: string) => /^ID-\d{6,}$/.test(c)).slice(0, 500) : [];
+    const r = await arrancarCorridaEnvio(String(req.tenantObjectId), { automatica: false, enSeco: req.body?.enSeco === true, cantidad: Number.isInteger(cantidad) && cantidad > 0 && cantidad <= 500 ? cantidad : undefined, codigos: codigos.length ? codigos : undefined });
     res.json({ arrancada: true, ...r });
   } catch (error: any) {
     res.status(error?.status || 400).json({ error: error?.message || "No se pudo arrancar la corrida." });

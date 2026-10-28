@@ -206,6 +206,19 @@ export async function armarCola(tenantId, opciones = {}) {
 /** Arranca una corrida y vuelve en el acto. Manual (botón) respeta sólo enfriamiento y cupo. */
 export async function arrancarCorridaEnvio(tenantId, opciones = {}) {
     const automatica = !!opciones.automatica;
+    /*
+      ENVIAR LOS MARCADOS (28/10/2026): una tanda con documentos elegidos, estén donde estén en la cola. Pasan
+      al principio (como «Mover al principio»: el resto queda corrido para después, en su orden) y la corrida
+      manda sólo ésos. El cupo de 24 h y el enfriamiento siguen mandando: es lo que evita que Dropbox Sign
+      rechace por exceso. Lo que no entra en el cupo queda primero para la próxima tanda.
+    */
+    const codigos = opciones.codigos?.length ? [...new Set(opciones.codigos)] : undefined;
+    if (codigos) {
+        const { movidos } = await reordenarCola(tenantId, codigos, "tope");
+        if (movidos === 0)
+            throw Object.assign(new Error("Ninguno de los marcados está en la cola."), { status: 400 });
+        opciones = { ...opciones, cantidad: movidos };
+    }
     tomarCandadoDropboxSign(tenantId, automatica, "envio");
     try {
         const { config, estado, cc } = await configDelTenant(tenantId);
@@ -216,7 +229,7 @@ export async function arrancarCorridaEnvio(tenantId, opciones = {}) {
             throw Object.assign(new Error("Falta la casilla de CC (Configuración → DropboxSign → correo que recibe los avisos)."), { status: 400 });
         const enSeco = enSecoForzado() || !!opciones.enSeco;
         await aplicarOrdenAutomatico(tenantId).catch((e) => console.warn("[DROPBOX-SIGN-BOT] No se pudo ordenar la cola:", e?.message || e));
-        const corrida = { tenantId, enSeco, automatica, eventos: [], terminada: false, irreversible: false, señal: { cortada: false }, arrancadaEl: new Date(), total: 0, enviados: 0, errores: 0, limite: false, actual: null, lineas: [], cantidad: opciones.cantidad ? Math.max(1, Math.floor(opciones.cantidad)) : undefined };
+        const corrida = { tenantId, enSeco, automatica, eventos: [], terminada: false, irreversible: false, señal: { cortada: false }, arrancadaEl: new Date(), total: 0, enviados: 0, errores: 0, limite: false, actual: null, lineas: [], cantidad: opciones.cantidad ? Math.max(1, Math.floor(opciones.cantidad)) : undefined, codigos };
         corridas.set(tenantId, corrida);
         await Tenant.updateOne({ _id: tenantId }, { $set: { [`${BASE}.ultimaCorridaAt`]: corrida.arrancadaEl } });
         void correr(corrida, cc, config);
@@ -258,6 +271,13 @@ async function correr(corrida, cc, config) {
     try {
         emitir({ tipo: "cola", texto: "Leyendo la cola y el Outbox…" });
         const cola = await armarCola(tenantId, { manual: !corrida.automatica, cantidad: corrida.cantidad });
+        if (corrida.codigos) {
+            // Sólo los marcados: si alguno no está en el Outbox, su lugar no lo ocupa otro de la cola.
+            const marcados = new Set(corrida.codigos);
+            cola.tanda = cola.tanda.filter((c) => marcados.has(c.codigo));
+            const fuera = corrida.codigos.length - cola.tanda.length;
+            emitir({ tipo: "cola", texto: `Enviar los marcados: ${cola.tanda.length} de ${corrida.codigos.length}${fuera ? ` (${fuera} no entran ahora: no están en el Outbox o no hay cupo; quedan primeros en la cola)` : ""}.` });
+        }
         // Los que ya no están en el Outbox NO se marcan (26/10/2026): siguen en la cola, la pantalla los
         // muestra como «ya no está en el Outbox» y se pueden sacar desde ahí. Sólo se anotan en el log.
         for (const f of cola.faltantes) {

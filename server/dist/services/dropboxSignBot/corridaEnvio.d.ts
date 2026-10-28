@@ -32,6 +32,8 @@ export interface CorridaEnvio {
     lineas: ILineaEnvio[];
     /** «Enviar ahora N»: cuántos pidió la persona (si no, el tamaño de tanda). El cupo de 24 h sigue mandando. */
     cantidad?: number;
+    /** «Enviar los marcados» (28/10/2026): sólo estos códigos, sin completar la tanda con otros de la cola. */
+    codigos?: string[];
 }
 export declare const corridaEnvioDe: (tenantId: string) => CorridaEnvio | undefined;
 export declare const ocupadaPor: (tenantId: string) => {
@@ -116,6 +118,7 @@ export declare function arrancarCorridaEnvio(tenantId: string, opciones?: {
     automatica?: boolean;
     enSeco?: boolean;
     cantidad?: number;
+    codigos?: string[];
 }): Promise<{
     enSeco: boolean;
     cantidad: number | null;

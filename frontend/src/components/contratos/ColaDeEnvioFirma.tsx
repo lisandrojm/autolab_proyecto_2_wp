@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUp, faArrowDown, faGripVertical, faLock, faSpinner, faTriangleExclamation, faChevronDown, faChevronRight, faRotateLeft, faEye, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUp, faArrowDown, faGripVertical, faLock, faSpinner, faTriangleExclamation, faChevronDown, faChevronRight, faRotateLeft, faEye, faCircleCheck, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 import { dropboxSignBotAPI, type BotCola, type GrupoTrabados, type ItemDeColaFirma } from "../../api/dropboxSign";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { PrevisualizacionColocacion } from "../dropboxSign/PrevisualizacionColocacion";
@@ -80,6 +80,30 @@ export const ColaDeEnvioFirma: React.FC<{ vista: BotCola; actual: string | null;
       setMoviendo(false);
     }
   };
+  /*
+    ENVIAR LOS MARCADOS AHORA (28/10/2026): una tanda con estos y nada más, estén donde estén en la cola.
+    Pasan al principio y el resto queda corrido para después. El cupo de 24 h sigue mandando: si se marcan
+    más de los que entran, salen los primeros y el resto queda primero para la próxima.
+  */
+  const enviarMarcados = async () => {
+    if (bloqueada || marcados.size === 0) return;
+    const n = marcados.size;
+    const cupo = r?.cupo ?? n;
+    const excede = n > cupo;
+    const ok = await sweetAlert.confirm(`Enviar ${n} a la firma ahora`, `Los ${n} marcados pasan al principio de la cola y se envían en esta tanda; el resto de la cola queda para después, en su orden.${excede ? ` Hoy entran ${cupo} (tope de 24 h): los otros ${n - cupo} quedan primeros para la próxima tanda.` : ""}`, "Sí, enviar");
+    if (!ok.isConfirmed) return;
+    setMoviendo(true);
+    try {
+      await dropboxSignBotAPI.arrancar(false, undefined, [...marcados]);
+      setMarcados(new Set());
+      await onCambio();
+    } catch (e: any) {
+      sweetAlert.error("No se pudo enviar", e?.response?.data?.error || e?.message || "");
+      await onCambio();
+    } finally {
+      setMoviendo(false);
+    }
+  };
   const alternar = (codigo: string) => setMarcados((s) => {
     const n = new Set(s);
     if (n.has(codigo)) n.delete(codigo);
@@ -109,6 +133,9 @@ export const ColaDeEnvioFirma: React.FC<{ vista: BotCola; actual: string | null;
           )}
           <div className="flex flex-wrap items-center gap-2">
             <input value={filtro} onChange={(e) => { setFiltro(e.target.value); setPagina(0); }} placeholder="Filtrar por archivo, firmante o tipo…" className="min-w-[220px] flex-1 rounded border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-800" />
+            <button type="button" disabled={bloqueada || moviendo || marcados.size === 0} onClick={() => void enviarMarcados()} title="Una tanda con los tildados y nada más: pasan al principio y se envían ya; el resto de la cola queda para después" className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40">
+              <FontAwesomeIcon icon={faPaperPlane} /> Enviar marcados ahora{marcados.size ? ` (${marcados.size})` : ""}
+            </button>
             <button type="button" className={btn} disabled={bloqueada || moviendo || marcados.size === 0} onClick={() => void mover([...marcados], "tope")} title="Los tildados pasan al principio, en el orden en que están">
               <FontAwesomeIcon icon={faArrowUp} /> Mover al principio{marcados.size ? ` (${marcados.size})` : ""}
             </button>

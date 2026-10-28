@@ -553,8 +553,8 @@ class DropboxSignBotAPI {
     return data;
   }
   /** `cantidad`: «Enviar ahora N» (si no, el tamaño de tanda). El cupo de 24 h sigue mandando. */
-  async arrancar(enSeco = false, cantidad?: number): Promise<{ arrancada: boolean; enSeco: boolean; cantidad?: number | null }> {
-    const { data } = await axios.post("/dropbox-sign/bot/corrida", { enSeco, ...(cantidad ? { cantidad } : {}) });
+  async arrancar(enSeco = false, cantidad?: number, codigos?: string[]): Promise<{ arrancada: boolean; enSeco: boolean; cantidad?: number | null }> {
+    const { data } = await axios.post("/dropbox-sign/bot/corrida", { enSeco, ...(cantidad ? { cantidad } : {}), ...(codigos?.length ? { codigos } : {}) });
     return data;
   }
   /** Mueve documentos de la cola: al principio, al fondo o antes de otro. 409 si hay una corrida enviando. */
