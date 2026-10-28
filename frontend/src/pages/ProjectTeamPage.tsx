@@ -49,7 +49,7 @@ import { coordinaAreas, PROJECT_COORDINATOR } from '../utils/permisosMobile';
 import { contratosAPI, ContratoItem, tiposDeContratoActivos } from '../api/contratos';
 import { formasPagoAPI, FormaPagoItem } from '../api/formasPago';
 import { claveCacheCatalogo } from '../api/simpleCatalog';
-import { formaPagoDelTipo, rechazoPorDatosBancarios } from '@compartido/formasPago';
+import { formasDelTipo, rechazoPorDatosBancarios } from '@compartido/formasPago';
 import { releasesAPI, Release } from '../api/release';
 import { companiesAPI, Company } from '../api/companies';
 import { CampoPuestoConDefaultDelServer } from '../components/contratos/CampoPuestoDesempenado';
@@ -311,7 +311,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   // Contratos (tipo real: jornadas/multiplicador/tiempo indeterminado) — lo que elige el wizard como
   // "Tipo de Contrato". Cada uno resuelve a una Plantilla (`contratoFrames`) para generar el PDF.
   const [contratos, setContratos] = useState<ContratoItem[]>([]);
-  // Configuración → Formas de pago: para saber con cuál paga el tipo de contrato elegido (`formaPagoDelTipo`).
+  // Configuración → Formas de pago: para saber con cuáles paga el tipo de contrato elegido (`formasDelTipo`).
   const [formasPago, setFormasPago] = useState<FormaPagoItem[]>([]);
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [userLookup, setUserLookup] = useState<Map<number | string, string>>(new Map());
@@ -1299,11 +1299,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   */
   const importesEnCeroWizard = !!contratoDelWizard?.data?.importesEnCero;
   /*
-    FORMA DE PAGO (28/10/2026): es del TIPO de contrato, no se elige acá. Si pide datos bancarios y a la
-    persona le faltan, un alta nueva no se puede guardar (el server aplica la misma regla).
+    FORMAS DE PAGO (28/10/2026): son del TIPO de contrato, no se eligen acá. Si todas piden datos bancarios y
+    a la persona le faltan, un alta nueva no se puede guardar (el server aplica la misma regla).
   */
-  const formaPagoDelWizard = formaPagoDelTipo(formasPago, contratoDelWizard?.data);
-  const rechazoFormaPago = esAltaNueva ? rechazoPorDatosBancarios(formaPagoDelWizard, (selectedUserForWizard?.metadata as any) || null) : null;
+  const rechazoFormaPago = esAltaNueva ? rechazoPorDatosBancarios(formasDelTipo(formasPago, contratoDelWizard?.data), (selectedUserForWizard?.metadata as any) || null) : null;
   useEffect(() => {
     if (importesEnCeroWizard && Number(wizardData.sueldo_jornada) !== 0) setWizardData((prev) => ({ ...prev, sueldo_jornada: 0 }));
   }, [importesEnCeroWizard, wizardData.sueldo_jornada]);

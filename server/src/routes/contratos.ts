@@ -2,7 +2,7 @@ import { Router, Response } from "express";
 import { Contrato } from "../models/Contrato.js";
 import { ContratoFrame } from "../models/ContratoFrame.js";
 import { FormaPago } from "../models/FormaPago.js";
-import { normalizarFormasDelTipo } from "../compartido/formasPago.js";
+import { CODIGO_POR_DEFECTO, normalizarFormasDelTipo } from "../compartido/formasPago.js";
 import { Types } from "mongoose";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 
@@ -180,7 +180,8 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
       data: {
         descripcion: String(descripcion ?? "").trim().slice(0, 2000),
         importesEnCero: importesEnCero === "true" || importesEnCero === true,
-        formasPagoIds: formas.valor?.formasPagoIds ?? [],
+        // Sin formas en el pedido: Transferencia bancaria, la forma por defecto (28/10/2026).
+        formasPagoIds: formas.valor?.formasPagoIds ?? (await FormaPago.find({ externalId: CODIGO_POR_DEFECTO }).select("_id").lean()).map((f) => f._id),
         formaPagoDefaultId: formas.valor?.formaPagoDefaultId ?? null,
         cantidadJornadas: parseNum(cantidadJornadas),
         multiplicadorDiario: parseNum(multiplicadorDiario),

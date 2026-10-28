@@ -111,7 +111,7 @@ import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { quitarContrato } from "../services/contratoDeSolicitud.js";
 import { Contrato } from "../models/Contrato.js";
 import { FormaPago } from "../models/FormaPago.js";
-import { formaPagoDelTipo, rechazoPorDatosBancarios } from "../compartido/formasPago.js";
+import { formasDelTipo, rechazoPorDatosBancarios } from "../compartido/formasPago.js";
 import { registrarAltaDeContrato } from "../services/altaTempranaService.js";
 import { arrancarDescargaConstancias, descargaConstanciasDe, pendientesDeConstancia } from "../services/arca/constanciasAltas.js";
 import { numeroALetras } from "../utils/numeroALetras.js";
@@ -2258,16 +2258,16 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
     contract.contrato_id = isValidId(contract.contrato_id) ? new Types.ObjectId(String(contract.contrato_id)) : undefined;
 
     /*
-      LA FORMA DE PAGO ES DEL TIPO DE CONTRATO (28/10/2026), no se elige por persona. Si la del tipo pide
-      datos bancarios, un contrato NUEVO exige CBU/alias y entidad financiera de la persona (el formulario
-      avisa lo mismo antes de guardar). Editar uno existente no se frena por esto.
+      LAS FORMAS DE PAGO SON DEL TIPO DE CONTRATO (28/10/2026), no se eligen por persona. Si todas las del
+      tipo piden datos bancarios, un contrato NUEVO exige CBU/alias y entidad financiera de la persona (el
+      formulario avisa lo mismo antes de guardar). Editar uno existente no se frena por esto.
     */
     delete contract.forma_pago_id;
     if (esContratoNuevo && contract.contrato_id) {
       const tipoDePago: any = await Contrato.findById(contract.contrato_id).select("data.formasPagoIds data.formaPagoDefaultId").lean();
       const formas: any[] = tipoDePago?.data?.formaPagoDefaultId || tipoDePago?.data?.formasPagoIds?.length ? await FormaPago.find({ _id: { $in: [tipoDePago.data.formaPagoDefaultId, ...(tipoDePago.data.formasPagoIds || [])].filter(Boolean) } }).lean() : [];
-      const forma = formaPagoDelTipo(formas.map((f) => ({ ...f, _id: String(f._id) })), tipoDePago?.data);
-      const rechazo = rechazoPorDatosBancarios(forma, (user as any).metadata);
+      const delTipo = formasDelTipo(formas.map((f) => ({ ...f, _id: String(f._id) })), tipoDePago?.data);
+      const rechazo = rechazoPorDatosBancarios(delTipo, (user as any).metadata);
       if (rechazo) return res.status(422).json({ error: rechazo });
     }
     contract.shiftId = sanitizeId(contract.shiftId);

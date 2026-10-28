@@ -1,7 +1,7 @@
 /**
  * FORMAS DE PAGO (27/10/2026): Efectivo, Transferencia bancaria, Cheque… Catálogo propio (Configuración →
- * Formas de pago). Cada tipo de contrato dice con cuál se paga (`formaPagoDefaultId`; 28/10/2026: no se
- * elige por persona). Si esa forma pide datos bancarios, el alta los exige.
+ * Formas de pago). Cada tipo de contrato dice con cuál o cuáles se paga (`formasPagoIds`; por defecto
+ * Transferencia bancaria). No se elige por persona. Si todas piden datos bancarios, el alta los exige.
  *
  * Las reglas viven acá, compartidas: el server las hace cumplir y el formulario las usa para no ofrecer
  * lo que después se rechaza. Sin dependencias (se importa desde el front con `@compartido`).
@@ -118,14 +118,16 @@ export function normalizarFormasDelTipo(formasPagoIds: unknown, formaPagoDefault
   return { formasPagoIds: habilitadas, formaPagoDefaultId: def && habilitadas.includes(def) ? def : null };
 }
 
+/** El código de la forma que se asigna por defecto a un tipo de contrato. */
+export const CODIGO_POR_DEFECTO = "TRANSFERENCIA_BANCARIA";
+
 /**
- * LA FORMA DE PAGO DEL TIPO DE CONTRATO (28/10/2026: se define en el tipo, no se elige por persona). Es la
- * `formaPagoDefaultId`; un tipo viejo con una sola habilitada y sin predeterminada, esa. Null = sin definir.
+ * LAS FORMAS DE PAGO DEL TIPO DE CONTRATO (28/10/2026: se definen en el tipo, una o varias; no se eligen
+ * por persona). Las de `formasPagoIds` (y la vieja `formaPagoDefaultId`, si quedó), en el orden del catálogo.
  */
-export function formaPagoDelTipo<T extends FormaPagoLike>(todas: T[], tipo: FormasDelTipo | null | undefined): T | null {
-  const habilitadas = ids(tipo?.formasPagoIds);
-  const id = tipo?.formaPagoDefaultId != null && String(tipo.formaPagoDefaultId) ? String(tipo.formaPagoDefaultId) : habilitadas.length === 1 ? habilitadas[0] : "";
-  return id ? todas.find((f) => String(f._id) === id) || null : null;
+export function formasDelTipo<T extends FormaPagoLike>(todas: T[], tipo: FormasDelTipo | null | undefined): T[] {
+  const elegidas = new Set([...ids(tipo?.formasPagoIds), ...(tipo?.formaPagoDefaultId != null && String(tipo.formaPagoDefaultId) ? [String(tipo.formaPagoDefaultId)] : [])]);
+  return ordenarFormas(todas.filter((f) => elegidas.has(String(f._id))));
 }
 
 /** Datos bancarios de la persona (`User.metadata`) que pide una forma con `requiereDatosBancarios`. */
@@ -138,11 +140,13 @@ export function faltanDatosBancarios(metadata: { cbu?: string | null; aliasBanca
 }
 
 /**
- * ¿Se puede dar de alta a esta persona con un tipo de contrato que paga de esta forma? Si la forma pide
- * datos bancarios y a la persona le faltan, el motivo; si no, `null`.
+ * ¿Se puede dar de alta a esta persona con este tipo de contrato? Si TODAS sus formas de pago piden datos
+ * bancarios y a la persona le faltan, el motivo; con alguna que no los pide (efectivo, por ejemplo) hay
+ * con qué pagarle y no se frena. Sin formas definidas, tampoco.
  */
-export function rechazoPorDatosBancarios(forma: FormaPagoLike | null | undefined, metadata: Parameters<typeof faltanDatosBancarios>[0]): string | null {
-  if (!forma?.requiereDatosBancarios) return null;
+export function rechazoPorDatosBancarios(formas: FormaPagoLike[], metadata: Parameters<typeof faltanDatosBancarios>[0]): string | null {
+  if (formas.length === 0 || !formas.every((f) => f.requiereDatosBancarios)) return null;
   const faltan = faltanDatosBancarios(metadata);
-  return faltan.length > 0 ? `El tipo de contrato se paga por «${forma.name}», que requiere los datos bancarios de la persona, y le falta: ${faltan.join(" y ")}. Cargalos en su ficha (Datos bancarios) antes de guardar.` : null;
+  const nombres = formas.map((f) => `«${f.name}»`).join(" o ");
+  return faltan.length > 0 ? `El tipo de contrato se paga por ${nombres}, que requiere los datos bancarios de la persona, y le falta: ${faltan.join(" y ")}. Cargalos en su ficha (Datos bancarios) antes de guardar.` : null;
 }

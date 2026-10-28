@@ -16,7 +16,7 @@ import { BadgeCustom } from '../contratacion/PlantillaCustom';
 import { infoAPI, InfoItem } from '../../api/info';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { formasPagoAPI, FormaPagoItem } from '../../api/formasPago';
-import { formaActiva, formaPagoDelTipo, normalizarFormasDelTipo, ordenarFormas } from '@compartido/formasPago';
+import { CODIGO_POR_DEFECTO, formaActiva, formasDelTipo, normalizarFormasDelTipo } from '@compartido/formasPago';
 import { SelectorCodigoArca } from '../arca/SelectorCodigoArca';
 import { MODALIDADES_OFRECIDAS } from './afipCompleteness';
 import { EstadoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
@@ -55,9 +55,8 @@ interface FormState {
   descripcion: string;
   /** Cambio de franco: todos los importes del contrato en cero. */
   importesEnCero: boolean;
-  /** Formas de pago habilitadas (`FormaPago._id`) y la predeterminada, una de ellas ('' = ninguna). */
+  /** Formas de pago del tipo (`FormaPago._id`): una o varias. Por defecto, Transferencia bancaria. */
   formasPagoIds: string[];
-  formaPagoDefaultId: string;
   cantidadJornadas: string;
   multiplicadorDiario: string;
   /** Límites de la jornada: vacío = sin límite. */
@@ -78,7 +77,7 @@ interface FormState {
   generaAlta: boolean;
 }
 
-const FORM_VACIO: FormState = { name: '', descripcion: '', importesEnCero: false, formasPagoIds: [], formaPagoDefaultId: '', cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, modoFechas: 'periodo', requiereFirma: true, requiereFirmaRelease: true, requiereFirmaAlta: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
+const FORM_VACIO: FormState = { name: '', descripcion: '', importesEnCero: false, formasPagoIds: [], cantidadJornadas: '', multiplicadorDiario: '', horasPorJornada: '', diasPorSemana: '', esTiempoIndeterminado: false, modoFechas: 'periodo', requiereFirma: true, requiereFirmaRelease: true, requiereFirmaAlta: true, isActive: true, estadoIds: [], afipModalidadContrato: '', afipTipoServicio: '', afipModalidadLiquidacion: '', generaAlta: true };
 
 const BadgeTiempoIndeterminado: React.FC = () => (
   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
@@ -257,6 +256,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   const [estados, setEstados] = useState<InfoItem[]>([]);
   // Configuración → Formas de pago, todas (las inactivas hacen falta para mostrar las que un tipo ya tenía).
   const [formasPago, setFormasPago] = useState<FormaPagoItem[]>([]);
+  // Transferencia bancaria: la forma con la que arranca un tipo nuevo o uno que no tenía ninguna.
+  const idsPorDefecto = formasPago.filter((f) => f.externalId === CODIGO_POR_DEFECTO && formaActiva(f)).map((f) => String(f._id));
   /** Los releases, para «Plantilla de Release asignada». Si no llegan, el bloque lo dice y no se toca. */
   const [releases, setReleases] = useState<Release[]>([]);
   useEffect(() => {
@@ -284,6 +285,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   const [releasesAsignados, setReleasesAsignados] = useState<string[]>([]);
   const [releasesOriginal, setReleasesOriginal] = useState<string[]>([]);
   const [ventanaAsignar, setVentanaAsignar] = useState<'contratos' | 'releases' | null>(null);
+  const [ventanaFormas, setVentanaFormas] = useState(false);
 
   // Vista tarjetas/tabla, como el resto de los ABM: la tabla solo en pantallas grandes.
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
@@ -612,7 +614,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
     setDuplicando(null);
     // Un contrato nuevo arranca declarando alta temprana: es el caso que pide códigos, y arrancar
     // por el que no pide nada dejaría pasar sin fricción justo al que sí la necesita.
-    setForm({ ...FORM_VACIO, estadoIds: conImpositivoGarantizado(estados, []) });
+    setForm({ ...FORM_VACIO, formasPagoIds: idsPorDefecto, estadoIds: conImpositivoGarantizado(estados, []) });
     setEstadoIdsOriginal([]);
     setPlantillasAsignadas([]);
     setPlantillasOriginal([]);
@@ -679,8 +681,11 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       name: contrato.name,
       descripcion: contrato.data?.descripcion || '',
       importesEnCero: !!contrato.data?.importesEnCero,
-      formasPagoIds: (contrato.data?.formasPagoIds || []).map(String),
-      formaPagoDefaultId: contrato.data?.formaPagoDefaultId ? String(contrato.data.formaPagoDefaultId) : '',
+      // Las del tipo (con la vieja predeterminada, si quedó); sin ninguna, Transferencia bancaria por defecto.
+      formasPagoIds: (() => {
+        const delTipo = formasDelTipo(formasPago, contrato.data).map((f) => String(f._id));
+        return delTipo.length ? delTipo : idsPorDefecto;
+      })(),
       cantidadJornadas: String(contrato.data?.cantidadJornadas ?? ''),
       multiplicadorDiario: String(contrato.data?.multiplicadorDiario ?? ''),
       horasPorJornada: contrato.data?.horasPorJornada != null ? String(contrato.data.horasPorJornada) : '',
@@ -872,12 +877,9 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       descripcion: form.descripcion,
       importesEnCero: form.importesEnCero,
       // La predeterminada sólo si sigue habilitada (el server aplica la misma regla).
-      // Una sola forma por tipo: se guarda como la predeterminada y única habilitada.
-      ...(() => {
-        const id = form.formaPagoDefaultId || (form.formasPagoIds.length === 1 ? form.formasPagoIds[0] : '');
-        const n = normalizarFormasDelTipo(id ? [id] : [], id || null);
-        return { formasPagoIds: n.formasPagoIds, formaPagoDefaultId: n.formaPagoDefaultId };
-      })(),
+      // Una o varias formas; ya no hay predeterminada (se limpia la que hubiera quedado).
+      formasPagoIds: normalizarFormasDelTipo(form.formasPagoIds, null).formasPagoIds,
+      formaPagoDefaultId: null,
       cantidadJornadas: form.cantidadJornadas,
       multiplicadorDiario: form.multiplicadorDiario,
       horasPorJornada: form.horasPorJornada,
@@ -966,17 +968,24 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   );
 
   /*
-    FORMA DE PAGO (28/10/2026): con qué se le paga a quien se contrata con este tipo. Es del tipo, no se
-    elige por persona. Se ofrecen las activas; la que el tipo ya tenía y después se desactivó se muestra
-    marcada como inactiva para no perderla al guardar.
+    FORMAS DE PAGO (28/10/2026): con qué se le paga a quien se contrata con este tipo, una o varias, elegidas
+    en una ventana con casillas. Son del tipo, no se eligen por persona. Por defecto, Transferencia
+    bancaria. Una que el tipo ya tenía y después se desactivó se sigue mostrando, marcada, para no perderla.
   */
-  const formaDelForm = form.formaPagoDefaultId || (form.formasPagoIds.length === 1 ? form.formasPagoIds[0] : '');
-  const formasOfrecidas = formasPago.filter((f) => formaActiva(f) || String(f._id) === formaDelForm);
-  const formaElegidaInactiva = formasPago.find((f) => String(f._id) === formaDelForm && !formaActiva(f));
+  const formasElegidas = formasPago.filter((f) => form.formasPagoIds.includes(String(f._id)));
   const bloqueFormasPago = (
     <div className="space-y-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5">
-      <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Forma de pago</span>
-      {formasOfrecidas.length === 0 ? (
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+          Formas de pago{formasElegidas.length ? ` (${formasElegidas.length})` : ''}
+        </span>
+        {formasPago.length > 0 && (
+          <button type="button" onClick={() => setVentanaFormas(true)} className="text-[11px] font-semibold text-blue-600 hover:underline dark:text-blue-400">
+            Elegir
+          </button>
+        )}
+      </div>
+      {formasPago.length === 0 ? (
         <p className="text-[11px] text-gray-500 dark:text-gray-400">
           No hay formas de pago cargadas. Se administran en{' '}
           <Link to="/formas-de-pago" className="text-blue-600 hover:underline dark:text-blue-400">
@@ -984,27 +993,28 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
           </Link>
           .
         </p>
+      ) : formasElegidas.length === 0 ? (
+        <p className="text-[11px] text-amber-700 dark:text-amber-300">Sin forma de pago. Tocá «Elegir» para marcar una o varias.</p>
       ) : (
-        <>
-          <select className="input-field w-full" value={formaDelForm} onChange={(e) => setForm((p) => ({ ...p, formasPagoIds: e.target.value ? [e.target.value] : [], formaPagoDefaultId: e.target.value }))}>
-            <option value="">Sin definir</option>
-            {formasOfrecidas.map((f) => (
-              <option key={String(f._id)} value={String(f._id)}>
-                {f.name}
-                {!formaActiva(f) ? ' (inactiva)' : ''}
-              </option>
-            ))}
-          </select>
-          {formaElegidaInactiva ? (
-            <p className="flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-300">
-              <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5 h-3 w-3 shrink-0" />
-              «{formaElegidaInactiva.name}» está inactiva en Formas de pago. Se conserva acá hasta que elijas otra.
-            </p>
-          ) : (
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">Con qué se le paga a quien se contrata con este tipo. Si pide datos bancarios, el alta exige CBU o alias y entidad financiera de la persona.</p>
-          )}
-        </>
+        <div className="flex flex-wrap gap-1">
+          {formasElegidas.map((f) => (
+            <span key={String(f._id)} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${formaActiva(f) ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800/50' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'}`} title={formaActiva(f) ? f.name : 'Inactiva en Formas de pago: se conserva hasta que la saques.'}>
+              {!formaActiva(f) && <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />}
+              {f.name}
+              {!formaActiva(f) ? ' (inactiva)' : ''}
+            </span>
+          ))}
+        </div>
       )}
+      <p className="text-[11px] text-gray-500 dark:text-gray-400">Con qué se le paga a quien se contrata con este tipo. Si todas piden datos bancarios, el alta exige CBU o alias y entidad financiera de la persona.</p>
+      <VentanaAsignar
+        abierta={ventanaFormas}
+        onCerrar={() => setVentanaFormas(false)}
+        titulo="Formas de pago"
+        opciones={formasPago.filter((f) => formaActiva(f) || form.formasPagoIds.includes(String(f._id))).map((f) => ({ id: String(f._id), nombre: `${f.name}${formaActiva(f) ? '' : ' (inactiva)'}`, nota: [f.requiereDatosBancarios ? 'Requiere datos bancarios' : '', f.requiereComprobante ? 'Requiere comprobante' : ''].filter(Boolean).join(' · ') || undefined }))}
+        valor={form.formasPagoIds}
+        onChange={(ids) => setForm((p) => ({ ...p, formasPagoIds: ids }))}
+      />
     </div>
   );
 
@@ -1245,15 +1255,16 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                   <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{contrato.name}</span>
                   {contrato.data?.importesEnCero && <span className="inline-flex w-fit items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="Cambio de franco: todos los importes en cero">Importes en 0</span>}
                   {contrato.data?.descripcion && <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 whitespace-pre-line" title={contrato.data.descripcion}>{contrato.data.descripcion}</span>}
-                  {/* La forma de pago del tipo (Configuración → Formas de pago). */}
-                  {(() => {
-                    const f = formaPagoDelTipo(formasPago, contrato.data);
-                    return f ? (
-                      <span className={`inline-flex w-fit items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${formaActiva(f) ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800/50' : 'bg-gray-100 text-gray-500 line-through dark:bg-gray-700 dark:text-gray-400'}`} title={formaActiva(f) ? 'Forma de pago' : 'Forma de pago inactiva'}>
-                        {f.name}
-                      </span>
-                    ) : null;
-                  })()}
+                  {/* Las formas de pago del tipo (Configuración → Formas de pago). */}
+                  {formasDelTipo(formasPago, contrato.data).length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {formasDelTipo(formasPago, contrato.data).map((f) => (
+                        <span key={String(f._id)} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${formaActiva(f) ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800/50' : 'bg-gray-100 text-gray-500 line-through dark:bg-gray-700 dark:text-gray-400'}`} title={formaActiva(f) ? 'Forma de pago' : 'Forma de pago inactiva'}>
+                          {f.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {tienePlantillaCustom(contrato._id) && <BadgeCustom className="w-fit" />}
                 </div>
 
