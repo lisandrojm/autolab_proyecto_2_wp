@@ -617,6 +617,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       // El importe guardado es el que se pactó: abrir la solicitud no es «cambiar de categoría», así que
       // no se le vuelve a proponer la escala encima (ver `propuestaAnterior`).
       propuestaAnterior.current = `${meta.categoriaSatId || ""}::${(meta as any).contratoId || ""}`;
+      // Y no es una propuesta de la app: no se recalcula solo (sí si se cambia la categoría o el tipo).
+      ultimaPropuesta.current = "";
       setFormData({
         fullName: meta.fullName || `${fuente.firstName} ${fuente.lastName}`,
         projectIds: meta.projectIds || [],
@@ -1691,6 +1693,17 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     un importe distinto.
   */
   const propuestaAnterior = useRef(`${formData.categoriaSatId}::${formData.contratoId}`);
+  /*
+    EL ÚLTIMO IMPORTE QUE PROPUSO LA APP (28/10/2026). Mientras el campo siga diciendo eso —nadie lo
+    escribió encima—, la propuesta se recalcula cuando cambia la escala de la categoría o el tipo de
+    contrato, aunque la clave sea la misma.
+
+    Sin esto la propuesta se hacía UNA vez por clave: si la categoría se elegía antes que el tipo de
+    contrato (o el tipo todavía no había cargado), quedaba la escala ÷ 30 × 1 en vez de ÷ 22 × 1,5, y
+    si después la categoría cambiaba sin cambiar la clave, el importe seguía siendo el de la anterior.
+    Así salió una «Jornada» G7 con 44.667,34 (el bruto del G6 ÷ 30) en vez de 84.532,22.
+  */
+  const ultimaPropuesta = useRef("");
   useEffect(() => {
     /*
       Se vuelve a proponer cuando cambia la categoría O el tipo de contrato: el multiplicador sale del
@@ -1705,16 +1718,20 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     if (!formData.categoriaSatId) return;
     // Un tipo «importes en 0» (cambio de franco) no se paga: no hay importe que proponer.
     if ((contratoElegido as any)?.data?.importesEnCero) return;
+    // Sin la categoría o el tipo de contrato cargados todavía no hay con qué proponer: se espera, sin registrar la clave.
+    const categoria = categoriasSat.find((c) => c._id === formData.categoriaSatId);
+    if (!categoria || (formData.contratoId && !contratoElegido)) return;
+    const propuesto = importePorJornadaDeCategoria(categoria, multiplicadorDiario, jornadasDelTipo);
+    if (!(propuesto > 0)) return;
     const clave = `${formData.categoriaSatId}::${formData.contratoId}`;
-    if (propuestaAnterior.current === clave) return;
+    const cambioLaClave = propuestaAnterior.current !== clave;
+    // Con la misma clave sólo se repone si el campo sigue con lo que propuso la app (o vacío): lo escrito a mano no se pisa.
+    const sigueLaPropuesta = formData.dailyRate === "" || formData.dailyRate === ultimaPropuesta.current;
+    if (!cambioLaClave && !sigueLaPropuesta) return;
     propuestaAnterior.current = clave;
-    const propuesto = importePorJornadaDeCategoria(
-      categoriasSat.find((c) => c._id === formData.categoriaSatId),
-      multiplicadorDiario,
-      jornadasDelTipo,
-    );
-    if (propuesto > 0) setFormData((p) => ({ ...p, dailyRate: String(propuesto) }));
-  }, [formData.categoriaSatId, formData.contratoId, categoriasSat, multiplicadorDiario, jornadasDelTipo, contratoElegido]);
+    ultimaPropuesta.current = String(propuesto);
+    if (formData.dailyRate !== String(propuesto)) setFormData((p) => ({ ...p, dailyRate: String(propuesto) }));
+  }, [formData.categoriaSatId, formData.contratoId, formData.dailyRate, categoriasSat, multiplicadorDiario, jornadasDelTipo, contratoElegido]);
 
   /*
     AL ELEGIR UN TIPO DE SERVICIOS SE SUELTA LA CATEGORÍA, y el importe se queda… EN NETO.
