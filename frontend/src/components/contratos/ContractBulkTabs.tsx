@@ -4366,6 +4366,8 @@ export const ContractBulkContratadosTab: React.FC<{
 }> = ({ allEstados, contratoFrames, onCount }) => {
   const [rows, setRows] = useState<ContractOverviewRow[]>([]);
   const [estado, setEstado] = useState<string | null>(null);
+  // El server no manda `estadoContratadoNombre`: es anterior a este paso (falta el deploy), no falta configuración.
+  const [serverViejo, setServerViejo] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterClientId, setFilterClientId] = useState('');
@@ -4379,6 +4381,7 @@ export const ContractBulkContratadosTab: React.FC<{
     return cachedFetch(`${CONTRACTS_OVERVIEW_CACHE}firma-config`, () => firmaDigitalAPI.config())
       .then(async (cfg) => {
         const nombre = cfg?.estadoContratadoNombre || '';
+        setServerViejo(!!cfg && !('estadoContratadoNombre' in cfg));
         setEstado(nombre);
         const res = nombre
           ? await cachedFetch(claveCacheContratados(nombre, filterClientId, filterProjectId), () => usersAPI.listContractsOverview({ limit: 10000, origen: 'sistema', estados: [nombre], sinVentana: true, clientId: filterClientId || undefined, projectId: filterProjectId || undefined }))
@@ -4462,8 +4465,10 @@ export const ContractBulkContratadosTab: React.FC<{
         <div className="flex items-center justify-center py-20">
           <LoadingSpinner message="Cargando contratados..." />
         </div>
+      ) : serverViejo ? (
+        <EmptyState icon={faTriangleExclamation} title="El servidor todavía no tiene esta versión" description="Contratados necesita el servidor actualizado (git pull + forever restart 5). Hasta entonces no puede saber cuál es el estado final." />
       ) : !estado ? (
-        <EmptyState icon={faTriangleExclamation} title="No se sabe cuál es el estado final" description='Ningún estado tiene configurada la carpeta de firmados («Requested signatures») en Documentos → Configurar transición automática. Ese estado es el de los contratados.' />
+        <EmptyState icon={faTriangleExclamation} title="No se sabe cuál es el estado final" description='Ningún estado tiene configurada la carpeta de firmados («Requested signatures») en Documentos → Configurar transición automática. Ese estado es el de los contratados (se puede fijar con el script estados:configurar-contratados).' />
       ) : filtered.length === 0 ? (
         <EmptyState icon={faUser} title="Sin contratados" description={rows.length === 0 ? `Todavía no hay contratos en «${estado}».` : 'No hay resultados con los filtros aplicados.'} />
       ) : (

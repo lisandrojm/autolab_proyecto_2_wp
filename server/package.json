@@ -189,6 +189,7 @@
     "test:variables-plantilla": "tsx --test src/utils/variablesPlantilla.test.ts",
     "plantillas:auditar": "dotenv -e .env.production -- tsx src/scripts/auditarPlantillas.ts",
     "contratos:pasar-a-contratados": "dotenv -e .env.production -- tsx src/scripts/pasarAContratados.ts",
+    "estados:configurar-contratados": "dotenv -e .env.production -- tsx src/scripts/configurarContratados.ts",
     "estados:diagnosticar-firma": "dotenv -e .env.production -- tsx src/scripts/diagnosticarEstadosFirma.ts",
     "solicitud:diagnosticar-importe": "dotenv -e .env.production -- tsx src/scripts/diagnosticarImporteSolicitud.ts",
     "plantillas:parametrizar:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/parametrizarPlantillas.ts",
