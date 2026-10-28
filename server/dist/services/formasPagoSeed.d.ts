@@ -28,3 +28,9 @@ export declare const FORMAS_INICIALES: readonly [{
  * como única habilitada y predeterminada, sólo si todavía no tenía formas configuradas.
  */
 export declare function sembrarFormasPagoUnaVez(): Promise<void>;
+/**
+ * TRANSFERENCIA BANCARIA POR DEFECTO (28/10/2026), UNA SOLA VEZ: los tipos de contrato que no tienen
+ * ninguna forma de pago quedan con Transferencia bancaria. Los que ya tienen alguna (por ejemplo «Servicios
+ * Intercambio» con Compensación) no se tocan. Después, lo que cada tipo tenga lo decide quien lo edita.
+ */
+export declare function transferenciaPorDefectoUnaVez(): Promise<void>;

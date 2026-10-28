@@ -3,7 +3,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { codigoDesdeNombre, conflictoDeUnicidad, errorDeCampos, formaPagoDelTipo, motivoParaNoBorrar, normalizarFormasDelTipo, rechazoPorDatosBancarios } from "./formasPago.js";
+import { codigoDesdeNombre, conflictoDeUnicidad, errorDeCampos, formasDelTipo, motivoParaNoBorrar, normalizarFormasDelTipo, rechazoPorDatosBancarios } from "./formasPago.js";
 const EFECTIVO = { _id: "f1", name: "Efectivo", externalId: "EFECTIVO", activo: true, orden: 1 };
 const TRANSFERENCIA = { _id: "f2", name: "Transferencia bancaria", externalId: "TRANSFERENCIA_BANCARIA", requiereDatosBancarios: true, activo: true, orden: 2 };
 const CHEQUE = { _id: "f3", name: "Cheque", externalId: "CHEQUE", requiereComprobante: true, activo: false, orden: 3 };
@@ -60,24 +60,21 @@ describe("las formas de un tipo de contrato", () => {
         assert.deepEqual(normalizarFormasDelTipo(undefined, "f2"), { formasPagoIds: [], formaPagoDefaultId: null });
     });
 });
-describe("la forma de pago sale del tipo de contrato", () => {
-    it("es la predeterminada del tipo", () => {
-        assert.equal(formaPagoDelTipo(TODAS, { formasPagoIds: ["f5"], formaPagoDefaultId: "f5" })?._id, "f5");
-    });
-    it("un tipo con una sola habilitada y sin predeterminada usa esa; con varias o ninguna, sin definir", () => {
-        assert.equal(formaPagoDelTipo(TODAS, { formasPagoIds: ["f2"] })?._id, "f2");
-        assert.equal(formaPagoDelTipo(TODAS, { formasPagoIds: ["f1", "f2"] }), null);
-        assert.equal(formaPagoDelTipo(TODAS, null), null);
+describe("las formas de pago salen del tipo de contrato", () => {
+    it("una o varias, en el orden del catálogo", () => {
+        assert.deepEqual(formasDelTipo(TODAS, { formasPagoIds: ["f5"] }).map((f) => f._id), ["f5"]);
+        assert.deepEqual(formasDelTipo(TODAS, { formasPagoIds: ["f5", "f1", "f2"] }).map((f) => f._id), ["f1", "f2", "f5"]);
+        assert.deepEqual(formasDelTipo(TODAS, null), []);
     });
 });
-describe("alta con una forma que pide datos bancarios", () => {
-    it("transferencia exige CBU/alias y entidad financiera", () => {
-        assert.match(rechazoPorDatosBancarios(TRANSFERENCIA, {}) || "", /CBU o alias y entidad financiera/);
-        assert.match(rechazoPorDatosBancarios(TRANSFERENCIA, { aliasBancario: "mi.alias" }) || "", /le falta: entidad financiera/);
-        assert.equal(rechazoPorDatosBancarios(TRANSFERENCIA, { aliasBancario: "mi.alias", bancoId: 7 }), null);
+describe("alta con formas que piden datos bancarios", () => {
+    it("sólo transferencia: exige CBU/alias y entidad financiera", () => {
+        assert.match(rechazoPorDatosBancarios([TRANSFERENCIA], {}) || "", /CBU o alias y entidad financiera/);
+        assert.match(rechazoPorDatosBancarios([TRANSFERENCIA], { aliasBancario: "mi.alias" }) || "", /le falta: entidad financiera/);
+        assert.equal(rechazoPorDatosBancarios([TRANSFERENCIA], { aliasBancario: "mi.alias", bancoId: 7 }), null);
     });
-    it("las demás formas no piden nada", () => {
-        assert.equal(rechazoPorDatosBancarios(EFECTIVO, {}), null);
-        assert.equal(rechazoPorDatosBancarios(null, {}), null);
+    it("con otra forma que no los pide, o sin formas, no frena", () => {
+        assert.equal(rechazoPorDatosBancarios([TRANSFERENCIA, EFECTIVO], {}), null);
+        assert.equal(rechazoPorDatosBancarios([], {}), null);
     });
 });

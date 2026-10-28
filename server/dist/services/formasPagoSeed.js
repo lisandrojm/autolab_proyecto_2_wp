@@ -1,6 +1,7 @@
 import { FormaPago } from "../models/FormaPago.js";
 import { Contrato } from "../models/Contrato.js";
 import { SemillaAplicada } from "../models/SemillaAplicada.js";
+import { CODIGO_POR_DEFECTO } from "../compartido/formasPago.js";
 const CLAVE = "formas-de-pago-iniciales";
 /** Las formas con las que arranca el catálogo. Se identifican por código. */
 export const FORMAS_INICIALES = [
@@ -60,6 +61,31 @@ export async function sembrarFormasPagoUnaVez() {
     }
     catch (error) {
         await SemillaAplicada.deleteOne({ clave: CLAVE });
+        throw error;
+    }
+}
+const CLAVE_POR_DEFECTO = "formas-de-pago-transferencia-por-defecto";
+/**
+ * TRANSFERENCIA BANCARIA POR DEFECTO (28/10/2026), UNA SOLA VEZ: los tipos de contrato que no tienen
+ * ninguna forma de pago quedan con Transferencia bancaria. Los que ya tienen alguna (por ejemplo «Servicios
+ * Intercambio» con Compensación) no se tocan. Después, lo que cada tipo tenga lo decide quien lo edita.
+ */
+export async function transferenciaPorDefectoUnaVez() {
+    const transferencia = await FormaPago.findOne({ externalId: CODIGO_POR_DEFECTO }).select("_id").lean();
+    if (!transferencia)
+        return; // sin la forma en el catálogo no hay qué asignar; se reintenta en el próximo arranque
+    const marca = await SemillaAplicada.updateOne({ clave: CLAVE_POR_DEFECTO }, { $setOnInsert: { clave: CLAVE_POR_DEFECTO, aplicadaEl: new Date() } }, { upsert: true });
+    if (marca.upsertedCount === 0)
+        return;
+    try {
+        const sinFormas = { $and: [{ $or: [{ "data.formasPagoIds": { $exists: false } }, { "data.formasPagoIds": { $size: 0 } }] }, { $or: [{ "data.formaPagoDefaultId": { $exists: false } }, { "data.formaPagoDefaultId": null }] }] };
+        const r = await Contrato.updateMany(sinFormas, { $set: { "data.formasPagoIds": [transferencia._id] } });
+        const detalle = `Transferencia bancaria por defecto: ${r.modifiedCount} tipo(s) de contrato sin forma de pago.`;
+        await SemillaAplicada.updateOne({ clave: CLAVE_POR_DEFECTO }, { $set: { detalle } });
+        console.log(`💳 ${detalle}`);
+    }
+    catch (error) {
+        await SemillaAplicada.deleteOne({ clave: CLAVE_POR_DEFECTO });
         throw error;
     }
 }

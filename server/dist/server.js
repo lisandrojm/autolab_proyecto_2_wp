@@ -20,7 +20,7 @@ import { seedOnStart, ensureSuperAdmin } from "./scripts/seedOnStart.js";
 import { asegurarPlantillasCustomEnTodos } from "./services/plantillasCustomSistema.js";
 import { ensureAllTenantsHaveDefaultRoles } from "./services/roleInitService.js";
 import { sembrarPaisesResidenciaUnaVez } from "./services/paisesResidenciaSeed.js";
-import { sembrarFormasPagoUnaVez } from "./services/formasPagoSeed.js";
+import { sembrarFormasPagoUnaVez, transferenciaPorDefectoUnaVez } from "./services/formasPagoSeed.js";
 import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { initCronScheduler } from "./services/cronService.js";
@@ -386,6 +386,7 @@ connectDB()
     // Las formas de pago iniciales (y «Servicios Intercambio» → Compensación), UNA sola vez (ver el servicio).
     try {
         await sembrarFormasPagoUnaVez();
+        await transferenciaPorDefectoUnaVez();
     }
     catch (error) {
         console.error("❌ No se pudo cargar el catálogo de Formas de pago:", error);
