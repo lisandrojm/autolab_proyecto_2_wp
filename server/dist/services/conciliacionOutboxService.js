@@ -4,7 +4,7 @@ import { createFolder, listFolder, moveEntry } from "./dropboxService.js";
 import { resolverCarpetaPorProposito } from "../utils/estadoCarpetas.js";
 import { DropboxSignEnvio } from "../models/DropboxSignEnvio.js";
 import { Tenant } from "../models/Tenant.js";
-import { codigosDe, describirConciliacion, planConciliacionOutbox } from "../utils/conciliacionOutbox.js";
+import { codigosDe, describirConciliacion, planConciliacionOutbox, posiblesPorNombre } from "../utils/conciliacionOutbox.js";
 export const CARPETA_YA_ENVIADOS = "Outbox_ya_enviados";
 const soloArchivos = (xs) => xs.filter((e) => e.tag === "file").map((e) => ({ name: e.name, path: e.path }));
 /** Los códigos que ya están en Pendbox y en Firmados: dos listados. La red de la corrida de envío. */
@@ -26,7 +26,17 @@ export async function conciliarOutbox(tenantId, cfg, opts) {
     const destino = `${path.posix.dirname(outbox.replace(/\/$/, ""))}/${CARPETA_YA_ENVIADOS}`.replace(/^\/\//, "/");
     for (const l of describirConciliacion(plan, opts.enSeco))
         log(l);
-    const r = { ...vacio, plan, destino };
+    const resumen = (cual, ruta, xs) => {
+        const docs = xs.filter((x) => !/\.json$/i.test(x.name));
+        return { cual, ruta, archivos: docs.length, conCodigo: codigosDe(docs.map((d) => ({ name: d.name, path: "" }))).size, ejemplos: docs.slice(0, 3).map((d) => d.name) };
+    };
+    const listaP = soloArchivos(p?.entries || []);
+    const listaF = soloArchivos(f?.entries || []);
+    const diagnostico = {
+        carpetas: [resumen("Outbox", outbox, soloArchivos(o.entries || [])), resumen("Pendbox", pendbox, listaP), resumen("Firmados", firmados, listaF)],
+        posibles: posiblesPorNombre(plan.quedan, listaP, listaF),
+    };
+    const r = { ...vacio, plan, destino, diagnostico };
     if (opts.enSeco || plan.mover.length === 0)
         return r;
     // La carpeta destino: si ya existe, Dropbox contesta conflicto y se sigue.

@@ -1,5 +1,5 @@
 import { getTenantDropboxConfig } from "./dropboxService.js";
-import { PlanConciliacion } from "../utils/conciliacionOutbox.js";
+import { PlanConciliacion, posiblesPorNombre } from "../utils/conciliacionOutbox.js";
 /**
  * LA EJECUCIÓN de la conciliación Outbox ↔ Pendbox/Firmados (la decisión es `utils/conciliacionOutbox.ts`).
  *
@@ -24,6 +24,17 @@ export interface ResultadoConciliacion {
         error: string;
     }>;
     salteada?: "sin_carpetas";
+    /** Qué se leyó de cada carpeta, para entender un plan vacío (lo imprime el script). */
+    diagnostico?: {
+        carpetas: Array<{
+            cual: string;
+            ruta: string | null;
+            archivos: number;
+            conCodigo: number;
+            ejemplos: string[];
+        }>;
+        posibles: ReturnType<typeof posiblesPorNombre>;
+    };
 }
 /** Los códigos que ya están en Pendbox y en Firmados: dos listados. La red de la corrida de envío. */
 export declare function codigosYaEnviados(tenantId: string, cfg: TenantDropboxConfig): Promise<{

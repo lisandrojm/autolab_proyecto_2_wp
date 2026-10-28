@@ -35,6 +35,17 @@ export interface PlanConciliacion {
 /** Código → primer archivo que lo trae, de una carpeta. */
 export declare function codigosDe(archivos: ArchivoConNombre[]): Map<string, string>;
 export declare function planConciliacionOutbox(outbox: ArchivoConNombre[], pendbox: ArchivoConNombre[], firmados: ArchivoConNombre[]): PlanConciliacion;
+/**
+ * DIAGNÓSTICO, NO DECISIÓN: los del Outbox que se quedan y cuyo nombre (sin código ni extensión) es el
+ * comienzo del de algún archivo de Pendbox o Firmados. Sirve para ver por qué no hubo match por código
+ * (la copia de allá no trae código, o trae otro). Nunca se mueve nada por esto.
+ */
+export declare function posiblesPorNombre(quedan: Queda[], pendbox: ArchivoConNombre[], firmados: ArchivoConNombre[]): Array<{
+    archivo: string;
+    carpeta: "pendbox" | "firmados";
+    otro: string;
+    codigoAlla: string;
+}>;
 /** Si el código ya está en Pendbox o Firmados, cuál de los dos (la red de la corrida de envío). */
 export declare function yaEnviadoPorCarpeta(codigo: string, carpetas: {
     pendbox: Map<string, string>;

@@ -34,6 +34,18 @@ async function main() {
   const r = await conciliarOutbox(String(tenant._id), cfg, { enSeco: DRY_RUN, log: (l) => console.log(l) });
   if (r.salteada === "sin_carpetas") console.log("Falta la carpeta Outbox, o Pendbox y Firmados (propósito sin resolver): no se hace nada.");
   else {
+    const d = r.diagnostico;
+    if (d) {
+      console.log("\nQué se leyó:");
+      for (const c of d.carpetas) {
+        console.log(`  ${c.cual.padEnd(9)} ${c.ruta || "(sin carpeta con ese propósito)"} · ${c.archivos} archivo(s), ${c.conCodigo} código(s) ID distintos`);
+        for (const e of c.ejemplos) console.log(`              ej.: ${e}`);
+      }
+      if (d.posibles.length) {
+        console.log(`\nCoinciden POR NOMBRE pero no por código (${d.posibles.length}) — no se mueven, sólo para revisar:`);
+        for (const x of d.posibles) console.log(`  ${x.archivo}\n      ↔ ${x.carpeta}: ${x.otro}${x.codigoAlla ? `  (allá: ${x.codigoAlla})` : "  (allá sin código)"}`);
+      }
+    }
     if (VER_TODOS && r.plan.quedan.length) {
       console.log("\nSe quedan en Outbox:");
       for (const q of r.plan.quedan) console.log(`  ${q.motivo === "sin_codigo" ? "sin código " : "sin rastro "} ${q.archivo.name}`);

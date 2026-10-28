@@ -1,5 +1,5 @@
 import { leerAnclas } from "./anclasNombre.js";
-import { ArchivoConNombre } from "./coincidenciaDeNombre.js";
+import { ArchivoConNombre, candidatosPorNombre } from "./coincidenciaDeNombre.js";
 
 /**
  * LO QUE YA SE ENVIÓ NO SE QUEDA EN OUTBOX (28/10/2026). La decisión, SIN Dropbox ni base: es lo que se
@@ -63,6 +63,25 @@ export function planConciliacionOutbox(outbox: ArchivoConNombre[], pendbox: Arch
     else plan.quedan.push({ archivo, motivo: "sin_rastro" });
   }
   return plan;
+}
+
+/**
+ * DIAGNÓSTICO, NO DECISIÓN: los del Outbox que se quedan y cuyo nombre (sin código ni extensión) es el
+ * comienzo del de algún archivo de Pendbox o Firmados. Sirve para ver por qué no hubo match por código
+ * (la copia de allá no trae código, o trae otro). Nunca se mueve nada por esto.
+ */
+export function posiblesPorNombre(quedan: Queda[], pendbox: ArchivoConNombre[], firmados: ArchivoConNombre[]): Array<{ archivo: string; carpeta: "pendbox" | "firmados"; otro: string; codigoAlla: string }> {
+  const r: Array<{ archivo: string; carpeta: "pendbox" | "firmados"; otro: string; codigoAlla: string }> = [];
+  for (const q of quedan) {
+    for (const [carpeta, lista] of [["firmados", firmados], ["pendbox", pendbox]] as const) {
+      const otro = lista.filter(esDocumento).find((x) => candidatosPorNombre([q.archivo], x.name).length > 0);
+      if (otro) {
+        r.push({ archivo: q.archivo.name, carpeta, otro: otro.name, codigoAlla: leerAnclas(otro.name).codigo });
+        break;
+      }
+    }
+  }
+  return r;
 }
 
 /** Si el código ya está en Pendbox o Firmados, cuál de los dos (la red de la corrida de envío). */

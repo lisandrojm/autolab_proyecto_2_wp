@@ -4,7 +4,7 @@ import { createFolder, getTenantDropboxConfig, listFolder, moveEntry } from "./d
 import { resolverCarpetaPorProposito } from "../utils/estadoCarpetas.js";
 import { DropboxSignEnvio } from "../models/DropboxSignEnvio.js";
 import { Tenant } from "../models/Tenant.js";
-import { codigosDe, describirConciliacion, PlanConciliacion, planConciliacionOutbox } from "../utils/conciliacionOutbox.js";
+import { codigosDe, describirConciliacion, PlanConciliacion, planConciliacionOutbox, posiblesPorNombre } from "../utils/conciliacionOutbox.js";
 
 /**
  * LA EJECUCIÓN de la conciliación Outbox ↔ Pendbox/Firmados (la decisión es `utils/conciliacionOutbox.ts`).
@@ -30,6 +30,11 @@ export interface ResultadoConciliacion {
   destino: string | null;
   fallas: Array<{ archivo: string; error: string }>;
   salteada?: "sin_carpetas";
+  /** Qué se leyó de cada carpeta, para entender un plan vacío (lo imprime el script). */
+  diagnostico?: {
+    carpetas: Array<{ cual: string; ruta: string | null; archivos: number; conCodigo: number; ejemplos: string[] }>;
+    posibles: ReturnType<typeof posiblesPorNombre>;
+  };
 }
 
 const soloArchivos = (xs: { tag: string; name: string; path: string }[]) => xs.filter((e) => e.tag === "file").map((e) => ({ name: e.name, path: e.path }));
@@ -52,7 +57,17 @@ export async function conciliarOutbox(tenantId: string, cfg: TenantDropboxConfig
   const plan = planConciliacionOutbox(soloArchivos(o.entries || []), soloArchivos(p?.entries || []), soloArchivos(f?.entries || []));
   const destino = `${path.posix.dirname(outbox.replace(/\/$/, ""))}/${CARPETA_YA_ENVIADOS}`.replace(/^\/\//, "/");
   for (const l of describirConciliacion(plan, opts.enSeco)) log(l);
-  const r: ResultadoConciliacion = { ...vacio, plan, destino };
+  const resumen = (cual: string, ruta: string | null, xs: { name: string }[]) => {
+    const docs = xs.filter((x) => !/\.json$/i.test(x.name));
+    return { cual, ruta, archivos: docs.length, conCodigo: codigosDe(docs.map((d) => ({ name: d.name, path: "" }))).size, ejemplos: docs.slice(0, 3).map((d) => d.name) };
+  };
+  const listaP = soloArchivos(p?.entries || []);
+  const listaF = soloArchivos(f?.entries || []);
+  const diagnostico = {
+    carpetas: [resumen("Outbox", outbox, soloArchivos(o.entries || [])), resumen("Pendbox", pendbox, listaP), resumen("Firmados", firmados, listaF)],
+    posibles: posiblesPorNombre(plan.quedan, listaP, listaF),
+  };
+  const r: ResultadoConciliacion = { ...vacio, plan, destino, diagnostico };
   if (opts.enSeco || plan.mover.length === 0) return r;
 
   // La carpeta destino: si ya existe, Dropbox contesta conflicto y se sigue.
