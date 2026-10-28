@@ -1003,6 +1003,8 @@ const CAMPOS_FILA_CONTRATO = [
     "categoria_sat_id", "rol_frame_id", "sede_id", "tipo_contrato_id", "sucursalArcaId", "actividadArca",
     "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "obraSocialBloqueada",
     "sinCuitValidacion", "puestoDesempenado", "contrato_id",
+    // La retribución pactada de ARCA sale de uno de estos según la modalidad de liquidación (`retribucionPactada.ts`).
+    "sueldo_jornada", "sueldo_bruto", "sueldo_neto", "sueldo_diario_neto", "dias_semana", "dias_por_semana", "dias_rotativos", "fechas_trabajadas",
 ];
 const PROYECCION_FILA_CONTRATO = Object.fromEntries(CAMPOS_FILA_CONTRATO.map((k) => [`c.${k}`, 1]));
 /*
@@ -1477,6 +1479,15 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 fecha_carga: c.fecha_carga || "",
                 sueldo_mano: c.sueldo_mano,
                 cantidad_jornadas_laborales: c.cantidad_jornadas_laborales,
+                // Los importes y los días: la retribución pactada de ARCA sale de uno de ellos según la modalidad de liquidación.
+                sueldo_jornada: c.sueldo_jornada,
+                sueldo_bruto: c.sueldo_bruto,
+                sueldo_neto: c.sueldo_neto,
+                sueldo_diario_neto: c.sueldo_diario_neto,
+                dias_semana: c.dias_semana,
+                dias_por_semana: c.dias_por_semana,
+                dias_rotativos: c.dias_rotativos,
+                fechas_trabajadas: c.fechas_trabajadas,
                 hora_inicio: c.hora_inicio,
                 hora_fin: c.hora_fin,
                 // Documentos descargables/subibles del contrato ACTIVO (para las columnas de la tabla).

@@ -6,6 +6,7 @@ import type { InfoItem } from "./tiposArca.js";
 import { DefaultsArca, OrigenValorArca } from "./cascadaArca.js";
 import type { ArcaSucursal } from "./tiposArca.js";
 import { type EstadoCategoriaArca } from "../catalogoArca.js";
+import { type CampoRetribucion } from "./retribucionPactada.js";
 import type { ProblemaDeSucursal } from "../sucursalesDeEmpresa.js";
 export interface AfipCatalogs {
     categorias: CategoriaSatItem[];
@@ -84,6 +85,14 @@ export interface AfipCatalogs {
             };
             puestoDesempenado?: string;
         };
+    }>;
+    /**
+     * Modalidades de liquidación con el importe del contrato que declara cada una como retribución
+     * pactada (`retribucionPactada.ts`). Opcional: sin ellas se declara el bruto de la escala, como antes.
+     */
+    modalidadesLiquidacion?: Array<{
+        externalId?: string | null;
+        retribucionPactada?: string | null;
     }>;
 }
 /**
@@ -257,6 +266,8 @@ export interface AfipValues {
     fechaInicio: string;
     fechaFin: string;
     retribucion: number;
+    /** De dónde sale la retribución: el campo del contrato que eligió la modalidad, o `""` = la escala. */
+    retribucionCampo: CampoRetribucion | "";
     categoriaProf: string;
     /** `false` = el tipo de contrato no genera alta temprana. */
     generaAlta: boolean;

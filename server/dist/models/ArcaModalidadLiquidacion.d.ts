@@ -16,6 +16,11 @@ export interface IArcaModalidadLiquidacion extends Document {
         id: number;
         nombre: string;
     };
+    /**
+     * Qué importe del contrato se declara como retribución pactada con esta modalidad (`compartido/arca/
+     * retribucionPactada.ts`: «jornada_bruto», «mensual_bruto»…). Vacío = el sueldo bruto de la escala.
+     */
+    retribucionPactada?: string;
     createdAt: Date;
     updatedAt: Date;
 }

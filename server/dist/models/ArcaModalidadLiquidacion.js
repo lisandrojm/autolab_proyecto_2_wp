@@ -6,6 +6,7 @@ const schema = new Schema({
         id: { type: Number },
         nombre: { type: String },
     },
+    retribucionPactada: { type: String, default: "" },
 }, {
     timestamps: true,
     collection: "arca-modalidades-liquidacion",

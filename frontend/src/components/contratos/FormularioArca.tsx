@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLock, faChevronDown, faChevronRight, faRotate, faPenToSquare, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { ContractOverviewRow } from "../../api/users";
+import { rotuloCampoRetribucion } from "@compartido/arca/retribucionPactada";
 import { AfipCatalogs, AfipValues, MODALIDADES_PLAZO_DETERMINADO, MODALIDADES_TIEMPO_INDETERMINADO, buscarTipoContrato } from "./afipCompleteness";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
 import { contratosAPI, ContratoItem } from "../../api/contratos";
@@ -786,7 +787,7 @@ export const FormularioArca: React.FC<{
               */}
                   {valores.categoriaProf && (
                     <div className="mt-1 pt-2.5 border-t border-gray-200 dark:border-gray-700/60">
-                      <FilaArca rotulo="Retribución pactada" campo="retribucion" dependeDe="categoria" info="retribucion" etiqueta="58–72" valor={valores.retribucion > 0 ? valores.retribucion.toLocaleString("es-AR", { minimumFractionDigits: 2 }) : ""} vacio="— el grupo salarial de esta categoría no tiene sueldo bruto cargado" faltaEsError origen={<>del grupo salarial del convenio · se actualiza por paritaria</>} />
+                      <FilaArca rotulo="Retribución pactada" campo="retribucion" dependeDe="categoria" info="retribucion" etiqueta="58–72" valor={valores.retribucion > 0 ? valores.retribucion.toLocaleString("es-AR", { minimumFractionDigits: 2 }) : ""} vacio={valores.retribucionCampo ? `— el contrato no tiene el «${rotuloCampoRetribucion(valores.retribucionCampo)}»` : "— el grupo salarial de esta categoría no tiene sueldo bruto cargado"} faltaEsError origen={valores.retribucionCampo ? <>«{rotuloCampoRetribucion(valores.retribucionCampo)}» del contrato · lo pide la modalidad de liquidación</> : <>del grupo salarial del convenio · se actualiza por paritaria</>} />
                     </div>
                   )}
                 </div>

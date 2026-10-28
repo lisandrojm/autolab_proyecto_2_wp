@@ -11,6 +11,7 @@ import { estadoGeneraAltaTemprana } from "./altaTemprana.js";
 import { claveEstado } from "../estadoClave.js";
 import { TEXTO_ESTADO_CATEGORIA, type EstadoCategoriaArca } from "../catalogoArca.js";
 import { resolverPuesto } from "../puestosDesempenados.js";
+import { campoDeModalidad, retribucionPactada, rotuloCampoRetribucion, type CampoRetribucion } from "./retribucionPactada.js";
 import { actividadHabitualDe, actividadesDeSucursalParaEmpresa, codigoDeSucursalParaEmpresa, TEXTO_PROBLEMA_SUCURSAL } from "../sucursalesDeEmpresa.js";
 import type { ProblemaDeSucursal } from "../sucursalesDeEmpresa.js";
 
@@ -96,6 +97,11 @@ export interface AfipCatalogs {
    * puesto desempeñado del registro de 85. Opcional: sin ellos se resuelve desde la categoría.
    */
   roleFrames?: Array<{ data?: { rol?: { id?: number }; puestoDesempenado?: string } }>;
+  /**
+   * Modalidades de liquidación con el importe del contrato que declara cada una como retribución
+   * pactada (`retribucionPactada.ts`). Opcional: sin ellas se declara el bruto de la escala, como antes.
+   */
+  modalidadesLiquidacion?: Array<{ externalId?: string | null; retribucionPactada?: string | null }>;
 }
 
 /**
@@ -279,7 +285,9 @@ export interface AfipValues {
   retribucionOk: boolean;
   fechaInicio: string; // tal cual está guardada (se normaliza al armar el TXT)
   fechaFin: string;
-  retribucion: number; // sueldo bruto de la categoría
+  retribucion: number; // el importe del contrato que pide la modalidad de liquidación, o el sueldo bruto de la escala
+  /** De dónde sale la retribución: el campo del contrato que eligió la modalidad, o `""` = la escala. */
+  retribucionCampo: CampoRetribucion | "";
   categoriaProf: string; // código ARCA de la categoría
   /** `false` = el tipo de contrato no genera alta temprana. */
   generaAlta: boolean;
@@ -601,7 +609,6 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   const obraSocialRegistrada = !obraSocial || registradas.length === 0 ? null : registradas.map(String).includes(String(obraSocial._id));
 
   const cuil = soloDigitos(row.cuit);
-  const retribucion = categoria?.data?.sueldoBruto || 0;
 
   /**
    * Hasta que no se valida contra ARCA, el contrato NO TIENE obra social.
@@ -647,6 +654,10 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   const revistaCascada = conCascada(undefined, "contrato", "situacionRevista", defaultsEmpresa, defaultsGlobales);
   const revistaResuelta = revistaCascada.valor ? revistaCascada : { valor: SITUACION_REVISTA_ALTA, origen: "global" as OrigenValorArca };
 
+  // La retribución pactada: el importe del contrato que pide la modalidad de liquidación, o el bruto de la escala.
+  const retribucionCampo = campoDeModalidad(modalidadLiqResuelta.valor, cat.modalidadesLiquidacion);
+  const retribucion = retribucionPactada(retribucionCampo, row, { tipo: tipo?.data as any, escala: categoria?.data }).valor;
+
   return {
     cuil,
     cuilValido: cuitEsValido(cuil),
@@ -654,6 +665,7 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
     fechaInicio: row.fecha_alta_contrato || "",
     fechaFin: row.fecha_baja_contrato || "",
     retribucion,
+    retribucionCampo,
     categoriaProf: categoria?.data?.codigoAfip ? String(categoria.data.codigoAfip) : "",
     /**
      * `false` = este tipo de contrato NO se declara ante ARCA (locación de servicios).
@@ -809,7 +821,11 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
   // --- Categoría
   // La retribución sale de la ESCALA, que vive en el grupo salarial del convenio: la categoría solo
   // aporta el código. Nombrar el grupo evita mandar a buscar un campo de sueldo en la categoría.
-  checks.push(v.retribucion <= 0 ? mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", "", "falta", "El grupo salarial de esta categoría no tiene cargado el sueldo bruto.") : !v.retribucionOk ? mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", String(v.retribucion), "error", "El importe no entra en las 15 posiciones del campo.") : mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", String(v.retribucion), "ok"));
+  // Con la modalidad de liquidación pidiendo un importe del contrato, sale del contrato y no de la escala.
+  if (v.retribucionCampo) {
+    const rotulo = `Retribución (${rotuloCampoRetribucion(v.retribucionCampo).toLowerCase()})`;
+    checks.push(v.retribucion <= 0 ? mk("retribucion", rotulo, "contrato", "", "falta", `La modalidad de liquidación declara el «${rotuloCampoRetribucion(v.retribucionCampo)}» del contrato, y el contrato no lo tiene cargado.`) : !v.retribucionOk ? mk("retribucion", rotulo, "contrato", String(v.retribucion), "error", "El importe no entra en las 15 posiciones del campo.") : mk("retribucion", rotulo, "contrato", String(v.retribucion), "ok"));
+  } else checks.push(v.retribucion <= 0 ? mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", "", "falta", "El grupo salarial de esta categoría no tiene cargado el sueldo bruto.") : !v.retribucionOk ? mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", String(v.retribucion), "error", "El importe no entra en las 15 posiciones del campo.") : mk("retribucion", "Retribución (sueldo bruto)", "categoria_sat", String(v.retribucion), "ok"));
   checks.push(presencia("categoriaProf", "Categoría profesional (cód. ARCA)", "categoria_sat", v.categoriaProf, "La categoría no tiene cargado su código de ARCA."));
 
   /*

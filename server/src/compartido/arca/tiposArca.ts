@@ -80,6 +80,15 @@ export interface ContractOverviewRow {
   fecha_carga?: string;
   sueldo_mano?: number;
   cantidad_jornadas_laborales?: number;
+  /** Los importes del contrato: la retribución pactada sale de uno de ellos según la modalidad de liquidación. */
+  sueldo_jornada?: number;
+  sueldo_bruto?: number;
+  sueldo_neto?: number;
+  sueldo_diario_neto?: number;
+  dias_semana?: number[];
+  dias_por_semana?: number;
+  dias_rotativos?: boolean;
+  fechas_trabajadas?: string[];
   hora_inicio?: string;
   hora_fin?: string;
   // Documentos del contrato ACTIVO, para las columnas de descarga/carga de la tabla de Contratos.

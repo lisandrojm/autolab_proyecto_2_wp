@@ -5,6 +5,7 @@ import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager
 import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
 import { ColumnaEmpresasArca, useVinculoArca } from "../components/arca/EmpresasDelItemArca";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
+import { CAMPOS_RETRIBUCION, TEXTO_SIN_CAMPO } from "@compartido/arca/retribucionPactada";
 
 const api = createSimpleCatalogApi("/arca/modalidades-liquidacion");
 
@@ -20,6 +21,16 @@ export const ArcaModalidadesLiquidacionPage: React.FC = () => {
 
   return (
   <SimpleCatalogManager
+    extraFields={[
+      {
+        // Qué importe del contrato va al TXT de alta como retribución pactada (pos. 58-72) con esta modalidad.
+        key: "retribucionPactada",
+        label: "Retribución pactada",
+        type: "select",
+        options: [{ value: "", label: TEXTO_SIN_CAMPO }, ...CAMPOS_RETRIBUCION.map((c) => ({ value: c.value, label: c.label }))],
+        showColumn: true,
+      },
+    ]}
     columnasCalculadas={[
       {
         // «Habilitadas para», no «Empresas»: acá la lista NO es un registro ante ARCA sino un

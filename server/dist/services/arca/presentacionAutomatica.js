@@ -11,6 +11,7 @@ import { Info } from "../../models/Info.js";
 import { RoleFrame } from "../../models/RoleFrame.js";
 import { ArcaSucursal } from "../../models/ArcaSucursal.js";
 import { getArcaDefaults } from "../../models/ArcaDefault.js";
+import { ArcaModalidadLiquidacion } from "../../models/ArcaModalidadLiquidacion.js";
 import { listarCategoriasCompat } from "../../utils/categoriaCompat.js";
 import { claveEstado } from "../../utils/estadoClave.js";
 import { ESTADO_TYPE } from "../../utils/estadosImpositivosSistema.js";
@@ -57,7 +58,7 @@ export async function catalogosArca() {
     return p;
 }
 async function leerCatalogosArca() {
-    const [defaults, categorias, tipos, obrasSociales, sedes, empresas, sucursales, convenios, roleFrames, estados] = await Promise.all([
+    const [defaults, categorias, tipos, obrasSociales, sedes, empresas, sucursales, convenios, roleFrames, estados, modalidadesLiquidacion] = await Promise.all([
         getArcaDefaults(),
         listarCategoriasCompat(),
         Contrato.find().sort({ orden: 1, name: 1 }).lean(),
@@ -69,6 +70,7 @@ async function leerCatalogosArca() {
         Convenio.find().select("externalId name obraSocialDefaultId puestoDesempenadoDefault").sort({ name: 1 }).lean(),
         RoleFrame.find().select("name data.rol.id data.puestoDesempenado").sort({ name: 1 }).lean(),
         Info.find({ type: ESTADO_TYPE }).sort({ "data.orden": 1, name: 1 }).lean(),
+        ArcaModalidadLiquidacion.find().select("externalId retribucionPactada").lean(),
     ]);
     const json = (v) => JSON.parse(JSON.stringify(v ?? null));
     return {
@@ -83,6 +85,7 @@ async function leerCatalogosArca() {
         estados: json(estados),
         defaultsArcaGlobales: json(defaults?.toObject ? defaults.toObject() : defaults),
         roleFrames: json(roleFrames),
+        modalidadesLiquidacion: json(modalidadesLiquidacion),
     };
 }
 /**
@@ -219,6 +222,16 @@ export async function candidatosDeAlta(tenantObjectId, opts = {}) {
             nombre_estado_empleado: c.nombre_estado_empleado || "",
             fecha_alta_contrato: c.fecha_alta_contrato || "",
             fecha_baja_contrato: c.fecha_baja_contrato || "",
+            // Los importes y los días: de uno de ellos sale la retribución pactada (ver `retribucionPactada.ts`).
+            cantidad_jornadas_laborales: c.cantidad_jornadas_laborales,
+            sueldo_jornada: c.sueldo_jornada,
+            sueldo_bruto: c.sueldo_bruto,
+            sueldo_neto: c.sueldo_neto,
+            sueldo_diario_neto: c.sueldo_diario_neto,
+            dias_semana: c.dias_semana,
+            dias_por_semana: c.dias_por_semana,
+            dias_rotativos: c.dias_rotativos,
+            fechas_trabajadas: c.fechas_trabajadas,
             altaArcaPresentada: c.altaArcaPresentada || null,
             empresaContratoId: empresaId,
             nombre_empresa_contrato: c.nombre_empresa_contrato || "",

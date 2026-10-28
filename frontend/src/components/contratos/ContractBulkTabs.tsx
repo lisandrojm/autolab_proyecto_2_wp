@@ -1033,8 +1033,13 @@ function useCatalogosArca(allEstados: InfoItem[]) {
       .catch(() => setDefaultsArcaGlobales({}));
   }, []);
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
+  // Qué importe del contrato declara cada modalidad de liquidación como retribución pactada.
+  const [modalidadesLiquidacion, setModalidadesLiquidacion] = useState<Array<{ externalId?: string; retribucionPactada?: string }>>([]);
 
   useEffect(() => {
+    cachedFetch(claveCacheCatalogo('/arca/modalidades-liquidacion'), () => createSimpleCatalogApi('/arca/modalidades-liquidacion').list())
+      .then((l) => setModalidadesLiquidacion(l as any))
+      .catch(() => setModalidadesLiquidacion([]));
     // Las claves son las mismas que usa Gestionar Equipo: lo que ya trajo una pantalla le sirve a la otra.
     cachedFetch('categoriaSat:all', () => categoriaSatAPI.list())
       .then(setCategorias)
@@ -1066,7 +1071,7 @@ function useCatalogosArca(allEstados: InfoItem[]) {
   // Las empresas entran al catálogo por su obra social por defecto (ver la cascada en resolveAfipValues).
   // `estados` entra al catálogo para que el TXT derive el alta temprana del estado del contrato y no
   // del switch que se eliminó. `allEstados` ya estaba en scope: es la misma lista que arma las bandejas.
-  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies, sucursales: arcaSucursales, convenios, estados: allEstados, defaultsArcaGlobales, roleFrames: roleFramesCat }), [categorias, tipos, obrasSociales, sedes, companies, arcaSucursales, convenios, allEstados, defaultsArcaGlobales, roleFramesCat]);
+  const afipCat = useMemo(() => ({ categorias, tipos, obrasSociales, sedes, empresas: companies, sucursales: arcaSucursales, convenios, estados: allEstados, defaultsArcaGlobales, roleFrames: roleFramesCat, modalidadesLiquidacion }), [categorias, tipos, obrasSociales, sedes, companies, arcaSucursales, convenios, allEstados, defaultsArcaGlobales, roleFramesCat, modalidadesLiquidacion]);
   return { afipCat, companies };
 }
 

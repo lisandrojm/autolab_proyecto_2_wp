@@ -18,6 +18,10 @@ import { listarCategoriasCompat } from "../../utils/categoriaCompat.js";
 import { claveEstado } from "../../utils/estadoClave.js";
 import { ESTADO_TYPE } from "../../utils/estadosImpositivosSistema.js";
 import { unirRegistros } from "../../compartido/layoutAltaArca.js";
+import { Contrato } from "../../models/Contrato.js";
+import { buscarTipoContrato } from "../../compartido/arca/afipCompleteness.js";
+import { conCascada } from "../../compartido/arca/cascadaArca.js";
+import { campoDeModalidad, retribucionPactada } from "../../compartido/arca/retribucionPactada.js";
 import { altaQueSePisa, altasPresentadasDe, textoAltaQueSePisa } from "./altasVigentes.js";
 import { CatalogosCotejo, Diferencia, EsperadoAlta, ModoAltas, cotejarRegistro, cuilDeRegistro, problemasDeForma } from "./cotejoAltas.js";
 
@@ -113,7 +117,7 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
   const presentadasPrevias = await altasPresentadasDe([...proyectosDelTenant], ups.map((u) => String(u.userId)), tenantObjectId);
 
   // ── Lo que hace falta para resolver lo esperado ─────────────────────────────────────────────────
-  const [categorias, convenios, obrasSociales, estados, defaultsGlobales, sucursales, modalidadesC, modalidadesL, tipos] = await Promise.all([
+  const [categorias, convenios, obrasSociales, estados, defaultsGlobales, sucursales, modalidadesC, modalidadesL, tipos, tiposContrato] = await Promise.all([
     listarCategoriasCompat(),
     Convenio.find().select("externalId obraSocialDefaultId puestoDesempenadoDefault").lean(),
     ObraSocial.find().select("externalId data.id").lean(),
@@ -123,8 +127,10 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
       .select("codigo")
       .lean(),
     ArcaModalidadContratacion.find().select("externalId").lean(),
-    ArcaModalidadLiquidacion.find().select("externalId").lean(),
+    ArcaModalidadLiquidacion.find().select("externalId retribucionPactada").lean(),
     ArcaTipoServicio.find().select("externalId").lean(),
+    // De la modalidad de liquidación del tipo sale qué importe del contrato es la retribución pactada.
+    Contrato.find().select("name data.afipModalidadLiquidacion data.cantidadJornadas data.diasPorSemana data.esTiempoIndeterminado").lean(),
   ]);
   const clavesAltaTemprana = new Set(
     (estados as any[]).filter((e) => e?.data?.esImpositivo && e?.data?.tipoImpositivo === "alta_temprana_afip").map((e) => claveEstado(String(e.name || ""))),
@@ -230,7 +236,12 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
       fechaFin: String(c.fecha_baja_contrato || ""),
       categoria: String(categoria?.data?.codigoArca || categoria?.data?.codigoAfip || ""),
       convenio: convenioCodigo,
-      retribucion: Number(categoria?.data?.sueldoBruto || 0),
+      // La misma regla que `resolveAfipValues`: el importe del contrato que pide la modalidad de liquidación, o el bruto de la escala.
+      retribucion: (() => {
+        const tipo: any = buscarTipoContrato(tiposContrato as any[], c.nombre_contrato);
+        const modalidad = conCascada(tipo?.data?.afipModalidadLiquidacion, "tipo_contrato", "modalidadLiquidacion", de, dg).valor;
+        return retribucionPactada(campoDeModalidad(modalidad, modalidadesL as any[]), c, { tipo: tipo?.data, escala: categoria?.data }).valor;
+      })(),
       rnos,
       rnosMotivo,
       // Mismo orden que el generador del registro: contrato → Rol Empresa → Categoría → convenio → empresa → instalación.
