@@ -47,6 +47,7 @@ const tenantSchema = new Schema({
             accountId: { type: String, index: true },
             connectedAt: { type: Date },
             scanIntervalMinutes: { type: Number, default: 20 },
+            conciliacionOutboxConfirmadaAt: { type: Date },
         },
         afip: {
             cuitRepresentada: { type: String },

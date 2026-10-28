@@ -19,6 +19,8 @@ import { quienTieneDropboxSign, soltarCandadoDropboxSign, tomarCandadoDropboxSig
 import { cargarMotor } from "./motor.js";
 import { descartarBorradoresDeLaCorrida } from "./borradores.js";
 import { leerOutbox, resolverFirmante } from "./outbox.js";
+import { codigosYaEnviados } from "../conciliacionOutboxService.js";
+import { yaEnviadoPorCarpeta } from "../../utils/conciliacionOutbox.js";
 import { reglasDelTenant } from "./reglasTenant.js";
 import { declaradasDe, detectarParaArchivo, guardarResumen, resumenDeArchivo, verificacionDe } from "./colocacion.js";
 
@@ -334,6 +336,36 @@ async function correr(corrida: CorridaEnvio, cc: string, config: ConfigEnvio): P
     if (cola.tanda.length === 0) {
       resultado = "sin_tanda";
       return;
+    }
+
+    /*
+      LA ÚLTIMA RED CONTRA DUPLICADOS (28/10/2026): si el código ya está en Pendbox o en Firmados, el
+      documento se envió (por el bot, a mano o por otra vía) aunque figure en la cola. No se manda: se
+      cierra su registro y queda dicho en el log. Dos listados de carpeta por corrida. Si no se pueden
+      leer, la corrida no arranca: mandar a ciegas es justo lo que esta red evita.
+    */
+    {
+      const { cfg: cfgDropbox } = await leerOutbox(tenantId);
+      const carpetas = await codigosYaEnviados(tenantId, cfgDropbox);
+      if (carpetas) {
+        const yaEnviados = (cola.tanda as Candidato[]).filter((c) => yaEnviadoPorCarpeta(c.codigo, carpetas));
+        for (const c of yaEnviados) {
+          const donde = yaEnviadoPorCarpeta(c.codigo, carpetas) === "firmado" ? "Firmados (ya firmado)" : "Pendbox (esperando firma)";
+          const detalle = `No se envía: ${c.codigo} ya está en ${donde}. Es un duplicado del Outbox.`;
+          corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: "salteado", detalle });
+          emitir({ tipo: "resultado", archivo: c.archivo, codigo: c.codigo, estado: "salteado", texto: detalle });
+          await DropboxSignEnvio.updateOne({ tenantId, codigo: c.codigo, estado: { $ne: "enviado" } }, { $set: { estado: "enviado", detalle } }).catch(() => {});
+        }
+        if (yaEnviados.length) {
+          const fuera = new Set(yaEnviados.map((c) => c.codigo));
+          cola.tanda = (cola.tanda as Candidato[]).filter((c) => !fuera.has(c.codigo));
+          corrida.total = cola.tanda.length;
+          if (cola.tanda.length === 0) {
+            resultado = "sin_tanda";
+            return;
+          }
+        }
+      }
     }
 
     // Resolver la colocación de cada documento ANTES de abrir el navegador (el mismo código que la

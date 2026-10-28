@@ -9,6 +9,7 @@ import { normalizarCuit, parseConstanciaPdf } from "../utils/constanciaPdf.js";
 import { leerAnclas, normalizarEmail } from "../utils/anclasNombre.js";
 import { esElAltaEnviada, momentoDeCarga, motivoParaDescartarArchivo, TEXTO_DESCARTE } from "../utils/archivoDeContrato.js";
 import { limpiarPendbox } from "./limpiezaPendboxService.js";
+import { conciliacionConfirmada, conciliarOutbox } from "./conciliacionOutboxService.js";
 import { DocumentoGenerado } from "../models/DocumentoGenerado.js";
 import { fechaISO } from "../utils/contratoVigencia.js";
 import { marcarReciboFirmado } from "./recibosSueldo.js";
@@ -291,6 +292,23 @@ async function scanTenant(tenant: any, estadosConTrigger: IInfo[]): Promise<numb
     if (r.renombrados || r.borrados) console.log(`[Pendbox] tenant ${tenant._id}: ${r.renombrados} firmado(s) renombrado(s), ${r.borrados} original(es) borrado(s) de Pendbox`);
   } catch (e: any) {
     console.warn("[Pendbox] no se pudo limpiar Pendbox (se reintenta en la próxima pasada):", e?.message || e);
+  }
+
+  /*
+    LO QUE YA SE ENVIÓ SALE DEL OUTBOX (ver `utils/conciliacionOutbox.ts`): si el código de un archivo del
+    Outbox ya está en Pendbox o en Firmados, la copia se mueve a `Outbox_ya_enviados` y su registro de la
+    cola se cierra. No depende del aviso por mail. Va DESPUÉS de la limpieza de Pendbox (que le pone el
+    código al firmado que volvió sin él). En seco hasta que una pasada real del script la confirme: sólo
+    se loguea cuántos se moverían, una vez por cambio.
+  */
+  try {
+    const enSeco = !(await conciliacionConfirmada(String(tenant._id)));
+    const r = await conciliarOutbox(String(tenant._id), cfg, { enSeco });
+    if (enSeco && r.plan.mover.length) logSiCambio(`${tenant._id}:conciliacion-outbox`, String(r.plan.mover.length), `[Outbox] tenant ${tenant._id}: ${r.plan.mover.length} archivo(s) del Outbox ya están en Pendbox o Firmados. Revisalos con «npm run outbox:conciliar:dry» y movelos con «npm run outbox:conciliar».`);
+    for (const f of r.fallas) console.warn(`[Outbox] no se pudo mover ${f.archivo}: ${f.error}`);
+    if (r.movidos) console.log(`[Outbox] tenant ${tenant._id}: ${r.movidos} ya enviado(s) movido(s) a ${r.destino}, ${r.registrosCerrados} registro(s) de la cola cerrados`);
+  } catch (e: any) {
+    console.warn("[Outbox] no se pudo conciliar el Outbox (se reintenta en la próxima pasada):", e?.message || e);
   }
 
   let transicionesAplicadas = 0;

@@ -56,6 +56,12 @@ export interface ITenant extends Document {
             connectedAt?: Date;
             /** Cada cuántos minutos se revisan las carpetas vigiladas por transición automática. Default 20. */
             scanIntervalMinutes?: number;
+            /**
+             * Primera pasada REAL de la conciliación Outbox ↔ Pendbox/Firmados, hecha a mano con el script después
+             * de revisar el modo seco. Hasta que exista, el escaneo de carpetas la corre en seco (ver
+             * `services/conciliacionOutboxService.ts`).
+             */
+            conciliacionOutboxConfirmadaAt?: Date;
         };
         afip?: {
             /** CUIT representada (el CUIT propio del tenant, dado de alta en AFIP como titular del certificado). */
