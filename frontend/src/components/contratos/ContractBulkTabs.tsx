@@ -1497,7 +1497,8 @@ export const ContractBulkAfipTab: React.FC<{
   // filtros de la barra que aplican los otros dos, para que los tres números sean comparables.
   const claveEnvioDoc = estadoEnvioDoc ? claveEstado(estadoEnvioDoc) : '';
   const countFirma = useMemo(
-    () => (claveEnvioDoc ? rows.filter((r) => claveEstado(r.nombre_estado_empleado || '') === claveEnvioDoc && matchesCommonFilters(r as ImpositivoRow)).length : 0),
+    // Lo ya enviado a firmar no cuenta: salió de la bandeja (ver `rowsEnEnvio` en la pestaña de Firma).
+    () => (claveEnvioDoc ? rows.filter((r) => claveEstado(r.nombre_estado_empleado || '') === claveEnvioDoc && !r.firmaEnviadaAt && matchesCommonFilters(r as ImpositivoRow)).length : 0),
     [rows, claveEnvioDoc, matchesCommonFilters],
   );
 
@@ -3699,10 +3700,12 @@ const FirmaEnviarCell: React.FC<{
       const resultado = res.resultados[0];
       if (resultado && !resultado.ok) {
         sweetAlert.error('No se pudo enviar', resultado.error || 'Error desconocido.');
+        onEnviado();
       } else {
         sweetAlert.success('Enviado', 'Se envió a firmar correctamente.');
+        // Se marca acá mismo: con `firmaEnviadaAt` la fila sale de la bandeja sin esperar la relectura.
+        onEnviado({ firmaEnviadaAt: new Date().toISOString() });
       }
-      onEnviado();
     } catch (e: any) {
       sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo enviar a firmar.');
     } finally {
@@ -3741,7 +3744,9 @@ export const ContractBulkFirmaTab: React.FC<{
   allEstados: InfoItem[];
   contratoFrames: ContratoFrameItem[];
   releases: Release[];
-}> = ({ allEstados, contratoFrames, releases }) => {
+  /** Cuántos se acaban de enviar a firmar: el contador de la pestaña lo calcula otra pestaña, desmontada ahora. */
+  onEnviados?: (cantidad: number) => void;
+}> = ({ allEstados, contratoFrames, releases, onEnviados }) => {
   const [rows, setRows] = useState<ContractOverviewRow[]>([]);
   const [config, setConfig] = useState<FirmaDigitalConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -3816,13 +3821,14 @@ export const ContractBulkFirmaTab: React.FC<{
       if (!patch) return load(true);
       const esLaFila = (r: ContractOverviewRow) => r._id === record._id && r.contractIndex === record.contractIndex;
       setRows((prev) => prev.map((r) => (esLaFila(r) ? { ...r, ...patch } : r)));
+      if (patch.firmaEnviadaAt && !record.firmaEnviadaAt) onEnviados?.(1);
       if (config?.estadoEnvioDocNombre) updateRefCache<{ rows: ContractOverviewRow[] }>(claveCacheEnvio(config.estadoEnvioDocNombre, filterClientId, filterProjectId), (data) => ({
         ...data,
         rows: (data.rows || []).map((r) => (esLaFila(r) ? { ...r, ...patch } : r)),
       }));
       return Promise.resolve();
     },
-    [load, config, filterClientId, filterProjectId],
+    [load, config, filterClientId, filterProjectId, onEnviados],
   );
 
   // Trámite impositivo de ORIGEN del contrato (por su tipo/plantilla, no por el estado actual —
@@ -3836,7 +3842,12 @@ export const ContractBulkFirmaTab: React.FC<{
   );
 
   const claveEnvio = config?.estadoEnvioDocNombre ? claveEstado(config.estadoEnvioDocNombre) : null;
-  const rowsEnEnvio = useMemo(() => (claveEnvio ? rows.filter((r) => claveEstado(r.nombre_estado_empleado || '') === claveEnvio) : []), [rows, claveEnvio]);
+  /*
+    LO ENVIADO A FIRMAR SALE DE LA BANDEJA en el momento (28/10/2026). El estado sigue siendo «Envío de
+    documentación» hasta que Dropbox Sign lo importa y el cron lo mueve, pero para esta bandeja ya está
+    hecho: se sigue en «Para Firmar» (Outbox). Antes quedaba con «Enviado» hasta recargar la página.
+  */
+  const rowsEnEnvio = useMemo(() => (claveEnvio ? rows.filter((r) => claveEstado(r.nombre_estado_empleado || '') === claveEnvio && !r.firmaEnviadaAt) : []), [rows, claveEnvio]);
 
   const empresasDelContrato = (r: ContractOverviewRow): string[] => (r.empresaContratoId ? [r.empresaContratoId] : (r.contratoEmpresas || []).map((e) => e.id));
 
@@ -4000,6 +4011,17 @@ export const ContractBulkFirmaTab: React.FC<{
     }
   };
 
+  /** Marca como enviadas las filas que el server confirmó: salen de la bandeja sin esperar la relectura. */
+  const sacarEnviadas = (res: { resultados: { projectId: string; userId: string; contractIndex: number; ok: boolean }[] }) => {
+    const ok = new Set(res.resultados.filter((x) => x.ok).map((x) => `${x.projectId}:${x.userId}:${x.contractIndex}`));
+    if (ok.size === 0) return;
+    onEnviados?.(ok.size);
+    const ahora = new Date().toISOString();
+    const marcar = (r: ContractOverviewRow) => (ok.has(`${r.projectId}:${r.userId}:${r.contractIndex}`) ? { ...r, firmaEnviadaAt: ahora } : r);
+    setRows((prev) => prev.map(marcar));
+    if (config?.estadoEnvioDocNombre) updateRefCache<{ rows: ContractOverviewRow[] }>(claveCacheEnvio(config.estadoEnvioDocNombre, filterClientId, filterProjectId), (data) => ({ ...data, rows: (data.rows || []).map(marcar) }));
+  };
+
   /** Sube a Outbox las filas que tienen todo generado. Devuelve el resultado del server. */
   const enviarFilas = async (filas: ContractOverviewRow[]) => {
     const targets = filas.map((r) => {
@@ -4034,7 +4056,9 @@ export const ContractBulkFirmaTab: React.FC<{
     setEnviando(true);
     try {
       sweetAlert.loading('Enviando a firmar…', `${fuenteEnvio.length} contrato(s)`);
-      avisarEnvio(await enviarFilas(fuenteEnvio), []);
+      const res = await enviarFilas(fuenteEnvio);
+      sacarEnviadas(res);
+      avisarEnvio(res, []);
       setSelected(new Set());
       load(true);
     } catch (e: any) {
@@ -4063,7 +4087,9 @@ export const ContractBulkFirmaTab: React.FC<{
         return;
       }
       sweetAlert.loading('Enviando a firmar…', `${aEnviar.length} contrato(s)`);
-      avisarEnvio(await enviarFilas(aEnviar), [...afuera, ...errores]);
+      const res = await enviarFilas(aEnviar);
+      sacarEnviadas(res);
+      avisarEnvio(res, [...afuera, ...errores]);
       setSelected(new Set());
     } catch (e: any) {
       sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo enviar a firmar.');

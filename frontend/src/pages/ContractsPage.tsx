@@ -662,7 +662,7 @@ export const ContractsPage: React.FC = () => {
         mgmtTab === 'para_firmar' || mgmtTab === 'enviado_firma' || mgmtTab === 'firmados' ? (
           <ContractDropboxTab tipo={mgmtTab} onCount={mgmtTab === 'para_firmar' ? setParaFirmarCount : mgmtTab === 'enviado_firma' ? setPendienteFirmaCount : setFirmadosCount} />
         ) : mgmtTab === 'firma' ? (
-          <ContractBulkFirmaTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} />
+          <ContractBulkFirmaTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onEnviados={(n) => setMgmtCounts((c) => ({ ...c, firma: Math.max(0, c.firma - n) }))} />
         ) : (
           <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} tipo={mgmtTab === 'alta_afip' ? 'alta_temprana_afip' : mgmtTab === 'sin_cuit' ? 'sin_cuit' : 'constancia_cuit'} onCounts={setMgmtCounts} />
         )
