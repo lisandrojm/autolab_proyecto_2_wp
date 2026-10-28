@@ -1279,6 +1279,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
       return d.toISOString().slice(0, 10);
     })();
     const enBandeja = (c: any) => estadosFiltro.includes(estadoCanonico(String(c?.nombre_estado_empleado ?? "")));
+    // «Contratados» (paso 6) no es trabajo pendiente sino el padrón de contratados: van todos, sin ventana.
+    const sinVentana = req.query.sinVentana === "true";
 
     // Filas "livianas": lo mínimo para filtrar, ordenar y paginar. El contrato completo se resuelve
     // después, ya recortado a la página.
@@ -1324,7 +1326,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
 
       const candidatosDeLaAsignacion: any[] =
         estadosFiltro.length > 0
-          ? contratos.filter((c) => enBandeja(c) && (c === contratoActivo || fechaISO(c.fecha_alta_contrato) >= desdeBandeja))
+          ? contratos.filter((c) => enBandeja(c) && (c === contratoActivo || sinVentana || fechaISO(c.fecha_alta_contrato) >= desdeBandeja))
           : [contratoActivo];
 
       for (const contrato of candidatosDeLaAsignacion) {

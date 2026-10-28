@@ -19,6 +19,7 @@ import { excepcionDelRol, idDeValoracion, normalizarValoracionesPorRol } from ".
 import { ContratoFrame } from "../models/ContratoFrame.js";
 import { User } from "../models/User.js";
 import { Info } from "../models/Info.js";
+import { estadoDirectoAContratado } from "../services/contratadoDirecto.js";
 import { CentroCosto } from "../models/CentroCosto.js";
 import { agruparContratosPorDocumento, partirClaveDocumento } from "../utils/agruparContratos.js";
 import { arrancarCorrida, corridaColgada, corridaDe, destrabarCorridaColgada, detenerCorrida } from "../services/arca/corridaServidor.js";
@@ -2019,6 +2020,17 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             const sedeDeLaFila = (Array.isArray(contract.areaShiftAssignments) ? contract.areaShiftAssignments : []).map((a) => sedeDe(a?.sedeId)).find(Boolean);
             if (sedeDeLaFila)
                 contract.sede_id = sedeDeLaFila;
+        }
+        /*
+          DIRECTO A CONTRATADOS (28/10/2026): un contrato NUEVO de un tipo que no manda nada a firmar ni
+          genera alta de ARCA no pasa por los pasos 1 a 5 de Gestión de Contratos. Se guarda ya en el
+          estado final. Editar uno existente no le cambia el estado.
+        */
+        {
+            const esNuevo = (contractIndex === undefined || contractIndex === null || contractIndex === "") && !isUpdate;
+            const directo = esNuevo ? await estadoDirectoAContratado(contract.contrato_id, contract.estado_id) : null;
+            if (directo?.data?.id != null)
+                contract.estado_id = directo.data.id;
         }
         const [sede, cat, estado, tipo, area, shift] = await Promise.all([
             Info.findOne({ type: "sede", "data.id": Number(contract.sede_id) }).lean(),

@@ -11,6 +11,8 @@ export interface FirmaDigitalConfig {
   pendienteFirmaCarpeta: string | null;
   /** Path de "Requested signatures": donde Dropbox Sign deja los contratos ya firmados. */
   firmadosCarpeta: string | null;
+  /** Estado final del circuito (al que llegan los firmados): alimenta el paso 6 «Contratados». */
+  estadoContratadoNombre?: string | null;
 }
 
 export interface GenerarContratoPayload {

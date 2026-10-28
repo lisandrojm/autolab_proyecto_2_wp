@@ -584,6 +584,8 @@ class UsersAPI {
       /** Varios estados a la vez (nombres). Lo usa Gestión de Contratos para pedirle al server solo
        *  los contratos con estado impositivo en vez de traerse el padrón entero. */
       estados?: string[];
+      /** Con `estados`: todos los contratos en esos estados, sin la ventana de 90 días de las bandejas (Contratados). */
+      sinVentana?: boolean;
       /** Varios tipos de contrato a la vez (por nombre). Lo usa Renovaciones. */
       tiposContrato?: string[];
       /** `sistema`: sólo los contratos creados en WeProdu (Solicitudes o «Agregar miembro»). */
@@ -611,6 +613,7 @@ class UsersAPI {
     if (params.estadoContrato) searchParams.append("estadoContrato", params.estadoContrato);
     if (params.reemplazo) searchParams.append("reemplazo", params.reemplazo);
     if (params.estados?.length) searchParams.append("estados", params.estados.join(","));
+    if (params.sinVentana) searchParams.append("sinVentana", "true");
     if (params.origen) searchParams.append("origen", params.origen);
     if (params.renovables) searchParams.append("renovables", "true");
     for (const t of params.tiposContrato || []) searchParams.append("tiposContrato", t);

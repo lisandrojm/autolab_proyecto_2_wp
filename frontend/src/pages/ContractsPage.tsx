@@ -27,7 +27,7 @@ import { faFileContract, faBriefcase, faHourglassHalf, faTable, faGrip, faChevro
 import { sweetAlert } from '../utils/sweetAlert';
 
 import { getHelp, hasHelp } from '../data/help/helpContent';
-import { ContractBulkAfipTab, ContractBulkFirmaTab } from '../components/contratos/ContractBulkTabs';
+import { ContractBulkAfipTab, ContractBulkContratadosTab, ContractBulkFirmaTab, contarContratados } from '../components/contratos/ContractBulkTabs';
 import { BotonOrden, useOrden } from '../components/ui/OrdenTabla';
 import { ContractDropboxTab, fetchDropboxCounts, InstructivoParaFirmar } from '../components/contratos/ContractDropboxTabs';
 import { AlcanceBanner } from '../components/context/AlcanceBanner';
@@ -55,7 +55,7 @@ const PAGE_SIZE = 25;
 /** Explicación puntual de cada pestaña de "Gestión de Contratos": si vive en la base o en una
  *  carpeta de Dropbox, y si interviene Dropbox Sign. Se muestra con el ⓘ propio de cada pestaña
  *  (aparte del info general que explica el conjunto). */
-const SUB_TAB_INFO: Record<'alta_afip' | 'constancia_cuit' | 'sin_cuit' | 'firma' | 'para_firmar' | 'enviado_firma' | 'firmados', { title: string; text: string }> = {
+const SUB_TAB_INFO: Record<'alta_afip' | 'constancia_cuit' | 'sin_cuit' | 'firma' | 'para_firmar' | 'enviado_firma' | 'firmados' | 'contratados', { title: string; text: string }> = {
   alta_afip: {
     title: 'Alta temprana de ARCA',
     text: 'Vive en la base de datos de la aplicación, no en Dropbox. Son los contratos registrados que todavía necesitan un Alta Temprana en ARCA. No interviene Dropbox Sign.',
@@ -84,10 +84,14 @@ const SUB_TAB_INFO: Record<'alta_afip' | 'constancia_cuit' | 'sin_cuit' | 'firma
     title: 'Firmados',
     text: 'No sale de la base de datos: muestra la carpeta "Requested signatures" de Dropbox. Son los contratos que Dropbox Sign ya devolvió firmados, listos para descargar.',
   },
+  contratados: {
+    title: 'Contratados',
+    text: 'Vive en la base de datos. Son todas las personas contratadas desde Solicitudes o desde la plataforma cuyo contrato terminó el circuito: llegó al estado final porque se firmó, o pasó directo porque su tipo de contrato no manda nada a firmar ni genera alta de ARCA. Ordenados por fecha de creación del contrato, lo último arriba.',
+  },
 };
 
 /** Cada sub-pestaña de "Gestión de Contratos". */
-type MgmtTab = 'alta_afip' | 'constancia_cuit' | 'sin_cuit' | 'firma' | 'para_firmar' | 'enviado_firma' | 'firmados';
+type MgmtTab = 'alta_afip' | 'constancia_cuit' | 'sin_cuit' | 'firma' | 'para_firmar' | 'enviado_firma' | 'firmados' | 'contratados';
 
 /**
  * El circuito son 5 PASOS, no 7 pestañas: el paso 1 (trámite impositivo) tiene tres variantes
@@ -106,6 +110,7 @@ const PASO_1_OPCIONES: { tab: MgmtTab; label: string; total: (c: { mgmtCounts: {
 interface TotalesGestion {
   mgmtCounts: { alta: number; cuit: number; firma: number; sinCuit: number };
   dropboxCounts: { para_firmar: number | null; enviado_firma: number | null; firmados: number | null };
+  contratados: number | null;
 }
 
 const PASOS_GESTION: { numero: number; label: string; carpeta?: string; descripcion: string; tabs: MgmtTab[]; total: (c: TotalesGestion) => number | null }[] = [
@@ -120,6 +125,7 @@ const PASOS_GESTION: { numero: number; label: string; carpeta?: string; descripc
   { numero: 3, label: 'Para Firmar', carpeta: 'Outbox', descripcion: 'Documentos listos para importar en Dropbox Sign y enviarlos a firmar.', tabs: ['para_firmar'], total: ({ dropboxCounts }) => dropboxCounts.para_firmar },
   { numero: 4, label: 'Enviado a la firma', carpeta: 'Pendbox', descripcion: 'La solicitud ya se envió desde Dropbox Sign y se espera la firma.', tabs: ['enviado_firma'], total: ({ dropboxCounts }) => dropboxCounts.enviado_firma },
   { numero: 5, label: 'Firmados', carpeta: 'Requested signatures', descripcion: 'Contratos que ya volvieron firmados.', tabs: ['firmados'], total: ({ dropboxCounts }) => dropboxCounts.firmados },
+  { numero: 6, label: 'Contratados', descripcion: 'Contratos que terminaron el circuito: firmados, o directos si su tipo no pide firma ni alta de ARCA.', tabs: ['contratados'], total: ({ contratados }) => contratados },
 ];
 
 /** Clases de un botón de pestaña (mismo estilo que el resto de los tabs de la app). */
@@ -254,6 +260,8 @@ export const ContractsPage: React.FC = () => {
   const [pendienteFirmaCount, setPendienteFirmaCount] = useState<number | null>(null);
   const [firmadosCount, setFirmadosCount] = useState<number | null>(null);
   const dropboxCounts = { para_firmar: paraFirmarCount, enviado_firma: pendienteFirmaCount, firmados: firmadosCount };
+  // Paso 6: se cuenta al entrar a Gestión, como los de Dropbox; la pestaña lo actualiza al abrirla.
+  const [contratadosCount, setContratadosCount] = useState<number | null>(null);
   // Al entrar a "Gestión de Contratos" se leen las 3 carpetas de Dropbox una sola vez, para que el
   // número aparezca en las 3 pestañas aunque el usuario no las haya abierto todavía (igual que las
   // pestañas de ARCA/CUIT/Firma). Al abrir cada pestaña, ContractDropboxTab vuelve a leer su carpeta
@@ -262,6 +270,9 @@ export const ContractsPage: React.FC = () => {
   useEffect(() => {
     if (mainTab !== 'management' || dropboxCountsFetchedRef.current) return;
     dropboxCountsFetchedRef.current = true;
+    contarContratados()
+      .then(setContratadosCount)
+      .catch(() => {});
     fetchDropboxCounts()
       .then((c) => {
         setParaFirmarCount(c.para_firmar);
@@ -604,7 +615,7 @@ export const ContractsPage: React.FC = () => {
               <div className="flex items-center gap-1 overflow-x-auto pb-1">
                 {PASOS_GESTION.map((paso, i) => {
                   const activo = paso.tabs.includes(mgmtTab);
-                  const total = paso.total({ mgmtCounts, dropboxCounts });
+                  const total = paso.total({ mgmtCounts, dropboxCounts, contratados: contratadosCount });
                   return (
                     <React.Fragment key={paso.numero}>
                       {i > 0 && <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-gray-300 dark:text-gray-600 shrink-0" />}
@@ -661,6 +672,8 @@ export const ContractsPage: React.FC = () => {
       {mainTab === 'management' ? (
         mgmtTab === 'para_firmar' || mgmtTab === 'enviado_firma' || mgmtTab === 'firmados' ? (
           <ContractDropboxTab tipo={mgmtTab} onCount={mgmtTab === 'para_firmar' ? setParaFirmarCount : mgmtTab === 'enviado_firma' ? setPendienteFirmaCount : setFirmadosCount} />
+        ) : mgmtTab === 'contratados' ? (
+          <ContractBulkContratadosTab allEstados={allEstados} contratoFrames={contratoFrames} onCount={setContratadosCount} />
         ) : mgmtTab === 'firma' ? (
           <ContractBulkFirmaTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onEnviados={(n) => setMgmtCounts((c) => ({ ...c, firma: Math.max(0, c.firma - n) }))} />
         ) : (

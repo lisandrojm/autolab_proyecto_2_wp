@@ -4340,3 +4340,212 @@ export const ContractBulkFirmaTab: React.FC<{
 };
 
 export default ContractBulkAfipTab;
+
+/** Clave de los contratados (paso 6): el estado y el ámbito, como `claveCacheEnvio`. */
+const claveCacheContratados = (estado: string, clientId = '', projectId = '') => `${CONTRACTS_OVERVIEW_CACHE}contratados:${estado}:${ambito(clientId, projectId)}`;
+
+/** Cuántos contratados hay, para el número del paso 6 sin haber entrado a la pestaña. */
+export const contarContratados = async (): Promise<number | null> => {
+  const cfg = await cachedFetch(`${CONTRACTS_OVERVIEW_CACHE}firma-config`, () => firmaDigitalAPI.config());
+  const estado = cfg?.estadoContratadoNombre || '';
+  if (!estado) return null;
+  const res = await cachedFetch(`${claveCacheContratados(estado)}:total`, () => usersAPI.listContractsOverview({ limit: 1, origen: 'sistema', estados: [estado], sinVentana: true }));
+  return res.total;
+};
+
+/**
+ * Paso 6 «Contratados» (28/10/2026): todos los contratos de WeProdu (Solicitudes o «Agregar miembro»)
+ * que llegaron al final del circuito. Es el estado al que llegan los firmados y, directo al crearse,
+ * los de tipos que no mandan nada a firmar ni generan alta de ARCA (`services/contratadoDirecto.ts`).
+ * Sin la ventana de 90 días de las bandejas: es el padrón, no trabajo pendiente. Lo último creado arriba.
+ */
+export const ContractBulkContratadosTab: React.FC<{
+  allEstados: InfoItem[];
+  contratoFrames: ContratoFrameItem[];
+  onCount?: (cantidad: number) => void;
+}> = ({ allEstados, contratoFrames, onCount }) => {
+  const [rows, setRows] = useState<ContractOverviewRow[]>([]);
+  const [estado, setEstado] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filterClientId, setFilterClientId] = useState('');
+  const [filterProjectId, setFilterProjectId] = useState('');
+  const [filterTipoContrato, setFilterTipoContrato] = useState('');
+  const [filterVigencia, setFilterVigencia] = useState('');
+
+  const load = useCallback((force = false) => {
+    if (force) invalidateRefCache(CONTRACTS_OVERVIEW_CACHE);
+    setLoading(true);
+    return cachedFetch(`${CONTRACTS_OVERVIEW_CACHE}firma-config`, () => firmaDigitalAPI.config())
+      .then(async (cfg) => {
+        const nombre = cfg?.estadoContratadoNombre || '';
+        setEstado(nombre);
+        const res = nombre
+          ? await cachedFetch(claveCacheContratados(nombre, filterClientId, filterProjectId), () => usersAPI.listContractsOverview({ limit: 10000, origen: 'sistema', estados: [nombre], sinVentana: true, clientId: filterClientId || undefined, projectId: filterProjectId || undefined }))
+          : { rows: [] as ContractOverviewRow[] };
+        setRows(res.rows);
+        if (!filterClientId && !filterProjectId) onCount?.(res.rows.length);
+      })
+      .catch(() => {
+        /* noop */
+      })
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterClientId, filterProjectId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (!pasaFiltrosDeContrato(r, { usuarios: '', vigencia: filterVigencia, novedades: '', tipoContrato: filterTipoContrato, estadoContrato: '', reemplazo: '' })) return false;
+      if (q && ![r.userName, r.userEmail, r.clientName, r.projectName, r.nombre_contrato, r.cuit].some((v) => String(v || '').toLowerCase().includes(q))) return false;
+      return true;
+    });
+  }, [rows, search, filterVigencia, filterTipoContrato]);
+
+  const clientOptions = useMemo(() => {
+    const m = new Map<string, string>();
+    rows.forEach((r) => r.clientId && m.set(r.clientId, r.clientName || r.clientId));
+    return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows]);
+  const projectOptions = useMemo(() => {
+    const m = new Map<string, string>();
+    rows.filter((r) => !filterClientId || r.clientId === filterClientId).forEach((r) => r.projectId && m.set(r.projectId, r.projectName || r.projectId));
+    return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows, filterClientId]);
+  const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(rows), [rows]);
+
+  const { ordenados, orden, alternar } = useOrdenTabla(
+    filtered,
+    {
+      fechaCarga: (r) => r.fecha_carga || '',
+      altaBaja: (r) => fechaISO(r.fecha_alta_contrato),
+      usuario: (r) => r.userName,
+      cuit: (r) => r.cuit,
+      cliente: (r) => r.clientName,
+      proyecto: (r) => r.projectName,
+      tipoContrato: (r) => r.nombre_contrato,
+    },
+    // Lo último creado arriba (pedido del 28/10/2026).
+    { columna: 'fechaCarga', direccion: 'desc' },
+  );
+  const ordenProps = { orden, onAlternar: alternar };
+  const pag = usePaginado(ordenados);
+  const rowKey = (r: ContractOverviewRow) => `${r._id}-${r.contractIndex}`;
+  const th = 'px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900';
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col lg:flex-row gap-3 lg:items-start justify-between">
+        <div className="flex-1 w-full">
+          <SearchAndFilters
+            searchTerm={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Buscar por colaborador, CUIT, proyecto o contrato..."
+            radioFilters={[{ label: 'Contratos', value: filterVigencia, onChange: setFilterVigencia, options: OPCIONES_VIGENCIA }]}
+            selectFilters={[
+              { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },
+              { label: 'Proyecto', value: filterProjectId, onChange: setFilterProjectId, placeholder: 'Todos los proyectos', options: projectOptions },
+              { label: 'Tipo de contrato', value: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
+            ]}
+          />
+        </div>
+        <button type="button" onClick={() => load(true)} title="Volver a leer" className="inline-flex items-center justify-center h-10 w-10 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 shrink-0">
+          <FontAwesomeIcon icon={faRotateRight} className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <LoadingSpinner message="Cargando contratados..." />
+        </div>
+      ) : !estado ? (
+        <EmptyState icon={faTriangleExclamation} title="No se sabe cuál es el estado final" description='Ningún estado tiene configurada la carpeta de firmados («Requested signatures») en Documentos → Configurar transición automática. Ese estado es el de los contratados.' />
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={faUser} title="Sin contratados" description={rows.length === 0 ? `Todavía no hay contratos en «${estado}».` : 'No hay resultados con los filtros aplicados.'} />
+      ) : (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left border-separate border-spacing-0 min-w-[1200px]">
+              <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
+                <tr>
+                  <th className={th}>
+                    <BotonOrden columna="fechaCarga" {...ordenProps}>Fecha de creación</BotonOrden>
+                  </th>
+                  <th className={th}>
+                    <BotonOrden columna="usuario" {...ordenProps}>Colaborador</BotonOrden>
+                  </th>
+                  <th className={th}>
+                    <BotonOrden columna="altaBaja" {...ordenProps}>Alta / Baja</BotonOrden>
+                  </th>
+                  <th className={th}>
+                    <BotonOrden columna="tipoContrato" {...ordenProps}>Tipo de Contrato</BotonOrden>
+                  </th>
+                  <th className={th}>
+                    <BotonOrden columna="cuit" {...ordenProps}>CUIT</BotonOrden>
+                  </th>
+                  <th className={th}>
+                    <BotonOrden columna="cliente" {...ordenProps}>Cliente</BotonOrden>
+                  </th>
+                  <th className={th}>
+                    <BotonOrden columna="proyecto" {...ordenProps}>Proyecto</BotonOrden>
+                  </th>
+                  <th className={th}>Estado</th>
+                  <th className={th}>Estado Impositivo</th>
+                  <ContractActionsHeader />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {pag.visibles.map((r) => {
+                  const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
+                  return (
+                    <tr key={rowKey(r)} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato sin fecha de carga">—</span>} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
+                          {r.userName}
+                          <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
+                        <div className="flex flex-col gap-1">
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
+                          <div className="flex flex-col gap-0.5 text-xs">
+                            <span>
+                              <span className="text-gray-400">Alta:</span> {formatDate(r.fecha_alta_contrato)}
+                            </span>
+                            <span>
+                              <span className="text-gray-400">Baja:</span> {r.fecha_baja_contrato ? formatDate(r.fecha_baja_contrato) : '—'}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || '—'}</td>
+                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
+                      <td className="px-4 py-3">
+                        <EstadoBadge name={r.nombre_estado_empleado || ''} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
+                      </td>
+                      <ContractActionsCell record={r} onDeleted={() => load(true)} />
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <Paginador pagina={pag.pagina} totalPaginas={pag.totalPaginas} total={pag.total} desde={pag.desde} mostrados={pag.visibles.length} onPagina={pag.setPagina} />
+        </div>
+      )}
+    </div>
+  );
+};
