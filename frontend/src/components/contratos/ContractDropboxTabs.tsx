@@ -36,10 +36,13 @@ const fmtTamanio = (bytes?: number): string => {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 };
 
+/** Fecha y hora del archivo en Dropbox, en horario argentino fijo (no el del navegador de quien mira). */
 const fmtFecha = (iso?: string): string => {
   if (!iso) return "—";
   const d = new Date(iso);
-  return isNaN(d.getTime()) ? "—" : d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  if (isNaN(d.getTime())) return "—";
+  const zona = { timeZone: "America/Argentina/Buenos_Aires" };
+  return `${d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", ...zona })} ${d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, ...zona })} h`;
 };
 
 export type TipoBandejaDropbox = "para_firmar" | "enviado_firma" | "firmados";
