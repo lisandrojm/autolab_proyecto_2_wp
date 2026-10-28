@@ -306,7 +306,7 @@ async function scanTenant(tenant: any, estadosConTrigger: IInfo[]): Promise<numb
     const r = await conciliarOutbox(String(tenant._id), cfg, { enSeco });
     if (enSeco && r.plan.mover.length) logSiCambio(`${tenant._id}:conciliacion-outbox`, String(r.plan.mover.length), `[Outbox] tenant ${tenant._id}: ${r.plan.mover.length} archivo(s) del Outbox ya están en Pendbox o Firmados. Revisalos con «npm run outbox:conciliar:dry» y movelos con «npm run outbox:conciliar».`);
     for (const f of r.fallas) console.warn(`[Outbox] no se pudo mover ${f.archivo}: ${f.error}`);
-    if (r.movidos) console.log(`[Outbox] tenant ${tenant._id}: ${r.movidos} ya enviado(s) movido(s) a ${r.destino}, ${r.registrosCerrados} registro(s) de la cola cerrados`);
+    if (r.movidos || r.registrosCerrados) console.log(`[Outbox] tenant ${tenant._id}: ${r.movidos} ya enviado(s) movido(s) a ${r.destino}, ${r.registrosCerrados} registro(s) de la cola cerrados`);
   } catch (e: any) {
     console.warn("[Outbox] no se pudo conciliar el Outbox (se reintenta en la próxima pasada):", e?.message || e);
   }

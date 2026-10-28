@@ -28,6 +28,12 @@ export interface ResultadoConciliacion {
   plan: PlanConciliacion;
   movidos: number;
   registrosCerrados: number;
+  /**
+   * Registros de la cola (trabados, en cola, con error) cuyo código ya está en Pendbox o Firmados y cuyo
+   * archivo YA NO está en el Outbox: el documento se fue por otra vía y el registro quedó colgado (así
+   * figuraban trabados 20 recibos ya firmados). En seco, cuántos se cerrarían.
+   */
+  registrosHuerfanos: Array<{ codigo: string; archivo: string; estado: string; donde: "firmado" | "esperando_firma" }>;
   destino: string | null;
   fallas: Array<{ archivo: string; error: string }>;
   salteada?: "sin_carpetas";
@@ -51,13 +57,22 @@ export async function codigosYaEnviados(tenantId: string, cfg: TenantDropboxConf
 export async function conciliarOutbox(tenantId: string, cfg: TenantDropboxConfig, opts: { enSeco: boolean; log?: (linea: string) => void }): Promise<ResultadoConciliacion> {
   const log = opts.log || (() => {});
   const [outbox, pendbox, firmados] = await Promise.all([resolverCarpetaPorProposito("outbox"), resolverCarpetaPorProposito("pendbox"), resolverCarpetaPorProposito("firmados")]);
-  const vacio: ResultadoConciliacion = { plan: { mover: [], quedan: [] }, movidos: 0, registrosCerrados: 0, destino: null, fallas: [] };
+  const vacio: ResultadoConciliacion = { plan: { mover: [], quedan: [] }, movidos: 0, registrosCerrados: 0, registrosHuerfanos: [], destino: null, fallas: [] };
   if (!outbox || (!pendbox && !firmados)) return { ...vacio, salteada: "sin_carpetas" };
 
   const [o, p, f] = await Promise.all([listFolder(tenantId, cfg, outbox, true), pendbox ? listFolder(tenantId, cfg, pendbox, true) : null, firmados ? listFolder(tenantId, cfg, firmados, true) : null]);
   const plan = planConciliacionOutbox(soloArchivos(o.entries || []), soloArchivos(p?.entries || []), soloArchivos(f?.entries || []));
   const destino = `${path.posix.dirname(outbox.replace(/\/$/, ""))}/${CARPETA_YA_ENVIADOS}`.replace(/^\/\//, "/");
   for (const l of describirConciliacion(plan, opts.enSeco)) log(l);
+
+  // Los registros colgados: código en Pendbox/Firmados, archivo fuera del Outbox, registro sin cerrar.
+  const codPendbox = codigosDe(soloArchivos(p?.entries || []));
+  const codFirmados = codigosDe(soloArchivos(f?.entries || []));
+  const codOutbox = codigosDe(soloArchivos(o.entries || []));
+  const alla = [...new Set([...codPendbox.keys(), ...codFirmados.keys()])].filter((c) => !codOutbox.has(c));
+  const colgados: any[] = alla.length ? await DropboxSignEnvio.find({ tenantId: new Types.ObjectId(tenantId), codigo: { $in: alla }, estado: { $in: ["requiere_revision", "en_cola", "limite", "error"] } }).select("codigo archivo estado").lean() : [];
+  const registrosHuerfanos = colgados.map((x) => ({ codigo: String(x.codigo), archivo: String(x.archivo || ""), estado: String(x.estado), donde: (codFirmados.has(x.codigo) ? "firmado" : "esperando_firma") as "firmado" | "esperando_firma" }));
+  if (registrosHuerfanos.length) log(`  ${registrosHuerfanos.length} registro(s) de la cola colgados (ya en Pendbox/Firmados, fuera del Outbox)  → ${opts.enSeco ? "se cerrarían" : "se cierran"}`);
   const resumen = (cual: string, ruta: string | null, xs: { name: string }[]) => {
     const docs = xs.filter((x) => !/\.json$/i.test(x.name));
     return { cual, ruta, archivos: docs.length, conCodigo: codigosDe(docs.map((d) => ({ name: d.name, path: "" }))).size, ejemplos: docs.slice(0, 3).map((d) => d.name) };
@@ -68,8 +83,16 @@ export async function conciliarOutbox(tenantId: string, cfg: TenantDropboxConfig
     carpetas: [resumen("Outbox", outbox, soloArchivos(o.entries || [])), resumen("Pendbox", pendbox, listaP), resumen("Firmados", firmados, listaF)],
     posibles: posiblesPorNombre(plan.quedan, listaP, listaF),
   };
-  const r: ResultadoConciliacion = { ...vacio, plan, destino, diagnostico };
-  if (opts.enSeco || plan.mover.length === 0) return r;
+  const r: ResultadoConciliacion = { ...vacio, plan, destino, diagnostico, registrosHuerfanos };
+  if (opts.enSeco) return r;
+  for (const h of registrosHuerfanos) {
+    const u = await DropboxSignEnvio.updateOne(
+      { tenantId: new Types.ObjectId(tenantId), codigo: h.codigo, estado: h.estado },
+      { $set: { estado: "enviado", detalle: `Ya estaba ${h.donde === "firmado" ? "en Firmados (firmado)" : "en Pendbox (esperando firma)"} y fuera del Outbox: el registro había quedado como «${h.estado}».` } },
+    ).catch(() => null);
+    if (u?.modifiedCount) r.registrosCerrados++;
+  }
+  if (plan.mover.length === 0) return r;
 
   // La carpeta destino: si ya existe, Dropbox contesta conflicto y se sigue.
   await createFolder(tenantId, cfg, destino).catch(() => {});

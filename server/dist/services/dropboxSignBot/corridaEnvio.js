@@ -625,7 +625,14 @@ export async function vistaDeCola(tenantId) {
             estimadoAt: estimados.get(r.codigo)?.toISOString() || null,
         };
     });
-    const trabadosReg = await DropboxSignEnvio.find({ tenantId, estado: "requiere_revision" }).sort({ updatedAt: -1 }).limit(500).lean();
+    /*
+      TRABADOS = SÓLO LOS QUE SIGUEN EN EL OUTBOX (28/10/2026). El registro queda aunque el documento ya se
+      haya ido (enviado por otra vía, devuelto firmado): 20 recibos figuraban trabados estando ya en
+      Requested signatures. Lo que no está en el Outbox no se puede enviar, así que no está trabado. Por
+      código, que es la identidad del documento (el nombre del registro puede ser viejo).
+    */
+    const codigosEnOutbox = new Set(archivos.map((a) => leerAnclas(a).codigo).filter(Boolean));
+    const trabadosReg = (await DropboxSignEnvio.find({ tenantId, estado: "requiere_revision" }).sort({ updatedAt: -1 }).limit(500).lean()).filter((r) => codigosEnOutbox.has(r.codigo) || enOutbox.has(r.archivo));
     const grupos = agruparTrabados(trabadosReg.map((r) => ({ archivo: r.archivo, codigo: r.codigo, detalle: r.detalle || "", firmante: r.firmante || "", verificadaAt: r.colocacion?.verificadaAt ? new Date(r.colocacion.verificadaAt).toISOString() : null })));
     // La última verificación: la de «Verificar todos» si la hay en memoria; si no, la más reciente guardada.
     const v = verificacionDe(tenantId);

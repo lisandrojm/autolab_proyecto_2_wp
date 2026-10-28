@@ -272,7 +272,7 @@ async function scanTenant(tenant, estadosConTrigger) {
             logSiCambio(`${tenant._id}:conciliacion-outbox`, String(r.plan.mover.length), `[Outbox] tenant ${tenant._id}: ${r.plan.mover.length} archivo(s) del Outbox ya están en Pendbox o Firmados. Revisalos con «npm run outbox:conciliar:dry» y movelos con «npm run outbox:conciliar».`);
         for (const f of r.fallas)
             console.warn(`[Outbox] no se pudo mover ${f.archivo}: ${f.error}`);
-        if (r.movidos)
+        if (r.movidos || r.registrosCerrados)
             console.log(`[Outbox] tenant ${tenant._id}: ${r.movidos} ya enviado(s) movido(s) a ${r.destino}, ${r.registrosCerrados} registro(s) de la cola cerrados`);
     }
     catch (e) {

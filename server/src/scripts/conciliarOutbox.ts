@@ -66,13 +66,17 @@ async function main() {
         for (const x of d.posibles) console.log(`  ${x.archivo}\n      ↔ ${x.carpeta}: ${x.otro}${x.codigoAlla ? `  (allá: ${x.codigoAlla})` : "  (allá sin código)"}`);
       }
     }
+    if (r.registrosHuerfanos.length) {
+      console.log(`\nRegistros de la cola colgados (el documento ya está en Pendbox/Firmados y no en Outbox) — ${r.registrosHuerfanos.length}:`);
+      for (const h of r.registrosHuerfanos) console.log(`  ${h.codigo}  ${h.estado.padEnd(17)} ${h.donde === "firmado" ? "firmado        " : "esperando firma"} ${h.archivo}`);
+    }
     if (VER_TODOS && r.plan.quedan.length) {
       console.log("\nSe quedan en Outbox:");
       for (const q of r.plan.quedan) console.log(`  ${q.motivo === "sin_codigo" ? "sin código " : "sin rastro "} ${q.archivo.name}`);
     }
     if (DRY_RUN) console.log(`\nNada se tocó. Destino de la pasada real: ${r.destino}`);
     else {
-      console.log(`\nHecho: ${r.movidos} movido(s) a ${r.destino}, ${r.registrosCerrados} registro(s) de la cola cerrados, ${r.fallas.length} falla(s).`);
+      console.log(`\nHecho: ${r.movidos} movido(s) a ${r.destino}, ${r.registrosCerrados} registro(s) de la cola cerrados (movidos + colgados), ${r.fallas.length} falla(s).`);
       for (const f of r.fallas) console.log(`  FALLA ${f.archivo} → ${f.error} (se queda en Outbox)`);
       if (r.fallas.length === 0) {
         await Tenant.updateOne({ _id: tenant._id }, { $set: { "integrations.dropbox.conciliacionOutboxConfirmadaAt": new Date() } });

@@ -18,6 +18,17 @@ export interface ResultadoConciliacion {
     plan: PlanConciliacion;
     movidos: number;
     registrosCerrados: number;
+    /**
+     * Registros de la cola (trabados, en cola, con error) cuyo código ya está en Pendbox o Firmados y cuyo
+     * archivo YA NO está en el Outbox: el documento se fue por otra vía y el registro quedó colgado (así
+     * figuraban trabados 20 recibos ya firmados). En seco, cuántos se cerrarían.
+     */
+    registrosHuerfanos: Array<{
+        codigo: string;
+        archivo: string;
+        estado: string;
+        donde: "firmado" | "esperando_firma";
+    }>;
     destino: string | null;
     fallas: Array<{
         archivo: string;
