@@ -612,19 +612,19 @@ export const ContractsPage: React.FC = () => {
               {/* Paso 1: las tres variantes del trámite impositivo son EXCLUYENTES (el contrato está
                   en una sola). Del 2 al 5 son etapas consecutivas. Por eso el stepper de dos niveles:
                   arriba los 5 pasos, y la fila de variantes solo cuando se está parado en el paso 1. */}
-              <div className="flex items-center gap-1 overflow-x-auto pb-1">
+              {/* Pasos en fila que hacen wrap, no un carrusel con scroll (pedido del 28/10/2026). */}
+              <div className="flex flex-wrap items-center gap-x-1 gap-y-2">
                 {PASOS_GESTION.map((paso, i) => {
                   const activo = paso.tabs.includes(mgmtTab);
                   const total = paso.total({ mgmtCounts, dropboxCounts, contratados: contratadosCount });
                   return (
                     <React.Fragment key={paso.numero}>
                       {i > 0 && <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-gray-300 dark:text-gray-600 shrink-0" />}
-                      <button type="button" onClick={() => setMgmtTab(paso.tabs[0])} title={paso.descripcion} className={`group flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors whitespace-nowrap shrink-0 ${activo ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                      <button type="button" onClick={() => setMgmtTab(paso.tabs[0])} title={paso.carpeta ? `${paso.descripcion} (carpeta ${paso.carpeta})` : paso.descripcion} className={`group flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors whitespace-nowrap shrink-0 ${activo ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                         <span className={`flex items-center justify-center h-5 w-5 rounded-full text-[11px] font-bold shrink-0 ${activo ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>{paso.numero}</span>
                         <span className={`text-sm font-medium ${activo ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                          {/* Sin «| Outbox» y compañía (28/10/2026): ocupaba lugar. La carpeta sigue en el título y en el ícono de Dropbox. */}
                           {paso.label}
-                          {/* La carpeta de Dropbox de cada paso (pedido del 26/10/2026): «Para Firmar | Outbox». */}
-                          {paso.carpeta && <span className="font-normal opacity-70"> | {paso.carpeta}</span>}
                         </span>
                         {total !== null && <span className="text-xs text-gray-400">({total})</span>}
                       </button>
