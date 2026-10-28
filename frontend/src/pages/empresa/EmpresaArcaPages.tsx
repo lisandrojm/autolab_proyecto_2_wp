@@ -1296,7 +1296,7 @@ export const EmpresaModalidadContratacionPage: React.FC = () => (
 export const EmpresaModalidadLiquidacionPage: React.FC = () => (
   <EmpresaContextLayout titulo="Modalidad de Liquidación" icono={faSliders} ayuda="empresaDefaults">
     {(empresa, recargar) => <DefaultArcaEmpresa empresa={empresa} recargar={recargar} campo="modalidadLiquidacion"
-        ambito={nomencladorPorId("modalidades-liquidacion")!.descripcionAmbito} api={modalidadesLiqApi} queEs="la modalidad de liquidación" nota="Posición 73 del TXT de alta." editarHabilitados
+        ambito={nomencladorPorId("modalidades-liquidacion")!.descripcionAmbito} api={modalidadesLiqApi} queEs="la modalidad de liquidación" nota="Posición 73 del TXT de alta." agregarDesdeLaFicha
         columnasExtra={[{ label: 'Retribución pactada', render: (item) => rotuloCampoRetribucion((item as { retribucionPactada?: string }).retribucionPactada) }]} />}
   </EmpresaContextLayout>
 );

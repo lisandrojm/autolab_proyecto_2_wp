@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faStar, faSearch, faXmark, faEraser } from '@fortawesome/free-solid-svg-icons';
+import { faStar, faSearch, faXmark, faEraser, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { SeccionEmpleador } from './EmpresaContextLayout';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { HerenciaGlobal } from '../arca/HerenciaGlobal';
@@ -9,6 +9,7 @@ import { SimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { CAMPO_IDS_DE_VINCULO } from '../../api/companies';
 import { Company } from '../../api/companies';
 import { sweetAlert } from '../../utils/sweetAlert';
+import { Modal } from '../ui/Modal';
 
 /**
  * EL VALOR POR DEFECTO DE UNA EMPLEADORA, MARCADO SOBRE EL NOMENCLADOR.
@@ -49,12 +50,12 @@ interface Props {
   /** La frase del mapa de ámbitos: por qué esta tabla no se declara por empresa. */
   ambito: string;
   /**
-   * Muestra el nomenclador entero con un switch «Habilitada» por fila, para elegir DESDE LA FICHA
-   * cuáles ofrece esta empleadora en los selectores. Sin esto la lista sale ya recortada y el
-   * recorte se cambia sólo desde Configuración → ARCA, columna «Habilitadas para».
+   * La tabla muestra SÓLO los que esta empleadora agregó, con «Agregar» para sumar del nomenclador y
+   * una acción para quitar. Es la lista que ofrecen los selectores de sus contratos. Sin esto la
+   * lista sale del recorte que se hace en Configuración → ARCA, columna «Habilitadas para».
    */
-  editarHabilitados?: boolean;
-  /** Columnas propias del nomenclador, entre «Nombre» y «Habilitada». */
+  agregarDesdeLaFicha?: boolean;
+  /** Columnas propias del nomenclador, entre «Nombre» y «Por defecto». */
   columnasExtra?: Array<{ label: string; render: (item: SimpleCatalogItem) => React.ReactNode }>;
 }
 
@@ -88,12 +89,13 @@ export const LimpiarDefaultEmpresa: React.FC<{ hayValor: boolean; onLimpiar: () 
 /** El grupo con el que quedó clasificado un tipo en el nomenclador. Vacío = todavía sin clasificar. */
 const grupoDelItem = (t: SimpleCatalogItem): string => String((t as { grupo?: unknown }).grupo ?? '');
 
-export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, api, queEs, nota, filtrarPorGrupoDeLaEmpresa, ambito, editarHabilitados, columnasExtra = [] }) => {
+export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, api, queEs, nota, filtrarPorGrupoDeLaEmpresa, ambito, agregarDesdeLaFicha, columnasExtra = [] }) => {
   const { guardar, guardando } = useGuardarEmpresa(empresa, recargar);
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [cargando, setCargando] = useState(true);
   const [q, setQ] = useState('');
   const [soloDelGrupo, setSoloDelGrupo] = useState(true);
+  const [agregando, setAgregando] = useState(false);
 
   useEffect(() => {
     api
@@ -119,10 +121,13 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
   const campoVinculo = campo in CAMPO_IDS_DE_VINCULO ? CAMPO_IDS_DE_VINCULO[campo as keyof typeof CAMPO_IDS_DE_VINCULO] : undefined;
   const asignados = ((campoVinculo ? (empresa[campoVinculo] as string[] | undefined) : undefined) || []).map(String);
   const delaEmpresa = useMemo(() => (asignados.length === 0 ? items : items.filter((i) => asignados.includes(i._id))), [items, asignados.join(',')]);
-  // Con el switch a la vista se lista el nomenclador entero: lo deshabilitado tiene que poder volver a prenderse.
-  const editaHabilitados = !!editarHabilitados && !!campoVinculo;
-  const listados = editaHabilitados ? items : delaEmpresa;
-  const habilitado = (i: SimpleCatalogItem) => asignados.length === 0 || asignados.includes(i._id);
+  /*
+    Agregando desde la ficha, la tabla es la lista de la empleadora tal cual está: vacía es vacía. Lo
+    que sigue valiendo es que los selectores, con la lista vacía, ofrecen todo el nomenclador; por
+    eso el estado vacío lo dice.
+  */
+  const agrega = !!agregarDesdeLaFicha && !!campoVinculo;
+  const listados = agrega ? items.filter((i) => asignados.includes(i._id)) : delaEmpresa;
 
   const visibles = useMemo(() => {
     const texto = q.trim().toLowerCase();
@@ -150,37 +155,33 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
     );
   };
 
-  /**
-   * Prende o apaga un ítem para esta empleadora.
-   *
-   * La lista vacía significa TODOS, así que: apagar uno con la lista vacía guarda todos menos ése;
-   * prender el último que faltaba vuelve a guardar vacío; y no se puede apagar el último que queda,
-   * porque la lista quedaría vacía y volvería a ofrecer todos.
-   *
-   * Si el que se apaga es el marcado por defecto, el default se limpia en el mismo guardado: si no,
-   * la empleadora heredaría un valor que su propio filtro ya no ofrece.
-   */
-  const alternarHabilitado = (i: SimpleCatalogItem) => {
-    if (!campoVinculo) return;
-    const actuales = asignados.length === 0 ? items.map((x) => x._id) : asignados;
-    const apagar = habilitado(i);
-    const nuevos = apagar ? actuales.filter((id) => id !== i._id) : [...new Set([...actuales, i._id])];
-    if (nuevos.length === 0) {
-      sweetAlert.error('No se puede', `Tiene que quedar al menos una habilitada. Con ninguna, ${empresa.razonSocial} volvería a ofrecer todas.`);
-      return;
-    }
-    const todos = items.every((x) => nuevos.includes(x._id));
-    const codigo = String(i.externalId || '');
-    const limpiaDefault = apagar && !!codigo && codigo === marcado;
-    guardar(
-      { [campoVinculo]: todos ? [] : nuevos, ...(limpiaDefault ? { defaultsArca: { [campo]: '' } } : {}) } as Partial<Company>,
-      `${nombreDe(codigo) || i.name} ${apagar ? 'ya no se ofrece' : 'se ofrece'} en ${empresa.razonSocial}.${limpiaDefault ? ' Era el valor por defecto: se quitó.' : ''}`,
-    );
+  /** Suma al final de la lista de la empleadora. Se guarda en un solo request. */
+  const agregar = async (ids: string[]) => {
+    if (!campoVinculo || ids.length === 0) return false;
+    const nuevos = [...new Set([...asignados, ...ids])];
+    return guardar({ [campoVinculo]: nuevos } as Partial<Company>, `Se ${ids.length === 1 ? 'agregó' : `agregaron ${ids.length}`} a ${empresa.razonSocial}.`);
   };
 
-  const habilitarTodos = () => {
+  /**
+   * Saca uno de la lista. Si era el marcado por defecto, el default se limpia en el mismo guardado:
+   * si no, la empleadora heredaría un valor que su propia lista ya no ofrece. Quitar el último deja
+   * la lista vacía, y vacía los selectores vuelven a ofrecer todo: se avisa antes.
+   */
+  const quitar = async (i: SimpleCatalogItem) => {
     if (!campoVinculo) return;
-    guardar({ [campoVinculo]: [] } as Partial<Company>, `${empresa.razonSocial} vuelve a ofrecer todo el nomenclador.`);
+    const nuevos = asignados.filter((id) => id !== i._id);
+    const codigo = String(i.externalId || '');
+    const limpiaDefault = !!codigo && codigo === marcado;
+    const avisos = [
+      limpiaDefault && `Es ${queEs} por defecto: se quita también.`,
+      nuevos.length === 0 && `Es la última: sin ninguna agregada, los selectores de ${empresa.razonSocial} vuelven a ofrecer todo el nomenclador.`,
+    ].filter(Boolean);
+    const r = await sweetAlert.confirm(`¿Quitar ${nombreDe(codigo) || i.name}?`, avisos.length ? avisos.join(' ') : `Deja de ofrecerse en los selectores de ${empresa.razonSocial}.`, 'Sí, quitar');
+    if (!r.isConfirmed) return;
+    guardar(
+      { [campoVinculo]: nuevos, ...(limpiaDefault ? { defaultsArca: { [campo]: '' } } : {}) } as Partial<Company>,
+      `${nombreDe(codigo) || i.name} ya no se ofrece en ${empresa.razonSocial}.${limpiaDefault ? ' Era el valor por defecto: se quitó.' : ''}`,
+    );
   };
 
   if (cargando) return <LoadingSpinner message="Cargando el nomenclador..." />;
@@ -212,23 +213,9 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
           Sin esto, una lista de cuatro códigos sobre un nomenclador de 293 se lee como un catálogo a
           medio importar, y el próximo paso es ir a cargarlos de nuevo.
         */}
-        {asignados.length > 0 && !editaHabilitados && (
+        {asignados.length > 0 && !agrega && (
           <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
             Mostrando los {delaEmpresa.length} que esta empleadora usa, de {items.length} del nomenclador. Se eligen desde Configuración → ARCA, en la columna «Empresas».
-          </p>
-        )}
-        {editaHabilitados && (
-          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-            {asignados.length > 0 ? (
-              <>
-                Esta empleadora ofrece {delaEmpresa.length} de {items.length} en los selectores.{' '}
-                <button type="button" onClick={habilitarTodos} disabled={guardando} className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 underline underline-offset-2 disabled:opacity-50">
-                  Habilitar todas
-                </button>
-              </>
-            ) : (
-              <>Se ofrecen todas en los selectores. Apagá «Habilitada» en las que esta empleadora no usa.</>
-            )}
           </p>
         )}
       </div>
@@ -250,6 +237,12 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
             {soloDelGrupo ? `Del grupo ${grupoEmpresa} (${visibles.length})` : `Los ${listados.length}`}
           </button>
         )}
+        {agrega && (
+          <button type="button" onClick={() => setAgregando(true)} disabled={guardando || listados.length >= items.length} className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold btn-primary disabled:opacity-50">
+            <FontAwesomeIcon icon={faPlus} className="h-3.5 w-3.5" />
+            Agregar
+          </button>
+        )}
       </div>
 
       {/*
@@ -268,31 +261,28 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
               {columnasExtra.map((c) => (
                 <th key={c.label} className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{c.label}</th>
               ))}
-              {editaHabilitados && (
-                <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="Si se ofrece en los selectores para los contratos de esta empleadora.">Habilitada</th>
-              )}
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">
                 <span className="inline-flex items-center gap-2">
                   Por defecto
                   <LimpiarDefaultEmpresa hayValor={!!marcado} onLimpiar={() => marcar(marcado)} queEs={queEs} disabled={guardando} />
                 </span>
               </th>
+              {agrega && <th className="px-4 py-3 w-px" aria-label="Acciones" />}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
             {visibles.length === 0 ? (
               <tr>
-                <td colSpan={3 + columnasExtra.length + (editaHabilitados ? 1 : 0)} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                  No hay ninguno que coincida.
+                <td colSpan={3 + columnasExtra.length + (agrega ? 1 : 0)} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                  {agrega && listados.length === 0 ? `Esta empleadora todavía no agregó ninguna. Mientras tanto, sus selectores ofrecen todo el nomenclador (${items.length}).` : 'No hay ninguno que coincida.'}
                 </td>
               </tr>
             ) : (
               visibles.map((i) => {
                 const codigo = String(i.externalId || '');
                 const esDefecto = !!codigo && codigo === marcado;
-                const activo = habilitado(i);
                 return (
-                  <tr key={i._id} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${activo ? '' : 'opacity-60'}`}>
+                  <tr key={i._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{codigo || '—'}</span>
                     </td>
@@ -300,27 +290,18 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
                     {columnasExtra.map((c) => (
                       <td key={c.label} className="px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300">{c.render(i)}</td>
                     ))}
-                    {editaHabilitados && (
-                      <td className="px-4 py-2.5 text-center">
-                        {/* Mismo switch que «Empresas que lo usan»: prender o apagar una relación, no elegir de una lista. */}
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={activo}
-                          aria-label={`${activo ? 'Deshabilitar' : 'Habilitar'} ${i.name} en ${empresa.razonSocial}`}
-                          disabled={guardando}
-                          onClick={() => alternarHabilitado(i)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${activo ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
-                        >
-                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${activo ? 'translate-x-6' : 'translate-x-1'}`} />
-                        </button>
-                      </td>
-                    )}
                     <td className="px-4 py-2.5">
-                      <button type="button" onClick={() => marcar(codigo)} disabled={guardando || !codigo || !activo} title={!activo ? 'Habilitala primero para poder marcarla por defecto.' : esDefecto ? `Es ${queEs} por defecto. Click para quitarlo.` : `Marcar como ${queEs} por defecto de esta empleadora`} aria-pressed={esDefecto} className={`shrink-0 transition-colors disabled:opacity-50 ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
+                      <button type="button" onClick={() => marcar(codigo)} disabled={guardando || !codigo} title={esDefecto ? `Es ${queEs} por defecto. Click para quitarlo.` : `Marcar como ${queEs} por defecto de esta empleadora`} aria-pressed={esDefecto} className={`shrink-0 transition-colors disabled:opacity-50 ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
                         <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5" />
                       </button>
                     </td>
+                    {agrega && (
+                      <td className="px-4 py-2.5 text-right">
+                        <button type="button" onClick={() => quitar(i)} disabled={guardando} title={`Quitar de ${empresa.razonSocial}`} aria-label={`Quitar ${i.name} de ${empresa.razonSocial}`} className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50">
+                          <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 );
               })
@@ -328,6 +309,84 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
           </tbody>
         </table>
       </div>
+
+      {agregando && (
+        <AgregarDelNomenclador
+          disponibles={items.filter((i) => !asignados.includes(i._id))}
+          columnasExtra={columnasExtra}
+          razonSocial={empresa.razonSocial}
+          guardando={guardando}
+          onCerrar={() => setAgregando(false)}
+          onAgregar={async (ids) => {
+            if (await agregar(ids)) setAgregando(false);
+          }}
+        />
+      )}
     </SeccionEmpleador>
+  );
+};
+
+/** El modal de «Agregar»: los del nomenclador que la empleadora todavía no tiene, con buscador y tildes. */
+const AgregarDelNomenclador: React.FC<{
+  disponibles: SimpleCatalogItem[];
+  columnasExtra: NonNullable<Props['columnasExtra']>;
+  razonSocial: string;
+  guardando: boolean;
+  onCerrar: () => void;
+  onAgregar: (ids: string[]) => void;
+}> = ({ disponibles, columnasExtra, razonSocial, guardando, onCerrar, onAgregar }) => {
+  const [q, setQ] = useState('');
+  const [elegidos, setElegidos] = useState<string[]>([]);
+  const visibles = useMemo(() => {
+    const texto = q.trim().toLowerCase();
+    return texto ? disponibles.filter((i) => `${i.externalId || ''} ${i.name || ''}`.toLowerCase().includes(texto)) : disponibles;
+  }, [disponibles, q]);
+  const alternar = (id: string) => setElegidos((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  return (
+    <Modal
+      isOpen
+      onClose={onCerrar}
+      title="Agregar"
+      subtitle={razonSocial}
+      size="md"
+      footer={
+        <div className="flex items-center justify-end gap-3 w-full">
+          <button type="button" onClick={onCerrar} disabled={guardando} className="btn-secondary">
+            Cancelar
+          </button>
+          <button type="button" onClick={() => onAgregar(elegidos)} disabled={guardando || elegidos.length === 0} className="btn-primary disabled:opacity-50">
+            {guardando ? 'Guardando…' : elegidos.length > 1 ? `Agregar ${elegidos.length}` : 'Agregar'}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-2">
+        <div className="relative">
+          <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por código o nombre..." className="w-full pl-9 pr-3 py-2 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200" />
+        </div>
+        <div className="max-h-80 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
+          {visibles.length === 0 ? (
+            <p className="px-3 py-4 text-xs text-gray-400 italic">{disponibles.length === 0 ? 'Ya están todas agregadas.' : 'No hay ninguna que coincida.'}</p>
+          ) : (
+            visibles.map((i) => (
+              <label key={i._id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/30">
+                <input type="checkbox" checked={elegidos.includes(i._id)} onChange={() => alternar(i._id)} className="h-4 w-4 rounded border-gray-300 text-blue-600" />
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{String(i.externalId || '—')}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm text-gray-800 dark:text-gray-200">{i.name}</span>
+                  {columnasExtra.map((c) => (
+                    <span key={c.label} className="block text-[11px] text-gray-500 dark:text-gray-400">
+                      {c.label}: {c.render(i)}
+                    </span>
+                  ))}
+                </span>
+              </label>
+            ))
+          )}
+        </div>
+      </div>
+    </Modal>
   );
 };
