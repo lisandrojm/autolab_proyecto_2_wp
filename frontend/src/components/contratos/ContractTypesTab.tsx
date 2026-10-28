@@ -979,13 +979,14 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   const formasElegidas = formasPago.filter((f) => form.formasPagoIds.includes(String(f._id)));
   const bloqueFormasPago = (
     <div className="space-y-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5">
-      <div className="flex items-center justify-between gap-2">
+      {/* Mismo «+ Asignar» que Plantilla | Contrato y Plantilla | Release. */}
+      <div className="flex items-center gap-2">
         <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
           Formas de pago{formasElegidas.length ? ` (${formasElegidas.length})` : ''}
         </span>
         {formasPago.length > 0 && (
-          <button type="button" onClick={() => setVentanaFormas(true)} className="text-[11px] font-semibold text-blue-600 hover:underline dark:text-blue-400">
-            Elegir
+          <button type="button" onClick={() => setVentanaFormas(true)} className="inline-flex items-center gap-1 rounded-md border border-blue-200 px-2 py-0.5 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/30">
+            + Asignar
           </button>
         )}
       </div>
@@ -998,7 +999,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
           .
         </p>
       ) : formasElegidas.length === 0 ? (
-        <p className="text-[11px] text-amber-700 dark:text-amber-300">Sin forma de pago. Tocá «Elegir» para marcar una o varias.</p>
+        <p className="text-[11px] text-amber-700 dark:text-amber-300">Sin forma de pago. Tocá «+ Asignar» para marcar una o varias.</p>
       ) : (
         <div className="flex flex-wrap gap-1">
           {formasElegidas.map((f) => (
