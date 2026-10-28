@@ -4,6 +4,7 @@ import { createFolder, getTenantDropboxConfig, listFolder, moveEntry } from "./d
 import { resolverCarpetaPorProposito } from "../utils/estadoCarpetas.js";
 import { DropboxSignEnvio } from "../models/DropboxSignEnvio.js";
 import { Tenant } from "../models/Tenant.js";
+import { leerAnclas } from "../utils/anclasNombre.js";
 import { codigosDe, describirConciliacion, PlanConciliacion, planConciliacionOutbox, posiblesPorNombre } from "../utils/conciliacionOutbox.js";
 
 /**
@@ -88,6 +89,39 @@ export async function conciliarOutbox(tenantId: string, cfg: TenantDropboxConfig
     if (u?.modifiedCount) r.registrosCerrados++;
   }
   return r;
+}
+
+/**
+ * YA ENVIADOS CONFIRMADOS A MANO: códigos que una persona verificó en Dropbox Sign (enviados por fuera de
+ * estas carpetas, sin rastro en Pendbox ni Firmados). Mismo destino y mismo cierre del registro que la
+ * conciliación; nunca borra. Por cada código devuelve, como evidencia para revisar, lo que hay en Pendbox
+ * y en Firmados del MISMO CUIL (no decide nada con eso).
+ */
+export async function moverConfirmadosAMano(tenantId: string, cfg: TenantDropboxConfig, codigos: string[], opts: { enSeco: boolean }) {
+  const [outbox, pendbox, firmados] = await Promise.all([resolverCarpetaPorProposito("outbox"), resolverCarpetaPorProposito("pendbox"), resolverCarpetaPorProposito("firmados")]);
+  if (!outbox) throw new Error("No hay carpeta con el propósito Outbox.");
+  const [o, p, f] = await Promise.all([listFolder(tenantId, cfg, outbox, true), pendbox ? listFolder(tenantId, cfg, pendbox, true) : null, firmados ? listFolder(tenantId, cfg, firmados, true) : null]);
+  const enOutbox = soloArchivos(o.entries || []);
+  const otros = [...soloArchivos(p?.entries || []).map((x) => ({ ...x, carpeta: "Pendbox" })), ...soloArchivos(f?.entries || []).map((x) => ({ ...x, carpeta: "Firmados" }))];
+  const destino = `${path.posix.dirname(outbox.replace(/\/$/, ""))}/${CARPETA_YA_ENVIADOS}`.replace(/^\/\//, "/");
+  const filas: Array<{ codigo: string; archivo: string | null; evidencia: string[]; movido: boolean; error?: string }> = [];
+  if (!opts.enSeco) await createFolder(tenantId, cfg, destino).catch(() => {});
+  for (const codigo of codigos) {
+    const archivo = enOutbox.find((a) => leerAnclas(a.name).codigo === codigo) || null;
+    const cuit = archivo ? leerAnclas(archivo.name).cuit : "";
+    const evidencia = cuit ? otros.filter((x) => x.name.includes(cuit)).map((x) => `${x.carpeta}: ${x.name}`) : [];
+    const fila = { codigo, archivo: archivo?.name || null, evidencia, movido: false } as (typeof filas)[number];
+    filas.push(fila);
+    if (opts.enSeco || !archivo) continue;
+    try {
+      await moveEntry(tenantId, cfg, archivo.path, `${destino}/${archivo.name}`);
+      fila.movido = true;
+      await DropboxSignEnvio.updateOne({ tenantId: new Types.ObjectId(tenantId), codigo, estado: { $ne: "enviado" } }, { $set: { estado: "enviado", detalle: `Confirmado a mano como ya enviado (por fuera de las carpetas). La copia del Outbox se movió a ${CARPETA_YA_ENVIADOS}.` } }).catch(() => {});
+    } catch (e: any) {
+      fila.error = String(e?.message || e);
+    }
+  }
+  return { destino, filas };
 }
 
 /** ¿Ya hubo una pasada real confirmada a mano? Hasta entonces el escaneo la corre en seco. */

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { Tenant } from "../models/Tenant.js";
 import { getTenantDropboxConfig } from "../services/dropboxService.js";
-import { CARPETA_YA_ENVIADOS, conciliarOutbox } from "../services/conciliacionOutboxService.js";
+import { CARPETA_YA_ENVIADOS, conciliarOutbox, moverConfirmadosAMano } from "../services/conciliacionOutboxService.js";
 
 /**
  * CONCILIAR EL OUTBOX A MANO (ver `utils/conciliacionOutbox.ts`): saca de Outbox («Para Firmar») las
@@ -10,6 +10,10 @@ import { CARPETA_YA_ENVIADOS, conciliarOutbox } from "../services/conciliacionOu
  *
  *   TENANT_SLUG=demo-tenant npm run outbox:conciliar:dry   ← lista qué se movería, no toca nada
  *   TENANT_SLUG=demo-tenant npm run outbox:conciliar       ← lo aplica
+ *
+ * `CODIGOS=ID-000429,ID-000430,…` es otro modo: códigos que verificaste A MANO en Dropbox Sign como ya
+ * enviados aunque no tengan rastro en las carpetas. En seco muestra cada archivo con lo que hay en Pendbox
+ * y Firmados de su mismo CUIL; en real los mueve a `Outbox_ya_enviados` y cierra su registro de la cola.
  *
  * `VER_TODOS=true` lista además los que se quedan (sin rastro o sin código). La primera pasada real deja
  * la conciliación habilitada en el escaneo de carpetas, que a partir de ahí la corre sola.
@@ -30,6 +34,22 @@ async function main() {
   if (!tenant) throw new Error(`No existe el tenant ${slug}`);
   const cfg = getTenantDropboxConfig(tenant);
   if (!cfg) throw new Error("El tenant no tiene Dropbox conectado");
+
+  const codigos = (process.env.CODIGOS || "").split(/[\s,]+/).map((c) => c.trim().toUpperCase()).filter(Boolean);
+  if (codigos.length) {
+    if (codigos.some((c) => !/^ID-\d{6,}$/.test(c))) throw new Error("CODIGOS: cada uno con la forma ID-000429, separados por coma.");
+    const m = await moverConfirmadosAMano(String(tenant._id), cfg, [...new Set(codigos)], { enSeco: DRY_RUN });
+    console.log(`Confirmados a mano como ya enviados — ${codigos.length} código(s)${DRY_RUN ? " — EN SECO" : ""}\n`);
+    for (const f of m.filas) {
+      console.log(`${f.codigo}  ${f.archivo ? f.archivo : "NO ESTÁ EN OUTBOX (no se hace nada)"}`);
+      if (f.archivo) console.log(f.evidencia.length ? f.evidencia.map((e) => `      mismo CUIL → ${e}`).join("\n") : "      mismo CUIL → nada en Pendbox ni Firmados");
+      if (f.error) console.log(`      FALLA: ${f.error} (se queda en Outbox)`);
+    }
+    const movidos = m.filas.filter((f) => f.movido).length;
+    console.log(DRY_RUN ? `\nNada se tocó. ${m.filas.filter((f) => f.archivo).length} se moverían a ${m.destino}.` : `\nHecho: ${movidos} movido(s) a ${m.destino}.`);
+    await mongoose.disconnect();
+    return;
+  }
 
   const r = await conciliarOutbox(String(tenant._id), cfg, { enSeco: DRY_RUN, log: (l) => console.log(l) });
   if (r.salteada === "sin_carpetas") console.log("Falta la carpeta Outbox, o Pendbox y Firmados (propósito sin resolver): no se hace nada.");

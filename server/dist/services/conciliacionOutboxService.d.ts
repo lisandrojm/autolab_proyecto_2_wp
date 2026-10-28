@@ -45,6 +45,24 @@ export declare function conciliarOutbox(tenantId: string, cfg: TenantDropboxConf
     enSeco: boolean;
     log?: (linea: string) => void;
 }): Promise<ResultadoConciliacion>;
+/**
+ * YA ENVIADOS CONFIRMADOS A MANO: códigos que una persona verificó en Dropbox Sign (enviados por fuera de
+ * estas carpetas, sin rastro en Pendbox ni Firmados). Mismo destino y mismo cierre del registro que la
+ * conciliación; nunca borra. Por cada código devuelve, como evidencia para revisar, lo que hay en Pendbox
+ * y en Firmados del MISMO CUIL (no decide nada con eso).
+ */
+export declare function moverConfirmadosAMano(tenantId: string, cfg: TenantDropboxConfig, codigos: string[], opts: {
+    enSeco: boolean;
+}): Promise<{
+    destino: string;
+    filas: {
+        codigo: string;
+        archivo: string | null;
+        evidencia: string[];
+        movido: boolean;
+        error?: string;
+    }[];
+}>;
 /** ¿Ya hubo una pasada real confirmada a mano? Hasta entonces el escaneo la corre en seco. */
 export declare function conciliacionConfirmada(tenantId: string): Promise<boolean>;
 export {};
