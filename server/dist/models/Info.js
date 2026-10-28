@@ -15,6 +15,7 @@ const infoSchema = new Schema({
         tipoImpositivo: { type: String },
         esSistema: { type: Boolean },
         aceptaSinCuit: { type: Boolean },
+        vinculadoAFirma: { type: Boolean },
         orden: { type: Number },
         ordenDependencia: { type: Number },
         transicionAutomatica: {

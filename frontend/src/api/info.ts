@@ -14,6 +14,8 @@ export interface EstadoPayload {
   tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
   /** El estado admite también personas SIN CUIT/CUIL argentino (se les muestra el badge "Sin CUIT"). */
   aceptaSinCuit?: boolean;
+  /** Depende de una firma del colaborador (Dropbox Sign). Omitido = el backend no la toca. */
+  vinculadoAFirma?: boolean;
   /**
    * Opcional: si se omite, el backend no la toca (se preserva la que ya tenía el estado — se edita
    * desde "Orden de dependencias", no desde el formulario de Editar Estado). `null` la borra.

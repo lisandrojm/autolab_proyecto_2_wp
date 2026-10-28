@@ -8,7 +8,7 @@ import { InfoModal } from '../ui/InfoModal';
 import { SelectorBadges } from '../ui/SelectorBadges';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable, faFileInvoiceDollar, faGripVertical, faCheck, faMultiply, faCircleInfo, faSitemap, faTriangleExclamation, faLock } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faEdit, faTrash, faTags, faFileContract, faGrip, faTable, faFileInvoiceDollar, faGripVertical, faCheck, faMultiply, faCircleInfo, faSitemap, faTriangleExclamation, faLock, faSignature } from '@fortawesome/free-solid-svg-icons';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -140,6 +140,20 @@ const ChipAceptaSinCuit: React.FC<{ estado: InfoItem }> = ({ estado }) => {
   );
 };
 
+/** Badge "Firma": el estado depende de una firma del colaborador (Dropbox Sign). */
+const ChipVinculadoAFirma: React.FC<{ estado: InfoItem }> = ({ estado }) => {
+  if (!estado.data?.vinculadoAFirma || estado.data?.esImpositivo) return null;
+  return (
+    <span
+      title="Depende de una firma del colaborador (Dropbox Sign): sólo se asigna a tipos de contrato que mandan algo a firmar"
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-500/20 dark:text-sky-200 dark:border-sky-500/50"
+    >
+      <FontAwesomeIcon icon={faSignature} className="h-2.5 w-2.5" />
+      Firma
+    </span>
+  );
+};
+
 /**
  * Los estados se listan separados por índole: los IMPOSITIVOS (los que representan un trámite de
  * ARCA y definen por qué pestaña de Contratos pasa el contrato) y el resto (los del circuito de
@@ -185,6 +199,8 @@ interface FormState {
    * que un mismo estado puede convivir con los dos casos.
    */
   aceptaSinCuit: boolean;
+  /** Depende de una firma del colaborador (Dropbox Sign): sólo para tipos que mandan algo a firmar. */
+  vinculadoAFirma: boolean;
 }
 
 const FORM_VACIO: FormState = {
@@ -196,6 +212,7 @@ const FORM_VACIO: FormState = {
   colorEtiquetaSecundaria: COLOR_POR_DEFECTO,
   tipoImpositivo: '',
   aceptaSinCuit: false,
+  vinculadoAFirma: false,
 };
 
 export const ContractStatesTab: React.FC = () => {
@@ -364,6 +381,7 @@ export const ContractStatesTab: React.FC = () => {
       colorEtiquetaSecundaria: estado.data?.colorEtiquetaSecundaria || COLOR_POR_DEFECTO,
       tipoImpositivo: (estado.data?.tipoImpositivo as TipoImpositivo) || '',
       aceptaSinCuit: !!estado.data?.aceptaSinCuit,
+      vinculadoAFirma: !!estado.data?.vinculadoAFirma,
     });
     setShowModal(true);
   };
@@ -397,6 +415,7 @@ export const ContractStatesTab: React.FC = () => {
       colorEtiquetaSecundaria: form.esImpositivo ? form.colorEtiquetaSecundaria : undefined,
       tipoImpositivo: form.esImpositivo && form.tipoImpositivo ? form.tipoImpositivo : undefined,
       aceptaSinCuit: form.esImpositivo ? form.aceptaSinCuit : undefined,
+      vinculadoAFirma: !form.esImpositivo && form.vinculadoAFirma,
       // transicionAutomatica NO se manda desde acá: se edita desde "Orden de dependencias".
     };
 
@@ -658,6 +677,21 @@ export const ContractStatesTab: React.FC = () => {
               )}
             </span>
           </label>
+
+          {!form.esImpositivo && (
+            <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+              <input
+                type="checkbox"
+                checked={form.vinculadoAFirma}
+                onChange={(e) => setForm((p) => ({ ...p, vinculadoAFirma: e.target.checked }))}
+                className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              />
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Vinculado a firma del colaborador (Dropbox Sign)</span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">Marcalo si el contrato llega a este estado por una firma (envío de documentación, firma pendiente, firma enviada). Sólo se puede asignar a tipos de contrato que mandan algo a firmar (contrato, release o alta de ARCA).</span>
+              </span>
+            </label>
+          )}
 
           {form.esImpositivo && (
             <div className="space-y-3 p-3 rounded-lg border border-purple-200 dark:border-purple-800/60 bg-purple-50/40 dark:bg-purple-900/10">
@@ -923,6 +957,8 @@ const SortableEstadoRow: React.FC<SortableEstadoProps & { index: number; onEnabl
             <ChipTipoImpositivo estado={estado} />
             <ChipAceptaSinCuit estado={estado} />
           </div>
+        ) : estado.data?.vinculadoAFirma ? (
+          <ChipVinculadoAFirma estado={estado} />
         ) : (
           <span className="text-xs text-gray-400">—</span>
         )}
@@ -1018,6 +1054,7 @@ const SortableEstadoCard: React.FC<SortableEstadoProps> = ({ estado, isReorderMo
             {estado.data?.esSistema ? <ChipSistema /> : null}
             {estado.data?.esImpositivo ? <ChipTipoImpositivo estado={estado} /> : null}
             {estado.data?.esImpositivo ? <ChipAceptaSinCuit estado={estado} /> : null}
+            <ChipVinculadoAFirma estado={estado} />
             <ChipPasoDependencia estado={estado} />
             <EstadoSecundarioBadge estado={estado} className="text-[10px]" />
           </div>

@@ -17,6 +17,7 @@ import { infoAPI, InfoItem } from '../../api/info';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { formasPagoAPI, FormaPagoItem } from '../../api/formasPago';
 import { CODIGO_POR_DEFECTO, formaActiva, formasDelTipo, normalizarFormasDelTipo, ordenarFormas } from '@compartido/formasPago';
+import { esEstadoDeFirma, tipoEnviaAFirmar } from '@compartido/estadosFirma';
 import { SelectorCodigoArca } from '../arca/SelectorCodigoArca';
 import { MODALIDADES_OFRECIDAS } from './afipCompleteness';
 import { EstadoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
@@ -471,6 +472,26 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   useEffect(() => {
     if (generaAlta) bloqueArcaRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [generaAlta]);
+
+  /*
+    ESTADOS DE FIRMA ↔ «ENVÍO A FIRMAR» (28/10/2026). Un estado vinculado a firma (FIRMA PENDIENTE,
+    FIRMA ENVIADA…) no tiene sentido en un tipo que no manda nada a firmar: se deshabilita y, si estaba
+    tildado, se destilda solo y se avisa cuáles. Volver a tildar un check de firma no los repone: se
+    eligen de nuevo. Al guardar, `sincronizarEstados` los desvincula de las plantillas del tipo.
+  */
+  const enviaAFirmar = tipoEnviaAFirmar({ requiereFirma: form.requiereFirma, requiereFirmaRelease: form.requiereFirmaRelease, requiereFirmaAlta: form.requiereFirmaAlta, generaAlta });
+  const [estadosQuitadosPorFirma, setEstadosQuitadosPorFirma] = useState<string[]>([]);
+  useEffect(() => {
+    if (!showModal || enviaAFirmar) {
+      setEstadosQuitadosPorFirma([]);
+      return;
+    }
+    const quitar = estados.filter((e) => esEstadoDeFirma(e) && (e.data?.contratoFrameIds || []).length > 0 && form.estadoIds.includes(e._id));
+    if (quitar.length === 0) return;
+    const ids = new Set(quitar.map((e) => e._id));
+    setEstadosQuitadosPorFirma((prev) => [...new Set([...prev, ...quitar.map((e) => e.name)])]);
+    setForm((p) => ({ ...p, estadoIds: p.estadoIds.filter((id) => !ids.has(id)) }));
+  }, [showModal, enviaAFirmar, estados, form.estadoIds]);
 
   useEffect(() => {
     if (!showModal) return;
@@ -1657,6 +1678,10 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
               const estadosImpositivos = estados.filter((e) => e.data?.esImpositivo);
               const estadosRegulares = estados.filter((e) => !e.data?.esImpositivo && (e.data?.contratoFrameIds || []).length > 0);
               const estadosGlobales = estados.filter((e) => (e.data?.contratoFrameIds || []).length === 0);
+              /** Los estados de firma no se pueden elegir en un tipo que no manda nada a firmar. */
+              const bloqueadoPorFirma = (e: InfoItem) => !enviaAFirmar && esEstadoDeFirma(e);
+              const regularesElegibles = estadosRegulares.filter((e) => !bloqueadoPorFirma(e));
+              const globalesDeFirma = estadosGlobales.filter(bloqueadoPorFirma);
               const estadosNoGlobales = estadosImpositivos.length + estadosRegulares.length;
               /*
                 LAS PLANTILLAS COMPARTIDAS. Los estados se vinculan a la plantilla, no al tipo: si una
@@ -1884,8 +1909,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              onClick={() => setForm((p) => ({ ...p, estadoIds: [...p.estadoIds.filter((id) => !estadosRegulares.some((e) => e._id === id)), ...estadosRegulares.map((e) => e._id)] }))}
-                              disabled={estadosRegulares.length === 0 || estadosRegulares.every((e) => form.estadoIds.includes(e._id))}
+                              onClick={() => setForm((p) => ({ ...p, estadoIds: [...p.estadoIds.filter((id) => !estadosRegulares.some((e) => e._id === id)), ...regularesElegibles.map((e) => e._id)] }))}
+                              disabled={regularesElegibles.length === 0 || regularesElegibles.every((e) => form.estadoIds.includes(e._id))}
                               className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed"
                             >
                               Seleccionar todos
@@ -1904,6 +1929,16 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                         <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1 mb-1.5 mt-0.5">
                           Se aplica a todas las Plantillas de este Contrato. Los Estados sin ningún tipo marcado se ofrecen siempre y no se pueden restringir acá.
                         </p>
+                        {!enviaAFirmar && (estadosQuitadosPorFirma.length > 0 || globalesDeFirma.length > 0 || estadosRegulares.some(bloqueadoPorFirma)) && (
+                          <div className="flex items-start gap-1.5 ml-1 mb-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+                            <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 mt-0.5 shrink-0" />
+                            <span>
+                              Este tipo no manda nada a firmar: los estados vinculados a firma no se pueden elegir.
+                              {estadosQuitadosPorFirma.length > 0 && <> Se quitaron {estadosQuitadosPorFirma.join(', ')}{otrosTipos.length > 0 ? ` (también para ${otrosTipos.join(', ')}, que comparte${otrosTipos.length === 1 ? '' : 'n'} la plantilla)` : ''}.</>}
+                              {globalesDeFirma.length > 0 && <> {globalesDeFirma.map((e) => e.name).join(', ')} se {globalesDeFirma.length === 1 ? 'ofrece' : 'ofrecen'} en todos los tipos: asignale tipos de contrato en Estados para poder excluirlo de éste.</>}
+                            </span>
+                          </div>
+                        )}
                         <div className="max-h-52 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
                           {estadosRegulares.length === 0 && estadosGlobales.length === 0 ? (
                             <p className="px-3 py-3 text-sm text-gray-500">No hay más estados cargados.</p>
@@ -1911,10 +1946,16 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                             <>
                               {estadosRegulares.map((estado) => {
                                 const checked = form.estadoIds.includes(estado._id);
+                                const bloqueado = bloqueadoPorFirma(estado);
                                 return (
-                                  <label key={estado._id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
-                                    <input type="checkbox" checked={checked} onChange={() => toggleEstado(estado._id)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                                  <label
+                                    key={estado._id}
+                                    title={bloqueado ? 'Vinculado a firma: requiere que se envíe a firmar algo (Envío a firmar)' : undefined}
+                                    className={`flex items-center gap-3 px-3 py-2 transition-colors ${bloqueado ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40'}`}
+                                  >
+                                    <input type="checkbox" checked={checked && !bloqueado} disabled={bloqueado} onChange={() => toggleEstado(estado._id)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed" />
                                     <EstadoBadge name={estado.name} className="text-[10px]" />
+                                    {bloqueado && <span className="ml-auto text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap">requiere firma</span>}
                                   </label>
                                 );
                               })}

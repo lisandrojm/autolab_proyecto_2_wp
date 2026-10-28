@@ -339,6 +339,8 @@ export interface InfoItem {
         esSistema?: boolean;
         /** El estado admite personas SIN CUIT/CUIL argentino (badge "Sin CUIT" en vez del trámite). */
         aceptaSinCuit?: boolean;
+        /** Estados: depende de una firma del colaborador (Dropbox Sign). Ver `compartido/estadosFirma.ts`. */
+        vinculadoAFirma?: boolean;
         /** Estados: orden visual en el ABM y en el dropdown del wizard (guía, no bloquea transiciones). */
         orden?: number;
         /** Estados: paso del flujo de dependencias (alternativas comparten número). Ausente = fuera del flujo. */

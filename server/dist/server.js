@@ -21,6 +21,7 @@ import { asegurarPlantillasCustomEnTodos } from "./services/plantillasCustomSist
 import { ensureAllTenantsHaveDefaultRoles } from "./services/roleInitService.js";
 import { sembrarPaisesResidenciaUnaVez } from "./services/paisesResidenciaSeed.js";
 import { sembrarFormasPagoUnaVez, transferenciaPorDefectoUnaVez } from "./services/formasPagoSeed.js";
+import { marcarEstadosDeFirmaUnaVez } from "./services/estadosFirmaSeed.js";
 import { ensureAllTenantsHaveDefaultShifts } from "./services/shiftInitService.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { initCronScheduler } from "./services/cronService.js";
@@ -390,6 +391,13 @@ connectDB()
     }
     catch (error) {
         console.error("❌ No se pudo cargar el catálogo de Formas de pago:", error);
+    }
+    // «Vinculado a firma» en ENVIO DE DOCUMENTACION / FIRMA PENDIENTE / FIRMA ENVIADA, UNA sola vez.
+    try {
+        await marcarEstadosDeFirmaUnaVez();
+    }
+    catch (error) {
+        console.error("❌ No se pudieron marcar los estados vinculados a firma:", error);
     }
     /*
       LAS TAREAS PROGRAMADAS (importación, backups, Dropbox, paritarias, centros de costo, Dropbox Sign).
