@@ -118,6 +118,9 @@ export interface SolicitudOverviewRow {
   roles_frame?: any[] | null;
   categoriaSatId?: string | null;
   tipoImpositivo?: string | null;
+  /** El tipo de contrato pedido y su nombre al pedirlo (lo resuelve la pantalla contra el ABM). */
+  contratoId?: string | null;
+  nombreContrato?: string | null;
   startDate?: string | null;
   dueDate?: string | null;
   schedule?: string | null;

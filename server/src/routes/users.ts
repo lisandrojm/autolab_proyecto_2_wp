@@ -1946,6 +1946,8 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
         roles_frame: m.roles_frame ?? null,
         categoriaSatId: m.categoriaSatId ?? null,
         tipoImpositivo: m.tipoImpositivo ?? null,
+        contratoId: m.contratoId ? String(m.contratoId) : null,
+        nombreContrato: m.nombre_contrato ?? null,
         startDate: m.startDate ?? null,
         dueDate: m.dueDate ?? null,
         schedule: m.schedule ?? null,

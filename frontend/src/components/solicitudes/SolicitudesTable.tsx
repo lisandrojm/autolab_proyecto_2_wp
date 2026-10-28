@@ -4,6 +4,7 @@ import { faCheck, faTimes, faClock, faRotateLeft, faTrash, faCommentDots, faEdit
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { categoriaSatAPI, CategoriaSatItem } from "../../api/categoriasSat";
 import { infoAPI, InfoItem } from "../../api/info";
+import { contratosAPI, ContratoItem } from "../../api/contratos";
 import type { ObraSocialDeSolicitud, ResultadoEliminarSolicitud } from "../../api/users";
 import { EstadoBadge } from "../EstadoSelect";
 import { estadoImpositivoPorTipo, esTipoImpositivo } from "../../utils/tramiteImpositivo";
@@ -67,6 +68,9 @@ export interface SolicitudVista {
   solicitudUserId?: string | null;
   categoriaSatId?: string | null;
   tipoImpositivo?: string | null;
+  /** El tipo de contrato pedido (`Contrato._id`) y el nombre que tenía al pedirlo, por si ya no existe. */
+  contratoId?: string | null;
+  nombreContrato?: string | null;
   startDate?: string | null;
   dueDate?: string | null;
   schedule?: string | null;
@@ -113,6 +117,8 @@ export const solicitudDesdeUser = (u: any): SolicitudVista => {
     roles_frame: m.roles_frame,
     categoriaSatId: m.categoriaSatId ?? null,
     tipoImpositivo: m.tipoImpositivo ?? null,
+    contratoId: m.contratoId ? String(m.contratoId) : null,
+    nombreContrato: m.nombre_contrato ?? null,
     startDate: m.startDate ?? null,
     dueDate: m.dueDate ?? null,
     schedule: m.schedule ?? null,
@@ -135,6 +141,7 @@ export const useCatalogosDeSolicitudes = () => {
   const [roleFrames, setRoleFrames] = useState<RoleFrameItem[]>([]);
   const [categoriasSat, setCategoriasSat] = useState<CategoriaSatItem[]>([]);
   const [estados, setEstados] = useState<InfoItem[]>([]);
+  const [tiposContrato, setTiposContrato] = useState<ContratoItem[]>([]);
 
   useEffect(() => {
     let vivo = true;
@@ -151,6 +158,7 @@ export const useCatalogosDeSolicitudes = () => {
       setCategoriasSat(cats);
       setEstados(infos);
     });
+    o(contratosAPI.list(), [] as ContratoItem[], "tipos de contrato").then((l) => vivo && setTiposContrato(l));
     return () => {
       vivo = false;
     };
@@ -172,8 +180,11 @@ export const useCatalogosDeSolicitudes = () => {
     /** El estado impositivo declarado. `null` si la solicitud no declaró ninguno. */
     const resolverTramite = (tipo?: string | null): InfoItem | null => (esTipoImpositivo(tipo) ? estadoImpositivoPorTipo(estados, tipo as any) : null);
 
-    return { roleFrames, categoriasSat, estados, resolverRolFrame, resolverTramite };
-  }, [roleFrames, categoriasSat, estados]);
+    /** El tipo de contrato pedido, con el nombre que tiene HOY en el ABM; si ya no está, el que tenía al pedirlo. */
+    const resolverTipoContrato = (s: SolicitudVista): string => (s.contratoId ? tiposContrato.find((t) => t._id === s.contratoId)?.name : "") || s.nombreContrato || "";
+
+    return { roleFrames, categoriasSat, estados, resolverRolFrame, resolverTramite, resolverTipoContrato };
+  }, [roleFrames, categoriasSat, estados, tiposContrato]);
 };
 
 /** Lo que dice la confirmación de «Eliminar»: en una aprobada se va también el contrato que creó. */
@@ -281,7 +292,7 @@ interface SolicitudesTableProps {
 }
 
 export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, onEditarAprobada, tituloAprobar, onVerDetalle, seleccionadas, onCambiarSeleccion, renderObraSocial, onSeleccionarTodas, totalSeleccionable }) => {
-  const { resolverRolFrame, resolverTramite } = catalogos;
+  const { resolverRolFrame, resolverTramite, resolverTipoContrato } = catalogos;
   const conSeleccion = !!seleccionadas && !!onCambiarSeleccion;
   // La casilla del encabezado marca o desmarca las de ESTA página (la selección de otras páginas se conserva).
   const enPagina = solicitudes.filter((s) => seleccionadas?.has(s._id)).length;
@@ -349,6 +360,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 </>
               )}
               <th className="px-4 py-3 font-semibold">Rol/es Empresa</th>
+              <th className="px-4 py-3 font-semibold whitespace-nowrap">Tipo de contrato</th>
               <th className="px-4 py-3 font-semibold whitespace-nowrap" title="El último contrato de la persona ANTERIOR a lo pedido (alta antes del inicio de la solicitud), en cualquier proyecto. Avisa si se superpone con las fechas pedidas.">Último contrato</th>
               <th className="px-4 py-3 font-semibold">Fechas</th>
               <th className="px-4 py-3 font-semibold">Horario</th>
@@ -511,6 +523,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   )}
 
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{resolverRolFrame(s)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{resolverTipoContrato(s) || <span className="text-gray-400">-</span>}</td>
                   {/* El último contrato de la PERSONA anterior a lo pedido (en cualquier proyecto), pegado a «Fechas» para compararlos. */}
                   <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos anteriores a lo pedido"}>
                     {s.ultimoContrato ? (
