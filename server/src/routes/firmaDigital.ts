@@ -50,13 +50,15 @@ const PATRON_PENDIENTE_FIRMA = [/pendbox/i];
 // siguiente). No hardcodea nombres de estado — los resuelve por la config real de cada tenant.
 router.get("/config", async (_req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const [estadoEnvioDocNombre, outboxCarpeta, pendienteFirmaCarpeta, firmadosCarpeta] = await Promise.all([
+    const [estadoEnvioDocNombre, outboxCarpeta, pendienteFirmaCarpeta, firmadosCarpeta, estadoContratadoNombre] = await Promise.all([
       resolverEstadoPorPropositos(["alta_temprana", "constancia_cuit"]),
       resolverCarpetaPorProposito("outbox"),
       resolverCarpetaPorProposito("pendbox"),
       resolverCarpetaPorProposito("firmados"),
+      // Paso 6 «Contratados»: el estado al que llegan los firmados (y, directo, los tipos sin firma ni alta).
+      resolverEstadoPorPropositos(["firmados"]),
     ]);
-    res.json({ estadoEnvioDocNombre, outboxCarpeta, pendienteFirmaCarpeta, firmadosCarpeta });
+    res.json({ estadoEnvioDocNombre, outboxCarpeta, pendienteFirmaCarpeta, firmadosCarpeta, estadoContratadoNombre });
   } catch (error) {
     console.error("Firma digital config error:", error);
     res.status(500).json({ error: "Internal server error" });
