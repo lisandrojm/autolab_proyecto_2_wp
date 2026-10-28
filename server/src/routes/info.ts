@@ -5,6 +5,10 @@ import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { PROPOSITOS, esProposito } from "../utils/propositosCarpeta.js";
 import { Tenant } from "../models/Tenant.js";
 import { getTenantDropboxConfig, listFolder } from "../services/dropboxService.js";
+import mongoose from "mongoose";
+import { ContratoFrame } from "../models/ContratoFrame.js";
+import { Contrato } from "../models/Contrato.js";
+import { esEstadoDeFirma, tipoEnviaAFirmar } from "../compartido/estadosFirma.js";
 import { ESTADO_TYPE, esEstadoDeSistema, ensureEstadosImpositivosSistema } from "../utils/estadosImpositivosSistema.js";
 
 const router = Router();
@@ -201,6 +205,12 @@ function parseEstadoBody(body: any, estadoActual?: any): { error?: string; name?
   // el update (spread `{ ...estado.data, ...parsed.data }`) preserve el paso que tengan en el flujo.
   if (esImpositivo) data.ordenDependencia = 1;
 
+  // Vinculado a firma (Dropbox Sign): igual que `transicionAutomatica`, sólo se toca si vino la clave,
+  // para que los que reenvían el estado sin conocerla (orden de dependencias) no la borren. Un
+  // impositivo nunca es de firma.
+  if (esImpositivo) data.vinculadoAFirma = false;
+  else if (Object.prototype.hasOwnProperty.call(body || {}, "vinculadoAFirma")) data.vinculadoAFirma = body.vinculadoAFirma === true;
+
   // Transición automática: se maneja aparte (se edita desde "Orden de dependencias", no desde este
   // formulario) y es opcional en el body. Igual que con `ordenDependencia`: si el caller NO manda la
   // clave, no se toca acá — para que el merge del PATCH preserve lo que ya estaba configurado. Si la
@@ -264,6 +274,30 @@ async function conflictoImpositivo(data: any, excluirId?: string): Promise<strin
   return `Esos tipos de contrato ya tienen un estado impositivo: ${porEstado.join(", ")}`;
 }
 
+/**
+ * Un estado de firma no se puede vincular a una plantilla cuyo tipo de contrato no manda nada a firmar
+ * (`compartido/estadosFirma.ts`). Sólo se miran las plantillas QUE SE AGREGAN: un vínculo que ya
+ * existía no impide editar el estado (el script `estados:diagnosticar-firma` los lista).
+ */
+async function conflictoFirma(data: any, plantillasAntes: string[] = []): Promise<string | null> {
+  if (!esEstadoDeFirma({ data })) return null;
+  const antes = new Set(plantillasAntes.map(String));
+  const nuevas = (data.contratoFrameIds || []).map(String).filter((id: string) => !antes.has(id) && mongoose.isValidObjectId(id));
+  if (nuevas.length === 0) return null;
+
+  const plantillas: any[] = await ContratoFrame.find({ _id: { $in: nuevas } }).select("contratoId contratoIds").lean();
+  const tipoIds = new Set<string>();
+  for (const p of plantillas) {
+    const lista = Array.isArray(p.contratoIds) && p.contratoIds.length ? p.contratoIds : p.contratoId ? [p.contratoId] : [];
+    for (const id of lista) tipoIds.add(String(id));
+  }
+  if (tipoIds.size === 0) return null;
+  const tipos: any[] = await Contrato.find({ _id: { $in: [...tipoIds] } }).select("name data.requiereFirma data.requiereFirmaRelease data.requiereFirmaAlta data.generaAlta").lean();
+  const sinFirma = tipos.filter((t) => !tipoEnviaAFirmar(t.data)).map((t) => t.name);
+  if (sinFirma.length === 0) return null;
+  return `Es un estado vinculado a firma y ${sinFirma.length === 1 ? "el tipo de contrato" : "los tipos de contrato"} ${sinFirma.map((n) => `«${n}»`).join(", ")} no ${sinFirma.length === 1 ? "manda" : "mandan"} nada a firmar. Marcá algo en «Envío a firmar» del tipo, o desmarcá «Vinculado a firma» en el estado.`;
+}
+
 // POST /info/estados - crear estado
 router.post("/estados", requireTenant, authenticateToken, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
@@ -287,6 +321,12 @@ router.post("/estados", requireTenant, authenticateToken, async (req: Authentica
     const conflicto = await conflictoImpositivo(parsed.data);
     if (conflicto) {
       res.status(409).json({ error: conflicto });
+      return;
+    }
+
+    const sinFirma = await conflictoFirma(parsed.data);
+    if (sinFirma) {
+      res.status(422).json({ error: sinFirma });
       return;
     }
 
@@ -416,6 +456,14 @@ router.patch("/estados/:id", requireTenant, authenticateToken, async (req: Authe
     const conflicto = await conflictoImpositivo(parsed.data, String(estado._id));
     if (conflicto) {
       res.status(409).json({ error: conflicto });
+      return;
+    }
+
+    // Si el body no trae la marca, vale la que ya tenía el estado.
+    const vinculadoAFirma = parsed.data.vinculadoAFirma ?? (estado.data as any)?.vinculadoAFirma;
+    const sinFirma = await conflictoFirma({ ...parsed.data, vinculadoAFirma }, (estado.data as any)?.contratoFrameIds || []);
+    if (sinFirma) {
+      res.status(422).json({ error: sinFirma });
       return;
     }
 

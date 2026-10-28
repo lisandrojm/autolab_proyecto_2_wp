@@ -26,6 +26,11 @@ export interface IInfo extends Document {
     esSistema?: boolean;
     /** El estado admite también personas SIN CUIT/CUIL argentino (badge "Sin CUIT" en vez del trámite). */
     aceptaSinCuit?: boolean;
+    /**
+     * Estados: depende de una firma del colaborador (Dropbox Sign), p. ej. FIRMA PENDIENTE. Sólo se
+     * puede asignar a tipos de contrato que mandan algo a firmar (`compartido/estadosFirma.ts`).
+     */
+    vinculadoAFirma?: boolean;
     /** Estados: orden visual en el ABM y en el dropdown del wizard (guía, no bloquea transiciones). */
     orden?: number;
     /** Estados: paso dentro del flujo de dependencias (alternativas comparten número). Ausente = fuera del flujo. */
@@ -72,6 +77,7 @@ const infoSchema = new Schema<IInfo>(
       tipoImpositivo: { type: String },
       esSistema: { type: Boolean },
       aceptaSinCuit: { type: Boolean },
+      vinculadoAFirma: { type: Boolean },
       orden: { type: Number },
       ordenDependencia: { type: Number },
       transicionAutomatica: {
