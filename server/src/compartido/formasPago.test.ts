@@ -3,7 +3,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { codigoDesdeNombre, conflictoDeUnicidad, errorDeCampos, formasParaSelector, motivoParaNoBorrar, normalizarFormasDelTipo, rechazoDeFormaPago, type FormaPagoLike } from "./formasPago.js";
+import { codigoDesdeNombre, conflictoDeUnicidad, errorDeCampos, formaPagoDelTipo, motivoParaNoBorrar, normalizarFormasDelTipo, rechazoPorDatosBancarios, type FormaPagoLike } from "./formasPago.js";
 
 const EFECTIVO: FormaPagoLike = { _id: "f1", name: "Efectivo", externalId: "EFECTIVO", activo: true, orden: 1 };
 const TRANSFERENCIA: FormaPagoLike = { _id: "f2", name: "Transferencia bancaria", externalId: "TRANSFERENCIA_BANCARIA", requiereDatosBancarios: true, activo: true, orden: 2 };
@@ -66,43 +66,25 @@ describe("las formas de un tipo de contrato", () => {
   });
 });
 
-describe("selector de forma de pago por tipo de contrato", () => {
-  it("el tipo acota: sólo sus habilitadas activas, con la predeterminada precargada", () => {
-    const r = formasParaSelector(TODAS, { formasPagoIds: ["f5"], formaPagoDefaultId: "f5" });
-    assert.deepEqual(r.opciones.map((f) => f._id), ["f5"]);
-    assert.equal(r.predeterminada, "f5");
-    assert.equal(r.restringido, true);
+describe("la forma de pago sale del tipo de contrato", () => {
+  it("es la predeterminada del tipo", () => {
+    assert.equal(formaPagoDelTipo(TODAS, { formasPagoIds: ["f5"], formaPagoDefaultId: "f5" })?._id, "f5");
   });
-  it("una habilitada inactiva no se ofrece", () => {
-    const r = formasParaSelector(TODAS, { formasPagoIds: ["f1", "f3"], formaPagoDefaultId: "f3" });
-    assert.deepEqual(r.opciones.map((f) => f._id), ["f1"]);
-    assert.equal(r.predeterminada, null);
-  });
-  it("sin habilitadas: todas las activas, en orden, sin predeterminada", () => {
-    const r = formasParaSelector(TODAS, { formasPagoIds: [] });
-    assert.deepEqual(r.opciones.map((f) => f._id), ["f1", "f2", "f5"]);
-    assert.equal(r.predeterminada, null);
-    assert.equal(r.restringido, false);
-    assert.deepEqual(formasParaSelector(TODAS, null).opciones.map((f) => f._id), ["f1", "f2", "f5"]);
-  });
-  it("la que el contrato ya tiene se conserva aunque esté inactiva o fuera del tipo", () => {
-    assert.deepEqual(formasParaSelector(TODAS, { formasPagoIds: ["f5"] }, "f3").opciones.map((f) => f._id), ["f3", "f5"]);
+  it("un tipo con una sola habilitada y sin predeterminada usa esa; con varias o ninguna, sin definir", () => {
+    assert.equal(formaPagoDelTipo(TODAS, { formasPagoIds: ["f2"] })?._id, "f2");
+    assert.equal(formaPagoDelTipo(TODAS, { formasPagoIds: ["f1", "f2"] }), null);
+    assert.equal(formaPagoDelTipo(TODAS, null), null);
   });
 });
 
-describe("guardar un contrato con forma de pago", () => {
-  const tipo = { formasPagoIds: ["f1", "f2"] };
-  const conBanco = { cbu: "0000003100010000000001", bancoId: 7 };
-  it("rechaza una forma que el tipo no habilita o que está inactiva", () => {
-    assert.match(rechazoDeFormaPago({ forma: COMPENSACION, tipo, metadata: conBanco }) || "", /no habilita/);
-    assert.match(rechazoDeFormaPago({ forma: CHEQUE, tipo: null }) || "", /inactiva/);
-  });
+describe("alta con una forma que pide datos bancarios", () => {
   it("transferencia exige CBU/alias y entidad financiera", () => {
-    assert.match(rechazoDeFormaPago({ forma: TRANSFERENCIA, tipo, metadata: {} }) || "", /CBU o alias y entidad financiera/);
-    assert.match(rechazoDeFormaPago({ forma: TRANSFERENCIA, tipo, metadata: { aliasBancario: "mi.alias" } }) || "", /le falta: entidad financiera/);
-    assert.equal(rechazoDeFormaPago({ forma: TRANSFERENCIA, tipo, metadata: { aliasBancario: "mi.alias", bancoId: 7 } }), null);
+    assert.match(rechazoPorDatosBancarios(TRANSFERENCIA, {}) || "", /CBU o alias y entidad financiera/);
+    assert.match(rechazoPorDatosBancarios(TRANSFERENCIA, { aliasBancario: "mi.alias" }) || "", /le falta: entidad financiera/);
+    assert.equal(rechazoPorDatosBancarios(TRANSFERENCIA, { aliasBancario: "mi.alias", bancoId: 7 }), null);
   });
-  it("la forma que el contrato ya tenía no se vuelve a juzgar", () => {
-    assert.equal(rechazoDeFormaPago({ forma: CHEQUE, tipo, previaId: "f3" }), null);
+  it("las demás formas no piden nada", () => {
+    assert.equal(rechazoPorDatosBancarios(EFECTIVO, {}), null);
+    assert.equal(rechazoPorDatosBancarios(null, {}), null);
   });
 });

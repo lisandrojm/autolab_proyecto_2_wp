@@ -1,7 +1,7 @@
 /**
  * FORMAS DE PAGO (27/10/2026): Efectivo, Transferencia bancaria, Cheque… Catálogo propio (Configuración →
- * Formas de pago) que cada tipo de contrato acota: qué formas habilita y cuál es la predeterminada. El
- * contrato de un miembro guarda la elegida en `forma_pago_id`.
+ * Formas de pago). Cada tipo de contrato dice con cuál se paga (`formaPagoDefaultId`; 28/10/2026: no se
+ * elige por persona). Si esa forma pide datos bancarios, el alta los exige.
  *
  * Las reglas viven acá, compartidas: el server las hace cumplir y el formulario las usa para no ofrecer
  * lo que después se rechaza. Sin dependencias (se importa desde el front con `@compartido`).
@@ -94,23 +94,13 @@ export function normalizarFormasDelTipo(formasPagoIds, formaPagoDefaultId) {
     return { formasPagoIds: habilitadas, formaPagoDefaultId: def && habilitadas.includes(def) ? def : null };
 }
 /**
- * LAS OPCIONES DEL SELECTOR DE FORMA DE PAGO DE UN CONTRATO.
- *
- *  · El tipo habilita algunas → sólo esas, y sólo las activas.
- *  · El tipo no habilita ninguna → todas las activas (no se bloquea el alta).
- *  · La que el contrato YA tiene se ofrece siempre, aunque después se haya desactivado o el tipo la haya
- *    sacado: editar un contrato viejo no puede borrarle su forma de pago en silencio.
- *
- * `predeterminada` es la del tipo, si está entre las opciones y activa.
+ * LA FORMA DE PAGO DEL TIPO DE CONTRATO (28/10/2026: se define en el tipo, no se elige por persona). Es la
+ * `formaPagoDefaultId`; un tipo viejo con una sola habilitada y sin predeterminada, esa. Null = sin definir.
  */
-export function formasParaSelector(todas, tipo, actualId) {
+export function formaPagoDelTipo(todas, tipo) {
     const habilitadas = ids(tipo?.formasPagoIds);
-    const restringido = habilitadas.length > 0;
-    const actual = String(actualId ?? "");
-    const opciones = ordenarFormas(todas.filter((f) => String(f._id) === actual || (formaActiva(f) && (!restringido || habilitadas.includes(String(f._id))))));
-    const def = tipo?.formaPagoDefaultId == null ? "" : String(tipo.formaPagoDefaultId);
-    const predeterminada = def && opciones.some((f) => String(f._id) === def && formaActiva(f)) ? def : null;
-    return { opciones, predeterminada, restringido };
+    const id = tipo?.formaPagoDefaultId != null && String(tipo.formaPagoDefaultId) ? String(tipo.formaPagoDefaultId) : habilitadas.length === 1 ? habilitadas[0] : "";
+    return id ? todas.find((f) => String(f._id) === id) || null : null;
 }
 /** Datos bancarios de la persona (`User.metadata`) que pide una forma con `requiereDatosBancarios`. */
 export function faltanDatosBancarios(metadata) {
@@ -123,27 +113,12 @@ export function faltanDatosBancarios(metadata) {
     return faltan;
 }
 /**
- * ¿Se puede guardar este contrato con esta forma de pago? Devuelve el motivo para rechazarlo, o `null`.
- *
- * Una forma que el contrato YA tenía (`previaId`) no se vuelve a juzgar: desactivarla o sacarla del tipo
- * no puede impedir editar otra cosa del contrato. Una forma NUEVA tiene que estar activa, habilitada por
- * el tipo (si el tipo acota) y, si pide datos bancarios, la persona los tiene que tener cargados.
+ * ¿Se puede dar de alta a esta persona con un tipo de contrato que paga de esta forma? Si la forma pide
+ * datos bancarios y a la persona le faltan, el motivo; si no, `null`.
  */
-export function rechazoDeFormaPago(p) {
-    const { forma } = p;
-    if (!forma)
-        return "La forma de pago elegida no existe.";
-    if (String(p.previaId ?? "") === String(forma._id))
+export function rechazoPorDatosBancarios(forma, metadata) {
+    if (!forma?.requiereDatosBancarios)
         return null;
-    if (!formaActiva(forma))
-        return `La forma de pago «${forma.name}» está inactiva: elegí otra.`;
-    const habilitadas = ids(p.tipo?.formasPagoIds);
-    if (habilitadas.length > 0 && !habilitadas.includes(String(forma._id)))
-        return `El tipo de contrato no habilita la forma de pago «${forma.name}».`;
-    if (forma.requiereDatosBancarios) {
-        const faltan = faltanDatosBancarios(p.metadata);
-        if (faltan.length > 0)
-            return `«${forma.name}» requiere los datos bancarios de la persona y le falta: ${faltan.join(" y ")}. Cargalos en su ficha (Datos bancarios) o elegí otra forma de pago.`;
-    }
-    return null;
+    const faltan = faltanDatosBancarios(metadata);
+    return faltan.length > 0 ? `El tipo de contrato se paga por «${forma.name}», que requiere los datos bancarios de la persona, y le falta: ${faltan.join(" y ")}. Cargalos en su ficha (Datos bancarios) antes de guardar.` : null;
 }

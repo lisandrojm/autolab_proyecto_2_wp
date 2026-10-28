@@ -16,7 +16,7 @@ import { BadgeCustom } from '../contratacion/PlantillaCustom';
 import { infoAPI, InfoItem } from '../../api/info';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { formasPagoAPI, FormaPagoItem } from '../../api/formasPago';
-import { formaActiva, normalizarFormasDelTipo, ordenarFormas } from '@compartido/formasPago';
+import { formaActiva, formaPagoDelTipo, normalizarFormasDelTipo, ordenarFormas } from '@compartido/formasPago';
 import { SelectorCodigoArca } from '../arca/SelectorCodigoArca';
 import { MODALIDADES_OFRECIDAS } from './afipCompleteness';
 import { EstadoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
@@ -872,8 +872,10 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
       descripcion: form.descripcion,
       importesEnCero: form.importesEnCero,
       // La predeterminada sólo si sigue habilitada (el server aplica la misma regla).
+      // Una sola forma por tipo: se guarda como la predeterminada y única habilitada.
       ...(() => {
-        const n = normalizarFormasDelTipo(form.formasPagoIds, form.formaPagoDefaultId || null);
+        const id = form.formaPagoDefaultId || (form.formasPagoIds.length === 1 ? form.formasPagoIds[0] : '');
+        const n = normalizarFormasDelTipo(id ? [id] : [], id || null);
         return { formasPagoIds: n.formasPagoIds, formaPagoDefaultId: n.formaPagoDefaultId };
       })(),
       cantidadJornadas: form.cantidadJornadas,
@@ -964,22 +966,17 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
   );
 
   /*
-    FORMAS DE PAGO (27/10/2026): cuáles se ofrecen al contratar con este tipo y cuál se precarga. Se listan
-    las activas; una que el tipo ya tenía y después se desactivó sigue marcada, con su aviso, para no
-    perderla al guardar. Destildar la predeterminada la limpia. Sin ninguna tildada, el contrato ofrece
-    todas las activas.
+    FORMA DE PAGO (28/10/2026): con qué se le paga a quien se contrata con este tipo. Es del tipo, no se
+    elige por persona. Se ofrecen las activas; la que el tipo ya tenía y después se desactivó se muestra
+    marcada como inactiva para no perderla al guardar.
   */
-  const formasVisibles = formasPago.filter((f) => formaActiva(f) || form.formasPagoIds.includes(String(f._id)));
-  const alternarFormaPago = (id: string) =>
-    setForm((p) => {
-      const ya = p.formasPagoIds.includes(id);
-      const formasPagoIds = ya ? p.formasPagoIds.filter((x) => x !== id) : [...p.formasPagoIds, id];
-      return { ...p, formasPagoIds, formaPagoDefaultId: ya && p.formaPagoDefaultId === id ? '' : p.formaPagoDefaultId };
-    });
+  const formaDelForm = form.formaPagoDefaultId || (form.formasPagoIds.length === 1 ? form.formasPagoIds[0] : '');
+  const formasOfrecidas = formasPago.filter((f) => formaActiva(f) || String(f._id) === formaDelForm);
+  const formaElegidaInactiva = formasPago.find((f) => String(f._id) === formaDelForm && !formaActiva(f));
   const bloqueFormasPago = (
     <div className="space-y-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5">
-      <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Formas de pago</span>
-      {formasVisibles.length === 0 ? (
+      <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Forma de pago</span>
+      {formasOfrecidas.length === 0 ? (
         <p className="text-[11px] text-gray-500 dark:text-gray-400">
           No hay formas de pago cargadas. Se administran en{' '}
           <Link to="/formas-de-pago" className="text-blue-600 hover:underline dark:text-blue-400">
@@ -989,34 +986,22 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
         </p>
       ) : (
         <>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">Habilitadas para este tipo, y la predeterminada (se precarga al contratar). Sin ninguna tildada, se ofrecen todas las activas.</p>
-          <div className="divide-y divide-gray-100 dark:divide-gray-700/60">
-            {formasVisibles.map((f) => {
-              const id = String(f._id);
-              const habilitada = form.formasPagoIds.includes(id);
-              return (
-                <div key={id} className="flex items-center justify-between gap-3 py-1">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer min-w-0">
-                    <input type="checkbox" checked={habilitada} onChange={() => alternarFormaPago(id)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-                    <span className="text-gray-700 dark:text-gray-300 truncate">{f.name}</span>
-                    {!formaActiva(f) && (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="Está inactiva: no se ofrece en contratos nuevos. Se conserva acá hasta que la destildes.">
-                        <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" /> Inactiva
-                      </span>
-                    )}
-                  </label>
-                  <label className={`flex shrink-0 items-center gap-1.5 text-[11px] ${habilitada ? 'text-gray-600 dark:text-gray-300 cursor-pointer' : 'text-gray-300 dark:text-gray-600'}`}>
-                    <input type="radio" name="formaPagoDefault" disabled={!habilitada} checked={habilitada && form.formaPagoDefaultId === id} onChange={() => setForm((p) => ({ ...p, formaPagoDefaultId: id }))} className="border-gray-300 text-blue-600 focus:ring-blue-500" />
-                    Predeterminada
-                  </label>
-                </div>
-              );
-            })}
-          </div>
-          {form.formaPagoDefaultId && (
-            <button type="button" onClick={() => setForm((p) => ({ ...p, formaPagoDefaultId: '' }))} className="text-[11px] text-gray-500 hover:text-blue-600 dark:text-gray-400">
-              Sin predeterminada
-            </button>
+          <select className="input-field w-full" value={formaDelForm} onChange={(e) => setForm((p) => ({ ...p, formasPagoIds: e.target.value ? [e.target.value] : [], formaPagoDefaultId: e.target.value }))}>
+            <option value="">Sin definir</option>
+            {formasOfrecidas.map((f) => (
+              <option key={String(f._id)} value={String(f._id)}>
+                {f.name}
+                {!formaActiva(f) ? ' (inactiva)' : ''}
+              </option>
+            ))}
+          </select>
+          {formaElegidaInactiva ? (
+            <p className="flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-300">
+              <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5 h-3 w-3 shrink-0" />
+              «{formaElegidaInactiva.name}» está inactiva en Formas de pago. Se conserva acá hasta que elijas otra.
+            </p>
+          ) : (
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">Con qué se le paga a quien se contrata con este tipo. Si pide datos bancarios, el alta exige CBU o alias y entidad financiera de la persona.</p>
           )}
         </>
       )}
@@ -1260,20 +1245,15 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                   <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{contrato.name}</span>
                   {contrato.data?.importesEnCero && <span className="inline-flex w-fit items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" title="Cambio de franco: todos los importes en cero">Importes en 0</span>}
                   {contrato.data?.descripcion && <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 whitespace-pre-line" title={contrato.data.descripcion}>{contrato.data.descripcion}</span>}
-                  {/* Las formas de pago habilitadas; la predeterminada, marcada. Sin ninguna: se ofrecen todas. */}
-                  {(contrato.data?.formasPagoIds || []).length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {ordenarFormas(formasPago.filter((f) => (contrato.data?.formasPagoIds || []).map(String).includes(String(f._id)))).map((f) => {
-                        const predeterminada = String(contrato.data?.formaPagoDefaultId || '') === String(f._id);
-                        return (
-                          <span key={String(f._id)} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${formaActiva(f) ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800/50' : 'bg-gray-100 text-gray-500 line-through dark:bg-gray-700 dark:text-gray-400'}`} title={`${predeterminada ? 'Predeterminada. ' : ''}${formaActiva(f) ? '' : 'Inactiva.'}`.trim() || f.name}>
-                            {predeterminada ? '★ ' : ''}
-                            {f.name}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
+                  {/* La forma de pago del tipo (Configuración → Formas de pago). */}
+                  {(() => {
+                    const f = formaPagoDelTipo(formasPago, contrato.data);
+                    return f ? (
+                      <span className={`inline-flex w-fit items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${formaActiva(f) ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800/50' : 'bg-gray-100 text-gray-500 line-through dark:bg-gray-700 dark:text-gray-400'}`} title={formaActiva(f) ? 'Forma de pago' : 'Forma de pago inactiva'}>
+                        {f.name}
+                      </span>
+                    ) : null;
+                  })()}
                   {tienePlantillaCustom(contrato._id) && <BadgeCustom className="w-fit" />}
                 </div>
 

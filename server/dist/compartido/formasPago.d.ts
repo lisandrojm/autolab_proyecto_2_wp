@@ -1,7 +1,7 @@
 /**
  * FORMAS DE PAGO (27/10/2026): Efectivo, Transferencia bancaria, Cheque… Catálogo propio (Configuración →
- * Formas de pago) que cada tipo de contrato acota: qué formas habilita y cuál es la predeterminada. El
- * contrato de un miembro guarda la elegida en `forma_pago_id`.
+ * Formas de pago). Cada tipo de contrato dice con cuál se paga (`formaPagoDefaultId`; 28/10/2026: no se
+ * elige por persona). Si esa forma pide datos bancarios, el alta los exige.
  *
  * Las reglas viven acá, compartidas: el server las hace cumplir y el formulario las usa para no ofrecer
  * lo que después se rechaza. Sin dependencias (se importa desde el front con `@compartido`).
@@ -72,20 +72,10 @@ export declare function normalizarFormasDelTipo(formasPagoIds: unknown, formaPag
     formaPagoDefaultId: string | null;
 };
 /**
- * LAS OPCIONES DEL SELECTOR DE FORMA DE PAGO DE UN CONTRATO.
- *
- *  · El tipo habilita algunas → sólo esas, y sólo las activas.
- *  · El tipo no habilita ninguna → todas las activas (no se bloquea el alta).
- *  · La que el contrato YA tiene se ofrece siempre, aunque después se haya desactivado o el tipo la haya
- *    sacado: editar un contrato viejo no puede borrarle su forma de pago en silencio.
- *
- * `predeterminada` es la del tipo, si está entre las opciones y activa.
+ * LA FORMA DE PAGO DEL TIPO DE CONTRATO (28/10/2026: se define en el tipo, no se elige por persona). Es la
+ * `formaPagoDefaultId`; un tipo viejo con una sola habilitada y sin predeterminada, esa. Null = sin definir.
  */
-export declare function formasParaSelector<T extends FormaPagoLike>(todas: T[], tipo: FormasDelTipo | null | undefined, actualId?: string | null): {
-    opciones: T[];
-    predeterminada: string | null;
-    restringido: boolean;
-};
+export declare function formaPagoDelTipo<T extends FormaPagoLike>(todas: T[], tipo: FormasDelTipo | null | undefined): T | null;
 /** Datos bancarios de la persona (`User.metadata`) que pide una forma con `requiereDatosBancarios`. */
 export declare function faltanDatosBancarios(metadata: {
     cbu?: string | null;
@@ -93,15 +83,7 @@ export declare function faltanDatosBancarios(metadata: {
     bancoId?: number | string | null;
 } | null | undefined): string[];
 /**
- * ¿Se puede guardar este contrato con esta forma de pago? Devuelve el motivo para rechazarlo, o `null`.
- *
- * Una forma que el contrato YA tenía (`previaId`) no se vuelve a juzgar: desactivarla o sacarla del tipo
- * no puede impedir editar otra cosa del contrato. Una forma NUEVA tiene que estar activa, habilitada por
- * el tipo (si el tipo acota) y, si pide datos bancarios, la persona los tiene que tener cargados.
+ * ¿Se puede dar de alta a esta persona con un tipo de contrato que paga de esta forma? Si la forma pide
+ * datos bancarios y a la persona le faltan, el motivo; si no, `null`.
  */
-export declare function rechazoDeFormaPago(p: {
-    forma: FormaPagoLike | null;
-    tipo: FormasDelTipo | null | undefined;
-    previaId?: string | null;
-    metadata?: Parameters<typeof faltanDatosBancarios>[0];
-}): string | null;
+export declare function rechazoPorDatosBancarios(forma: FormaPagoLike | null | undefined, metadata: Parameters<typeof faltanDatosBancarios>[0]): string | null;
