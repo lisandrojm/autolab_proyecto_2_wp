@@ -1299,6 +1299,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   */
   const importesEnCeroWizard = !!contratoDelWizard?.data?.importesEnCero;
   /*
+    EL IMPORTE NO ES EL DE LA ESCALA VIGENTE (28/10/2026). Al aprobar una solicitud se abre con lo que
+    pidió el móvil, y la «Diferencia diaria neto» se mide contra eso: arranca en 0 aunque el número sea
+    de otro grupo o de una cuenta vieja (pasó con un G7 «Jornada» que traía el bruto del G6 ÷ 30). Se
+    avisa con la cuenta de la escala y se ofrece usarla; no se pisa solo, porque puede ser a propósito.
+  */
+  const categoriaDelWizard = allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id));
+  const jornadaDeLaEscalaWizard = !esServicios && !importesEnCeroWizard && categoriaDelWizard ? importePorJornadaDeCategoria(categoriaDelWizard, Number(contratoDelWizard?.data?.multiplicadorDiario) || null, Number(contratoDelWizard?.data?.cantidadJornadas) || null) : 0;
+  const fmtPesos = (n: number) => `$ ${n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const importeFueraDeEscalaWizard =jornadaDeLaEscalaWizard > 0 && Number(wizardData.sueldo_jornada) > 0 && Math.abs(Number(wizardData.sueldo_jornada) - jornadaDeLaEscalaWizard) > 0.01;
+  /*
     FORMAS DE PAGO (28/10/2026): son del TIPO de contrato, no se eligen acá. Si todas piden datos bancarios y
     a la persona le faltan, un alta nueva no se puede guardar (el server aplica la misma regla).
   */
@@ -5184,6 +5194,25 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   Lo que se guarda sigue siendo el sueldo por jornada.
                 */}
                 <div className="md:col-span-2 space-y-4 pt-6 border-t border-gray-100 dark:border-gray-700">
+                  {importeFueraDeEscalaWizard && (
+                    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-200">
+                      <span className="flex-1 min-w-[16rem]">
+                        El importe por jornada (<b>{fmtPesos(Number(wizardData.sueldo_jornada))}</b>{approvingSolicitudId ? ', el que pidió la solicitud' : ''}) no es el de la escala vigente: {categoriaDelWizard?.data?.numeroCategoria != null ? `G${categoriaDelWizard.data.numeroCategoria}` : 'la categoría'}
+                        {contratoDelWizard?.name ? ` con «${contratoDelWizard.name}»` : ''} da <b>{fmtPesos(jornadaDeLaEscalaWizard)}</b>
+                        {Number(contratoDelWizard?.data?.cantidadJornadas) > 0 ? ` (bruto mensual ÷ ${Number(contratoDelWizard?.data?.cantidadJornadas)}${Number(contratoDelWizard?.data?.multiplicadorDiario) > 0 ? ` × ${Number(contratoDelWizard?.data?.multiplicadorDiario).toLocaleString('es-AR')}` : ''})` : ''}.
+                      </span>
+                      <button
+                        type="button"
+                        className="rounded-md bg-amber-600 px-3 py-1 font-semibold text-white hover:bg-amber-700"
+                        onClick={() => {
+                          jornadaBaseWizard.current = jornadaDeLaEscalaWizard;
+                          setWizardData((prev) => ({ ...prev, sueldo_jornada: jornadaDeLaEscalaWizard }));
+                        }}
+                      >
+                        Usar la escala
+                      </button>
+                    </div>
+                  )}
                   <ImportesDelContrato conservarJornadaExterna className="grid grid-cols-1 md:grid-cols-2 gap-4" valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ''} onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))} mesesEq={mesesEqWizard} indeterminado={indeterminadoWizard} jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0} jornadasDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.cantidadJornadas) || null} diasPorSemanaDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.diasPorSemana) || null} proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id)))} diasSemana={diasSemanaWizard} soloNeto={soloNetoWizard} estadoReferencia={nombreEstadoWizard} resumenTotal={resumenDelTotalWizard} bloqueado={importesEnCeroWizard || (!esServicios && !wizardData.categoria_sat_id)} textoBloqueado={importesEnCeroWizard ? "En 0: este tipo de contrato es un cambio de franco (el día no se paga)." : "Se habilita al elegir la categoría: el importe sale de su escala."} claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1" claseCampo="input-field w-full" claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300" claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1" />
 
                   {/* Lo que se deriva de la categoría y de las jornadas: se muestra, no se carga. */}
