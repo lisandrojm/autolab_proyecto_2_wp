@@ -8,6 +8,7 @@ import { useGuardarEmpresa } from './useGuardarEmpresa';
 import { SimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { CAMPO_IDS_DE_VINCULO } from '../../api/companies';
 import { Company } from '../../api/companies';
+import { sweetAlert } from '../../utils/sweetAlert';
 
 /**
  * EL VALOR POR DEFECTO DE UNA EMPLEADORA, MARCADO SOBRE EL NOMENCLADOR.
@@ -47,6 +48,14 @@ interface Props {
   filtrarPorGrupoDeLaEmpresa?: boolean;
   /** La frase del mapa de ámbitos: por qué esta tabla no se declara por empresa. */
   ambito: string;
+  /**
+   * Muestra el nomenclador entero con un switch «Habilitada» por fila, para elegir DESDE LA FICHA
+   * cuáles ofrece esta empleadora en los selectores. Sin esto la lista sale ya recortada y el
+   * recorte se cambia sólo desde Configuración → ARCA, columna «Habilitadas para».
+   */
+  editarHabilitados?: boolean;
+  /** Columnas propias del nomenclador, entre «Nombre» y «Habilitada». */
+  columnasExtra?: Array<{ label: string; render: (item: SimpleCatalogItem) => React.ReactNode }>;
 }
 
 /**
@@ -79,7 +88,7 @@ export const LimpiarDefaultEmpresa: React.FC<{ hayValor: boolean; onLimpiar: () 
 /** El grupo con el que quedó clasificado un tipo en el nomenclador. Vacío = todavía sin clasificar. */
 const grupoDelItem = (t: SimpleCatalogItem): string => String((t as { grupo?: unknown }).grupo ?? '');
 
-export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, api, queEs, nota, filtrarPorGrupoDeLaEmpresa, ambito }) => {
+export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, api, queEs, nota, filtrarPorGrupoDeLaEmpresa, ambito, editarHabilitados, columnasExtra = [] }) => {
   const { guardar, guardando } = useGuardarEmpresa(empresa, recargar);
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -110,15 +119,19 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
   const campoVinculo = campo in CAMPO_IDS_DE_VINCULO ? CAMPO_IDS_DE_VINCULO[campo as keyof typeof CAMPO_IDS_DE_VINCULO] : undefined;
   const asignados = ((campoVinculo ? (empresa[campoVinculo] as string[] | undefined) : undefined) || []).map(String);
   const delaEmpresa = useMemo(() => (asignados.length === 0 ? items : items.filter((i) => asignados.includes(i._id))), [items, asignados.join(',')]);
+  // Con el switch a la vista se lista el nomenclador entero: lo deshabilitado tiene que poder volver a prenderse.
+  const editaHabilitados = !!editarHabilitados && !!campoVinculo;
+  const listados = editaHabilitados ? items : delaEmpresa;
+  const habilitado = (i: SimpleCatalogItem) => asignados.length === 0 || asignados.includes(i._id);
 
   const visibles = useMemo(() => {
     const texto = q.trim().toLowerCase();
-    return delaEmpresa.filter((i) => {
+    return listados.filter((i) => {
       if (acotaPorGrupo && soloDelGrupo && grupoDelItem(i) !== grupoEmpresa) return false;
       if (!texto) return true;
       return `${i.externalId || ''} ${i.name || ''}`.toLowerCase().includes(texto);
     });
-  }, [delaEmpresa, q, acotaPorGrupo, soloDelGrupo, grupoEmpresa]);
+  }, [listados, q, acotaPorGrupo, soloDelGrupo, grupoEmpresa]);
 
   const nombreDe = (codigo: string): string => {
     const i = items.find((x) => String(x.externalId || '') === codigo);
@@ -135,6 +148,39 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
       { defaultsArca: { [campo]: nuevo } } as Partial<Company>,
       nuevo ? `${nombreDe(nuevo)} es ahora ${queEs} por defecto de ${empresa.razonSocial}.` : `${empresa.razonSocial} vuelve a heredar ${queEs} de la instalación.`,
     );
+  };
+
+  /**
+   * Prende o apaga un ítem para esta empleadora.
+   *
+   * La lista vacía significa TODOS, así que: apagar uno con la lista vacía guarda todos menos ése;
+   * prender el último que faltaba vuelve a guardar vacío; y no se puede apagar el último que queda,
+   * porque la lista quedaría vacía y volvería a ofrecer todos.
+   *
+   * Si el que se apaga es el marcado por defecto, el default se limpia en el mismo guardado: si no,
+   * la empleadora heredaría un valor que su propio filtro ya no ofrece.
+   */
+  const alternarHabilitado = (i: SimpleCatalogItem) => {
+    if (!campoVinculo) return;
+    const actuales = asignados.length === 0 ? items.map((x) => x._id) : asignados;
+    const apagar = habilitado(i);
+    const nuevos = apagar ? actuales.filter((id) => id !== i._id) : [...new Set([...actuales, i._id])];
+    if (nuevos.length === 0) {
+      sweetAlert.error('No se puede', `Tiene que quedar al menos una habilitada. Con ninguna, ${empresa.razonSocial} volvería a ofrecer todas.`);
+      return;
+    }
+    const todos = items.every((x) => nuevos.includes(x._id));
+    const codigo = String(i.externalId || '');
+    const limpiaDefault = apagar && !!codigo && codigo === marcado;
+    guardar(
+      { [campoVinculo]: todos ? [] : nuevos, ...(limpiaDefault ? { defaultsArca: { [campo]: '' } } : {}) } as Partial<Company>,
+      `${nombreDe(codigo) || i.name} ${apagar ? 'ya no se ofrece' : 'se ofrece'} en ${empresa.razonSocial}.${limpiaDefault ? ' Era el valor por defecto: se quitó.' : ''}`,
+    );
+  };
+
+  const habilitarTodos = () => {
+    if (!campoVinculo) return;
+    guardar({ [campoVinculo]: [] } as Partial<Company>, `${empresa.razonSocial} vuelve a ofrecer todo el nomenclador.`);
   };
 
   if (cargando) return <LoadingSpinner message="Cargando el nomenclador..." />;
@@ -166,9 +212,23 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
           Sin esto, una lista de cuatro códigos sobre un nomenclador de 293 se lee como un catálogo a
           medio importar, y el próximo paso es ir a cargarlos de nuevo.
         */}
-        {asignados.length > 0 && (
+        {asignados.length > 0 && !editaHabilitados && (
           <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
             Mostrando los {delaEmpresa.length} que esta empleadora usa, de {items.length} del nomenclador. Se eligen desde Configuración → ARCA, en la columna «Empresas».
+          </p>
+        )}
+        {editaHabilitados && (
+          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+            {asignados.length > 0 ? (
+              <>
+                Esta empleadora ofrece {delaEmpresa.length} de {items.length} en los selectores.{' '}
+                <button type="button" onClick={habilitarTodos} disabled={guardando} className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 underline underline-offset-2 disabled:opacity-50">
+                  Habilitar todas
+                </button>
+              </>
+            ) : (
+              <>Se ofrecen todas en los selectores. Apagá «Habilitada» en las que esta empleadora no usa.</>
+            )}
           </p>
         )}
       </div>
@@ -187,7 +247,7 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
             respuesta útil, y acá además explicaría mal por qué la lista está entera. */}
         {acotaPorGrupo && (
           <button type="button" onClick={() => setSoloDelGrupo((v) => !v)} className={`shrink-0 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${soloDelGrupo ? 'bg-blue-50 dark:bg-blue-900/25 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
-            {soloDelGrupo ? `Del grupo ${grupoEmpresa} (${visibles.length})` : `Los ${delaEmpresa.length}`}
+            {soloDelGrupo ? `Del grupo ${grupoEmpresa} (${visibles.length})` : `Los ${listados.length}`}
           </button>
         )}
       </div>
@@ -205,6 +265,12 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
             <tr>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">Código</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+              {columnasExtra.map((c) => (
+                <th key={c.label} className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{c.label}</th>
+              ))}
+              {editaHabilitados && (
+                <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="Si se ofrece en los selectores para los contratos de esta empleadora.">Habilitada</th>
+              )}
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">
                 <span className="inline-flex items-center gap-2">
                   Por defecto
@@ -216,7 +282,7 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
             {visibles.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                <td colSpan={3 + columnasExtra.length + (editaHabilitados ? 1 : 0)} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
                   No hay ninguno que coincida.
                 </td>
               </tr>
@@ -224,14 +290,34 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
               visibles.map((i) => {
                 const codigo = String(i.externalId || '');
                 const esDefecto = !!codigo && codigo === marcado;
+                const activo = habilitado(i);
                 return (
-                  <tr key={i._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                  <tr key={i._id} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${activo ? '' : 'opacity-60'}`}>
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{codigo || '—'}</span>
                     </td>
                     <td className="px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200">{i.name}</td>
+                    {columnasExtra.map((c) => (
+                      <td key={c.label} className="px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300">{c.render(i)}</td>
+                    ))}
+                    {editaHabilitados && (
+                      <td className="px-4 py-2.5 text-center">
+                        {/* Mismo switch que «Empresas que lo usan»: prender o apagar una relación, no elegir de una lista. */}
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={activo}
+                          aria-label={`${activo ? 'Deshabilitar' : 'Habilitar'} ${i.name} en ${empresa.razonSocial}`}
+                          disabled={guardando}
+                          onClick={() => alternarHabilitado(i)}
+                          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${activo ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${activo ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                      </td>
+                    )}
                     <td className="px-4 py-2.5">
-                      <button type="button" onClick={() => marcar(codigo)} disabled={guardando || !codigo} title={esDefecto ? `Es ${queEs} por defecto. Click para quitarlo.` : `Marcar como ${queEs} por defecto de esta empleadora`} aria-pressed={esDefecto} className={`shrink-0 transition-colors disabled:opacity-50 ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
+                      <button type="button" onClick={() => marcar(codigo)} disabled={guardando || !codigo || !activo} title={!activo ? 'Habilitala primero para poder marcarla por defecto.' : esDefecto ? `Es ${queEs} por defecto. Click para quitarlo.` : `Marcar como ${queEs} por defecto de esta empleadora`} aria-pressed={esDefecto} className={`shrink-0 transition-colors disabled:opacity-50 ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
                         <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5" />
                       </button>
                     </td>

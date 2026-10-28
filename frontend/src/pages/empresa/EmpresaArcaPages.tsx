@@ -25,6 +25,7 @@ import { CONVENIO_EXCLUIDO } from '../../components/contratos/afipCompleteness';
 import { ConveniosTable } from '../../components/convenios/ConveniosTable';
 import { BannerParitarias } from '../../components/paritarias/BannerParitarias';
 import { LinkSiPuede } from '../../components/LinkSiPuede';
+import { rotuloCampoRetribucion } from '@compartido/arca/retribucionPactada';
 
 /**
  * "Datos del Empleador" de ARCA, por CUIT.
@@ -1295,7 +1296,8 @@ export const EmpresaModalidadContratacionPage: React.FC = () => (
 export const EmpresaModalidadLiquidacionPage: React.FC = () => (
   <EmpresaContextLayout titulo="Modalidad de Liquidación" icono={faSliders} ayuda="empresaDefaults">
     {(empresa, recargar) => <DefaultArcaEmpresa empresa={empresa} recargar={recargar} campo="modalidadLiquidacion"
-        ambito={nomencladorPorId("modalidades-liquidacion")!.descripcionAmbito} api={modalidadesLiqApi} queEs="la modalidad de liquidación" nota="Posición 73 del TXT de alta." />}
+        ambito={nomencladorPorId("modalidades-liquidacion")!.descripcionAmbito} api={modalidadesLiqApi} queEs="la modalidad de liquidación" nota="Posición 73 del TXT de alta." editarHabilitados
+        columnasExtra={[{ label: 'Retribución pactada', render: (item) => rotuloCampoRetribucion((item as { retribucionPactada?: string }).retribucionPactada) }]} />}
   </EmpresaContextLayout>
 );
 
