@@ -34,3 +34,14 @@ export declare function cambiosAlAprobar(meta: any, contrato: any, proyecto: {
     _id: any;
     name?: string;
 }): Promise<CambioDeRevision[]>;
+/**
+ * LA SOLICITUD ALINEADA CON LO QUE SE CONTRATÓ (pedido del 29/10/2026).
+ *
+ * Al aprobar se corrige el alta (tipo de contrato, fechas, valor…) y eso queda en el contrato; la
+ * solicitud seguía diciendo lo que se PIDIÓ, y la lista de Solicitudes y lo que lee de ella (la planilla
+ * de jornaleros, la ficha) mostraban un «Jornada» que se había aprobado como Servicios Intercambio. Lo
+ * pedido no se pierde: `cambiosAlAprobar` lo guarda en `solicitudRevision` ANTES de llamar a esto.
+ *
+ * Devuelve el `$set` (sólo lo que el contrato trae).
+ */
+export declare function solicitudSegunElContrato(contrato: any): Promise<Record<string, any>>;

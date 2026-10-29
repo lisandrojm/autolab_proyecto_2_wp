@@ -113,7 +113,7 @@ import { formasDelTipo, rechazoPorDatosBancarios } from "../compartido/formasPag
 import { registrarAltaDeContrato } from "../services/altaTempranaService.js";
 import { arrancarDescargaConstancias, descargaConstanciasDe, pendientesDeConstancia } from "../services/arca/constanciasAltas.js";
 import { numeroALetras } from "../utils/numeroALetras.js";
-import { cambiosAlAprobar } from "../services/revisionDeSolicitud.js";
+import { cambiosAlAprobar, solicitudSegunElContrato } from "../services/revisionDeSolicitud.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 async function ensureDir(dir) {
@@ -2385,6 +2385,13 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         // entra recién ahora; si ya existía, ya contaba y esto no hace nada (ver `services/conteoUsuariosTenant.ts`).
         if (idSolicitud)
             await sumarAlConteo(req.tenantObjectId, userId);
+        // Editar después un contrato que vino de una solicitud también la alinea (al aprobar se hace más abajo).
+        const solicitudDelContrato = enrichedContract.solicitudId;
+        if (!idSolicitud && solicitudDelContrato) {
+            const alineada = await solicitudSegunElContrato(enrichedContract);
+            if (Object.keys(alineada).length)
+                await User.updateOne({ _id: solicitudDelContrato, tenantId: req.tenantObjectId }, { $set: alineada });
+        }
         /*
           AVISARLE A QUIEN PIDIÓ EL ALTA que se aprobó.
     
@@ -2409,6 +2416,10 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
                 const quienAprueba = await User.findById(req.user.userId).select("firstName lastName metadata.fullName").lean();
                 await User.updateOne({ _id: solicitudAprobada._id }, { $set: { "metadata.solicitudRevision": { cambios, comentario, porNombre: nombreDePersona(quienAprueba), el: new Date() } } });
             }
+            // Lo pedido ya quedó en la revisión: la solicitud pasa a decir lo que se contrató (ver `solicitudSegunElContrato`).
+            const alineada = await solicitudSegunElContrato(enrichedContract);
+            if (Object.keys(alineada).length)
+                await User.updateOne({ _id: solicitudAprobada._id }, { $set: alineada });
             /*
               AVISARLE A QUIEN PIDIÓ EL ALTA.
       

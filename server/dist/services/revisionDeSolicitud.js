@@ -4,6 +4,7 @@ import { Shift } from "../models/Shift.js";
 import { Company } from "../models/Company.js";
 import { Contrato } from "../models/Contrato.js";
 import { Info } from "../models/Info.js";
+import { Categoria } from "../models/Categoria.js";
 import { Project } from "../models/Project.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import { User } from "../models/User.js";
@@ -170,4 +171,60 @@ async function buscarCategoriaPorId(idCategoria) {
     // `resolverCategoriasCompatPorId` mira el catálogo nuevo y, para lo que no esté, el viejo.
     const [cat] = await resolverCategoriasCompatPorId([idCategoria]);
     return cat || null;
+}
+/** "2026-10-31" o un ISO → "YYYY-MM-DD" (como guarda la solicitud); otra cosa, null. */
+const diaIso = (v) => {
+    const m = /^(\d{4}-\d{2}-\d{2})/.exec(String(v ?? ""));
+    return m ? m[1] : null;
+};
+/**
+ * LA SOLICITUD ALINEADA CON LO QUE SE CONTRATÓ (pedido del 29/10/2026).
+ *
+ * Al aprobar se corrige el alta (tipo de contrato, fechas, valor…) y eso queda en el contrato; la
+ * solicitud seguía diciendo lo que se PIDIÓ, y la lista de Solicitudes y lo que lee de ella (la planilla
+ * de jornaleros, la ficha) mostraban un «Jornada» que se había aprobado como Servicios Intercambio. Lo
+ * pedido no se pierde: `cambiosAlAprobar` lo guarda en `solicitudRevision` ANTES de llamar a esto.
+ *
+ * Devuelve el `$set` (sólo lo que el contrato trae).
+ */
+export async function solicitudSegunElContrato(contrato) {
+    const set = {};
+    const poner = (campo, v) => {
+        if (v !== undefined && v !== null && v !== "")
+            set[`metadata.${campo}`] = v;
+    };
+    if (!contrato)
+        return set;
+    poner("contratoId", contrato.contrato_id && Types.ObjectId.isValid(String(contrato.contrato_id)) ? new Types.ObjectId(String(contrato.contrato_id)) : null);
+    poner("nombre_contrato", contrato.nombre_contrato);
+    poner("startDate", diaIso(contrato.fecha_alta_contrato));
+    poner("dueDate", diaIso(contrato.fecha_baja_contrato));
+    // Con o sin días sueltos: un contrato por período no tiene fechas, y la solicitud no puede seguir mostrando las pedidas.
+    set["metadata.fechasTrabajadas"] = Array.isArray(contrato.fechas_trabajadas) ? contrato.fechas_trabajadas : [];
+    if (contrato.cantidad_jornadas_laborales != null)
+        poner("workdaysCount", Number(contrato.cantidad_jornadas_laborales));
+    if (contrato.sueldo_jornada != null)
+        poner("dailyRate", Number(contrato.sueldo_jornada));
+    if (Array.isArray(contrato.dias_semana))
+        poner("diasSemana", contrato.dias_semana);
+    if (contrato.dias_por_semana != null)
+        poner("diasPorSemana", Number(contrato.dias_por_semana));
+    if (contrato.hora_inicio || contrato.hora_fin)
+        poner("schedule", `${texto(contrato.hora_inicio)} - ${texto(contrato.hora_fin)}`);
+    if (Array.isArray(contrato.areaShiftAssignments) && contrato.areaShiftAssignments.length)
+        poner("areaShiftAssignments", contrato.areaShiftAssignments);
+    if (contrato.empresaContratoId && Types.ObjectId.isValid(String(contrato.empresaContratoId)))
+        poner("empresaContratoId", new Types.ObjectId(String(contrato.empresaContratoId)));
+    // El trámite: el del estado que guardó el contrato (por su clave canónica, como en `cambiosAlAprobar`).
+    if (contrato.nombre_estado_empleado) {
+        const estados = await Info.find({ type: "estado-empleado" }).select("name data.tipoImpositivo").lean();
+        const estado = estados.find((e) => claveEstado(e.name) === claveEstado(texto(contrato.nombre_estado_empleado)));
+        poner("tipoImpositivo", estado?.data?.tipoImpositivo);
+    }
+    // La categoría: el contrato la guarda por su número legacy; la solicitud, por `_id` de `categorias`.
+    if (Number.isFinite(Number(contrato.categoria_sat_id)) && contrato.categoria_sat_id != null) {
+        const cat = await Categoria.findOne({ legacyId: Number(contrato.categoria_sat_id) }).select("_id").lean();
+        poner("categoriaSatId", cat ? String(cat._id) : null);
+    }
+    return set;
 }
