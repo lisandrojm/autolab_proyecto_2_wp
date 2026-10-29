@@ -1179,8 +1179,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                   <th className="px-4 py-3 font-semibold">Tiempo Indet.</th>
                   <th className="px-4 py-3 font-semibold">Firma</th>
                   <th className="px-4 py-3 font-semibold">Estado</th>
-                  <th className="px-4 py-3 font-semibold">Plantillas</th>
-                  <th className="px-4 py-3 font-semibold">Release</th>
+                  <th className="px-4 py-3 font-semibold">Plantilla Contrato</th>
+                  <th className="px-4 py-3 font-semibold">Plantilla Release</th>
                   <th className="px-4 py-3 font-semibold">Estados</th>
                   <th className="px-4 py-3 font-semibold text-right">Acciones</th>
                 </tr>
@@ -1322,7 +1322,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
 
                 {cantPlantillas > 0 && (
                   <div className="flex flex-col gap-1 pt-1 border-t border-gray-100 dark:border-gray-700/60">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Plantillas</label>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Plantilla Contrato</label>
                     <div className="flex flex-wrap gap-1">
                       {plantillasDe(contrato._id).map((p) => (
                         <PlantillaChip key={p._id} plantilla={p} />
@@ -1336,7 +1336,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                   if (lista.length === 0) return null;
                   return (
                     <div className="flex flex-col gap-1 pt-1 border-t border-gray-100 dark:border-gray-700/60">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Release</label>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Plantilla Release</label>
                       <div className="flex flex-wrap gap-1">
                         {lista.map((rl) => (
                           <ReleaseChip key={rl._id} release={rl} general={generales} />
@@ -1398,10 +1398,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                 )}
 
 
-                <div className="flex items-center justify-between gap-2 pt-2 mt-auto border-t border-gray-100 dark:border-gray-700/60">
-                  <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                    {cantPlantillas} plantilla{cantPlantillas === 1 ? '' : 's'} asignada{cantPlantillas === 1 ? '' : 's'}
-                  </span>
+                {/* Sin «N plantillas asignadas»: contaba sólo las de contrato, y con el release al lado se leía como el total. */}
+                <div className="flex items-center justify-end gap-2 pt-2 mt-auto border-t border-gray-100 dark:border-gray-700/60">
                   <div className="flex items-center gap-1">
                     <CardFooterAction icon={faCopy} title="Duplicar contrato" onClick={() => abrirDuplicar(contrato)} />
                     <CardFooterAction icon={faEdit} title="Editar contrato" onClick={() => abrirEditar(contrato)} />
