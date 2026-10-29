@@ -100,6 +100,8 @@ export interface CatalogExtraField {
   showColumn?: boolean;
   /** Encabezado de la columna (por defecto usa `label`). */
   columnLabel?: string;
+  /** Cómo se dibuja la celda en la tabla, si el texto de la opción no alcanza (ej. un «Sin definir» con su (i)). */
+  renderColumna?: (item: SimpleCatalogItem) => React.ReactNode;
   placeholder?: string;
   /** Aparece en el modal de «Filtrar» (sólo `select` y `estado`, que tienen opciones cerradas). */
   filtrable?: boolean;
@@ -948,6 +950,7 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
 
   /** Una celda de campo extra: su valor y, si es una opción inactiva, el «i» amarillo que lo explica. */
   const celdaExtra = (f: CatalogExtraField, item: SimpleCatalogItem) => {
+    if (f.renderColumna) return f.renderColumna(item);
     if (f.type === 'color' && f.vistaPrevia) {
       const color = String(item[f.key] ?? '').trim();
       return f.vistaPrevia(esColorValido(color) ? color : '', String(item.name ?? ''));
