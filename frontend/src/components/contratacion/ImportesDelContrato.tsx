@@ -117,6 +117,13 @@ interface Props {
    * faltan no se dibujan. La cuenta la arma el componente con sus propios números.
    */
   resumenTotal?: ResumenTotal;
+  /**
+   * DE REFERENCIA: el puesto de una plantilla (pedido del 29/10/2026). Ahí no hay fechas —son de cada
+   * contratación— y semana, mensual y total salen de la jornada sobre una ventana por defecto: se
+   * marcan con el (*) del aviso de Servicios, se ven más apagados que la jornada (que es el dato que
+   * se fija) y el total dice que es estimado. `ventana` completa «× N jornadas …» del total.
+   */
+  deReferencia?: { ventana: string };
 }
 
 export interface ResumenTotal {
@@ -132,7 +139,7 @@ export interface ResumenTotal {
 
 const pesosAR = (n: number) => n.toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mesesDelPeriodo, jornadas, jornadasDelTipo, proporcionNeto, diasPorSemanaDelTipo, diasSemana: diasMarcados, indeterminado = false, soloNeto: soloNetoPedido = false, bloqueado = false, textoBloqueado, ayudaJornada, className = "", claseEtiqueta, claseCampo, claseCampoTotal, claseAyuda, icono, adornoCampo, infoEnRotulo, conservarJornadaExterna = false, resumenTotal, estadoReferencia }: Props) {
+export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mesesDelPeriodo, jornadas, jornadasDelTipo, proporcionNeto, diasPorSemanaDelTipo, diasSemana: diasMarcados, indeterminado = false, soloNeto: soloNetoPedido = false, bloqueado = false, textoBloqueado, ayudaJornada, className = "", claseEtiqueta, claseCampo, claseCampoTotal, claseAyuda, icono, adornoCampo, infoEnRotulo, conservarJornadaExterna = false, resumenTotal, estadoReferencia, deReferencia }: Props) {
   // Los meses que dura el contrato PARA LOS IMPORTES: con jornadas en el tipo, jornadas ÷ esas jornadas.
   const mesesEq = mesesParaImportes(mesesDelPeriodo, jornadas, jornadasDelTipo);
   // La semana del contrato: los días por semana del tipo, si los tiene; si no, los días marcados.
@@ -152,19 +159,36 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
     leer la ayuda de cada campo para enterarse.
   */
   const colorReferencia = useColorDeEstado(soloNeto ? estadoReferencia : undefined) || "#f59e0b";
-  const marca = soloNeto ? (
-    <span className="ml-1 font-black normal-case tracking-normal" style={{ color: colorReferencia }} title="Valor de referencia">
-      (*)
-    </span>
-  ) : null;
-  const avisoReferencia = soloNeto ? (
-    <div className="md:col-span-2 rounded-lg px-3 py-2 text-xs flex items-start gap-2" style={{ color: colorReferencia, border: `1px solid ${colorReferencia}`, background: `color-mix(in srgb, ${colorReferencia} 12%, transparent)` }}>
-      {estadoReferencia && <EstadoBadge name={estadoReferencia} className="shrink-0" />}
-      <span className="leading-snug">
-        <span className="font-black">(*)</span> Todos los importes son un <span className="font-black uppercase">valor de referencia</span> de acuerdo a la categoría del rol asignado y la valoración del proyecto.
+  // En una plantilla (`deReferencia`) la jornada es firme: el (*) va en los que salen de ella.
+  const marcaDe = (unidad: UnidadImporte) =>
+    soloNeto || (deReferencia && unidad !== "jornada") ? (
+      <span className="ml-1 font-black normal-case tracking-normal" style={{ color: colorReferencia }} title="Valor de referencia">
+        (*)
       </span>
-    </div>
-  ) : null;
+    ) : null;
+  const TEXTO_AL_CONTRATAR = "El total real se calcula al contratar, con las fechas que se elijan.";
+  const avisoReferencia =
+    soloNeto || deReferencia ? (
+      <div className="md:col-span-2 rounded-lg px-3 py-2 text-xs flex items-start gap-2" style={{ color: colorReferencia, border: `1px solid ${colorReferencia}`, background: `color-mix(in srgb, ${colorReferencia} 12%, transparent)` }}>
+        {soloNeto && estadoReferencia && <EstadoBadge name={estadoReferencia} className="shrink-0" />}
+        <span className="leading-snug">
+          {soloNeto ? (
+            <>
+              <span className="font-black">(*)</span> Todos los importes son un <span className="font-black uppercase">valor de referencia</span> de acuerdo a la categoría del rol asignado y la valoración del proyecto.{deReferencia && ` ${TEXTO_AL_CONTRATAR}`}
+            </>
+          ) : (
+            <>
+              <span className="font-black">(*)</span> Semana, mensual y total son un <span className="font-black uppercase">valor de referencia</span>: salen del importe por jornada. {TEXTO_AL_CONTRATAR}
+            </>
+          )}
+        </span>
+      </div>
+    ) : null;
+  /*
+    LOS DERIVADOS, MÁS APAGADOS (`deReferencia`): la jornada es el dato duro; semana, mensual y total
+    son proyecciones. Sin el verde del mensual y el total, que los hacía leer como el monto del contrato.
+  */
+  const claseDe = (unidad: UnidadImporte, base: string) => (deReferencia && unidad !== "jornada" ? `${claseCampo.replace("font-medium", "font-normal")} text-slate-500 dark:text-slate-400` : base);
   // En pantalla: el total siempre en neto; con `soloNeto`, todos.
   const vista = (unidad: UnidadImporte) => (netoSobreBruto && (soloNeto || unidad === "total") ? netoSobreBruto : 1);
   const [ancla, setAncla] = useState<AnclaImporte | null>(null);
@@ -282,8 +306,14 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
   const jornadasDe = (unidad: UnidadImporte): string | null => {
     if (sinJornadas) return null;
     if (unidad === "mes") return Number(jornadasDelTipo) > 0 ? `× ${jornadasDelTipo} jornadas del tipo de contrato` : indeterminado ? `× ${jornadas} jornadas` : "prorrateado por los días hábiles del mes";
-    if (unidad === "total") return indeterminado ? null : `× ${jornadas} ${jornadas === 1 ? "jornada" : "jornadas"} del contrato`;
-    if (unidad === "semana") return diasSemana > 0 ? `× ${diasSemana} ${diasSemana === 1 ? "día" : "días"} por semana` : null;
+    if (unidad === "total") return indeterminado ? null : deReferencia ? `Estimado: × ${jornadas} ${jornadas === 1 ? "jornada" : "jornadas"} ${deReferencia.ventana}` : `× ${jornadas} ${jornadas === 1 ? "jornada" : "jornadas"} del contrato`;
+    if (unidad === "semana") {
+      if (diasSemana <= 0) return null;
+      const base = `× ${diasSemana} ${diasSemana === 1 ? "día" : "días"} por semana`;
+      // En la plantilla se dice de dónde sale: el tipo de contrato manda sobre los días del turno.
+      if (!deReferencia || !(Number(diasPorSemanaDelTipo) > 0)) return base;
+      return `${base} del tipo de contrato${diasMarcados > 0 && diasMarcados < diasSemana ? ` (el turno trabaja ${diasMarcados})` : ""}`;
+    }
     return null;
   };
   const subRotulo = (unidad: UnidadImporte) => {
@@ -295,17 +325,17 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
       <label className={claseEtiqueta}>
         {icono}
         {rotulo}
-        {marca}
+        {marcaDe(unidad)}
         {infoEnRotulo?.(rotulo, ayuda)}
       </label>
       {subRotulo(unidad)}
       {adornoCampo ? (
         <div className="relative">
           {adornoCampo}
-          <CampoImporte valor={importeEn(unidad)} onCambio={(v) => cambiarImporte(unidad, v)} onBlur={soltar} disabled={bloqueado || deshabilitado} className={clase} />
+          <CampoImporte valor={importeEn(unidad)} onCambio={(v) => cambiarImporte(unidad, v)} onBlur={soltar} disabled={bloqueado || deshabilitado} className={claseDe(unidad, clase)} />
         </div>
       ) : (
-        <CampoImporte valor={importeEn(unidad)} onCambio={(v) => cambiarImporte(unidad, v)} onBlur={soltar} disabled={bloqueado || deshabilitado} className={clase} />
+        <CampoImporte valor={importeEn(unidad)} onCambio={(v) => cambiarImporte(unidad, v)} onBlur={soltar} disabled={bloqueado || deshabilitado} className={claseDe(unidad, clase)} />
       )}
       {!infoEnRotulo && ayuda}
       {debajo}
@@ -351,16 +381,17 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
         <label className={claseEtiqueta}>
           {icono}
           {rotulo}
+          {marcaDe(unidad)}
           {infoEnRotulo?.(rotulo, ayudaNeto)}
         </label>
         {subRotulo(unidad)}
         {adornoCampo ? (
           <div className="relative">
             {adornoCampo}
-            <CampoImporte valor={valor} onCambio={(t) => cambiarImporte(unidad, t, true)} onBlur={soltar} disabled={bloqueado || deshabilitado} className={clase} />
+            <CampoImporte valor={valor} onCambio={(t) => cambiarImporte(unidad, t, true)} onBlur={soltar} disabled={bloqueado || deshabilitado} className={claseDe(unidad, clase)} />
           </div>
         ) : (
-          <CampoImporte valor={valor} onCambio={(t) => cambiarImporte(unidad, t, true)} onBlur={soltar} disabled={bloqueado || deshabilitado} className={clase} />
+          <CampoImporte valor={valor} onCambio={(t) => cambiarImporte(unidad, t, true)} onBlur={soltar} disabled={bloqueado || deshabilitado} className={claseDe(unidad, clase)} />
         )}
         {!infoEnRotulo && ayudaNeto}
       </div>
@@ -405,6 +436,7 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
         </>
       ) : (
       <>
+      {avisoReferencia}
       {/* El neto a la izquierda y el bruto a la derecha: el neto es el que se mira; el bruto, el que se guarda. */}
       {conNeto && campoNeto("jornada", "Importe por jornada neto", "El importe por jornada", sinJornadas)}
       {campo("jornada", conNeto ? "Importe por jornada bruto" : "Importe por Jornada", sinJornadas, sinJornadas ? ayuda(TEXTO_SIN_JORNADAS) : ayudaJornada ?? ayuda("Total ÷ jornadas del contrato. Varía según los días hábiles de cada mes."), claseCampo)}
@@ -414,7 +446,7 @@ export function ImportesDelContrato({ valorJornada, onValorJornada, mesesEq: mes
       {campo("mes", conNeto ? "Importe mensual bruto" : "Importe mensual", mesesEq <= 0 || sinJornadas, ayuda(mesesEq > 0 && !sinJornadas ? (Number(jornadasDelTipo) > 0 ? `Jornada × ${jornadasDelTipo} jornadas por mes del tipo de contrato. Si lo cambiás, se recalculan los demás.` : indeterminado ? `Un mes completo: jornada × ${jornadas} jornadas. Si lo cambiás, se recalculan los demás.` : "Se prorratea según los días hábiles reales de cada mes del período. Si lo cambiás, se recalculan los demás.") : TEXTO_SIN_JORNADAS), claseCampo)}
       </>
       )}
-      {campo("total", conNeto ? "Importe total del contrato neto" : "Importe total del contrato", sinJornadas || indeterminado, ayuda(indeterminado ? "Tiempo indeterminado: el contrato no termina, así que no tiene total. Lo que rige es el mensual." : !sinJornadas ? conNeto ? `Neto por jornada × ${jornadas} jornada(s) del contrato: lo que cobra por todo el contrato. Si lo cambiás, se recalculan los demás.` : Number(jornadasDelTipo) > 0 ? `Jornada × ${jornadas} jornada(s) del contrato.` : `Mensual × meses del contrato (${mesesEq.toLocaleString("es-AR", { maximumFractionDigits: 2 })}). Si lo cambiás, se recalculan los demás.` : TEXTO_SIN_JORNADAS), claseCampoTotal, resumen)}
+      {campo("total", conNeto ? "Importe total del contrato neto" : "Importe total del contrato", sinJornadas || indeterminado, ayuda(indeterminado ? "Tiempo indeterminado: el contrato no termina, así que no tiene total. Lo que rige es el mensual." : !sinJornadas ? conNeto ? `Neto por jornada × ${jornadas} jornada(s) del contrato: lo que cobra por todo el contrato. Si lo cambiás, se recalculan los demás.` : Number(jornadasDelTipo) > 0 ? `Jornada × ${jornadas} jornada(s) del contrato.` : `Mensual × meses del contrato (${mesesEq.toLocaleString("es-AR", { maximumFractionDigits: 2 })}). Si lo cambiás, se recalculan los demás.` : TEXTO_SIN_JORNADAS), claseCampoTotal, deReferencia && !sinJornadas && !indeterminado ? <>{resumen}<p className="text-[11px] leading-snug text-slate-500 dark:text-slate-400">Estimado. El total real se calcula al contratar el equipo, con las fechas que se elijan en «Días que trabajan».</p></> : resumen)}
       {hayQueRestaurar && !bloqueado && (
         <div className="col-span-full">
           <button

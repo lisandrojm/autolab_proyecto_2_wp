@@ -309,6 +309,7 @@ export default function DetallePuesto() {
                 diasPorSemanaDelTipo={Number(contratoDelPuesto?.data?.diasPorSemana) || null}
                 proporcionNeto={proporcionNetoDeCategoria(categoriaDelPuesto)}
                 soloNeto={efectivo.tipoImpositivo === "constancia_cuit"}
+                deReferencia={{ ventana: efectivo.diasSemana?.length ? "de este mes con los días del turno" : "de este mes, de lunes a viernes" }}
                 diasSemana={diasRef.length}
                 bloqueado={importesEnCero || !categoriaActual}
                 textoBloqueado={importesEnCero ? "En 0: este tipo de contrato es un cambio de franco (el día no se paga)." : "Se habilita al elegir la categoría."}
