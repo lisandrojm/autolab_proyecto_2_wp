@@ -31,6 +31,14 @@ export const TEXTO_SIN_CAMPO = "Sueldo bruto de la escala (categoría)";
 
 export const esCampoRetribucion = (v: unknown): v is CampoRetribucion => CAMPOS_RETRIBUCION.some((c) => c.value === v);
 
+/**
+ * Las modalidades que se ofrecen al elegir la del TIPO DE CONTRATO: sólo las que tienen definida su
+ * retribución pactada. La que el tipo ya tiene se deja aunque no la tenga, para no esconderla.
+ */
+export function modalidadesLiqOfrecidas<T extends { externalId?: string | null; retribucionPactada?: string | null }>(items: T[], actual?: string | null): T[] {
+  return items.filter((m) => !!String(m.retribucionPactada ?? "").trim() || (!!actual && String(m.externalId ?? "") === String(actual)));
+}
+
 export const rotuloCampoRetribucion = (v: unknown): string => CAMPOS_RETRIBUCION.find((c) => c.value === v)?.label ?? TEXTO_SIN_CAMPO;
 
 /** Lo que hace falta del contrato (`UserProject.contracts[i]` o la fila de Contratos). */

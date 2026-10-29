@@ -27,6 +27,7 @@ import { faGripVertical, faCheck, faMultiply } from '@fortawesome/free-solid-svg
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { modalidadesLiqOfrecidas } from '@compartido/arca/retribucionPactada';
 
 // Nomencladores de ARCA de los que salen los tres códigos. Se leen enteros (153 / 293 / 8 / 2): son
 // chicos y se cargan una vez al abrir la pestaña.
@@ -1871,13 +1872,13 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                       <SelectorCodigoArca
                         label="Modalidad de liquidación"
                         sufijoLabel="(1 díg.)"
-                        items={modalidadesLiq}
+                        items={modalidadesLiqOfrecidas(modalidadesLiq, form.afipModalidadLiquidacion)}
                         cargando={cargandoArca}
                         value={form.afipModalidadLiquidacion}
                         onChange={(c) => setForm((p) => ({ ...p, afipModalidadLiquidacion: c }))}
                         formatCodigo={pad1}
                         placeholder="Sin elegir — ej. 1 por mes"
-                        vacioHint="El catálogo de Modalidades de Liquidación está vacío. Se siembra en Configuración → ARCA → Modalidades de Liquidación."
+                        vacioHint="Ninguna modalidad de liquidación tiene definida su retribución pactada. Se define en Configuración → ARCA → Modalidades de Liquidación."
                       />
                 {errorCodigo('afipModalidadLiquidacion')}
                     </div>

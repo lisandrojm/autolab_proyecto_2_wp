@@ -25,6 +25,13 @@ export const CAMPOS_RETRIBUCION = [
 ];
 export const TEXTO_SIN_CAMPO = "Sueldo bruto de la escala (categoría)";
 export const esCampoRetribucion = (v) => CAMPOS_RETRIBUCION.some((c) => c.value === v);
+/**
+ * Las modalidades que se ofrecen al elegir la del TIPO DE CONTRATO: sólo las que tienen definida su
+ * retribución pactada. La que el tipo ya tiene se deja aunque no la tenga, para no esconderla.
+ */
+export function modalidadesLiqOfrecidas(items, actual) {
+    return items.filter((m) => !!String(m.retribucionPactada ?? "").trim() || (!!actual && String(m.externalId ?? "") === String(actual)));
+}
 export const rotuloCampoRetribucion = (v) => CAMPOS_RETRIBUCION.find((c) => c.value === v)?.label ?? TEXTO_SIN_CAMPO;
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const r2 = (n) => Math.round(n * 100) / 100;

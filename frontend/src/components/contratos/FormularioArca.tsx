@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLock, faChevronDown, faChevronRight, faRotate, faPenToSquare, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { ContractOverviewRow } from "../../api/users";
-import { rotuloCampoRetribucion } from "@compartido/arca/retribucionPactada";
+import { rotuloCampoRetribucion, modalidadesLiqOfrecidas } from "@compartido/arca/retribucionPactada";
 import { AfipCatalogs, AfipValues, MODALIDADES_PLAZO_DETERMINADO, MODALIDADES_TIEMPO_INDETERMINADO, buscarTipoContrato } from "./afipCompleteness";
 import { createSimpleCatalogApi, SimpleCatalogItem } from "../../api/simpleCatalog";
 import { contratosAPI, ContratoItem } from "../../api/contratos";
@@ -235,13 +235,13 @@ const EditarCodigosDelTipo: React.FC<{
         <SelectorCodigoArca
           label="Modalidad de liquidación"
           sufijoLabel="(1 díg.)"
-          items={modalidadesLiq}
+          items={modalidadesLiqOfrecidas(modalidadesLiq, liquidacion)}
           value={liquidacion}
           onChange={setLiquidacion}
           formatCodigo={pad1}
           placeholder="Sin elegir — ej. 1 por mes"
           ayuda="Posición 73 del registro."
-          vacioHint="El catálogo de Modalidades de Liquidación está vacío. Se siembra en Configuración → ARCA → Modalidades de Liquidación."
+          vacioHint="Ninguna modalidad de liquidación tiene definida su retribución pactada. Se define en Configuración → ARCA → Modalidades de Liquidación."
         />
       </div>
     </Modal>

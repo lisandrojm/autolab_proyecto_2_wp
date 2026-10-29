@@ -289,7 +289,7 @@ const helpResources = {
       // Modalidades de liquidación (ARCA)
       'arcaModalidadLiquidacion.title': 'Información de Modalidades de Liquidación',
       'arcaModalidadLiquidacion.description': 'Tabla oficial de ARCA: cada cuánto se liquida la retribución pactada.',
-      'arcaModalidadLiquidacion.items': ['**Qué es**: El código de 1 dígito que va en la posición 73 del TXT de alta masiva.', '**Son ocho**: 1 mes · 2 quincena · 3 semana · 4 día · 5 hora · 6 pieza · 7 a comisión · 8 jornal.', '**Dónde se usa**: Se asigna por Tipo de Contrato, en Configuración → Contratos.', '**Origen**: Se siembra desde el nomenclador de ARCA y solo hace falta tocarla si el organismo la actualiza.'],
+      'arcaModalidadLiquidacion.items': ['**Qué es**: El código de 1 dígito que va en la posición 73 del TXT de alta masiva.', '**Son ocho**: 1 mes · 2 quincena · 3 semana · 4 día · 5 hora · 6 pieza · 7 a comisión · 8 jornal.', '**Dónde se usa**: Se asigna por Tipo de Contrato, en Configuración → Contratos.', '**Retribución pactada**: Las modalidades que no tienen definida una retribución pactada no se muestran como opción en el Tipo de Contrato.', '**Origen**: Se siembra desde el nomenclador de ARCA y solo hace falta tocarla si el organismo la actualiza.'],
 
       // Pedidos (Configuración / tipos de pedido)
       'orderTypes.title': 'Información de Pedidos',

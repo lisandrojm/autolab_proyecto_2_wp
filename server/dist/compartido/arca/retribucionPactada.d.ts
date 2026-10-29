@@ -32,6 +32,14 @@ export declare const CAMPOS_RETRIBUCION: readonly [{
 export type CampoRetribucion = (typeof CAMPOS_RETRIBUCION)[number]["value"];
 export declare const TEXTO_SIN_CAMPO = "Sueldo bruto de la escala (categor\u00EDa)";
 export declare const esCampoRetribucion: (v: unknown) => v is CampoRetribucion;
+/**
+ * Las modalidades que se ofrecen al elegir la del TIPO DE CONTRATO: sólo las que tienen definida su
+ * retribución pactada. La que el tipo ya tiene se deja aunque no la tenga, para no esconderla.
+ */
+export declare function modalidadesLiqOfrecidas<T extends {
+    externalId?: string | null;
+    retribucionPactada?: string | null;
+}>(items: T[], actual?: string | null): T[];
 export declare const rotuloCampoRetribucion: (v: unknown) => string;
 /** Lo que hace falta del contrato (`UserProject.contracts[i]` o la fila de Contratos). */
 export interface ContratoParaRetribucion {
