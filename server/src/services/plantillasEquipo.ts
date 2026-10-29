@@ -321,7 +321,7 @@ export async function obtenerPlantilla(acc: Acceso, id: string) {
   const p: any = (await cargar(acc, id)).toObject();
   const userIds = (p.equipos || []).flatMap((e: any) => (e.asignaciones || []).flatMap((a: any) => [a.userId, reemplazoDe(a)?.replacedUserId])).filter(idOk);
   const [personas, porDiasSueltos, compromisos]: [any[], (id: string) => boolean, Compromisos] = await Promise.all([
-    userIds.length ? User.find({ _id: { $in: userIds }, tenantId: acc.tenantId }).select("firstName lastName email metadata.fullName metadata.activo").lean() : Promise.resolve([]),
+    userIds.length ? User.find({ _id: { $in: userIds }, tenantId: acc.tenantId }).select("firstName lastName email metadata.fullName metadata.activo metadata.cuit").lean() : Promise.resolve([]),
     contratosPorDiasSueltos([p]),
     compromisosDeLasPlantillas(acc.tenantId, [p]),
   ]);
@@ -346,6 +346,7 @@ export async function obtenerPlantilla(acc: Acceso, id: string) {
           puestoId: String(a.puestoId),
           userId: a.userId ? String(a.userId) : null,
           nombre: !a.userId ? "" : u ? nombreDe(u) : "Persona no encontrada",
+          cuit: u?.metadata?.cuit || "",
           activo: !!u && u.metadata?.activo !== false,
           condiciones: condicionesParaMostrar(a.condiciones),
           excluido: !!a.excluido,

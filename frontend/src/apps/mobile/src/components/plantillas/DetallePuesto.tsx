@@ -17,6 +17,7 @@ import { importePorJornadaDeCategoria, proporcionNetoDeCategoria } from "../../.
 import { jornadasCalculadasDelPedido, mesesEquivalentes, periodoDeCalculo } from "../../../../../utils/jornadas";
 import { marcasParaSelector } from "./PantallaEquipo";
 import { nombreRoles, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
+import { formatCuit } from "../../../../../utils/cuit";
 
 /*
   PANTALLA 4 · UN PUESTO DE UN EQUIPO.
@@ -242,7 +243,10 @@ export default function DetallePuesto() {
             mira. Sin persona, el botón es azul y lleva el «+»: ahí sí es lo que hay que hacer.
           */}
           <div className="flex items-center gap-2">
-            <p className={`min-w-0 flex-1 truncate text-lg font-bold ${persona ? "text-slate-900 dark:text-white" : "text-amber-800 dark:text-amber-300"}`}>{persona ? persona.nombre : "Sin asignar"}</p>
+            <div className="min-w-0 flex-1">
+              <p className={`truncate text-lg font-bold ${persona ? "text-slate-900 dark:text-white" : "text-amber-800 dark:text-amber-300"}`}>{persona ? persona.nombre : "Sin asignar"}</p>
+              {persona && <p className="font-mono text-sm text-slate-500 dark:text-slate-400">{persona.cuit ? `CUIT ${formatCuit(persona.cuit)}` : "Sin CUIT cargado"}</p>}
+            </div>
             <button type="button" onClick={() => setHoja("persona")} aria-label={persona ? "Cambiar persona" : "Asignar persona"} title={persona ? "Cambiar persona" : "Asignar persona"} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${persona ? "border border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200" : "bg-blue-600 text-white"}`}>
               <FontAwesomeIcon icon={persona ? faArrowRightArrowLeft : faUserPlus} />
             </button>

@@ -41,6 +41,8 @@ export interface Asignacion {
   /** `null` = sin persona, pero con condiciones propias en este equipo. */
   userId: string | null;
   nombre: string;
+  /** El CUIT de la persona, sin formato; vacío si no lo tiene cargado. */
+  cuit?: string;
   condiciones: Condiciones | null;
   /** El equipo no usa este puesto (sigue en la plantilla para los demás equipos). */
   excluido: boolean;
