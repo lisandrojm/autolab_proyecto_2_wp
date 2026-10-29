@@ -6,6 +6,8 @@ import { User } from "../models/User.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import { Categoria } from "../models/Categoria.js";
 import { ConvenioGrupo } from "../models/ConvenioGrupo.js";
+import UserProject from "../models/UserProject.js";
+import { Contrato } from "../models/Contrato.js";
 import { armarPlanilla, rangoDelMes } from "../utils/planillaJornaleros.js";
 import { generarXlsxJornaleros } from "./planillaJornalerosXlsx.js";
 /*
@@ -15,8 +17,11 @@ import { generarXlsxJornaleros } from "./planillaJornalerosXlsx.js";
   vinculado a la persona real por `solicitudUserId`. Filtros:
     · `metadata.solicitudStatus = "aprobada"` y `metadata.startDate` dentro del mes.
     · NO `isSolicitud`: pasa a false al aprobarse, y filtrar por él deja el mes vacío.
-    · `metadata.nombre_contrato = "Jornada"`: los mensualizados (plazo fijo) y los de servicios van
-      por otro circuito.
+    · Tipo «Jornada» DEL CONTRATO que se creó al aprobarla (`contracts[].solicitudId`), no el de la
+      solicitud: la solicitud guarda lo que se PIDIÓ (lo corregido al aprobar queda en el contrato y en
+      `solicitudRevision`). Pedida como Jornada y aprobada como Servicios Intercambio no entra; al revés,
+      sí. El jornal y las fechas también salen del contrato. Sólo sin contrato vinculado (datos viejos)
+      se usa lo de la solicitud. Los mensualizados (plazo fijo) y los de servicios van por otro circuito.
   `categoriaSatId` apunta a `categorias` (no a `categorias-sat`); el número de categoría es el del
   grupo del convenio.
 */
@@ -26,12 +31,26 @@ export const RUTA_PLANTILLA = path.resolve(DIR, "../../plantillas/jornaleros.xls
 export const TIPO_CONTRATO_JORNALEROS = "Jornada";
 export async function datosPlanillaJornaleros(tenantId, mes) {
     const { desde, hasta } = rangoDelMes(mes);
-    const solicitudes = await User.find({
+    const solicitudesTodas = await User.find({
         tenantId,
         "metadata.solicitudStatus": "aprobada",
-        "metadata.nombre_contrato": TIPO_CONTRATO_JORNALEROS,
         "metadata.startDate": { $gte: desde, $lte: hasta },
     }, { firstName: 1, lastName: 1, metadata: 1 }).lean();
+    // El contrato de cada solicitud: lo que efectivamente se contrató.
+    const contratoPorSolicitud = new Map();
+    const ups = await UserProject.find({ "contracts.solicitudId": { $in: solicitudesTodas.map((s) => s._id) } }, { contracts: 1 }).lean();
+    for (const up of ups)
+        for (const c of up.contracts || [])
+            if (c.solicitudId)
+                contratoPorSolicitud.set(String(c.solicitudId), c);
+    const idsTipos = [...new Set([...contratoPorSolicitud.values()].map((c) => c.contrato_id).filter(Boolean).map(String))];
+    const nombreDeTipo = new Map((await Contrato.find({ _id: { $in: idsTipos } }, { name: 1 }).lean()).map((t) => [String(t._id), t.name]));
+    const tipoDe = (s) => {
+        const c = contratoPorSolicitud.get(String(s._id));
+        const delContrato = c ? c.nombre_contrato || nombreDeTipo.get(String(c.contrato_id || "")) : null;
+        return String(delContrato || s.metadata?.nombre_contrato || "").trim();
+    };
+    const solicitudes = solicitudesTodas.filter((s) => tipoDe(s) === TIPO_CONTRATO_JORNALEROS);
     const idsPersonas = [...new Set(solicitudes.map((s) => s.metadata?.solicitudUserId).filter(Boolean).map(String))];
     const idsRoles = [...new Set(solicitudes.flatMap((s) => s.metadata?.roles_frame || []).map(String))];
     const idsCategorias = [...new Set(solicitudes.map((s) => s.metadata?.categoriaSatId).filter((id) => id && Types.ObjectId.isValid(id)).map(String))];
@@ -50,7 +69,9 @@ export async function datosPlanillaJornaleros(tenantId, mes) {
         // Sin `solicitudUserId` la solicitud es el alta de alguien nuevo: la persona es ella misma.
         const persona = (m.solicitudUserId && personaPorId.get(String(m.solicitudUserId))) || s;
         const cat = categoriaPorId.get(String(m.categoriaSatId || ""));
-        const fechas = Array.isArray(m.fechasTrabajadas) && m.fechasTrabajadas.length ? m.fechasTrabajadas : m.startDate ? [m.startDate] : [];
+        const contrato = contratoPorSolicitud.get(String(s._id));
+        const fechasContrato = Array.isArray(contrato?.fechas_trabajadas) ? contrato.fechas_trabajadas : [];
+        const fechas = fechasContrato.length ? fechasContrato : Array.isArray(m.fechasTrabajadas) && m.fechasTrabajadas.length ? m.fechasTrabajadas : m.startDate ? [m.startDate] : [];
         return {
             id: String(s._id),
             personaId: String(persona._id),
@@ -60,7 +81,8 @@ export async function datosPlanillaJornaleros(tenantId, mes) {
             rol: (m.roles_frame || []).map((id) => rolPorId.get(String(id))).filter(Boolean).join(" / "),
             categoriaNumero: cat?.numero ?? null,
             categoriaNombre: cat?.nombre || "",
-            dailyRate: Number(m.dailyRate) || 0,
+            // `sueldo_jornada` del contrato es el mismo bruto por jornada que `dailyRate`, ya con lo corregido al aprobar.
+            dailyRate: (contrato ? Number(contrato.sueldo_jornada) : Number(m.dailyRate)) || 0,
             fechas: [...new Set(fechas)],
         };
     });
