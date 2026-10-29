@@ -1,6 +1,6 @@
 import { Info, IInfo } from "../models/Info.js";
 import { IUserProject } from "../models/UserProject.js";
-import { destinoSiNoSeFirma } from "./contratadoDirecto.js";
+import { destinoSiNoSeFirma, copiarConstanciaAContratados } from "./contratadoDirecto.js";
 
 /** Único evento que puede disparar una transición automática hacia un Estado. */
 export type EventoTransicionAutomatica = "dropbox_carpeta";
@@ -54,6 +54,8 @@ export async function aplicarTransicion(up: IUserProject, contractIndex: number,
   up.contracts[contractIndex] = { ...contrato.toObject(), estado_id: destinoId, nombre_estado_empleado: estadoDestino.name } as any;
   up.markModified("contracts");
   await up.save();
+  // Si se salteó Generar Documentos por no firmarse, la constancia va también a «Contratados sin firma».
+  if (estadoDestino !== estadoPedido) await copiarConstanciaAContratados(up.projectId, contrato);
 
   return { aplicada: true, estadoAnteriorId, estadoNuevo: { id: destinoId, nombre: estadoDestino.name } };
 }

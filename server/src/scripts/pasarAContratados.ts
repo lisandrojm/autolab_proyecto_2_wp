@@ -4,7 +4,7 @@ import { User } from "../models/User.js";
 import { Contrato } from "../models/Contrato.js";
 import { Info } from "../models/Info.js";
 import { tipoEnviaAFirmar } from "../compartido/estadosFirma.js";
-import { estadoContratado } from "../services/contratadoDirecto.js";
+import { estadoContratado, copiarConstanciaAContratados } from "../services/contratadoDirecto.js";
 
 /**
  * LOS CONTRATOS QUE YA EXISTÍAN DE TIPOS SIN FIRMA NI ALTA, A «CONTRATADOS».
@@ -45,6 +45,7 @@ async function main() {
   let total = 0;
   for (const up of ups) {
     let cambio = false;
+    const aCopiar: any[] = [];
     up.contracts.forEach((c: any, i: number) => {
       if (!tipoIds.some((id) => String(id) === String(c.contrato_id))) return;
       if (!(c.solicitudId || c.origen === "agregar_miembro")) return;
@@ -57,11 +58,17 @@ async function main() {
       if (APLICAR) {
         up.contracts[i] = { ...c.toObject(), estado_id: destino.data.id, nombre_estado_empleado: destino.name };
         cambio = true;
+        aCopiar.push(c);
       }
     });
     if (cambio) {
       up.markModified("contracts");
       await up.save();
+      // La constancia, también a «Contratados sin firma» (como al pasar en el momento).
+      for (const c of aCopiar) {
+        const r = await copiarConstanciaAContratados(up.projectId, c);
+        console.log(`    constancia: ${r.path ? `copiada a ${r.path}` : `no se copió (${r.motivo})`}`);
+      }
     }
   }
   console.log(`\n${total} contrato(s) ${APLICAR ? "movidos" : "se moverían"} a ${destino.name}.`);

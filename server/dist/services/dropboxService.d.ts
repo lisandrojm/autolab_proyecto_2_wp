@@ -100,6 +100,8 @@ export declare function uploadFileSession(tenantId: string, cfg: TenantDropboxCo
 export declare function downloadFolderZip(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<Buffer>;
 export declare function deleteEntry(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<void>;
 export declare function moveEntry(tenantId: string, cfg: TenantDropboxConfig, fromPath: string, toPath: string): Promise<DropboxEntry>;
+/** Copia un archivo. Con `autorename`: si ya hay uno con ese nombre en el destino, Dropbox le cambia el nombre. */
+export declare function copyEntry(tenantId: string, cfg: TenantDropboxConfig, fromPath: string, toPath: string): Promise<DropboxEntry>;
 export declare function createFolder(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<DropboxEntry>;
 /** Verifica que un path esté dentro del rootPath del tenant (evita salir de /HelloSign). */
 export declare function isWithinRoot(cfg: TenantDropboxConfig, path: string): boolean;

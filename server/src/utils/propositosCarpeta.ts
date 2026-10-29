@@ -80,6 +80,12 @@ export const PROPOSITOS = [
     descripcion: "Donde Dropbox Sign deja los documentos ya firmados. La carpeta se llama «Requested signatures»: ese nombre lo pone Dropbox Sign, no nosotros.",
     patrones: [/requested/i, /signature/i],
   },
+  {
+    valor: "contratados_sin_firma",
+    etiqueta: "Contratados sin firma",
+    descripcion: "Copia de la constancia de CUIT de los contratos que no se firman, cuando pasan a Contratados. Sin configurar, se usa «Contratados/Sin firma» junto a la carpeta de ARCA.",
+    patrones: [/sin/i, /firma/i],
+  },
 ] as const satisfies readonly DefinicionProposito[];
 
 export type PropositoCarpeta = (typeof PROPOSITOS)[number]["valor"];

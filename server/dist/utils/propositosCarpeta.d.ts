@@ -69,6 +69,11 @@ export declare const PROPOSITOS: readonly [{
     readonly etiqueta: "Firmados";
     readonly descripcion: "Donde Dropbox Sign deja los documentos ya firmados. La carpeta se llama «Requested signatures»: ese nombre lo pone Dropbox Sign, no nosotros.";
     readonly patrones: [RegExp, RegExp];
+}, {
+    readonly valor: "contratados_sin_firma";
+    readonly etiqueta: "Contratados sin firma";
+    readonly descripcion: "Copia de la constancia de CUIT de los contratos que no se firman, cuando pasan a Contratados. Sin configurar, se usa «Contratados/Sin firma» junto a la carpeta de ARCA.";
+    readonly patrones: [RegExp, RegExp];
 }];
 export type PropositoCarpeta = (typeof PROPOSITOS)[number]["valor"];
 /** Los valores sueltos, para el `enum` de Mongoose y las validaciones. */

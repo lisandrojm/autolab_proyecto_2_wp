@@ -64,6 +64,12 @@ export const PROPOSITOS = [
         descripcion: "Donde Dropbox Sign deja los documentos ya firmados. La carpeta se llama «Requested signatures»: ese nombre lo pone Dropbox Sign, no nosotros.",
         patrones: [/requested/i, /signature/i],
     },
+    {
+        valor: "contratados_sin_firma",
+        etiqueta: "Contratados sin firma",
+        descripcion: "Copia de la constancia de CUIT de los contratos que no se firman, cuando pasan a Contratados. Sin configurar, se usa «Contratados/Sin firma» junto a la carpeta de ARCA.",
+        patrones: [/sin/i, /firma/i],
+    },
 ];
 /** Los valores sueltos, para el `enum` de Mongoose y las validaciones. */
 export const VALORES_PROPOSITO = PROPOSITOS.map((p) => p.valor);

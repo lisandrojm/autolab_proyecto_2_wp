@@ -1,5 +1,5 @@
 import { Info } from "../models/Info.js";
-import { destinoSiNoSeFirma } from "./contratadoDirecto.js";
+import { destinoSiNoSeFirma, copiarConstanciaAContratados } from "./contratadoDirecto.js";
 const ESTADO_TYPE = "estado-empleado";
 /** Estados (catálogo global) configurados con este evento. Ya validado al guardar: todos tienen `ordenDependencia`. */
 export async function cargarEstadosPorEvento(evento) {
@@ -39,6 +39,9 @@ export async function aplicarTransicion(up, contractIndex, estadoPedido) {
     up.contracts[contractIndex] = { ...contrato.toObject(), estado_id: destinoId, nombre_estado_empleado: estadoDestino.name };
     up.markModified("contracts");
     await up.save();
+    // Si se salteó Generar Documentos por no firmarse, la constancia va también a «Contratados sin firma».
+    if (estadoDestino !== estadoPedido)
+        await copiarConstanciaAContratados(up.projectId, contrato);
     return { aplicada: true, estadoAnteriorId, estadoNuevo: { id: destinoId, nombre: estadoDestino.name } };
 }
 /**

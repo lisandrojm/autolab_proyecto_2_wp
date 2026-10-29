@@ -8,7 +8,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { elegirCarpeta, elegirSinCuit, EstadoConCarpetas } from "./estadoCarpetas.js";
+import { elegirCarpeta, elegirSinCuit, elegirContratadosSinFirma, EstadoConCarpetas } from "./estadoCarpetas.js";
 
 /** La configuración real del tenant demo, después del backfill. */
 const CONFIGURADO: EstadoConCarpetas[] = [
@@ -136,5 +136,22 @@ describe("«Sin CUIT»: la deducción también pasa por propósito", () => {
 
   it("sin Constancia tampoco, no se deduce nada", () => {
     assert.equal(elegirSinCuit([{ name: "E", carpetas: [{ dropboxCarpeta: "/HelloSign/Outbox", proposito: "outbox" }] }]).carpeta, null);
+  });
+});
+
+describe("Contratados sin firma", () => {
+  it("sin configurar, se deduce de Constancia de CUIT, fuera de ARCA", () => {
+    const r = elegirContratadosSinFirma(CONFIGURADO);
+    assert.equal(r.carpeta, "/WEPRODU/Contratados/Sin firma");
+    assert.equal(r.origen, "derivada");
+  });
+
+  it("la configurada manda", () => {
+    const conPropia: EstadoConCarpetas[] = [...CONFIGURADO, { name: "Disponible", carpetas: [{ dropboxCarpeta: "/WEPRODU/Otra", proposito: "contratados_sin_firma" }] }];
+    assert.equal(elegirContratadosSinFirma(conPropia).carpeta, "/WEPRODU/Otra");
+  });
+
+  it("sin Constancia de CUIT no inventa una ruta", () => {
+    assert.equal(elegirContratadosSinFirma([{ name: "E", carpetas: [{ dropboxCarpeta: "/HelloSign/Outbox", proposito: "outbox" }] }]).carpeta, null);
   });
 });

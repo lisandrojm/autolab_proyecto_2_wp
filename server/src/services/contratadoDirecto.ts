@@ -3,6 +3,10 @@ import { Info, IInfo } from "../models/Info.js";
 import { Contrato } from "../models/Contrato.js";
 import { resolverEstadoPorPropositos } from "../utils/estadoCarpetas.js";
 import { tipoEnviaAFirmar } from "../compartido/estadosFirma.js";
+import { Project } from "../models/Project.js";
+import { Tenant } from "../models/Tenant.js";
+import { getTenantDropboxConfig, copyEntry } from "./dropboxService.js";
+import { resolverContratadosSinFirma } from "../utils/estadoCarpetas.js";
 
 const ESTADO_TYPE = "estado-empleado";
 
@@ -56,4 +60,31 @@ export async function estadoDirectoAContratado(contratoId: unknown, estadoId: un
   const generaAlta = estadoActual?.data?.tipoImpositivo === "alta_temprana_afip";
   if (generaAlta || tipoEnviaAFirmar({ ...(tipo.data || {}), generaAlta })) return null;
   return estadoContratado();
+}
+
+/**
+ * LA CONSTANCIA, COPIADA A «CONTRATADOS SIN FIRMA» (29/10/2026). Un contrato que no se firma no tiene
+ * documento firmado que quede en la carpeta del estado final; lo único que tiene es la constancia de
+ * CUIT archivada. Se COPIA —el original sigue en la carpeta del trámite, que es la que vigila el
+ * escaneo— a la carpeta de los contratados sin firma. Best-effort: si Dropbox falla, el contrato ya
+ * está en Contratados igual y queda el motivo en el log. Devuelve el path copiado o el motivo.
+ */
+export async function copiarConstanciaAContratados(projectId: unknown, contrato: any): Promise<{ path?: string; motivo?: string }> {
+  const origen = String(contrato?.constanciaAfipDropboxPath || "");
+  if (!origen) return { motivo: "el contrato no tiene constancia archivada" };
+  try {
+    const proyecto: any = await Project.findById(projectId).select("tenantId").lean();
+    const tenant = proyecto?.tenantId ? await Tenant.findById(proyecto.tenantId).lean() : null;
+    const cfg = getTenantDropboxConfig(tenant);
+    if (!cfg) return { motivo: "Dropbox no está conectado" };
+    const { carpeta } = await resolverContratadosSinFirma();
+    if (!carpeta) return { motivo: "no hay carpeta de Constancia de CUIT de la que deducir «Contratados/Sin firma»" };
+    const nombre = origen.split("/").pop();
+    const copia = await copyEntry(String(proyecto.tenantId), cfg, origen, `${carpeta.replace(/\/$/, "")}/${nombre}`);
+    return { path: copia.path };
+  } catch (e: any) {
+    const detalle = e?.response?.data ? JSON.stringify(e.response.data) : e?.message || String(e);
+    console.error(`CONTRATADOS: no se pudo copiar la constancia ${origen} a «Contratados sin firma»:`, detalle);
+    return { motivo: detalle };
+  }
 }

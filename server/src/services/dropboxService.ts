@@ -308,6 +308,12 @@ export async function moveEntry(tenantId: string, cfg: TenantDropboxConfig, from
   return mapEntry(data.metadata);
 }
 
+/** Copia un archivo. Con `autorename`: si ya hay uno con ese nombre en el destino, Dropbox le cambia el nombre. */
+export async function copyEntry(tenantId: string, cfg: TenantDropboxConfig, fromPath: string, toPath: string): Promise<DropboxEntry> {
+  const data = await rpc(tenantId, cfg, "/files/copy_v2", { from_path: fromPath, to_path: toPath, autorename: true });
+  return mapEntry(data.metadata);
+}
+
 export async function createFolder(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<DropboxEntry> {
   const data = await rpc(tenantId, cfg, "/files/create_folder_v2", { path, autorename: false });
   return mapEntry(data.metadata);

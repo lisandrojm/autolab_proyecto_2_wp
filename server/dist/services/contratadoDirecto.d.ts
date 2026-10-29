@@ -23,3 +23,14 @@ export declare function estadoContratado(): Promise<IInfo | null>;
  */
 export declare function destinoSiNoSeFirma(contrato: any, destino: IInfo): Promise<IInfo>;
 export declare function estadoDirectoAContratado(contratoId: unknown, estadoId: unknown): Promise<IInfo | null>;
+/**
+ * LA CONSTANCIA, COPIADA A «CONTRATADOS SIN FIRMA» (29/10/2026). Un contrato que no se firma no tiene
+ * documento firmado que quede en la carpeta del estado final; lo único que tiene es la constancia de
+ * CUIT archivada. Se COPIA —el original sigue en la carpeta del trámite, que es la que vigila el
+ * escaneo— a la carpeta de los contratados sin firma. Best-effort: si Dropbox falla, el contrato ya
+ * está en Contratados igual y queda el motivo en el log. Devuelve el path copiado o el motivo.
+ */
+export declare function copiarConstanciaAContratados(projectId: unknown, contrato: any): Promise<{
+    path?: string;
+    motivo?: string;
+}>;

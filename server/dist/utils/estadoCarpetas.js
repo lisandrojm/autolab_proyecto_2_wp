@@ -84,6 +84,27 @@ export function elegirSinCuit(estados) {
     const raiz = constancia.carpeta.replace(/\/$/, "").split("/").slice(0, -1).join("/");
     return { proposito: "sin_cuit", carpeta: `${raiz}/Sin cuit`, origen: "derivada", estado: constancia.estado };
 }
+/**
+ * La carpeta de «Contratados sin firma» (29/10/2026): la configurada, o deducida de la de Constancia
+ * igual que «Sin CUIT» pero un nivel más arriba — /WEPRODU/ARCA/Constancia de cuit → /WEPRODU/Contratados/Sin firma —,
+ * porque no es un trámite de ARCA sino el final del circuito.
+ */
+export function elegirContratadosSinFirma(estados) {
+    const propia = elegirCarpeta(estados, "contratados_sin_firma");
+    if (propia.carpeta)
+        return propia;
+    const constancia = elegirCarpeta(estados, "constancia_cuit");
+    if (!constancia.carpeta)
+        return { proposito: "contratados_sin_firma", carpeta: null, origen: "no_resuelta" };
+    const raiz = constancia.carpeta.replace(/\/$/, "").split("/").slice(0, -2).join("/");
+    return { proposito: "contratados_sin_firma", carpeta: `${raiz}/Contratados/Sin firma`, origen: "derivada", estado: constancia.estado };
+}
+export async function resolverContratadosSinFirma() {
+    const r = elegirContratadosSinFirma(await estadosConTransicion());
+    if (r.origen === "patron" && r.carpeta)
+        anotarFallback("contratados_sin_firma", r.carpeta);
+    return r;
+}
 export async function resolverSinCuit() {
     const estados = await estadosConTransicion();
     const r = elegirSinCuit(estados);
@@ -124,6 +145,6 @@ export async function resolverEstadoPorPropositos(propositos) {
 export async function diagnosticoCarpetas() {
     const out = [];
     for (const p of PROPOSITOS)
-        out.push(p.valor === "sin_cuit" ? await resolverSinCuit() : await resolverProposito(p.valor));
+        out.push(p.valor === "sin_cuit" ? await resolverSinCuit() : p.valor === "contratados_sin_firma" ? await resolverContratadosSinFirma() : await resolverProposito(p.valor));
     return out;
 }

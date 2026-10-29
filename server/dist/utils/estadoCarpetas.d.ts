@@ -76,6 +76,13 @@ export declare function resolverCarpetaPorProposito(proposito: PropositoCarpeta)
  */
 /** La decisión de «Sin CUIT», sin base de datos. */
 export declare function elegirSinCuit(estados: EstadoConCarpetas[]): CarpetaResuelta;
+/**
+ * La carpeta de «Contratados sin firma» (29/10/2026): la configurada, o deducida de la de Constancia
+ * igual que «Sin CUIT» pero un nivel más arriba — /WEPRODU/ARCA/Constancia de cuit → /WEPRODU/Contratados/Sin firma —,
+ * porque no es un trámite de ARCA sino el final del circuito.
+ */
+export declare function elegirContratadosSinFirma(estados: EstadoConCarpetas[]): CarpetaResuelta;
+export declare function resolverContratadosSinFirma(): Promise<CarpetaResuelta>;
 export declare function resolverSinCuit(): Promise<CarpetaResuelta>;
 /**
  * El ESTADO cuya configuración incluye alguna carpeta de alguno de estos propósitos.
