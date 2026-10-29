@@ -36,7 +36,7 @@ export const ArcaModalidadesLiquidacionPage: React.FC = () => {
           const campo = String((item as { retribucionPactada?: string }).retribucionPactada || "").trim();
           if (campo) return rotuloCampoRetribucion(campo);
           return (
-            <span className="inline-flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
+            <span className="inline-flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
               Sin definir
               <button
                 type="button"
@@ -46,7 +46,7 @@ export const ArcaModalidadesLiquidacionPage: React.FC = () => {
                 }}
                 title="No se ofrece en los tipos de contrato. Tocá para ver por qué."
                 aria-label={`${item.name}: retribución pactada sin definir, ver qué significa`}
-                className="text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+                className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
               >
                 <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
               </button>
