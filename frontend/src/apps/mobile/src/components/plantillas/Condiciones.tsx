@@ -163,10 +163,14 @@ export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, o
       </div>
       )}
 
-      {/* Por jornada no hay días que fijar acá: se eligen al contratar. La fila no se dibuja; una nota que lo diga es una fila para decir que no hay fila. */}
-      {!sueltos && (
+      {/*
+        SIEMPRE, también por jornada: ahí las fechas se eligen al contratar y estos días quedan de
+        referencia (los del turno, los que muestra el badge). Escondida, un turno que trajo «Lun a Dom»
+        no se podía corregir desde ningún lado.
+      */}
       <div className="px-3 py-2">
         <span className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Días{marca("dias")}</span>
+        {sueltos && <p className="mb-1.5 text-xs text-slate-500 dark:text-slate-400">Las fechas exactas se eligen al contratar; estos días son los del turno.</p>}
           <>
             <div className="flex flex-wrap gap-1.5">
               {DIAS.map((d) => {
@@ -184,7 +188,6 @@ export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, o
             </label>
           </>
       </div>
-      )}
     </div>
     </div>
   );

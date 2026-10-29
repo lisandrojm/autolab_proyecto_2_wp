@@ -15,7 +15,7 @@ import { HojaModal } from "./HojaModal";
 import { BotonInfo } from "../ModalInfo";
 import CampoConvenio from "./CampoConvenio";
 import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/ChipValoracion";
-import { CLASE_CAMPO, Pill } from "./comun";
+import { CLASE_CAMPO, fechaCorta, Pill } from "./comun";
 import { EstadoBadge } from "../../../../../components/EstadoSelect";
 import { estadoImpositivoPorTipo } from "../../../../../utils/tramiteImpositivo";
 
@@ -138,6 +138,8 @@ export default function PantallaEquipo() {
       </Seccion>
 
       <Seccion titulo="Condiciones del equipo">
+        {/* Contratar no lee de vuelta la plantilla: las solicitudes ya creadas quedan como estaban. */}
+        {equipo.ultimaContratacionEl && <p className="mb-2 text-xs text-slate-600 dark:text-slate-300">Contratado el {fechaCorta(equipo.ultimaContratacionEl)}. Cambiar estas condiciones no modifica lo ya contratado: aplica a las próximas contrataciones.</p>}
         {/* Sin horario: es por persona, con el del turno por defecto (ver `sinHorario`). */}
         {/* El tipo de contrato del equipo es el que arranca cada puesto; en cada uno se puede cambiar (queda «distinto»). */}
         <FilasCondiciones
