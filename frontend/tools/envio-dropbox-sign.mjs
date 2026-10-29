@@ -583,6 +583,7 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
   let scrollerLogueado = false;
   let scrollExplicado = false;
   let scrollProbado = false;
+  let agrandados = 0;
   for (let i = 0; i < 6 && caja; i++) {
     const ed = await frameDelEditor(page);
     onProgreso(`intento ${i + 1}: ventana ${page.viewportSize()?.height || "?"} px de alto, frame ${ed ? `${Math.round(ed.caja.h)} px en y ${Math.round(ed.caja.y)}` : "sin iframe"}, hoja ${Math.round(caja.w)}×${Math.round(caja.h)} en (${Math.round(caja.x)}, ${Math.round(caja.y)}).`);
@@ -666,12 +667,22 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
       movida = await seMovio();
       if (movida) r = { movio: NaN, estado: "rueda del mouse sobre la hoja" };
     }
-    if (!movida && !ventanaAgrandada) {
-      const vp = page.viewportSize() || { width: 1457, height: 812 };
-      const nuevoAlto = Math.min(4000, Math.round(vp.height + Math.max(dy, 0) * 2 + 400));
+    /*
+      HASTA QUE ENTRE, NO UNA SOLA VEZ (29/10/2026). Con el tope en 4000 px y un único agrandado, un
+      contrato de 6 páginas con la firma en la última (y 6459 del frame, que medía 3862) quedaba afuera y
+      la corrida se cortaba con «nada movió la hoja». El editor se estira con la ventana: se agranda lo
+      que falte para que el punto entre (más margen), hasta 3 veces y hasta ALTO_MAX_VENTANA.
+    */
+    const vpAhora = page.viewportSize() || { width: 1457, height: 812 };
+    if (!movida && agrandados < 3 && vpAhora.height < ALTO_MAX_VENTANA) {
+      const vp = vpAhora;
+      const falta = Math.max(d.y - abajo, 0);
+      const nuevoAlto = Math.min(ALTO_MAX_VENTANA, Math.round(Math.max(vp.height + falta + 600, vp.height + Math.max(dy, 0) * 2 + 400)));
       const altoFrameAntes = ed ? ed.caja.h : vp.height;
       await page.setViewportSize({ width: vp.width, height: nuevoAlto });
-      ventanaAgrandada = { ...vp };
+      agrandados++;
+      // El tamaño ORIGINAL, para restaurar al final: no el de un agrandado anterior.
+      if (!ventanaAgrandada) ventanaAgrandada = { ...vp };
       r = { movio: NaN, estado: `ventana agrandada de ${vp.height} a ${nuevoAlto} px de alto para que la página entre sin scrollear` };
       onProgreso(`Ningún scroll movió la hoja: ${r.estado}.`);
       /*
@@ -708,7 +719,7 @@ export async function traerALaVista(page, colocacion, geometria, onProgreso = ()
       }
       i--; // la vuelta del agrandado no cuenta como intento: la que sigue mide con la geometría nueva
       continue;
-    } else if (!movida) r = { movio: 0, estado: "nada movió la hoja (propiedad, AvPág, rueda y ventana agrandada)" };
+    } else if (!movida) r = { movio: 0, estado: `nada movió la hoja (propiedad, AvPág, rueda y ventana agrandada ${agrandados} vez/veces hasta ${page.viewportSize()?.height || "?"} px${(page.viewportSize()?.height || 0) >= ALTO_MAX_VENTANA ? ", el máximo" : ""})` };
     if (Number.isFinite(r.movio)) scrolleado += Math.abs(r.movio);
     estadoScroll = r.estado;
     await page.waitForTimeout(600);
@@ -740,6 +751,8 @@ async function centroDelCampo(page) {
 let hojaDelCampo = null;
 /** Alto de ventana con el que se trabaja en el editor: la página 1 de una A4 (~1326 px a escala 1,575) entra entera. */
 const ALTO_EDITOR = 2100;
+/** Hasta dónde se agranda la ventana para que entre la página de la firma: ~10 páginas A4 a la escala del editor. */
+const ALTO_MAX_VENTANA = 16000;
 async function asegurarVentanaAlta(page, onProgreso = () => {}) {
   const vp = page.viewportSize() || { width: 1457, height: 812 };
   if (vp.height >= ALTO_EDITOR) return;
