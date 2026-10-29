@@ -705,15 +705,16 @@ describe("cascada de defaults de ARCA — contrato, empleadora, instalación", (
       ...(globales ? { defaultsArcaGlobales: globales } : {}),
     } as any);
 
-  it("modalidad de liquidación: el default de la empleadora llega a la posición 73", () => {
-    // Antes esto NO pasaba: el valor se guardaba en la ficha y la resolución miraba solo el tipo.
-    const record = buildAltaRecord(fila(), cat({ tipoServicio: "008", modalidadLiquidacion: "2", modalidadContratacion: "021" }));
+  it("modalidad de liquidación: NO hereda de la empleadora; rige la de la instalación", () => {
+    // La modalidad de liquidación es del tipo de contrato. Un default que quedó guardado en la ficha
+    // (de cuando había pantalla por empresa) no puede decidir la posición 73 sin verse.
+    const record = buildAltaRecord(fila(), cat({ tipoServicio: "008", modalidadLiquidacion: "2", modalidadContratacion: "021" }, { modalidadLiquidacion: "5" }));
     assert.ok(record, "con los códigos heredados el registro tiene que armarse");
-    assert.equal(tramo(record as string, 73, 73), "2");
+    assert.equal(tramo(record as string, 73, 73), "5");
   });
 
   it("modalidad de contrato: el default de la instalación llega a las posiciones 17-19", () => {
-    const record = buildAltaRecord(fila(), cat({ tipoServicio: "008", modalidadLiquidacion: "2" }, { modalidadContratacion: "021" }));
+    const record = buildAltaRecord(fila(), cat({ tipoServicio: "008" }, { modalidadContratacion: "021", modalidadLiquidacion: "2" }));
     assert.ok(record, "con los códigos heredados el registro tiene que armarse");
     assert.equal(tramo(record as string, 17, 19), "021");
   });
@@ -722,7 +723,8 @@ describe("cascada de defaults de ARCA — contrato, empleadora, instalación", (
     const record = buildAltaRecord(fila(), cat({ tipoServicio: "008", modalidadLiquidacion: "2", modalidadContratacion: "021" }, { modalidadContratacion: "999", modalidadLiquidacion: "9" }));
     assert.ok(record);
     assert.equal(tramo(record as string, 17, 19), "021");
-    assert.equal(tramo(record as string, 73, 73), "2");
+    // Salvo la modalidad de liquidación, que no tiene escalón de empresa.
+    assert.equal(tramo(record as string, 73, 73), "9");
   });
 
   it("un default VACÍO en la empleadora no tapa al de la instalación", () => {
@@ -755,10 +757,9 @@ describe("cascada de defaults de ARCA — contrato, empleadora, instalación", (
     assert.match(liq?.detalle || "", /Configuraci/i, "el motivo tiene que decir dónde se marca el default");
   });
 
-  it("el checklist distingue si el valor vino de la empleadora o de la instalación", () => {
+  it("el checklist dice que el valor vino de la instalación, y no lee el de la empleadora", () => {
     const deLaEmpresa = resolveAfip(fila(), cat({ modalidadLiquidacion: "2" })).checks.find((c) => c.key === "modalidadLiq");
-    assert.equal(deLaEmpresa?.estado, "ok");
-    assert.match(deLaEmpresa?.detalle || "", /empleadora/i);
+    assert.equal(deLaEmpresa?.estado, "falta");
 
     const deLaInstalacion = resolveAfip(fila(), cat({}, { modalidadLiquidacion: "2" })).checks.find((c) => c.key === "modalidadLiq");
     assert.equal(deLaInstalacion?.estado, "ok");

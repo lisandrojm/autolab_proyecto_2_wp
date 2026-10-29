@@ -1,9 +1,8 @@
 import React from "react";
 import { faClock } from "@fortawesome/free-solid-svg-icons";
-import { encabezadoDeAmbito, nomencladorPorId, rotuloColumnaEmpresas } from "../config/nomencladoresArca";
+import { encabezadoDeAmbito } from "../config/nomencladoresArca";
 import { SimpleCatalogManager } from "../components/catalog/SimpleCatalogManager";
 import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultArcaStar";
-import { ColumnaEmpresasArca, useVinculoArca } from "../components/arca/EmpresasDelItemArca";
 import { createSimpleCatalogApi } from "../api/simpleCatalog";
 import { CAMPOS_RETRIBUCION, TEXTO_SIN_CAMPO } from "@compartido/arca/retribucionPactada";
 
@@ -16,9 +15,6 @@ const formatCodigo = (raw: string): string => {
 };
 
 export const ArcaModalidadesLiquidacionPage: React.FC = () => {
-  // Las empresas que usan cada código. Ver `useVinculoArca`.
-  const { empresas, recargar, asignadasDe } = useVinculoArca('modalidadLiquidacion');
-
   return (
   <SimpleCatalogManager
     extraFields={[
@@ -32,13 +28,6 @@ export const ArcaModalidadesLiquidacionPage: React.FC = () => {
       },
     ]}
     columnasCalculadas={[
-      {
-        // «Habilitadas para», no «Empresas»: acá la lista NO es un registro ante ARCA sino un
-        // recorte nuestro. El rótulo sale de `rotuloColumnaEmpresas` para que las dos clases de
-        // columna no puedan volver a llamarse igual por descuido.
-        label: rotuloColumnaEmpresas(nomencladorPorId("modalidades-liquidacion")!),
-        render: (item) => <ColumnaEmpresasArca tipo="modalidadLiquidacion" itemId={item._id} itemLabel={`${item.externalId || ""} ${item.name}`.trim()} empresas={empresas} asignadas={asignadasDe(item._id)} onGuardado={recargar} />,
-      },
       {
         label: "Por defecto",
         encabezado: (

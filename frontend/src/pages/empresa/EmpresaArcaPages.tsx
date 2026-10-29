@@ -25,7 +25,6 @@ import { CONVENIO_EXCLUIDO } from '../../components/contratos/afipCompleteness';
 import { ConveniosTable } from '../../components/convenios/ConveniosTable';
 import { BannerParitarias } from '../../components/paritarias/BannerParitarias';
 import { LinkSiPuede } from '../../components/LinkSiPuede';
-import { rotuloCampoRetribucion } from '@compartido/arca/retribucionPactada';
 
 /**
  * "Datos del Empleador" de ARCA, por CUIT.
@@ -46,7 +45,6 @@ type ConvenioConOS = SimpleCatalogItem & { obraSocialDefaultId?: number | null }
 const conveniosApi = createSimpleCatalogApi('/convenios');
 const tiposServicioApi = createSimpleCatalogApi('/arca/tipos-servicio');
 const gruposTipoServicioApi = createSimpleCatalogApi('/arca/grupos-tipo-servicio');
-const modalidadesLiqApi = createSimpleCatalogApi('/arca/modalidades-liquidacion');
 const puestosApi = createSimpleCatalogApi('/arca/puestos-desempenados');
 const situacionesRevistaApi = createSimpleCatalogApi('/arca/situaciones-revista');
 const modalidadesContratacionApi = createSimpleCatalogApi('/arca/modalidades-contratacion');
@@ -1293,13 +1291,8 @@ export const EmpresaModalidadContratacionPage: React.FC = () => (
   </EmpresaContextLayout>
 );
 
-export const EmpresaModalidadLiquidacionPage: React.FC = () => (
-  <EmpresaContextLayout titulo="Modalidad de Liquidación" icono={faSliders} ayuda="empresaDefaults">
-    {(empresa, recargar) => <DefaultArcaEmpresa empresa={empresa} recargar={recargar} campo="modalidadLiquidacion"
-        ambito={nomencladorPorId("modalidades-liquidacion")!.descripcionAmbito} api={modalidadesLiqApi} queEs="la modalidad de liquidación" nota="Posición 73 del TXT de alta." agregarDesdeLaFicha
-        columnasExtra={[{ label: 'Retribución pactada', render: (item) => rotuloCampoRetribucion((item as { retribucionPactada?: string }).retribucionPactada) }]} />}
-  </EmpresaContextLayout>
-);
+// Modalidad de Liquidación NO tiene pantalla por empresa: la define el tipo de contrato (y, si el tipo
+// no la trae, la ★ de la instalación). Un default o un recorte por empleadora no tenía sentido.
 
 export const EmpresaPuestoDesempenadoPage: React.FC = () => (
   <EmpresaContextLayout titulo="Puesto Desempeñado" icono={faListCheck} ayuda="empresaDefaults">

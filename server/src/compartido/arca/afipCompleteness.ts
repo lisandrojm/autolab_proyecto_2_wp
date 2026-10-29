@@ -639,7 +639,9 @@ export function resolveAfipValues(row: ContractOverviewRow, cat: AfipCatalogs): 
   const defaultsGlobales = cat.defaultsArcaGlobales;
   const tipoServicioResuelto = conCascada(tipo?.data?.afipTipoServicio, "tipo_contrato", "tipoServicio", defaultsEmpresa, defaultsGlobales);
   const modalidadContratoResuelta = conCascada(tipo?.data?.afipModalidadContrato, "tipo_contrato", "modalidadContratacion", defaultsEmpresa, defaultsGlobales);
-  const modalidadLiqResuelta = conCascada(tipo?.data?.afipModalidadLiquidacion, "tipo_contrato", "modalidadLiquidacion", defaultsEmpresa, defaultsGlobales);
+  // La modalidad de liquidación NO tiene escalón de empresa: es del tipo de contrato, y si el tipo no
+  // la trae rige la ★ de la instalación. Un default por empleadora decidía la posición 73 sin verse.
+  const modalidadLiqResuelta = conCascada(tipo?.data?.afipModalidadLiquidacion, "tipo_contrato", "modalidadLiquidacion", undefined, defaultsGlobales);
   // Solo para el registro de 85. El puesto lo define la categoría (cada categoría de un CCT es un
   // puesto); la situación de revista no tiene escalón de contrato: un alta nueva es «Activo».
   // Elegido en el contrato → Rol Empresa → Categoría → convenio de la categoría → empresa → instalación (`compartido/puestosDesempenados.ts`,
@@ -877,7 +879,7 @@ export function resolveAfip(row: ContractOverviewRow, cat: AfipCatalogs): AfipRo
   };
   checks.push(heredado("modalidadContrato", "Modalidad de contrato", v.modalidadContrato, v.modalidadContratoOrigen, "El tipo de contrato no tiene cargado su código de modalidad, y no hay ninguno marcado con estrella: se marca en la ficha de la empleadora o en Configuración → ARCA."));
   checks.push(heredado("tipoServicio", "Tipo de servicio", v.tipoServicio, v.tipoServicioOrigen, "El tipo de contrato no tiene cargado su tipo de servicio, y no hay ninguno marcado con estrella: se marca en la ficha de la empleadora o en Configuración → ARCA."));
-  checks.push(heredado("modalidadLiq", "Modalidad de liquidación", v.modalidadLiq, v.modalidadLiqOrigen, "El tipo de contrato no tiene cargada su modalidad de liquidación, y no hay ninguna marcada con estrella: se marca en la ficha de la empleadora o en Configuración → ARCA."));
+  checks.push(heredado("modalidadLiq", "Modalidad de liquidación", v.modalidadLiq, v.modalidadLiqOrigen, "El tipo de contrato no tiene cargada su modalidad de liquidación, y no hay ninguna marcada con estrella en Configuración → ARCA → Modalidades de Liquidación."));
 
   // --- Obra social. Decir de DÓNDE salió no es un detalle: si salió del convenio, corregirla es
   // cambiar el convenio y alcanza a todos sus contratos; si salió de la persona, es solo de ella.

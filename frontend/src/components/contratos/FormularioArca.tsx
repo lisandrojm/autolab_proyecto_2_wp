@@ -545,19 +545,6 @@ export const FormularioArca: React.FC<{
   const tipo: ContratoItem | undefined = useMemo(() => buscarTipoContrato(cat.tipos, row.nombre_contrato), [cat.tipos, row.nombre_contrato]);
   const nombreTipo = row.nombre_contrato || "este tipo de contrato";
 
-  /**
-   * Las modalidades de liquidación que ofrece la empleadora de este contrato (ficha → ARCA →
-   * Modalidad de Liquidación). Lista vacía = todas. La que ya tiene el tipo se deja aunque esté
-   * apagada, para que el selector no la pierda de vista.
-   */
-  const modalidadesLiqDeLaEmpresa = useMemo(() => {
-    const emp = cat.empresas?.find((e) => e._id === row.empresaContratoId) as { modalidadLiquidacionIds?: string[] } | undefined;
-    const habilitadas = (emp?.modalidadLiquidacionIds || []).map(String);
-    if (habilitadas.length === 0) return modalidadesLiq;
-    const actual = String(tipo?.data?.afipModalidadLiquidacion || "");
-    return modalidadesLiq.filter((m) => habilitadas.includes(m._id) || (!!actual && String(m.externalId || "") === actual));
-  }, [cat.empresas, row.empresaContratoId, modalidadesLiq, tipo]);
-
   /*
     Acá estaba «guardarEnTipo», que escribía los tres códigos ARCA en el tipo de contrato desde este
     modal. Se fue con los pickers: los códigos se editan en el tipo, no en la ficha de una persona,
@@ -1043,7 +1030,7 @@ export const FormularioArca: React.FC<{
               recuadro del convenio, debajo de la Categoría, que es la que la define. */}
         </div>
 
-        <CodigosDelTipo nombreTipo={nombreTipo} modalidadContrato={valores.modalidadContrato} nombreModalidadContrato={nombreDe(modalidadesContrato, valores.modalidadContrato)} tipoServicio={valores.tipoServicio} nombreTipoServicio={nombreDe(tiposServicio, valores.tipoServicio)} modalidadLiq={valores.modalidadLiq} nombreModalidadLiq={nombreDe(modalidadesLiq, valores.modalidadLiq)} onRefrescar={onCambioNivel} tipo={tipo} catalogos={{ modalidadesContrato, tiposServicio, modalidadesLiq: modalidadesLiqDeLaEmpresa, gruposTipoServicio }} />
+        <CodigosDelTipo nombreTipo={nombreTipo} modalidadContrato={valores.modalidadContrato} nombreModalidadContrato={nombreDe(modalidadesContrato, valores.modalidadContrato)} tipoServicio={valores.tipoServicio} nombreTipoServicio={nombreDe(tiposServicio, valores.tipoServicio)} modalidadLiq={valores.modalidadLiq} nombreModalidadLiq={nombreDe(modalidadesLiq, valores.modalidadLiq)} onRefrescar={onCambioNivel} tipo={tipo} catalogos={{ modalidadesContrato, tiposServicio, modalidadesLiq, gruposTipoServicio }} />
 
         {/*
           EL PUESTO DESEMPEÑADO, siempre cargado con el que le toca. No es del registro de 130 que

@@ -89,7 +89,7 @@ import { ContratosPage } from "./pages/ContratosPage";
 import { EmpresasPage } from "./pages/EmpresasPage";
 // Contexto Empresa (la empleadora como eje, igual que Cliente).
 import { EmpresaInfoPage } from "./pages/empresa/EmpresaInfoPage";
-import { EmpresaObrasSocialesPage, EmpresaConveniosPage, EmpresaDomiciliosPage, EmpresaCategoriasPage, EmpresaGruposTipoServicioPage, EmpresaTiposServicioPage, EmpresaModalidadContratacionPage, EmpresaModalidadLiquidacionPage, EmpresaPuestoDesempenadoPage, EmpresaSituacionRevistaPage } from "./pages/empresa/EmpresaArcaPages";
+import { EmpresaObrasSocialesPage, EmpresaConveniosPage, EmpresaDomiciliosPage, EmpresaCategoriasPage, EmpresaGruposTipoServicioPage, EmpresaTiposServicioPage, EmpresaModalidadContratacionPage, EmpresaPuestoDesempenadoPage, EmpresaSituacionRevistaPage } from "./pages/empresa/EmpresaArcaPages";
 import { EmpresaContratosPage } from "./pages/empresa/EmpresaContratosPage";
 import { EmpresaSedesPage } from "./pages/empresa/EmpresaSedesPage";
 import { MembretesPage } from "./pages/MembretesPage";
@@ -928,14 +928,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <EmpresaModalidadContratacionPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/empresas/:empresaId/arca/modalidades-liquidacion"
-                element={
-                  <ProtectedRoute>
-                    <EmpresaModalidadLiquidacionPage />
                   </ProtectedRoute>
                 }
               />
