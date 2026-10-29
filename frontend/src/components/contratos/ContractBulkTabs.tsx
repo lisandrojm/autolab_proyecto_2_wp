@@ -3375,8 +3375,8 @@ const FirmaContratoCell: React.FC<{
     return (
       <div className="flex flex-col items-center justify-center gap-1 min-w-[120px]" onClick={(e) => e.stopPropagation()}>
         {!requiereFirma ? (
-          <span className="text-xs text-gray-400" title='Este Tipo de Contrato no tiene tildado "Se envía a firmar"'>
-            No se envía a Firma
+          <span className="text-xs text-gray-400 whitespace-nowrap" title='Este Tipo de Contrato no tiene tildado "Se envía a firmar"'>
+            No se Firma
           </span>
         ) : puedeGenerar ? (
           // Sin empresa elegida no se ofrece generar: primero hay que elegirla (en ámbar, como
@@ -3604,8 +3604,8 @@ const FirmaReleaseCell: React.FC<{
 
   if (releasesAplicables.length === 0 && releasesCustom.length === 0) {
     return (
-      <span className="text-xs text-gray-400" title='Ni el Tipo de Contrato («Se envía a firmar el release») ni ningún Tipo de Release de este proyecto lo mandan a firmar'>
-        No se envía a Firma
+      <span className="text-xs text-gray-400 whitespace-nowrap" title='Ni el Tipo de Contrato («Se envía a firmar el release») ni ningún Tipo de Release de este proyecto lo mandan a firmar'>
+        No se Firma
       </span>
     );
   }

@@ -1,5 +1,6 @@
 import { Info, IInfo } from "../models/Info.js";
 import { IUserProject } from "../models/UserProject.js";
+import { destinoSiNoSeFirma } from "./contratadoDirecto.js";
 
 /** Único evento que puede disparar una transición automática hacia un Estado. */
 export type EventoTransicionAutomatica = "dropbox_carpeta";
@@ -34,9 +35,11 @@ async function ordenDependenciaDelEstado(estadoId: number | undefined | null): P
  * está en ese estado o más adelante, no hace nada. No hace falta que el destino sea el paso inmediato
  * siguiente: alcanza con que esté más adelante que el actual (el evento certifica que ya llegó ahí).
  */
-export async function aplicarTransicion(up: IUserProject, contractIndex: number, estadoDestino: IInfo): Promise<ResultadoTransicion> {
+export async function aplicarTransicion(up: IUserProject, contractIndex: number, estadoPedido: IInfo): Promise<ResultadoTransicion> {
   const contrato = up.contracts[contractIndex] as any;
   if (!contrato) return { aplicada: false, motivo: "contrato_inexistente" };
+  // Un tipo que no manda nada a firmar no pasa por Generar Documentos: va a Contratados (ver `destinoSiNoSeFirma`).
+  const estadoDestino = await destinoSiNoSeFirma(contrato, estadoPedido);
 
   const destinoId = estadoDestino.data?.id;
   const destinoOrden = estadoDestino.data?.ordenDependencia;

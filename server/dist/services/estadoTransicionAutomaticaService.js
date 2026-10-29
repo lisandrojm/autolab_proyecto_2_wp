@@ -1,4 +1,5 @@
 import { Info } from "../models/Info.js";
+import { destinoSiNoSeFirma } from "./contratadoDirecto.js";
 const ESTADO_TYPE = "estado-empleado";
 /** Estados (catálogo global) configurados con este evento. Ya validado al guardar: todos tienen `ordenDependencia`. */
 export async function cargarEstadosPorEvento(evento) {
@@ -19,10 +20,12 @@ async function ordenDependenciaDelEstado(estadoId) {
  * está en ese estado o más adelante, no hace nada. No hace falta que el destino sea el paso inmediato
  * siguiente: alcanza con que esté más adelante que el actual (el evento certifica que ya llegó ahí).
  */
-export async function aplicarTransicion(up, contractIndex, estadoDestino) {
+export async function aplicarTransicion(up, contractIndex, estadoPedido) {
     const contrato = up.contracts[contractIndex];
     if (!contrato)
         return { aplicada: false, motivo: "contrato_inexistente" };
+    // Un tipo que no manda nada a firmar no pasa por Generar Documentos: va a Contratados (ver `destinoSiNoSeFirma`).
+    const estadoDestino = await destinoSiNoSeFirma(contrato, estadoPedido);
     const destinoId = estadoDestino.data?.id;
     const destinoOrden = estadoDestino.data?.ordenDependencia;
     if (typeof destinoId !== "number" || typeof destinoOrden !== "number")

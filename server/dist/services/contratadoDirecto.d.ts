@@ -13,4 +13,13 @@ export declare function estadoContratado(): Promise<IInfo | null>;
  * Si genera alta lo dice el estado impositivo que ya trae el contrato (el de su plantilla): el
  * `generaAlta` guardado en el tipo quedó viejo, ahora lo decide ese estado (ver ContractTypesTab).
  */
+/**
+ * TERMINADO EL TRÁMITE IMPOSITIVO, LOS QUE NO SE FIRMAN VAN A CONTRATADOS (29/10/2026). La constancia de
+ * CUIT archivada (o el alta registrada) llevaba el contrato a «Envío de documentación», la bandeja
+ * Generar Documentos, aunque su tipo no mande nada a firmar: quedaba ahí diciendo «No se firma». Si el
+ * tipo no firma nada —contando la firma del alta sólo si el contrato viene de un alta temprana—, el
+ * destino pasa a ser Contratados. Sólo contratos de WeProdu (solicitud o «Agregar miembro»), como el
+ * paso 6. Devuelve el estado que corresponde, o el mismo destino.
+ */
+export declare function destinoSiNoSeFirma(contrato: any, destino: IInfo): Promise<IInfo>;
 export declare function estadoDirectoAContratado(contratoId: unknown, estadoId: unknown): Promise<IInfo | null>;
