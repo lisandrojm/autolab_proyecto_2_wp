@@ -21,6 +21,7 @@ import { ANCHOS_GLOSARIO, filasGlosarioExtras } from "../../../utils/hojaGlosari
 import * as XLSX from "xlsx";
 import { usePuedeAbrir } from "../../../hooks/usePuedeAbrir";
 import { fechaDeCalendario } from "../../../utils/fechas";
+import { PlanillaJornalerosModal } from "../../solicitudes/PlanillaJornalerosModal";
 
 
 interface NewsReportsModalProps {
@@ -699,6 +700,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const navigate = useNavigate();
   const puedeAbrir = usePuedeAbrir();
   const [dateFrom, setDateFrom] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
+  const [planillaJornalerosAbierta, setPlanillaJornalerosAbierta] = useState(false);
   const [dateTo, setDateTo] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
   /**
    * PROYECTO/S: VARIOS A LA VEZ. Vacío = todos.
@@ -2186,6 +2188,11 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
               <FontAwesomeIcon icon={faClipboardList} />
               Exportar Detalle Diario
             </button>
+            {/* La planilla mensual de liquidación: sale de las solicitudes de Jornada, no de los partes, así que no depende de la tabla. */}
+            <button onClick={() => setPlanillaJornalerosAbierta(true)} className="px-5 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition-colors flex items-center gap-2 text-sm font-semibold shadow-sm">
+              <FontAwesomeIcon icon={faFileExcel} />
+              Exportar Jornaleros
+            </button>
           </div>
         }
       >
@@ -3096,6 +3103,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
       <ContractDetailModal isOpen={contractModal.open} onClose={() => setContractModal({ ...contractModal, open: false })} employeeName={contractModal.employeeName} userProjectsData={contractModal.data} /* El detalle de contratos se recorta a UN proyecto: con varios elegidos no hay uno solo al que acotar, así que se muestran todos. */
         filterProjectId={proyectosSeleccionados.length === 1 ? proyectosDelReporte.find((p) => p.clave === proyectosSeleccionados[0])?.id : undefined} zIndex={100} periodStart={parseISO(dateFrom + "T00:00:00")} periodEnd={parseISO(dateTo + "T23:59:59")} nombresPorId={nombresPorId} />
       <TotalDetailModal isOpen={totalDetail.open} onClose={() => setTotalDetail({ open: false, stats: null })} stats={totalDetail.stats} glossary={glossary} zIndex={110} />
+      <PlanillaJornalerosModal isOpen={planillaJornalerosAbierta} onClose={() => setPlanillaJornalerosAbierta(false)} mesInicial={dateFrom.slice(0, 7)} zIndex={120} />
       <DailyDetailModal isOpen={dailyDetailModal.open} onClose={() => setDailyDetailModal({ open: false, stats: null })} stats={dailyDetailModal.stats} dateFrom={dateFrom} dateTo={dateTo} zIndex={120} />
     </>
   );

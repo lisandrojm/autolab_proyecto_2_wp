@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserPlus, faChevronLeft, faChevronRight, faTrash, faCheck, faXmark, faFileExcel } from "@fortawesome/free-solid-svg-icons";
+import { faUserPlus, faChevronLeft, faChevronRight, faTrash, faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -23,7 +23,6 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { ESTADOS_SOLICITUD, ESTADO_SOLICITUD, SolicitudVista, SolicitudesTable, resultadoEliminarSolicitud, textoEliminarSolicitud, useCatalogosDeSolicitudes } from "../components/solicitudes/SolicitudesTable";
 import { SolicitudDetalleModal } from "../components/solicitudes/SolicitudDetalleModal";
-import { PlanillaJornalerosModal } from "../components/solicitudes/PlanillaJornalerosModal";
 import { CalificacionesModal } from "../components/calificaciones/CalificacionesModal";
 import { calificacionesAPI } from "../api/calificaciones";
 // La pantalla del equipo, montada en modo «sólo aprobación»: de ahí sale el wizard de contratación.
@@ -140,7 +139,6 @@ export const SolicitudesPage: React.FC = () => {
   const [procesando, setProcesando] = useState<{ accion: "aprobar" | "rechazar"; hechas: number; total: number } | null>(null);
   const [refrescando, setRefrescando] = useState(false);
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
-  const [planillaJornalerosAbierta, setPlanillaJornalerosAbierta] = useState(false);
 
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
@@ -559,12 +557,6 @@ export const SolicitudesPage: React.FC = () => {
       subtitle="Todas las solicitudes de alta, de todos los clientes y proyectos."
       faIcon={{ icon: faUserPlus }}
       itemCount={total}
-      headerActions={
-        <button type="button" onClick={() => setPlanillaJornalerosAbierta(true)} className="inline-flex items-center gap-2 rounded-lg border border-green-600 px-3 py-2 text-sm font-semibold text-green-700 hover:bg-green-50 dark:border-green-500 dark:text-green-400 dark:hover:bg-green-950/30" title="Generar la planilla mensual de jornaleros (.xlsx)">
-          <FontAwesomeIcon icon={faFileExcel} />
-          <span className="hidden sm:inline">Planilla de jornaleros</span>
-        </button>
-      }
       infoModal={{
         isOpen: ayudaAbierta,
         onOpen: () => setAyudaAbierta(true),
@@ -782,7 +774,6 @@ export const SolicitudesPage: React.FC = () => {
         La ventana va FUERA del listado: la carga masiva es lo primero que se usa en una cuenta que
         todavía no tiene ninguna solicitud, y ahí lo que se dibuja es el estado vacío.
       */}
-      <PlanillaJornalerosModal isOpen={planillaJornalerosAbierta} onClose={() => setPlanillaJornalerosAbierta(false)} />
     </PageLayout>
   );
 };

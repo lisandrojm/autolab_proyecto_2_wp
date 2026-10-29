@@ -17,12 +17,18 @@ const mesActual = () => {
 
 const pesos = (n: number) => n.toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2 });
 
-export const PlanillaJornalerosModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-  const [mes, setMes] = useState(mesActual);
+/** `mesInicial` ("YYYY-MM"): el mes con que abre (en Reportes de Novedades, el de «Fecha desde»). */
+export const PlanillaJornalerosModal: React.FC<{ isOpen: boolean; onClose: () => void; mesInicial?: string; zIndex?: number }> = ({ isOpen, onClose, mesInicial, zIndex }) => {
+  const [mes, setMes] = useState(() => mesInicial || mesActual());
   const [resumen, setResumen] = useState<ResumenPlanillaJornaleros | null>(null);
   const [cargando, setCargando] = useState(false);
   const [descargando, setDescargando] = useState(false);
   const [error, setError] = useState("");
+
+  // Cada vez que se abre, arranca en el mes del reporte.
+  useEffect(() => {
+    if (isOpen && mesInicial) setMes(mesInicial);
+  }, [isOpen, mesInicial]);
 
   useEffect(() => {
     if (!isOpen || !mes) return;
@@ -67,6 +73,7 @@ export const PlanillaJornalerosModal: React.FC<{ isOpen: boolean; onClose: () =>
       title="Planilla de jornaleros"
       subtitle="Solicitudes aprobadas de tipo Jornada que empiezan en el mes"
       size="lg"
+      zIndex={zIndex}
       footer={
         <div className="flex w-full justify-end gap-2">
           <button type="button" onClick={onClose} className="btn-secondary">
