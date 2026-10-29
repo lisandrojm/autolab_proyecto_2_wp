@@ -96,6 +96,8 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
   const [q, setQ] = useState('');
   const [soloDelGrupo, setSoloDelGrupo] = useState(true);
   const [agregando, setAgregando] = useState(false);
+  /** Las filas tildadas para quitar en lote. */
+  const [tildados, setTildados] = useState<string[]>([]);
 
   useEffect(() => {
     api
@@ -163,25 +165,29 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
   };
 
   /**
-   * Saca uno de la lista. Si era el marcado por defecto, el default se limpia en el mismo guardado:
-   * si no, la empleadora heredaría un valor que su propia lista ya no ofrece. Quitar el último deja
-   * la lista vacía, y vacía los selectores vuelven a ofrecer todo: se avisa antes.
+   * Saca de la lista (una fila o las tildadas). Si entre ellas está la marcada por defecto, el default
+   * se limpia en el mismo guardado: si no, la empleadora heredaría un valor que su propia lista ya no
+   * ofrece. Dejar la lista vacía hace que los selectores vuelvan a ofrecer todo: se avisa antes.
    */
-  const quitar = async (i: SimpleCatalogItem) => {
-    if (!campoVinculo) return;
-    const nuevos = asignados.filter((id) => id !== i._id);
-    const codigo = String(i.externalId || '');
-    const limpiaDefault = !!codigo && codigo === marcado;
+  const quitar = async (aQuitar: SimpleCatalogItem[]) => {
+    if (!campoVinculo || aQuitar.length === 0) return;
+    const ids = new Set(aQuitar.map((i) => i._id));
+    const nuevos = asignados.filter((id) => !ids.has(id));
+    const limpiaDefault = !!marcado && aQuitar.some((i) => String(i.externalId || '') === marcado);
+    const nombres = aQuitar.map((i) => nombreDe(String(i.externalId || '')) || i.name);
+    const titulo = aQuitar.length === 1 ? `¿Quitar ${nombres[0]}?` : `¿Quitar ${aQuitar.length}?`;
     const avisos = [
-      limpiaDefault && `Es ${queEs} por defecto: se quita también.`,
-      nuevos.length === 0 && `Es la última: sin ninguna agregada, los selectores de ${empresa.razonSocial} vuelven a ofrecer todo el nomenclador.`,
+      aQuitar.length > 1 && `${nombres.join(', ')}.`,
+      limpiaDefault && `Una es ${queEs} por defecto: se quita también.`,
+      nuevos.length === 0 && `No queda ninguna: sin ninguna agregada, los selectores de ${empresa.razonSocial} vuelven a ofrecer todo el nomenclador.`,
     ].filter(Boolean);
-    const r = await sweetAlert.confirm(`¿Quitar ${nombreDe(codigo) || i.name}?`, avisos.length ? avisos.join(' ') : `Deja de ofrecerse en los selectores de ${empresa.razonSocial}.`, 'Sí, quitar');
+    const r = await sweetAlert.confirm(titulo, avisos.length ? avisos.join(' ') : `Deja de ofrecerse en los selectores de ${empresa.razonSocial}.`, 'Sí, quitar');
     if (!r.isConfirmed) return;
-    guardar(
+    const ok = await guardar(
       { [campoVinculo]: nuevos, ...(limpiaDefault ? { defaultsArca: { [campo]: '' } } : {}) } as Partial<Company>,
-      `${nombreDe(codigo) || i.name} ya no se ofrece en ${empresa.razonSocial}.${limpiaDefault ? ' Era el valor por defecto: se quitó.' : ''}`,
+      `${aQuitar.length === 1 ? `${nombres[0]} ya no se ofrece` : `Se quitaron ${aQuitar.length}`} en ${empresa.razonSocial}.${limpiaDefault ? ' Incluía el valor por defecto: se quitó.' : ''}`,
     );
+    if (ok) setTildados((prev) => prev.filter((id) => !ids.has(id)));
   };
 
   if (cargando) return <LoadingSpinner message="Cargando el nomenclador..." />;
@@ -237,6 +243,12 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
             {soloDelGrupo ? `Del grupo ${grupoEmpresa} (${visibles.length})` : `Los ${listados.length}`}
           </button>
         )}
+        {agrega && tildados.length > 0 && (
+          <button type="button" onClick={() => quitar(listados.filter((i) => tildados.includes(i._id)))} disabled={guardando} className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-50">
+            <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+            Quitar {tildados.length}
+          </button>
+        )}
         {agrega && (
           <button type="button" onClick={() => setAgregando(true)} disabled={guardando || listados.length >= items.length} className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold btn-primary disabled:opacity-50">
             <FontAwesomeIcon icon={faPlus} className="h-3.5 w-3.5" />
@@ -256,6 +268,24 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-900/50">
             <tr>
+              {agrega && (
+                <th className="pl-4 py-3 w-px">
+                  {/* Tilda o destilda lo que se ve: con el buscador puesto, sólo las filtradas. */}
+                  <input
+                    type="checkbox"
+                    aria-label="Seleccionar todas las visibles"
+                    checked={visibles.length > 0 && visibles.every((i) => tildados.includes(i._id))}
+                    ref={(el) => {
+                      if (el) el.indeterminate = visibles.some((i) => tildados.includes(i._id)) && !visibles.every((i) => tildados.includes(i._id));
+                    }}
+                    onChange={(e) => {
+                      const ids = visibles.map((i) => i._id);
+                      setTildados((prev) => (e.target.checked ? [...new Set([...prev, ...ids])] : prev.filter((id) => !ids.includes(id))));
+                    }}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">Código</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
               {columnasExtra.map((c) => (
@@ -273,7 +303,7 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
             {visibles.length === 0 ? (
               <tr>
-                <td colSpan={3 + columnasExtra.length + (agrega ? 1 : 0)} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                <td colSpan={3 + columnasExtra.length + (agrega ? 2 : 0)} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
                   {agrega && listados.length === 0 ? `Esta empleadora todavía no agregó ninguna. Mientras tanto, sus selectores ofrecen todo el nomenclador (${items.length}).` : 'No hay ninguno que coincida.'}
                 </td>
               </tr>
@@ -282,7 +312,12 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
                 const codigo = String(i.externalId || '');
                 const esDefecto = !!codigo && codigo === marcado;
                 return (
-                  <tr key={i._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                  <tr key={i._id} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${tildados.includes(i._id) ? 'bg-blue-50/60 dark:bg-blue-950/20' : ''}`}>
+                    {agrega && (
+                      <td className="pl-4 py-2.5">
+                        <input type="checkbox" aria-label={`Seleccionar ${i.name}`} checked={tildados.includes(i._id)} onChange={() => setTildados((prev) => (prev.includes(i._id) ? prev.filter((id) => id !== i._id) : [...prev, i._id]))} className="h-4 w-4 rounded border-gray-300 text-blue-600" />
+                      </td>
+                    )}
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{codigo || '—'}</span>
                     </td>
@@ -297,7 +332,7 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
                     </td>
                     {agrega && (
                       <td className="px-4 py-2.5 text-right">
-                        <button type="button" onClick={() => quitar(i)} disabled={guardando} title={`Quitar de ${empresa.razonSocial}`} aria-label={`Quitar ${i.name} de ${empresa.razonSocial}`} className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50">
+                        <button type="button" onClick={() => quitar([i])} disabled={guardando} title={`Quitar de ${empresa.razonSocial}`} aria-label={`Quitar ${i.name} de ${empresa.razonSocial}`} className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50">
                           <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
                         </button>
                       </td>
