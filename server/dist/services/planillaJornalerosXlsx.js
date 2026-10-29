@@ -9,7 +9,9 @@ import { MESES } from "../utils/planillaJornaleros.js";
   gráficos al abrir un archivo: el Resumen saldría sin ellos.
 
   Qué se toca:
-    · Reporte: una fila por jornada (valores; E, J y O con sus fórmulas de siempre).
+    · Reporte: una fila por jornada (valores; E y J con sus fórmulas de siempre). Sin las columnas
+      CONTROL TRELLO y la del legajo repetido (pedido del 29/10/2026): la plantilla ya no las tiene,
+      y el control del Resumen que leía la de Trello se sacó.
     · SUBTOTAL: las mismas filas, que leen del Reporte, con «Total <persona>» y «Total general»
       con =SUBTOTAL(9, …) (no duplica los parciales).
     · LIQUIDACION: era una tabla dinámica (B:E). Se reemplaza por valores —una fila por persona y
@@ -59,7 +61,7 @@ const conRef = (xml, etiqueta, ref) => xml.replace(new RegExp(`<${etiqueta} ref=
 function hojaReporte(xml, p) {
     const filas = p.reporte.map((f, i) => {
         const r = i + 2;
-        return fila(r, ` spans="1:15" x14ac:dyDescent="0.3"`, [
+        return fila(r, ` spans="1:12" x14ac:dyDescent="0.3"`, [
             ["A", 23, texto(f.legajo)],
             ["B", undefined, texto(f.apellido)],
             ["C", undefined, texto(f.nombre)],
@@ -72,15 +74,12 @@ function hojaReporte(xml, p) {
             ["J", 66, { f: `+I${r}*H${r}` }],
             ["K", 24, { d: f.fecha }],
             ["L", 24, { d: f.fecha }],
-            ["M", 23, { t: "OK" }],
-            ["N", 23, null],
-            ["O", 23, { f: `IF(A${r}="","",A${r})` }],
         ]);
     });
     const ultima = p.reporte.length + 1;
     let out = reemplazarFilas(xml, 2, filas);
-    out = out.replace(/<dimension ref="[^"]*"\/>/, `<dimension ref="A1:O${Math.max(ultima, 1)}"/>`);
-    out = conRef(out, "autoFilter", `A1:M${Math.max(ultima, 1)}`).replace(/<sortState[\s\S]*?<\/sortState>/, "");
+    out = out.replace(/<dimension ref="[^"]*"\/>/, `<dimension ref="A1:L${Math.max(ultima, 1)}"/>`);
+    out = conRef(out, "autoFilter", `A1:L${Math.max(ultima, 1)}`).replace(/<sortState[\s\S]*?<\/sortState>/, "");
     return out;
 }
 /** SUBTOTAL: devuelve el XML y la última fila escrita (la del «Total general»). */
@@ -250,7 +249,7 @@ export async function generarXlsxJornaleros(plantilla, p) {
         wb = wb.replace(new RegExp(`(<definedName name="_xlnm\\._FilterDatabase" localSheetId="${hoja}" hidden="1">)[^<]*`), (_m, abre) => abre + rango);
     };
     filtro(3, `LIQUIDACION!$A$3:$J$${liquidacion.total - 1}`);
-    filtro(1, `Reporte!$A$1:$M$${ultimaReporte}`);
+    filtro(1, `Reporte!$A$1:$L$${ultimaReporte}`);
     filtro(2, `SUBTOTAL!$A$1:$L$${subtotal.ultima - 1}`);
     wb = wb.replace(/<calcPr([^>]*?)\/>/, (_m, a) => `<calcPr${a.replace(/ fullCalcOnLoad="\d"/, "")} fullCalcOnLoad="1"/>`);
     // Abre en el Resumen.
