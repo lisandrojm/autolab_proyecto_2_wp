@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faStar, faSearch, faXmark, faEraser, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faStar, faSearch, faXmark, faEraser } from '@fortawesome/free-solid-svg-icons';
 import { SeccionEmpleador } from './EmpresaContextLayout';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { HerenciaGlobal } from '../arca/HerenciaGlobal';
@@ -8,8 +8,6 @@ import { useGuardarEmpresa } from './useGuardarEmpresa';
 import { SimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { CAMPO_IDS_DE_VINCULO } from '../../api/companies';
 import { Company } from '../../api/companies';
-import { sweetAlert } from '../../utils/sweetAlert';
-import { Modal } from '../ui/Modal';
 
 /**
  * EL VALOR POR DEFECTO DE UNA EMPLEADORA, MARCADO SOBRE EL NOMENCLADOR.
@@ -49,14 +47,6 @@ interface Props {
   filtrarPorGrupoDeLaEmpresa?: boolean;
   /** La frase del mapa de ámbitos: por qué esta tabla no se declara por empresa. */
   ambito: string;
-  /**
-   * La tabla muestra SÓLO los que esta empleadora agregó, con «Agregar» para sumar del nomenclador y
-   * una acción para quitar. Es la lista que ofrecen los selectores de sus contratos. Sin esto la
-   * lista sale del recorte que se hace en Configuración → ARCA, columna «Habilitadas para».
-   */
-  agregarDesdeLaFicha?: boolean;
-  /** Columnas propias del nomenclador, entre «Nombre» y «Por defecto». */
-  columnasExtra?: Array<{ label: string; render: (item: SimpleCatalogItem) => React.ReactNode }>;
 }
 
 /**
@@ -89,15 +79,12 @@ export const LimpiarDefaultEmpresa: React.FC<{ hayValor: boolean; onLimpiar: () 
 /** El grupo con el que quedó clasificado un tipo en el nomenclador. Vacío = todavía sin clasificar. */
 const grupoDelItem = (t: SimpleCatalogItem): string => String((t as { grupo?: unknown }).grupo ?? '');
 
-export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, api, queEs, nota, filtrarPorGrupoDeLaEmpresa, ambito, agregarDesdeLaFicha, columnasExtra = [] }) => {
+export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, api, queEs, nota, filtrarPorGrupoDeLaEmpresa, ambito }) => {
   const { guardar, guardando } = useGuardarEmpresa(empresa, recargar);
   const [items, setItems] = useState<SimpleCatalogItem[]>([]);
   const [cargando, setCargando] = useState(true);
   const [q, setQ] = useState('');
   const [soloDelGrupo, setSoloDelGrupo] = useState(true);
-  const [agregando, setAgregando] = useState(false);
-  /** Las filas tildadas para quitar en lote. */
-  const [tildados, setTildados] = useState<string[]>([]);
 
   useEffect(() => {
     api
@@ -123,22 +110,15 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
   const campoVinculo = campo in CAMPO_IDS_DE_VINCULO ? CAMPO_IDS_DE_VINCULO[campo as keyof typeof CAMPO_IDS_DE_VINCULO] : undefined;
   const asignados = ((campoVinculo ? (empresa[campoVinculo] as string[] | undefined) : undefined) || []).map(String);
   const delaEmpresa = useMemo(() => (asignados.length === 0 ? items : items.filter((i) => asignados.includes(i._id))), [items, asignados.join(',')]);
-  /*
-    Agregando desde la ficha, la tabla es la lista de la empleadora tal cual está: vacía es vacía. Lo
-    que sigue valiendo es que los selectores, con la lista vacía, ofrecen todo el nomenclador; por
-    eso el estado vacío lo dice.
-  */
-  const agrega = !!agregarDesdeLaFicha && !!campoVinculo;
-  const listados = agrega ? items.filter((i) => asignados.includes(i._id)) : delaEmpresa;
 
   const visibles = useMemo(() => {
     const texto = q.trim().toLowerCase();
-    return listados.filter((i) => {
+    return delaEmpresa.filter((i) => {
       if (acotaPorGrupo && soloDelGrupo && grupoDelItem(i) !== grupoEmpresa) return false;
       if (!texto) return true;
       return `${i.externalId || ''} ${i.name || ''}`.toLowerCase().includes(texto);
     });
-  }, [listados, q, acotaPorGrupo, soloDelGrupo, grupoEmpresa]);
+  }, [delaEmpresa, q, acotaPorGrupo, soloDelGrupo, grupoEmpresa]);
 
   const nombreDe = (codigo: string): string => {
     const i = items.find((x) => String(x.externalId || '') === codigo);
@@ -155,39 +135,6 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
       { defaultsArca: { [campo]: nuevo } } as Partial<Company>,
       nuevo ? `${nombreDe(nuevo)} es ahora ${queEs} por defecto de ${empresa.razonSocial}.` : `${empresa.razonSocial} vuelve a heredar ${queEs} de la instalación.`,
     );
-  };
-
-  /** Suma al final de la lista de la empleadora. Se guarda en un solo request. */
-  const agregar = async (ids: string[]) => {
-    if (!campoVinculo || ids.length === 0) return false;
-    const nuevos = [...new Set([...asignados, ...ids])];
-    return guardar({ [campoVinculo]: nuevos } as Partial<Company>, `Se ${ids.length === 1 ? 'agregó' : `agregaron ${ids.length}`} a ${empresa.razonSocial}.`);
-  };
-
-  /**
-   * Saca de la lista (una fila o las tildadas). Si entre ellas está la marcada por defecto, el default
-   * se limpia en el mismo guardado: si no, la empleadora heredaría un valor que su propia lista ya no
-   * ofrece. Dejar la lista vacía hace que los selectores vuelvan a ofrecer todo: se avisa antes.
-   */
-  const quitar = async (aQuitar: SimpleCatalogItem[]) => {
-    if (!campoVinculo || aQuitar.length === 0) return;
-    const ids = new Set(aQuitar.map((i) => i._id));
-    const nuevos = asignados.filter((id) => !ids.has(id));
-    const limpiaDefault = !!marcado && aQuitar.some((i) => String(i.externalId || '') === marcado);
-    const nombres = aQuitar.map((i) => nombreDe(String(i.externalId || '')) || i.name);
-    const titulo = aQuitar.length === 1 ? `¿Quitar ${nombres[0]}?` : `¿Quitar ${aQuitar.length}?`;
-    const avisos = [
-      aQuitar.length > 1 && `${nombres.join(', ')}.`,
-      limpiaDefault && `Una es ${queEs} por defecto: se quita también.`,
-      nuevos.length === 0 && `No queda ninguna: sin ninguna agregada, los selectores de ${empresa.razonSocial} vuelven a ofrecer todo el nomenclador.`,
-    ].filter(Boolean);
-    const r = await sweetAlert.confirm(titulo, avisos.length ? avisos.join(' ') : `Deja de ofrecerse en los selectores de ${empresa.razonSocial}.`, 'Sí, quitar');
-    if (!r.isConfirmed) return;
-    const ok = await guardar(
-      { [campoVinculo]: nuevos, ...(limpiaDefault ? { defaultsArca: { [campo]: '' } } : {}) } as Partial<Company>,
-      `${aQuitar.length === 1 ? `${nombres[0]} ya no se ofrece` : `Se quitaron ${aQuitar.length}`} en ${empresa.razonSocial}.${limpiaDefault ? ' Incluía el valor por defecto: se quitó.' : ''}`,
-    );
-    if (ok) setTildados((prev) => prev.filter((id) => !ids.has(id)));
   };
 
   if (cargando) return <LoadingSpinner message="Cargando el nomenclador..." />;
@@ -219,7 +166,7 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
           Sin esto, una lista de cuatro códigos sobre un nomenclador de 293 se lee como un catálogo a
           medio importar, y el próximo paso es ir a cargarlos de nuevo.
         */}
-        {asignados.length > 0 && !agrega && (
+        {asignados.length > 0 && (
           <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
             Mostrando los {delaEmpresa.length} que esta empleadora usa, de {items.length} del nomenclador. Se eligen desde Configuración → ARCA, en la columna «Empresas».
           </p>
@@ -240,19 +187,7 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
             respuesta útil, y acá además explicaría mal por qué la lista está entera. */}
         {acotaPorGrupo && (
           <button type="button" onClick={() => setSoloDelGrupo((v) => !v)} className={`shrink-0 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${soloDelGrupo ? 'bg-blue-50 dark:bg-blue-900/25 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
-            {soloDelGrupo ? `Del grupo ${grupoEmpresa} (${visibles.length})` : `Los ${listados.length}`}
-          </button>
-        )}
-        {agrega && tildados.length > 0 && (
-          <button type="button" onClick={() => quitar(listados.filter((i) => tildados.includes(i._id)))} disabled={guardando} className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-50">
-            <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
-            Quitar {tildados.length}
-          </button>
-        )}
-        {agrega && (
-          <button type="button" onClick={() => setAgregando(true)} disabled={guardando || listados.length >= items.length} className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold btn-primary disabled:opacity-50">
-            <FontAwesomeIcon icon={faPlus} className="h-3.5 w-3.5" />
-            Agregar
+            {soloDelGrupo ? `Del grupo ${grupoEmpresa} (${visibles.length})` : `Los ${delaEmpresa.length}`}
           </button>
         )}
       </div>
@@ -268,43 +203,21 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-900/50">
             <tr>
-              {agrega && (
-                <th className="pl-4 py-3 w-px">
-                  {/* Tilda o destilda lo que se ve: con el buscador puesto, sólo las filtradas. */}
-                  <input
-                    type="checkbox"
-                    aria-label="Seleccionar todas las visibles"
-                    checked={visibles.length > 0 && visibles.every((i) => tildados.includes(i._id))}
-                    ref={(el) => {
-                      if (el) el.indeterminate = visibles.some((i) => tildados.includes(i._id)) && !visibles.every((i) => tildados.includes(i._id));
-                    }}
-                    onChange={(e) => {
-                      const ids = visibles.map((i) => i._id);
-                      setTildados((prev) => (e.target.checked ? [...new Set([...prev, ...ids])] : prev.filter((id) => !ids.includes(id))));
-                    }}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600"
-                  />
-                </th>
-              )}
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">Código</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-              {columnasExtra.map((c) => (
-                <th key={c.label} className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{c.label}</th>
-              ))}
               <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">
                 <span className="inline-flex items-center gap-2">
                   Por defecto
                   <LimpiarDefaultEmpresa hayValor={!!marcado} onLimpiar={() => marcar(marcado)} queEs={queEs} disabled={guardando} />
                 </span>
               </th>
-              {agrega && <th className="px-4 py-3 w-px" aria-label="Acciones" />}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
             {visibles.length === 0 ? (
               <tr>
-                <td colSpan={3 + columnasExtra.length + (agrega ? 2 : 0)} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                  {agrega && listados.length === 0 ? `Esta empleadora todavía no agregó ninguna. Mientras tanto, sus selectores ofrecen todo el nomenclador (${items.length}).` : 'No hay ninguno que coincida.'}
+                <td colSpan={3} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                  No hay ninguno que coincida.
                 </td>
               </tr>
             ) : (
@@ -312,31 +225,16 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
                 const codigo = String(i.externalId || '');
                 const esDefecto = !!codigo && codigo === marcado;
                 return (
-                  <tr key={i._id} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${tildados.includes(i._id) ? 'bg-blue-50/60 dark:bg-blue-950/20' : ''}`}>
-                    {agrega && (
-                      <td className="pl-4 py-2.5">
-                        <input type="checkbox" aria-label={`Seleccionar ${i.name}`} checked={tildados.includes(i._id)} onChange={() => setTildados((prev) => (prev.includes(i._id) ? prev.filter((id) => id !== i._id) : [...prev, i._id]))} className="h-4 w-4 rounded border-gray-300 text-blue-600" />
-                      </td>
-                    )}
+                  <tr key={i._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{codigo || '—'}</span>
                     </td>
                     <td className="px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200">{i.name}</td>
-                    {columnasExtra.map((c) => (
-                      <td key={c.label} className="px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300">{c.render(i)}</td>
-                    ))}
                     <td className="px-4 py-2.5">
                       <button type="button" onClick={() => marcar(codigo)} disabled={guardando || !codigo} title={esDefecto ? `Es ${queEs} por defecto. Click para quitarlo.` : `Marcar como ${queEs} por defecto de esta empleadora`} aria-pressed={esDefecto} className={`shrink-0 transition-colors disabled:opacity-50 ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
                         <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5" />
                       </button>
                     </td>
-                    {agrega && (
-                      <td className="px-4 py-2.5 text-right">
-                        <button type="button" onClick={() => quitar([i])} disabled={guardando} title={`Quitar de ${empresa.razonSocial}`} aria-label={`Quitar ${i.name} de ${empresa.razonSocial}`} className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50">
-                          <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
-                        </button>
-                      </td>
-                    )}
                   </tr>
                 );
               })
@@ -344,84 +242,6 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
           </tbody>
         </table>
       </div>
-
-      {agregando && (
-        <AgregarDelNomenclador
-          disponibles={items.filter((i) => !asignados.includes(i._id))}
-          columnasExtra={columnasExtra}
-          razonSocial={empresa.razonSocial}
-          guardando={guardando}
-          onCerrar={() => setAgregando(false)}
-          onAgregar={async (ids) => {
-            if (await agregar(ids)) setAgregando(false);
-          }}
-        />
-      )}
     </SeccionEmpleador>
-  );
-};
-
-/** El modal de «Agregar»: los del nomenclador que la empleadora todavía no tiene, con buscador y tildes. */
-const AgregarDelNomenclador: React.FC<{
-  disponibles: SimpleCatalogItem[];
-  columnasExtra: NonNullable<Props['columnasExtra']>;
-  razonSocial: string;
-  guardando: boolean;
-  onCerrar: () => void;
-  onAgregar: (ids: string[]) => void;
-}> = ({ disponibles, columnasExtra, razonSocial, guardando, onCerrar, onAgregar }) => {
-  const [q, setQ] = useState('');
-  const [elegidos, setElegidos] = useState<string[]>([]);
-  const visibles = useMemo(() => {
-    const texto = q.trim().toLowerCase();
-    return texto ? disponibles.filter((i) => `${i.externalId || ''} ${i.name || ''}`.toLowerCase().includes(texto)) : disponibles;
-  }, [disponibles, q]);
-  const alternar = (id: string) => setElegidos((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-
-  return (
-    <Modal
-      isOpen
-      onClose={onCerrar}
-      title="Agregar"
-      subtitle={razonSocial}
-      size="md"
-      footer={
-        <div className="flex items-center justify-end gap-3 w-full">
-          <button type="button" onClick={onCerrar} disabled={guardando} className="btn-secondary">
-            Cancelar
-          </button>
-          <button type="button" onClick={() => onAgregar(elegidos)} disabled={guardando || elegidos.length === 0} className="btn-primary disabled:opacity-50">
-            {guardando ? 'Guardando…' : elegidos.length > 1 ? `Agregar ${elegidos.length}` : 'Agregar'}
-          </button>
-        </div>
-      }
-    >
-      <div className="space-y-2">
-        <div className="relative">
-          <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por código o nombre..." className="w-full pl-9 pr-3 py-2 rounded-lg text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200" />
-        </div>
-        <div className="max-h-80 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700/60">
-          {visibles.length === 0 ? (
-            <p className="px-3 py-4 text-xs text-gray-400 italic">{disponibles.length === 0 ? 'Ya están todas agregadas.' : 'No hay ninguna que coincida.'}</p>
-          ) : (
-            visibles.map((i) => (
-              <label key={i._id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/30">
-                <input type="checkbox" checked={elegidos.includes(i._id)} onChange={() => alternar(i._id)} className="h-4 w-4 rounded border-gray-300 text-blue-600" />
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{String(i.externalId || '—')}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm text-gray-800 dark:text-gray-200">{i.name}</span>
-                  {columnasExtra.map((c) => (
-                    <span key={c.label} className="block text-[11px] text-gray-500 dark:text-gray-400">
-                      {c.label}: {c.render(i)}
-                    </span>
-                  ))}
-                </span>
-              </label>
-            ))
-          )}
-        </div>
-      </div>
-    </Modal>
   );
 };
