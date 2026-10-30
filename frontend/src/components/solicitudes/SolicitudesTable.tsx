@@ -152,11 +152,7 @@ export const useCatalogosDeSolicitudes = () => {
         console.error(`Error cargando ${que} para solicitudes:`, e);
         return vacio;
       });
-    Promise.all([
-      o(roleFrameAPI.list(), [] as RoleFrameItem[], "roles frame"),
-      o(categoriaSatAPI.list(), [] as CategoriaSatItem[], "categorías"),
-      o(infoAPI.listByType("estado-empleado"), [] as InfoItem[], "estados"),
-    ]).then(([frames, cats, infos]) => {
+    Promise.all([o(roleFrameAPI.list(), [] as RoleFrameItem[], "roles frame"), o(categoriaSatAPI.list(), [] as CategoriaSatItem[], "categorías"), o(infoAPI.listByType("estado-empleado"), [] as InfoItem[], "estados")]).then(([frames, cats, infos]) => {
       if (!vivo) return;
       setRoleFrames(frames);
       setCategoriasSat(cats);
@@ -208,11 +204,7 @@ export const resultadoEliminarSolicitud = (r: ResultadoEliminarSolicitud): { enc
     const periodo = c.desde ? ` (${formatDiaSolicitud(c.desde)}${c.hasta ? ` → ${formatDiaSolicitud(c.hasta)}` : ", indeterminado"})` : "";
     return { encontrado: true, texto: `Se eliminaron la solicitud y su contrato${c.proyecto ? ` en ${c.proyecto}` : ""}${periodo}.` };
   }
-  return {
-    encontrado: false,
-    texto:
-      "Se eliminó la solicitud, pero no se encontró el contrato que generó: puede que al aprobarla se hayan cambiado las fechas. Si la persona sigue en el equipo del proyecto, eliminá el contrato desde ahí.",
-  };
+  return { encontrado: false, texto: "Se eliminó la solicitud, pero no se encontró el contrato que generó: puede que al aprobarla se hayan cambiado las fechas. Si la persona sigue en el equipo del proyecto, eliminá el contrato desde ahí." };
 };
 
 /**
@@ -256,10 +248,7 @@ export const formatFechaSolicitud = (dateStr?: string | null) => {
   caracteres— decía 19/09. Se arma la fecha con el día escrito, sin zona horaria de por medio.
 */
 export const formatDiaSolicitud = (dateStr?: string | null) => {
-  const [y, m, d] = String(dateStr || "")
-    .slice(0, 10)
-    .split("-")
-    .map(Number);
+  const [y, m, d] = String(dateStr || "").slice(0, 10).split("-").map(Number);
   if (!y || !m || !d) return formatFechaSolicitud(dateStr);
   return new Date(y, m - 1, d).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
 };
@@ -300,22 +289,7 @@ interface SolicitudesTableProps {
   totalSeleccionable?: number;
 }
 
-export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({
-  solicitudes,
-  catalogos,
-  mostrarProyectos = false,
-  onAprobar,
-  onRechazar,
-  onReabrir,
-  onEliminar,
-  onEditarAprobada,
-  onVerDetalle,
-  seleccionadas,
-  onCambiarSeleccion,
-  renderObraSocial,
-  onSeleccionarTodas,
-  totalSeleccionable,
-}) => {
+export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, onEditarAprobada, onVerDetalle, seleccionadas, onCambiarSeleccion, renderObraSocial, onSeleccionarTodas, totalSeleccionable }) => {
   const { resolverRolFrame, resolverTramite, resolverTipoContrato } = catalogos;
   const conSeleccion = !!seleccionadas && !!onCambiarSeleccion;
   // La casilla del encabezado marca o desmarca las de ESTA página (la selección de otras páginas se conserva).
@@ -333,7 +307,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({
   };
   const alternarPagina = () => {
     const nuevas = new Set(seleccionadas);
-    for (const s of solicitudes) todasEnPagina ? nuevas.delete(s._id) : nuevas.add(s._id);
+    for (const s of solicitudes) (todasEnPagina ? nuevas.delete(s._id) : nuevas.add(s._id));
     onCambiarSeleccion?.(nuevas);
   };
   const alternar = (id: string) => {
@@ -342,6 +316,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({
     else nuevas.add(id);
     onCambiarSeleccion?.(nuevas);
   };
+
 
   /*
     LOS ENCABEZADOS QUEDAN FIJOS debajo del header de la pantalla, CON EL SCROLL DE LA PÁGINA (30/10/2026).
@@ -381,11 +356,11 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({
   const filaDeEncabezados = (
     <tr className="bg-gray-50 dark:bg-[#18202f] border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
       {/*
-          LA CASILLA Y EL NOMBRE QUEDAN FIJOS al correr la tabla de costado (pedido del 20/10/2026):
-          con muchas columnas, al llegar a Estado o Acciones ya no se veía de quién era la fila.
-          Fondos opacos: por una celda fija translúcida se ve pasar lo que scrollea (`#18202f` es el
-          gris del encabezado ya mezclado, como en Gestionar Equipo).
-        */}
+        LA CASILLA Y EL NOMBRE QUEDAN FIJOS al correr la tabla de costado (pedido del 20/10/2026):
+        con muchas columnas, al llegar a Estado o Acciones ya no se veía de quién era la fila.
+        Fondos opacos: por una celda fija translúcida se ve pasar lo que scrollea (`#18202f` es el
+        gris del encabezado ya mezclado, como en Gestionar Equipo).
+      */}
       {conSeleccion && (
         <th className="sticky left-0 z-[6] w-10 min-w-[2.5rem] pl-4 py-3 bg-gray-50 dark:bg-[#18202f]">
           <input
@@ -395,25 +370,17 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({
               if (el) el.indeterminate = algoMarcado && !todoMarcado;
             }}
             onChange={alternarEncabezado}
-            aria-label={
-              porListado ? (todoMarcado ? "Desmarcar todas" : `Marcar las ${totalSeleccionable} del listado`) : todasEnPagina ? "Desmarcar las de esta página" : "Marcar todas las de esta página"
-            }
+            aria-label={porListado ? (todoMarcado ? "Desmarcar todas" : `Marcar las ${totalSeleccionable} del listado`) : todasEnPagina ? "Desmarcar las de esta página" : "Marcar todas las de esta página"}
             title={porListado ? (todoMarcado ? "Desmarcar todas" : `Marcar las ${totalSeleccionable} del listado (todas las páginas)`) : undefined}
             className="h-4 w-4 rounded cursor-pointer"
           />
         </th>
       )}
-      <th
-        className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)]`}
-      >
-        Nombre
-      </th>
-      <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">
-        Fecha de creación
-      </th>
+      <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)]`}>Nombre</th>
+      <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">Fecha de creación</th>
       {/* Las columnas que comparte con Contratos → Alta temprana de ARCA van en SU orden (27/10/2026):
-            Nombre, Fecha de creación, Obra social, Cliente, Proyecto, Estado y Tipo de alta (allá, «Estado
-            Impositivo»). «Último contrato» va pegado a «Fechas», para ver si se superponen. */}
+          Nombre, Fecha de creación, Obra social, Cliente, Proyecto, Estado y Tipo de alta (allá, «Estado
+          Impositivo»). «Último contrato» va pegado a «Fechas», para ver si se superponen. */}
       <th className="px-4 py-3 font-semibold">Solicitó</th>
       {renderObraSocial && <th className="px-4 py-3 font-semibold">Obra social</th>}
       {mostrarProyectos && (
@@ -424,20 +391,13 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({
       )}
       <th className="px-4 py-3 font-semibold">Rol/es Empresa</th>
       <th className="px-4 py-3 font-semibold whitespace-nowrap">Tipo de contrato</th>
-      <th
-        className="px-4 py-3 font-semibold whitespace-nowrap"
-        title="El último contrato de la persona ANTERIOR a lo pedido (alta antes del inicio de la solicitud), en cualquier proyecto. Avisa si se superpone con las fechas pedidas."
-      >
-        Último contrato
-      </th>
+      <th className="px-4 py-3 font-semibold whitespace-nowrap" title="El último contrato de la persona ANTERIOR a lo pedido (alta antes del inicio de la solicitud), en cualquier proyecto. Avisa si se superpone con las fechas pedidas.">Último contrato</th>
       <th className="px-4 py-3 font-semibold">Fechas</th>
       <th className="px-4 py-3 font-semibold">Horario</th>
       <th className="px-4 py-3 font-semibold text-center">Estado</th>
       <th className="px-4 py-3 font-semibold">Tipo de alta</th>
       {/* Las acciones quedan FIJAS a la derecha (27/10/2026): con la tabla ancha, «Editar para Aprobar» y «Rechazar» quedaban fuera de la vista. */}
-      <th className="sticky right-0 z-[6] px-4 py-3 font-semibold text-right bg-gray-50 dark:bg-[#18202f] shadow-[inset_1px_0_0_#e5e7eb,-4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_1px_0_0_#4b5563,-4px_0_6px_-4px_rgba(0,0,0,0.4)]">
-        Acciones
-      </th>
+      <th className="sticky right-0 z-[6] px-4 py-3 font-semibold text-right bg-gray-50 dark:bg-[#18202f] shadow-[inset_1px_0_0_#e5e7eb,-4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_1px_0_0_#4b5563,-4px_0_6px_-4px_rgba(0,0,0,0.4)]">Acciones</th>
     </tr>
   );
 
@@ -486,34 +446,18 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({
                   necesita leerlos antes de decidir, no después. Los botones de la última columna
                   siguen funcionando como atajo, cortando la propagación del click.
                 */
-                <tr
-                  key={s._id}
-                  onClick={onVerDetalle ? () => onVerDetalle(s) : undefined}
-                  className={`group border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${onVerDetalle ? "cursor-pointer" : ""} ${filaApagada ? "opacity-60 bg-gray-50/60 dark:bg-gray-900/30" : ""} ${seleccionadas?.has(s._id) ? "bg-blue-50/70 dark:bg-blue-900/20" : ""}`}
-                >
+                <tr key={s._id} onClick={onVerDetalle ? () => onVerDetalle(s) : undefined} className={`group border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${onVerDetalle ? "cursor-pointer" : ""} ${filaApagada ? "opacity-60 bg-gray-50/60 dark:bg-gray-900/30" : ""} ${seleccionadas?.has(s._id) ? "bg-blue-50/70 dark:bg-blue-900/20" : ""}`}>
                   {conSeleccion && (
                     <td className={`sticky left-0 z-[5] w-10 min-w-[2.5rem] pl-4 py-3 ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={!!seleccionadas?.has(s._id)}
-                        onChange={() => alternar(s._id)}
-                        aria-label={`Seleccionar a ${s.nombre}`}
-                        className="h-4 w-4 rounded cursor-pointer"
-                      />
+                      <input type="checkbox" checked={!!seleccionadas?.has(s._id)} onChange={() => alternar(s._id)} aria-label={`Seleccionar a ${s.nombre}`} className="h-4 w-4 rounded cursor-pointer" />
                     </td>
                   )}
-                  <td
-                    className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[5] px-4 py-3 min-w-[14rem] max-w-[20rem] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)] ${fondoFijo}`}
-                  >
+                  <td className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[5] px-4 py-3 min-w-[14rem] max-w-[20rem] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)] ${fondoFijo}`}>
                     <div className="min-w-0">
                       <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
                         {s.nombre}
                         {/* Extiende un contrato que estaba por vencer: no es un ingreso nuevo. */}
-                        {s.esRenovacion && (
-                          <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold align-middle bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-                            Renovación
-                          </span>
-                        )}
+                        {s.esRenovacion && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold align-middle bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>}
                         {/*
                           Se rechazó y volvió corregida: no es una solicitud nueva. El detalle dice qué
                           se había objetado, que es la pregunta de quien la vuelve a mirar.
@@ -583,16 +527,14 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({
                     <div className="min-w-0">
                       {s.solicitante?.nombre ? <p className="text-sm text-gray-900 dark:text-white truncate">{s.solicitante.nombre}</p> : <span className="text-sm text-gray-400">—</span>}
                       {s.solicitante?.nombre && s.solicitante.roles.some((r) => ROL_QUE_SOLICITA.test(r)) && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {s.solicitante.roles
-                            .filter((r) => ROL_QUE_SOLICITA.test(r))
-                            .map((r) => (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {s.solicitante.roles.filter((r) => ROL_QUE_SOLICITA.test(r)).map((r) => (
                               <span key={r} className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">
                                 {r}
                               </span>
                             ))}
-                        </div>
-                      )}
+                          </div>
+                        )}
                     </div>
                   </td>
 
@@ -643,27 +585,16 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{resolverRolFrame(s)}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{resolverTipoContrato(s) || <span className="text-gray-400">-</span>}</td>
                   {/* El último contrato de la PERSONA anterior a lo pedido (en cualquier proyecto), pegado a «Fechas» para compararlos. */}
-                  <td
-                    className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap"
-                    title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos anteriores a lo pedido"}
-                  >
+                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos anteriores a lo pedido"}>
                     {s.ultimoContrato ? (
                       (() => {
                         const vigente = isContractVigente(s.ultimoContrato.alta, s.ultimoContrato.baja || undefined);
                         return (
                           <div className="flex flex-col gap-1">
-                            <span
-                              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}
-                            >
-                              {vigente ? "VIGENTE" : "NO VIGENTE"}
-                            </span>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
                             <div className="flex flex-col gap-0.5 text-xs">
-                              <span>
-                                <span className="text-gray-400">Alta:</span> {formatDate(s.ultimoContrato.alta)}
-                              </span>
-                              <span>
-                                <span className="text-gray-400">Baja:</span> {s.ultimoContrato.baja ? formatDate(s.ultimoContrato.baja) : "—"}
-                              </span>
+                              <span><span className="text-gray-400">Alta:</span> {formatDate(s.ultimoContrato.alta)}</span>
+                              <span><span className="text-gray-400">Baja:</span> {s.ultimoContrato.baja ? formatDate(s.ultimoContrato.baja) : "—"}</span>
                             </div>
                             {/* El período pedido (columna «Fechas», al lado) se pisa con este contrato. */}
                             {seSuperpone(s.startDate, s.dueDate, s.ultimoContrato.alta, s.ultimoContrato.baja) && (
@@ -702,10 +633,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({
                     inventar el dato del que depende el TXT de ARCA.
                   */}
                   <td className="px-4 py-3">{tramite ? <EstadoBadge name={tramite.name} /> : <span className="text-xs text-gray-400 italic">Sin definir</span>}</td>
-                  <td
-                    className={`sticky right-0 z-[5] px-4 py-3 text-right shadow-[inset_1px_0_0_#e5e7eb,-4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_1px_0_0_#4b5563,-4px_0_6px_-4px_rgba(0,0,0,0.4)] ${fondoFijo}`}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <td className={`sticky right-0 z-[5] px-4 py-3 text-right shadow-[inset_1px_0_0_#e5e7eb,-4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_1px_0_0_#4b5563,-4px_0_6px_-4px_rgba(0,0,0,0.4)] ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
                     {/* Una solicitud rechazada o cancelada no se aprueba de una: primero se reabre,
                         así queda explícito que se está deshaciendo la decisión. */}
                     <div className="flex items-center justify-end gap-1.5">
@@ -720,20 +648,12 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({
                             eso el hover dice «Editar y aprobar».
                           */}
                           {onAprobar && (
-                            <button
-                              onClick={() => onAprobar(s)}
-                              className="px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap"
-                              title="Editar y aprobar"
-                            >
+                            <button onClick={() => onAprobar(s)} className="px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap" title="Editar y aprobar">
                               <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
                               Aprobar
                             </button>
                           )}
-                          <button
-                            onClick={() => onRechazar(s)}
-                            className="px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded transition-colors flex items-center gap-1.5 whitespace-nowrap"
-                            title="Rechazar"
-                          >
+                          <button onClick={() => onRechazar(s)} className="px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded transition-colors flex items-center gap-1.5 whitespace-nowrap" title="Rechazar">
                             <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
                             Rechazar
                           </button>
@@ -745,22 +665,14 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({
                           el mismo formulario con que se aprobó.
                         */
                         onEditarAprobada ? (
-                          <button
-                            onClick={() => onEditarAprobada(s)}
-                            className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-                            title="Editar el contrato que se creó al aprobarla"
-                          >
+                          <button onClick={() => onEditarAprobada(s)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors" title="Editar el contrato que se creó al aprobarla">
                             <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                           </button>
                         ) : (
                           <span className="text-xs text-gray-400 italic">Ya aprobada</span>
                         )
                       ) : (
-                        <button
-                          onClick={() => onReabrir(s)}
-                          className="px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded transition-colors flex items-center gap-1.5 whitespace-nowrap"
-                          title="Volver a dejarla pendiente"
-                        >
+                        <button onClick={() => onReabrir(s)} className="px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded transition-colors flex items-center gap-1.5 whitespace-nowrap" title="Volver a dejarla pendiente">
                           <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
                           Volver a pendiente
                         </button>
@@ -778,12 +690,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({
                         el server se la niega a quien no administra). Ahí deshace la contratación: se va
                         también el contrato que creó al aprobarse (ver `DELETE /users/:id/solicitud`).
                       */}
-                      <button
-                        onClick={() => onEliminar(s)}
-                        className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                        title="Eliminar"
-                        aria-label="Eliminar"
-                      >
+                      <button onClick={() => onEliminar(s)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar" aria-label="Eliminar">
                         <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                       </button>
                     </div>
