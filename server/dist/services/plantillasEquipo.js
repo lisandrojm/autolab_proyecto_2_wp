@@ -960,13 +960,14 @@ async function contextoDe(tenantId, p, integrantes, fechas, puntuales) {
         User.find({ _id: { $in: [...integrantes.map((i) => i.userId), ...Object.values(puntuales).map((x) => x.userId)].filter(idOk).map(oid) }, tenantId }).select("firstName lastName email metadata.fullName metadata.activo metadata.isSolicitud").lean(),
         User.find({ tenantId, projectIds: oid(p.projectId) }).select("_id").lean(),
         RequestConfig.find({ tenantId, isActive: true }).select("name").lean(),
-        idOk(p.projectId) ? Project.findById(p.projectId).select("metadata.sedeId metadata.sedeIds").lean() : null,
+        idOk(p.projectId) ? Project.findById(p.projectId).select("metadata.sedeId metadata.sedeIds areasConfig").lean() : null,
     ]);
     // La principal: la primera de `sedeIds`, o la única `sedeId` de los proyectos de antes.
     const sedeIds = Array.isArray(proyecto?.metadata?.sedeIds) ? proyecto.metadata.sedeIds.map(Number).filter((n) => n > 0) : [];
     const sedePrincipal = sedeIds[0] || (Number(proyecto?.metadata?.sedeId) > 0 ? Number(proyecto.metadata.sedeId) : null);
     return {
         sedePrincipal,
+        areasConfig: proyecto ? proyecto.areasConfig || [] : undefined,
         contratos: new Map(contratos.map((c) => [String(c._id), { modoFechas: c.data?.modoFechas, esTiempoIndeterminado: !!c.data?.esTiempoIndeterminado, multiplicadorDiario: c.data?.multiplicadorDiario, horasPorJornada: c.data?.horasPorJornada ?? null, cantidadJornadas: c.data?.cantidadJornadas ?? null, diasPorSemana: c.data?.diasPorSemana ?? null }])),
         hayContratos: !!hayContratos,
         convenioCct: String(convenio?.externalId || "").trim(),

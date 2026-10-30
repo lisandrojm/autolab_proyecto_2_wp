@@ -1686,29 +1686,30 @@ router.patch("/projects/:projectId/team-config/:userId/areas", requireTenant, au
       ...(a.sedeId ? { sedeId: a.sedeId } : {}),
     }));
 
-    const config: any[] = project.teamConfig || [];
-    const entrada = config.find((c: any) => String(c.userId) === String(userId));
-    const antes = fotoDeAreas(config);
+    const entrada: any = (project.teamConfig || []).find((c: any) => String(c.userId) === String(userId));
+    const uid = new Types.ObjectId(userId);
     const marca = { updatedBy: req.user?.userId && Types.ObjectId.isValid(req.user.userId) ? new Types.ObjectId(req.user.userId) : undefined, updatedAt: new Date() };
-
+    /*
+      POR PERSONA, CON UN UPDATE A LA BASE (30/10/2026): antes se guardaba el array entero del documento
+      cargado, y un cambio de otro hecho en el medio se perdía. Los campos viejos (un área, un turno) siguen
+      a la primera asignación: el parte del móvil los leía y anotaba a quien se movió en su área anterior.
+    */
+    const campos = { areaShiftAssignments: asignaciones, areaId: asignaciones[0]?.areaId ?? null, shiftId: asignaciones[0]?.shiftIds?.[0] ?? null, ...marca };
+    const ponerEnLaFila = () => Project.updateOne({ _id: project._id }, { $set: Object.fromEntries(Object.entries(campos).map(([k, v]) => [`teamConfig.$[f].${k}`, v])) }, { arrayFilters: [{ "f.userId": uid }] });
+    const cambio = firmaDeAreas(entrada?.areaShiftAssignments) !== firmaDeAreas(asignaciones);
     if (entrada) {
-      if (firmaDeAreas(entrada.areaShiftAssignments) !== firmaDeAreas(asignaciones)) Object.assign(entrada, marca);
-      entrada.areaShiftAssignments = asignaciones;
-      // Los campos viejos (un área, un turno) siguen a la primera asignación: el parte del móvil los leía
-      // primero y anotaba a quien se movió en su área anterior.
-      entrada.areaId = asignaciones[0]?.areaId;
-      entrada.shiftId = asignaciones[0]?.shiftIds?.[0];
+      if (cambio) await ponerEnLaFila();
     } else {
-      // Alguien del equipo que todavía no tenía fila propia en `teamConfig`: se crea con los defaults
-      // del modelo, sin inventarle horario.
-      config.push({ userId: new Types.ObjectId(userId), canRegister: true, useProjectSchedule: true, areaShiftAssignments: asignaciones, areaId: asignaciones[0]?.areaId, shiftId: asignaciones[0]?.shiftIds?.[0], ...marca });
+      // Alguien del equipo que todavía no tenía fila propia: se crea con los defaults del modelo, sin inventarle horario.
+      const r = await Project.updateOne({ _id: project._id, "teamConfig.userId": { $ne: uid } }, { $push: { teamConfig: { userId: uid, canRegister: true, useProjectSchedule: true, ...campos } } });
+      if (!r.modifiedCount) await ponerEnLaFila();
     }
+    if (cambio || !entrada) {
+      await registrarCambiosDelEquipo({ tenantId: req.tenantObjectId, projectId: project._id, porUserId: req.user?.userId, origen: "jerarquia", payload: { areaShiftAssignments }, cambios: [{ userId: uid, campo: "areas", antes: JSON.parse(firmaDeAreas(entrada?.areaShiftAssignments)), despues: JSON.parse(firmaDeAreas(asignaciones)) }] });
+    }
+    const actualizado: any = await Project.findById(project._id).select("teamConfig").lean();
 
-    project.teamConfig = config;
-    await project.save();
-    await registrarCambiosDelEquipo({ tenantId: req.tenantObjectId, projectId: project._id, porUserId: req.user?.userId, origen: "jerarquia", payload: { areaShiftAssignments }, cambios: cambiosDeAreas(antes, fotoDeAreas(config)) });
-
-    res.json({ teamConfig: project.teamConfig });
+    res.json({ teamConfig: actualizado?.teamConfig || [] });
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: "Invalid data", details: error.errors });
@@ -1756,6 +1757,12 @@ router.patch("/projects/:projectId/team-config/sede-de-area", requireTenant, aut
 
 // PATCH /projects/:projectId/team-config
 router.patch("/projects/:projectId/team-config", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  /*
+    DESACTIVADO (30/10/2026). Reemplazaba `teamConfig` ENTERO con lo que mandara el cliente: con una copia
+    vieja o un tipo sin áreas, borraba el área de todo el equipo. Nadie lo llamaba. El área de un miembro
+    se cambia con PATCH .../team-config/:userId/areas o desde el wizard (assign-member).
+  */
+  if (process.env.HABILITAR_TEAM_CONFIG_ENTERO !== "1") return res.status(410).json({ error: "Este guardado del equipo entero ya no se usa: el área de cada miembro se cambia por separado." });
   try {
     const { projectId } = req.params;
     const { config } = updateTeamConfigSchema.parse(req.body);
@@ -2542,9 +2549,8 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       tarjeta vieja o aprobar una solicitud le cambiaba el área al miembro, y de paso perdía su horario
       propio y volvía `canRegister`/`useProjectSchedule` a true.
     */
-    if (!project.teamConfig) project.teamConfig = [];
-    const configIndex = project.teamConfig.findIndex(c => c.userId.toString() === user._id.toString());
-    const filaPrevia: any = configIndex > -1 ? (project.teamConfig[configIndex] as any).toObject?.() ?? project.teamConfig[configIndex] : null;
+    const filaDelDoc: any = (project.teamConfig || []).find((c: any) => c.userId.toString() === user._id.toString());
+    const filaPrevia: any = filaDelDoc ? filaDelDoc.toObject?.() ?? filaDelDoc : null;
     const filaNueva = filaDelEquipoTrasGuardar(
       filaPrevia,
       {
@@ -2554,14 +2560,25 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       },
       actualizarEquipo.areas,
     );
-    if (filaNueva) {
-      const fila = { ...filaNueva, userId: user._id, updatedBy: req.user?.userId && Types.ObjectId.isValid(req.user.userId) ? new Types.ObjectId(req.user.userId) : undefined, updatedAt: new Date() };
-      cambiosDelEquipo.push({ userId: user._id, campo: "areas", antes: JSON.parse(firmaDeAreas(filaPrevia?.areaShiftAssignments)), despues: JSON.parse(firmaDeAreas(sanitizedAssignments)) });
-      if (configIndex > -1) project.teamConfig[configIndex] = fila as any;
-      else project.teamConfig.push(fila as any);
-    }
-
     await project.save();
+    /*
+      LA FILA SE ESCRIBE POR PERSONA, NO POR POSICIÓN (30/10/2026). Reemplazar `teamConfig[N]` en el
+      documento cargado pisaba la fila de OTRO miembro si en el medio alguien sacaba a una persona del
+      equipo (el array se corre). Ahora es un update a la base que busca la fila por `userId`.
+    */
+    if (filaNueva) {
+      const marca = { updatedBy: req.user?.userId && Types.ObjectId.isValid(req.user.userId) ? new Types.ObjectId(req.user.userId) : undefined, updatedAt: new Date() };
+      const campos = { areaId: (filaNueva as any).areaId, shiftId: (filaNueva as any).shiftId, areaShiftAssignments: sanitizedAssignments, ...marca };
+      const ponerEnLaFila = () =>
+        Project.updateOne({ _id: project._id }, { $set: Object.fromEntries(Object.entries(campos).map(([k, v]) => [`teamConfig.$[f].${k}`, v])) }, { arrayFilters: [{ "f.userId": user._id }] });
+      if (filaPrevia) await ponerEnLaFila();
+      else {
+        const r = await Project.updateOne({ _id: project._id, "teamConfig.userId": { $ne: user._id } }, { $push: { teamConfig: { userId: user._id, canRegister: true, useProjectSchedule: true, ...campos } } });
+        // Otro pedido le creó la fila mientras tanto: se completa ésa.
+        if (!r.modifiedCount) await ponerEnLaFila();
+      }
+      cambiosDelEquipo.push({ userId: user._id, campo: "areas", antes: JSON.parse(firmaDeAreas(filaPrevia?.areaShiftAssignments)), despues: JSON.parse(firmaDeAreas(sanitizedAssignments)) });
+    }
     await registrarCambiosDelEquipo({
       tenantId: req.tenantObjectId,
       projectId: project._id,
@@ -4410,30 +4427,39 @@ router.patch(
 router.delete("/projects/:projectId/members/:userId", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const { projectId, userId } = req.params;
+    if (!Types.ObjectId.isValid(projectId) || !Types.ObjectId.isValid(userId)) return res.status(400).json({ error: "Invalid id" });
+
+    // Del tenant de quien pide: antes se filtraba sólo por id (30/10/2026).
+    const project: any = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("teamConfig").lean();
+    if (!project) return res.status(404).json({ error: "Project not found" });
+    const filaPrevia = (project.teamConfig || []).find((c: any) => String(c.userId) === String(userId));
 
     // 1. Update Project: remove from assignedUsers, teamConfig, and coordinatorAssignments
-    await Project.findByIdAndUpdate(projectId, {
-      $pull: { 
-        assignedUsers: userId,
-        teamConfig: { userId },
-        coordinatorAssignments: { userId }
-      }
+    await Project.updateOne({ _id: projectId, tenantId: req.tenantObjectId }, {
+      $pull: {
+        assignedUsers: new Types.ObjectId(userId),
+        teamConfig: { userId: new Types.ObjectId(userId) },
+        coordinatorAssignments: { userId: new Types.ObjectId(userId) },
+      },
     });
 
     // 2. Remove the UserProject document (it holds history and creates shift conflicts)
+    const vinculos: any[] = await UserProject.find({ projectId, userId }).select("_id").lean();
     await UserProject.deleteMany({ projectId, userId });
 
-    // 3. Update User: remove from projectIds and metadata.projects
-    await User.findByIdAndUpdate(userId, {
+    /*
+      3. La ficha: `metadata.projects` guarda los ids de los UserProject (no del proyecto). Antes se sacaba
+      `{ projectId }`, que no coincide con nada: quedaban referencias a vínculos borrados.
+    */
+    await User.updateOne({ _id: userId, tenantId: req.tenantObjectId }, {
       $pull: {
-        projectIds: projectId,
-        "metadata.projects": { projectId } // Pull from metadata projects if it matches the ID
-      }
+        projectIds: new Types.ObjectId(projectId),
+        "metadata.projects": { $in: vinculos.map((v) => v._id) },
+      },
     });
-    
-    // Some metadata.projects might be stored as ObjectIds or the UserProject ID itself. 
-    // Let's also pull by searching for any entry that might reference the now-deleted UserProject
-    // but the above usually covers the projectIds link.
+    if (filaPrevia?.areaShiftAssignments?.length) {
+      await registrarCambiosDelEquipo({ tenantId: req.tenantObjectId, projectId, porUserId: req.user?.userId, origen: "quitar-del-equipo", cambios: [{ userId, campo: "areas", antes: JSON.parse(firmaDeAreas(filaPrevia.areaShiftAssignments)), despues: [] }] });
+    }
 
     res.json({ message: "Member removed and data cleaned up successfully" });
   } catch (error) {

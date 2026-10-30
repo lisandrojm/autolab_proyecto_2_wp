@@ -1,24 +1,3 @@
-/**
- * ═══════════════════════════════════════════════════════════════════════
- * EL PLAN DE UN LOTE: qué solicitud sale de cada integrante de una plantilla de equipo
- * ═══════════════════════════════════════════════════════════════════════
- *
- * Es el corazón del alta masiva y es PURO: recibe la plantilla, las fechas de esta contratación, lo que
- * se pisó sólo esta vez y todo lo que hace falta saber de la base (el `Contexto`), y devuelve por
- * integrante sus jornadas, sus cuatro importes, sus errores y sus advertencias, más los `DatosSolicitud`
- * con los que se arma el payload. Lo usan igual `preview` (no escribe) y `contratar` (escribe si no hay
- * errores): por eso los dos no pueden diferir.
- *
- * LAS REGLAS SON LAS DEL FORMULARIO INDIVIDUAL (`UserRegistrationModal.handleSubmit`), una por una:
- * persona, roles, categoría (salvo servicios), área y turno, tipo de contrato (por puesto), tope de horas del
- * contrato, importe de servicios, convenio, categoría del convenio, reemplazo con reemplazado y motivo,
- * errores de jornadas. Y el cálculo es el mismo módulo (`compartido/jornadas.ts`). Lo único nuevo:
- *  - la persona tiene que existir y estar activa (en el individual se elige de una lista que ya filtra),
- *  - la persona reemplazada tiene que ser del equipo del proyecto (el individual sólo ofrece esos),
- *  - el aviso de que la escala cambió desde que se fijó a mano el importe de alguien.
- *
- * ERRORES frenan la contratación entera (el lote es todo o nada). ADVERTENCIAS se muestran y no frenan.
- */
 import { Importes } from "../compartido/jornadas.js";
 import { DatosSolicitud } from "../compartido/solicitudDeContratacion.js";
 export interface PlantillaParaPlan {
@@ -164,6 +143,8 @@ export interface Contexto {
     superposiciones: Map<string, AvisoDeSuperposicionPlan[]>;
     /** La sede principal del proyecto (`data.id`): la que lleva cada solicitud del lote, como en el alta individual. */
     sedePrincipal?: number | null;
+    /** Las áreas del proyecto (con sus turnos y sedes). Sin esto (pruebas), el área del puesto pasa sin revisar. */
+    areasConfig?: any[];
 }
 export interface FilaDelPlan {
     integranteId: string;

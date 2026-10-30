@@ -10,6 +10,9 @@ const updateUserProjectSchema = z.object({
 });
 // PATCH /user-projects/:id - Update project-specific metadata
 router.patch("/:id", requireTenant, authenticateToken, async (req, res) => {
+    // DESACTIVADO (30/10/2026): sin llamadas y sin control de permisos ni de tenant; cambiaba el área vieja del vínculo.
+    if (process.env.HABILITAR_USER_PROJECTS_PATCH !== "1")
+        return res.status(410).json({ error: "Este cambio ya no se usa." });
     try {
         const { id } = req.params;
         const data = updateUserProjectSchema.parse(req.body);

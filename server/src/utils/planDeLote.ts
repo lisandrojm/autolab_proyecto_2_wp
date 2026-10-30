@@ -19,6 +19,7 @@
  *
  * ERRORES frenan la contratación entera (el lote es todo o nada). ADVERTENCIAS se muestran y no frenan.
  */
+import { sedeParaGuardar } from "../compartido/areaTurno.js";
 import { derivarImportes, erroresDeJornadas, importePorJornada, mesesParaImportes, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo, Importes } from "../compartido/jornadas.js";
 import { DatosSolicitud } from "../compartido/solicitudDeContratacion.js";
 import { semanaDelTipoDeContrato } from "../compartido/diasDeTrabajo.js";
@@ -161,6 +162,8 @@ export interface Contexto {
   superposiciones: Map<string, AvisoDeSuperposicionPlan[]>;
   /** La sede principal del proyecto (`data.id`): la que lleva cada solicitud del lote, como en el alta individual. */
   sedePrincipal?: number | null;
+  /** Las áreas del proyecto (con sus turnos y sedes). Sin esto (pruebas), el área del puesto pasa sin revisar. */
+  areasConfig?: any[];
 }
 
 export interface FilaDelPlan {
@@ -241,7 +244,14 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
 
     const inTime = p.inTime || integ.inTime || "";
     const outTime = p.outTime || integ.outTime || "";
-    const areaShiftAssignments = integ.areaId && integ.shiftId ? [{ areaId: String(integ.areaId), shiftIds: [String(integ.shiftId)] }] : [];
+    /*
+      EL ÁREA DEL PUESTO, SI ES DE ESTE PROYECTO, Y CON SU SEDE (30/10/2026). Un equipo pasado a otro
+      proyecto podía arrastrar el área del puesto del proyecto anterior; y sin sede, en un área con varias
+      sedes la solicitud aprobada quedaba en «falta elegir sede».
+    */
+    const areaDelProyecto = !ctx.areasConfig || ctx.areasConfig.some((c: any) => String(c?.areaId?._id ?? c?.areaId) === String(integ.areaId));
+    const sedeDelArea = integ.areaId && ctx.areasConfig ? sedeParaGuardar(ctx.areasConfig as any, String(integ.areaId), undefined, ctx.sedePrincipal) : undefined;
+    const areaShiftAssignments = integ.areaId && integ.shiftId && areaDelProyecto ? [{ areaId: String(integ.areaId), shiftIds: [String(integ.shiftId)], ...(sedeDelArea ? { sedeId: sedeDelArea } : {}) }] : [];
     const categoriaSatId = esServicios ? "" : p.categoriaSatId || integ.categoriaSatId || "";
     const categoria = categoriaSatId ? ctx.categorias.get(categoriaSatId) : undefined;
 

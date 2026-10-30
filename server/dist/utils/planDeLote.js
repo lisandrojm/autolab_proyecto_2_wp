@@ -19,6 +19,7 @@
  *
  * ERRORES frenan la contratación entera (el lote es todo o nada). ADVERTENCIAS se muestran y no frenan.
  */
+import { sedeParaGuardar } from "../compartido/areaTurno.js";
 import { derivarImportes, erroresDeJornadas, importePorJornada, mesesParaImportes, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from "../compartido/jornadas.js";
 import { semanaDelTipoDeContrato } from "../compartido/diasDeTrabajo.js";
 import { tramiteSinConvenioNiCategoria } from "../compartido/tramiteSinEscala.js";
@@ -71,7 +72,14 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
         const limiteHoras = contrato?.horasPorJornada ?? null;
         const inTime = p.inTime || integ.inTime || "";
         const outTime = p.outTime || integ.outTime || "";
-        const areaShiftAssignments = integ.areaId && integ.shiftId ? [{ areaId: String(integ.areaId), shiftIds: [String(integ.shiftId)] }] : [];
+        /*
+          EL ÁREA DEL PUESTO, SI ES DE ESTE PROYECTO, Y CON SU SEDE (30/10/2026). Un equipo pasado a otro
+          proyecto podía arrastrar el área del puesto del proyecto anterior; y sin sede, en un área con varias
+          sedes la solicitud aprobada quedaba en «falta elegir sede».
+        */
+        const areaDelProyecto = !ctx.areasConfig || ctx.areasConfig.some((c) => String(c?.areaId?._id ?? c?.areaId) === String(integ.areaId));
+        const sedeDelArea = integ.areaId && ctx.areasConfig ? sedeParaGuardar(ctx.areasConfig, String(integ.areaId), undefined, ctx.sedePrincipal) : undefined;
+        const areaShiftAssignments = integ.areaId && integ.shiftId && areaDelProyecto ? [{ areaId: String(integ.areaId), shiftIds: [String(integ.shiftId)], ...(sedeDelArea ? { sedeId: sedeDelArea } : {}) }] : [];
         const categoriaSatId = esServicios ? "" : p.categoriaSatId || integ.categoriaSatId || "";
         const categoria = categoriaSatId ? ctx.categorias.get(categoriaSatId) : undefined;
         // ── Las fechas de esta persona ──

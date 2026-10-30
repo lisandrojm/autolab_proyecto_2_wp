@@ -3062,6 +3062,12 @@ router.get("/:id/solicitud/contrato", requireTenant, authenticateToken, requireP
 });
 // PUT /users/:id/approve-solicitud - Aprobar solicitud de alta y convertir en miembro del equipo
 router.put("/:id/approve-solicitud", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
+    /*
+      DESACTIVADO (30/10/2026): aprobación vieja, sin llamadas. Armaba un contrato sin área ni turno, con rol
+      vacío, y PISABA los vínculos con proyectos de la persona. Se aprueba con el formulario (assign-member).
+    */
+    if (process.env.HABILITAR_APROBACION_VIEJA !== "1")
+        return res.status(410).json({ error: "Esta forma de aprobar ya no se usa: se aprueba desde el formulario de la solicitud." });
     try {
         const userId = req.params.id;
         const { email, password, sueldo_jornada = 0, sueldo_mano = 0, nombre_contrato = "Tiempo Indeterminado", nombre_sede = "", observaciones = "", } = req.body;
