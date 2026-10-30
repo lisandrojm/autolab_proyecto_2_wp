@@ -270,6 +270,12 @@ export type Deteccion = {
     } | null;
 };
 /**
+ * Una firma en una página del medio no se puede mandar: el motor sólo navega a la primera o a la última.
+ * Es del DOCUMENTO, no de la pantalla: va a revisión antes de abrir el wizard. Si llegaba al motor, su
+ * rechazo contaba como falla de pantalla y cortaba la corrida cada 4 h con los mismos tres (30/10/2026).
+ */
+export declare function motivoPaginaIntermedia(c: Pick<Colocacion, "pagina" | "paginaIndex" | "totalPaginas">): string;
+/**
  * Resuelve dónde va la firma para ese archivo. Devuelve el campo (puntos PDF) con el ancla elegida y
  * TODO lo que se descartó con su motivo. Nunca devuelve una colocación para un tipo pendiente o
  * desconocido, ni sin ancla: no hay respaldo de pantalla.

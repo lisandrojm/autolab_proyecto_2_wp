@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { REGLAS_BASE, buscarTexto, coincidencias, colocacionDesdeMarcas, contienePalabra, deteccionDesdeDeclarada, distanciaARect, extenderAPalabra, motivoPorTipo, motivosDesactualizado, pdfAPantalla, pantallaAPdf, reglaDe, resolverColocacion, validarPunto, validarReglas, vecesFirmaEnPlantilla, type ColocacionDeclarada, type PaginaPdf, type ReglaColocacion } from "./reglasColocacionFirma.js";
+import { REGLAS_BASE, buscarTexto, coincidencias, colocacionDesdeMarcas, contienePalabra, deteccionDesdeDeclarada, distanciaARect, extenderAPalabra, motivoPaginaIntermedia, motivoPorTipo, motivosDesactualizado, pdfAPantalla, pantallaAPdf, reglaDe, resolverColocacion, validarPunto, validarReglas, vecesFirmaEnPlantilla, type ColocacionDeclarada, type PaginaPdf, type ReglaColocacion } from "./reglasColocacionFirma.js";
 
 const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), "../services/dropboxSignBot/fixtures");
 const fixture = (nombre: string): { archivo: string; firmante: string; paginas: PaginaPdf[] } => JSON.parse(readFileSync(resolve(FIXTURES, `${nombre}.json`), "utf8"));
@@ -341,5 +341,13 @@ describe("9. cuándo una verificación guardada quedó desactualizada", () => {
   });
   it("una de antes de guardar el hash, con más de un día, se avisa por la fecha", () => {
     assert.ok(motivosDesactualizado({ verificadaAt: new Date(Date.now() - 3 * 86400 * 1000) }, {}).length > 0);
+  });
+});
+
+describe("10. firma en una página del medio", () => {
+  it("es motivo de revisión del documento (no llega al motor)", () => {
+    assert.match(motivoPaginaIntermedia({ pagina: "otra", paginaIndex: 1, totalPaginas: 3 }), /página 2 de 3, una del medio/);
+    assert.equal(motivoPaginaIntermedia({ pagina: "ultima", paginaIndex: 2, totalPaginas: 3 }), "");
+    assert.equal(motivoPaginaIntermedia({ pagina: "primera", paginaIndex: 0 }), "");
   });
 });

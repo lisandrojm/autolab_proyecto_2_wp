@@ -9,7 +9,7 @@ import { leerAnclas } from "../../utils/anclasNombre.js";
 import { abrirOcr } from "../../utils/ocrPaginas.js";
 import { CONFIG_POR_DEFECTO, cortarPorFallosSeguidos, cupoDelDia, destinoDelIntento, estimarEnvios, fechaYHoraArgentina, intentosTrasLaCorrida, planificar, puedeCorrer, validarEncolado, INTENTOS_FALLIDOS_MAXIMOS } from "./planificador.js";
 import { esTextoDeLimite, guardDeEnvio } from "./reglas.js";
-import { motivosDesactualizado, pantallaAPdf, pdfAPantalla, reglaDe } from "../../compartido/reglasColocacionFirma.js";
+import { motivoPaginaIntermedia, motivosDesactualizado, pantallaAPdf, pdfAPantalla, reglaDe } from "../../compartido/reglasColocacionFirma.js";
 import { ContratoFrame } from "../../models/ContratoFrame.js";
 import { agruparTrabados, cupoVentana24h, estadoDelPanel, ordenPorRecientes } from "../../compartido/colaFirma.js";
 import { Release } from "../../models/Release.js";
@@ -331,8 +331,8 @@ async function correr(corrida, cc, config) {
                 try {
                     const d = await detectarParaArchivo(tenantId, { cfg, outbox: cola.outbox || "" }, c.archivo, reglas, { firmante: { nombre: c.firmante, email: c.email }, worker: worker || undefined });
                     await guardarResumen(tenantId, c.codigo, resumenDeArchivo(d, cambiadasAt));
-                    if (d.deteccion.ok === false) {
-                        const motivo = d.deteccion.motivo;
+                    if (d.deteccion.ok === false || motivoPaginaIntermedia(d.deteccion.colocacion)) {
+                        const motivo = d.deteccion.ok === false ? d.deteccion.motivo : motivoPaginaIntermedia(d.deteccion.colocacion);
                         corrida.lineas.push({ archivo: c.archivo, codigo: c.codigo, email: c.email, estado: "requiere_revision", detalle: motivo });
                         emitir({ tipo: "resultado", archivo: c.archivo, codigo: c.codigo, estado: "requiere_revision", texto: `requiere_revision: ${motivo}` });
                         await actualizarRegistro(tenantId, c.codigo, { estado: "requiere_revision", detalle: motivo });

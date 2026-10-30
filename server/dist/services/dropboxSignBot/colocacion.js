@@ -3,7 +3,7 @@ import { DropboxSignEnvio } from "../../models/DropboxSignEnvio.js";
 import { downloadFileContent } from "../dropboxService.js";
 import { leerAnclas } from "../../utils/anclasNombre.js";
 import { abrirOcr } from "../../utils/ocrPaginas.js";
-import { deteccionDesdeDeclarada, reglaDe, resolverColocacion } from "../../compartido/reglasColocacionFirma.js";
+import { deteccionDesdeDeclarada, motivoPaginaIntermedia, reglaDe, resolverColocacion } from "../../compartido/reglasColocacionFirma.js";
 import { Types } from "mongoose";
 import { DocumentoGenerado } from "../../models/DocumentoGenerado.js";
 import { sha256 } from "../colocacionDePlantilla.js";
@@ -168,7 +168,7 @@ export async function arrancarVerificacion(tenantId, alcance = "outbox") {
                     const resumen = resumenDeArchivo(d, cambiadasAt);
                     await guardarResumen(tenantId, d.codigo, resumen);
                     const det = d.deteccion;
-                    const motivo = det.ok === true ? (d.firmante ? "" : d.motivoSinFirmante || "No se pudo resolver al firmante en la base.") : det.motivo;
+                    const motivo = det.ok === true ? motivoPaginaIntermedia(det.colocacion) || (d.firmante ? "" : d.motivoSinFirmante || "No se pudo resolver al firmante en la base.") : det.motivo;
                     resultado = { archivo, codigo: d.codigo, tipo: d.tipo, estado: registro?.estado || "", firmante: d.firmante?.nombre || "", email: d.firmante?.email || "", ok: !motivo, pagina: resumen.pagina, rotulo: resumen.rotulo, fuente: resumen.fuente, motivo, ms: Date.now() - t0, verificadaAt: new Date().toISOString(), origen: d.origen };
                 }
                 catch (e) {

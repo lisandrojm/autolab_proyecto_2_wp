@@ -532,6 +532,15 @@ export type Deteccion =
   | { ok: false; motivo: string; descartados: Descartado[]; paginaIndex: number | null; tamanoPagina: { ancho: number; alto: number } | null };
 
 const paginaDe = (idx: number, total: number): Colocacion["pagina"] => (idx === 0 ? "primera" : idx === total - 1 ? "ultima" : "otra");
+/**
+ * Una firma en una página del medio no se puede mandar: el motor sólo navega a la primera o a la última.
+ * Es del DOCUMENTO, no de la pantalla: va a revisión antes de abrir el wizard. Si llegaba al motor, su
+ * rechazo contaba como falla de pantalla y cortaba la corrida cada 4 h con los mismos tres (30/10/2026).
+ */
+export function motivoPaginaIntermedia(c: Pick<Colocacion, "pagina" | "paginaIndex" | "totalPaginas">): string {
+  if (c.pagina !== "otra") return "";
+  return `El ancla está en la página ${c.paginaIndex + 1}${c.totalPaginas ? ` de ${c.totalPaginas}` : ""}, una del medio: el motor sólo navega a la primera o a la última. No se envía.`;
+}
 const resumenDeRect = (r: Rect) => `(${Math.round(r.x)}, ${Math.round(r.y)}) ${Math.round(r.w)}×${Math.round(r.h)} pt`;
 
 /** Lo que dice una columna debajo de un rectángulo (ítems que arrancan a la misma x, hasta `alto` pt más abajo). */
