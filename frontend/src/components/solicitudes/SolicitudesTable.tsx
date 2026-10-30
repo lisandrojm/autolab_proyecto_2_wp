@@ -578,7 +578,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                       {s.estado === "pendiente" ? (
                         <>
                           {/*
-                            «APROBAR» (verde, con tilde) Y «RECHAZAR» (rojo, con cruz), CON TEXTO: sólo con
+                            «APROBAR» (azul como los botones de acción, con tilde) Y «RECHAZAR» (rojo, con cruz), CON TEXTO: sólo con
                             los íconos no se entendía qué hacía cada uno (30/10/2026).
 
                             Aprobar no se resuelve con este click: abre el alta con lo que pidió la solicitud
@@ -586,7 +586,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                             eso el hover dice «Editar y aprobar».
                           */}
                           {onAprobar && (
-                            <button onClick={() => onAprobar(s)} className="px-2.5 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap" title="Editar y aprobar">
+                            <button onClick={() => onAprobar(s)} className="px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap" title="Editar y aprobar">
                               <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
                               Aprobar
                             </button>
