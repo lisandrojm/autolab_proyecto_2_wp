@@ -580,16 +580,15 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                       {s.estado === "pendiente" ? (
                         <>
                           {/*
-                            EL LÁPIZ (no un tilde) PORQUE ESO ES LO QUE HACE: «Editar para aprobar».
+                            TILDE VERDE = «Editar para aprobar» (pedido del 30/10/2026; antes era un lápiz).
 
                             Aprobar no se resuelve con este click: abre el alta con lo que pidió la solicitud
-                            para completar contrato, área y turno, y recién al guardar ahí queda aprobada. Con
-                            un tilde parecía la decisión final —y quien lo tocaba creía haber aprobado algo que
-                            seguía pendiente si cerraba el formulario—. Sólo íconos, con el texto en el title.
+                            para completar contrato, área y turno, y recién al guardar ahí queda aprobada. Por
+                            eso el title lo dice. Sólo íconos, con el texto en el title.
                           */}
                           {onAprobar && (
-                            <button onClick={() => onAprobar(s)} className="p-1.5 rounded text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors" title={`Editar para aprobar${tituloAprobar ? ` · ${tituloAprobar(s)}` : ""}`} aria-label="Editar para aprobar">
-                              <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                            <button onClick={() => onAprobar(s)} className="p-1.5 rounded text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors" title={`Editar para aprobar${tituloAprobar ? ` · ${tituloAprobar(s)}` : ""}`} aria-label="Editar para aprobar">
+                              <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                             </button>
                           )}
                           <button onClick={() => onRechazar(s)} className="p-1.5 rounded text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Rechazar solicitud" aria-label="Rechazar solicitud">
