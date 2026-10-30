@@ -1287,8 +1287,9 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
       const contratoActivo = contratoDe.get(String(member._id));
       if (!contratoActivo || !esContratoVigente(contratoActivo, hoy)) continue;
 
-      let assignments: any[] = configByUser.get(String(member._id))?.areaShiftAssignments || [];
-      if (assignments.length === 0) assignments = contratoActivo.areaShiftAssignments || [];
+      // El equipo es la verdad (30/10/2026): una fila vacía es «sin área». El contrato sólo para quien no tiene fila.
+      const fila = configByUser.get(String(member._id));
+      const assignments: any[] = fila ? fila.areaShiftAssignments || [] : contratoActivo.areaShiftAssignments || [];
 
       // Un miembro cuenta UNA vez por combinación, aunque la tenga repetida en sus asignaciones. Con la fila
       // (sede) donde está, explícita: quien «falta elegir sede» no suma en ninguna (ver `sedeEnArea`).
@@ -1355,8 +1356,9 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
     for (const member of members) {
       const contratoActivo = contratoDe.get(String(member._id)) || null;
 
-      let assignments: any[] = configByUser.get(String(member._id))?.areaShiftAssignments || [];
-      if (assignments.length === 0) assignments = contratoActivo?.areaShiftAssignments || [];
+      // El equipo es la verdad (30/10/2026): una fila vacía es «sin área». El contrato sólo para quien no tiene fila.
+      const fila = configByUser.get(String(member._id));
+      const assignments: any[] = fila ? fila.areaShiftAssignments || [] : contratoActivo?.areaShiftAssignments || [];
       const ctxSede = { areasConfig: (project as any).areasConfig, sedePrincipal: sedePrincipalDe((project as any).metadata) };
       const keys = claveAreaTurnoDelMiembro(assignments, ctxSede);
 

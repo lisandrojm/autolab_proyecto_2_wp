@@ -105,6 +105,15 @@ const combosDeContrato = (c: any): { areaId: string; shiftIds: string[]; sedeId?
   return idDe(c.areaId) && idDe(c.shiftId) ? [{ areaId: idDe(c.areaId), shiftIds: [idDe(c.shiftId)] }] : [];
 };
 
+/**
+ * Las combinaciones área/turno de la PERSONA en el proyecto: las de su fila del equipo —el equipo es la
+ * verdad (30/10/2026)— y las del contrato sólo si no tiene fila. Antes eran siempre las del contrato que
+ * vence: a quien se había movido de área lo seguía viendo el coordinador del área vieja, y la renovación
+ * le proponía esa área.
+ */
+const combosDelMiembro = (fila: any, c: any): { areaId: string; shiftIds: string[]; sedeId?: number }[] =>
+  fila ? combosDeContrato({ areaShiftAssignments: fila.areaShiftAssignments || [] }) : combosDeContrato(c);
+
 // Lo que se lee de cada contrato. Los contratos cargan documentación y firmas: traerlos enteros pesa.
 const CAMPOS_CONTRATO = ["fecha_alta_contrato", "fecha_baja_contrato", "nombre_contrato", "nombre_rol_frame", "rol_frame_id", "nombre_area", "nombre_turno", "areaId", "shiftId", "areaShiftAssignments", "hora_inicio", "hora_fin", "sueldo_jornada", "dias_por_semana", "dias_semana", "dias_rotativos", "empresaContratoId", "sede_id"];
 
@@ -164,6 +173,10 @@ async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: 
   }
   const projectIds = [...new Set([...supervisa, ...coordina.keys()])];
   if (projectIds.length === 0) return [];
+  // La fila del equipo de cada persona en cada proyecto (sólo área/turno: es lo que se lee).
+  const filaDelEquipo = new Map<string, any>();
+  for (const p of (await Project.find({ _id: { $in: projectIds.map((id) => new Types.ObjectId(id)) } }).select("teamConfig.userId teamConfig.areaShiftAssignments").lean()) as any[])
+    for (const f of p.teamConfig || []) filaDelEquipo.set(`${p._id}:${f.userId}`, f);
   const t1 = Date.now();
 
   /*
@@ -201,7 +214,7 @@ async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: 
       if (contratos.some((o) => o !== c && fechaISO(o.fecha_alta_contrato) > baja)) continue;
       if (!supervisa.has(pid)) {
         const mios = coordina.get(pid);
-        const suyos = [...clavesDelMiembro(combosDeContrato(c), { areasConfig: areasDe.get(pid), sedePrincipal: principalDe.get(pid) })];
+        const suyos = [...clavesDelMiembro(combosDelMiembro(filaDelEquipo.get(`${pid}:${up.userId}`), c), { areasConfig: areasDe.get(pid), sedePrincipal: principalDe.get(pid) })];
         if (!mios || !suyos.some((k) => mios.has(k))) continue;
       }
       candidatos.push({ up, c, alta, baja, pid, indice });
@@ -213,7 +226,7 @@ async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: 
   }
 
   // 3. Lo ya resuelto y los nombres, todo junto: son consultas independientes.
-  const combos = candidatos.map((x) => combosDeContrato(x.c)[0]);
+  const combos = candidatos.map((x) => combosDelMiembro(filaDelEquipo.get(`${x.pid}:${x.up.userId}`), x.c)[0]);
   const [decisiones, personas, proyectos, areas, turnos, roles] = await Promise.all([
     RenovacionContrato.find({ tenantId: tenant, userProjectId: { $in: candidatos.map((x) => x.up._id) } }).lean() as Promise<any[]>,
     User.find({ _id: { $in: candidatos.map((x) => x.up.userId) } }).select("firstName lastName metadata.fullName metadata.roles_frame").lean(),
@@ -290,7 +303,7 @@ async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: 
           schedule: horario || undefined,
           dailyRate: c.sueldo_jornada || undefined,
           empresaContratoId: c.empresaContratoId ? String(c.empresaContratoId) : undefined,
-          areaShiftAssignments: combosDeContrato(c),
+          areaShiftAssignments: combosDelMiembro(filaDelEquipo.get(`${pid}:${up.userId}`), c),
         },
       },
     });

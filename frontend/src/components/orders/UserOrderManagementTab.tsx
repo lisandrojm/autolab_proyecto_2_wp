@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { rolDelMiembroHoy } from '@compartido/configDelEquipo';
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch, faFilter, faSpinner, faSave, faCalendarAlt, faClipboardList, faUndo } from "@fortawesome/free-solid-svg-icons";
@@ -206,27 +207,9 @@ export const UserOrderManagementTab: React.FC = () => {
     return contractType;
   };
 
+  // Misma regla que el server (`rolDelMiembroHoy`): el rol del EQUIPO donde rige su contrato.
   const getActiveRoleFrame = (balance: UserOrderBalance): string => {
-    let roleFrame = "Sin rol frame";
-    if (balance.metadata?.projects) {
-      const now = new Date().getTime();
-      balance.metadata.projects.forEach((p: any) => {
-        if (p.contracts) {
-          p.contracts.forEach((c: any) => {
-            const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
-            if (endDate) endDate.setHours(23, 59, 59, 999);
-            const isActive = !endDate || endDate.getTime() >= now;
-            if (isActive && c.nombre_rol_frame) {
-              roleFrame = c.nombre_rol_frame;
-            }
-          });
-        }
-        if (roleFrame === "Sin rol frame" && p.nombre_rol_frame) {
-          roleFrame = p.nombre_rol_frame;
-        }
-      });
-    }
-    return roleFrame;
+    return rolDelMiembroHoy((balance.metadata?.projects || []) as any[], new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' })) || 'Sin rol frame';
   };
 
   const filterBalances = () => {

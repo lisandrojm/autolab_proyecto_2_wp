@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { rolDelMiembroHoy } from '@compartido/configDelEquipo';
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faSave, faCalendarAlt, faCircleInfo, faChevronDown, faChevronRight, faFileContract } from "@fortawesome/free-solid-svg-icons";
@@ -449,29 +450,10 @@ export const UserVacationManagementTab: React.FC = () => {
     return c ? c.nombre_contrato || c.tipo_contrato || null : null;
   };
 
+  // Misma regla que el server (`rolDelMiembroHoy`): el rol del EQUIPO donde rige su contrato.
   const getActiveRoleFrame = (balance: UserVacationBalance): string => {
-    // Lo resuelve el server con esta misma regla; lo de abajo queda para una respuesta vieja.
     if (balance.rolEmpresa) return balance.rolEmpresa;
-    let roleFrame = "Sin rol empresa";
-    if (balance.metadata?.projects) {
-      const now = new Date().getTime();
-      balance.metadata.projects.forEach((p: any) => {
-        if (p.contracts) {
-          p.contracts.forEach((c: any) => {
-            const endDate = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
-            if (endDate) endDate.setHours(23, 59, 59, 999);
-            const isActive = !endDate || endDate.getTime() >= now;
-            if (isActive && c.nombre_rol_frame) {
-              roleFrame = c.nombre_rol_frame;
-            }
-          });
-        }
-        if (roleFrame === "Sin rol empresa" && p.nombre_rol_frame) {
-          roleFrame = p.nombre_rol_frame;
-        }
-      });
-    }
-    return roleFrame;
+    return rolDelMiembroHoy((balance.metadata?.projects || []) as any[], new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' })) || 'Sin rol empresa';
   };
 
   const filterBalances = () => {

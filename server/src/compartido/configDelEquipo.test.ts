@@ -69,3 +69,23 @@ describe("qué escribe un guardado en el equipo", () => {
     assert.equal(firmaDeAreas([{ areaId: { _id: AREA }, shiftIds: [TURNO_NOCHE, TURNO_TARDE] }]), firmaDeAreas([{ areaId: AREA, shiftIds: [TURNO_TARDE, { _id: TURNO_NOCHE }] }]));
   });
 });
+
+describe("fase 2: una sola regla para leer", () => {
+  it("el rol de hoy: el del EQUIPO del proyecto donde rige el contrato, no el del contrato ni el de otro proyecto", async () => {
+    const { rolDelMiembroHoy, rolDelMiembro } = await import("./configDelEquipo.js");
+    const vinculos = [
+      { nombre_rol_frame: "Peinador", contracts: [{ fecha_alta_contrato: "2026-10-30", fecha_baja_contrato: "2026-10-30", nombre_rol_frame: "Maquillador" }] },
+      { nombre_rol_frame: "Asistente", contracts: [{ fecha_alta_contrato: "01/01/2026", fecha_baja_contrato: "31/12/2025", nombre_rol_frame: "Asistente" }] },
+    ];
+    assert.equal(rolDelMiembroHoy(vinculos, "2026-10-30"), "Peinador");
+    // Terminada la jornada, no cambia a otro rol de contrato: queda el del equipo con rol.
+    assert.equal(rolDelMiembroHoy(vinculos, "2026-11-02"), "Asistente");
+    assert.equal(rolDelMiembro("Sin rol frame", "Maquillador"), "Maquillador");
+  });
+  it("las asignaciones: la fila del equipo aunque esté vacía; el contrato sólo sin fila", async () => {
+    const { asignacionesDelMiembro } = await import("../utils/areaTurno.js");
+    const contrato = { areaShiftAssignments: [{ areaId: AREA, shiftIds: [TURNO_TARDE] }] };
+    assert.deepEqual(asignacionesDelMiembro({ areaShiftAssignments: [] }, contrato), []);
+    assert.deepEqual(asignacionesDelMiembro(undefined, contrato), contrato.areaShiftAssignments);
+  });
+});

@@ -34,15 +34,15 @@ export async function ponerSedeEnArea(
 
   const config: any[] = project.teamConfig || [];
   const porUsuario = new Map<string, any>(config.map((c: any) => [String(c.userId), c]));
-  // Sólo hace falta el contrato de quien no tiene asignaciones propias en `teamConfig`.
-  const sinPropias = ids.filter((id) => !(porUsuario.get(id)?.areaShiftAssignments || []).length);
+  // Sólo hace falta el contrato de quien no tiene fila en `teamConfig` (una fila vacía es «sin área»).
+  const sinPropias = ids.filter((id) => !porUsuario.get(id));
   const contratoDe = sinPropias.length > 0 ? await contratosQueRigenDelProyecto(String(project._id), hoyArgentina()) : new Map<string, any>();
 
   let cambiadas = 0;
   for (const id of ids) {
     const entrada = porUsuario.get(id);
     const propias: any[] = entrada?.areaShiftAssignments || [];
-    const base: any[] = propias.length > 0 ? propias : contratoDe.get(id)?.areaShiftAssignments || [];
+    const base: any[] = entrada ? propias : contratoDe.get(id)?.areaShiftAssignments || [];
     if (!base.some((a) => idDe(a?.areaId) === areaId)) continue;
 
     let cambio = false;

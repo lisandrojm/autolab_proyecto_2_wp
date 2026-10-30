@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 
+import { rolDelMiembroHoy } from '@compartido/configDelEquipo';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner, faCalendar, faShoppingCart, faListCheck, faTable, faGrip, faFileArrowUp, faTriangleExclamation, faClock, faCheckCircle, faTimesCircle, faTruck, faBan, faTimes, faFilePdf, faDownload, faTrash, faCheck, faFileSignature, faChartSimple, faBell } from "@fortawesome/free-solid-svg-icons";
 import { hrManagementAPI, Order } from "../api/management";
@@ -585,7 +586,8 @@ export const OrdersPage: React.FC = () => {
     if (!user || typeof user === "string") return <span className="text-xs text-gray-500">-</span>;
 
     if (user.metadata?.projects?.length > 0) {
-      const role = user.metadata.projects[0]?.nombre_rol_frame;
+      // El rol del equipo donde rige su contrato, no el del primer proyecto de la lista.
+      const role = rolDelMiembroHoy(user.metadata.projects as any[], new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' })) || user.metadata.projects[0]?.nombre_rol_frame;
       if (role) {
         return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-300">{role}</span>;
       }

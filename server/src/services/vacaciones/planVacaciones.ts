@@ -6,6 +6,7 @@ import UserProject from "../../models/UserProject.js";
 import { Area } from "../../models/Area.js";
 import { Shift } from "../../models/Shift.js";
 import { RoleFrame } from "../../models/RoleFrame.js";
+import { rolDelMiembro } from "../../compartido/configDelEquipo.js";
 import { Vacation } from "../../models/Vacation.js";
 import { VacationConfig } from "../../models/VacationConfig.js";
 import { Notification } from "../../models/Notification.js";
@@ -91,6 +92,11 @@ export async function equipoParaPlan(tenantObjectId: Types.ObjectId, tenantId: s
   const configByUser = new Map<string, any>((project.teamConfig || []).map((c: any) => [String(c.userId), c]));
   const vinculos: any[] = await UserProject.find({ projectId: project._id, userId: { $in: members.map((m: any) => m._id) } }).select("userId rol_frame_id nombre_rol_frame").lean();
   const vinculoDe = new Map(vinculos.map((v) => [String(v.userId), v]));
+  // El id numérico del rol del equipo cuando no es el del contrato (las reglas de solapamiento van por id).
+  const nombresDeRol = [...new Set(vinculos.map((v) => String(v.nombre_rol_frame || "").trim()).filter(Boolean))];
+  const idDeRolPorNombre = new Map<string, number>(
+    ((await RoleFrame.find({ name: { $in: nombresDeRol } }).select("name data.rol.id").lean()) as any[]).filter((r) => r.data?.rol?.id != null).map((r) => [String(r.name).trim(), Number(r.data.rol.id)]),
+  );
 
   type Crudo = { user: any; contrato: any; claves: string[]; rolNumerico: number | null; nombreRol: string };
   const crudos: Crudo[] = [];
@@ -105,8 +111,12 @@ export async function equipoParaPlan(tenantObjectId: Types.ObjectId, tenantId: s
       continue;
     }
     const v = vinculoDe.get(String(m._id));
-    const rolNumerico = Number.isFinite(Number(contrato.rol_frame_id)) && contrato.rol_frame_id != null ? Number(contrato.rol_frame_id) : Number.isFinite(Number(v?.rol_frame_id)) && v?.rol_frame_id != null ? Number(v.rol_frame_id) : null;
-    const nombreRol = String(contrato.nombre_rol_frame || v?.nombre_rol_frame || "").trim() || "Sin rol empresa";
+    // El rol del EQUIPO primero, el del contrato si el equipo no tiene (`rolDelMiembro`, 30/10/2026): con el
+    // del contrato primero, una jornada con otro rol lo cambiaba de grupo.
+    const nombreRol = rolDelMiembro(v?.nombre_rol_frame, contrato.nombre_rol_frame) || "Sin rol empresa";
+    const delContrato = Number.isFinite(Number(contrato.rol_frame_id)) && contrato.rol_frame_id != null ? Number(contrato.rol_frame_id) : null;
+    const delVinculo = Number.isFinite(Number(v?.rol_frame_id)) && v?.rol_frame_id != null ? Number(v.rol_frame_id) : null;
+    const rolNumerico = nombreRol === String(contrato.nombre_rol_frame || "").trim() && delContrato != null ? delContrato : delVinculo ?? idDeRolPorNombre.get(nombreRol) ?? delContrato;
     crudos.push({ user: m, contrato, claves, rolNumerico, nombreRol });
   }
 

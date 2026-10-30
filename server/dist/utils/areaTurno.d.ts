@@ -12,7 +12,11 @@ import { type ContextoDeSede } from "../compartido/areaTurno.js";
  * combinación lleva la fila donde está la persona; las que «faltan elegir sede» no dan clave.
  */
 export declare function claveAreaTurnoDelMiembro(assignments: any[], ctx?: ContextoDeSede): Set<string>;
-/** Las asignaciones que valen para el miembro: `teamConfig` primero, el contrato después. */
+/**
+ * Las asignaciones que valen para el miembro: las de su fila de `teamConfig` —vacía es «sin área»— y el
+ * contrato sólo si no tiene fila (30/10/2026). Antes una fila vacía caía al contrato que rige, que cambia
+ * con el calendario: el área «se cambiaba sola», y quien se pasaba a «Sin asignar» volvía a aparecer.
+ */
 export declare function asignacionesDelMiembro(configDelMiembro: any, contrato: any): any[];
 /** Separa una clave "areaId::shiftId[::s<sede>]". */
 export declare function partirClave(clave: string): {

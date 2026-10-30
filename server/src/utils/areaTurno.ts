@@ -17,10 +17,13 @@ export function claveAreaTurnoDelMiembro(assignments: any[], ctx?: ContextoDeSed
   return clavesDelMiembro(assignments, ctx);
 }
 
-/** Las asignaciones que valen para el miembro: `teamConfig` primero, el contrato después. */
+/**
+ * Las asignaciones que valen para el miembro: las de su fila de `teamConfig` —vacía es «sin área»— y el
+ * contrato sólo si no tiene fila (30/10/2026). Antes una fila vacía caía al contrato que rige, que cambia
+ * con el calendario: el área «se cambiaba sola», y quien se pasaba a «Sin asignar» volvía a aparecer.
+ */
 export function asignacionesDelMiembro(configDelMiembro: any, contrato: any): any[] {
-  const deConfig: any[] = configDelMiembro?.areaShiftAssignments || [];
-  if (deConfig.length > 0) return deConfig;
+  if (configDelMiembro) return configDelMiembro.areaShiftAssignments || [];
   return contrato?.areaShiftAssignments || [];
 }
 

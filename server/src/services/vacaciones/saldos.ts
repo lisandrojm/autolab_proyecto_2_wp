@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { rolDelMiembroHoy } from "../../compartido/configDelEquipo.js";
 import { Vacation } from "../../models/Vacation.js";
 import { VacationConfig } from "../../models/VacationConfig.js";
 import { User } from "../../models/User.js";
@@ -118,19 +119,13 @@ export async function saldosDeVacaciones(tenantId: any, tenantObjectId: any, sel
    * columna dice con qué rol figura HOY, y eso lo fija el contrato cuando lo hay; la ficha es lo
    * declarado de la persona, que sólo alcanza cuando no hay nada contratado que lo diga.
    */
+  // Desde el 30/10/2026 manda el rol del EQUIPO del proyecto donde rige su contrato (`rolDelMiembroHoy`):
+  // con el del último contrato, terminar una jornada cambiaba el rol que se veía.
+  const hoyRol = hoyArgentina();
   const rolEmpresaDe = (misVinculos: any[], rolesPropios: { nombre: string }[]): string => {
-    let rol = "Sin rol empresa";
-    const ahora = Date.now();
-    for (const v of misVinculos) {
-      for (const c of v.contracts || []) {
-        const baja = c.fecha_baja_contrato ? new Date(c.fecha_baja_contrato) : null;
-        if (baja) baja.setHours(23, 59, 59, 999);
-        if ((!baja || baja.getTime() >= ahora) && c.nombre_rol_frame) rol = c.nombre_rol_frame;
-      }
-      if (rol === "Sin rol empresa" && v.nombre_rol_frame) rol = v.nombre_rol_frame;
-    }
-    if (rol === "Sin rol empresa" && rolesPropios.length) rol = rolesPropios.map((r) => r.nombre).join(", ");
-    return rol;
+    const rol = rolDelMiembroHoy(misVinculos, hoyRol);
+    if (rol) return rol;
+    return rolesPropios.length ? rolesPropios.map((r) => r.nombre).join(", ") : "Sin rol empresa";
   };
 
   // 2. Fetch all overrides for the selected year

@@ -86,3 +86,20 @@ export declare function horarioAlElegirTurno(p: {
     hora_inicio: string;
     hora_fin: string;
 } | null;
+/** El rol de un miembro en UN proyecto: el del equipo y, si no tiene, el del contrato (decisión del 30/10/2026). */
+export declare function rolDelMiembro(rolEquipo: string | null | undefined, rolContrato: string | null | undefined): string;
+/**
+ * EL ROL CON QUE FIGURA HOY UNA PERSONA, mirando todos sus proyectos (vacaciones, pedidos). Antes era el
+ * rol del último contrato no vencido de cualquier proyecto, en el orden del array: cambiaba cuando
+ * terminaba una jornada y podía mostrar el de otro proyecto. Ahora: el proyecto donde tiene el contrato
+ * vigente más reciente, y ahí el rol del EQUIPO (el del contrato sólo si el equipo no tiene). Sin nada
+ * vigente, el rol del equipo del último proyecto que lo tenga. "" si no hay ninguno.
+ */
+export declare function rolDelMiembroHoy(vinculos: Array<{
+    nombre_rol_frame?: string;
+    contracts?: Array<{
+        fecha_alta_contrato?: any;
+        fecha_baja_contrato?: any;
+        nombre_rol_frame?: string;
+    }>;
+}> | null | undefined, hoy: string): string;

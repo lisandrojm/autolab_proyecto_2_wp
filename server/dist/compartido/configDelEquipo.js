@@ -84,3 +84,47 @@ export function horarioAlElegirTurno(p) {
         return null;
     return { hora_inicio: p.turnoNuevo.startTime, hora_fin: p.turnoNuevo.endTime };
 }
+/** "YYYY-MM-DD" de una fecha guardada como ISO, "DD/MM/YYYY" o Date; "" si no se entiende. */
+function diaDe(v) {
+    if (!v)
+        return "";
+    if (v instanceof Date)
+        return isNaN(v.getTime()) ? "" : v.toISOString().slice(0, 10);
+    const t = String(v).trim();
+    const dmy = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(t);
+    if (dmy)
+        return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
+    const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(t);
+    return iso ? iso[0] : "";
+}
+/** El rol de un miembro en UN proyecto: el del equipo y, si no tiene, el del contrato (decisión del 30/10/2026). */
+export function rolDelMiembro(rolEquipo, rolContrato) {
+    if (tieneRol(rolEquipo))
+        return String(rolEquipo).trim();
+    return tieneRol(rolContrato) ? String(rolContrato).trim() : "";
+}
+/**
+ * EL ROL CON QUE FIGURA HOY UNA PERSONA, mirando todos sus proyectos (vacaciones, pedidos). Antes era el
+ * rol del último contrato no vencido de cualquier proyecto, en el orden del array: cambiaba cuando
+ * terminaba una jornada y podía mostrar el de otro proyecto. Ahora: el proyecto donde tiene el contrato
+ * vigente más reciente, y ahí el rol del EQUIPO (el del contrato sólo si el equipo no tiene). Sin nada
+ * vigente, el rol del equipo del último proyecto que lo tenga. "" si no hay ninguno.
+ */
+export function rolDelMiembroHoy(vinculos, hoy) {
+    let mejor = null;
+    for (const v of vinculos || []) {
+        for (const c of v?.contracts || []) {
+            const alta = diaDe(c.fecha_alta_contrato);
+            const baja = diaDe(c.fecha_baja_contrato);
+            if ((alta && alta > hoy) || (baja && baja < hoy))
+                continue;
+            const rol = rolDelMiembro(v.nombre_rol_frame, c.nombre_rol_frame);
+            if (rol && (!mejor || alta >= mejor.alta))
+                mejor = { alta, rol };
+        }
+    }
+    if (mejor)
+        return mejor.rol;
+    const conRol = (vinculos || []).filter((v) => tieneRol(v?.nombre_rol_frame));
+    return conRol.length ? String(conRol[conRol.length - 1].nombre_rol_frame).trim() : "";
+}

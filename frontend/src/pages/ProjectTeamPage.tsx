@@ -1864,7 +1864,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     }
 
     // 2. Check user's contract history fallback
-    if (shifts.length === 0) {
+    // Sólo si no tiene fila en el equipo: una fila (aunque vacía) es la verdad.
+    if (shifts.length === 0 && !userConfig) {
       if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
         const fallbackAssign = activeContract.areaShiftAssignments.find((a: any) => {
           const aid = typeof a.areaId === 'object' ? a.areaId?._id : a.areaId;
@@ -3053,8 +3054,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const config = teamConfig.find((c) => String(c.userId) === String(memberId));
     const member = teamMembers.find((m) => String(m._id) === String(memberId));
     const lastContract = member ? getActiveContract(member) : null;
-    let assignments: any[] = config?.areaShiftAssignments || [];
-    if (assignments.length === 0) assignments = lastContract?.areaShiftAssignments || [];
+    // Misma regla que el server (`asignacionesDelMiembro`): la fila del equipo, aunque esté vacía; el contrato si no hay fila.
+    const assignments: any[] = config ? config.areaShiftAssignments || [] : lastContract?.areaShiftAssignments || [];
     return (assignments || []).map((a: any) => {
       const areaId = String(a.areaId?._id || a.areaId || '');
       return {
@@ -3347,7 +3348,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             }
 
             // 1b. Alternative: Check last contract in projects metadata (backup source)
-            if (areaData.length === 0 && activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
+            // Sólo si no tiene fila en el equipo: una fila vacía es «sin área» (el contrato que rige cambia con el calendario).
+            if (areaData.length === 0 && !config && activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {
               areaData = activeContract.areaShiftAssignments
                 .map((asa: any) => {
                   const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
@@ -3371,8 +3373,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                 .filter(Boolean) as { id: string; name: string }[];
             }
 
-            // 3. Fallback: Global user area (legacy/basic)
-            if (areaData.length === 0) {
+            // 3. Fallback: Global user area (legacy/basic). Sólo sin fila en el equipo (una fila vacía es «sin área»).
+            if (areaData.length === 0 && !config) {
               const userAreaId = typeof user.areaId === 'object' ? user.areaId?._id : user.areaId;
               const userAreaName = typeof user.areaId === 'object' ? user.areaId?.name : allAreas.find((a) => String(a._id) === String(userAreaId))?.name;
               if (userAreaId && userAreaName) {
@@ -4172,7 +4174,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               }
 
               // 3. Check user's contract history (metadata) fallback
-              if (shifts.length === 0) {
+              if (shifts.length === 0 && !userConfig) {
                 const activeContract = contratoQueRige(user, project?._id);
 
                 if (activeContract?.areaShiftAssignments && activeContract.areaShiftAssignments.length > 0) {

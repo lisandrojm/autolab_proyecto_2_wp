@@ -1203,9 +1203,9 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
             const contratoActivo = contratoDe.get(String(member._id));
             if (!contratoActivo || !esContratoVigente(contratoActivo, hoy))
                 continue;
-            let assignments = configByUser.get(String(member._id))?.areaShiftAssignments || [];
-            if (assignments.length === 0)
-                assignments = contratoActivo.areaShiftAssignments || [];
+            // El equipo es la verdad (30/10/2026): una fila vacía es «sin área». El contrato sólo para quien no tiene fila.
+            const fila = configByUser.get(String(member._id));
+            const assignments = fila ? fila.areaShiftAssignments || [] : contratoActivo.areaShiftAssignments || [];
             // Un miembro cuenta UNA vez por combinación, aunque la tenga repetida en sus asignaciones. Con la fila
             // (sede) donde está, explícita: quien «falta elegir sede» no suma en ninguna (ver `sedeEnArea`).
             for (const key of claveAreaTurnoDelMiembro(assignments, { areasConfig: project.areasConfig, sedePrincipal: sedePrincipalDe(project.metadata) })) {
@@ -1264,9 +1264,9 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
         const rows = [];
         for (const member of members) {
             const contratoActivo = contratoDe.get(String(member._id)) || null;
-            let assignments = configByUser.get(String(member._id))?.areaShiftAssignments || [];
-            if (assignments.length === 0)
-                assignments = contratoActivo?.areaShiftAssignments || [];
+            // El equipo es la verdad (30/10/2026): una fila vacía es «sin área». El contrato sólo para quien no tiene fila.
+            const fila = configByUser.get(String(member._id));
+            const assignments = fila ? fila.areaShiftAssignments || [] : contratoActivo?.areaShiftAssignments || [];
             const ctxSede = { areasConfig: project.areasConfig, sedePrincipal: sedePrincipalDe(project.metadata) };
             const keys = claveAreaTurnoDelMiembro(assignments, ctxSede);
             // Turnos que la persona tiene en esta fila (área + sede), acotados a los pedidos (los que coordina quien abre el detalle).
