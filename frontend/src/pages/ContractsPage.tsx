@@ -36,6 +36,7 @@ import { firmaDigitalAPI, FirmaDigitalConfig } from '../api/firmaDigital';
 import { MOBILE_ACTIVITY_LOGS as PERMISO_NOVEDADES_MOBILE } from '../utils/permisosMobile';
 import { arcaRelacionesAPI, EmpresaConCuit, RelacionResumida } from '../api/arcaRelaciones';
 import { CeldaContratosArca } from '../components/arca/CeldaContratosArca';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 /*
   Filtro por lo que la persona PUEDE HACER en la app, no por cómo se llama su rol.
@@ -688,206 +689,204 @@ export const ContractsPage: React.FC = () => {
           ) : rows.length === 0 ? (
             <EmptyState title="No se encontraron contratos" description={searchTerm ? 'Intenta con otros términos de búsqueda.' : 'No hay registros de contratos en el sistema.'} icon={faFileContract} />
           ) : effectiveViewMode === 'table' ? (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-              <div className="overflow-x-auto custom-scrollbar min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-1.5rem)]">
-                <table className="w-full text-left border-collapse min-w-[3010px]">
-                  <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
-                    <tr className="border-b border-gray-100 dark:border-gray-800">
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                        <BotonOrden columna="usuario" {...ordenProps}>
-                          Colaborador
-                        </BotonOrden>
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                        <BotonOrden columna="cuit" {...ordenProps}>
-                          CUIT
-                        </BotonOrden>
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center bg-gray-50 dark:bg-gray-900">
-                        <BotonOrden columna="contratos" {...ordenProps}>
-                          Contratos
-                        </BotonOrden>
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Las relaciones laborales que ARCA tiene de la persona, de la más nueva a la más vieja (última sincronización)">
-                        Contratos en ARCA
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                        <BotonOrden columna="cliente" {...ordenProps}>
-                          Cliente
-                        </BotonOrden>
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                        <BotonOrden columna="proyecto" {...ordenProps}>
-                          Proyecto
-                        </BotonOrden>
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Rol/es</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                        <BotonOrden columna="rolEmpresa" {...ordenProps}>
-                          Rol/es Empresa
-                        </BotonOrden>
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                        <BotonOrden columna="estado" {...ordenProps}>
-                          Estado
-                        </BotonOrden>
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Área / Turno</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Sede</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                        <BotonOrden columna="contrato" {...ordenProps}>
-                          Contrato
-                        </BotonOrden>
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                        <BotonOrden columna="estadoContrato" {...ordenProps}>
-                          Estado Contrato
-                        </BotonOrden>
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Impositivo</th>
-                      <ContractDocsHeaders />
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                        <BotonOrden columna="reemplazo" {...ordenProps}>
-                          Reemplazo
-                        </BotonOrden>
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                        <BotonOrden columna="altaBaja" {...ordenProps}>
-                          Alta / Baja
-                        </BotonOrden>
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right bg-gray-50 dark:bg-gray-900">Monto / Jorn.</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Horario</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right bg-gray-50 dark:bg-gray-900">Acciones</th>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-clip">
+              <TablaConEncabezadoFijo tabla="w-full text-left border-collapse min-w-[3010px]">
+                <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                      <BotonOrden columna="usuario" {...ordenProps}>
+                        Colaborador
+                      </BotonOrden>
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                      <BotonOrden columna="cuit" {...ordenProps}>
+                        CUIT
+                      </BotonOrden>
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center bg-gray-50 dark:bg-gray-900">
+                      <BotonOrden columna="contratos" {...ordenProps}>
+                        Contratos
+                      </BotonOrden>
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Las relaciones laborales que ARCA tiene de la persona, de la más nueva a la más vieja (última sincronización)">
+                      Contratos en ARCA
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                      <BotonOrden columna="cliente" {...ordenProps}>
+                        Cliente
+                      </BotonOrden>
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                      <BotonOrden columna="proyecto" {...ordenProps}>
+                        Proyecto
+                      </BotonOrden>
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Rol/es</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                      <BotonOrden columna="rolEmpresa" {...ordenProps}>
+                        Rol/es Empresa
+                      </BotonOrden>
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                      <BotonOrden columna="estado" {...ordenProps}>
+                        Estado
+                      </BotonOrden>
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Área / Turno</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Sede</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                      <BotonOrden columna="contrato" {...ordenProps}>
+                        Contrato
+                      </BotonOrden>
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                      <BotonOrden columna="estadoContrato" {...ordenProps}>
+                        Estado Contrato
+                      </BotonOrden>
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Impositivo</th>
+                    <ContractDocsHeaders />
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                      <BotonOrden columna="reemplazo" {...ordenProps}>
+                        Reemplazo
+                      </BotonOrden>
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                      <BotonOrden columna="altaBaja" {...ordenProps}>
+                        Alta / Baja
+                      </BotonOrden>
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right bg-gray-50 dark:bg-gray-900">Monto / Jorn.</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Horario</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right bg-gray-50 dark:bg-gray-900">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {rows.map((record) => (
+                    <tr key={record._id} onClick={() => setManagedUser({ id: record.userId, name: record.userName })} title="Gestionar contratos de la persona" className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group cursor-pointer">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center shrink-0">
+                            <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{record.userName}</p>
+                            <p className="text-xs text-gray-500 truncate">{record.userEmail}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(record.cuit, record.sinCuit)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="text-sm font-bold px-2.5 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona en el proyecto">
+                          {record.contractsInProject}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        {relacionesArca[cuilDe(record.cuit)] === null ? (
+                          <span className="text-xs text-gray-400" title="No se pudo consultar">—</span>
+                        ) : (
+                          <CeldaContratosArca cuil={record.cuit} nombre={record.userName} relaciones={relacionesArca[cuilDe(record.cuit)] ?? undefined} razonSocialDe={razonSocialArca} />
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{record.clientName || '—'}</td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{record.projectName}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {(() => {
+                            const filteredRoles = (record.userRoles || []).filter((r) => !r.name.toLowerCase().includes('responsable'));
+                            return (
+                              <>
+                                {filteredRoles.slice(0, 3).map((r) => {
+                                  const isCoordinador = (r.permissions || []).includes(PERMISO_NOVEDADES_MOBILE);
+                                  const badgeClasses = isCoordinador ? 'border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400' : 'border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400';
+                                  return (
+                                    <span key={r._id} className={`text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap ${badgeClasses}`}>
+                                      {r.name}
+                                    </span>
+                                  );
+                                })}
+                                {filteredRoles.length > 3 && <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">+{filteredRoles.length - 3}</span>}
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{record.nombreRolFrame || '-'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${record.userActivo ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{record.userActivo ? 'ACTIVO' : 'INACTIVO'}</span>
+                      </td>
+                      <td className="px-4 py-3">{renderAreaTurno(record)}</td>
+                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{record.nombre_sede || '-'}</td>
+                      <td className="px-4 py-3">
+                        <span className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
+                          <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
+                          {record.nombre_contrato || '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">{record.nombre_estado_empleado ? <EstadoBadge name={record.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}</td>
+                      {/* Estado impositivo (Alta ARCA / Alta Servicios): según el Tipo de Contrato, no el estado actual. */}
+                      <td className="px-4 py-3">
+                        {(() => {
+                          const estadoImpositivo = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados);
+                          if (!estadoImpositivo) return <span className="text-xs text-gray-400">—</span>;
+                          return (
+                            <div className="flex flex-col gap-1 w-fit">
+                              {estadoImpositivo.data?.etiquetaSecundaria?.trim() ? <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px] whitespace-nowrap" /> : <EstadoBadge name={estadoImpositivo.name} className="text-[10px] whitespace-nowrap" />}
+                              <TramiteImpositivoBadge estado={estadoImpositivo} persona={{ cuit: record.cuit, sinCuit: record.sinCuit }} />
+                            </div>
+                          );
+                        })()}
+                      </td>
+                      <ContractDocsColumns record={record} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContractRow} onDownloadRelease={handleDownloadReleaseRow} onUploadAlta={handleUploadAltaRow} canUploadAlta={false} />
+                      <td className="px-4 py-3">
+                        {record.reemplazo ? (
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-800/50 w-fit">
+                            <FontAwesomeIcon icon={faIdCard} className="text-[9px]" />
+                            <span>{record.nombre_reemplazado || replacedNames[String(record.empleado_id_reemplezado)] || `ID: ${record.empleado_id_reemplezado}`}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500">
+                        {(() => {
+                          const vigente = isContractVigente(record.fecha_alta_contrato, record.fecha_baja_contrato);
+                          return (
+                            <div className="flex flex-col gap-1">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
+                              <div className="flex flex-col gap-0.5 text-xs">
+                                <span>
+                                  <span className="text-gray-400">Alta:</span> {formatDate(record.fecha_alta_contrato)}
+                                </span>
+                                <span>
+                                  <span className="text-gray-400">Baja:</span> {record.fecha_baja_contrato ? formatDate(record.fecha_baja_contrato) : '—'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="text-sm font-bold text-primary-600 dark:text-primary-400">${record.sueldo_mano?.toLocaleString()}</div>
+                        {record.cantidad_jornadas_laborales ? <div className="text-xs text-gray-400">{record.cantidad_jornadas_laborales} jor.</div> : null}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{record.hora_inicio ? `${record.hora_inicio} - ${record.hora_fin}` : '-'}</td>
+                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => handleEditContract(record)} title="Editar contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                            <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => handleDeleteContract(record)} title="Eliminar contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {rows.map((record) => (
-                      <tr key={record._id} onClick={() => setManagedUser({ id: record.userId, name: record.userName })} title="Gestionar contratos de la persona" className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group cursor-pointer">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center shrink-0">
-                              <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{record.userName}</p>
-                              <p className="text-xs text-gray-500 truncate">{record.userEmail}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(record.cuit, record.sinCuit)}</td>
-                        <td className="px-4 py-3 text-center">
-                          <span className="text-sm font-bold px-2.5 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona en el proyecto">
-                            {record.contractsInProject}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 align-top">
-                          {relacionesArca[cuilDe(record.cuit)] === null ? (
-                            <span className="text-xs text-gray-400" title="No se pudo consultar">—</span>
-                          ) : (
-                            <CeldaContratosArca cuil={record.cuit} nombre={record.userName} relaciones={relacionesArca[cuilDe(record.cuit)] ?? undefined} razonSocialDe={razonSocialArca} />
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{record.clientName || '—'}</td>
-                        <td className="px-4 py-3">
-                          <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{record.projectName}</div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
-                            {(() => {
-                              const filteredRoles = (record.userRoles || []).filter((r) => !r.name.toLowerCase().includes('responsable'));
-                              return (
-                                <>
-                                  {filteredRoles.slice(0, 3).map((r) => {
-                                    const isCoordinador = (r.permissions || []).includes(PERMISO_NOVEDADES_MOBILE);
-                                    const badgeClasses = isCoordinador ? 'border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400' : 'border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400';
-                                    return (
-                                      <span key={r._id} className={`text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap ${badgeClasses}`}>
-                                        {r.name}
-                                      </span>
-                                    );
-                                  })}
-                                  {filteredRoles.length > 3 && <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">+{filteredRoles.length - 3}</span>}
-                                </>
-                              );
-                            })()}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{record.nombreRolFrame || '-'}</td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${record.userActivo ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{record.userActivo ? 'ACTIVO' : 'INACTIVO'}</span>
-                        </td>
-                        <td className="px-4 py-3">{renderAreaTurno(record)}</td>
-                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{record.nombre_sede || '-'}</td>
-                        <td className="px-4 py-3">
-                          <span className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
-                            <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
-                            {record.nombre_contrato || '-'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">{record.nombre_estado_empleado ? <EstadoBadge name={record.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}</td>
-                        {/* Estado impositivo (Alta ARCA / Alta Servicios): según el Tipo de Contrato, no el estado actual. */}
-                        <td className="px-4 py-3">
-                          {(() => {
-                            const estadoImpositivo = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados);
-                            if (!estadoImpositivo) return <span className="text-xs text-gray-400">—</span>;
-                            return (
-                              <div className="flex flex-col gap-1 w-fit">
-                                {estadoImpositivo.data?.etiquetaSecundaria?.trim() ? <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px] whitespace-nowrap" /> : <EstadoBadge name={estadoImpositivo.name} className="text-[10px] whitespace-nowrap" />}
-                                <TramiteImpositivoBadge estado={estadoImpositivo} persona={{ cuit: record.cuit, sinCuit: record.sinCuit }} />
-                              </div>
-                            );
-                          })()}
-                        </td>
-                        <ContractDocsColumns record={record} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContractRow} onDownloadRelease={handleDownloadReleaseRow} onUploadAlta={handleUploadAltaRow} canUploadAlta={false} />
-                        <td className="px-4 py-3">
-                          {record.reemplazo ? (
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-800/50 w-fit">
-                              <FontAwesomeIcon icon={faIdCard} className="text-[9px]" />
-                              <span>{record.nombre_reemplazado || replacedNames[String(record.empleado_id_reemplezado)] || `ID: ${record.empleado_id_reemplezado}`}</span>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-gray-400">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500">
-                          {(() => {
-                            const vigente = isContractVigente(record.fecha_alta_contrato, record.fecha_baja_contrato);
-                            return (
-                              <div className="flex flex-col gap-1">
-                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
-                                <div className="flex flex-col gap-0.5 text-xs">
-                                  <span>
-                                    <span className="text-gray-400">Alta:</span> {formatDate(record.fecha_alta_contrato)}
-                                  </span>
-                                  <span>
-                                    <span className="text-gray-400">Baja:</span> {record.fecha_baja_contrato ? formatDate(record.fecha_baja_contrato) : '—'}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })()}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="text-sm font-bold text-primary-600 dark:text-primary-400">${record.sueldo_mano?.toLocaleString()}</div>
-                          {record.cantidad_jornadas_laborales ? <div className="text-xs text-gray-400">{record.cantidad_jornadas_laborales} jor.</div> : null}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{record.hora_inicio ? `${record.hora_inicio} - ${record.hora_fin}` : '-'}</td>
-                        <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1">
-                            <button onClick={() => handleEditContract(record)} title="Editar contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-                              <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
-                            </button>
-                            <button onClick={() => handleDeleteContract(record)} title="Eliminar contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </TablaConEncabezadoFijo>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

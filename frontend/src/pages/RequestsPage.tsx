@@ -72,68 +72,66 @@ export const tieneReemplazo = (r: AttendanceRecord) => !!(r.replacementName || "
 
 const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attendance }) => {
   return (
-    <div className="overflow-auto max-h-[calc(100vh-320px)] rounded border border-gray-200 dark:border-gray-700">
-      <table className="w-full text-sm text-left">
-        <thead className="sticky top-0 z-10 shadow-sm bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold outline outline-1 outline-gray-200 dark:outline-gray-700">
-          <tr>
-            <th className="py-3 px-4">Colaborador</th>
-            <th className="py-3 px-4 text-center">Presente</th>
-            <th className="py-3 px-4">Motivo</th>
-            <th className="py-3 px-4">Area</th>
-            <th className="py-3 px-4 text-center">Entrada</th>
-            <th className="py-3 px-4 text-center">Salida</th>
-            <th className="py-3 px-4 text-center">Hs. Exts.</th>
-            <th className="py-3 px-4 text-center">Entrada Exts.</th>
-            <th className="py-3 px-4 text-center">Salida Exts.</th>
-            <th className="py-3 px-4 text-center">Reemplazo</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-          {attendance.map((record) => {
-            const isAbsent = record.status !== "present" && record.status !== "late";
-            // Check if status implies absence but maybe check absenceReason too?
-            // "late" is usually present but late. "present" is present.
-            // All others (sick, vacation, etc) are absent.
+    <TablaConEncabezadoFijo className="rounded border border-gray-200 dark:border-gray-700" tabla="w-full text-sm text-left">
+      <thead className="shadow-sm bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold outline outline-1 outline-gray-200 dark:outline-gray-700">
+        <tr>
+          <th className="py-3 px-4">Colaborador</th>
+          <th className="py-3 px-4 text-center">Presente</th>
+          <th className="py-3 px-4">Motivo</th>
+          <th className="py-3 px-4">Area</th>
+          <th className="py-3 px-4 text-center">Entrada</th>
+          <th className="py-3 px-4 text-center">Salida</th>
+          <th className="py-3 px-4 text-center">Hs. Exts.</th>
+          <th className="py-3 px-4 text-center">Entrada Exts.</th>
+          <th className="py-3 px-4 text-center">Salida Exts.</th>
+          <th className="py-3 px-4 text-center">Reemplazo</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+        {attendance.map((record) => {
+          const isAbsent = record.status !== "present" && record.status !== "late";
+          // Check if status implies absence but maybe check absenceReason too?
+          // "late" is usually present but late. "present" is present.
+          // All others (sick, vacation, etc) are absent.
 
-            return (
-              <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                <td className={`py-3 px-4 font-medium ${isAbsent ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-white"}`}>
-                  <div className="flex items-center gap-2">
-                    <span>{record.employeeName}</span>
-                    {record.absenceReason?.toLowerCase().includes("adicional") && <span className="bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.5 rounded dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wider">Otros Presentes</span>}
-                  </div>
-                </td>
-                <td className="py-3 px-4 text-center">
-                  <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${!isAbsent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{!isAbsent ? "Sí" : "No"}</span>
-                </td>
-                <td className="py-3 px-4 text-gray-600 dark:text-gray-400 capitalize">{isAbsent ? record.absenceReason || "Ausente" : record.absenceReason?.toLowerCase().includes("adicional") ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wide">Otros Presentes</span> : "-"}</td>
-                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{record.areaName || "-"}</td>
-                <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.entryTime || "-"}</td>
-                <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.exitTime || "-"}</td>
-                <td className="py-3 px-4 text-center">
-                  <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${record.overtimeHours > 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"}`}>{record.overtimeHours}</span>
-                </td>
-                <td className="py-3 px-4 text-center text-xs font-medium">{record.overtimeEntryTime ? <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded">{record.overtimeEntryTime}</span> : <span className="text-gray-400 dark:text-gray-600">-</span>}</td>
-                <td className="py-3 px-4 text-center text-xs font-medium">{record.overtimeExitTime ? <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded">{record.overtimeExitTime}</span> : <span className="text-gray-400 dark:text-gray-600">-</span>}</td>
-                <td className="py-3 px-4 text-center text-xs font-medium">
-                  {/* Un "-" no distinguía "no necesita reemplazo" (está presente) de "faltó y nadie lo cubrió". */}
-                  {record.replacementName ? (
-                    // Mismo ámbar que el badge "No" de dos filas más abajo: toda la columna habla de
-                    // reemplazo, así que el color dice "esto es un reemplazante" y no se confunde con
-                    // el nombre del colaborador de la primera columna.
-                    <span className="text-amber-700 dark:text-amber-400 font-medium">{record.replacementName}</span>
-                  ) : isAbsent ? (
-                    <span className="inline-block px-2 py-1 rounded text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">No</span>
-                  ) : (
-                    <span className="text-gray-400 dark:text-gray-600">-</span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+          return (
+            <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+              <td className={`py-3 px-4 font-medium ${isAbsent ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-white"}`}>
+                <div className="flex items-center gap-2">
+                  <span>{record.employeeName}</span>
+                  {record.absenceReason?.toLowerCase().includes("adicional") && <span className="bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.5 rounded dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wider">Otros Presentes</span>}
+                </div>
+              </td>
+              <td className="py-3 px-4 text-center">
+                <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${!isAbsent ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{!isAbsent ? "Sí" : "No"}</span>
+              </td>
+              <td className="py-3 px-4 text-gray-600 dark:text-gray-400 capitalize">{isAbsent ? record.absenceReason || "Ausente" : record.absenceReason?.toLowerCase().includes("adicional") ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-wide">Otros Presentes</span> : "-"}</td>
+              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{record.areaName || "-"}</td>
+              <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.entryTime || "-"}</td>
+              <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-400">{record.exitTime || "-"}</td>
+              <td className="py-3 px-4 text-center">
+                <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${record.overtimeHours > 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"}`}>{record.overtimeHours}</span>
+              </td>
+              <td className="py-3 px-4 text-center text-xs font-medium">{record.overtimeEntryTime ? <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded">{record.overtimeEntryTime}</span> : <span className="text-gray-400 dark:text-gray-600">-</span>}</td>
+              <td className="py-3 px-4 text-center text-xs font-medium">{record.overtimeExitTime ? <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded">{record.overtimeExitTime}</span> : <span className="text-gray-400 dark:text-gray-600">-</span>}</td>
+              <td className="py-3 px-4 text-center text-xs font-medium">
+                {/* Un "-" no distinguía "no necesita reemplazo" (está presente) de "faltó y nadie lo cubrió". */}
+                {record.replacementName ? (
+                  // Mismo ámbar que el badge "No" de dos filas más abajo: toda la columna habla de
+                  // reemplazo, así que el color dice "esto es un reemplazante" y no se confunde con
+                  // el nombre del colaborador de la primera columna.
+                  <span className="text-amber-700 dark:text-amber-400 font-medium">{record.replacementName}</span>
+                ) : isAbsent ? (
+                  <span className="inline-block px-2 py-1 rounded text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">No</span>
+                ) : (
+                  <span className="text-gray-400 dark:text-gray-600">-</span>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </TablaConEncabezadoFijo>
   );
 };
 
@@ -158,7 +156,7 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
   const [isOpen, setIsOpen] = useState(count > 0);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 overflow-clip">
       <button onClick={() => setIsOpen(!isOpen)} className="px-5 py-4 flex justify-between items-center w-full text-left focus:outline-none hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
         <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
           {title} <span className={count > 0 ? "text-red-600 dark:text-red-400 font-semibold" : "text-gray-500 font-normal"}>({count})</span>
@@ -172,43 +170,41 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
 
           {/* Los que sí cubrió alguien: acá el encabezado de reemplazo tiene sentido porque hay datos debajo. */}
           {conReemplazo.length > 0 && (
-            <div className="overflow-auto max-h-[calc(100vh-320px)]">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 shadow-sm text-[9px] uppercase text-gray-500 font-medium outline outline-1 outline-gray-100 dark:outline-gray-700 bg-white dark:bg-gray-800">
-                  <tr className="border-b border-gray-100 dark:border-gray-700">
-                    <th rowSpan={2} className="py-2 px-4 text-left font-black text-gray-400 border-r border-gray-100 dark:border-gray-700 align-middle w-[180px]">
-                      Colaborador Ausente
-                    </th>
-                    <th colSpan={6} className="py-1 px-4 text-center font-black bg-blue-50/50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 border-b border-blue-100 dark:border-blue-900/30">
-                      Información del Reemplazo / Jornalero
-                    </th>
+            <TablaConEncabezadoFijo tabla="w-full text-sm">
+              <thead className="shadow-sm text-[9px] uppercase text-gray-500 font-medium outline outline-1 outline-gray-100 dark:outline-gray-700 bg-white dark:bg-gray-800">
+                <tr className="border-b border-gray-100 dark:border-gray-700">
+                  <th rowSpan={2} className="py-2 px-4 text-left font-black text-gray-400 border-r border-gray-100 dark:border-gray-700 align-middle w-[180px]">
+                    Colaborador Ausente
+                  </th>
+                  <th colSpan={6} className="py-1 px-4 text-center font-black bg-blue-50/50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 border-b border-blue-100 dark:border-blue-900/30">
+                    Información del Reemplazo / Jornalero
+                  </th>
+                </tr>
+                <tr>
+                  <th className="py-1.5 px-4 text-left font-semibold text-blue-500/80">Nombre / Detalle</th>
+                  <th className="py-1.5 px-2 text-center font-medium">Entrada</th>
+                  <th className="py-1.5 px-2 text-center font-medium">Salida</th>
+                  <th className="py-1.5 px-2 text-center font-medium">Hs. Exts.</th>
+                  <th className="py-1.5 px-2 text-center font-medium text-[8px]">Entr. Exts.</th>
+                  <th className="py-1.5 px-2 text-center font-medium text-[8px]">Sal. Exts.</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {conReemplazo.map((rec) => (
+                  <tr key={rec.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
+                    <td className="py-2 px-4 font-bold text-red-600 dark:text-red-400 whitespace-nowrap border-r border-gray-50 dark:border-gray-700/50">{rec.employeeName}</td>
+                    <td className="py-2 px-4 text-blue-600 dark:text-blue-400 font-medium whitespace-nowrap bg-blue-50/20 dark:bg-blue-900/5">{rec.replacementName}</td>
+                    <td className="py-2 px-2 text-center text-[11px] text-gray-500 dark:text-gray-400 bg-blue-50/20 dark:bg-blue-900/5">{rec.entryTime || "-"}</td>
+                    <td className="py-2 px-2 text-center text-[11px] text-gray-500 dark:text-gray-400 bg-blue-50/20 dark:bg-blue-900/5">{rec.exitTime || "-"}</td>
+                    <td className="py-2 px-2 text-center bg-blue-50/20 dark:bg-blue-900/5">
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-black ${rec.overtimeHours > 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500"}`}>{rec.overtimeHours}</span>
+                    </td>
+                    <td className="py-2 px-2 text-center text-[10px] text-gray-500 dark:text-gray-400 bg-blue-50/20 dark:bg-blue-900/5">{rec.overtimeEntryTime || "-"}</td>
+                    <td className="py-2 px-2 text-center text-[10px] text-gray-500 dark:text-gray-400 bg-blue-50/20 dark:bg-blue-900/5">{rec.overtimeExitTime || "-"}</td>
                   </tr>
-                  <tr>
-                    <th className="py-1.5 px-4 text-left font-semibold text-blue-500/80">Nombre / Detalle</th>
-                    <th className="py-1.5 px-2 text-center font-medium">Entrada</th>
-                    <th className="py-1.5 px-2 text-center font-medium">Salida</th>
-                    <th className="py-1.5 px-2 text-center font-medium">Hs. Exts.</th>
-                    <th className="py-1.5 px-2 text-center font-medium text-[8px]">Entr. Exts.</th>
-                    <th className="py-1.5 px-2 text-center font-medium text-[8px]">Sal. Exts.</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {conReemplazo.map((rec) => (
-                    <tr key={rec.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
-                      <td className="py-2 px-4 font-bold text-red-600 dark:text-red-400 whitespace-nowrap border-r border-gray-50 dark:border-gray-700/50">{rec.employeeName}</td>
-                      <td className="py-2 px-4 text-blue-600 dark:text-blue-400 font-medium whitespace-nowrap bg-blue-50/20 dark:bg-blue-900/5">{rec.replacementName}</td>
-                      <td className="py-2 px-2 text-center text-[11px] text-gray-500 dark:text-gray-400 bg-blue-50/20 dark:bg-blue-900/5">{rec.entryTime || "-"}</td>
-                      <td className="py-2 px-2 text-center text-[11px] text-gray-500 dark:text-gray-400 bg-blue-50/20 dark:bg-blue-900/5">{rec.exitTime || "-"}</td>
-                      <td className="py-2 px-2 text-center bg-blue-50/20 dark:bg-blue-900/5">
-                        <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-black ${rec.overtimeHours > 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500"}`}>{rec.overtimeHours}</span>
-                      </td>
-                      <td className="py-2 px-2 text-center text-[10px] text-gray-500 dark:text-gray-400 bg-blue-50/20 dark:bg-blue-900/5">{rec.overtimeEntryTime || "-"}</td>
-                      <td className="py-2 px-2 text-center text-[10px] text-gray-500 dark:text-gray-400 bg-blue-50/20 dark:bg-blue-900/5">{rec.overtimeExitTime || "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </TablaConEncabezadoFijo>
           )}
 
           {/* Los descubiertos: sin columnas de reemplazo, porque no hay nada que poner en ellas. */}
@@ -236,6 +232,7 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
 import { useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
 import { etiquetaCentroCosto, CLASE_BADGE_CENTRO_COSTO } from "../utils/centroCosto";
+import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
 
 /** «426 LN+»: el código del centro de costo delante del nombre del proyecto (si el nombre no lo trae ya). */
 const conCodigoDeCentro = (p: any): string => {
@@ -1332,184 +1329,182 @@ export const RequestsPage: React.FC = () => {
             Es el mismo patrón que ya usan AttendanceTable y AbsenceBlock más arriba en este archivo.
             Los 260px son el título + los filtros + la paginación de abajo.
           */
-          <div className="overflow-auto max-h-[calc(100vh-260px)] rounded border dark:border-slate-800">
-            <table className="w-full dark:bg-slate-800/80 table-auto">
-              <thead className="sticky top-0 z-10">
-                <tr>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">No Registro</th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Carga</th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Novedad</th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Centro de costo</th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Área | Turno</th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Total Registros de Asistencia">
-                    Registros
-                  </th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Ausentes</th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Ausencias que cubrió un reemplazante">
-                    Reemplazos
-                  </th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Otros Presentes</th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Personas que se tomaron un compensatorio. Van también en «Ausentes»: un compensatorio es una ausencia.">
-                    Compensatorios
-                  </th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Personas con horas extras">
-                    Horas Extras
-                  </th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Comentarios del supervisor">
-                    Comentarios
-                  </th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Enviado Por</th>
-                  <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagedReports.map((report) => (
-                  <tr key={report.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleViewDetail(report)}>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-col gap-1 items-start">
-                        <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{report.reportNumber || "Pendiente"}</span>
-                        {(() => {
-                          const isEdited = report.createdAt && report.updatedAt && (new Date(report.updatedAt).getTime() - new Date(report.createdAt).getTime() > 1000);
-                          if (!isEdited) return null;
-                          return (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded shadow-sm whitespace-nowrap">
-                              <FontAwesomeIcon icon={faPen} className="text-[8px]" />
-                              EDITADO ({(() => {
-                                try {
-                                  const d = new Date(report.updatedAt!);
-                                  const day = String(d.getDate()).padStart(2, "0");
-                                  const month = String(d.getMonth() + 1).padStart(2, "0");
-                                  const year = d.getFullYear();
-                                  return `${day}/${month}/${year}`;
-                                } catch {
-                                  return "";
-                                }
-                              })()})
-                            </span>
-                          );
-                        })()}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">
+          <TablaConEncabezadoFijo className="rounded border dark:border-slate-800" tabla="w-full dark:bg-slate-800/80 table-auto">
+            <thead>
+              <tr>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">No Registro</th>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Carga</th>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">F. Novedad</th>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Centro de costo</th>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Área | Turno</th>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Total Registros de Asistencia">
+                  Registros
+                </th>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Ausentes</th>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Ausencias que cubrió un reemplazante">
+                  Reemplazos
+                </th>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Otros Presentes</th>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Personas que se tomaron un compensatorio. Van también en «Ausentes»: un compensatorio es una ausencia.">
+                  Compensatorios
+                </th>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Personas con horas extras">
+                  Horas Extras
+                </th>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300" title="Comentarios del supervisor">
+                  Comentarios
+                </th>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Enviado Por</th>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {pagedReports.map((report) => (
+                <tr key={report.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleViewDetail(report)}>
+                  <td className="py-3 px-4">
+                    <div className="flex flex-col gap-1 items-start">
+                      <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{report.reportNumber || "Pendiente"}</span>
                       {(() => {
-                        try {
-                          return report.submittedAt ? format(new Date(report.submittedAt), "dd MMM yyyy", { locale: es }) : "-";
-                        } catch {
-                          return "-";
-                        }
+                        const isEdited = report.createdAt && report.updatedAt && (new Date(report.updatedAt).getTime() - new Date(report.createdAt).getTime() > 1000);
+                        if (!isEdited) return null;
+                        return (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded shadow-sm whitespace-nowrap">
+                            <FontAwesomeIcon icon={faPen} className="text-[8px]" />
+                            EDITADO ({(() => {
+                              try {
+                                const d = new Date(report.updatedAt!);
+                                const day = String(d.getDate()).padStart(2, "0");
+                                const month = String(d.getMonth() + 1).padStart(2, "0");
+                                const year = d.getFullYear();
+                                return `${day}/${month}/${year}`;
+                              } catch {
+                                return "";
+                              }
+                            })()})
+                          </span>
+                        );
                       })()}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 font-medium">
-                      {(() => {
-                        try {
-                          return report.date ? format(new Date(report.date + "T00:00:00"), "dd MMM yyyy", { locale: es }) : "-";
-                        } catch {
-                          return "-";
-                        }
-                      })()}
-                    </td>
-                    {/* El código del centro de costo del proyecto («705»): el nombre ya no lo trae adelante. */}
-                    <td className="py-3 px-4">
-                      {centroPorProyecto.get(String(report.projectIdRaw || "")) ? (
-                        <span className={`${CLASE_BADGE_CENTRO_COSTO} px-2 py-0.5 text-xs`}>{centroPorProyecto.get(String(report.projectIdRaw || ""))}</span>
-                      ) : (
-                        <span className="text-gray-300 dark:text-gray-600">-</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800 w-fit">
-                        <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-[10px]" />
-                        {report.projectName}
-                      </span>
-                    </td>
-                    {/* `whitespace-nowrap` en la celda: sin esto la columna se sigue encogiendo hasta
-                        el ancho del texto más corto y los badges, que ya no se parten, se desbordan. */}
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <div className="flex flex-wrap gap-1">{renderAreaShiftBadges(report, false)}</div>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 font-medium">{report.registros ?? report.attendance.length}</td>
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">
                     {(() => {
-                      // Dos columnas, dos números: cuántos faltaron y a cuántos los cubrió alguien.
-                      // La resta —los que quedaron descubiertos— se lee sola, y en el detalle cada
-                      // fila dice cuál es cuál.
-                      // Los cuenta el server (`ausentes`, `reemplazos`); el `??` cubre un parte ya abierto,
-                      // que sí trae su detalle, y cualquier respuesta vieja que todavía no los traiga.
-                      const ausentes = report.ausentes ?? report.attendance.filter(esAusente).length;
-                      const reemplazos = report.reemplazos ?? report.attendance.filter(esAusente).filter(tieneReemplazo).length;
-                      return (
-                        <>
-                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                            {ausentes > 0 ? <span className="text-red-600 dark:text-red-400 font-medium">{ausentes}</span> : "0"}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                            {reemplazos > 0 ? <span className="text-blue-600 dark:text-blue-400 font-medium">{reemplazos}</span> : "0"}
-                          </td>
-                        </>
-                      );
+                      try {
+                        return report.submittedAt ? format(new Date(report.submittedAt), "dd MMM yyyy", { locale: es }) : "-";
+                      } catch {
+                        return "-";
+                      }
                     })()}
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                      {(() => {
-                        const otrosPresentes = report.otrosPresentes ?? report.attendance.filter(esOtroPresente).length;
-                        return otrosPresentes > 0 ? <span className="text-amber-600 dark:text-amber-400 font-medium">{otrosPresentes}</span> : "0";
-                      })()}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                      {(() => {
-                        // Los cuenta el server; el `??` cubre un parte ya abierto, que sí trae su detalle.
-                        const compensatorios = report.compensatorios ?? report.attendance.filter((r) => r.status === "compensatory").length;
-                        return compensatorios > 0 ? <span className="text-violet-600 dark:text-violet-400 font-medium">{compensatorios}</span> : "0";
-                      })()}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                      {(() => {
-                        const overtimeCount = report.conHorasExtra ?? report.attendance.filter(tieneHorasExtras).length;
-                        return overtimeCount > 0 ? <span className="text-green-600 dark:text-green-400 font-medium">{overtimeCount}</span> : "0";
-                      })()}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                      {(() => {
-                        // `comments` es un único texto libre por novedad, no una lista: el contador da 0 o 1,
-                        // igual que el tab "Comentarios (n)" del detalle. Si alguna vez pasa a ser varios,
-                        // los dos lugares tienen que cambiar juntos.
-                        const tieneComentario = (report.comments || "").trim().length > 0;
-                        return tieneComentario ? <span className="text-yellow-600 dark:text-yellow-400 font-medium">1</span> : "0";
-                      })()}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{report.submittedBy}</td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {/* El click en toda la fila sigue abriendo el detalle: esto es el gesto explícito
-                            para quien lo busca como botón, no un reemplazo. */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewDetail(report);
-                          }}
-                          className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors px-2 py-1 rounded"
-                          title="Ver detalle"
-                          aria-label="Ver detalle"
-                        >
-                          <FontAwesomeIcon icon={faEye} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteReport(report.id);
-                          }}
-                          className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors px-2 py-1 rounded"
-                          title="Eliminar"
-                          aria-label="Eliminar"
-                        >
-                          <FontAwesomeIcon icon={faTrash} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400 font-medium">
+                    {(() => {
+                      try {
+                        return report.date ? format(new Date(report.date + "T00:00:00"), "dd MMM yyyy", { locale: es }) : "-";
+                      } catch {
+                        return "-";
+                      }
+                    })()}
+                  </td>
+                  {/* El código del centro de costo del proyecto («705»): el nombre ya no lo trae adelante. */}
+                  <td className="py-3 px-4">
+                    {centroPorProyecto.get(String(report.projectIdRaw || "")) ? (
+                      <span className={`${CLASE_BADGE_CENTRO_COSTO} px-2 py-0.5 text-xs`}>{centroPorProyecto.get(String(report.projectIdRaw || ""))}</span>
+                    ) : (
+                      <span className="text-gray-300 dark:text-gray-600">-</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800 w-fit">
+                      <FontAwesomeIcon icon={faBriefcase} className="text-blue-400 text-[10px]" />
+                      {report.projectName}
+                    </span>
+                  </td>
+                  {/* `whitespace-nowrap` en la celda: sin esto la columna se sigue encogiendo hasta
+                      el ancho del texto más corto y los badges, que ya no se parten, se desbordan. */}
+                  <td className="py-3 px-4 whitespace-nowrap">
+                    <div className="flex flex-wrap gap-1">{renderAreaShiftBadges(report, false)}</div>
+                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 font-medium">{report.registros ?? report.attendance.length}</td>
+                  {(() => {
+                    // Dos columnas, dos números: cuántos faltaron y a cuántos los cubrió alguien.
+                    // La resta —los que quedaron descubiertos— se lee sola, y en el detalle cada
+                    // fila dice cuál es cuál.
+                    // Los cuenta el server (`ausentes`, `reemplazos`); el `??` cubre un parte ya abierto,
+                    // que sí trae su detalle, y cualquier respuesta vieja que todavía no los traiga.
+                    const ausentes = report.ausentes ?? report.attendance.filter(esAusente).length;
+                    const reemplazos = report.reemplazos ?? report.attendance.filter(esAusente).filter(tieneReemplazo).length;
+                    return (
+                      <>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                          {ausentes > 0 ? <span className="text-red-600 dark:text-red-400 font-medium">{ausentes}</span> : "0"}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                          {reemplazos > 0 ? <span className="text-blue-600 dark:text-blue-400 font-medium">{reemplazos}</span> : "0"}
+                        </td>
+                      </>
+                    );
+                  })()}
+                  <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                    {(() => {
+                      const otrosPresentes = report.otrosPresentes ?? report.attendance.filter(esOtroPresente).length;
+                      return otrosPresentes > 0 ? <span className="text-amber-600 dark:text-amber-400 font-medium">{otrosPresentes}</span> : "0";
+                    })()}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                    {(() => {
+                      // Los cuenta el server; el `??` cubre un parte ya abierto, que sí trae su detalle.
+                      const compensatorios = report.compensatorios ?? report.attendance.filter((r) => r.status === "compensatory").length;
+                      return compensatorios > 0 ? <span className="text-violet-600 dark:text-violet-400 font-medium">{compensatorios}</span> : "0";
+                    })()}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                    {(() => {
+                      const overtimeCount = report.conHorasExtra ?? report.attendance.filter(tieneHorasExtras).length;
+                      return overtimeCount > 0 ? <span className="text-green-600 dark:text-green-400 font-medium">{overtimeCount}</span> : "0";
+                    })()}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                    {(() => {
+                      // `comments` es un único texto libre por novedad, no una lista: el contador da 0 o 1,
+                      // igual que el tab "Comentarios (n)" del detalle. Si alguna vez pasa a ser varios,
+                      // los dos lugares tienen que cambiar juntos.
+                      const tieneComentario = (report.comments || "").trim().length > 0;
+                      return tieneComentario ? <span className="text-yellow-600 dark:text-yellow-400 font-medium">1</span> : "0";
+                    })()}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{report.submittedBy}</td>
+                  <td className="py-3 px-4 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {/* El click en toda la fila sigue abriendo el detalle: esto es el gesto explícito
+                          para quien lo busca como botón, no un reemplazo. */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewDetail(report);
+                        }}
+                        className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors px-2 py-1 rounded"
+                        title="Ver detalle"
+                        aria-label="Ver detalle"
+                      >
+                        <FontAwesomeIcon icon={faEye} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteReport(report.id);
+                        }}
+                        className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors px-2 py-1 rounded"
+                        title="Eliminar"
+                        aria-label="Eliminar"
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </TablaConEncabezadoFijo>
         )}
 
         {!loading && filteredReports.length === 0 && (

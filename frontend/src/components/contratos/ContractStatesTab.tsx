@@ -18,6 +18,7 @@ import { useEstadoCatalogStore } from '../../stores/estadoCatalogStore';
 import { estadoColorPorDefecto, colorTextoBadge, EstadoSecundarioBadge } from '../EstadoSelect';
 import { useThemeStore } from '../../stores/themeStore';
 import { TipoImpositivo, TRAMITES_IMPOSITIVOS } from '../../utils/tramiteImpositivo';
+import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 
 /** Paleta sugerida: solo se elige el color de la tipografía; el fondo es ese color con transparencia. */
 const COLORES = [
@@ -520,39 +521,37 @@ export const ContractStatesTab: React.FC = () => {
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           {viewMode === 'table' ? (
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      <th className="px-4 py-3 font-semibold text-center w-14">Ordenar</th>
-                      <th className="px-4 py-3 font-semibold text-center w-14">Orden</th>
-                      <th className="px-4 py-3 font-semibold">Badge</th>
-                      <th className="px-4 py-3 font-semibold">Dependencias</th>
-                      <th className="px-4 py-3 font-semibold">Impositivo</th>
-                      <th className="px-4 py-3 font-semibold">Badge Secundario</th>
-                      <th className="px-4 py-3 font-semibold">Tipos de contrato</th>
-                      <th className="px-4 py-3 font-semibold text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <SortableContext items={mostrar.map((e) => e._id)} strategy={verticalListSortingStrategy}>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                      {mostrar.map((estado, index) => (
-                        <SortableEstadoRow
-                          key={estado._id}
-                          estado={estado}
-                          index={index}
-                          isReorderMode={isReorderMode}
-                          tiposVigentes={tiposVigentes}
-                          abrirEditar={abrirEditar}
-                          eliminar={eliminar}
-                          onEnableReorder={handleStartReorder}
-                        />
-                      ))}
-                    </tbody>
-                  </SortableContext>
-                </table>
-              </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-clip">
+              <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 py-3 font-semibold text-center w-14">Ordenar</th>
+                    <th className="px-4 py-3 font-semibold text-center w-14">Orden</th>
+                    <th className="px-4 py-3 font-semibold">Badge</th>
+                    <th className="px-4 py-3 font-semibold">Dependencias</th>
+                    <th className="px-4 py-3 font-semibold">Impositivo</th>
+                    <th className="px-4 py-3 font-semibold">Badge Secundario</th>
+                    <th className="px-4 py-3 font-semibold">Tipos de contrato</th>
+                    <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <SortableContext items={mostrar.map((e) => e._id)} strategy={verticalListSortingStrategy}>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {mostrar.map((estado, index) => (
+                      <SortableEstadoRow
+                        key={estado._id}
+                        estado={estado}
+                        index={index}
+                        isReorderMode={isReorderMode}
+                        tiposVigentes={tiposVigentes}
+                        abrirEditar={abrirEditar}
+                        eliminar={eliminar}
+                        onEnableReorder={handleStartReorder}
+                      />
+                    ))}
+                  </tbody>
+                </SortableContext>
+              </TablaConEncabezadoFijo>
             </div>
           ) : (
             <SortableContext items={mostrar.map((e) => e._id)} strategy={verticalListSortingStrategy}>

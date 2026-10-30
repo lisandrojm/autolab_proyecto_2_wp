@@ -64,9 +64,7 @@ export const CeldaContratosArca: React.FC<{
             <FontAwesomeIcon icon={faSpinner} spin /> Cargando relaciones…
           </span>
         ) : detalle ? (
-          <div className="overflow-x-auto">
-            <TablaRelacionesArca relaciones={detalle} razonSocialDe={razonSocialDe} />
-          </div>
+          <TablaRelacionesArca relaciones={detalle} razonSocialDe={razonSocialDe} />
         ) : null}
       </Modal>
     </div>

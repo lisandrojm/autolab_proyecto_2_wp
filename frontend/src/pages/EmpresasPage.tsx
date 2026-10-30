@@ -20,6 +20,7 @@ import { infoAPI, InfoItem } from '../api/info';
 import { ordenarSedes } from '../utils/sedesProyecto';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 const HELP_KEY = 'empresas' as const;
 
@@ -491,85 +492,83 @@ export const EmpresasPage: React.FC = () => {
           <Card variant="create" onClick={openCreate} header={{ title: 'Nueva Empresa', subtitle: 'Agregar empresa', icon: faBuilding }} />
         </div>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800/50 shadow-sm">
-          <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                <th className="px-4 py-3">Razón Social</th>
-                {/* `w-px` + `nowrap`: el CUIT es un identificador y se cotea de un vistazo contra
-                    ARCA. Partido en dos renglones ("30-" / "71706837-4") deja de leerse como uno. */}
-                <th className="px-4 py-3 whitespace-nowrap w-px">CUIT</th>
-                <th className="px-4 py-3">Domicilio Legal</th>
-                <th className="px-4 py-3">Firmante</th>
-                <th className="px-4 py-3">Representante Legal</th>
-                {/* El estado va JUNTO a los tres números que lo componen: la columna dice si puede
-                    dar altas, y las tres de al lado, con qué cuenta para hacerlo. */}
-                <th className="px-4 py-3 whitespace-nowrap w-px">ARCA</th>
-                <th className="px-4 py-3">Convenios</th>
-                <th className="px-4 py-3">Obras Sociales</th>
-                <th className="px-4 py-3">Sucursales ARCA</th>
-                <th className="px-4 py-3">Sedes</th>
-                <th className="px-4 py-3 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-              {filtered.map((c) => (
-                <tr key={c._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                  <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">{c.razonSocial}</td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap w-px">{c.cuit || '—'}</td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-[280px] truncate" title={domicilioResumen(c)}>
-                    {domicilioResumen(c) || '—'}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                    {c.firmanteNombre ? (
-                      <div className="flex flex-col">
-                        <span className="text-gray-800 dark:text-gray-200">{c.firmanteNombre}</span>
-                        {c.firmanteCargo && <span className="text-[11px] text-gray-400">{c.firmanteCargo}</span>}
-                      </div>
-                    ) : (
-                      '—'
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                    {c.representanteLegalNombre ? (
-                      <div className="flex flex-col">
-                        <span className="text-gray-800 dark:text-gray-200">{c.representanteLegalNombre}</span>
-                        {c.representanteLegalEmail && <span className="text-[11px] text-gray-400">{c.representanteLegalEmail}</span>}
-                      </div>
-                    ) : (
-                      '—'
-                    )}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap w-px">
-                    <EstadoArcaBadge empresa={c} onClick={setInfoArca} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <ContadorLista empresa={c} tipo="convenios" total={(c.convenioIds || []).length} cargando={cargandoConvenios} singular="convenio" plural="convenios" />
-                  </td>
-                  <td className="px-4 py-3">
-                    <ContadorLista empresa={c} tipo="obrasSociales" total={(c.obrasSocialesIds || []).length} cargando={cargandoObrasSociales} singular="obra social" plural="obras sociales" />
-                  </td>
-                  <td className="px-4 py-3">
-                    <ContadorLista empresa={c} tipo="sucursales" total={(c.sucursalIds || []).length} cargando={cargandoSucursales} singular="sucursal" plural="sucursales" />
-                  </td>
-                  <td className="px-4 py-3">
-                    <ContadorLista empresa={c} tipo="sedes" total={(c.sedeIds || []).length} cargando={cargandoSedes} singular="sede" plural="sedes" />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEdit(c)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Editar">
-                        <FontAwesomeIcon icon={faEdit} />
-                      </button>
-                      <button onClick={() => handleDelete(c)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Eliminar">
-                        <FontAwesomeIcon icon={faTrash} />
-                      </button>
+        <TablaConEncabezadoFijo className="mt-6 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800/50 shadow-sm" tabla="w-full text-left text-sm border-collapse">
+          <thead>
+            <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3">Razón Social</th>
+              {/* `w-px` + `nowrap`: el CUIT es un identificador y se cotea de un vistazo contra
+                  ARCA. Partido en dos renglones ("30-" / "71706837-4") deja de leerse como uno. */}
+              <th className="px-4 py-3 whitespace-nowrap w-px">CUIT</th>
+              <th className="px-4 py-3">Domicilio Legal</th>
+              <th className="px-4 py-3">Firmante</th>
+              <th className="px-4 py-3">Representante Legal</th>
+              {/* El estado va JUNTO a los tres números que lo componen: la columna dice si puede
+                  dar altas, y las tres de al lado, con qué cuenta para hacerlo. */}
+              <th className="px-4 py-3 whitespace-nowrap w-px">ARCA</th>
+              <th className="px-4 py-3">Convenios</th>
+              <th className="px-4 py-3">Obras Sociales</th>
+              <th className="px-4 py-3">Sucursales ARCA</th>
+              <th className="px-4 py-3">Sedes</th>
+              <th className="px-4 py-3 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+            {filtered.map((c) => (
+              <tr key={c._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">{c.razonSocial}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap w-px">{c.cuit || '—'}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-[280px] truncate" title={domicilioResumen(c)}>
+                  {domicilioResumen(c) || '—'}
+                </td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                  {c.firmanteNombre ? (
+                    <div className="flex flex-col">
+                      <span className="text-gray-800 dark:text-gray-200">{c.firmanteNombre}</span>
+                      {c.firmanteCargo && <span className="text-[11px] text-gray-400">{c.firmanteCargo}</span>}
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                  {c.representanteLegalNombre ? (
+                    <div className="flex flex-col">
+                      <span className="text-gray-800 dark:text-gray-200">{c.representanteLegalNombre}</span>
+                      {c.representanteLegalEmail && <span className="text-[11px] text-gray-400">{c.representanteLegalEmail}</span>}
+                    </div>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap w-px">
+                  <EstadoArcaBadge empresa={c} onClick={setInfoArca} />
+                </td>
+                <td className="px-4 py-3">
+                  <ContadorLista empresa={c} tipo="convenios" total={(c.convenioIds || []).length} cargando={cargandoConvenios} singular="convenio" plural="convenios" />
+                </td>
+                <td className="px-4 py-3">
+                  <ContadorLista empresa={c} tipo="obrasSociales" total={(c.obrasSocialesIds || []).length} cargando={cargandoObrasSociales} singular="obra social" plural="obras sociales" />
+                </td>
+                <td className="px-4 py-3">
+                  <ContadorLista empresa={c} tipo="sucursales" total={(c.sucursalIds || []).length} cargando={cargandoSucursales} singular="sucursal" plural="sucursales" />
+                </td>
+                <td className="px-4 py-3">
+                  <ContadorLista empresa={c} tipo="sedes" total={(c.sedeIds || []).length} cargando={cargandoSedes} singular="sede" plural="sedes" />
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <button onClick={() => openEdit(c)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Editar">
+                      <FontAwesomeIcon icon={faEdit} />
+                    </button>
+                    <button onClick={() => handleDelete(c)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Eliminar">
+                      <FontAwesomeIcon icon={faTrash} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </TablaConEncabezadoFijo>
       )}
 
       <EmpresaFormModal

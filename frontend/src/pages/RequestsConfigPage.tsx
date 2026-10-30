@@ -17,6 +17,7 @@ import { InfoModal } from '../components/ui/InfoModal';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 const DAYS_OF_WEEK = [
   { id: 0, label: 'Domingo', short: 'D' },
@@ -718,28 +719,26 @@ export const RequestsConfigPage: React.FC = () => {
                 </div>
 
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                      <thead className="text-xs uppercase bg-gray-900 text-gray-400 font-medium">
-                        <tr>
-                          <th className="py-4 px-6 w-16 text-center">Ordenar</th>
-                          <th className="py-4 px-6 w-16 text-center">Orden</th>
-                          <th className="py-4 px-6">Tipo de ausencia</th>
-                          <th className="py-4 px-6 text-center">Visibilidad</th>
-                          <th className="py-4 px-6 text-center">Reemplazo Opcional</th>
-                          <th className="py-4 px-6 text-center">Estado</th>
-                          <th className="py-4 px-6 text-right w-32"></th>
-                        </tr>
-                      </thead>
-                      <SortableContext items={activityTypes.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                          {activityTypes.map((item, index) => (
-                            <SortableActivityTypeRow key={item.id} item={item} index={index} isReorderMode={isReorderMode} allProjects={allProjects} onEdit={openEditModal} onDelete={handleDeleteType} onToggleActive={handleToggleActive} onToggleReplacement={handleToggleReplacement} onStartReorder={handleStartReorder} />
-                          ))}
-                        </tbody>
-                      </SortableContext>
-                    </table>
-                  </div>
+                  <TablaConEncabezadoFijo tabla="w-full text-sm text-left">
+                    <thead className="text-xs uppercase bg-gray-900 text-gray-400 font-medium">
+                      <tr>
+                        <th className="py-4 px-6 w-16 text-center">Ordenar</th>
+                        <th className="py-4 px-6 w-16 text-center">Orden</th>
+                        <th className="py-4 px-6">Tipo de ausencia</th>
+                        <th className="py-4 px-6 text-center">Visibilidad</th>
+                        <th className="py-4 px-6 text-center">Reemplazo Opcional</th>
+                        <th className="py-4 px-6 text-center">Estado</th>
+                        <th className="py-4 px-6 text-right w-32"></th>
+                      </tr>
+                    </thead>
+                    <SortableContext items={activityTypes.map((item) => item.id)} strategy={verticalListSortingStrategy}>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                        {activityTypes.map((item, index) => (
+                          <SortableActivityTypeRow key={item.id} item={item} index={index} isReorderMode={isReorderMode} allProjects={allProjects} onEdit={openEditModal} onDelete={handleDeleteType} onToggleActive={handleToggleActive} onToggleReplacement={handleToggleReplacement} onStartReorder={handleStartReorder} />
+                        ))}
+                      </tbody>
+                    </SortableContext>
+                  </TablaConEncabezadoFijo>
                 </DndContext>
 
                 {activityTypes.length === 0 && (

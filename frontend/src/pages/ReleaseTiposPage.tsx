@@ -15,6 +15,7 @@ import { releaseTiposAPI, ReleaseTipoItem } from "../api/releaseTipos";
 import { releasesAPI } from "../api/release";
 import { BadgeCustom } from "../components/contratacion/PlantillaCustom";
 import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
+import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
 
 const normalizar = (s: string): string =>
   (s || "")
@@ -248,47 +249,45 @@ export const ReleaseTiposPage: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  <th className="px-4 py-3 font-semibold">Nombre</th>
-                  <th className="px-4 py-3 font-semibold">Estado</th>
-                  <th className="px-4 py-3 font-semibold">Firma</th>
-                  <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-clip">
+          <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 font-semibold">Nombre</th>
+                <th className="px-4 py-3 font-semibold">Estado</th>
+                <th className="px-4 py-3 font-semibold">Firma</th>
+                <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {filtrados.map((tipo) => (
+                <tr key={tipo._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                  <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">
+                    <span className="inline-flex items-center gap-2">
+                      {tipo.name}
+                      {tiposConCustom.has(tipo._id) && <BadgeCustom />}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${tipo.isActive === false ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"}`}>{tipo.isActive === false ? "Inactivo" : "Activo"}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <BadgeFirma activo={tipo.requiereFirma !== false} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => abrirEditar(tipo)} className="p-2 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Editar tipo de release">
+                        <FontAwesomeIcon icon={faEdit} />
+                      </button>
+                      {!tipo.delSistema && (<button onClick={() => eliminar(tipo)} className="p-2 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Eliminar tipo de release">
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>)}
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {filtrados.map((tipo) => (
-                  <tr key={tipo._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                    <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">
-                      <span className="inline-flex items-center gap-2">
-                        {tipo.name}
-                        {tiposConCustom.has(tipo._id) && <BadgeCustom />}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${tipo.isActive === false ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"}`}>{tipo.isActive === false ? "Inactivo" : "Activo"}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <BadgeFirma activo={tipo.requiereFirma !== false} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => abrirEditar(tipo)} className="p-2 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Editar tipo de release">
-                          <FontAwesomeIcon icon={faEdit} />
-                        </button>
-                        {!tipo.delSistema && (<button onClick={() => eliminar(tipo)} className="p-2 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Eliminar tipo de release">
-                          <FontAwesomeIcon icon={faTrash} />
-                        </button>)}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </TablaConEncabezadoFijo>
         </div>
       )}
 

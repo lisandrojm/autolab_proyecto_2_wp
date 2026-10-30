@@ -5,6 +5,7 @@ import { dropboxSignBotAPI, type AlcanceVerificacion, type AnclaRegla, type Regl
 import { InfoModal } from "../ui/InfoModal";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { PrevisualizacionColocacion } from "./PrevisualizacionColocacion";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 /*
   «REGLAS DE COLOCACIÓN DE LA FIRMA» (22/10/2026): la tabla tipo de documento → ancla, editable y
@@ -199,92 +200,90 @@ export const ReglasColocacionCard: React.FC = () => {
           <FontAwesomeIcon icon={faSpinner} spin /> Cargando…
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-          <table className="min-w-full text-xs">
-            <thead className="bg-gray-50 dark:bg-gray-900/40 text-[11px] uppercase text-gray-500">
-              <tr>
-                <th className="px-3 py-2 text-left">Tipo</th>
-                <th className="px-3 py-2 text-left">Nombre matchea</th>
-                <th className="px-3 py-2 text-left">Página</th>
-                <th className="px-3 py-2 text-left">Ancla y posición</th>
-                <th className="px-3 py-2 text-left">Campo</th>
-                <th className="px-3 py-2 text-left">Estado</th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {/*
-                FAMILIA A (25/10/2026): los documentos generados desde una plantilla con {{firma}} traen
-                su posición capturada al generarlos. No es una regla de acá: se define en el ABM de
-                Plantillas y se muestra de SÓLO LECTURA, para que las dos cosas no vuelvan a divergir.
-              */}
-              <tr className="align-top bg-blue-50/50 dark:bg-blue-950/20">
+        <TablaConEncabezadoFijo className="rounded-lg border border-gray-200 dark:border-gray-700" tabla="min-w-full text-xs">
+          <thead className="bg-gray-50 dark:bg-gray-900/40 text-[11px] uppercase text-gray-500">
+            <tr>
+              <th className="px-3 py-2 text-left">Tipo</th>
+              <th className="px-3 py-2 text-left">Nombre matchea</th>
+              <th className="px-3 py-2 text-left">Página</th>
+              <th className="px-3 py-2 text-left">Ancla y posición</th>
+              <th className="px-3 py-2 text-left">Campo</th>
+              <th className="px-3 py-2 text-left">Estado</th>
+              <th className="px-3 py-2" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            {/*
+              FAMILIA A (25/10/2026): los documentos generados desde una plantilla con {{firma}} traen
+              su posición capturada al generarlos. No es una regla de acá: se define en el ABM de
+              Plantillas y se muestra de SÓLO LECTURA, para que las dos cosas no vuelvan a divergir.
+            */}
+            <tr className="align-top bg-blue-50/50 dark:bg-blue-950/20">
+              <td className="px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">
+                Plantillas del ABM
+                <p className="mt-0.5 max-w-[28ch] font-normal text-[11px] text-gray-500">Contratos y releases generados por WeProdu desde una plantilla con {"{{firma}}"}: la posición se captura al generar el documento y viaja con él.</p>
+              </td>
+              <td className="px-3 py-2 text-gray-600 dark:text-gray-300">cualquier nombre, por el código del documento</td>
+              <td className="px-3 py-2 text-gray-600 dark:text-gray-300">donde cayó {"{{firma}}"}</td>
+              <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                Sobre la línea <span className="font-mono">«Firma: ____»</span> que imprime {"{{firma}}"}. Sin búsqueda de rótulo ni OCR. Si el PDF del Outbox no es el generado, se usan las reglas de abajo.
+              </td>
+              <td className="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap">45 pt de alto<br /><span className="text-[11px] text-gray-500">ancho = la línea</span></td>
+              <td className="px-3 py-2 whitespace-nowrap">
+                <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">Declarada</span>
+              </td>
+              <td className="px-3 py-2 whitespace-nowrap text-right">
+                <a href="/contratos-frame" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold" title="La posición se define en la plantilla, con {{firma}}">
+                  Se define en la plantilla →
+                </a>
+              </td>
+            </tr>
+            {reglas.map((r, i) => (
+              <tr key={`${r.tipo}-${i}`} className="align-top">
                 <td className="px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">
-                  Plantillas del ABM
-                  <p className="mt-0.5 max-w-[28ch] font-normal text-[11px] text-gray-500">Contratos y releases generados por WeProdu desde una plantilla con {"{{firma}}"}: la posición se captura al generar el documento y viaja con él.</p>
+                  {r.tipo}
+                  {r.descripcion && <p className="mt-0.5 max-w-[28ch] font-normal text-[11px] text-gray-500">{r.descripcion}</p>}
                 </td>
-                <td className="px-3 py-2 text-gray-600 dark:text-gray-300">cualquier nombre, por el código del documento</td>
-                <td className="px-3 py-2 text-gray-600 dark:text-gray-300">donde cayó {"{{firma}}"}</td>
+                <td className="px-3 py-2 font-mono text-gray-600 dark:text-gray-300">{r.patronNombre}</td>
+                <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{PAGINAS[r.pagina]}</td>
                 <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
-                  Sobre la línea <span className="font-mono">«Firma: ____»</span> que imprime {"{{firma}}"}. Sin búsqueda de rótulo ni OCR. Si el PDF del Outbox no es el generado, se usan las reglas de abajo.
+                  {r.anclas.length === 0 && <span className="text-gray-400">—</span>}
+                  {r.anclas.map((a, j) => (
+                    <p key={j} className={j > 0 ? "mt-1 border-t border-dashed border-gray-200 pt-1 dark:border-gray-700" : ""}>
+                      <span className="font-mono text-gray-800 dark:text-gray-100">«{a.rotulo}»</span> · {POSICION[a.tipo]} · {OCURRENCIAS[a.ocurrencia]}
+                      {a.excluir.length > 0 && <span className="text-red-600 dark:text-red-400"> · nunca si contiene {a.excluir.map((e) => `«${e}»`).join(", ")}</span>}
+                    </p>
+                  ))}
+                  {r.ocr && <p className="mt-0.5 text-[11px] text-gray-500">Rótulo dibujado: se lee por OCR la franja {Math.round(r.ocr.desde * 100)}–{Math.round(r.ocr.hasta * 100)} % de la página.</p>}
                 </td>
-                <td className="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap">45 pt de alto<br /><span className="text-[11px] text-gray-500">ancho = la línea</span></td>
+                <td className="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                  {r.campo.alto} pt de alto
+                  <br />
+                  <span className="text-[11px] text-gray-500">ancho = la línea (o {r.campo.anchoFijo} pt)</span>
+                </td>
                 <td className="px-3 py-2 whitespace-nowrap">
-                  <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">Declarada</span>
+                  {r.estado === "activo" && r.anclas.length > 0 ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300">
+                      <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" /> Definida
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300" title={r.motivoPendiente}>
+                      <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" /> Sin definir
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-2 whitespace-nowrap text-right">
-                  <a href="/contratos-frame" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold" title="La posición se define en la plantilla, con {{firma}}">
-                    Se define en la plantilla →
-                  </a>
+                  <button type="button" onClick={() => abrirEditor(i)} className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold" title="Editar">
+                    <FontAwesomeIcon icon={faPen} /> Editar
+                  </button>
+                  <button type="button" onClick={() => quitar(i)} className="ml-3 text-red-600 hover:text-red-700 dark:text-red-400 font-semibold" title="Quitar">
+                    <FontAwesomeIcon icon={faTrash} />
+                  </button>
                 </td>
               </tr>
-              {reglas.map((r, i) => (
-                <tr key={`${r.tipo}-${i}`} className="align-top">
-                  <td className="px-3 py-2 font-semibold text-gray-800 dark:text-gray-100">
-                    {r.tipo}
-                    {r.descripcion && <p className="mt-0.5 max-w-[28ch] font-normal text-[11px] text-gray-500">{r.descripcion}</p>}
-                  </td>
-                  <td className="px-3 py-2 font-mono text-gray-600 dark:text-gray-300">{r.patronNombre}</td>
-                  <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{PAGINAS[r.pagina]}</td>
-                  <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
-                    {r.anclas.length === 0 && <span className="text-gray-400">—</span>}
-                    {r.anclas.map((a, j) => (
-                      <p key={j} className={j > 0 ? "mt-1 border-t border-dashed border-gray-200 pt-1 dark:border-gray-700" : ""}>
-                        <span className="font-mono text-gray-800 dark:text-gray-100">«{a.rotulo}»</span> · {POSICION[a.tipo]} · {OCURRENCIAS[a.ocurrencia]}
-                        {a.excluir.length > 0 && <span className="text-red-600 dark:text-red-400"> · nunca si contiene {a.excluir.map((e) => `«${e}»`).join(", ")}</span>}
-                      </p>
-                    ))}
-                    {r.ocr && <p className="mt-0.5 text-[11px] text-gray-500">Rótulo dibujado: se lee por OCR la franja {Math.round(r.ocr.desde * 100)}–{Math.round(r.ocr.hasta * 100)} % de la página.</p>}
-                  </td>
-                  <td className="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                    {r.campo.alto} pt de alto
-                    <br />
-                    <span className="text-[11px] text-gray-500">ancho = la línea (o {r.campo.anchoFijo} pt)</span>
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    {r.estado === "activo" && r.anclas.length > 0 ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300">
-                        <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" /> Definida
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300" title={r.motivoPendiente}>
-                        <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" /> Sin definir
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-right">
-                    <button type="button" onClick={() => abrirEditor(i)} className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-semibold" title="Editar">
-                      <FontAwesomeIcon icon={faPen} /> Editar
-                    </button>
-                    <button type="button" onClick={() => quitar(i)} className="ml-3 text-red-600 hover:text-red-700 dark:text-red-400 font-semibold" title="Quitar">
-                      <FontAwesomeIcon icon={faTrash} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </TablaConEncabezadoFijo>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">

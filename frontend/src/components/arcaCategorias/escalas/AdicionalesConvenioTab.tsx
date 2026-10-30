@@ -8,6 +8,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { sweetAlert } from '../../../utils/sweetAlert';
 import { formatearFechaCalendario } from '../../../utils/fechas';
 import { ChipAConfirmar, ChipOrigen, pesos, porciento, Th, TEXTO_TIPO_CALCULO, textoRemunerativo } from './piezas';
+import { TablaConEncabezadoFijo } from '../../ui/TablaConEncabezadoFijo';
 
 /**
  * ABM de los ADICIONALES del convenio: el apartado que faltaba.
@@ -197,81 +198,79 @@ export const AdicionalesConvenioTab: React.FC<Props> = ({ convenio, fecha, adici
   }, [historialDe]);
 
   const tabla = (lista: AdicionalConValor[], titulo: string) => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-clip">
       <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{titulo}</span>
         <span className="text-xs text-gray-500 dark:text-gray-400">{lista.length} adicional(es)</span>
       </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full">
-          <thead className="bg-gray-50 dark:bg-gray-900/50">
-            <tr>
-              <Th className="text-left">Adicional</Th>
-              <Th className="text-left">Tipo</Th>
-              <Th className="text-left">Remunerativo</Th>
-              <Th className="text-right">Valor al {formatearFechaCalendario(fecha)}</Th>
-              <Th className="text-left hidden lg:table-cell">Vigencia</Th>
-              <Th className="text-right">Acciones</Th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {lista.map((a) => (
-              <tr key={a._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{a.nombre}</span>
-                    {!a.confirmado && <ChipAConfirmar />}
-                  </div>
-                  <span className="block font-mono text-[11px] text-gray-500 dark:text-gray-400">{a.codigo}</span>
-                  {a.condicion && <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{a.condicion}</span>}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
-                  {TEXTO_TIPO_CALCULO[a.tipoCalculo] || a.tipoCalculo}
-                  {a.unidad && <span className="block text-xs text-gray-500 dark:text-gray-400">{a.unidad}</span>}
-                </td>
-                <td className="px-4 py-3 text-sm">
-                  {a.remunerativo === null ? <ChipAConfirmar texto="No se sabe" ayuda="El acta no dice si es remunerativo. Mientras siga así, no entra en la base de aportes del cálculo." /> : <span className={a.remunerativo ? 'text-green-700 dark:text-green-400 font-semibold' : 'text-gray-600 dark:text-gray-300'}>{textoRemunerativo(a.remunerativo)}</span>}
-                </td>
-                <td className="px-4 py-3 text-right text-sm font-mono text-gray-900 dark:text-gray-100">
-                  {a.tipoCalculo === 'porcentaje' ? porciento(a.porcentaje) : pesos(a.monto)}
-                  {a.monto === null && a.porcentaje === null && <span className="block text-[11px] text-amber-600 dark:text-amber-400">sin importe para esa fecha</span>}
-                </td>
-                <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">
-                  {a.valorDesde ? (
-                    <>
-                      {formatearFechaCalendario(a.valorDesde)} → {a.valorHasta ? formatearFechaCalendario(a.valorHasta) : 'sin fin'}
-                    </>
-                  ) : (
-                    '—'
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-1">
-                    <button type="button" onClick={() => void verHistorial(a)} title="Ver el historial de importes" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                      <FontAwesomeIcon icon={faClockRotateLeft} className="h-4 w-4" />
+      <TablaConEncabezadoFijo tabla="min-w-full">
+        <thead className="bg-gray-50 dark:bg-gray-900/50">
+          <tr>
+            <Th className="text-left">Adicional</Th>
+            <Th className="text-left">Tipo</Th>
+            <Th className="text-left">Remunerativo</Th>
+            <Th className="text-right">Valor al {formatearFechaCalendario(fecha)}</Th>
+            <Th className="text-left hidden lg:table-cell">Vigencia</Th>
+            <Th className="text-right">Acciones</Th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          {lista.map((a) => (
+            <tr key={a._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+              <td className="px-4 py-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{a.nombre}</span>
+                  {!a.confirmado && <ChipAConfirmar />}
+                </div>
+                <span className="block font-mono text-[11px] text-gray-500 dark:text-gray-400">{a.codigo}</span>
+                {a.condicion && <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">{a.condicion}</span>}
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                {TEXTO_TIPO_CALCULO[a.tipoCalculo] || a.tipoCalculo}
+                {a.unidad && <span className="block text-xs text-gray-500 dark:text-gray-400">{a.unidad}</span>}
+              </td>
+              <td className="px-4 py-3 text-sm">
+                {a.remunerativo === null ? <ChipAConfirmar texto="No se sabe" ayuda="El acta no dice si es remunerativo. Mientras siga así, no entra en la base de aportes del cálculo." /> : <span className={a.remunerativo ? 'text-green-700 dark:text-green-400 font-semibold' : 'text-gray-600 dark:text-gray-300'}>{textoRemunerativo(a.remunerativo)}</span>}
+              </td>
+              <td className="px-4 py-3 text-right text-sm font-mono text-gray-900 dark:text-gray-100">
+                {a.tipoCalculo === 'porcentaje' ? porciento(a.porcentaje) : pesos(a.monto)}
+                {a.monto === null && a.porcentaje === null && <span className="block text-[11px] text-amber-600 dark:text-amber-400">sin importe para esa fecha</span>}
+              </td>
+              <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                {a.valorDesde ? (
+                  <>
+                    {formatearFechaCalendario(a.valorDesde)} → {a.valorHasta ? formatearFechaCalendario(a.valorHasta) : 'sin fin'}
+                  </>
+                ) : (
+                  '—'
+                )}
+              </td>
+              <td className="px-4 py-3">
+                <div className="flex items-center justify-end gap-1">
+                  <button type="button" onClick={() => void verHistorial(a)} title="Ver el historial de importes" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <FontAwesomeIcon icon={faClockRotateLeft} className="h-4 w-4" />
+                  </button>
+                  {canManage && !a.confirmado && (
+                    <button type="button" onClick={() => void confirmarRapido(a)} title="Confirmar el tipo de cálculo y el carácter" className="p-1.5 rounded text-green-600 dark:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                     </button>
-                    {canManage && !a.confirmado && (
-                      <button type="button" onClick={() => void confirmarRapido(a)} title="Confirmar el tipo de cálculo y el carácter" className="p-1.5 rounded text-green-600 dark:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                        <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
+                  )}
+                  {canManage && (
+                    <>
+                      <button type="button" onClick={() => abrirEdicion(a)} title="Editar el adicional" className="p-1.5 rounded text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <FontAwesomeIcon icon={faPenToSquare} className="h-4 w-4" />
                       </button>
-                    )}
-                    {canManage && (
-                      <>
-                        <button type="button" onClick={() => abrirEdicion(a)} title="Editar el adicional" className="p-1.5 rounded text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                          <FontAwesomeIcon icon={faPenToSquare} className="h-4 w-4" />
-                        </button>
-                        <button type="button" onClick={() => void borrar(a)} title="Borrar el adicional y sus importes" className="p-1.5 rounded text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                          <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                      <button type="button" onClick={() => void borrar(a)} title="Borrar el adicional y sus importes" className="p-1.5 rounded text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </TablaConEncabezadoFijo>
     </div>
   );
 
@@ -401,7 +400,7 @@ export const AdicionalesConvenioTab: React.FC<Props> = ({ convenio, fecha, adici
         ) : historial.length === 0 ? (
           <p className="text-sm text-gray-500 dark:text-gray-400 py-4">Todavía no tiene ningún importe cargado.</p>
         ) : (
-          <table className="min-w-full">
+          <TablaConEncabezadoFijo tabla="min-w-full">
             <thead className="bg-gray-50 dark:bg-gray-900/50">
               <tr>
                 <Th className="text-left">Desde</Th>
@@ -433,7 +432,7 @@ export const AdicionalesConvenioTab: React.FC<Props> = ({ convenio, fecha, adici
                 </tr>
               ))}
             </tbody>
-          </table>
+          </TablaConEncabezadoFijo>
         )}
 
         {formValor && (

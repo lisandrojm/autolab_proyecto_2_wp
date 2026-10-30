@@ -49,6 +49,7 @@ import { sweetAlert } from '../../utils/sweetAlert';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
 import { arcaDefaultsAPI, ArcaDefaults, CLAVE_CACHE_DEFAULTS_ARCA } from "../../api/arcaDefaults";
 import { LinkSiPuede } from '../LinkSiPuede';
+import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 const CLAVE_CACHE_OBRAS_SOCIALES = claveCacheCatalogo('/obras-sociales');
@@ -2334,414 +2335,412 @@ export const ContractBulkAfipTab: React.FC<{
               </button>
             </div>
           )}
-          <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-separate border-spacing-0 min-w-[1650px]">
-              <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
-                {/*
-                  LA FILA QUE NOMBRA AL GRUPO. Seis columnas que son una sola cosa.
+          <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1650px]">
+            <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
+              {/*
+                LA FILA QUE NOMBRA AL GRUPO. Seis columnas que son una sola cosa.
 
-                  Empresa Contrato, Convenio, Categoría, Obra Social, Sucursal y Actividad no son seis
-                  datos sueltos: son los que la EMPLEADORA declaró ante ARCA y los que se eligen dentro
-                  de eso. La banda azul ya los pintaba juntos, pero un color no dice de qué son — con
-                  quince columnas al lado, había que deducirlo.
+                Empresa Contrato, Convenio, Categoría, Obra Social, Sucursal y Actividad no son seis
+                datos sueltos: son los que la EMPLEADORA declaró ante ARCA y los que se eligen dentro
+                de eso. La banda azul ya los pintaba juntos, pero un color no dice de qué son — con
+                quince columnas al lado, había que deducirlo.
 
-                  `COLUMNAS_ANTES_DEL_GRUPO` es el offset hasta ahí. Va como constante y no como número
-                  suelto porque si mañana se agrega una columna a la izquierda, el rótulo se corre y
-                  queda titulando las columnas equivocadas — un error que se ve pero no se entiende.
+                `COLUMNAS_ANTES_DEL_GRUPO` es el offset hasta ahí. Va como constante y no como número
+                suelto porque si mañana se agrega una columna a la izquierda, el rótulo se corre y
+                queda titulando las columnas equivocadas — un error que se ve pero no se entiende.
 
-                  Las de la derecha SÍ se completan, aunque vayan vacías: ver `COLUMNAS_DESPUES_DEL_GRUPO`.
+                Las de la derecha SÍ se completan, aunque vayan vacías: ver `COLUMNAS_DESPUES_DEL_GRUPO`.
 
-                  EL PRIMER RELLENO VA FIJO, como las columnas que tiene abajo.
+                EL PRIMER RELLENO VA FIJO, como las columnas que tiene abajo.
 
-                  Abarca justo las tres fijas —por eso usa `COLUMNAS_FIJAS`—, pero sin `sticky` esta
-                  fila entera scrolleaba a lo ancho mientras la de abajo se quedaba quieta: la banda
-                  de arriba de «Datos ARCA» y «Usuario» mostraba lo que iba pasando. Las dos filas del
-                  encabezado tienen que quedarse juntas o no se queda ninguna.
+                Abarca justo las tres fijas —por eso usa `COLUMNAS_FIJAS`—, pero sin `sticky` esta
+                fila entera scrolleaba a lo ancho mientras la de abajo se quedaba quieta: la banda
+                de arriba de «Datos ARCA» y «Usuario» mostraba lo que iba pasando. Las dos filas del
+                encabezado tienen que quedarse juntas o no se queda ninguna.
 
-                  Va sin el borde de cierre: el filo del bloque fijo ya lo dibujan la fila de abajo y
-                  las celdas del cuerpo. Repetirlo acá, en una banda vacía y más baja, se leía como
-                  una rayita suelta fuera de lugar en vez de como el borde de una columna.
-                */}
-                {hayEncuadre && (
-                  <tr>
-                    <th colSpan={COLUMNAS_FIJAS} className="sticky left-0 z-[15] p-0 bg-gray-50 dark:bg-gray-900" />
-                    <th colSpan={COLUMNAS_ANTES_DEL_GRUPO - COLUMNAS_FIJAS} className="p-0 bg-gray-50 dark:bg-gray-900" />
-                    <th colSpan={6} className={`px-4 pt-2.5 pb-1 text-[10px] font-bold uppercase tracking-widest text-blue-700/80 dark:text-blue-400/80 text-center ${GRUPO_ENCUADRE_TH}`}>
-                      Datos que declara la empleadora ante ARCA
-                    </th>
-                    <th colSpan={COLUMNAS_DESPUES_DEL_GRUPO} className="p-0 bg-gray-50 dark:bg-gray-900" />
-                  </tr>
-                )}
-                <tr className="border-b border-gray-100 dark:border-gray-800">
-                  <th className={`sticky left-0 z-[15] px-4 py-3 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK}`}>
-                    <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={selectableFiltered.length === 0} title={`Seleccionar los ${selectableFiltered.length} del listado (todas las páginas, no sólo la que se ve)`} className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
+                Va sin el borde de cierre: el filo del bloque fijo ya lo dibujan la fila de abajo y
+                las celdas del cuerpo. Repetirlo acá, en una banda vacía y más baja, se leía como
+                una rayita suelta fuera de lugar en vez de como el borde de una columna.
+              */}
+              {hayEncuadre && (
+                <tr>
+                  <th colSpan={COLUMNAS_FIJAS} className="sticky left-0 z-[15] p-0 bg-gray-50 dark:bg-gray-900" />
+                  <th colSpan={COLUMNAS_ANTES_DEL_GRUPO - COLUMNAS_FIJAS} className="p-0 bg-gray-50 dark:bg-gray-900" />
+                  <th colSpan={6} className={`px-4 pt-2.5 pb-1 text-[10px] font-bold uppercase tracking-widest text-blue-700/80 dark:text-blue-400/80 text-center ${GRUPO_ENCUADRE_TH}`}>
+                    Datos que declara la empleadora ante ARCA
                   </th>
-                  {/*
-                    * La columna fija, la que queda a la vista mientras se scrollea a lo ancho:
-                    *
-                    *  - en Alta temprana, «Datos ARCA»: es el semáforo de la fila —qué falta para
-                    *    que esta persona entre en el TXT— y es lo que se está mirando todo el
-                    *    tiempo. Acá «Acciones» ocupaba ese lugar con un «Generar TXT» por fila que
-                    *    dependía, justamente, de lo que este badge dice (y que se hace en masa);
-                    *  - en Constancia de CUIT y Sin CUIT se mantiene «Acciones», porque ahí sí
-                    *    lleva la única forma de hacer el trámite de esa fila.
-                    */}
-                  {filterTipo === 'alta_temprana_afip' ? (
-                    <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColFija}`}>
-                      <span className="inline-flex items-center gap-1.5">
-                        <BotonOrden columna="datosArca" {...ordenProps} title="Ordenar por lo que falta para el TXT">
-                          Datos ARCA
-                        </BotonOrden>
-                        <button type="button" onClick={() => setDatosAfipInfoOpen(true)} title="Por qué a veces no se puede generar el TXT" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
+                  <th colSpan={COLUMNAS_DESPUES_DEL_GRUPO} className="p-0 bg-gray-50 dark:bg-gray-900" />
+                </tr>
+              )}
+              <tr className="border-b border-gray-100 dark:border-gray-800">
+                <th className={`sticky left-0 z-[15] px-4 py-3 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK}`}>
+                  <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={selectableFiltered.length === 0} title={`Seleccionar los ${selectableFiltered.length} del listado (todas las páginas, no sólo la que se ve)`} className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
+                </th>
+                {/*
+                  * La columna fija, la que queda a la vista mientras se scrollea a lo ancho:
+                  *
+                  *  - en Alta temprana, «Datos ARCA»: es el semáforo de la fila —qué falta para
+                  *    que esta persona entre en el TXT— y es lo que se está mirando todo el
+                  *    tiempo. Acá «Acciones» ocupaba ese lugar con un «Generar TXT» por fila que
+                  *    dependía, justamente, de lo que este badge dice (y que se hace en masa);
+                  *  - en Constancia de CUIT y Sin CUIT se mantiene «Acciones», porque ahí sí
+                  *    lleva la única forma de hacer el trámite de esa fila.
+                  */}
+                {filterTipo === 'alta_temprana_afip' ? (
+                  <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColFija}`}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <BotonOrden columna="datosArca" {...ordenProps} title="Ordenar por lo que falta para el TXT">
+                        Datos ARCA
+                      </BotonOrden>
+                      <button type="button" onClick={() => setDatosAfipInfoOpen(true)} title="Por qué a veces no se puede generar el TXT" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
+                        <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                      </button>
+                    </span>
+                  </th>
+                ) : (
+                  <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColFija}`}>Acciones</th>
+                )}
+                {/*
+                  «USUARIO», PEGADA A LA ANTERIOR Y TAMBIÉN FIJA.
+
+                  Es de quién es la fila: con diecinueve columnas, al llegar a Convenio o a Estado
+                  Impositivo el nombre ya había quedado fuera de pantalla y había que volver al
+                  principio para saber a quién se le estaba tocando el contrato. Ver `anchoColFija`
+                  para por qué el ancho de la de al lado está fijado a mano.
+                */}
+                <th className={`sticky ${izquierdaColUsuario} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 ${bordeFinDeFijas}`}>
+                  <BotonOrden columna="usuario" {...ordenProps}>
+                    Colaborador
+                  </BotonOrden>
+                </th>
+                {/* «Fecha de creación»: cuándo se cargó el contrato. Es el orden con el que abre la tabla. */}
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Cuándo se cargó el contrato en WeProdu">
+                  <BotonOrden columna="fechaCarga" {...ordenProps}>
+                    Fecha de creación
+                  </BotonOrden>
+                </th>
+                {/* Acá vivía «Verificar (Opc)», una columna entera para un botón que copiaba el CUIT
+                    y abría el portal de ARCA a mano. Se sacó: al lado de «Validar», que consulta el
+                    Padrón sola y deja el resultado archivado, un segundo botón que manda a hacer lo
+                    mismo a mano solo hacía dudar de cuál era el que valía. La columna sobrevive solo
+                    para «Sin CUIT», donde el contenido es otro. */}
+                {filterTipo === 'sin_cuit' && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Validación</th>}
+                {filterTipo === 'sin_cuit' && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Documentación</th>}
+                {/*
+                  «Último Contrato», y no «Alta / Baja».
+
+                  Una persona puede tener varios contratos en el proyecto, así que un par de fechas
+                  sueltas no decía de CUÁL eran. Estas son las del último, que es el que manda para
+                  el alta. El detalle no se pierde: la celda sigue rotulando sus dos líneas con
+                  «Alta:» y «Baja:», y arriba lleva el badge de vigencia.
+                */}
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="ultimoContrato" {...ordenProps} title="Ordenar por la fecha de alta del último contrato">
+                    Último Contrato
+                  </BotonOrden>
+                </th>
+                {layoutConstancia && (
+                  <>
+                    {filterTipo !== 'sin_cuit' && (
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                        <span className="inline-flex items-center gap-1.5">
+                          Datos CUIT/CUIL
+                          <button type="button" onClick={() => setDatosCuitInfoOpen(true)} title="Por qué a veces no se puede validar" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
+                            <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                          </button>
+                        </span>
+                      </th>
+                    )}
+                    {filterTipo !== 'sin_cuit' && (
+                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Estado en el Padrón de ARCA">
+                        ARCA
+                      </th>
+                    )}
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Si la constancia quedó archivada en Dropbox">
+                      DROPBOX
+                    </th>
+                  </>
+                )}
+                {filterTipo !== 'sin_cuit' && <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === 'alta_temprana_afip' ? 'Alta ARCA' : 'Alta Servicios'} />}
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="cuit" {...ordenProps}>
+                    CUIT
+                  </BotonOrden>
+                </th>
+                {/* El fondo y el borde de «grupo encuadre» solo cuando hay grupo: sin las tres
+                    columnas de al lado, abrir un grupo en Empresa Contrato lo dejaría sin cerrar. */}
+                <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${hayEncuadre ? GRUPO_ENCUADRE_TH_INICIO : ''}`}>
+                  <span className="inline-flex items-center gap-1.5">
+                    <BotonOrden columna="empresaContrato" {...ordenProps}>
+                      Empresa Contrato
+                    </BotonOrden>
+                    {filterTipo === 'alta_temprana_afip' && (
+                      <>
+                        <span className="text-red-500">*</span>
+                        <button type="button" onClick={() => setEmpresaContratoInfoOpen(true)} title="Por qué es obligatoria" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
                           <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
                         </button>
-                      </span>
+                      </>
+                    )}
+                    {hayEncuadre && <FlechaEncuadre />}
+                  </span>
+                </th>
+                {/* Entre Empresa Contrato y Obra Social, que es el orden en que se resuelven: la
+                    obra social por defecto sale del convenio, y el convenio de la categoría. */}
+                {hayEncuadre && (
+                  <>
+                    <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`}>
+                      <BotonOrden columna="convenio" {...ordenProps}>
+                        Convenio
+                      </BotonOrden>
+                      <FlechaEncuadre />
                     </th>
-                  ) : (
-                    <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColFija}`}>Acciones</th>
+                    <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`}>
+                      <BotonOrden columna="categoria" {...ordenProps}>
+                        Categoría
+                      </BotonOrden>
+                      <FlechaEncuadre />
+                    </th>
+                  </>
+                )}
+                {/* Pegada a Empresa Contrato: la obra social se valida contra el CUIT de la
+                    empleadora, así que las dos columnas se leen juntas —sin empresa, esta no se
+                    puede resolver—. */}
+                {hayEncuadre && (
+                  <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`} title="Código RNOS (pos. 40-45). Ordena por estado: primero lo que hay que resolver.">
+                    <BotonOrden columna="obraSocial" {...ordenProps} title="Ordena por estado: primero lo que hay que resolver">
+                      Obra Social
+                    </BotonOrden>
+                  </th>
+                )}
+                {/*
+                  SUCURSAL Y ACTIVIDAD, ADENTRO DE LA BANDA. Son datos del alta igual que los otros.
+
+                  Quedaron afuera al agregarlas y eso las hacía leer como algo aparte, cuando salen
+                  del mismo lugar: los domicilios de explotación son los que la EMPLEADORA declaró
+                  ante ARCA, igual que sus convenios y sus obras sociales registradas. La banda es
+                  justamente «todo lo que cuelga de la empleadora», así que el cierre pasa a ser la
+                  Actividad y ya no la Obra Social.
+                */}
+                {hayEncuadre && (
+                  <>
+                    <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`} title="Domicilio de explotación declarado por la empleadora (pos. 74-78)">
+                      <BotonOrden columna="sucursal" {...ordenProps}>
+                        Sucursal
+                      </BotonOrden>
+                      <FlechaEncuadre />
+                    </th>
+                    <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH_FIN}`} title="Actividad declarada en ese domicilio (pos. 79-84). Con una sola, se hereda.">
+                      <BotonOrden columna="actividad" {...ordenProps}>
+                        Actividad
+                      </BotonOrden>
+                    </th>
+                  </>
+                )}
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="empresaRelease" {...ordenProps}>
+                    Empresa Release
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="cliente" {...ordenProps}>
+                    Cliente
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="proyecto" {...ordenProps}>
+                    Proyecto
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="contrato" {...ordenProps}>
+                    Contrato
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="estado" {...ordenProps}>
+                    Estado
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Impositivo</th>
+                <ContractActionsHeader />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {pag.visibles.map(({ row: r, result }) => (
+                <tr key={`${r._id}-${r.contractIndex}`} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}>
+                  <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
+                    <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={tituloCheck(r)} className={`rounded border-gray-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${omitidaEnValidacion(r) ? 'text-amber-500 focus:ring-amber-500' : 'text-emerald-600 focus:ring-emerald-500'}`} />
+                  </td>
+                  <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${anchoColFija} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
+                    {filterTipo === 'alta_temprana_afip' ? (
+                      <div className="flex flex-col items-start gap-1.5">
+                        <BadgeArca result={result} onClick={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })} />
+                        {result.completo && <BotonPresentarFila row={r} result={result} />}
+                      </div>
+                    ) : noPoseeCuit(r.cuit, r.sinCuit) ? (
+                      // Sin CUIT los trámites de ARCA no aplican: la salida es generar los documentos.
+                      <BotonHabilitarFirma row={r} tramite={r._tipo || 'constancia_cuit'} validado={!!r.sinCuitValidacion?.validado} onHabilitado={() => load(true)} />
+                    ) : (
+                      <div className="flex items-center gap-1.5 whitespace-nowrap">
+                        <BotonValidarCuit row={r} onConsultado={() => load(true)} compacto />
+                      </div>
+                    )}
+                  </td>
+                  {/* «Usuario», la otra columna fija: de quién es la fila. Ver `anchoColFija`. */}
+                  <td className={`sticky ${izquierdaColUsuario} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${bordeFinDeFijas} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
+                    <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
+                      {r.userName}
+                      <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                    <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>} />
+                  </td>
+                  {filterTipo === 'sin_cuit' && (
+                    <td className="px-4 py-3">
+                      <CeldaValidacionSinCuit row={r} onAbrir={() => setValidacionRow(r)} onCambio={(v) => aplicarValidacionSinCuit(r, v)} />
+                    </td>
                   )}
-                  {/*
-                    «USUARIO», PEGADA A LA ANTERIOR Y TAMBIÉN FIJA.
-
-                    Es de quién es la fila: con diecinueve columnas, al llegar a Convenio o a Estado
-                    Impositivo el nombre ya había quedado fuera de pantalla y había que volver al
-                    principio para saber a quién se le estaba tocando el contrato. Ver `anchoColFija`
-                    para por qué el ancho de la de al lado está fijado a mano.
-                  */}
-                  <th className={`sticky ${izquierdaColUsuario} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 ${bordeFinDeFijas}`}>
-                    <BotonOrden columna="usuario" {...ordenProps}>
-                      Colaborador
-                    </BotonOrden>
-                  </th>
-                  {/* «Fecha de creación»: cuándo se cargó el contrato. Es el orden con el que abre la tabla. */}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Cuándo se cargó el contrato en WeProdu">
-                    <BotonOrden columna="fechaCarga" {...ordenProps}>
-                      Fecha de creación
-                    </BotonOrden>
-                  </th>
-                  {/* Acá vivía «Verificar (Opc)», una columna entera para un botón que copiaba el CUIT
-                      y abría el portal de ARCA a mano. Se sacó: al lado de «Validar», que consulta el
-                      Padrón sola y deja el resultado archivado, un segundo botón que manda a hacer lo
-                      mismo a mano solo hacía dudar de cuál era el que valía. La columna sobrevive solo
-                      para «Sin CUIT», donde el contenido es otro. */}
-                  {filterTipo === 'sin_cuit' && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Validación</th>}
-                  {filterTipo === 'sin_cuit' && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Documentación</th>}
-                  {/*
-                    «Último Contrato», y no «Alta / Baja».
-
-                    Una persona puede tener varios contratos en el proyecto, así que un par de fechas
-                    sueltas no decía de CUÁL eran. Estas son las del último, que es el que manda para
-                    el alta. El detalle no se pierde: la celda sigue rotulando sus dos líneas con
-                    «Alta:» y «Baja:», y arriba lleva el badge de vigencia.
-                  */}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="ultimoContrato" {...ordenProps} title="Ordenar por la fecha de alta del último contrato">
-                      Último Contrato
-                    </BotonOrden>
-                  </th>
+                  {filterTipo === 'sin_cuit' && (
+                    <td className="px-4 py-3">
+                      <CeldaDocumentacionSinCuit row={r} onAbrir={() => setValidacionRow(r)} onCambio={(v) => aplicarValidacionSinCuit(r, v)} />
+                    </td>
+                  )}
+                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
+                    {(() => {
+                      const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
+                      return (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
+                            <EstadoRenovacion record={r} />
+                          </div>
+                          <div className="flex flex-col gap-0.5 text-xs">
+                            <span>
+                              <span className="text-gray-400">Alta:</span> {formatDate(r.fecha_alta_contrato)}
+                            </span>
+                            <span>
+                              <span className="text-gray-400">Baja:</span> {r.fecha_baja_contrato ? formatDate(r.fecha_baja_contrato) : '—'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </td>
                   {layoutConstancia && (
                     <>
                       {filterTipo !== 'sin_cuit' && (
-                        <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                          <span className="inline-flex items-center gap-1.5">
-                            Datos CUIT/CUIL
-                            <button type="button" onClick={() => setDatosCuitInfoOpen(true)} title="Por qué a veces no se puede validar" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
-                              <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                            </button>
-                          </span>
-                        </th>
-                      )}
-                      {filterTipo !== 'sin_cuit' && (
-                        <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Estado en el Padrón de ARCA">
-                          ARCA
-                        </th>
-                      )}
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Si la constancia quedó archivada en Dropbox">
-                        DROPBOX
-                      </th>
-                    </>
-                  )}
-                  {filterTipo !== 'sin_cuit' && <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === 'alta_temprana_afip' ? 'Alta ARCA' : 'Alta Servicios'} />}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="cuit" {...ordenProps}>
-                      CUIT
-                    </BotonOrden>
-                  </th>
-                  {/* El fondo y el borde de «grupo encuadre» solo cuando hay grupo: sin las tres
-                      columnas de al lado, abrir un grupo en Empresa Contrato lo dejaría sin cerrar. */}
-                  <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${hayEncuadre ? GRUPO_ENCUADRE_TH_INICIO : ''}`}>
-                    <span className="inline-flex items-center gap-1.5">
-                      <BotonOrden columna="empresaContrato" {...ordenProps}>
-                        Empresa Contrato
-                      </BotonOrden>
-                      {filterTipo === 'alta_temprana_afip' && (
-                        <>
-                          <span className="text-red-500">*</span>
-                          <button type="button" onClick={() => setEmpresaContratoInfoOpen(true)} title="Por qué es obligatoria" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
-                            <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                          </button>
-                        </>
-                      )}
-                      {hayEncuadre && <FlechaEncuadre />}
-                    </span>
-                  </th>
-                  {/* Entre Empresa Contrato y Obra Social, que es el orden en que se resuelven: la
-                      obra social por defecto sale del convenio, y el convenio de la categoría. */}
-                  {hayEncuadre && (
-                    <>
-                      <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`}>
-                        <BotonOrden columna="convenio" {...ordenProps}>
-                          Convenio
-                        </BotonOrden>
-                        <FlechaEncuadre />
-                      </th>
-                      <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`}>
-                        <BotonOrden columna="categoria" {...ordenProps}>
-                          Categoría
-                        </BotonOrden>
-                        <FlechaEncuadre />
-                      </th>
-                    </>
-                  )}
-                  {/* Pegada a Empresa Contrato: la obra social se valida contra el CUIT de la
-                      empleadora, así que las dos columnas se leen juntas —sin empresa, esta no se
-                      puede resolver—. */}
-                  {hayEncuadre && (
-                    <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`} title="Código RNOS (pos. 40-45). Ordena por estado: primero lo que hay que resolver.">
-                      <BotonOrden columna="obraSocial" {...ordenProps} title="Ordena por estado: primero lo que hay que resolver">
-                        Obra Social
-                      </BotonOrden>
-                    </th>
-                  )}
-                  {/*
-                    SUCURSAL Y ACTIVIDAD, ADENTRO DE LA BANDA. Son datos del alta igual que los otros.
-
-                    Quedaron afuera al agregarlas y eso las hacía leer como algo aparte, cuando salen
-                    del mismo lugar: los domicilios de explotación son los que la EMPLEADORA declaró
-                    ante ARCA, igual que sus convenios y sus obras sociales registradas. La banda es
-                    justamente «todo lo que cuelga de la empleadora», así que el cierre pasa a ser la
-                    Actividad y ya no la Obra Social.
-                  */}
-                  {hayEncuadre && (
-                    <>
-                      <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`} title="Domicilio de explotación declarado por la empleadora (pos. 74-78)">
-                        <BotonOrden columna="sucursal" {...ordenProps}>
-                          Sucursal
-                        </BotonOrden>
-                        <FlechaEncuadre />
-                      </th>
-                      <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH_FIN}`} title="Actividad declarada en ese domicilio (pos. 79-84). Con una sola, se hereda.">
-                        <BotonOrden columna="actividad" {...ordenProps}>
-                          Actividad
-                        </BotonOrden>
-                      </th>
-                    </>
-                  )}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="empresaRelease" {...ordenProps}>
-                      Empresa Release
-                    </BotonOrden>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="cliente" {...ordenProps}>
-                      Cliente
-                    </BotonOrden>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="proyecto" {...ordenProps}>
-                      Proyecto
-                    </BotonOrden>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="contrato" {...ordenProps}>
-                      Contrato
-                    </BotonOrden>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="estado" {...ordenProps}>
-                      Estado
-                    </BotonOrden>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Impositivo</th>
-                  <ContractActionsHeader />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {pag.visibles.map(({ row: r, result }) => (
-                  <tr key={`${r._id}-${r.contractIndex}`} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}>
-                    <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
-                      <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={tituloCheck(r)} className={`rounded border-gray-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${omitidaEnValidacion(r) ? 'text-amber-500 focus:ring-amber-500' : 'text-emerald-600 focus:ring-emerald-500'}`} />
-                    </td>
-                    <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${anchoColFija} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
-                      {filterTipo === 'alta_temprana_afip' ? (
-                        <div className="flex flex-col items-start gap-1.5">
-                          <BadgeArca result={result} onClick={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })} />
-                          {result.completo && <BotonPresentarFila row={r} result={result} />}
-                        </div>
-                      ) : noPoseeCuit(r.cuit, r.sinCuit) ? (
-                        // Sin CUIT los trámites de ARCA no aplican: la salida es generar los documentos.
-                        <BotonHabilitarFirma row={r} tramite={r._tipo || 'constancia_cuit'} validado={!!r.sinCuitValidacion?.validado} onHabilitado={() => load(true)} />
-                      ) : (
-                        <div className="flex items-center gap-1.5 whitespace-nowrap">
-                          <BotonValidarCuit row={r} onConsultado={() => load(true)} compacto />
-                        </div>
-                      )}
-                    </td>
-                    {/* «Usuario», la otra columna fija: de quién es la fila. Ver `anchoColFija`. */}
-                    <td className={`sticky ${izquierdaColUsuario} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${bordeFinDeFijas} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
-                      <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
-                        {r.userName}
-                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>} />
-                    </td>
-                    {filterTipo === 'sin_cuit' && (
-                      <td className="px-4 py-3">
-                        <CeldaValidacionSinCuit row={r} onAbrir={() => setValidacionRow(r)} onCambio={(v) => aplicarValidacionSinCuit(r, v)} />
-                      </td>
-                    )}
-                    {filterTipo === 'sin_cuit' && (
-                      <td className="px-4 py-3">
-                        <CeldaDocumentacionSinCuit row={r} onAbrir={() => setValidacionRow(r)} onCambio={(v) => aplicarValidacionSinCuit(r, v)} />
-                      </td>
-                    )}
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
-                      {(() => {
-                        const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
-                        return (
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
-                              <EstadoRenovacion record={r} />
-                            </div>
-                            <div className="flex flex-col gap-0.5 text-xs">
-                              <span>
-                                <span className="text-gray-400">Alta:</span> {formatDate(r.fecha_alta_contrato)}
-                              </span>
-                              <span>
-                                <span className="text-gray-400">Baja:</span> {r.fecha_baja_contrato ? formatDate(r.fecha_baja_contrato) : '—'}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </td>
-                    {layoutConstancia && (
-                      <>
-                        {filterTipo !== 'sin_cuit' && (
-                          <td className="px-4 py-3">
-                            {(() => {
-                              const cuil = cuitEsValido(r.cuit) ? fmtCuit(r.cuit) : '';
-                              return (
-                                <button onClick={() => setConstancia({ row: r, cuil })} title="Ver los datos necesarios para buscar la Constancia de CUIT/CUIL en ARCA" className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors ${cuil ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100'}`}>
-                                  <FontAwesomeIcon icon={cuil ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
-                                  {cuil ? 'Completo' : 'Falta 1'}
-                                </button>
-                              );
-                            })()}
-                          </td>
-                        )}
-                        {/* Estado en ARCA y archivado en Dropbox, por separado (acciones — Validar/ARCA — viven en la columna sticky "Acciones"). */}
-                        {filterTipo !== 'sin_cuit' && (
-                          <td className="px-4 py-3">
-                            <ArcaBadge row={r} />
-                          </td>
-                        )}
                         <td className="px-4 py-3">
-                          <DropboxBadge row={r} />
+                          {(() => {
+                            const cuil = cuitEsValido(r.cuit) ? fmtCuit(r.cuit) : '';
+                            return (
+                              <button onClick={() => setConstancia({ row: r, cuil })} title="Ver los datos necesarios para buscar la Constancia de CUIT/CUIL en ARCA" className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold border whitespace-nowrap transition-colors ${cuil ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100'}`}>
+                                <FontAwesomeIcon icon={cuil ? faCheck : faTriangleExclamation} className="h-2.5 w-2.5" />
+                                {cuil ? 'Completo' : 'Falta 1'}
+                              </button>
+                            );
+                          })()}
                         </td>
-                      </>
-                    )}
-                    {filterTipo !== 'sin_cuit' && <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel onConstanciaEliminada={() => load(true)} />}
-                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
-                    <td className={`px-4 py-3 ${hayEncuadre ? GRUPO_ENCUADRE_INICIO : ''}`} onClick={(e) => e.stopPropagation()}>
-                      <EmpresaSelectCell record={r} campo="contrato" requerido={filterTipo === 'alta_temprana_afip'} onGuardado={(patch) => aplicarCambio(r, patch)} />
-                    </td>
-                    {hayEncuadre && (
-                      <>
-                        <td className={`px-4 py-3 ${GRUPO_ENCUADRE}`} onClick={(e) => e.stopPropagation()}>
-                          <ConvenioSelectCell
-                            record={r}
-                            valores={resolveAfipValues(r, afipCat)}
-                            cat={afipCat}
-                            convenio={convenioFila[rowKey(r)] || ''}
-                            onConvenio={async (cct) => {
-                              setConvenioFila((prev) => ({ ...prev, [rowKey(r)]: cct }));
-                              // Cambiar de convenio limpia la categoría de otro: misma regla que el
-                              // modal. Sin eso queda convenio A con categoría de B, que ARCA rechaza
-                              // aunque la fila se vea completa.
-                              const v = resolveAfipValues(r, afipCat);
-                              const actual = afipCat.categorias.find((c: any) => String(c.data?.codigoAfip ?? '') === v.categoriaProf);
-                              if (cct && v.categoriaProf && String(actual?.data?.convenio || '').trim() !== cct) {
-                                try {
-                                  const res = await projectsAPI.updateCategoriaSat(r.projectId, r.userId, r.contractIndex, null);
-                                  aplicarCambio(r, { categoria_sat_id: res.categoria_sat_id, nombre_categoria_sat: res.nombre_categoria_sat, sueldo_neto: res.sueldo_neto, sueldo_bruto: res.sueldo_bruto } as any);
-                                } catch (e: any) {
-                                  sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo limpiar la categoría.');
-                                }
-                              }
-                            }}
-                          />
+                      )}
+                      {/* Estado en ARCA y archivado en Dropbox, por separado (acciones — Validar/ARCA — viven en la columna sticky "Acciones"). */}
+                      {filterTipo !== 'sin_cuit' && (
+                        <td className="px-4 py-3">
+                          <ArcaBadge row={r} />
                         </td>
-                        <td className={`px-4 py-3 ${GRUPO_ENCUADRE}`} onClick={(e) => e.stopPropagation()}>
-                          <CategoriaSelectCell record={r} valores={resolveAfipValues(r, afipCat)} cat={afipCat} convenio={convenioFila[rowKey(r)] || ''} nivelDeCategoria={nivelDeCategoria} onGuardado={(patch) => aplicarCambio(r, patch)} />
-                        </td>
-                      </>
-                    )}
-                    {hayEncuadre && (
+                      )}
+                      <td className="px-4 py-3">
+                        <DropboxBadge row={r} />
+                      </td>
+                    </>
+                  )}
+                  {filterTipo !== 'sin_cuit' && <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel onConstanciaEliminada={() => load(true)} />}
+                  <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
+                  <td className={`px-4 py-3 ${hayEncuadre ? GRUPO_ENCUADRE_INICIO : ''}`} onClick={(e) => e.stopPropagation()}>
+                    <EmpresaSelectCell record={r} campo="contrato" requerido={filterTipo === 'alta_temprana_afip'} onGuardado={(patch) => aplicarCambio(r, patch)} />
+                  </td>
+                  {hayEncuadre && (
+                    <>
                       <td className={`px-4 py-3 ${GRUPO_ENCUADRE}`} onClick={(e) => e.stopPropagation()}>
-                        <ObraSocialCell
+                        <ConvenioSelectCell
                           record={r}
                           valores={resolveAfipValues(r, afipCat)}
-                          onAbrir={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })}
-                          onValidar={() => setLoteObrasSociales(new Set([rowKey(r)]))}
-                          onSinEmpresa={() => setObraSocialSinEmpresa(r)}
-                          onQuitado={(patch) => aplicarCambio(r, patch)}
+                          cat={afipCat}
+                          convenio={convenioFila[rowKey(r)] || ''}
+                          onConvenio={async (cct) => {
+                            setConvenioFila((prev) => ({ ...prev, [rowKey(r)]: cct }));
+                            // Cambiar de convenio limpia la categoría de otro: misma regla que el
+                            // modal. Sin eso queda convenio A con categoría de B, que ARCA rechaza
+                            // aunque la fila se vea completa.
+                            const v = resolveAfipValues(r, afipCat);
+                            const actual = afipCat.categorias.find((c: any) => String(c.data?.codigoAfip ?? '') === v.categoriaProf);
+                            if (cct && v.categoriaProf && String(actual?.data?.convenio || '').trim() !== cct) {
+                              try {
+                                const res = await projectsAPI.updateCategoriaSat(r.projectId, r.userId, r.contractIndex, null);
+                                aplicarCambio(r, { categoria_sat_id: res.categoria_sat_id, nombre_categoria_sat: res.nombre_categoria_sat, sueldo_neto: res.sueldo_neto, sueldo_bruto: res.sueldo_bruto } as any);
+                              } catch (e: any) {
+                                sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo limpiar la categoría.');
+                              }
+                            }
+                          }}
                         />
                       </td>
-                    )}
-                    {/* Mismo orden que los encabezados: Sucursal y después Actividad, que depende de ella. */}
-                    {hayEncuadre && (
-                      <>
-                        <td className={`px-4 py-3 ${GRUPO_ENCUADRE}`} onClick={(e) => e.stopPropagation()}>
-                          <SucursalSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
-                        </td>
-                        <td className={`px-4 py-3 ${GRUPO_ENCUADRE_FIN}`} onClick={(e) => e.stopPropagation()}>
-                          <ActividadSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
-                        </td>
-                      </>
-                    )}
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <EmpresaSelectCell record={r} campo="release" requerido={false} onGuardado={(patch) => aplicarCambio(r, patch)} />
+                      <td className={`px-4 py-3 ${GRUPO_ENCUADRE}`} onClick={(e) => e.stopPropagation()}>
+                        <CategoriaSelectCell record={r} valores={resolveAfipValues(r, afipCat)} cat={afipCat} convenio={convenioFila[rowKey(r)] || ''} nivelDeCategoria={nivelDeCategoria} onGuardado={(patch) => aplicarCambio(r, patch)} />
+                      </td>
+                    </>
+                  )}
+                  {hayEncuadre && (
+                    <td className={`px-4 py-3 ${GRUPO_ENCUADRE}`} onClick={(e) => e.stopPropagation()}>
+                      <ObraSocialCell
+                        record={r}
+                        valores={resolveAfipValues(r, afipCat)}
+                        onAbrir={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })}
+                        onValidar={() => setLoteObrasSociales(new Set([rowKey(r)]))}
+                        onSinEmpresa={() => setObraSocialSinEmpresa(r)}
+                        onQuitado={(patch) => aplicarCambio(r, patch)}
+                      />
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || '—'}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col items-start gap-1">
-                        <EstadoBadge name={r._estadoName} />
-                        {r._tipo ? (
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${r._tipo === 'alta_temprana_afip' ? 'bg-purple-600 text-white border-purple-600 dark:bg-purple-500 dark:border-purple-500' : 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700'}`}>
-                            <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
-                            {TIPO_LABEL[r._tipo]}
-                          </span>
-                        ) : (
-                          <span className="text-[11px] text-gray-400 italic">Sin trámite definido</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
-                    </td>
-                    <ContractActionsCell record={r} onDeleted={() => load(true)} />
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  )}
+                  {/* Mismo orden que los encabezados: Sucursal y después Actividad, que depende de ella. */}
+                  {hayEncuadre && (
+                    <>
+                      <td className={`px-4 py-3 ${GRUPO_ENCUADRE}`} onClick={(e) => e.stopPropagation()}>
+                        <SucursalSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
+                      </td>
+                      <td className={`px-4 py-3 ${GRUPO_ENCUADRE_FIN}`} onClick={(e) => e.stopPropagation()}>
+                        <ActividadSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
+                      </td>
+                    </>
+                  )}
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <EmpresaSelectCell record={r} campo="release" requerido={false} onGuardado={(patch) => aplicarCambio(r, patch)} />
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || '—'}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col items-start gap-1">
+                      <EstadoBadge name={r._estadoName} />
+                      {r._tipo ? (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${r._tipo === 'alta_temprana_afip' ? 'bg-purple-600 text-white border-purple-600 dark:bg-purple-500 dark:border-purple-500' : 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700'}`}>
+                          <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
+                          {TIPO_LABEL[r._tipo]}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-gray-400 italic">Sin trámite definido</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
+                  </td>
+                  <ContractActionsCell record={r} onDeleted={() => load(true)} />
+                </tr>
+              ))}
+            </tbody>
+          </TablaConEncabezadoFijo>
           <Paginador pagina={pag.pagina} totalPaginas={pag.totalPaginas} total={pag.total} desde={pag.desde} mostrados={pag.visibles.length} onPagina={pag.setPagina} />
         </div>
       )}
@@ -4196,142 +4195,140 @@ export const ContractBulkFirmaTab: React.FC<{
               </button>
             </div>
           )}
-          <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-separate border-spacing-0 min-w-[1600px]">
-              <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
-                <tr className="border-b border-gray-100 dark:border-gray-800">
-                  <th className={`sticky left-0 z-[15] px-4 py-3 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK}`}>
-                    <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={seleccionables.length === 0} title="Seleccionar todas las filas sin enviar, de todas las páginas" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
-                  </th>
-                  <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_ACCIONES}`}>Acciones</th>
-                  {/* «Fecha de creación» y «Usuario», fijas con Acciones: ver `FIRMA_ANCHO_ACCIONES`. */}
-                  <th className={`sticky ${FIRMA_IZQ_FECHA} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_FECHA}`}>
-                    <BotonOrden columna="fechaCarga" {...ordenProps}>
-                      Fecha de creación
-                    </BotonOrden>
-                  </th>
-                  <th className={`sticky ${FIRMA_IZQ_USUARIO} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 ${FIRMA_FIN_DE_FIJAS}`}>
-                    <BotonOrden columna="usuario" {...ordenProps}>
-                      Colaborador
-                    </BotonOrden>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="altaBaja" {...ordenProps}>
-                      Alta / Baja
-                    </BotonOrden>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="tramite" {...ordenProps}>
-                      Trámite
-                    </BotonOrden>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="tipoContrato" {...ordenProps}>
-                      Tipo de Contrato
-                    </BotonOrden>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Contrato</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Release</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="cuit" {...ordenProps}>
-                      CUIT
-                    </BotonOrden>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="cliente" {...ordenProps}>
-                      Cliente
-                    </BotonOrden>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="proyecto" {...ordenProps}>
-                      Proyecto
-                    </BotonOrden>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="estado" {...ordenProps}>
-                      Estado
-                    </BotonOrden>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Impositivo</th>
-                  <ContractActionsHeader />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {pag.visibles.map((r) => {
-                  const tipo = tipoDelRow(r);
-                  const template = findTemplate(r as unknown as Contract, contratoFrames);
-                  const contratoAplica = contratoRequiereFirma(template);
-                  const releasesFila = releasesDeLaFila(template, releasesQueFirman, r, tiposContrato, activeReleases);
-                  const enviable = calcularEnviable(r, contratoFrames, releasesQueFirman, tipo, tiposContrato, activeReleases);
-                  return (
-                    <tr key={rowKey(r)} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
-                      <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
-                        <input type="checkbox" checked={selected.has(rowKey(r))} disabled={r.firmaEnviadaAt ? true : !pendientePorFila.get(rowKey(r))?.algoAplica} onChange={() => toggleSel(rowKey(r))} title={r.firmaEnviadaAt ? 'Ya se envió a firmar' : enviable ? 'Incluir en el envío a firmar' : pendientePorFila.get(rowKey(r))?.motivo ? `No se puede generar solo: ${pendientePorFila.get(rowKey(r))!.motivo}` : 'Seleccionar: el contrato y/o el release que falten se generan con «Generar contratos» / «Generar releases»'} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
-                      </td>
-                      <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_ACCIONES} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
-                        <FirmaEnviarCell record={r} contratoAplica={contratoAplica} releasesAplicables={releasesFila} altaAplica={altaVaAFirma(r, template, tipo)} tipoImpositivo={tipo} onEnviado={(patch) => aplicarCambio(r, patch)} />
-                      </td>
-                      <td className={`sticky ${FIRMA_IZQ_FECHA} z-[5] px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_FECHA} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
-                        <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>} />
-                      </td>
-                      <td className={`sticky ${FIRMA_IZQ_USUARIO} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${FIRMA_FIN_DE_FIJAS} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
-                        <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
-                          {r.userName}
-                          <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
-                        {(() => {
-                          const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
-                          return (
-                            <div className="flex flex-col gap-1">
-                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
-                              <div className="flex flex-col gap-0.5 text-xs">
-                                <span>
-                                  <span className="text-gray-400">Alta:</span> {formatDate(r.fecha_alta_contrato)}
-                                </span>
-                                <span>
-                                  <span className="text-gray-400">Baja:</span> {r.fecha_baja_contrato ? formatDate(r.fecha_baja_contrato) : '—'}
-                                </span>
-                              </div>
+          <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1600px]">
+            <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
+              <tr className="border-b border-gray-100 dark:border-gray-800">
+                <th className={`sticky left-0 z-[15] px-4 py-3 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK}`}>
+                  <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={seleccionables.length === 0} title="Seleccionar todas las filas sin enviar, de todas las páginas" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
+                </th>
+                <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_ACCIONES}`}>Acciones</th>
+                {/* «Fecha de creación» y «Usuario», fijas con Acciones: ver `FIRMA_ANCHO_ACCIONES`. */}
+                <th className={`sticky ${FIRMA_IZQ_FECHA} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_FECHA}`}>
+                  <BotonOrden columna="fechaCarga" {...ordenProps}>
+                    Fecha de creación
+                  </BotonOrden>
+                </th>
+                <th className={`sticky ${FIRMA_IZQ_USUARIO} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 ${FIRMA_FIN_DE_FIJAS}`}>
+                  <BotonOrden columna="usuario" {...ordenProps}>
+                    Colaborador
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="altaBaja" {...ordenProps}>
+                    Alta / Baja
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="tramite" {...ordenProps}>
+                    Trámite
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="tipoContrato" {...ordenProps}>
+                    Tipo de Contrato
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Contrato</th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Release</th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="cuit" {...ordenProps}>
+                    CUIT
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="cliente" {...ordenProps}>
+                    Cliente
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="proyecto" {...ordenProps}>
+                    Proyecto
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="estado" {...ordenProps}>
+                    Estado
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Impositivo</th>
+                <ContractActionsHeader />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {pag.visibles.map((r) => {
+                const tipo = tipoDelRow(r);
+                const template = findTemplate(r as unknown as Contract, contratoFrames);
+                const contratoAplica = contratoRequiereFirma(template);
+                const releasesFila = releasesDeLaFila(template, releasesQueFirman, r, tiposContrato, activeReleases);
+                const enviable = calcularEnviable(r, contratoFrames, releasesQueFirman, tipo, tiposContrato, activeReleases);
+                return (
+                  <tr key={rowKey(r)} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                    <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
+                      <input type="checkbox" checked={selected.has(rowKey(r))} disabled={r.firmaEnviadaAt ? true : !pendientePorFila.get(rowKey(r))?.algoAplica} onChange={() => toggleSel(rowKey(r))} title={r.firmaEnviadaAt ? 'Ya se envió a firmar' : enviable ? 'Incluir en el envío a firmar' : pendientePorFila.get(rowKey(r))?.motivo ? `No se puede generar solo: ${pendientePorFila.get(rowKey(r))!.motivo}` : 'Seleccionar: el contrato y/o el release que falten se generan con «Generar contratos» / «Generar releases»'} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
+                    </td>
+                    <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_ACCIONES} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
+                      <FirmaEnviarCell record={r} contratoAplica={contratoAplica} releasesAplicables={releasesFila} altaAplica={altaVaAFirma(r, template, tipo)} tipoImpositivo={tipo} onEnviado={(patch) => aplicarCambio(r, patch)} />
+                    </td>
+                    <td className={`sticky ${FIRMA_IZQ_FECHA} z-[5] px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_FECHA} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
+                      <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>} />
+                    </td>
+                    <td className={`sticky ${FIRMA_IZQ_USUARIO} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${FIRMA_FIN_DE_FIJAS} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
+                      <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
+                        {r.userName}
+                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
+                      {(() => {
+                        const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
+                        return (
+                          <div className="flex flex-col gap-1">
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
+                            <div className="flex flex-col gap-0.5 text-xs">
+                              <span>
+                                <span className="text-gray-400">Alta:</span> {formatDate(r.fecha_alta_contrato)}
+                              </span>
+                              <span>
+                                <span className="text-gray-400">Baja:</span> {r.fecha_baja_contrato ? formatDate(r.fecha_baja_contrato) : '—'}
+                              </span>
                             </div>
-                          );
-                        })()}
-                      </td>
-                      <td className="px-4 py-3">
-                        {tipo ? (
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${tipo === 'alta_temprana_afip' ? 'bg-purple-600 text-white border-purple-600 dark:bg-purple-500 dark:border-purple-500' : 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700'}`}>
-                            <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
-                            {TIPO_LABEL[tipo]}
-                          </span>
-                        ) : (
-                          <span className="text-[11px] text-gray-400 italic">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || '—'}</td>
-                      <td className="px-4 py-3">
-                        <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} onGenerado={(patch) => aplicarCambio(r, patch)} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesFila} releasesCustom={releasesCustomDeLaFila(template, releasesQueFirman, r, tiposContrato, activeReleases)} onGenerado={(patch) => aplicarCambio(r, patch)} />
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
-                      <td className="px-4 py-3">
-                        <EstadoBadge name={r.nombre_estado_empleado || ''} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
-                      </td>
-                      <ContractActionsCell record={r} onDeleted={() => load(true)} />
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-4 py-3">
+                      {tipo ? (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${tipo === 'alta_temprana_afip' ? 'bg-purple-600 text-white border-purple-600 dark:bg-purple-500 dark:border-purple-500' : 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700'}`}>
+                          <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
+                          {TIPO_LABEL[tipo]}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-gray-400 italic">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || '—'}</td>
+                    <td className="px-4 py-3">
+                      <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} onGenerado={(patch) => aplicarCambio(r, patch)} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <FirmaReleaseCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} releasesAplicables={releasesFila} releasesCustom={releasesCustomDeLaFila(template, releasesQueFirman, r, tiposContrato, activeReleases)} onGenerado={(patch) => aplicarCambio(r, patch)} />
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
+                    <td className="px-4 py-3">
+                      <EstadoBadge name={r.nombre_estado_empleado || ''} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
+                    </td>
+                    <ContractActionsCell record={r} onDeleted={() => load(true)} />
+                  </tr>
+                );
+              })}
+            </tbody>
+          </TablaConEncabezadoFijo>
           <Paginador pagina={pag.pagina} totalPaginas={pag.totalPaginas} total={pag.total} desde={pag.desde} mostrados={pag.visibles.length} onPagina={pag.setPagina} />
         </div>
       )}
@@ -4472,82 +4469,80 @@ export const ContractBulkContratadosTab: React.FC<{
       ) : filtered.length === 0 ? (
         <EmptyState icon={faUser} title="Sin contratados" description={rows.length === 0 ? `Todavía no hay contratos en «${estado}».` : 'No hay resultados con los filtros aplicados.'} />
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-separate border-spacing-0 min-w-[1200px]">
-              <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
-                <tr>
-                  <th className={th}>
-                    <BotonOrden columna="fechaCarga" {...ordenProps}>Fecha de creación</BotonOrden>
-                  </th>
-                  <th className={th}>
-                    <BotonOrden columna="usuario" {...ordenProps}>Colaborador</BotonOrden>
-                  </th>
-                  <th className={th}>
-                    <BotonOrden columna="altaBaja" {...ordenProps}>Alta / Baja</BotonOrden>
-                  </th>
-                  <th className={th}>
-                    <BotonOrden columna="tipoContrato" {...ordenProps}>Tipo de Contrato</BotonOrden>
-                  </th>
-                  <th className={th}>
-                    <BotonOrden columna="cuit" {...ordenProps}>CUIT</BotonOrden>
-                  </th>
-                  <th className={th}>
-                    <BotonOrden columna="cliente" {...ordenProps}>Cliente</BotonOrden>
-                  </th>
-                  <th className={th}>
-                    <BotonOrden columna="proyecto" {...ordenProps}>Proyecto</BotonOrden>
-                  </th>
-                  <th className={th}>Estado</th>
-                  <th className={th}>Estado Impositivo</th>
-                  <ContractActionsHeader />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {pag.visibles.map((r) => {
-                  const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
-                  return (
-                    <tr key={rowKey(r)} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                        <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato sin fecha de carga">—</span>} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
-                          {r.userName}
-                          <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                        <div className="flex flex-col gap-1">
-                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
-                          <div className="flex flex-col gap-0.5 text-xs">
-                            <span>
-                              <span className="text-gray-400">Alta:</span> {formatDate(r.fecha_alta_contrato)}
-                            </span>
-                            <span>
-                              <span className="text-gray-400">Baja:</span> {r.fecha_baja_contrato ? formatDate(r.fecha_baja_contrato) : '—'}
-                            </span>
-                          </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-clip">
+          <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1200px]">
+            <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
+              <tr>
+                <th className={th}>
+                  <BotonOrden columna="fechaCarga" {...ordenProps}>Fecha de creación</BotonOrden>
+                </th>
+                <th className={th}>
+                  <BotonOrden columna="usuario" {...ordenProps}>Colaborador</BotonOrden>
+                </th>
+                <th className={th}>
+                  <BotonOrden columna="altaBaja" {...ordenProps}>Alta / Baja</BotonOrden>
+                </th>
+                <th className={th}>
+                  <BotonOrden columna="tipoContrato" {...ordenProps}>Tipo de Contrato</BotonOrden>
+                </th>
+                <th className={th}>
+                  <BotonOrden columna="cuit" {...ordenProps}>CUIT</BotonOrden>
+                </th>
+                <th className={th}>
+                  <BotonOrden columna="cliente" {...ordenProps}>Cliente</BotonOrden>
+                </th>
+                <th className={th}>
+                  <BotonOrden columna="proyecto" {...ordenProps}>Proyecto</BotonOrden>
+                </th>
+                <th className={th}>Estado</th>
+                <th className={th}>Estado Impositivo</th>
+                <ContractActionsHeader />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {pag.visibles.map((r) => {
+                const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
+                return (
+                  <tr key={rowKey(r)} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato sin fecha de carga">—</span>} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
+                        {r.userName}
+                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
+                        <div className="flex flex-col gap-0.5 text-xs">
+                          <span>
+                            <span className="text-gray-400">Alta:</span> {formatDate(r.fecha_alta_contrato)}
+                          </span>
+                          <span>
+                            <span className="text-gray-400">Baja:</span> {r.fecha_baja_contrato ? formatDate(r.fecha_baja_contrato) : '—'}
+                          </span>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || '—'}</td>
-                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
-                      <td className="px-4 py-3">
-                        <EstadoBadge name={r.nombre_estado_empleado || ''} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
-                      </td>
-                      <ContractActionsCell record={r} onDeleted={() => load(true)} />
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || '—'}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
+                    <td className="px-4 py-3">
+                      <EstadoBadge name={r.nombre_estado_empleado || ''} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
+                    </td>
+                    <ContractActionsCell record={r} onDeleted={() => load(true)} />
+                  </tr>
+                );
+              })}
+            </tbody>
+          </TablaConEncabezadoFijo>
           <Paginador pagina={pag.pagina} totalPaginas={pag.totalPaginas} total={pag.total} desde={pag.desde} mostrados={pag.visibles.length} onPagina={pag.setPagina} />
         </div>
       )}

@@ -14,6 +14,7 @@ import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { getHelp } from '../data/help/helpContent';
 import { empresaAssetUrl } from '../utils/empresaAssets';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 /**
  * ABM "Empresa/s | Membrete/s": se crea un membrete (logo + firma + aclaración/cargo) y se le asigna
@@ -273,48 +274,46 @@ export function MembretesPage() {
             </InfoModal>
           )}
           {effectiveViewMode === 'table' ? (
-            <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-900/50">
-                  <tr>
-                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Empresa</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">CUIT</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Logo</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Firma</th>
-                    <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+            <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900/50">
+                <tr>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Empresa</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">CUIT</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Logo</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Firma</th>
+                  <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                {membretes.map((c) => (
+                  <tr key={c._id} onClick={() => openEdit(c)} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 cursor-pointer">
+                    <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700 flex items-center justify-center overflow-hidden shrink-0">{c.logoUrl ? <img src={getImageUrl(c.logoUrl)} alt="" className="w-full h-full object-contain" /> : <FontAwesomeIcon icon={faBuilding} className="text-gray-400 h-3.5 w-3.5" />}</div>
+                        <span className="truncate">{c.razonSocial}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{c.cuit || '—'}</td>
+                    <td className="px-5 py-3 text-sm">
+                      <FontAwesomeIcon icon={faImage} className={c.logoUrl ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-600'} />
+                    </td>
+                    <td className="px-5 py-3 text-sm">
+                      <FontAwesomeIcon icon={faSignature} className={c.signatureUrl ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-600'} />
+                    </td>
+                    <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
+                        <button type="button" onClick={() => openEdit(c)} className="p-1.5 rounded text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Editar membrete">
+                          <FontAwesomeIcon icon={faPenToSquare} className="h-4 w-4" />
+                        </button>
+                        <button type="button" onClick={() => handleDeleteMembrete(c)} className="p-1.5 rounded text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Eliminar membrete">
+                          <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                  {membretes.map((c) => (
-                    <tr key={c._id} onClick={() => openEdit(c)} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 cursor-pointer">
-                      <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700 flex items-center justify-center overflow-hidden shrink-0">{c.logoUrl ? <img src={getImageUrl(c.logoUrl)} alt="" className="w-full h-full object-contain" /> : <FontAwesomeIcon icon={faBuilding} className="text-gray-400 h-3.5 w-3.5" />}</div>
-                          <span className="truncate">{c.razonSocial}</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{c.cuit || '—'}</td>
-                      <td className="px-5 py-3 text-sm">
-                        <FontAwesomeIcon icon={faImage} className={c.logoUrl ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-600'} />
-                      </td>
-                      <td className="px-5 py-3 text-sm">
-                        <FontAwesomeIcon icon={faSignature} className={c.signatureUrl ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-600'} />
-                      </td>
-                      <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
-                          <button type="button" onClick={() => openEdit(c)} className="p-1.5 rounded text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Editar membrete">
-                            <FontAwesomeIcon icon={faPenToSquare} className="h-4 w-4" />
-                          </button>
-                          <button type="button" onClick={() => handleDeleteMembrete(c)} className="p-1.5 rounded text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Eliminar membrete">
-                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </TablaConEncabezadoFijo>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {membretes.map((c) => (

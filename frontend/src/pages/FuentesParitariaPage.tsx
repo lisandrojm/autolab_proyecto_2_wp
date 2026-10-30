@@ -15,6 +15,7 @@ import { paritariasAPI, FuenteParitaria, ResultadoDeRevision } from '../api/pari
 import { getHelp } from '../data/help/helpContent';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
 import { ConvenioSelector } from '../components/empresas/ConvenioSelector';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 /**
  * ABM de fuentes de paritarias: qué páginas se vigilan y con qué patrones.
@@ -461,80 +462,78 @@ export const FuentesParitariaPage: React.FC = () => {
       ) : fuentes.length === 0 ? (
         <div className="text-center py-12 text-sm text-gray-500 dark:text-gray-400">Todavía no hay ninguna fuente. Cargá una con «+»: hace falta la página de listado de la entidad y un patrón que distinga los acuerdos del resto de los PDF que cuelgan ahí.</div>
       ) : vista === 'table' ? (
-        <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900/50">
-              <tr>
-                <th className="px-4 py-3 w-px">
-                  {/* Todas de una: con tres filas es cómodo, y con quince es la diferencia entre
-                      elegir y rendirse. */}
-                  <input
-                    type="checkbox"
-                    aria-label="Seleccionar todas"
-                    checked={elegidas.size === fuentes.length && fuentes.length > 0}
-                    onChange={(e) => setElegidas(e.target.checked ? new Set(fuentes.map((f) => f._id)) : new Set())}
-                    className="accent-blue-600"
-                  />
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fuente</th>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Convenios</th>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Patrones</th>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Publicaciones</th>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-                {/* Última antes de Acciones, como en el resto de los nomencladores. */}
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="La fuente que se ofrece primero al asociarle una a un convenio. No cambia qué escala rige.">
-                  <span className="inline-flex items-center gap-2">
-                    Por defecto
-                    <LimpiarDefaultArca campo="fuenteParitariaId" queEs="la fuente de paritarias" />
+        <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-900/50">
+            <tr>
+              <th className="px-4 py-3 w-px">
+                {/* Todas de una: con tres filas es cómodo, y con quince es la diferencia entre
+                    elegir y rendirse. */}
+                <input
+                  type="checkbox"
+                  aria-label="Seleccionar todas"
+                  checked={elegidas.size === fuentes.length && fuentes.length > 0}
+                  onChange={(e) => setElegidas(e.target.checked ? new Set(fuentes.map((f) => f._id)) : new Set())}
+                  className="accent-blue-600"
+                />
+              </th>
+              <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fuente</th>
+              <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Convenios</th>
+              <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Patrones</th>
+              <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Publicaciones</th>
+              <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+              {/* Última antes de Acciones, como en el resto de los nomencladores. */}
+              <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="La fuente que se ofrece primero al asociarle una a un convenio. No cambia qué escala rige.">
+                <span className="inline-flex items-center gap-2">
+                  Por defecto
+                  <LimpiarDefaultArca campo="fuenteParitariaId" queEs="la fuente de paritarias" />
+                </span>
+              </th>
+              <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+            {fuentes.map((f) => (
+              <tr key={f._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 align-top">
+                <td className="px-4 py-3">
+                  <input type="checkbox" aria-label={`Seleccionar ${f.nombre}`} checked={elegidas.has(f._id)} onChange={() => alternarElegida(f._id)} className="accent-blue-600" />
+                </td>
+                <td className="px-5 py-3">
+                  <span className="block text-sm font-medium text-gray-900 dark:text-white">
+                    {f.nombre}
+                    {avisoDeVigilancia(vigilanciaDe(f)) && (
+                      <span className={`ml-2 text-[10px] px-1.5 py-px rounded border ${vigilanciaDe(f) === 'desconocida' ? 'border-red-400 text-red-600 dark:text-red-400' : 'border-gray-300 dark:border-gray-600 text-gray-500'}`}>{avisoDeVigilancia(vigilanciaDe(f))}</span>
+                    )}
                   </span>
-                </th>
-                <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+                  <span className="block text-xs text-gray-500 dark:text-gray-400">{f.entidad}</span>
+                  <a href={f.url} target="_blank" rel="noreferrer" className="block text-xs text-blue-600 dark:text-blue-400 hover:underline break-all">
+                    {f.url} <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2 w-2" />
+                  </a>
+                </td>
+                <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">
+                  <BadgesDeConvenios convenios={f.convenios} />
+                </td>
+                <td className="px-5 py-3 text-[11px] font-mono text-gray-500 dark:text-gray-400">
+                  <span className="block">incluir: /{f.patronIncluir}/i</span>
+                  {f.patronExcluir && <span className="block">excluir: /{f.patronExcluir}/i</span>}
+                </td>
+                <td className="px-5 py-3">{botonPublicaciones(f)}</td>
+                <td className={`px-5 py-3 text-xs ${f.conProblema ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                  <span className="inline-flex items-start gap-1.5">
+                    <FontAwesomeIcon icon={f.conProblema ? faTriangleExclamation : faCircleCheck} className="h-3 w-3 mt-0.5 shrink-0" />
+                    <span>
+                      {lineaEstado(f)}
+                      {f.conProblema && f.ultimoError && <span className="block">{f.ultimoError}</span>}
+                    </span>
+                  </span>
+                </td>
+                <td className="px-5 py-3 w-px">
+                  <DefaultArcaStar campo="fuenteParitariaId" valor={String(f._id)} nombre={f.nombre} queEs="la fuente de paritarias" />
+                </td>
+                <td className="px-5 py-3 text-right">{acciones(f)}</td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-              {fuentes.map((f) => (
-                <tr key={f._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 align-top">
-                  <td className="px-4 py-3">
-                    <input type="checkbox" aria-label={`Seleccionar ${f.nombre}`} checked={elegidas.has(f._id)} onChange={() => alternarElegida(f._id)} className="accent-blue-600" />
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className="block text-sm font-medium text-gray-900 dark:text-white">
-                      {f.nombre}
-                      {avisoDeVigilancia(vigilanciaDe(f)) && (
-                        <span className={`ml-2 text-[10px] px-1.5 py-px rounded border ${vigilanciaDe(f) === 'desconocida' ? 'border-red-400 text-red-600 dark:text-red-400' : 'border-gray-300 dark:border-gray-600 text-gray-500'}`}>{avisoDeVigilancia(vigilanciaDe(f))}</span>
-                      )}
-                    </span>
-                    <span className="block text-xs text-gray-500 dark:text-gray-400">{f.entidad}</span>
-                    <a href={f.url} target="_blank" rel="noreferrer" className="block text-xs text-blue-600 dark:text-blue-400 hover:underline break-all">
-                      {f.url} <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-2 w-2" />
-                    </a>
-                  </td>
-                  <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">
-                    <BadgesDeConvenios convenios={f.convenios} />
-                  </td>
-                  <td className="px-5 py-3 text-[11px] font-mono text-gray-500 dark:text-gray-400">
-                    <span className="block">incluir: /{f.patronIncluir}/i</span>
-                    {f.patronExcluir && <span className="block">excluir: /{f.patronExcluir}/i</span>}
-                  </td>
-                  <td className="px-5 py-3">{botonPublicaciones(f)}</td>
-                  <td className={`px-5 py-3 text-xs ${f.conProblema ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                    <span className="inline-flex items-start gap-1.5">
-                      <FontAwesomeIcon icon={f.conProblema ? faTriangleExclamation : faCircleCheck} className="h-3 w-3 mt-0.5 shrink-0" />
-                      <span>
-                        {lineaEstado(f)}
-                        {f.conProblema && f.ultimoError && <span className="block">{f.ultimoError}</span>}
-                      </span>
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 w-px">
-                    <DefaultArcaStar campo="fuenteParitariaId" valor={String(f._id)} nombre={f.nombre} queEs="la fuente de paritarias" />
-                  </td>
-                  <td className="px-5 py-3 text-right">{acciones(f)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </TablaConEncabezadoFijo>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
           {fuentes.map((f) => (

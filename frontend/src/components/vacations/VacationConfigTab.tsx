@@ -9,6 +9,7 @@ import { pdfsAPI, Pdf } from "../../api/pdf";
 import { pdfPreviewAPI } from "../../api/pdfPreview";
 import { vacationConfigAPI, VacationConfig } from "../../api/vacationConfig";
 import { LinkSiPuede } from "../LinkSiPuede";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 export const VacationConfigTab: React.FC = () => {
   const [config, setConfig] = useState<VacationConfig | null>(null);
@@ -121,42 +122,40 @@ export const VacationConfigTab: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Escala Legal (LCT N° 20.744)</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">El cálculo de días base se ajusta estrictamente a la Ley de Contrato de Trabajo de Argentina.</p>
 
-            <div className="overflow-hidden rounded border border-gray-200 dark:border-gray-700 mb-6">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Antigüedad
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Días Corridos
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                  <tr>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Menos de 6 meses</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">1 día cada 20 trabajados</td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">6 meses a 5 años</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">14 días</td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">5 a 10 años</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">21 días</td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">10 a 20 años</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">28 días</td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Más de 20 años</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">35 días</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <TablaConEncabezadoFijo className="rounded border border-gray-200 dark:border-gray-700 mb-6" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Antigüedad
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Días Corridos
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Menos de 6 meses</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">1 día cada 20 trabajados</td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">6 meses a 5 años</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">14 días</td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">5 a 10 años</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">21 días</td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">10 a 20 años</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">28 días</td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Más de 20 años</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">35 días</td>
+                </tr>
+              </tbody>
+            </TablaConEncabezadoFijo>
 
             <div className="max-w-md">
               <div className="flex items-center gap-2 mb-2">
@@ -307,38 +306,36 @@ export const VacationConfigTab: React.FC = () => {
                   </ul>
 
                   {/* Table */}
-                  <div className="mt-4 overflow-hidden rounded border border-blue-200 dark:border-blue-700">
-                    <table className="min-w-full divide-y divide-blue-200 dark:divide-blue-700 text-sm">
-                      <thead className="bg-blue-100 dark:bg-blue-800/50">
-                        <tr>
-                          <th className="px-4 py-2 text-left font-medium text-blue-900 dark:text-blue-200">Escenario</th>
-                          <th className="px-4 py-2 text-left font-medium text-blue-900 dark:text-blue-200">Proyecto A</th>
-                          <th className="px-4 py-2 text-left font-medium text-blue-900 dark:text-blue-200">Proyecto B</th>
-                          <th className="px-4 py-2 text-left font-medium text-blue-900 dark:text-blue-200">Resultado Aplicado</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-blue-200 dark:divide-blue-700 bg-white dark:bg-gray-800/50">
-                        <tr>
-                          <td className="px-4 py-2 font-medium text-blue-900 dark:text-blue-300">Tipo de Días</td>
-                          <td className="px-4 py-2 text-blue-800 dark:text-blue-200">Corridos</td>
-                          <td className="px-4 py-2 text-blue-800 dark:text-blue-200">Hábiles</td>
-                          <td className="px-4 py-2 font-semibold text-blue-900 dark:text-blue-300">Hábiles (Prioridad)</td>
-                        </tr>
-                        <tr>
-                          <td className="px-4 py-2 font-medium text-blue-900 dark:text-blue-300">Fraccionamiento</td>
-                          <td className="px-4 py-2 text-blue-800 dark:text-blue-200">No permite</td>
-                          <td className="px-4 py-2 text-blue-800 dark:text-blue-200">Permite (Mín. 5 días)</td>
-                          <td className="px-4 py-2 font-semibold text-blue-900 dark:text-blue-300">Permite</td>
-                        </tr>
-                        <tr>
-                          <td className="px-4 py-2 font-medium text-blue-900 dark:text-blue-300">Mínimo de Días</td>
-                          <td className="px-4 py-2 text-blue-800 dark:text-blue-200">Mín. 7 días</td>
-                          <td className="px-4 py-2 text-blue-800 dark:text-blue-200">Mín. 3 días</td>
-                          <td className="px-4 py-2 font-semibold text-blue-900 dark:text-blue-300">3 días (El menor)</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                  <TablaConEncabezadoFijo className="mt-4 rounded border border-blue-200 dark:border-blue-700" tabla="min-w-full divide-y divide-blue-200 dark:divide-blue-700 text-sm">
+                    <thead className="bg-blue-100 dark:bg-blue-800/50">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-medium text-blue-900 dark:text-blue-200">Escenario</th>
+                        <th className="px-4 py-2 text-left font-medium text-blue-900 dark:text-blue-200">Proyecto A</th>
+                        <th className="px-4 py-2 text-left font-medium text-blue-900 dark:text-blue-200">Proyecto B</th>
+                        <th className="px-4 py-2 text-left font-medium text-blue-900 dark:text-blue-200">Resultado Aplicado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-blue-200 dark:divide-blue-700 bg-white dark:bg-gray-800/50">
+                      <tr>
+                        <td className="px-4 py-2 font-medium text-blue-900 dark:text-blue-300">Tipo de Días</td>
+                        <td className="px-4 py-2 text-blue-800 dark:text-blue-200">Corridos</td>
+                        <td className="px-4 py-2 text-blue-800 dark:text-blue-200">Hábiles</td>
+                        <td className="px-4 py-2 font-semibold text-blue-900 dark:text-blue-300">Hábiles (Prioridad)</td>
+                      </tr>
+                      <tr>
+                        <td className="px-4 py-2 font-medium text-blue-900 dark:text-blue-300">Fraccionamiento</td>
+                        <td className="px-4 py-2 text-blue-800 dark:text-blue-200">No permite</td>
+                        <td className="px-4 py-2 text-blue-800 dark:text-blue-200">Permite (Mín. 5 días)</td>
+                        <td className="px-4 py-2 font-semibold text-blue-900 dark:text-blue-300">Permite</td>
+                      </tr>
+                      <tr>
+                        <td className="px-4 py-2 font-medium text-blue-900 dark:text-blue-300">Mínimo de Días</td>
+                        <td className="px-4 py-2 text-blue-800 dark:text-blue-200">Mín. 7 días</td>
+                        <td className="px-4 py-2 text-blue-800 dark:text-blue-200">Mín. 3 días</td>
+                        <td className="px-4 py-2 font-semibold text-blue-900 dark:text-blue-300">3 días (El menor)</td>
+                      </tr>
+                    </tbody>
+                  </TablaConEncabezadoFijo>
                 </div>
               </div>
             </div>

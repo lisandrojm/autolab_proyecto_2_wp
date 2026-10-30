@@ -7,6 +7,7 @@ import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { sweetAlert } from "../utils/sweetAlert";
 import { faltaDefinirDias } from "@compartido/diasDeTrabajo";
+import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
 
 /*
   CONTRATOS SIN DÍAS: los vigentes o futuros que no dicen qué días de la semana trabaja la persona.
@@ -151,76 +152,74 @@ export const ContratosSinDiasPage: React.FC = () => {
               </button>
             </div>
           )}
-          <div className="overflow-x-auto rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-800/50">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/50 text-xs font-bold uppercase tracking-widest text-gray-400 dark:border-gray-800 dark:bg-gray-900/30">
-                  <th className="px-4 py-3">Persona</th>
-                  <th className="px-4 py-3">Contrato</th>
-                  <th className="px-4 py-3">Días que trabaja</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-                {visibles.map((f) => {
-                  const k = clave(f);
-                  const d = dias[k] || [];
-                  const r = rotativos[k];
-                  const falta = problema(f);
-                  return (
-                    <tr key={k} className="align-top">
-                      <td className="px-4 py-3">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{f.persona}</p>
-                        <p className="text-xs text-gray-500">{f.proyecto}</p>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-300">
-                        <p>{f.contrato || "Sin tipo"}{f.rol ? ` · ${f.rol}` : ""}</p>
-                        <p>
-                          {corta(f.fechaAlta)} → {f.fechaBaja ? corta(f.fechaBaja) : "sin baja"} {f.horario ? `· ${f.horario}` : ""}
-                        </p>
-                        {f.jornadas != null && <p className="text-gray-400">{f.jornadas} jornadas</p>}
-                        {f.turno && <p className="text-blue-600 dark:text-blue-400">Turno: {f.turno}</p>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {DIAS.map((x) => {
-                            const on = d.includes(x.i);
-                            return (
-                              <button
-                                key={x.i}
-                                type="button"
-                                onClick={() => setDias((p) => ({ ...p, [k]: on ? d.filter((y) => y !== x.i) : [...d, x.i].sort() }))}
-                                className={`h-8 w-9 rounded-md text-xs font-bold ${on ? "bg-blue-600 text-white" : "border border-gray-200 text-gray-500 dark:border-gray-700"}`}
-                              >
-                                {x.t}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <label className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-                          <input type="checkbox" checked={!!r?.on} onChange={(e) => setRotativos((p) => ({ ...p, [k]: { on: e.target.checked, porSemana: p[k]?.porSemana || d.length || 1 } }))} />
-                          Rotativos
-                          {r?.on && (
-                            <>
-                              · por semana
-                              <input type="number" min={1} max={7} value={r.porSemana} onChange={(e) => setRotativos((p) => ({ ...p, [k]: { on: true, porSemana: Number(e.target.value) || 1 } }))} className="w-14 rounded border border-gray-200 px-1 py-0.5 dark:border-gray-700 dark:bg-gray-900" />
-                            </>
-                          )}
-                        </label>
-                        {falta && d.length > 0 && <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">{falta}</p>}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button type="button" onClick={() => void guardar(f)} disabled={!!falta || guardando === k || enLote} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">
-                          {guardando === k && <FontAwesomeIcon icon={faSpinner} spin />}
-                          Guardar
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <TablaConEncabezadoFijo className="rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-800/50" tabla="w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50/50 text-xs font-bold uppercase tracking-widest text-gray-400 dark:border-gray-800 dark:bg-gray-900/30">
+                <th className="px-4 py-3">Persona</th>
+                <th className="px-4 py-3">Contrato</th>
+                <th className="px-4 py-3">Días que trabaja</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+              {visibles.map((f) => {
+                const k = clave(f);
+                const d = dias[k] || [];
+                const r = rotativos[k];
+                const falta = problema(f);
+                return (
+                  <tr key={k} className="align-top">
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{f.persona}</p>
+                      <p className="text-xs text-gray-500">{f.proyecto}</p>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-300">
+                      <p>{f.contrato || "Sin tipo"}{f.rol ? ` · ${f.rol}` : ""}</p>
+                      <p>
+                        {corta(f.fechaAlta)} → {f.fechaBaja ? corta(f.fechaBaja) : "sin baja"} {f.horario ? `· ${f.horario}` : ""}
+                      </p>
+                      {f.jornadas != null && <p className="text-gray-400">{f.jornadas} jornadas</p>}
+                      {f.turno && <p className="text-blue-600 dark:text-blue-400">Turno: {f.turno}</p>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {DIAS.map((x) => {
+                          const on = d.includes(x.i);
+                          return (
+                            <button
+                              key={x.i}
+                              type="button"
+                              onClick={() => setDias((p) => ({ ...p, [k]: on ? d.filter((y) => y !== x.i) : [...d, x.i].sort() }))}
+                              className={`h-8 w-9 rounded-md text-xs font-bold ${on ? "bg-blue-600 text-white" : "border border-gray-200 text-gray-500 dark:border-gray-700"}`}
+                            >
+                              {x.t}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <label className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                        <input type="checkbox" checked={!!r?.on} onChange={(e) => setRotativos((p) => ({ ...p, [k]: { on: e.target.checked, porSemana: p[k]?.porSemana || d.length || 1 } }))} />
+                        Rotativos
+                        {r?.on && (
+                          <>
+                            · por semana
+                            <input type="number" min={1} max={7} value={r.porSemana} onChange={(e) => setRotativos((p) => ({ ...p, [k]: { on: true, porSemana: Number(e.target.value) || 1 } }))} className="w-14 rounded border border-gray-200 px-1 py-0.5 dark:border-gray-700 dark:bg-gray-900" />
+                          </>
+                        )}
+                      </label>
+                      {falta && d.length > 0 && <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">{falta}</p>}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button type="button" onClick={() => void guardar(f)} disabled={!!falta || guardando === k || enLote} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">
+                        {guardando === k && <FontAwesomeIcon icon={faSpinner} spin />}
+                        Guardar
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </TablaConEncabezadoFijo>
         </div>
       )}
     </PageLayout>

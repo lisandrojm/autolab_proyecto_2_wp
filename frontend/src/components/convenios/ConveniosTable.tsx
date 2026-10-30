@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { SimpleCatalogItem } from '../../api/simpleCatalog';
 import { formatRnos } from '../../utils/rnos';
+import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 
 /**
  * LA tabla de convenios. Una sola, usada por el nomenclador y por la ficha de empresa.
@@ -93,89 +94,87 @@ interface Props {
 }
 
 export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, renderEmpresas, renderVigilancia, renderPorDefecto, ayudaPorDefecto, accionPorDefecto, renderAcciones, ayudaSinObraSocial, renderSindicato, renderPuesto }) => (
-  <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl">
-    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-      <thead className="bg-gray-50 dark:bg-gray-900/50">
-        <tr className="text-left text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
-          {/* El código va PRIMERO: es el identificador y con lo que se busca. */}
-          <th className="px-4 py-2.5 whitespace-nowrap w-px">Código</th>
-          <th className="px-4 py-2.5">Actividad</th>
-          <th className="px-4 py-2.5">Signatario</th>
-          {/* Pegada al signatario, que es el texto crudo del que sale: verlos juntos hace evidente
-              si la asignación es correcta. NO es lo mismo que «Fuente de paritarias», que también
-              nombra gremios — por eso esta va como chip y aquella queda en texto plano. */}
-          {renderSindicato && <th className="px-4 py-2.5 whitespace-nowrap w-px">Sindicato</th>}
-          {/* Va al lado de la obra social porque es el mismo tipo de dato: lo que el CONVENIO define
-              para quien trabaja bajo él, cuando ni el rol ni la categoría dicen otra cosa. */}
-          {renderPuesto && <th className="px-4 py-2.5">Puesto por defecto</th>}
-          {/* «por defecto» y no «obra social» a secas: es la que rige cuando ARCA no devuelve una
-              propia para la persona, no la que va a tener sí o sí. La diferencia importa: la
-              validación contra el padrón puede traer otra. */}
-          <th className="px-4 py-2.5">Obra social por defecto</th>
-          {renderVigilancia && <th className="px-4 py-2.5 whitespace-nowrap w-px">Fuente de paritarias</th>}
-          {renderEmpresas && <th className="px-4 py-2.5 whitespace-nowrap w-px">Empresas</th>}
-          {renderPorDefecto && (
-            <th className="px-4 py-2.5 whitespace-nowrap w-px">
-              <span className="inline-flex items-center gap-1.5">
-                Por defecto
-                {/* La estrella sola no dice qué hace. Y lo que hace es MENOS de lo que se teme: no
-                    fuerza nada, solo ordena el combo. Decirlo evita que nadie la use por las dudas. */}
-                <FontAwesomeIcon
-                  icon={faCircleInfo}
-                  title={ayudaPorDefecto || "El convenio habitual de esta empleadora: en el alta aparece PRIMERO en el select y marcado con la estrella. No obliga a usarlo — se puede elegir cualquiera de los otros registrados."}
-                  className="h-3 w-3 text-gray-400 normal-case"
-                />
-                {accionPorDefecto}
-              </span>
-            </th>
-          )}
-          {renderAcciones && <th className="px-4 py-2.5 text-right whitespace-nowrap w-px">Acciones</th>}
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60 bg-white dark:bg-gray-800">
-        {convenios.map((c) => {
-          const r = obraSocialDe?.(c) ?? { os: undefined };
-          return (
-            <tr key={c._id} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${r.noRegistrada ? 'bg-red-50/60 dark:bg-red-950/20' : ''}`}>
-              <td className="px-4 py-3 align-top font-mono text-xs font-bold text-blue-700 dark:text-blue-400 whitespace-nowrap">{c.externalId || '—'}</td>
-              <td className="px-4 py-3 align-top text-sm text-gray-900 dark:text-gray-100 max-w-[18rem]">{c.name}</td>
-              <td className="px-4 py-3 align-top text-xs text-gray-500 dark:text-gray-400 max-w-[18rem]">{c.signatario || '—'}</td>
-              {renderSindicato && <td className="px-4 py-3 align-top whitespace-nowrap">{renderSindicato(c)}</td>}
-              {renderPuesto && <td className="px-4 py-3 align-top">{renderPuesto(c)}</td>}
-              <td className="px-4 py-3 align-top">
-                {r.sinSindicato && !r.os ? (
-                  /* «Excluido de convenio» y no «Sin sindicato»: es lo que este caso realmente
-                     comprueba (externalId === 9999/99). Con la columna SINDICATO al lado, decir «sin
-                     sindicato» acá hacía que la misma palabra significara dos cosas en la misma fila
-                     —«no le asignamos gremio» y «este CCT no tiene gremio por definición»—. */
-                  <span className="text-xs text-gray-500 dark:text-gray-400 italic">Excluido de convenio → la define la empresa, en Obras Sociales.</span>
-                ) : r.os ? (
-                  <>
-                    <span className={`block text-sm ${r.noRegistrada ? 'text-red-700 dark:text-red-400 font-semibold' : 'text-gray-900 dark:text-gray-100'}`}>
-                      <span className="font-mono text-xs opacity-70 mr-1.5">{formatRnos(r.os.externalId)}</span>
-                      {r.os.name}
-                    </span>
-                    {/* De dónde sale: lo normal es "del convenio". La excepción se marca como tal. */}
-                    {/* Ya no hay dos orígenes posibles: la obra social es siempre la del convenio. */}
-                    <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-gray-400">
-                      del convenio
-                    </span>
-                    {r.noRegistrada && <span className="block text-[11px] text-red-700 dark:text-red-400 mt-0.5">No está entre las registradas por esta empleadora: ARCA va a rechazar estas altas.</span>}
-                  </>
-                ) : ayudaSinObraSocial ? (
-                  <span className="text-xs text-amber-700 dark:text-amber-400">Sin obra social cargada. {ayudaSinObraSocial}</span>
-                ) : (
-                  <span className="text-gray-400 dark:text-gray-600">—</span>
-                )}
-              </td>
-              {renderVigilancia && <td className="px-4 py-3 align-top text-sm whitespace-nowrap">{renderVigilancia(c)}</td>}
-              {renderEmpresas && <td className="px-4 py-3 align-top text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{renderEmpresas(c)}</td>}
-              {renderPorDefecto && <td className="px-4 py-3 align-top text-center whitespace-nowrap">{renderPorDefecto(c)}</td>}
-              {renderAcciones && <td className="px-4 py-3 align-top text-right whitespace-nowrap">{renderAcciones(c)}</td>}
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  </div>
+  <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-xl" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+    <thead className="bg-gray-50 dark:bg-gray-900/50">
+      <tr className="text-left text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+        {/* El código va PRIMERO: es el identificador y con lo que se busca. */}
+        <th className="px-4 py-2.5 whitespace-nowrap w-px">Código</th>
+        <th className="px-4 py-2.5">Actividad</th>
+        <th className="px-4 py-2.5">Signatario</th>
+        {/* Pegada al signatario, que es el texto crudo del que sale: verlos juntos hace evidente
+            si la asignación es correcta. NO es lo mismo que «Fuente de paritarias», que también
+            nombra gremios — por eso esta va como chip y aquella queda en texto plano. */}
+        {renderSindicato && <th className="px-4 py-2.5 whitespace-nowrap w-px">Sindicato</th>}
+        {/* Va al lado de la obra social porque es el mismo tipo de dato: lo que el CONVENIO define
+            para quien trabaja bajo él, cuando ni el rol ni la categoría dicen otra cosa. */}
+        {renderPuesto && <th className="px-4 py-2.5">Puesto por defecto</th>}
+        {/* «por defecto» y no «obra social» a secas: es la que rige cuando ARCA no devuelve una
+            propia para la persona, no la que va a tener sí o sí. La diferencia importa: la
+            validación contra el padrón puede traer otra. */}
+        <th className="px-4 py-2.5">Obra social por defecto</th>
+        {renderVigilancia && <th className="px-4 py-2.5 whitespace-nowrap w-px">Fuente de paritarias</th>}
+        {renderEmpresas && <th className="px-4 py-2.5 whitespace-nowrap w-px">Empresas</th>}
+        {renderPorDefecto && (
+          <th className="px-4 py-2.5 whitespace-nowrap w-px">
+            <span className="inline-flex items-center gap-1.5">
+              Por defecto
+              {/* La estrella sola no dice qué hace. Y lo que hace es MENOS de lo que se teme: no
+                  fuerza nada, solo ordena el combo. Decirlo evita que nadie la use por las dudas. */}
+              <FontAwesomeIcon
+                icon={faCircleInfo}
+                title={ayudaPorDefecto || "El convenio habitual de esta empleadora: en el alta aparece PRIMERO en el select y marcado con la estrella. No obliga a usarlo — se puede elegir cualquiera de los otros registrados."}
+                className="h-3 w-3 text-gray-400 normal-case"
+              />
+              {accionPorDefecto}
+            </span>
+          </th>
+        )}
+        {renderAcciones && <th className="px-4 py-2.5 text-right whitespace-nowrap w-px">Acciones</th>}
+      </tr>
+    </thead>
+    <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60 bg-white dark:bg-gray-800">
+      {convenios.map((c) => {
+        const r = obraSocialDe?.(c) ?? { os: undefined };
+        return (
+          <tr key={c._id} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${r.noRegistrada ? 'bg-red-50/60 dark:bg-red-950/20' : ''}`}>
+            <td className="px-4 py-3 align-top font-mono text-xs font-bold text-blue-700 dark:text-blue-400 whitespace-nowrap">{c.externalId || '—'}</td>
+            <td className="px-4 py-3 align-top text-sm text-gray-900 dark:text-gray-100 max-w-[18rem]">{c.name}</td>
+            <td className="px-4 py-3 align-top text-xs text-gray-500 dark:text-gray-400 max-w-[18rem]">{c.signatario || '—'}</td>
+            {renderSindicato && <td className="px-4 py-3 align-top whitespace-nowrap">{renderSindicato(c)}</td>}
+            {renderPuesto && <td className="px-4 py-3 align-top">{renderPuesto(c)}</td>}
+            <td className="px-4 py-3 align-top">
+              {r.sinSindicato && !r.os ? (
+                /* «Excluido de convenio» y no «Sin sindicato»: es lo que este caso realmente
+                   comprueba (externalId === 9999/99). Con la columna SINDICATO al lado, decir «sin
+                   sindicato» acá hacía que la misma palabra significara dos cosas en la misma fila
+                   —«no le asignamos gremio» y «este CCT no tiene gremio por definición»—. */
+                <span className="text-xs text-gray-500 dark:text-gray-400 italic">Excluido de convenio → la define la empresa, en Obras Sociales.</span>
+              ) : r.os ? (
+                <>
+                  <span className={`block text-sm ${r.noRegistrada ? 'text-red-700 dark:text-red-400 font-semibold' : 'text-gray-900 dark:text-gray-100'}`}>
+                    <span className="font-mono text-xs opacity-70 mr-1.5">{formatRnos(r.os.externalId)}</span>
+                    {r.os.name}
+                  </span>
+                  {/* De dónde sale: lo normal es "del convenio". La excepción se marca como tal. */}
+                  {/* Ya no hay dos orígenes posibles: la obra social es siempre la del convenio. */}
+                  <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-gray-400">
+                    del convenio
+                  </span>
+                  {r.noRegistrada && <span className="block text-[11px] text-red-700 dark:text-red-400 mt-0.5">No está entre las registradas por esta empleadora: ARCA va a rechazar estas altas.</span>}
+                </>
+              ) : ayudaSinObraSocial ? (
+                <span className="text-xs text-amber-700 dark:text-amber-400">Sin obra social cargada. {ayudaSinObraSocial}</span>
+              ) : (
+                <span className="text-gray-400 dark:text-gray-600">—</span>
+              )}
+            </td>
+            {renderVigilancia && <td className="px-4 py-3 align-top text-sm whitespace-nowrap">{renderVigilancia(c)}</td>}
+            {renderEmpresas && <td className="px-4 py-3 align-top text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{renderEmpresas(c)}</td>}
+            {renderPorDefecto && <td className="px-4 py-3 align-top text-center whitespace-nowrap">{renderPorDefecto(c)}</td>}
+            {renderAcciones && <td className="px-4 py-3 align-top text-right whitespace-nowrap">{renderAcciones(c)}</td>}
+          </tr>
+        );
+      })}
+    </tbody>
+  </TablaConEncabezadoFijo>
 );

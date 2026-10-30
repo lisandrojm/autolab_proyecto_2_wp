@@ -9,6 +9,7 @@ import { Modal } from "../components/ui/Modal";
 import { RichTextEditor, RichTextViewer } from "../components/ui/RichTextEditor";
 import { sweetAlert } from "../utils/sweetAlert";
 import { terminosCondicionesAPI, TerminosInput, TerminosItem } from "../api/terminosCondiciones";
+import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
 
 /*
   TÉRMINOS Y CONDICIONES DEL REGISTRO.
@@ -161,47 +162,45 @@ export const TerminosCondicionesPage: React.FC = () => {
       ) : filtrados.length === 0 ? (
         <EmptyState icon={faFileSignature} title={busqueda ? "Sin resultados" : "Todavía no hay términos y condiciones"} description={busqueda ? "Probá con otra búsqueda." : "Cargá los primeros: mientras no haya ninguno vigente, el registro no pide aceptar nada."} />
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  <th className="px-4 py-3 font-semibold">Título</th>
-                  <th className="px-4 py-3 font-semibold">Estado</th>
-                  <th className="px-4 py-3 font-semibold">Versión</th>
-                  <th className="px-4 py-3 font-semibold">Aceptaciones</th>
-                  <th className="px-4 py-3 font-semibold">Modificado</th>
-                  <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-clip">
+          <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 font-semibold">Título</th>
+                <th className="px-4 py-3 font-semibold">Estado</th>
+                <th className="px-4 py-3 font-semibold">Versión</th>
+                <th className="px-4 py-3 font-semibold">Aceptaciones</th>
+                <th className="px-4 py-3 font-semibold">Modificado</th>
+                <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {filtrados.map((t) => (
+                <tr key={t._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                  <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">{t.titulo}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${t.vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}>{t.vigente ? "Vigente" : "No vigente"}</span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">v{t.version}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{t.aceptaciones}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{fechaCorta(t.updatedAt)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => setVistaPrevia({ titulo: t.titulo, contenido: t.contenido })} title="Ver cómo se muestra en el registro" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                        <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => abrirEditar(t)} title="Editar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                        <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => eliminar(t)} title="Eliminar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                        <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {filtrados.map((t) => (
-                  <tr key={t._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                    <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">{t.titulo}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${t.vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}>{t.vigente ? "Vigente" : "No vigente"}</span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">v{t.version}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{t.aceptaciones}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{fechaCorta(t.updatedAt)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => setVistaPrevia({ titulo: t.titulo, contenido: t.contenido })} title="Ver cómo se muestra en el registro" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-                          <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => abrirEditar(t)} title="Editar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-                          <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => eliminar(t)} title="Eliminar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                          <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </TablaConEncabezadoFijo>
         </div>
       )}
 

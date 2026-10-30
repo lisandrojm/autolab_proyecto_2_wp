@@ -42,6 +42,7 @@ import { calificacionesAPI, ResumenCalificacion } from '../api/calificaciones';
 import { CalificacionesModal, CalificacionesPanel } from '../components/calificaciones/CalificacionesModal';
 import { CalificacionPromedio } from '../components/calificaciones/Estrellas';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 const HELP_KEY = 'users' as const;
 
@@ -2212,264 +2213,262 @@ export const UsersPage: React.FC = () => {
                 {canManage && <Card variant="create" onClick={openCreate} header={{ title: 'Nuevo Usuario', subtitle: 'Crear un nuevo usuario', icon: faUser }} />}
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/50 shadow-sm">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-800">
-                      <th className="py-4 px-6 w-10">
+              <TablaConEncabezadoFijo className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/50 shadow-sm" tabla="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-800">
+                    <th className="py-4 px-6 w-10">
+                      <input
+                        type="checkbox"
+                        checked={todosTildados}
+                        onChange={alternarTodos}
+                        disabled={validablesEnPantalla.length === 0}
+                        title="Tildar todos los de esta página que estén sin validar y tengan CUIT válido"
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      />
+                    </th>
+                    <SortableTh columna="name" activa={sortBy} direccion={sortDir} onSort={toggleSort}>Usuario</SortableTh>
+                    <SortableTh columna="roles" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden md:table-cell">Roles</SortableTh>
+                    <SortableTh columna="cuit" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden lg:table-cell">CUIT</SortableTh>
+                    <SortableTh columna="contratos" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden md:table-cell text-center">Contratos</SortableTh>
+                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-center" title="Nombre confirmado contra el Padrón de ARCA">ARCA</th>
+                    {/* `hidden lg:table-cell`: la tabla ya venía con siete columnas, y en pantallas
+                        chicas esta es la primera que sobra — el dato completo sigue en la ficha. */}
+                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest hidden lg:table-cell" title="Sindicato al que está afiliada la persona">Sindicato</th>
+                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest hidden md:table-cell" title="Promedio de sus calificaciones (1 a 5 estrellas). Click para verlas o calificar.">Calificación</th>
+                    <SortableTh columna="estado" activa={sortBy} direccion={sortDir} onSort={toggleSort}>Estado</SortableTh>
+                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                  {users.map((user) => (
+                    <tr key={user._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors cursor-pointer" onClick={() => openView(user)}>
+                      {/* `stopPropagation`: la fila entera abre la ficha, y tildar no es abrir. */}
+                      <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
-                          checked={todosTildados}
-                          onChange={alternarTodos}
-                          disabled={validablesEnPantalla.length === 0}
-                          title="Tildar todos los de esta página que estén sin validar y tengan CUIT válido"
+                          checked={seleccionados.has(user._id)}
+                          onChange={() => alternarUno(user._id)}
+                          disabled={!puedeValidarse(user)}
+                          title={
+                            puedeValidarse(user)
+                              ? 'Tildar para validar su nombre contra ARCA'
+                              : user.metadata?.nombreValidadoArcaAt
+                                ? 'El nombre ya está validado en ARCA: no hace falta volver a consultarlo'
+                                : 'Sin un CUIT válido no se puede consultar el Padrón'
+                          }
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         />
-                      </th>
-                      <SortableTh columna="name" activa={sortBy} direccion={sortDir} onSort={toggleSort}>Usuario</SortableTh>
-                      <SortableTh columna="roles" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden md:table-cell">Roles</SortableTh>
-                      <SortableTh columna="cuit" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden lg:table-cell">CUIT</SortableTh>
-                      <SortableTh columna="contratos" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden md:table-cell text-center">Contratos</SortableTh>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-center" title="Nombre confirmado contra el Padrón de ARCA">ARCA</th>
-                      {/* `hidden lg:table-cell`: la tabla ya venía con siete columnas, y en pantallas
-                          chicas esta es la primera que sobra — el dato completo sigue en la ficha. */}
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest hidden lg:table-cell" title="Sindicato al que está afiliada la persona">Sindicato</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest hidden md:table-cell" title="Promedio de sus calificaciones (1 a 5 estrellas). Click para verlas o calificar.">Calificación</th>
-                      <SortableTh columna="estado" activa={sortBy} direccion={sortDir} onSort={toggleSort}>Estado</SortableTh>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-                    {users.map((user) => (
-                      <tr key={user._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/20 transition-colors cursor-pointer" onClick={() => openView(user)}>
-                        {/* `stopPropagation`: la fila entera abre la ficha, y tildar no es abrir. */}
-                        <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={seleccionados.has(user._id)}
-                            onChange={() => alternarUno(user._id)}
-                            disabled={!puedeValidarse(user)}
-                            title={
-                              puedeValidarse(user)
-                                ? 'Tildar para validar su nombre contra ARCA'
-                                : user.metadata?.nombreValidadoArcaAt
-                                  ? 'El nombre ya está validado en ARCA: no hace falta volver a consultarlo'
-                                  : 'Sin un CUIT válido no se puede consultar el Padrón'
-                            }
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                          />
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="flex items-center gap-3">
-                            <FontAwesomeIcon icon={faUser} className="text-blue-600" />
-                            <div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="text-sm font-semibold">{user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : user.email.split('@')[0]}</p>
-                                <NombreArca
-                                  estado={estadoNombreArca({ cuit: user.metadata?.cuit, sinCuit: user.metadata?.sinCuit, validadoAt: user.metadata?.nombreValidadoArcaAt })}
-                                  fecha={user.metadata?.nombreValidadoArcaAt}
-                                  conInfo
-                                />
-                                {/*
-                                  El mismo aviso que la tarjeta, en el ancho que tiene una fila.
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-3">
+                          <FontAwesomeIcon icon={faUser} className="text-blue-600" />
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-sm font-semibold">{user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : user.email.split('@')[0]}</p>
+                              <NombreArca
+                                estado={estadoNombreArca({ cuit: user.metadata?.cuit, sinCuit: user.metadata?.sinCuit, validadoAt: user.metadata?.nombreValidadoArcaAt })}
+                                fecha={user.metadata?.nombreValidadoArcaAt}
+                                conInfo
+                              />
+                              {/*
+                                El mismo aviso que la tarjeta, en el ancho que tiene una fila.
 
-                                  Acá no entra un recuadro con dos renglones, así que va como badge al
-                                  lado del nombre — el texto completo está en el `title`. Lo que no
-                                  podía pasar es que el pedido se viera solo en una de las dos vistas:
-                                  quien trabaja en tabla nunca se enteraría de a quién hay que
-                                  abrirle la cuenta. La condición es la misma función que la tarjeta.
-                                */}
-                                {esperaCuentaBancaria(user.metadata) && (
-                                  <span
-                                    title="Declaró no tener banco y autorizó que se le cree una cuenta a su nombre. Falta hacer el trámite y cargarle el CBU."
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 whitespace-nowrap"
-                                  >
-                                    <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />
-                                    Falta cuenta
-                                  </span>
-                                )}
-                                {(() => {
-                                  const activeVac = getUserActiveVacation(user._id);
-                                  if (!activeVac) return null;
-                                  const dateRangeStr = `Vacaciones: del ${formatDateString(activeVac.startDate)} al ${formatDateString(activeVac.endDate)}`;
-                                  const fullName = user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : user.email.split('@')[0];
-                                  return (
-                                    <button type="button" onClick={(e) => showVacationInfo(user._id, fullName, e)} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:border-amber-500/30 transition-all shadow-sm cursor-pointer focus:outline-none" title={dateRangeStr}>
-                                      <FontAwesomeIcon icon={faUmbrellaBeach} className="text-[9px] mr-1" />
-                                      <span>VACACIONES</span>
-                                      <FontAwesomeIcon icon={faInfoCircle} className="text-[9px] ml-1 opacity-75 hover:opacity-100" />
-                                    </button>
-                                  );
-                                })()}
-                              </div>
-                              <p className="text-xs text-gray-500">{user.email}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-6 hidden md:table-cell">
-                          <div className="flex flex-wrap gap-1">
-                            {user.roles.map((r) => {
-                              const isCoord = (r.permissions || []).includes(MOBILE_ACTIVITY_LOGS);
-
-                              let classes = 'bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300';
-                              if (isCoord) {
-                                classes = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800';
-                              }
-
-                              return (
-                                <span key={r._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${classes}`}>
-                                  {r.name}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6 hidden lg:table-cell">
-                          {user.metadata?.cuit ? (
-                            <span className="text-xs font-mono text-gray-700 dark:text-gray-300 select-all" onClick={(e) => e.stopPropagation()}>
-                              {formatCuit(user.metadata.cuit)}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
-                          )}
-                        </td>
-                        <td className="py-4 px-6 hidden md:table-cell text-center">
-                          <span className="text-xs text-gray-500">{(user.metadata?.projects || []).reduce((acc: number, p: any) => acc + (p.contracts?.length || 0), 0)}</span>
-                        </td>
-                        {/*
-                          Columna ARCA: el estado y su acción en la misma celda.
-
-                          El ✓ ya estaba al lado del nombre, pero para arreglar un "sin validar" había
-                          que tildar la fila, subir a la barra y apretar el masivo. Para una sola
-                          persona son tres pasos y una selección que después hay que limpiar.
-                        */}
-                        <td className="py-4 px-6 text-center" onClick={(e) => e.stopPropagation()}>
-                          {(() => {
-                            const estado = estadoNombreArca({ cuit: user.metadata?.cuit, sinCuit: user.metadata?.sinCuit, validadoAt: user.metadata?.nombreValidadoArcaAt });
-                            if (estado === 'validado')
-                              return (
-                                <span title={`Validado en ARCA${user.metadata?.nombreValidadoArcaAt ? ` el ${new Date(user.metadata.nombreValidadoArcaAt).toLocaleDateString()}` : ''}`} className="inline-flex text-green-600 dark:text-green-500">
-                                  <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4" />
-                                </span>
-                              );
-                            /*
-                              Sin CUIT válido no hay a quién preguntarle. Pero un "—" mudo se lee como
-                              una falla del sistema —"no me deja validar y no entiendo por qué"— cuando
-                              en realidad es un dato mal cargado. Se dice cuál es el problema.
-                            */
-                            if (estado === 'no_aplica') {
-                              if (user.metadata?.sinCuit) return <span className="text-[11px] font-semibold text-violet-600 dark:text-violet-400" title="Declaró no tener CUIT/CUIL argentino: sus contratos van por el circuito Sin CUIT, no hay nada que consultar">Sin CUIT</span>;
-                              const motivo = motivoCuitInvalido(user.metadata?.cuit);
-                              return (
-                                <button
-                                  onClick={() => openEdit(user)}
-                                  title={`${motivo?.detalle || 'No se puede consultar el Padrón con este CUIT.'} — Click para corregirlo.`}
-                                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400 hover:underline"
+                                Acá no entra un recuadro con dos renglones, así que va como badge al
+                                lado del nombre — el texto completo está en el `title`. Lo que no
+                                podía pasar es que el pedido se viera solo en una de las dos vistas:
+                                quien trabaja en tabla nunca se enteraría de a quién hay que
+                                abrirle la cuenta. La condición es la misma función que la tarjeta.
+                              */}
+                              {esperaCuentaBancaria(user.metadata) && (
+                                <span
+                                  title="Declaró no tener banco y autorizó que se le cree una cuenta a su nombre. Falta hacer el trámite y cargarle el CBU."
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 whitespace-nowrap"
                                 >
-                                  <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
-                                  {motivo?.corto || 'CUIT inválido'}
-                                </button>
-                              );
+                                  <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />
+                                  Falta cuenta
+                                </span>
+                              )}
+                              {(() => {
+                                const activeVac = getUserActiveVacation(user._id);
+                                if (!activeVac) return null;
+                                const dateRangeStr = `Vacaciones: del ${formatDateString(activeVac.startDate)} al ${formatDateString(activeVac.endDate)}`;
+                                const fullName = user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : user.email.split('@')[0];
+                                return (
+                                  <button type="button" onClick={(e) => showVacationInfo(user._id, fullName, e)} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:border-amber-500/30 transition-all shadow-sm cursor-pointer focus:outline-none" title={dateRangeStr}>
+                                    <FontAwesomeIcon icon={faUmbrellaBeach} className="text-[9px] mr-1" />
+                                    <span>VACACIONES</span>
+                                    <FontAwesomeIcon icon={faInfoCircle} className="text-[9px] ml-1 opacity-75 hover:opacity-100" />
+                                  </button>
+                                );
+                              })()}
+                            </div>
+                            <p className="text-xs text-gray-500">{user.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 hidden md:table-cell">
+                        <div className="flex flex-wrap gap-1">
+                          {user.roles.map((r) => {
+                            const isCoord = (r.permissions || []).includes(MOBILE_ACTIVITY_LOGS);
+
+                            let classes = 'bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-300';
+                            if (isCoord) {
+                              classes = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800';
                             }
+
+                            return (
+                              <span key={r._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${classes}`}>
+                                {r.name}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 hidden lg:table-cell">
+                        {user.metadata?.cuit ? (
+                          <span className="text-xs font-mono text-gray-700 dark:text-gray-300 select-all" onClick={(e) => e.stopPropagation()}>
+                            {formatCuit(user.metadata.cuit)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
+                        )}
+                      </td>
+                      <td className="py-4 px-6 hidden md:table-cell text-center">
+                        <span className="text-xs text-gray-500">{(user.metadata?.projects || []).reduce((acc: number, p: any) => acc + (p.contracts?.length || 0), 0)}</span>
+                      </td>
+                      {/*
+                        Columna ARCA: el estado y su acción en la misma celda.
+
+                        El ✓ ya estaba al lado del nombre, pero para arreglar un "sin validar" había
+                        que tildar la fila, subir a la barra y apretar el masivo. Para una sola
+                        persona son tres pasos y una selección que después hay que limpiar.
+                      */}
+                      <td className="py-4 px-6 text-center" onClick={(e) => e.stopPropagation()}>
+                        {(() => {
+                          const estado = estadoNombreArca({ cuit: user.metadata?.cuit, sinCuit: user.metadata?.sinCuit, validadoAt: user.metadata?.nombreValidadoArcaAt });
+                          if (estado === 'validado')
+                            return (
+                              <span title={`Validado en ARCA${user.metadata?.nombreValidadoArcaAt ? ` el ${new Date(user.metadata.nombreValidadoArcaAt).toLocaleDateString()}` : ''}`} className="inline-flex text-green-600 dark:text-green-500">
+                                <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4" />
+                              </span>
+                            );
+                          /*
+                            Sin CUIT válido no hay a quién preguntarle. Pero un "—" mudo se lee como
+                            una falla del sistema —"no me deja validar y no entiendo por qué"— cuando
+                            en realidad es un dato mal cargado. Se dice cuál es el problema.
+                          */
+                          if (estado === 'no_aplica') {
+                            if (user.metadata?.sinCuit) return <span className="text-[11px] font-semibold text-violet-600 dark:text-violet-400" title="Declaró no tener CUIT/CUIL argentino: sus contratos van por el circuito Sin CUIT, no hay nada que consultar">Sin CUIT</span>;
+                            const motivo = motivoCuitInvalido(user.metadata?.cuit);
                             return (
                               <button
-                                onClick={() => validarNombresEnArca([user._id])}
-                                // Deshabilitado mientras corre CUALQUIER validación —no se pisan entre sí—,
-                                // pero el spinner solo gira en la fila que se apretó.
-                                disabled={validandoNombres}
-                                title="Consultar el Padrón de ARCA y confirmar el nombre de esta persona"
-                                className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                                onClick={() => openEdit(user)}
+                                title={`${motivo?.detalle || 'No se puede consultar el Padrón con este CUIT.'} — Click para corregirlo.`}
+                                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400 hover:underline"
                               >
-                                <FontAwesomeIcon icon={validandoFila === user._id ? faSpinner : faLandmark} spin={validandoFila === user._id} className="h-3 w-3" />
-                                Validar
+                                <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
+                                {motivo?.corto || 'CUIT inválido'}
                               </button>
                             );
-                          })()}
-                        </td>
-                        <td className="py-4 px-6 hidden lg:table-cell">
-                          {(() => {
-                            if (!user.metadata?.afiliadoAlSindicato) return <span className="text-gray-400 dark:text-gray-600">—</span>;
-                            const suyos = (user.metadata?.sindicatoIds || []).map((id) => sindicatos.find((sind) => sind._id === id)).filter(Boolean) as SimpleCatalogItem[];
-                            // Sin gremio elegido no hay afiliación que mostrar: mismo criterio que la
-                            // ficha. El formulario ya no deja guardar ese estado.
-                            if (suyos.length === 0) return <span className="text-gray-400 dark:text-gray-600">—</span>;
-                            return (
-                              <div className="flex flex-wrap gap-1">
-                                {suyos.map((sind) => {
-                                  const sigla = typeof sind.sigla === 'string' ? sind.sigla.trim() : '';
-                                  return (
-                                    <span
-                                      key={sind._id}
-                                      title={sind.name}
-                                      className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
-                                    >
-                                      {sigla || sind.name}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            );
-                          })()}
-                        </td>
-                        <td className="py-4 px-6 hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
-                          {/* Las solicitudes no son personas todavía: se califica a la persona, no al pedido. */}
-                          {user.metadata?.isSolicitud ? (
-                            <span className="text-gray-400 dark:text-gray-600">—</span>
-                          ) : (
-                            <button type="button" onClick={() => setCalificandoA(user)} title="Ver calificaciones o calificar" className="rounded px-1 py-0.5 hover:bg-amber-50 dark:hover:bg-amber-900/20">
-                              <CalificacionPromedio promedio={calificaciones[user._id]?.promedio} cantidad={calificaciones[user._id]?.cantidad} />
+                          }
+                          return (
+                            <button
+                              onClick={() => validarNombresEnArca([user._id])}
+                              // Deshabilitado mientras corre CUALQUIER validación —no se pisan entre sí—,
+                              // pero el spinner solo gira en la fila que se apretó.
+                              disabled={validandoNombres}
+                              title="Consultar el Padrón de ARCA y confirmar el nombre de esta persona"
+                              className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                            >
+                              <FontAwesomeIcon icon={validandoFila === user._id ? faSpinner : faLandmark} spin={validandoFila === user._id} className="h-3 w-3" />
+                              Validar
                             </button>
+                          );
+                        })()}
+                      </td>
+                      <td className="py-4 px-6 hidden lg:table-cell">
+                        {(() => {
+                          if (!user.metadata?.afiliadoAlSindicato) return <span className="text-gray-400 dark:text-gray-600">—</span>;
+                          const suyos = (user.metadata?.sindicatoIds || []).map((id) => sindicatos.find((sind) => sind._id === id)).filter(Boolean) as SimpleCatalogItem[];
+                          // Sin gremio elegido no hay afiliación que mostrar: mismo criterio que la
+                          // ficha. El formulario ya no deja guardar ese estado.
+                          if (suyos.length === 0) return <span className="text-gray-400 dark:text-gray-600">—</span>;
+                          return (
+                            <div className="flex flex-wrap gap-1">
+                              {suyos.map((sind) => {
+                                const sigla = typeof sind.sigla === 'string' ? sind.sigla.trim() : '';
+                                return (
+                                  <span
+                                    key={sind._id}
+                                    title={sind.name}
+                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
+                                  >
+                                    {sigla || sind.name}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </td>
+                      <td className="py-4 px-6 hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
+                        {/* Las solicitudes no son personas todavía: se califica a la persona, no al pedido. */}
+                        {user.metadata?.isSolicitud ? (
+                          <span className="text-gray-400 dark:text-gray-600">—</span>
+                        ) : (
+                          <button type="button" onClick={() => setCalificandoA(user)} title="Ver calificaciones o calificar" className="rounded px-1 py-0.5 hover:bg-amber-50 dark:hover:bg-amber-900/20">
+                            <CalificacionPromedio promedio={calificaciones[user._id]?.promedio} cantidad={calificaciones[user._id]?.cantidad} />
+                          </button>
+                        )}
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${user.metadata?.activo ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}`}>{user.metadata?.activo ? 'Activo' : 'Inactivo'}</span>
+                          {/* Sin CUIT/CUIL argentino: sus contratos van por el circuito "Sin CUIT". */}
+                          {noPoseeCuit(user.metadata?.cuit, user.metadata?.sinCuit) && (
+                            <span title="No tiene CUIT/CUIL argentino: sus contratos van por el circuito Sin CUIT" className="text-[10px] font-bold px-2 py-1 rounded uppercase border border-dashed bg-violet-100 text-violet-800 border-violet-500 dark:bg-violet-500/25 dark:text-violet-200 dark:border-violet-400">
+                              Sin CUIT
+                            </span>
                           )}
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${user.metadata?.activo ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}`}>{user.metadata?.activo ? 'Activo' : 'Inactivo'}</span>
-                            {/* Sin CUIT/CUIL argentino: sus contratos van por el circuito "Sin CUIT". */}
-                            {noPoseeCuit(user.metadata?.cuit, user.metadata?.sinCuit) && (
-                              <span title="No tiene CUIT/CUIL argentino: sus contratos van por el circuito Sin CUIT" className="text-[10px] font-bold px-2 py-1 rounded uppercase border border-dashed bg-violet-100 text-violet-800 border-violet-500 dark:bg-violet-500/25 dark:text-violet-200 dark:border-violet-400">
-                                Sin CUIT
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6 text-right">
-                          <div className="flex justify-end gap-1">
-                            {canManage &&
-                              (user.isSystem ? (
-                                <div className="p-2 text-gray-400 cursor-not-allowed" title="Usuario del sistema protegido">
-                                  <FontAwesomeIcon icon={faLock} />
-                                </div>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openEdit(user);
-                                    }}
-                                    className="p-2 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
-                                    title="Editar usuario"
-                                  >
-                                    <FontAwesomeIcon icon={faEdit} />
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDelete(user);
-                                    }}
-                                    className="p-2 text-gray-400 hover:text-red-500"
-                                    title="Eliminar usuario"
-                                  >
-                                    <FontAwesomeIcon icon={faTrash} />
-                                  </button>
-                                </>
-                              ))}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex justify-end gap-1">
+                          {canManage &&
+                            (user.isSystem ? (
+                              <div className="p-2 text-gray-400 cursor-not-allowed" title="Usuario del sistema protegido">
+                                <FontAwesomeIcon icon={faLock} />
+                              </div>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEdit(user);
+                                  }}
+                                  className="p-2 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
+                                  title="Editar usuario"
+                                >
+                                  <FontAwesomeIcon icon={faEdit} />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(user);
+                                  }}
+                                  className="p-2 text-gray-400 hover:text-red-500"
+                                  title="Eliminar usuario"
+                                >
+                                  <FontAwesomeIcon icon={faTrash} />
+                                </button>
+                              </>
+                            ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </TablaConEncabezadoFijo>
             )}
           </div>
           {totalPages > 1 && (

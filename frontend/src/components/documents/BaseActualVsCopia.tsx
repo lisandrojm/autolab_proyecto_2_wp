@@ -4,6 +4,7 @@ import { faSpinner, faTriangleExclamation, faCheck } from "@fortawesome/free-sol
 import { backupsAPI, BaseActual, CopiaBackup, ManifiestoCopia } from "../../api/backups";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { mensajeErrorApi } from "../../utils/errorApi";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 /** Un solo lugar para los errores de esta pantalla: distingue «falta deployar» de un error real. */
 const mostrarError = (e: any, titulo: string) => {
@@ -98,75 +99,73 @@ export const BaseActualVsCopia: React.FC<{ copias: CopiaBackup[] }> = ({ copias 
           Leyendo la base…
         </p>
       ) : (
-        <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900">
+        <TablaConEncabezadoFijo className="rounded border border-gray-200 dark:border-gray-700" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-900">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Colección</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Documentos (hoy)</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tamaño</th>
+              {comparar && <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">En la copia</th>}
+              {comparar && <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Diferencia</th>}
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+            {cargandoCopia ? (
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Colección</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Documentos (hoy)</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tamaño</th>
-                {comparar && <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">En la copia</th>}
-                {comparar && <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Diferencia</th>}
+                <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
+                  <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                  Leyendo la copia…
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-              {cargandoCopia ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
-                    <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
-                    Leyendo la copia…
-                  </td>
-                </tr>
-              ) : (
-                nombres.map((nombre) => {
-                  const viva = base?.colecciones.find((c) => c.nombre === nombre);
-                  const copia = enCopia.get(nombre);
-                  const faltaEnCopia = !!comparar && copia === undefined;
-                  const faltaEnBase = !!comparar && !viva;
-                  const diferencia = comparar && viva && copia !== undefined ? viva.documentos - copia : null;
-                  return (
-                    <tr key={nombre} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${faltaEnCopia || faltaEnBase ? "bg-amber-50/60 dark:bg-amber-900/10" : ""}`}>
-                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                        {nombre}
-                        {faltaEnCopia && (
-                          <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400" title="Está en la base pero no en la copia: la copia quedó incompleta">
-                            <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
-                            falta en la copia
+            ) : (
+              nombres.map((nombre) => {
+                const viva = base?.colecciones.find((c) => c.nombre === nombre);
+                const copia = enCopia.get(nombre);
+                const faltaEnCopia = !!comparar && copia === undefined;
+                const faltaEnBase = !!comparar && !viva;
+                const diferencia = comparar && viva && copia !== undefined ? viva.documentos - copia : null;
+                return (
+                  <tr key={nombre} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${faltaEnCopia || faltaEnBase ? "bg-amber-50/60 dark:bg-amber-900/10" : ""}`}>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                      {nombre}
+                      {faltaEnCopia && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400" title="Está en la base pero no en la copia: la copia quedó incompleta">
+                          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
+                          falta en la copia
+                        </span>
+                      )}
+                      {faltaEnBase && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400" title="Está en la copia pero ya no en la base: se borró después del backup">
+                          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
+                          ya no está en la base
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-right tabular-nums text-gray-600 dark:text-gray-300">{viva ? nro(viva.documentos) : "—"}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-right text-gray-500">{formatearTamano(viva?.bytes || 0)}</td>
+                    {comparar && <td className="px-4 py-2.5 whitespace-nowrap text-sm text-right tabular-nums text-gray-600 dark:text-gray-300">{copia !== undefined ? nro(copia) : "—"}</td>}
+                    {comparar && (
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-right tabular-nums">
+                        {diferencia === null ? (
+                          <span className="text-gray-400">—</span>
+                        ) : diferencia === 0 ? (
+                          <span className="text-emerald-600 dark:text-emerald-400" title="Sin cambios desde la copia">
+                            <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
                           </span>
-                        )}
-                        {faltaEnBase && (
-                          <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400" title="Está en la copia pero ya no en la base: se borró después del backup">
-                            <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
-                            ya no está en la base
+                        ) : (
+                          <span className={diferencia > 0 ? "text-blue-600 dark:text-blue-400" : "text-red-600 dark:text-red-400"} title={diferencia > 0 ? "Se agregaron documentos después de la copia" : "Hay menos documentos que en la copia"}>
+                            {diferencia > 0 ? "+" : ""}
+                            {nro(diferencia)}
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-right tabular-nums text-gray-600 dark:text-gray-300">{viva ? nro(viva.documentos) : "—"}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-right text-gray-500">{formatearTamano(viva?.bytes || 0)}</td>
-                      {comparar && <td className="px-4 py-2.5 whitespace-nowrap text-sm text-right tabular-nums text-gray-600 dark:text-gray-300">{copia !== undefined ? nro(copia) : "—"}</td>}
-                      {comparar && (
-                        <td className="px-4 py-2.5 whitespace-nowrap text-sm text-right tabular-nums">
-                          {diferencia === null ? (
-                            <span className="text-gray-400">—</span>
-                          ) : diferencia === 0 ? (
-                            <span className="text-emerald-600 dark:text-emerald-400" title="Sin cambios desde la copia">
-                              <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
-                            </span>
-                          ) : (
-                            <span className={diferencia > 0 ? "text-blue-600 dark:text-blue-400" : "text-red-600 dark:text-red-400"} title={diferencia > 0 ? "Se agregaron documentos después de la copia" : "Hay menos documentos que en la copia"}>
-                              {diferencia > 0 ? "+" : ""}
-                              {nro(diferencia)}
-                            </span>
-                          )}
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                    )}
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </TablaConEncabezadoFijo>
       )}
 
       {comparar && manifiesto && (

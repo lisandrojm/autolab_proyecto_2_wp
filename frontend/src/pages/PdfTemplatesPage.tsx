@@ -23,6 +23,7 @@ import { RichTextEditor } from '../components/ui/RichTextEditor';
 import { ViewToggle, ViewMode } from '../components/ui/ViewToggle';
 import { PdfAssignmentStatus } from './PdfAssignmentStatus';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 const HELP_KEY = 'pdfTemplates' as const;
 
@@ -429,60 +430,58 @@ export function PdfTemplatesPage({ scope }: { scope: PdfTemplatesScope }) {
             {isFetching && <div className="absolute -top-6 right-0 text-xs text-gray-500 dark:text-gray-400">Filtrando…</div>}
 
             {effectiveViewMode === 'table' ? (
-              <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg mx-0.5 lg:mx-0">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-900/50">
-                    <tr>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Código</th>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Membrete | Firma</th>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
-                      <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+              <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg mx-0.5 lg:mx-0" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900/50">
+                  <tr>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Código</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Membrete | Firma</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
+                    <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                  {filteredTemplates.map((template) => (
+                    <tr key={template._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 cursor-pointer" onClick={() => openEdit(template)}>
+                      <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{template.name}</td>
+                      <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{codeOptions.find((c) => c.value === template.code)?.label || template.code}</td>
+                      <td className="px-5 py-3 text-sm whitespace-nowrap">
+                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${template.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}`}>{template.isActive ? 'Activa' : 'Inactiva'}</span>
+                      </td>
+                      <td className="px-5 py-3 text-sm whitespace-nowrap">
+                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${template.usaMembrete ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}>{template.usaMembrete ? 'Activo' : 'Inactivo'}</span>
+                      </td>
+                      <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                        <span className="truncate max-w-[320px] block" title="Contenido de la plantilla">
+                          {(template.content || '')
+                            .replace(/<[^>]*>/g, ' ')
+                            .replace(/&nbsp;/g, ' ')
+                            .trim()
+                            .slice(0, 70)}
+                          {(template.content || '').length > 70 ? '…' : ''}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => handlePreviewItem(template)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Previsualizar">
+                            <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => handleDownload(template)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar PDF de ejemplo">
+                            <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => openEdit(template)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar">
+                            <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => handleDelete(template)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="Eliminar">
+                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                    {filteredTemplates.map((template) => (
-                      <tr key={template._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 cursor-pointer" onClick={() => openEdit(template)}>
-                        <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">{template.name}</td>
-                        <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{codeOptions.find((c) => c.value === template.code)?.label || template.code}</td>
-                        <td className="px-5 py-3 text-sm whitespace-nowrap">
-                          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${template.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}`}>{template.isActive ? 'Activa' : 'Inactiva'}</span>
-                        </td>
-                        <td className="px-5 py-3 text-sm whitespace-nowrap">
-                          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${template.usaMembrete ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}>{template.usaMembrete ? 'Activo' : 'Inactivo'}</span>
-                        </td>
-                        <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
-                          <span className="truncate max-w-[320px] block" title="Contenido de la plantilla">
-                            {(template.content || '')
-                              .replace(/<[^>]*>/g, ' ')
-                              .replace(/&nbsp;/g, ' ')
-                              .trim()
-                              .slice(0, 70)}
-                            {(template.content || '').length > 70 ? '…' : ''}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => handlePreviewItem(template)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Previsualizar">
-                              <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
-                            </button>
-                            <button onClick={() => handleDownload(template)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar PDF de ejemplo">
-                              <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
-                            </button>
-                            <button onClick={() => openEdit(template)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar">
-                              <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
-                            </button>
-                            <button onClick={() => handleDelete(template)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="Eliminar">
-                              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </TablaConEncabezadoFijo>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mx-0.5 lg:mx-0">
                 {filteredTemplates.map((template) => (

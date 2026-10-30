@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faClock, faEye } from "@fortawesome/free-solid-svg-icons";
 import { RequestData } from "../../api/requests";
 import { fechaDeCalendario } from "../../utils/fechas";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 interface RequestTableProps {
   requests: RequestData[];
@@ -37,8 +38,8 @@ export const RequestTable: React.FC<RequestTableProps> = ({ requests, onApprove,
   };
 
   return (
-    <div className="overflow-x-auto rounded border dark:border-slate-800">
-      <table className="min-w-full bg-white dark:bg-gray-800 rounded-xl overflow-hidden">
+    <div className="rounded border dark:border-slate-800">
+      <TablaConEncabezadoFijo tabla="min-w-full bg-white dark:bg-gray-800">
         <thead className="bg-gray-50 dark:bg-gray-900">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Empleado</th>
@@ -121,7 +122,7 @@ export const RequestTable: React.FC<RequestTableProps> = ({ requests, onApprove,
             );
           })}
         </tbody>
-      </table>
+      </TablaConEncabezadoFijo>
       {requests.length === 0 && <div className="text-center py-12 text-gray-500 dark:text-gray-400">No hay solicitudes</div>}
     </div>
   );

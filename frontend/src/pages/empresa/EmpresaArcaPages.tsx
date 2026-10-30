@@ -25,6 +25,7 @@ import { CONVENIO_EXCLUIDO } from '../../components/contratos/afipCompleteness';
 import { ConveniosTable } from '../../components/convenios/ConveniosTable';
 import { BannerParitarias } from '../../components/paritarias/BannerParitarias';
 import { LinkSiPuede } from '../../components/LinkSiPuede';
+import { TablaConEncabezadoFijo } from '../../components/ui/TablaConEncabezadoFijo';
 
 /**
  * "Datos del Empleador" de ARCA, por CUIT.
@@ -219,81 +220,79 @@ const ObrasSocialesBody: React.FC<{ empresa: Company; recargar: () => Promise<vo
             que descifrar por el color. Con encabezados, cada dato dice qué es —y «En uso» deja de
             parecer una etiqueta decorativa para leerse como lo que es: a cuántos alcanza sacarla.
           */}
-          <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg max-h-96 overflow-y-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-900/50">
+          <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900/50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">RNOS</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">En uso</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">
+                  <span className="inline-flex items-center gap-1.5">
+                    Por defecto
+                    {/* El rótulo es el mismo que en el resto, pero acá el default significa MENOS:
+                        solo rige para los excluidos de convenio (9999/99), que no tienen sindicato
+                        del que heredar. Decirlo evita que se lea como «la obra social de la empresa». */}
+                    <FontAwesomeIcon icon={faCircleInfo} title="La obra social de los trabajadores EXCLUIDOS DE CONVENIO (9999/99). Quien está bajo un convenio hereda la de su sindicato y no pasa por acá." className="h-3 w-3 text-gray-400 normal-case" />
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+              {registradas.length === 0 ? (
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">RNOS</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">En uso</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">
-                    <span className="inline-flex items-center gap-1.5">
-                      Por defecto
-                      {/* El rótulo es el mismo que en el resto, pero acá el default significa MENOS:
-                          solo rige para los excluidos de convenio (9999/99), que no tienen sindicato
-                          del que heredar. Decirlo evita que se lea como «la obra social de la empresa». */}
-                      <FontAwesomeIcon icon={faCircleInfo} title="La obra social de los trabajadores EXCLUIDOS DE CONVENIO (9999/99). Quien está bajo un convenio hereda la de su sindicato y no pasa por acá." className="h-3 w-3 text-gray-400 normal-case" />
-                    </span>
-                  </th>
+                  <td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                    Todavía no hay ninguna registrada para esta empleadora.
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                {registradas.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                      Todavía no hay ninguna registrada para esta empleadora.
-                    </td>
-                  </tr>
-                ) : (
-                  registradas.map((o) => {
-                    const osId = String(dataId(o));
-                    const contratos = enUso.contratos[osId] || 0;
-                    const convenios = (enUso.convenios[osId] || []).length;
-                    const esDefecto = dataId(o) === defaultId;
-                    return (
-                      <tr key={o._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-                        <td className="px-4 py-2.5 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{formatRnos(o.externalId)}</span>
-                        </td>
-                        <td className="px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100">{o.name}</td>
-                        {/*
-                          A CUÁNTOS ALCANZA. Alimentaba la confirmación de «quitar», que ahora se hace
-                          desde el nomenclador; se muestra acá para que no se pierda: quitarla no rompe
-                          nada en el momento, rompe después, cuando esos contratos generen el TXT y ARCA
-                          los rechace por declarar una obra social que este CUIT ya no tiene registrada.
-                        */}
-                        <td className="px-4 py-2.5 whitespace-nowrap text-[11px] text-gray-500 dark:text-gray-400">
-                          {contratos === 0 && convenios === 0 ? (
-                            '—'
-                          ) : (
-                            <span title={`${contratos} contrato(s) la tienen fijada · ${convenios} convenio(s) registrados la heredan`}>
-                              {contratos > 0 && `${contratos} contrato${contratos === 1 ? '' : 's'}`}
-                              {contratos > 0 && convenios > 0 && ' · '}
-                              {convenios > 0 && `${convenios} CCT`}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          {/* Mismo gesto que las demás ★, pero este valor SÍ viaja al TXT, así que no
-                              se guarda con el click: entra en el «Guardar cambios» de arriba, como el
-                              selector con el que convive. */}
-                          <button
-                            type="button"
-                            onClick={() => setDefaultId(esDefecto ? null : dataId(o))}
-                            aria-pressed={esDefecto}
-                            title={esDefecto ? 'Es la de los excluidos de convenio. Click para quitarla.' : `Usar ${o.name} para los excluidos de convenio de esta empleadora`}
-                            className={`shrink-0 transition-colors ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}
-                          >
-                            <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+              ) : (
+                registradas.map((o) => {
+                  const osId = String(dataId(o));
+                  const contratos = enUso.contratos[osId] || 0;
+                  const convenios = (enUso.convenios[osId] || []).length;
+                  const esDefecto = dataId(o) === defaultId;
+                  return (
+                    <tr key={o._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{formatRnos(o.externalId)}</span>
+                      </td>
+                      <td className="px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100">{o.name}</td>
+                      {/*
+                        A CUÁNTOS ALCANZA. Alimentaba la confirmación de «quitar», que ahora se hace
+                        desde el nomenclador; se muestra acá para que no se pierda: quitarla no rompe
+                        nada en el momento, rompe después, cuando esos contratos generen el TXT y ARCA
+                        los rechace por declarar una obra social que este CUIT ya no tiene registrada.
+                      */}
+                      <td className="px-4 py-2.5 whitespace-nowrap text-[11px] text-gray-500 dark:text-gray-400">
+                        {contratos === 0 && convenios === 0 ? (
+                          '—'
+                        ) : (
+                          <span title={`${contratos} contrato(s) la tienen fijada · ${convenios} convenio(s) registrados la heredan`}>
+                            {contratos > 0 && `${contratos} contrato${contratos === 1 ? '' : 's'}`}
+                            {contratos > 0 && convenios > 0 && ' · '}
+                            {convenios > 0 && `${convenios} CCT`}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {/* Mismo gesto que las demás ★, pero este valor SÍ viaja al TXT, así que no
+                            se guarda con el click: entra en el «Guardar cambios» de arriba, como el
+                            selector con el que convive. */}
+                        <button
+                          type="button"
+                          onClick={() => setDefaultId(esDefecto ? null : dataId(o))}
+                          aria-pressed={esDefecto}
+                          title={esDefecto ? 'Es la de los excluidos de convenio. Click para quitarla.' : `Usar ${o.name} para los excluidos de convenio de esta empleadora`}
+                          className={`shrink-0 transition-colors ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}
+                        >
+                          <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </TablaConEncabezadoFijo>
         </div>
       </details>
 
@@ -734,132 +733,130 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
             domicilio y de esta empleadora, y separarlas en otra tabla obligaría a cruzar dos listas
             para contestar «qué puede declarar acá»—, pero ahora bajo un título que lo dice.
           */}
-          <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-900/50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="El código de sucursal de ESTA empresa en ARCA. Es por CUIT.">Código</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Domicilio y actividades declaradas</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">
-                    <span className="inline-flex items-center gap-1.5">
-                      Por defecto
-                      <FontAwesomeIcon icon={faCircleInfo} title="El domicilio habitual de esta empleadora: en el alta aparece PRIMERO en el select y marcado con ★. No obliga a usarlo — se puede elegir cualquiera de los otros declarados." className="h-3 w-3 text-gray-400 normal-case" />
-                    </span>
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                {elegidas.map((s) => (
-                  <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-                    <td className="px-4 py-2.5 align-top whitespace-nowrap">
-                      {/*
-                        EL CÓDIGO DE ESTA EMPRESA para el domicilio, editable. Es el que va al TXT.
-                        Vacío rige el del catálogo (se ve de fondo, y se avisa): es el compartido, que
-                        puede no ser el de este CUIT. Al lado, de dónde salió: leído de ARCA o a mano.
-                      */}
-                      <div className="flex flex-col items-start gap-1">
-                        <input
-                          maxLength={5}
-                          inputMode="numeric"
-                          value={codigosPorSucursal[s._id] ?? ''}
-                          onChange={(e) => setCodigosPorSucursal((prev) => ({ ...prev, [s._id]: e.target.value.replace(/\D/g, '') }))}
-                          placeholder={s.codigo}
-                          title={`Código con el que ${empresa.razonSocial} tiene registrado este domicilio en ARCA (Datos del Empleador → Domicilios de Explotación). Es por CUIT: puede ser distinto del de otra empresa en el mismo domicilio.`}
-                          aria-label={`Código de sucursal de ${s.domicilio} para ${empresa.razonSocial}`}
-                          className="input-field w-20 font-mono text-xs font-bold py-1 px-2 text-blue-700 dark:text-blue-400"
-                        />
-                        {(() => {
-                          const previa = (empresa.sucursalActividades || []).find((x) => String(x.sucursalId) === s._id);
-                          const actual = codigoSucursal(codigosPorSucursal[s._id]);
-                          if (!actual) return <span className="text-[10px] italic text-amber-700 dark:text-amber-400" title="Todavía no se cargó el código de esta empresa para este domicilio.">rige {s.codigo}, el del catálogo</span>;
-                          const sinTocar = actual === codigoSucursal(previa?.codigo);
-                          return sinTocar && previa?.origen === 'arca' ? (
-                            <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400" title="Leído de ARCA">de ARCA</span>
-                          ) : (
-                            <span className="text-[10px] text-gray-500 dark:text-gray-400" title="Cargado a mano">a mano</span>
-                          );
-                        })()}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{s.domicilio}</span>
-                      {/*
-                        BADGES, y la edición en un modal.
-
-                        Estaban como filas de ancho completo, una debajo de la otra: cuatro domicilios
-                        con sus actividades ocupaban la pantalla entera para mostrar cuatro códigos.
-                        Como badges se ve de un vistazo qué declaró esta empleadora en cada domicilio,
-                        que es la pregunta que se viene a contestar acá.
-
-                        La ✕ del badge quita en el acto; agregar abre el modal, porque elegir del
-                        catálogo necesita buscador y no entra en una fila.
-                      */}
-                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                        {(actividadesPorSucursal[s._id] || []).length === 0 ? (
-                          <span className="text-xs text-amber-700 dark:text-amber-400">Sin actividades declaradas para esta empleadora: sus contratos en este domicilio no pueden generar el alta.</span>
+          <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900/50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="El código de sucursal de ESTA empresa en ARCA. Es por CUIT.">Código</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Domicilio y actividades declaradas</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">
+                  <span className="inline-flex items-center gap-1.5">
+                    Por defecto
+                    <FontAwesomeIcon icon={faCircleInfo} title="El domicilio habitual de esta empleadora: en el alta aparece PRIMERO en el select y marcado con ★. No obliga a usarlo — se puede elegir cualquiera de los otros declarados." className="h-3 w-3 text-gray-400 normal-case" />
+                  </span>
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+              {elegidas.map((s) => (
+                <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                  <td className="px-4 py-2.5 align-top whitespace-nowrap">
+                    {/*
+                      EL CÓDIGO DE ESTA EMPRESA para el domicilio, editable. Es el que va al TXT.
+                      Vacío rige el del catálogo (se ve de fondo, y se avisa): es el compartido, que
+                      puede no ser el de este CUIT. Al lado, de dónde salió: leído de ARCA o a mano.
+                    */}
+                    <div className="flex flex-col items-start gap-1">
+                      <input
+                        maxLength={5}
+                        inputMode="numeric"
+                        value={codigosPorSucursal[s._id] ?? ''}
+                        onChange={(e) => setCodigosPorSucursal((prev) => ({ ...prev, [s._id]: e.target.value.replace(/\D/g, '') }))}
+                        placeholder={s.codigo}
+                        title={`Código con el que ${empresa.razonSocial} tiene registrado este domicilio en ARCA (Datos del Empleador → Domicilios de Explotación). Es por CUIT: puede ser distinto del de otra empresa en el mismo domicilio.`}
+                        aria-label={`Código de sucursal de ${s.domicilio} para ${empresa.razonSocial}`}
+                        className="input-field w-20 font-mono text-xs font-bold py-1 px-2 text-blue-700 dark:text-blue-400"
+                      />
+                      {(() => {
+                        const previa = (empresa.sucursalActividades || []).find((x) => String(x.sucursalId) === s._id);
+                        const actual = codigoSucursal(codigosPorSucursal[s._id]);
+                        if (!actual) return <span className="text-[10px] italic text-amber-700 dark:text-amber-400" title="Todavía no se cargó el código de esta empresa para este domicilio.">rige {s.codigo}, el del catálogo</span>;
+                        const sinTocar = actual === codigoSucursal(previa?.codigo);
+                        return sinTocar && previa?.origen === 'arca' ? (
+                          <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400" title="Leído de ARCA">de ARCA</span>
                         ) : (
-                          (actividadesPorSucursal[s._id] || []).map((a) => (
-                            <span key={a.codigo} title={a.descripcion} className="inline-flex items-center gap-1.5 pl-2 pr-1 py-0.5 rounded text-[11px] bg-blue-50 dark:bg-blue-900/25 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                              {/*
-                                LA ★ DE LA ACTIVIDAD, sólo cuando hay más de una: marca la habitual,
-                                la que se preselecciona en el contrato. Con una sola no se dibuja —rige
-                                esa—. Sin ninguna marcada, se elige en cada contrato. Tocar la marcada
-                                la desmarca.
-                              */}
-                              {(actividadesPorSucursal[s._id] || []).length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => setHabitualPorSucursal((prev) => ({ ...prev, [s._id]: habitualDe(s._id) === codigoActividad(a.codigo) ? '' : codigoActividad(a.codigo) }))}
-                                  title={habitualDe(s._id) === codigoActividad(a.codigo) ? `${a.codigo} es la actividad habitual acá: se preselecciona en los contratos. Tocá para desmarcarla.` : `Marcar ${a.codigo} como la actividad habitual de ${empresa.razonSocial} en este domicilio.`}
-                                  aria-label={`Actividad habitual: ${a.codigo}`}
-                                  aria-pressed={habitualDe(s._id) === codigoActividad(a.codigo)}
-                                  className="shrink-0"
-                                >
-                                  <FontAwesomeIcon icon={faStar} className={`h-2.5 w-2.5 ${habitualDe(s._id) === codigoActividad(a.codigo) ? 'text-amber-500' : 'text-gray-300 dark:text-gray-600 hover:text-amber-400'}`} />
-                                </button>
-                              )}
-                              <span className="font-mono font-semibold">{a.codigo}</span>
-                              {a.descripcion && <span className="truncate max-w-[16rem]">{a.descripcion}</span>}
-                              <button type="button" onClick={() => setActividadesPorSucursal((prev) => ({ ...prev, [s._id]: (prev[s._id] || []).filter((x) => x.codigo !== a.codigo) }))} title={`Quitar ${a.codigo} de este domicilio`} className="ml-0.5 text-blue-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                                <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
-                              </button>
-                            </span>
-                          ))
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2.5 align-top">
-                      {/*
-                        Es por empleadora y no global porque el código de domicilio es POR CUIT: el
-                        mismo domicilio declarado por dos empresas son dos registros distintos, así que
-                        un default único apuntaría a uno que la otra no tiene.
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400" title="Cargado a mano">a mano</span>
+                        );
+                      })()}
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <span className="text-sm text-gray-900 dark:text-gray-100">{s.domicilio}</span>
+                    {/*
+                      BADGES, y la edición en un modal.
 
-                        Marcarlo NO lo escribe en ningún contrato: en el alta se ofrece primero, con la
-                        estrella, y hay que elegirlo. Un default que se autocompleta deja el formulario
-                        viéndose completo con un domicilio que nadie miró — y el domicilio es el que
-                        decide qué actividades acepta ARCA.
-                      */}
-                      <button type="button" onClick={() => marcarPorDefecto(s._id)} disabled={guardando} aria-pressed={porDefectoId === s._id} title={porDefectoId === s._id ? 'Es el domicilio por defecto. Click para quitarlo.' : 'Marcar como domicilio por defecto de esta empleadora'} className={`shrink-0 transition-colors disabled:opacity-50 ${porDefectoId === s._id ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
-                        <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                    <td className="px-4 py-2.5 align-top text-right">
-                      {/*
-                        EXACTAMENTE el ✎ de la columna «Acciones» de las tablas de catálogo: mismas
-                        clases y mismo tamaño por defecto del ícono. Copiado y no aproximado — un ícono
-                        del mismo gesto que se ve apenas distinto en cada pantalla hace dudar de si
-                        hace lo mismo.
-                      */}
-                      <button type="button" onClick={() => setEditandoActividades(s)} title="Editar las actividades de este domicilio" className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300">
-                        <FontAwesomeIcon icon={faEdit} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      Estaban como filas de ancho completo, una debajo de la otra: cuatro domicilios
+                      con sus actividades ocupaban la pantalla entera para mostrar cuatro códigos.
+                      Como badges se ve de un vistazo qué declaró esta empleadora en cada domicilio,
+                      que es la pregunta que se viene a contestar acá.
+
+                      La ✕ del badge quita en el acto; agregar abre el modal, porque elegir del
+                      catálogo necesita buscador y no entra en una fila.
+                    */}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      {(actividadesPorSucursal[s._id] || []).length === 0 ? (
+                        <span className="text-xs text-amber-700 dark:text-amber-400">Sin actividades declaradas para esta empleadora: sus contratos en este domicilio no pueden generar el alta.</span>
+                      ) : (
+                        (actividadesPorSucursal[s._id] || []).map((a) => (
+                          <span key={a.codigo} title={a.descripcion} className="inline-flex items-center gap-1.5 pl-2 pr-1 py-0.5 rounded text-[11px] bg-blue-50 dark:bg-blue-900/25 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                            {/*
+                              LA ★ DE LA ACTIVIDAD, sólo cuando hay más de una: marca la habitual,
+                              la que se preselecciona en el contrato. Con una sola no se dibuja —rige
+                              esa—. Sin ninguna marcada, se elige en cada contrato. Tocar la marcada
+                              la desmarca.
+                            */}
+                            {(actividadesPorSucursal[s._id] || []).length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => setHabitualPorSucursal((prev) => ({ ...prev, [s._id]: habitualDe(s._id) === codigoActividad(a.codigo) ? '' : codigoActividad(a.codigo) }))}
+                                title={habitualDe(s._id) === codigoActividad(a.codigo) ? `${a.codigo} es la actividad habitual acá: se preselecciona en los contratos. Tocá para desmarcarla.` : `Marcar ${a.codigo} como la actividad habitual de ${empresa.razonSocial} en este domicilio.`}
+                                aria-label={`Actividad habitual: ${a.codigo}`}
+                                aria-pressed={habitualDe(s._id) === codigoActividad(a.codigo)}
+                                className="shrink-0"
+                              >
+                                <FontAwesomeIcon icon={faStar} className={`h-2.5 w-2.5 ${habitualDe(s._id) === codigoActividad(a.codigo) ? 'text-amber-500' : 'text-gray-300 dark:text-gray-600 hover:text-amber-400'}`} />
+                              </button>
+                            )}
+                            <span className="font-mono font-semibold">{a.codigo}</span>
+                            {a.descripcion && <span className="truncate max-w-[16rem]">{a.descripcion}</span>}
+                            <button type="button" onClick={() => setActividadesPorSucursal((prev) => ({ ...prev, [s._id]: (prev[s._id] || []).filter((x) => x.codigo !== a.codigo) }))} title={`Quitar ${a.codigo} de este domicilio`} className="ml-0.5 text-blue-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                              <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5 align-top">
+                    {/*
+                      Es por empleadora y no global porque el código de domicilio es POR CUIT: el
+                      mismo domicilio declarado por dos empresas son dos registros distintos, así que
+                      un default único apuntaría a uno que la otra no tiene.
+
+                      Marcarlo NO lo escribe en ningún contrato: en el alta se ofrece primero, con la
+                      estrella, y hay que elegirlo. Un default que se autocompleta deja el formulario
+                      viéndose completo con un domicilio que nadie miró — y el domicilio es el que
+                      decide qué actividades acepta ARCA.
+                    */}
+                    <button type="button" onClick={() => marcarPorDefecto(s._id)} disabled={guardando} aria-pressed={porDefectoId === s._id} title={porDefectoId === s._id ? 'Es el domicilio por defecto. Click para quitarlo.' : 'Marcar como domicilio por defecto de esta empleadora'} className={`shrink-0 transition-colors disabled:opacity-50 ${porDefectoId === s._id ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
+                      <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5" />
+                    </button>
+                  </td>
+                  <td className="px-4 py-2.5 align-top text-right">
+                    {/*
+                      EXACTAMENTE el ✎ de la columna «Acciones» de las tablas de catálogo: mismas
+                      clases y mismo tamaño por defecto del ícono. Copiado y no aproximado — un ícono
+                      del mismo gesto que se ve apenas distinto en cada pantalla hace dudar de si
+                      hace lo mismo.
+                    */}
+                    <button type="button" onClick={() => setEditandoActividades(s)} title="Editar las actividades de este domicilio" className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300">
+                      <FontAwesomeIcon icon={faEdit} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </TablaConEncabezadoFijo>
         </div>
       )}
 
@@ -1207,49 +1204,47 @@ const GruposTipoServicioBody: React.FC<{ empresa: Company; recargar: () => Promi
       {cargando ? (
         <LoadingSpinner message="Cargando grupos..." />
       ) : (
-        <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grupo</th>
-                <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Código</th>
-                <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipos de servicio</th>
-                <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                  <span className="inline-flex items-center gap-1.5">
-                    Por defecto
-                    <button type="button" title="El grupo marcado aparece primero al cargar un contrato y deja preseleccionado el filtro de Tipo de Servicio. Se puede elegir el otro igual: es una sugerencia, no un candado." className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal">
-                      <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+        <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800" tabla="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+              <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grupo</th>
+              <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Código</th>
+              <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipos de servicio</th>
+              <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                <span className="inline-flex items-center gap-1.5">
+                  Por defecto
+                  <button type="button" title="El grupo marcado aparece primero al cargar un contrato y deja preseleccionado el filtro de Tipo de Servicio. Se puede elegir el otro igual: es una sugerencia, no un candado." className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal">
+                    <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                  </button>
+                  <LimpiarDefaultEmpresa hayValor={!!porDefecto} onLimpiar={() => marcarPorDefecto(porDefecto)} queEs="el grupo de tipo de servicio" disabled={guardando} />
+                </span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+            {grupos.map((g) => {
+              const codigo = String(g.externalId || '');
+              const cuantos = tipos.filter((t) => grupoDelItem(t) === codigo).length;
+              const esDefecto = porDefecto === codigo;
+              return (
+                <tr key={g._id} className={`transition-colors ${esDefecto ? 'bg-amber-50/60 dark:bg-amber-950/10' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}`}>
+                  <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">{g.name}</td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{codigo || '—'}</span>
+                  </td>
+                  {/* Cuántos tipos cuelgan de cada grupo: es lo que hace entendible por qué el
+                      filtro importa — sin él, el combo del alta son 293 opciones. */}
+                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{cuantos > 0 ? `${cuantos} de ${tipos.length}` : 'sin clasificar'}</td>
+                  <td className="px-4 py-3 text-center">
+                    <button onClick={() => marcarPorDefecto(codigo)} disabled={guardando || !codigo} title={esDefecto ? 'Es el grupo por defecto. Click para quitarlo.' : `Marcar ${g.name} como grupo por defecto de esta empleadora`} className={`transition-colors disabled:opacity-50 ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
+                      <FontAwesomeIcon icon={faStar} />
                     </button>
-                    <LimpiarDefaultEmpresa hayValor={!!porDefecto} onLimpiar={() => marcarPorDefecto(porDefecto)} queEs="el grupo de tipo de servicio" disabled={guardando} />
-                  </span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-              {grupos.map((g) => {
-                const codigo = String(g.externalId || '');
-                const cuantos = tipos.filter((t) => grupoDelItem(t) === codigo).length;
-                const esDefecto = porDefecto === codigo;
-                return (
-                  <tr key={g._id} className={`transition-colors ${esDefecto ? 'bg-amber-50/60 dark:bg-amber-950/10' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}`}>
-                    <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">{g.name}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{codigo || '—'}</span>
-                    </td>
-                    {/* Cuántos tipos cuelgan de cada grupo: es lo que hace entendible por qué el
-                        filtro importa — sin él, el combo del alta son 293 opciones. */}
-                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{cuantos > 0 ? `${cuantos} de ${tipos.length}` : 'sin clasificar'}</td>
-                    <td className="px-4 py-3 text-center">
-                      <button onClick={() => marcarPorDefecto(codigo)} disabled={guardando || !codigo} title={esDefecto ? 'Es el grupo por defecto. Click para quitarlo.' : `Marcar ${g.name} como grupo por defecto de esta empleadora`} className={`transition-colors disabled:opacity-50 ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
-                        <FontAwesomeIcon icon={faStar} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </TablaConEncabezadoFijo>
       )}
     </SeccionEmpleador>
   );

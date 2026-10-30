@@ -10,6 +10,7 @@ import { EmptyState } from "../ui/EmptyState";
 import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { BotonOrden, useOrdenTabla } from "../ui/OrdenTabla";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 /** Dropbox Sign (ex HelloSign): donde se firman los contratos que se mandan desde acá. */
 const DROPBOX_SIGN_URL = "https://www.dropbox.com/sign";
@@ -485,101 +486,99 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
       ) : filtradas.length === 0 ? (
         <EmptyState icon={faFilePdf} title={entries.length === 0 ? "No hay contratos en esta carpeta" : "Sin resultados"} description={entries.length === 0 ? carpeta : "Probá con otro texto en el filtro."} />
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto custom-scrollbar min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-1.5rem)]">
-            <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-sm">
-                <tr className="border-b border-gray-100 dark:border-gray-800">
-                  <th className="px-4 py-3 w-10 bg-gray-50 dark:bg-gray-900">
-                    <input
-                      type="checkbox"
-                      className="cursor-pointer accent-blue-600"
-                      checked={allSelected}
-                      ref={(el) => {
-                        if (el) el.indeterminate = !allSelected && filtradas.some((e) => selected.has(e.path));
-                      }}
-                      onChange={toggleSelectAll}
-                      title="Seleccionar todos los archivos"
-                    />
-                  </th>
-                  {/* La fecha primero: es por lo que se ordena y lo primero que se mira. */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-clip">
+          <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
+            <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
+              <tr className="border-b border-gray-100 dark:border-gray-800">
+                <th className="px-4 py-3 w-10 bg-gray-50 dark:bg-gray-900">
+                  <input
+                    type="checkbox"
+                    className="cursor-pointer accent-blue-600"
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = !allSelected && filtradas.some((e) => selected.has(e.path));
+                    }}
+                    onChange={toggleSelectAll}
+                    title="Seleccionar todos los archivos"
+                  />
+                </th>
+                {/* La fecha primero: es por lo que se ordena y lo primero que se mira. */}
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="fecha" orden={orden} onAlternar={alternar}>
+                    Fecha
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="contrato" orden={orden} onAlternar={alternar}>
+                    Contrato
+                  </BotonOrden>
+                </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="tamanio" orden={orden} onAlternar={alternar}>
+                    Tamaño
+                  </BotonOrden>
+                </th>
+                {tipo === "para_firmar" && (
                   <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="fecha" orden={orden} onAlternar={alternar}>
-                      Fecha
+                    <BotonOrden columna="firma" orden={orden} onAlternar={alternar} title={orden?.columna === "firma" && !orden.porDefecto ? (orden.direccion === "asc" ? "De lo que sale antes a lo que sale después. Click: al revés." : "De lo que sale después a lo que sale antes. Click: quitar el orden.") : "Ordenar por cuándo sale a la firma: lo más cercano primero"}>
+                      Firma
                     </BotonOrden>
                   </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="contrato" orden={orden} onAlternar={alternar}>
-                      Contrato
-                    </BotonOrden>
-                  </th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                    <BotonOrden columna="tamanio" orden={orden} onAlternar={alternar}>
-                      Tamaño
-                    </BotonOrden>
-                  </th>
-                  {tipo === "para_firmar" && (
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                      <BotonOrden columna="firma" orden={orden} onAlternar={alternar} title={orden?.columna === "firma" && !orden.porDefecto ? (orden.direccion === "asc" ? "De lo que sale antes a lo que sale después. Click: al revés." : "De lo que sale después a lo que sale antes. Click: quitar el orden.") : "Ordenar por cuándo sale a la firma: lo más cercano primero"}>
-                        Firma
-                      </BotonOrden>
-                    </th>
-                  )}
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right bg-gray-50 dark:bg-gray-900">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {ordenados.map((e) => (
-                  <tr key={e.path} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(e.path) ? "bg-blue-50/60 dark:bg-blue-900/10" : ""}`}>
-                    <td className="px-4 py-3">
-                      <input type="checkbox" className="cursor-pointer accent-blue-600" checked={selected.has(e.path)} onChange={() => toggleSelected(e.path)} />
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtFecha(e.serverModified)}</td>
-                    <td className="px-4 py-3">
-                      <span className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-                        <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
-                        <span className="truncate max-w-[520px]" title={e.name}>
-                          {e.name}
-                        </span>
+                )}
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right bg-gray-50 dark:bg-gray-900">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {ordenados.map((e) => (
+                <tr key={e.path} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(e.path) ? "bg-blue-50/60 dark:bg-blue-900/10" : ""}`}>
+                  <td className="px-4 py-3">
+                    <input type="checkbox" className="cursor-pointer accent-blue-600" checked={selected.has(e.path)} onChange={() => toggleSelected(e.path)} />
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtFecha(e.serverModified)}</td>
+                  <td className="px-4 py-3">
+                    <span className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                      <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
+                      <span className="truncate max-w-[520px]" title={e.name}>
+                        {e.name}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtTamanio(e.size)}</td>
-                    {tipo === "para_firmar" && (
-                      <td className="px-4 py-3">
-                        <BadgeFirma e={bot.estados.get(e.name)} ahora={bot.ahora} />
-                      </td>
-                    )}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtTamanio(e.size)}</td>
+                  {tipo === "para_firmar" && (
                     <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        {/*
-                          También en «Enviado a la firma» (antes era de solo lectura): borrar o renombrar
-                          acá no toca la solicitud en Dropbox Sign, que ya tiene su copia; sirve para
-                          sacar un archivo que se mandó mal.
-                        */}
-                        <>
-                            {/* VOLVER A ENCOLAR (26/10/2026): un documento en «Error» o «Requiere revisión» vuelve a la cola desde su fila. */}
-                            {tipo === "para_firmar" && ["error", "requiere_revision"].includes(bot.estados.get(e.name)?.estado || "") && (
-                              <button type="button" onClick={() => void reencolar(e.name)} disabled={reencolando === e.name} title="Volver a encolar (lo valida otra vez: tipo, firmante, que siga en Outbox)" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900/40 hover:text-green-700 dark:hover:text-green-400 transition-colors disabled:opacity-50">
-                                <FontAwesomeIcon icon={reencolando === e.name ? faSpinner : faRotateRight} spin={reencolando === e.name} className="h-4 w-4" />
-                              </button>
-                            )}
-                            <button type="button" onClick={() => descargar(e)} disabled={descargando === e.path} title="Descargar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50">
-                              <FontAwesomeIcon icon={descargando === e.path ? faSpinner : faDownload} spin={descargando === e.path} className="h-4 w-4" />
-                            </button>
-                            <button type="button" onClick={() => handleRename(e)} title="Renombrar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors">
-                              <FontAwesomeIcon icon={faPen} className="h-4 w-4" />
-                            </button>
-                            <button type="button" onClick={() => handleDelete(e)} disabled={eliminando === e.path} title="Eliminar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50">
-                              <FontAwesomeIcon icon={eliminando === e.path ? faSpinner : faTrash} spin={eliminando === e.path} className="h-4 w-4" />
-                            </button>
-                        </>
-                      </div>
+                      <BadgeFirma e={bot.estados.get(e.name)} ahora={bot.ahora} />
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  )}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      {/*
+                        También en «Enviado a la firma» (antes era de solo lectura): borrar o renombrar
+                        acá no toca la solicitud en Dropbox Sign, que ya tiene su copia; sirve para
+                        sacar un archivo que se mandó mal.
+                      */}
+                      <>
+                          {/* VOLVER A ENCOLAR (26/10/2026): un documento en «Error» o «Requiere revisión» vuelve a la cola desde su fila. */}
+                          {tipo === "para_firmar" && ["error", "requiere_revision"].includes(bot.estados.get(e.name)?.estado || "") && (
+                            <button type="button" onClick={() => void reencolar(e.name)} disabled={reencolando === e.name} title="Volver a encolar (lo valida otra vez: tipo, firmante, que siga en Outbox)" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-green-900/40 hover:text-green-700 dark:hover:text-green-400 transition-colors disabled:opacity-50">
+                              <FontAwesomeIcon icon={reencolando === e.name ? faSpinner : faRotateRight} spin={reencolando === e.name} className="h-4 w-4" />
+                            </button>
+                          )}
+                          <button type="button" onClick={() => descargar(e)} disabled={descargando === e.path} title="Descargar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50">
+                            <FontAwesomeIcon icon={descargando === e.path ? faSpinner : faDownload} spin={descargando === e.path} className="h-4 w-4" />
+                          </button>
+                          <button type="button" onClick={() => handleRename(e)} title="Renombrar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors">
+                            <FontAwesomeIcon icon={faPen} className="h-4 w-4" />
+                          </button>
+                          <button type="button" onClick={() => handleDelete(e)} disabled={eliminando === e.path} title="Eliminar" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-red-900/40 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50">
+                            <FontAwesomeIcon icon={eliminando === e.path ? faSpinner : faTrash} spin={eliminando === e.path} className="h-4 w-4" />
+                          </button>
+                      </>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </TablaConEncabezadoFijo>
         </div>
       )}
     </div>

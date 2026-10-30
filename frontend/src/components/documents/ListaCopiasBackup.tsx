@@ -5,6 +5,7 @@ import { backupsAPI, CopiaBackup, ArchivoCopia } from "../../api/backups";
 import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { mensajeErrorApi } from "../../utils/errorApi";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 /** Un solo lugar para los errores de esta pantalla: distingue «falta deployar» de un error real. */
 const mostrarError = (e: any, titulo: string) => {
@@ -262,102 +263,100 @@ export const ListaCopiasBackup: React.FC<{ recarga?: number; frecuenciaHoras?: n
       ) : copias.length === 0 ? (
         <p className="py-10 text-center text-sm text-gray-500">Todavía no hay ninguna copia. Generá una con «Backup ahora».</p>
       ) : (
-        <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900">
-              <tr>
-                <th className="px-4 py-3 w-10">
-                  <input
-                    type="checkbox"
-                    checked={todasTildadas}
-                    onChange={() => setTildadas(todasTildadas ? new Set() : new Set(copias.map((c) => c.path)))}
-                    title={todasTildadas ? "Destildar todas" : "Tildar todas"}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                  />
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Copia</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tamaño</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Colecciones</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Documentos</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+        <TablaConEncabezadoFijo className="rounded border border-gray-200 dark:border-gray-700" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-900">
+            <tr>
+              <th className="px-4 py-3 w-10">
+                <input
+                  type="checkbox"
+                  checked={todasTildadas}
+                  onChange={() => setTildadas(todasTildadas ? new Set() : new Set(copias.map((c) => c.path)))}
+                  title={todasTildadas ? "Destildar todas" : "Tildar todas"}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Copia</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tamaño</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Colecciones</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Documentos</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+            {copias.map((c) => (
+              <tr key={c.path} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${tildadas.has(c.path) ? "bg-blue-50/60 dark:bg-blue-900/10" : ""}`}>
+                <td className="px-4 py-3">
+                  <input type="checkbox" checked={tildadas.has(c.path)} onChange={() => alternar(c.path)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <button onClick={() => abrir(c)} className="inline-flex items-center gap-2 text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400" title="Ver las colecciones de esta copia">
+                    <FontAwesomeIcon icon={abierta === c.path ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400" />
+                    <FontAwesomeIcon icon={abierta === c.path ? faFolderOpen : faFolder} className="text-amber-500" />
+                    {c.nombre}
+                  </button>
+                  {!c.completa && (
+                    <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase text-red-600 dark:text-red-400" title="No tiene _backup.json: la subida quedó a medias">
+                      <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
+                      Incompleta
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{formatearFecha(c.fecha, c.nombre)}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-300">{formatearTamano(c.bytes)}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-300">{c.colecciones || "—"}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-300">{c.documentos ? c.documentos.toLocaleString("es-AR") : "—"}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-center">
+                  <button
+                    onClick={() => descargar(c)}
+                    disabled={!c.completa || bajando === c.path}
+                    title={c.completa ? "Descargar la copia entera (.zip) para importar a Atlas" : "Sin manifiesto: la copia está incompleta"}
+                    className="p-2 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <FontAwesomeIcon icon={bajando === c.path ? faSpinner : faDownload} spin={bajando === c.path} />
+                  </button>
+                  {/* Una copia incompleta SÍ se puede borrar: es justamente la que hay que sacar. */}
+                  <button onClick={() => borrar(c)} title="Eliminar esta copia de Dropbox" className="p-2 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
+                    <FontAwesomeIcon icon={faTrash} />
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-              {copias.map((c) => (
-                <tr key={c.path} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${tildadas.has(c.path) ? "bg-blue-50/60 dark:bg-blue-900/10" : ""}`}>
-                  <td className="px-4 py-3">
-                    <input type="checkbox" checked={tildadas.has(c.path)} onChange={() => alternar(c.path)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm">
-                    <button onClick={() => abrir(c)} className="inline-flex items-center gap-2 text-gray-800 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400" title="Ver las colecciones de esta copia">
-                      <FontAwesomeIcon icon={abierta === c.path ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400" />
-                      <FontAwesomeIcon icon={abierta === c.path ? faFolderOpen : faFolder} className="text-amber-500" />
-                      {c.nombre}
-                    </button>
-                    {!c.completa && (
-                      <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase text-red-600 dark:text-red-400" title="No tiene _backup.json: la subida quedó a medias">
-                        <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" />
-                        Incompleta
-                      </span>
+            ))}
+            {/* La fila desplegada va aparte para no romper el colspan de la tabla. */}
+            {copias.map((c) =>
+              abierta === c.path ? (
+                <tr key={`${c.path}-abierta`} className="bg-gray-50 dark:bg-gray-800/40">
+                  <td colSpan={7} className="px-4 py-3">
+                    {cargandoArchivos && !archivos[c.path] ? (
+                      <p className="text-xs text-gray-500">
+                        <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                        Leyendo la copia…
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
+                        {(archivos[c.path] || []).map((a) => (
+                          <div key={a.path} className="flex items-center gap-2 text-xs px-2 py-1 rounded hover:bg-white dark:hover:bg-gray-800">
+                            <FontAwesomeIcon icon={faFileLines} className="h-3 w-3 text-gray-400 shrink-0" />
+                            <span className="flex-1 truncate text-gray-700 dark:text-gray-300" title={a.nombre}>
+                              {a.nombre}
+                            </span>
+                            <span className="text-gray-400 tabular-nums shrink-0">{formatearTamano(a.bytes)}</span>
+                            <button onClick={() => ver(a)} title="Ver el contenido" className="p-1 rounded text-gray-500 hover:text-blue-600 shrink-0">
+                              <FontAwesomeIcon icon={faEye} className="h-3 w-3" />
+                            </button>
+                            <button onClick={() => bajarArchivo(a)} title="Descargar este archivo" className="p-1 rounded text-gray-500 hover:text-blue-600 shrink-0">
+                              <FontAwesomeIcon icon={faDownload} className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{formatearFecha(c.fecha, c.nombre)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-300">{formatearTamano(c.bytes)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-300">{c.colecciones || "—"}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-300">{c.documentos ? c.documentos.toLocaleString("es-AR") : "—"}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center">
-                    <button
-                      onClick={() => descargar(c)}
-                      disabled={!c.completa || bajando === c.path}
-                      title={c.completa ? "Descargar la copia entera (.zip) para importar a Atlas" : "Sin manifiesto: la copia está incompleta"}
-                      className="p-2 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      <FontAwesomeIcon icon={bajando === c.path ? faSpinner : faDownload} spin={bajando === c.path} />
-                    </button>
-                    {/* Una copia incompleta SÍ se puede borrar: es justamente la que hay que sacar. */}
-                    <button onClick={() => borrar(c)} title="Eliminar esta copia de Dropbox" className="p-2 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
-                      <FontAwesomeIcon icon={faTrash} />
-                    </button>
-                  </td>
                 </tr>
-              ))}
-              {/* La fila desplegada va aparte para no romper el colspan de la tabla. */}
-              {copias.map((c) =>
-                abierta === c.path ? (
-                  <tr key={`${c.path}-abierta`} className="bg-gray-50 dark:bg-gray-800/40">
-                    <td colSpan={7} className="px-4 py-3">
-                      {cargandoArchivos && !archivos[c.path] ? (
-                        <p className="text-xs text-gray-500">
-                          <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
-                          Leyendo la copia…
-                        </p>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
-                          {(archivos[c.path] || []).map((a) => (
-                            <div key={a.path} className="flex items-center gap-2 text-xs px-2 py-1 rounded hover:bg-white dark:hover:bg-gray-800">
-                              <FontAwesomeIcon icon={faFileLines} className="h-3 w-3 text-gray-400 shrink-0" />
-                              <span className="flex-1 truncate text-gray-700 dark:text-gray-300" title={a.nombre}>
-                                {a.nombre}
-                              </span>
-                              <span className="text-gray-400 tabular-nums shrink-0">{formatearTamano(a.bytes)}</span>
-                              <button onClick={() => ver(a)} title="Ver el contenido" className="p-1 rounded text-gray-500 hover:text-blue-600 shrink-0">
-                                <FontAwesomeIcon icon={faEye} className="h-3 w-3" />
-                              </button>
-                              <button onClick={() => bajarArchivo(a)} title="Descargar este archivo" className="p-1 rounded text-gray-500 hover:text-blue-600 shrink-0">
-                                <FontAwesomeIcon icon={faDownload} className="h-3 w-3" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ) : null,
-              )}
-            </tbody>
-          </table>
-        </div>
+              ) : null,
+            )}
+          </tbody>
+        </TablaConEncabezadoFijo>
       )}
 
       {cargandoVista && (

@@ -8,6 +8,7 @@ import { arcaSucursalesAPI } from '../api/arcaSucursales';
 import { LAYOUT_ALTA, TipoCampoAlta } from '../components/contratos/afipTxt';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { LinkSiPuede } from '../components/LinkSiPuede';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 /**
  * "Cómo funciona" el alta masiva de ARCA: la cadena de dependencias y el registro de 130.
@@ -254,37 +255,35 @@ export const ArcaComoFuncionaPage: React.FC = () => {
         <section>
           <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Los 130 caracteres, campo por campo</h2>
 
-          <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-900/50">
-                <tr className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
-                  <th className="px-4 py-2.5 whitespace-nowrap w-px">Pos.</th>
-                  <th className="px-4 py-2.5">Campo</th>
-                  <th className="px-4 py-2.5">De dónde sale</th>
-                  <th className="px-4 py-2.5 text-right whitespace-nowrap w-px" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60 bg-white dark:bg-gray-800">
-                {LAYOUT_ALTA.map((c) => {
-                  const tag = TAG[c.tipo];
-                  const atenuado = c.tipo === 'constante' || c.tipo === 'en_blanco';
-                  return (
-                    <tr key={c.desde} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-                      <td className="px-4 py-2 font-mono text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap align-top">
-                        {c.desde}
-                        {c.hasta !== c.desde ? `-${c.hasta}` : ''}
-                      </td>
-                      <td className={`px-4 py-2 align-top ${atenuado ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>{c.nombre}</td>
-                      <td className="px-4 py-2 align-top text-gray-600 dark:text-gray-400">{c.origen}</td>
-                      <td className="px-4 py-2 align-top text-right">
-                        <span className={`inline-block rounded px-2 py-0.5 text-[11px] font-semibold border whitespace-nowrap ${tag.clase}`}>{tag.texto}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <TablaConEncabezadoFijo className="rounded-xl border border-gray-200 dark:border-gray-700" tabla="min-w-full text-sm">
+            <thead className="bg-gray-50 dark:bg-gray-900/50">
+              <tr className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+                <th className="px-4 py-2.5 whitespace-nowrap w-px">Pos.</th>
+                <th className="px-4 py-2.5">Campo</th>
+                <th className="px-4 py-2.5">De dónde sale</th>
+                <th className="px-4 py-2.5 text-right whitespace-nowrap w-px" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60 bg-white dark:bg-gray-800">
+              {LAYOUT_ALTA.map((c) => {
+                const tag = TAG[c.tipo];
+                const atenuado = c.tipo === 'constante' || c.tipo === 'en_blanco';
+                return (
+                  <tr key={c.desde} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                    <td className="px-4 py-2 font-mono text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap align-top">
+                      {c.desde}
+                      {c.hasta !== c.desde ? `-${c.hasta}` : ''}
+                    </td>
+                    <td className={`px-4 py-2 align-top ${atenuado ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>{c.nombre}</td>
+                    <td className="px-4 py-2 align-top text-gray-600 dark:text-gray-400">{c.origen}</td>
+                    <td className="px-4 py-2 align-top text-right">
+                      <span className={`inline-block rounded px-2 py-0.5 text-[11px] font-semibold border whitespace-nowrap ${tag.clase}`}>{tag.texto}</span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </TablaConEncabezadoFijo>
 
           <div className="mt-4">
             <Nota titulo="Situación de revista y régimen no existen en este formato.">Aparecen en la pantalla de alta individual de ARCA, pero el registro de 130 posiciones no los lleva. Tampoco hay que pedir el trabajador agropecuario ni el CCG: son constantes para una productora. Lo mismo con puesto desempeñado y convenio colectivo, que van en blanco — ARCA infiere el convenio de la categoría.</Nota>

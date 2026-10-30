@@ -5,6 +5,7 @@ import { faArrowUp, faArrowDown, faGripVertical, faLock, faSpinner, faTriangleEx
 import { dropboxSignBotAPI, type BotCola, type GrupoTrabados, type ItemDeColaFirma } from "../../api/dropboxSign";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { PrevisualizacionColocacion } from "../dropboxSign/PrevisualizacionColocacion";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 /**
  * LA COLA DE ENVÍO A LA FIRMA Y LO TRABADO, COMO SE ENTIENDE (25/10/2026).
@@ -152,76 +153,74 @@ export const ColaDeEnvioFirma: React.FC<{ vista: BotCola; actual: string | null;
           {items.length === 0 ? (
             <p className="py-2 text-xs text-gray-500">La cola está vacía. Se arma desde la lista: tildá y «Enviar a la firma», o «Encolar todo lo elegible».</p>
           ) : (
-            <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
-              <table className="min-w-full text-xs">
-                <thead className="bg-gray-50 text-[10px] uppercase text-gray-500 dark:bg-gray-900/40">
-                  <tr>
-                    <th className="w-6 px-2 py-1.5" />
-                    <th className="w-8 px-2 py-1.5 text-right">#</th>
-                    <th className="px-2 py-1.5 text-left">Documento</th>
-                    <th className="px-2 py-1.5 text-left">Firmante</th>
-                    <th className="px-2 py-1.5 text-left">Sale</th>
-                    <th className="px-2 py-1.5" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {visibles.map((x: ItemDeColaFirma) => {
-                    const enviandoAhora = x.estado === "enviando" || x.archivo === actual;
-                    return (
-                      <React.Fragment key={x.codigo}>
-                        <tr
-                          draggable={!bloqueada}
-                          onDragStart={() => setArrastrado(x.codigo)}
-                          onDragOver={(e) => { if (arrastrado && arrastrado !== x.codigo) e.preventDefault(); }}
-                          onDrop={(e) => { e.preventDefault(); if (arrastrado && arrastrado !== x.codigo) void mover([arrastrado], "antes", x.codigo); setArrastrado(null); }}
-                          onDragEnd={() => setArrastrado(null)}
-                          className={`${enviandoAhora ? "bg-purple-50 dark:bg-purple-900/20" : !x.enOutbox ? "opacity-50" : ""} ${arrastrado === x.codigo ? "opacity-40" : ""}`}
-                        >
-                          <td className="px-2 py-1">
-                            <input type="checkbox" disabled={bloqueada} checked={marcados.has(x.codigo)} onChange={() => alternar(x.codigo)} className="rounded border-gray-300" />
-                          </td>
-                          <td className="px-2 py-1 text-right tabular-nums text-gray-500">{x.posicion}</td>
-                          <td className="px-2 py-1">
-                            <span className="flex items-center gap-1.5">
-                              {!bloqueada && <FontAwesomeIcon icon={faGripVertical} className="h-3 w-3 cursor-grab text-gray-300" title="Arrastrá para cambiar el orden" />}
-                              <span className="break-all font-mono text-gray-700 dark:text-gray-200">{x.archivo}</span>
-                            </span>
-                            {!x.enOutbox && <span className="text-[10px] text-amber-700 dark:text-amber-400">ya no está en el Outbox: no se envía</span>}
-                          </td>
-                          <td className="whitespace-nowrap px-2 py-1 text-gray-600 dark:text-gray-300">{x.firmante || "—"}</td>
-                          <td className="whitespace-nowrap px-2 py-1">
-                            {enviandoAhora ? (
-                              <span className="font-semibold text-purple-700 dark:text-purple-300"><FontAwesomeIcon icon={faSpinner} spin /> enviando ahora</span>
-                            ) : x.estado === "limite" ? (
-                              <span className="text-amber-700 dark:text-amber-300">frenado por Dropbox Sign · reintenta</span>
-                            ) : x.estimadoAt ? (
-                              <span className={x.entra ? "text-green-700 dark:text-green-400" : "text-gray-500"}>{hora(x.estimadoAt)}</span>
-                            ) : (
-                              <span className={x.entra ? "text-green-700 dark:text-green-400" : "text-gray-500"}>{x.entra ? "entra ahora" : "después"}</span>
-                            )}
-                          </td>
-                          <td className="whitespace-nowrap px-2 py-1 text-right">
-                            <button type="button" disabled={bloqueada || moviendo || x.posicion === 1} onClick={() => void mover([x.codigo], "tope")} className="px-1 text-gray-500 hover:text-blue-600 disabled:opacity-30" title="Subir al tope">
-                              <FontAwesomeIcon icon={faArrowUp} />
-                            </button>
-                            <button type="button" disabled={bloqueada || moviendo || x.posicion === items.length} onClick={() => void mover([x.codigo], "fondo")} className="px-1 text-gray-500 hover:text-blue-600 disabled:opacity-30" title="Bajar al fondo">
-                              <FontAwesomeIcon icon={faArrowDown} />
-                            </button>
+            <TablaConEncabezadoFijo className="rounded border border-gray-200 dark:border-gray-700" tabla="min-w-full text-xs">
+              <thead className="bg-gray-50 text-[10px] uppercase text-gray-500 dark:bg-gray-900/40">
+                <tr>
+                  <th className="w-6 px-2 py-1.5" />
+                  <th className="w-8 px-2 py-1.5 text-right">#</th>
+                  <th className="px-2 py-1.5 text-left">Documento</th>
+                  <th className="px-2 py-1.5 text-left">Firmante</th>
+                  <th className="px-2 py-1.5 text-left">Sale</th>
+                  <th className="px-2 py-1.5" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {visibles.map((x: ItemDeColaFirma) => {
+                  const enviandoAhora = x.estado === "enviando" || x.archivo === actual;
+                  return (
+                    <React.Fragment key={x.codigo}>
+                      <tr
+                        draggable={!bloqueada}
+                        onDragStart={() => setArrastrado(x.codigo)}
+                        onDragOver={(e) => { if (arrastrado && arrastrado !== x.codigo) e.preventDefault(); }}
+                        onDrop={(e) => { e.preventDefault(); if (arrastrado && arrastrado !== x.codigo) void mover([arrastrado], "antes", x.codigo); setArrastrado(null); }}
+                        onDragEnd={() => setArrastrado(null)}
+                        className={`${enviandoAhora ? "bg-purple-50 dark:bg-purple-900/20" : !x.enOutbox ? "opacity-50" : ""} ${arrastrado === x.codigo ? "opacity-40" : ""}`}
+                      >
+                        <td className="px-2 py-1">
+                          <input type="checkbox" disabled={bloqueada} checked={marcados.has(x.codigo)} onChange={() => alternar(x.codigo)} className="rounded border-gray-300" />
+                        </td>
+                        <td className="px-2 py-1 text-right tabular-nums text-gray-500">{x.posicion}</td>
+                        <td className="px-2 py-1">
+                          <span className="flex items-center gap-1.5">
+                            {!bloqueada && <FontAwesomeIcon icon={faGripVertical} className="h-3 w-3 cursor-grab text-gray-300" title="Arrastrá para cambiar el orden" />}
+                            <span className="break-all font-mono text-gray-700 dark:text-gray-200">{x.archivo}</span>
+                          </span>
+                          {!x.enOutbox && <span className="text-[10px] text-amber-700 dark:text-amber-400">ya no está en el Outbox: no se envía</span>}
+                        </td>
+                        <td className="whitespace-nowrap px-2 py-1 text-gray-600 dark:text-gray-300">{x.firmante || "—"}</td>
+                        <td className="whitespace-nowrap px-2 py-1">
+                          {enviandoAhora ? (
+                            <span className="font-semibold text-purple-700 dark:text-purple-300"><FontAwesomeIcon icon={faSpinner} spin /> enviando ahora</span>
+                          ) : x.estado === "limite" ? (
+                            <span className="text-amber-700 dark:text-amber-300">frenado por Dropbox Sign · reintenta</span>
+                          ) : x.estimadoAt ? (
+                            <span className={x.entra ? "text-green-700 dark:text-green-400" : "text-gray-500"}>{hora(x.estimadoAt)}</span>
+                          ) : (
+                            <span className={x.entra ? "text-green-700 dark:text-green-400" : "text-gray-500"}>{x.entra ? "entra ahora" : "después"}</span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-2 py-1 text-right">
+                          <button type="button" disabled={bloqueada || moviendo || x.posicion === 1} onClick={() => void mover([x.codigo], "tope")} className="px-1 text-gray-500 hover:text-blue-600 disabled:opacity-30" title="Subir al tope">
+                            <FontAwesomeIcon icon={faArrowUp} />
+                          </button>
+                          <button type="button" disabled={bloqueada || moviendo || x.posicion === items.length} onClick={() => void mover([x.codigo], "fondo")} className="px-1 text-gray-500 hover:text-blue-600 disabled:opacity-30" title="Bajar al fondo">
+                            <FontAwesomeIcon icon={faArrowDown} />
+                          </button>
+                        </td>
+                      </tr>
+                      {x.codigo === ultimoQueEntra && !filtro && x.posicion < items.length && (
+                        <tr>
+                          <td colSpan={6} className="bg-amber-50 px-2 py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                            corte del cupo: lo de abajo sale cuando Dropbox Sign libere lugar (ventana de 24 h)
                           </td>
                         </tr>
-                        {x.codigo === ultimoQueEntra && !filtro && x.posicion < items.length && (
-                          <tr>
-                            <td colSpan={6} className="bg-amber-50 px-2 py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-                              corte del cupo: lo de abajo sale cuando Dropbox Sign libere lugar (ventana de 24 h)
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </TablaConEncabezadoFijo>
           )}
           {paginas > 1 && (
             <div className="flex items-center justify-end gap-2 text-[11px] text-gray-600 dark:text-gray-300">

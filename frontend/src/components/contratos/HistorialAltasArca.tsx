@@ -5,6 +5,7 @@ import { Modal } from '../ui/Modal';
 import { projectsAPI, CorridaAltasGuardada, EstadoConstanciasAlta } from '../../api/projects';
 import { detalleDeLoPresentado } from './progresoTandas';
 import { sweetAlert } from '../../utils/sweetAlert';
+import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 
 /**
  * EL AVISO AL TERMINAR LA DESCARGA DE LAS ALTAS TEMPRANAS: cuántas constancias se bajaron de ARCA, a
@@ -336,101 +337,99 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
         {corridas && filas.length === 0 && <p className="text-xs text-gray-500 dark:text-gray-400">No hay altas presentadas{buscar ? ' que coincidan con la búsqueda' : ''}.</p>}
 
         {filas.length > 0 && (
-          <div className="max-h-[60vh] overflow-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-            <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-[10px]">
-                <tr>
-                  <th className="px-3 py-2 text-left">Fecha</th>
-                  <th className="px-3 py-2 text-left">Persona</th>
-                  <th className="px-3 py-2 text-left">CUIL</th>
-                  <th className="px-3 py-2 text-left">Empleadora</th>
-                  <th className="px-3 py-2 text-left">Resultado</th>
-                  <th className="px-3 py-2 text-left">Constancia</th>
-                  <th className="px-3 py-2 text-left">Presentó</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {filas.map((f) => {
-                  const v = vista(f.resultado);
-                  return (
-                    <React.Fragment key={f.clave}>
-                      <tr onClick={() => setAbierta(abierta === f.clave ? null : f.clave)} title="Ver el registro que se mandó a ARCA" className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60">
-                        <td className="px-3 py-1.5 whitespace-nowrap text-gray-600 dark:text-gray-400">{fmtFecha(f.fecha)}</td>
-                        <td className="px-3 py-1.5 font-semibold text-gray-900 dark:text-gray-100">
-                          {f.nombre}
-                          {/* El contrato al que corresponde el alta: con dos altas de la misma persona y empleadora, es lo que las distingue. */}
-                          {f.contrato && (
-                            <span className="block font-normal text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                              {fechaCortaIso(f.contrato.alta)} → {f.contrato.baja ? fechaCortaIso(f.contrato.baja) : 'indeterminado'}
+          <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg" tabla="w-full text-xs">
+            <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-[10px]">
+              <tr>
+                <th className="px-3 py-2 text-left">Fecha</th>
+                <th className="px-3 py-2 text-left">Persona</th>
+                <th className="px-3 py-2 text-left">CUIL</th>
+                <th className="px-3 py-2 text-left">Empleadora</th>
+                <th className="px-3 py-2 text-left">Resultado</th>
+                <th className="px-3 py-2 text-left">Constancia</th>
+                <th className="px-3 py-2 text-left">Presentó</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {filas.map((f) => {
+                const v = vista(f.resultado);
+                return (
+                  <React.Fragment key={f.clave}>
+                    <tr onClick={() => setAbierta(abierta === f.clave ? null : f.clave)} title="Ver el registro que se mandó a ARCA" className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                      <td className="px-3 py-1.5 whitespace-nowrap text-gray-600 dark:text-gray-400">{fmtFecha(f.fecha)}</td>
+                      <td className="px-3 py-1.5 font-semibold text-gray-900 dark:text-gray-100">
+                        {f.nombre}
+                        {/* El contrato al que corresponde el alta: con dos altas de la misma persona y empleadora, es lo que las distingue. */}
+                        {f.contrato && (
+                          <span className="block font-normal text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                            {fechaCortaIso(f.contrato.alta)} → {f.contrato.baja ? fechaCortaIso(f.contrato.baja) : 'indeterminado'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-1.5 font-mono">{fmtCuit(f.cuil)}</td>
+                      <td className="px-3 py-1.5 text-gray-600 dark:text-gray-400">{f.empresa}</td>
+                      <td className="px-3 py-1.5">
+                        <FontAwesomeIcon icon={v.icon} className={`h-3 w-3 mr-1.5 ${v.clase}`} />
+                        {v.texto}
+                        {f.enSeco && f.resultado !== 'seco' ? ' (en seco)' : ''}
+                        {f.tanda ? ` · tanda ${f.tanda}` : ''}
+                        {f.cat ? ` · C.A.T. ${f.cat}` : ''}
+                        {f.porConsulta ? ' · por consulta' : ''}
+                        {f.motivo && <span className="block text-[11px] text-red-700 dark:text-red-400">{f.motivo}</span>}
+                      </td>
+                      <td className="px-3 py-1.5">
+                        {f.constancia ? (
+                          <>
+                            <span title={f.constancia.archivadaEn || 'La constancia quedó cargada en el contrato, pero no se pudo subir a Dropbox.'} className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold whitespace-nowrap ${DESTINO[f.constancia.destino]?.clase || ''}`}>
+                              {DESTINO[f.constancia.destino]?.texto || f.constancia.destino}
                             </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-1.5 font-mono">{fmtCuit(f.cuil)}</td>
-                        <td className="px-3 py-1.5 text-gray-600 dark:text-gray-400">{f.empresa}</td>
-                        <td className="px-3 py-1.5">
-                          <FontAwesomeIcon icon={v.icon} className={`h-3 w-3 mr-1.5 ${v.clase}`} />
-                          {v.texto}
-                          {f.enSeco && f.resultado !== 'seco' ? ' (en seco)' : ''}
-                          {f.tanda ? ` · tanda ${f.tanda}` : ''}
-                          {f.cat ? ` · C.A.T. ${f.cat}` : ''}
-                          {f.porConsulta ? ' · por consulta' : ''}
-                          {f.motivo && <span className="block text-[11px] text-red-700 dark:text-red-400">{f.motivo}</span>}
-                        </td>
-                        <td className="px-3 py-1.5">
-                          {f.constancia ? (
+                            {/* Quién la trajo: la descarga automática, alguien desde ARCA, o alguien que subió el PDF. */}
+                            <span className="block text-[10px] text-gray-500 dark:text-gray-400 mt-0.5" title={f.constancia.origen ? undefined : 'Bajada antes de que se guardara el origen (18/10/2026): no se sabe si fue automática o de un usuario.'}>
+                              {f.constancia.origen === 'automatica' ? 'Bajada automática' : f.constancia.origen === 'descarga' ? `Bajada por ${f.constancia.por || 'un usuario'}` : f.constancia.origen === 'subida' ? `Subida por ${f.constancia.por || 'un usuario'}` : 'Origen sin registrar'}
+                            </span>
+                          </>
+                        ) : f.constancia === undefined ? (
+                          // El servidor no mandó el dato (versión anterior): no se afirma que falte.
+                          <span className="text-[11px] text-gray-400" title="El servidor todavía no informa el destino de la constancia: hay que actualizarlo (git pull) y reiniciarlo.">
+                            sin dato
+                          </span>
+                        ) : f.resultado === 'presentada' && !f.enSeco ? (
+                          <span className="text-[11px] text-amber-700 dark:text-amber-400">Falta bajarla</span>
+                        ) : (
+                          <span className="text-gray-300 dark:text-gray-600">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-1.5 text-gray-600 dark:text-gray-400">{f.usuario || '—'}</td>
+                    </tr>
+                    {abierta === f.clave && (
+                      <tr>
+                        <td colSpan={7} className="px-3 py-2 bg-gray-50 dark:bg-gray-900/40">
+                          {f.registro ? (
                             <>
-                              <span title={f.constancia.archivadaEn || 'La constancia quedó cargada en el contrato, pero no se pudo subir a Dropbox.'} className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold whitespace-nowrap ${DESTINO[f.constancia.destino]?.clase || ''}`}>
-                                {DESTINO[f.constancia.destino]?.texto || f.constancia.destino}
-                              </span>
-                              {/* Quién la trajo: la descarga automática, alguien desde ARCA, o alguien que subió el PDF. */}
-                              <span className="block text-[10px] text-gray-500 dark:text-gray-400 mt-0.5" title={f.constancia.origen ? undefined : 'Bajada antes de que se guardara el origen (18/10/2026): no se sabe si fue automática o de un usuario.'}>
-                                {f.constancia.origen === 'automatica' ? 'Bajada automática' : f.constancia.origen === 'descarga' ? `Bajada por ${f.constancia.por || 'un usuario'}` : f.constancia.origen === 'subida' ? `Subida por ${f.constancia.por || 'un usuario'}` : 'Origen sin registrar'}
-                              </span>
+                              <pre className="font-mono text-[11px] p-2 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-pre">{f.registro}</pre>
+                              <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                                {detalleDeLoPresentado(f.registro).map((c) => (
+                                  <p key={c.posiciones} className="flex justify-between gap-2 py-0.5 border-b border-gray-100 dark:border-gray-800">
+                                    <span className="text-gray-600 dark:text-gray-400">{c.nombre}</span>
+                                    <span className="font-mono text-gray-900 dark:text-gray-100 whitespace-pre">
+                                      {c.valor}
+                                      {c.legible ? <span className="font-sans text-gray-500 dark:text-gray-400"> · {c.legible}</span> : null}
+                                    </span>
+                                  </p>
+                                ))}
+                              </div>
                             </>
-                          ) : f.constancia === undefined ? (
-                            // El servidor no mandó el dato (versión anterior): no se afirma que falte.
-                            <span className="text-[11px] text-gray-400" title="El servidor todavía no informa el destino de la constancia: hay que actualizarlo (git pull) y reiniciarlo.">
-                              sin dato
-                            </span>
-                          ) : f.resultado === 'presentada' && !f.enSeco ? (
-                            <span className="text-[11px] text-amber-700 dark:text-amber-400">Falta bajarla</span>
                           ) : (
-                            <span className="text-gray-300 dark:text-gray-600">—</span>
+                            <p className="text-gray-500 dark:text-gray-400">Esta corrida es anterior a que se guardara el registro enviado: queda el resultado, no el detalle.</p>
                           )}
+                          <RespuestaDeArca f={f} />
                         </td>
-                        <td className="px-3 py-1.5 text-gray-600 dark:text-gray-400">{f.usuario || '—'}</td>
                       </tr>
-                      {abierta === f.clave && (
-                        <tr>
-                          <td colSpan={7} className="px-3 py-2 bg-gray-50 dark:bg-gray-900/40">
-                            {f.registro ? (
-                              <>
-                                <pre className="font-mono text-[11px] p-2 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-pre">{f.registro}</pre>
-                                <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                                  {detalleDeLoPresentado(f.registro).map((c) => (
-                                    <p key={c.posiciones} className="flex justify-between gap-2 py-0.5 border-b border-gray-100 dark:border-gray-800">
-                                      <span className="text-gray-600 dark:text-gray-400">{c.nombre}</span>
-                                      <span className="font-mono text-gray-900 dark:text-gray-100 whitespace-pre">
-                                        {c.valor}
-                                        {c.legible ? <span className="font-sans text-gray-500 dark:text-gray-400"> · {c.legible}</span> : null}
-                                      </span>
-                                    </p>
-                                  ))}
-                                </div>
-                              </>
-                            ) : (
-                              <p className="text-gray-500 dark:text-gray-400">Esta corrida es anterior a que se guardara el registro enviado: queda el resultado, no el detalle.</p>
-                            )}
-                            <RespuestaDeArca f={f} />
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </TablaConEncabezadoFijo>
         )}
         <p className="text-[11px] text-gray-500 dark:text-gray-400">Últimas 200 corridas. Click en una fila para ver el registro que se le mandó a ARCA, campo por campo.</p>
       </div>

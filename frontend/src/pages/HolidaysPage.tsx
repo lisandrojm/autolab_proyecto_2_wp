@@ -12,6 +12,7 @@ import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCalendar, faEdit, faTrash, faPlus, faFileExcel, faDownload, faUpload, faTable, faGrip, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 interface HolidayFormData {
   date: string;
@@ -465,62 +466,60 @@ export const HolidaysPage: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción</th>
-                      {canManage && <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                    {filteredHolidays.map((holiday) => {
-                      const dateObj = new Date(holiday.date);
-                      const formattedDate = dateObj.toLocaleDateString(undefined, {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        timeZone: 'UTC',
-                      });
-                      return (
-                        <tr key={holiday._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-3">
-                              <FontAwesomeIcon icon={faCalendar} className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formattedDate}</span>
+            <div className="overflow-clip border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
+              <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción</th>
+                    {canManage && <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                  {filteredHolidays.map((holiday) => {
+                    const dateObj = new Date(holiday.date);
+                    const formattedDate = dateObj.toLocaleDateString(undefined, {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      timeZone: 'UTC',
+                    });
+                    return (
+                      <tr key={holiday._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <FontAwesomeIcon icon={faCalendar} className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formattedDate}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{holiday.name}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${holiday.type === 'Nacional' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' : holiday.type === 'Feriado Puente' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' : holiday.type === 'Provincial' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-300'}`}>{holiday.type || 'Nacional'}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{holiday.description || '—'}</span>
+                        </td>
+                        {canManage && (
+                          <td className="px-6 py-4 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-2">
+                              <button onClick={() => openEdit(holiday)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar">
+                                <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => handleDelete(holiday)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="Eliminar">
+                                <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                              </button>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{holiday.name}</span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${holiday.type === 'Nacional' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' : holiday.type === 'Feriado Puente' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' : holiday.type === 'Provincial' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-300'}`}>{holiday.type || 'Nacional'}</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{holiday.description || '—'}</span>
-                          </td>
-                          {canManage && (
-                            <td className="px-6 py-4 text-right whitespace-nowrap">
-                              <div className="flex items-center justify-end gap-2">
-                                <button onClick={() => openEdit(holiday)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar">
-                                  <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
-                                </button>
-                                <button onClick={() => handleDelete(holiday)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="Eliminar">
-                                  <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </TablaConEncabezadoFijo>
             </div>
           )}
 

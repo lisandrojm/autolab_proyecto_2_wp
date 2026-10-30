@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileContract, faCheck, faTimes, faToggleOn, faToggleOff } from "@fortawesome/free-solid-svg-icons";
 import { vacationConfigAPI, VacationConfig, AvailableContract, ContractRule } from "../../api/vacationConfig";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 export const ContractConfigTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -112,55 +113,53 @@ export const ContractConfigTab: React.FC = () => {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 mb-6">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-800">
+      <TablaConEncabezadoFijo className="rounded border border-gray-200 dark:border-gray-700 mb-6" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo de Contrato Activo</th>
+            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Botón Vacaciones | Estado</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+          {availableContracts.length > 0 ? (
+            availableContracts.map((contract) => {
+              const isEnabled = rules[contract.id];
+              return (
+                <tr key={contract.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">{contract.name}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <button type="button" onClick={() => handleToggle(contract.id)} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${isEnabled ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"}`}>
+                      <FontAwesomeIcon icon={isEnabled ? faToggleOn : faToggleOff} className="mr-2" />
+                      {isEnabled ? "Activo" : "Inactivo"}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })
+          ) : (
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo de Contrato Activo</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Botón Vacaciones | Estado</th>
+              <td colSpan={2} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                No se encontraron tipos de contrato disponibles.
+              </td>
             </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            {availableContracts.length > 0 ? (
-              availableContracts.map((contract) => {
-                const isEnabled = rules[contract.id];
-                return (
-                  <tr key={contract.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{contract.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button type="button" onClick={() => handleToggle(contract.id)} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${isEnabled ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"}`}>
-                        <FontAwesomeIcon icon={isEnabled ? faToggleOn : faToggleOff} className="mr-2" />
-                        {isEnabled ? "Activo" : "Inactivo"}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={2} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                  No se encontraron tipos de contrato disponibles.
-                </td>
-              </tr>
-            )}
+          )}
 
-            {/* Fila estática para usuarios sin contrato */}
-            <tr className="bg-gray-50/50 dark:bg-gray-800/30">
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-500 dark:text-gray-400 italic">Sin contrato activo</div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-center">
-                <button type="button" disabled className="px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed opacity-70">
-                  <FontAwesomeIcon icon={faToggleOff} className="mr-2" />
-                  Inactivo
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+          {/* Fila estática para usuarios sin contrato */}
+          <tr className="bg-gray-50/50 dark:bg-gray-800/30">
+            <td className="px-6 py-4 whitespace-nowrap">
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400 italic">Sin contrato activo</div>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-center">
+              <button type="button" disabled className="px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed opacity-70">
+                <FontAwesomeIcon icon={faToggleOff} className="mr-2" />
+                Inactivo
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </TablaConEncabezadoFijo>
 
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-4 mb-6">
         <p className="text-sm text-blue-800 dark:text-blue-200">

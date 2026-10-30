@@ -22,6 +22,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { SubPestanasEscala, SubPestanaEscala } from './escalas/SubPestanasEscala';
 import { EscalaConvenioTabs } from './escalas/EscalaConvenioTabs';
 import { AccionesEscalaConvenio } from './escalas/AccionesEscalaConvenio';
+import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 
 /**
  * ABM de Categorías, navegado como ARCA lo modela:
@@ -1068,174 +1069,172 @@ export const CategoriasArcaTab: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {gruposVisibles.length > 0 && (
-            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                      <th className="px-3 py-3 w-8" />
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grupo</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sueldo Básico</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Adicional</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell" title="El porcentaje que se deduce del básico y el adicional cargados. En 0634/11 es fijo por grupo.">
-                        % Adic.
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sueldo Bruto</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden xl:table-cell">Presentismo</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Neto</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Actualización</th>
-                      {canManage && <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                    {gruposVisibles.map((g) => {
-                      const abierto = estaExpandido(g);
-                      const sinEscala = !g.sueldoBruto;
-                      return (
-                        <React.Fragment key={g._id}>
-                          <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer" onClick={() => alternar(g._id)}>
-                            <td className="px-3 py-3 text-gray-400">
-                              <FontAwesomeIcon icon={abierto ? faChevronDown : faChevronRight} className="h-3 w-3" />
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <span className="inline-flex items-center justify-center h-7 w-10 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold">{g.numero}</span>
-                                <div className="min-w-0">
-                                  {g.nombre && <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{g.nombre}</span>}
-                                  <span className="block text-xs text-gray-500 dark:text-gray-400">{g.categorias.length === 1 ? '1 categoría' : `${g.categorias.length} categorías`}</span>
-                                </div>
+            <div className="overflow-clip border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
+              <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                    <th className="px-3 py-3 w-8" />
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grupo</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sueldo Básico</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Adicional</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell" title="El porcentaje que se deduce del básico y el adicional cargados. En 0634/11 es fijo por grupo.">
+                      % Adic.
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sueldo Bruto</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden xl:table-cell">Presentismo</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Neto</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Actualización</th>
+                    {canManage && <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                  {gruposVisibles.map((g) => {
+                    const abierto = estaExpandido(g);
+                    const sinEscala = !g.sueldoBruto;
+                    return (
+                      <React.Fragment key={g._id}>
+                        <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer" onClick={() => alternar(g._id)}>
+                          <td className="px-3 py-3 text-gray-400">
+                            <FontAwesomeIcon icon={abierto ? faChevronDown : faChevronRight} className="h-3 w-3" />
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center justify-center h-7 w-10 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold">{g.numero}</span>
+                              <div className="min-w-0">
+                                {g.nombre && <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{g.nombre}</span>}
+                                <span className="block text-xs text-gray-500 dark:text-gray-400">{g.categorias.length === 1 ? '1 categoría' : `${g.categorias.length} categorías`}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-medium">{formatCurrency(g.sueldoBasico)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-medium">{formatCurrency(g.sueldoAdicional)}</td>
+                          <td className="px-4 py-3 hidden lg:table-cell">
+                            {(() => {
+                              const pct = adicionalPctDeducido(g.sueldoBasico, g.sueldoAdicional);
+                              if (pct === null) return <span className="text-sm text-gray-400">—</span>;
+                              // Más de dos decimales significa que el importe no sale de un porcentaje redondo:
+                              // casi siempre es un número tipeado a mano.
+                              const sospechoso = Math.round(pct * 100) !== Math.round(pct * 10000) / 100;
+                              return (
+                                <span
+                                  className={`text-sm font-mono ${sospechoso ? 'text-amber-600 dark:text-amber-400' : 'text-gray-600 dark:text-gray-300'}`}
+                                  title={sospechoso ? 'No es un porcentaje redondo: revisá el adicional cargado contra el acta.' : undefined}
+                                >
+                                  {pct.toLocaleString('es-AR', { maximumFractionDigits: 4 })} %
+                                </span>
+                              );
+                            })()}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`text-sm font-semibold ${sinEscala ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(g.sueldoBruto)}</span>
+                            {sinEscala && (
+                              <span className="block text-[10px] text-red-600 dark:text-red-400" title="Sin sueldo bruto, la retribución del TXT queda en 0 y ARCA rechaza el alta.">
+                                Sin escala: bloquea el alta
+                              </span>
+                            )}
+                            {!sinEscala && g.sueldoBrutoLetras && (
+                              <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[170px]" title={g.sueldoBrutoLetras}>
+                                {g.sueldoBrutoLetras}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-medium hidden xl:table-cell">{formatCurrency(g.presentismo)}</td>
+                          <td className="px-4 py-3 text-sm text-blue-700 dark:text-blue-400 font-bold">{formatCurrency(g.neto)}</td>
+                          <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{formatDate(g.fechaActualizacion)}</td>
+                          {canManage && (
+                            <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-2">
+                                <button onClick={() => abrirEscala(g)} className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors" title="Editar la escala del grupo (aplicar paritaria)">
+                                  <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                                </button>
+                                <button onClick={() => eliminarGrupo(g)} disabled={g.categorias.length > 0} className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={g.categorias.length > 0 ? 'Tiene categorías: movelas o eliminalas antes' : 'Eliminar grupo'}>
+                                  <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                                </button>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-medium">{formatCurrency(g.sueldoBasico)}</td>
-                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-medium">{formatCurrency(g.sueldoAdicional)}</td>
-                            <td className="px-4 py-3 hidden lg:table-cell">
-                              {(() => {
-                                const pct = adicionalPctDeducido(g.sueldoBasico, g.sueldoAdicional);
-                                if (pct === null) return <span className="text-sm text-gray-400">—</span>;
-                                // Más de dos decimales significa que el importe no sale de un porcentaje redondo:
-                                // casi siempre es un número tipeado a mano.
-                                const sospechoso = Math.round(pct * 100) !== Math.round(pct * 10000) / 100;
-                                return (
-                                  <span
-                                    className={`text-sm font-mono ${sospechoso ? 'text-amber-600 dark:text-amber-400' : 'text-gray-600 dark:text-gray-300'}`}
-                                    title={sospechoso ? 'No es un porcentaje redondo: revisá el adicional cargado contra el acta.' : undefined}
-                                  >
-                                    {pct.toLocaleString('es-AR', { maximumFractionDigits: 4 })} %
-                                  </span>
-                                );
-                              })()}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className={`text-sm font-semibold ${sinEscala ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>{formatCurrency(g.sueldoBruto)}</span>
-                              {sinEscala && (
-                                <span className="block text-[10px] text-red-600 dark:text-red-400" title="Sin sueldo bruto, la retribución del TXT queda en 0 y ARCA rechaza el alta.">
-                                  Sin escala: bloquea el alta
-                                </span>
-                              )}
-                              {!sinEscala && g.sueldoBrutoLetras && (
-                                <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[170px]" title={g.sueldoBrutoLetras}>
-                                  {g.sueldoBrutoLetras}
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 font-medium hidden xl:table-cell">{formatCurrency(g.presentismo)}</td>
-                            <td className="px-4 py-3 text-sm text-blue-700 dark:text-blue-400 font-bold">{formatCurrency(g.neto)}</td>
-                            <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{formatDate(g.fechaActualizacion)}</td>
-                            {canManage && (
-                              <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex items-center justify-end gap-2">
-                                  <button onClick={() => abrirEscala(g)} className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors" title="Editar la escala del grupo (aplicar paritaria)">
-                                    <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
-                                  </button>
-                                  <button onClick={() => eliminarGrupo(g)} disabled={g.categorias.length > 0} className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={g.categorias.length > 0 ? 'Tiene categorías: movelas o eliminalas antes' : 'Eliminar grupo'}>
-                                    <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              </td>
-                            )}
-                          </tr>
-
-                          {abierto && (
-                            <tr>
-                              <td colSpan={canManage ? 10 : 9} className="p-0 bg-gray-50/70 dark:bg-gray-900/30">
-                                {g.categorias.length === 0 ? (
-                                  <div className="px-6 py-4 text-xs text-gray-500 dark:text-gray-400">Este grupo no tiene categorías.</div>
-                                ) : (
-                                  <table className="w-full text-left border-collapse">
-                                    <thead>
-                                      <tr className="border-b border-gray-200 dark:border-gray-700/60">
-                                        <th className="pl-14 pr-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Cód. ARCA</th>
-                                        <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nombre</th>
-                                        <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Descripción de ARCA</th>
-                                        <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contratos</th>
-                                        {/* Última antes de Acciones, como en todos los nomencladores. */}
-                                        <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap">
-                                          <span className="inline-flex items-center gap-2">
-                                            Por defecto
-                                            <LimpiarDefaultArca campo="categoria" queEs="la categoría que se ofrece primero" />
-                                          </span>
-                                        </th>
-                                        {canManage && <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Acciones</th>}
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                                      {g.categorias.map((c) => (
-                                        <tr key={c._id} className="hover:bg-white dark:hover:bg-gray-800/60 transition-colors">
-                                          <td className="pl-14 pr-4 py-2">
-                                            {/* 6 dígitos, como lo escribe ARCA: así se coteja de un vistazo contra un export del organismo. */}
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{c.codigoArca}</span>
-                                          </td>
-                                          <td className="px-4 py-2">
-                                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{c.nombre}</span>
-                                            <span className="block">
-                                              <PuestoDeCategoria cat={c} grupo={g} />
-                                            </span>
-                                            {!c.isActive && (
-                                              <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600" title="Resuelve para los contratos que ya la usan, pero no se ofrece al cargar uno nuevo.">
-                                                NO ELEGIBLE
-                                              </span>
-                                            )}
-                                          </td>
-                                          {/* Siempre visible, al lado del nombre: es lo que muestra si el código dice lo mismo que el nombre. */}
-                                          <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
-                                            <span className="inline-flex items-center gap-1.5">
-                                              <EstadoArcaChip estado={c.estadoArca} confirmada={c.estadoArcaConfirmada} descripcion={c.descripcionArca} />
-                                              {c.descripcionArca || '—'}
-                                            </span>
-                                          </td>
-                                          <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{c.contratos > 0 ? c.contratos : '—'}</td>
-                                          <td className="px-4 py-2">
-                                            <DefaultArcaStar campo="categoria" valor={c.codigoArca} nombre={`${c.codigoArca} — ${c.nombre}`} queEs="la categoría que se ofrece primero" />
-                                          </td>
-                                          {canManage && (
-                                            <td className="px-4 py-2 text-right whitespace-nowrap">
-                                              <div className="flex items-center justify-end gap-1.5">
-                                                <button onClick={() => abrirEditarCategoria(c, g, convenioSel)} className="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors" title="Editar">
-                                                  <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
-                                                </button>
-                                                <button onClick={() => alternarActiva(c)} className="p-1.5 text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 rounded transition-colors" title={c.isActive ? 'Dejar de ofrecerla en contratos nuevos' : 'Volver a ofrecerla'}>
-                                                  <FontAwesomeIcon icon={c.isActive ? faEye : faEyeSlash} className="h-3.5 w-3.5" />
-                                                </button>
-                                                <button onClick={() => eliminarCategoria(c)} disabled={c.contratos > 0} className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={c.contratos > 0 ? `${c.contratos} contrato(s) la usan: desactivala en vez de eliminarla` : 'Eliminar'}>
-                                                  <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
-                                                </button>
-                                              </div>
-                                            </td>
-                                          )}
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                )}
-                              </td>
-                            </tr>
                           )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                        </tr>
+
+                        {abierto && (
+                          <tr>
+                            <td colSpan={canManage ? 10 : 9} className="p-0 bg-gray-50/70 dark:bg-gray-900/30">
+                              {g.categorias.length === 0 ? (
+                                <div className="px-6 py-4 text-xs text-gray-500 dark:text-gray-400">Este grupo no tiene categorías.</div>
+                              ) : (
+                                <table className="w-full text-left border-collapse">
+                                  <thead>
+                                    <tr className="border-b border-gray-200 dark:border-gray-700/60">
+                                      <th className="pl-14 pr-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Cód. ARCA</th>
+                                      <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nombre</th>
+                                      <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Descripción de ARCA</th>
+                                      <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contratos</th>
+                                      {/* Última antes de Acciones, como en todos los nomencladores. */}
+                                      <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap">
+                                        <span className="inline-flex items-center gap-2">
+                                          Por defecto
+                                          <LimpiarDefaultArca campo="categoria" queEs="la categoría que se ofrece primero" />
+                                        </span>
+                                      </th>
+                                      {canManage && <th className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Acciones</th>}
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                    {g.categorias.map((c) => (
+                                      <tr key={c._id} className="hover:bg-white dark:hover:bg-gray-800/60 transition-colors">
+                                        <td className="pl-14 pr-4 py-2">
+                                          {/* 6 dígitos, como lo escribe ARCA: así se coteja de un vistazo contra un export del organismo. */}
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{c.codigoArca}</span>
+                                        </td>
+                                        <td className="px-4 py-2">
+                                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{c.nombre}</span>
+                                          <span className="block">
+                                            <PuestoDeCategoria cat={c} grupo={g} />
+                                          </span>
+                                          {!c.isActive && (
+                                            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600" title="Resuelve para los contratos que ya la usan, pero no se ofrece al cargar uno nuevo.">
+                                              NO ELEGIBLE
+                                            </span>
+                                          )}
+                                        </td>
+                                        {/* Siempre visible, al lado del nombre: es lo que muestra si el código dice lo mismo que el nombre. */}
+                                        <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
+                                          <span className="inline-flex items-center gap-1.5">
+                                            <EstadoArcaChip estado={c.estadoArca} confirmada={c.estadoArcaConfirmada} descripcion={c.descripcionArca} />
+                                            {c.descripcionArca || '—'}
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{c.contratos > 0 ? c.contratos : '—'}</td>
+                                        <td className="px-4 py-2">
+                                          <DefaultArcaStar campo="categoria" valor={c.codigoArca} nombre={`${c.codigoArca} — ${c.nombre}`} queEs="la categoría que se ofrece primero" />
+                                        </td>
+                                        {canManage && (
+                                          <td className="px-4 py-2 text-right whitespace-nowrap">
+                                            <div className="flex items-center justify-end gap-1.5">
+                                              <button onClick={() => abrirEditarCategoria(c, g, convenioSel)} className="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors" title="Editar">
+                                                <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
+                                              </button>
+                                              <button onClick={() => alternarActiva(c)} className="p-1.5 text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 rounded transition-colors" title={c.isActive ? 'Dejar de ofrecerla en contratos nuevos' : 'Volver a ofrecerla'}>
+                                                <FontAwesomeIcon icon={c.isActive ? faEye : faEyeSlash} className="h-3.5 w-3.5" />
+                                              </button>
+                                              <button onClick={() => eliminarCategoria(c)} disabled={c.contratos > 0} className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={c.contratos > 0 ? `${c.contratos} contrato(s) la usan: desactivala en vez de eliminarla` : 'Eliminar'}>
+                                                <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+                                              </button>
+                                            </div>
+                                          </td>
+                                        )}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </TablaConEncabezadoFijo>
 
               <div className="bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 px-4 py-3">
                 <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -1257,103 +1256,101 @@ export const CategoriasArcaTab: React.FC = () => {
             categoría tiene la suya o no tiene ninguna.
           */}
           {sinGrupoVisibles.length > 0 && (
-            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
+            <div className="overflow-clip border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
               <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                 <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Categorías sin grupo salarial</span>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
                   ARCA no publica grupo en todos los convenios. Sin grupo del cual heredar, la escala vive en cada categoría.
                 </p>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cód. ARCA</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción de ARCA</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sueldo Bruto</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden xl:table-cell">Neto</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Actualización</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contratos</th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                        <span className="inline-flex items-center gap-2">
-                          Por defecto
-                          <LimpiarDefaultArca campo="categoria" queEs="la categoría que se ofrece primero" />
+              <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cód. ARCA</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción de ARCA</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sueldo Bruto</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden xl:table-cell">Neto</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Actualización</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contratos</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                      <span className="inline-flex items-center gap-2">
+                        Por defecto
+                        <LimpiarDefaultArca campo="categoria" queEs="la categoría que se ofrece primero" />
+                      </span>
+                    </th>
+                    {canManage && <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                  {sinGrupoVisibles.map((c) => (
+                    <tr key={c._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                      <td className="px-4 py-2.5">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{c.codigoArca}</span>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{c.nombre}</span>
+                        <span className="block">
+                          <PuestoDeCategoria cat={c} grupo={null} />
                         </span>
-                      </th>
-                      {canManage && <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                    {sinGrupoVisibles.map((c) => (
-                      <tr key={c._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                        <td className="px-4 py-2.5">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{c.codigoArca}</span>
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{c.nombre}</span>
-                          <span className="block">
-                            <PuestoDeCategoria cat={c} grupo={null} />
+                        {!c.isActive && (
+                          <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600" title="Resuelve para los contratos que ya la usan, pero no se ofrece al cargar uno nuevo.">
+                            NO ELEGIBLE
                           </span>
-                          {!c.isActive && (
-                            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600" title="Resuelve para los contratos que ya la usan, pero no se ofrece al cargar uno nuevo.">
-                              NO ELEGIBLE
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">
-                          <span className="inline-flex items-center gap-1.5">
-                            <EstadoArcaChip estado={c.estadoArca} confirmada={c.estadoArcaConfirmada} descripcion={c.descripcionArca} />
-                            {c.descripcionArca || '—'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5">
-                          {/*
-                            «Sin escala» y «$ 0» NO son lo mismo, y el color los separa: el primero es
-                            un dato que falta y bloquea el alta; el segundo sería una decisión.
-                            `escalaOrigen` es lo único que permite distinguirlos desde acá.
-                          */}
-                          {c.escalaOrigen === null ? (
-                            <span className="text-xs font-semibold text-red-600 dark:text-red-400" title="Sin sueldo bruto, la retribución del TXT queda en 0 y ARCA rechaza el alta.">
-                              Sin escala: bloquea el alta
-                            </span>
-                          ) : (
-                            <>
-                              <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{formatCurrency(c.sueldoBruto)}</span>
-                              {c.sueldoBrutoLetras && (
-                                <span className="block text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[170px]" title={c.sueldoBrutoLetras}>
-                                  {c.sueldoBrutoLetras}
-                                </span>
-                              )}
-                            </>
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5 text-sm text-blue-700 dark:text-blue-400 font-bold hidden xl:table-cell">{c.escalaOrigen === null ? '—' : formatCurrency(c.neto)}</td>
-                        <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{formatDate(c.fechaActualizacion)}</td>
-                        <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">{c.contratos > 0 ? c.contratos : '—'}</td>
-                        <td className="px-4 py-2.5">
-                          <DefaultArcaStar campo="categoria" valor={c.codigoArca} nombre={`${c.codigoArca} — ${c.nombre}`} queEs="la categoría que se ofrece primero" />
-                        </td>
-                        {canManage && (
-                          <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button onClick={() => abrirEditarCategoria(c, null, convenioSel)} className="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors" title="Editar la categoría y su escala">
-                                <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
-                              </button>
-                              <button onClick={() => alternarActiva(c)} className="p-1.5 text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 rounded transition-colors" title={c.isActive ? 'Dejar de ofrecerla en contratos nuevos' : 'Volver a ofrecerla'}>
-                                <FontAwesomeIcon icon={c.isActive ? faEye : faEyeSlash} className="h-3.5 w-3.5" />
-                              </button>
-                              <button onClick={() => eliminarCategoria(c)} disabled={c.contratos > 0} className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={c.contratos > 0 ? `${c.contratos} contrato(s) la usan: desactivala en vez de eliminarla` : 'Eliminar'}>
-                                <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </td>
                         )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">
+                        <span className="inline-flex items-center gap-1.5">
+                          <EstadoArcaChip estado={c.estadoArca} confirmada={c.estadoArcaConfirmada} descripcion={c.descripcionArca} />
+                          {c.descripcionArca || '—'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {/*
+                          «Sin escala» y «$ 0» NO son lo mismo, y el color los separa: el primero es
+                          un dato que falta y bloquea el alta; el segundo sería una decisión.
+                          `escalaOrigen` es lo único que permite distinguirlos desde acá.
+                        */}
+                        {c.escalaOrigen === null ? (
+                          <span className="text-xs font-semibold text-red-600 dark:text-red-400" title="Sin sueldo bruto, la retribución del TXT queda en 0 y ARCA rechaza el alta.">
+                            Sin escala: bloquea el alta
+                          </span>
+                        ) : (
+                          <>
+                            <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">{formatCurrency(c.sueldoBruto)}</span>
+                            {c.sueldoBrutoLetras && (
+                              <span className="block text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[170px]" title={c.sueldoBrutoLetras}>
+                                {c.sueldoBrutoLetras}
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-sm text-blue-700 dark:text-blue-400 font-bold hidden xl:table-cell">{c.escalaOrigen === null ? '—' : formatCurrency(c.neto)}</td>
+                      <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{formatDate(c.fechaActualizacion)}</td>
+                      <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">{c.contratos > 0 ? c.contratos : '—'}</td>
+                      <td className="px-4 py-2.5">
+                        <DefaultArcaStar campo="categoria" valor={c.codigoArca} nombre={`${c.codigoArca} — ${c.nombre}`} queEs="la categoría que se ofrece primero" />
+                      </td>
+                      {canManage && (
+                        <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button onClick={() => abrirEditarCategoria(c, null, convenioSel)} className="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors" title="Editar la categoría y su escala">
+                              <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => alternarActiva(c)} className="p-1.5 text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 rounded transition-colors" title={c.isActive ? 'Dejar de ofrecerla en contratos nuevos' : 'Volver a ofrecerla'}>
+                              <FontAwesomeIcon icon={c.isActive ? faEye : faEyeSlash} className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => eliminarCategoria(c)} disabled={c.contratos > 0} className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={c.contratos > 0 ? `${c.contratos} contrato(s) la usan: desactivala en vez de eliminarla` : 'Eliminar'}>
+                              <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </TablaConEncabezadoFijo>
               <div className="bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 px-4 py-3">
                 <span className="text-xs text-gray-500 dark:text-gray-400">
                   <span className="font-bold text-gray-700 dark:text-gray-300">{sinGrupoVisibles.length}</span> categoría(s) sin grupo

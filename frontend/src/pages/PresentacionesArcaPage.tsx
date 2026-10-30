@@ -10,6 +10,7 @@ import { CorridaAltasArca } from "../components/contratos/CorridaAltasArca";
 import { CuentaRegresiva } from "../components/ui/CuentaRegresiva";
 import { sweetAlert } from "../utils/sweetAlert";
 import { ProjectTeamPage } from "./ProjectTeamPage";
+import { TablaConEncabezadoFijo, useAltoDeBarra } from "../components/ui/TablaConEncabezadoFijo";
 
 /*
   A.R.C.A ALTAS AUTOMÁTICAS: cada alta temprana se presenta sola a la hora configurada (14:00 argentinas
@@ -32,6 +33,8 @@ const veces = (n: number) => `${n} ${n === 1 ? "vez" : "veces"}`;
 // La cuenta regresiva vive en `components/ui/CuentaRegresiva.tsx`: la comparte con «A.R.C.A Descargas Automáticas».
 
 export const PresentacionesArcaPage: React.FC = () => {
+  // La barra de «N altas tildadas» también se pega debajo del header: el encabezado de la tabla va debajo de ella.
+  const [barraRef, altoBarra] = useAltoDeBarra();
   const [estado, setEstado] = useState<EstadoPresentacionAutomatica | null>(null);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -341,25 +344,23 @@ export const PresentacionesArcaPage: React.FC = () => {
   };
 
   const tabla = (lista: AltaPendienteArca[]) => (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-      <table className="min-w-full">
-        <thead>
-          <tr>
-            <th className={`${th} w-8`}>
-              <input type="checkbox" className="rounded border-gray-300 text-amber-600 focus:ring-amber-500" checked={lista.some((c) => c.presentable) && lista.filter((c) => c.presentable).every((c) => seleccion.has(claveDe(c)))} disabled={!lista.some((c) => c.presentable)} onChange={() => alternarTodas(lista)} title="Tildar todas las que se pueden presentar" />
-            </th>
-            <th className={th}>Persona</th>
-            <th className={th}>Proyecto</th>
-            <th className={th}>Empresa</th>
-            <th className={th}>Contrato</th>
-            <th className={th}>Estado</th>
-            <th className={th}>Se presenta en</th>
-            <th className={`${th} text-right`}>Acción</th>
-          </tr>
-        </thead>
-        <tbody>{lista.map((c) => fila(c))}</tbody>
-      </table>
-    </div>
+    <TablaConEncabezadoFijo top={`calc(var(--wp-sticky-top, 144px) + ${altoBarra}px)`} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800" tabla="min-w-full">
+      <thead>
+        <tr>
+          <th className={`${th} w-8`}>
+            <input type="checkbox" className="rounded border-gray-300 text-amber-600 focus:ring-amber-500" checked={lista.some((c) => c.presentable) && lista.filter((c) => c.presentable).every((c) => seleccion.has(claveDe(c)))} disabled={!lista.some((c) => c.presentable)} onChange={() => alternarTodas(lista)} title="Tildar todas las que se pueden presentar" />
+          </th>
+          <th className={th}>Persona</th>
+          <th className={th}>Proyecto</th>
+          <th className={th}>Empresa</th>
+          <th className={th}>Contrato</th>
+          <th className={th}>Estado</th>
+          <th className={th}>Se presenta en</th>
+          <th className={`${th} text-right`}>Acción</th>
+        </tr>
+      </thead>
+      <tbody>{lista.map((c) => fila(c))}</tbody>
+    </TablaConEncabezadoFijo>
   );
 
   const u = estado?.ultimaCorrida;
@@ -491,94 +492,92 @@ export const PresentacionesArcaPage: React.FC = () => {
               ) : presentadasOrdenadas.length === 0 ? (
                 <p className="text-sm text-gray-500">{buscar ? "Sin resultados para la búsqueda." : soloAutomaticas ? "La automática todavía no presentó ninguna alta. Destildá «Solo las automáticas» para ver las manuales y forzadas." : "Todavía no se presentó ninguna alta por Altas Masivas."}</p>
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                  <table className="min-w-full">
-                    <thead>
-                      <tr>
-                        <th className={th}>
-                          <BotonOrden columna="fecha" orden={ordenRegistro} onAlternar={alternarRegistro}>
-                            Fecha
-                          </BotonOrden>
-                        </th>
-                        <th className={th}>
-                          <BotonOrden columna="persona" orden={ordenRegistro} onAlternar={alternarRegistro}>
-                            Persona
-                          </BotonOrden>
-                        </th>
-                        {/* Desde → hasta del contrato: sin esto, dos filas de la misma persona (otro contrato, o el
-                            mismo reintentado) parecían duplicadas y no se sabía cuál había fallado. */}
-                        <th className={th}>
-                          <BotonOrden columna="contrato" orden={ordenRegistro} onAlternar={alternarRegistro}>
-                            Contrato
-                          </BotonOrden>
-                        </th>
-                        <th className={th}>
-                          <BotonOrden columna="empresa" orden={ordenRegistro} onAlternar={alternarRegistro}>
-                            Empresa
-                          </BotonOrden>
-                        </th>
-                        <th className={th}>
-                          <BotonOrden columna="resultado" orden={ordenRegistro} onAlternar={alternarRegistro}>
-                            Resultado
-                          </BotonOrden>
-                        </th>
-                        <th className={th}>Constancia</th>
-                        <th className={th}>
-                          <BotonOrden columna="quien" orden={ordenRegistro} onAlternar={alternarRegistro}>
-                            Presentó
-                          </BotonOrden>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {presentadasOrdenadas.map((r) => {
-                        const res = RESULTADO[r.resultado] || { texto: r.resultado, clase: RESULTADO.pendiente.clase };
-                        return (
-                          <tr key={r.clave} className="border-t border-gray-100 dark:border-gray-800 align-top">
-                            <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                              {new Date(r.fecha).toLocaleDateString("es-AR")} {new Date(r.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
-                            </td>
-                            <td className="px-4 py-3">
-                              <p className="text-sm font-semibold text-gray-900 dark:text-white">{r.nombre}</p>
-                              <p className="text-xs font-mono text-gray-500">{fmtCuil(r.cuil)}</p>
-                            </td>
-                            <td className="px-4 py-3 text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap tabular-nums">
-                              {r.contrato ? (
-                                <>
-                                  <p>Desde {fechaCorta(r.contrato.alta)}</p>
-                                  <p className="text-gray-500">Hasta {r.contrato.baja ? fechaCorta(r.contrato.baja) : "indeterminado"}</p>
-                                </>
-                              ) : (
-                                <span className="text-gray-400" title="El contrato ya no está en la ficha de la persona (se borró o se editó)">—</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.empresa}</td>
-                            <td className="px-4 py-3 text-xs max-w-[280px]">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${res.clase}`}>{res.texto}</span>
-                              {r.motivo && <p className="mt-1 text-gray-500">{r.motivo}</p>}
-                              {/* No salió en esta corrida, pero el contrato se presentó después: cuándo y quién. */}
-                              {r.presentadaDespues && (
-                                <p className="mt-1 font-semibold text-green-700 dark:text-green-400 flex items-start gap-1">
-                                  <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3 mt-0.5 shrink-0" />
-                                  <span>
-                                    Presentada después: {new Date(r.presentadaDespues.fecha).toLocaleDateString("es-AR")} {new Date(r.presentadaDespues.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
-                                    {r.presentadaDespues.automatica ? " · en la corrida automática" : r.presentadaDespues.usuario ? ` · a mano por ${r.presentadaDespues.usuario}` : r.presentadaDespues.via === "carga_masiva" ? " · por Carga Masiva" : ""}
-                                  </span>
-                                </p>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                              {r.constancia === undefined ? "—" : r.constancia === null ? "Sin bajar" : CONSTANCIA[r.constancia.destino] || r.constancia.destino}
-                              {r.constancia?.validadaEl && <p className="text-[11px] text-gray-400">validada el {fechaCorta(String(r.constancia.validadaEl).slice(0, 10))}</p>}
-                              {r.constancia && <p className="text-[11px] text-gray-500">{r.constancia.origen === "automatica" ? "Bajada automática" : r.constancia.origen === "descarga" ? `Bajada por ${r.constancia.por || "un usuario"}` : r.constancia.origen === "subida" ? `Subida por ${r.constancia.por || "un usuario"}` : "Origen sin registrar"}</p>}
-                            </td>
-                            <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.quien}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                <TablaConEncabezadoFijo className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800" tabla="min-w-full">
+                  <thead>
+                    <tr>
+                      <th className={th}>
+                        <BotonOrden columna="fecha" orden={ordenRegistro} onAlternar={alternarRegistro}>
+                          Fecha
+                        </BotonOrden>
+                      </th>
+                      <th className={th}>
+                        <BotonOrden columna="persona" orden={ordenRegistro} onAlternar={alternarRegistro}>
+                          Persona
+                        </BotonOrden>
+                      </th>
+                      {/* Desde → hasta del contrato: sin esto, dos filas de la misma persona (otro contrato, o el
+                          mismo reintentado) parecían duplicadas y no se sabía cuál había fallado. */}
+                      <th className={th}>
+                        <BotonOrden columna="contrato" orden={ordenRegistro} onAlternar={alternarRegistro}>
+                          Contrato
+                        </BotonOrden>
+                      </th>
+                      <th className={th}>
+                        <BotonOrden columna="empresa" orden={ordenRegistro} onAlternar={alternarRegistro}>
+                          Empresa
+                        </BotonOrden>
+                      </th>
+                      <th className={th}>
+                        <BotonOrden columna="resultado" orden={ordenRegistro} onAlternar={alternarRegistro}>
+                          Resultado
+                        </BotonOrden>
+                      </th>
+                      <th className={th}>Constancia</th>
+                      <th className={th}>
+                        <BotonOrden columna="quien" orden={ordenRegistro} onAlternar={alternarRegistro}>
+                          Presentó
+                        </BotonOrden>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {presentadasOrdenadas.map((r) => {
+                      const res = RESULTADO[r.resultado] || { texto: r.resultado, clase: RESULTADO.pendiente.clase };
+                      return (
+                        <tr key={r.clave} className="border-t border-gray-100 dark:border-gray-800 align-top">
+                          <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                            {new Date(r.fecha).toLocaleDateString("es-AR")} {new Date(r.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{r.nombre}</p>
+                            <p className="text-xs font-mono text-gray-500">{fmtCuil(r.cuil)}</p>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap tabular-nums">
+                            {r.contrato ? (
+                              <>
+                                <p>Desde {fechaCorta(r.contrato.alta)}</p>
+                                <p className="text-gray-500">Hasta {r.contrato.baja ? fechaCorta(r.contrato.baja) : "indeterminado"}</p>
+                              </>
+                            ) : (
+                              <span className="text-gray-400" title="El contrato ya no está en la ficha de la persona (se borró o se editó)">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.empresa}</td>
+                          <td className="px-4 py-3 text-xs max-w-[280px]">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${res.clase}`}>{res.texto}</span>
+                            {r.motivo && <p className="mt-1 text-gray-500">{r.motivo}</p>}
+                            {/* No salió en esta corrida, pero el contrato se presentó después: cuándo y quién. */}
+                            {r.presentadaDespues && (
+                              <p className="mt-1 font-semibold text-green-700 dark:text-green-400 flex items-start gap-1">
+                                <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3 mt-0.5 shrink-0" />
+                                <span>
+                                  Presentada después: {new Date(r.presentadaDespues.fecha).toLocaleDateString("es-AR")} {new Date(r.presentadaDespues.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                                  {r.presentadaDespues.automatica ? " · en la corrida automática" : r.presentadaDespues.usuario ? ` · a mano por ${r.presentadaDespues.usuario}` : r.presentadaDespues.via === "carga_masiva" ? " · por Carga Masiva" : ""}
+                                </span>
+                              </p>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                            {r.constancia === undefined ? "—" : r.constancia === null ? "Sin bajar" : CONSTANCIA[r.constancia.destino] || r.constancia.destino}
+                            {r.constancia?.validadaEl && <p className="text-[11px] text-gray-400">validada el {fechaCorta(String(r.constancia.validadaEl).slice(0, 10))}</p>}
+                            {r.constancia && <p className="text-[11px] text-gray-500">{r.constancia.origen === "automatica" ? "Bajada automática" : r.constancia.origen === "descarga" ? `Bajada por ${r.constancia.por || "un usuario"}` : r.constancia.origen === "subida" ? `Subida por ${r.constancia.por || "un usuario"}` : "Origen sin registrar"}</p>}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.quien}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </TablaConEncabezadoFijo>
               )}
             </section>
           )}
@@ -616,7 +615,7 @@ export const PresentacionesArcaPage: React.FC = () => {
           )}
 
           {seleccionadas.length > 0 && (
-            <div className="sticky top-[var(--wp-sticky-top,144px)] z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-4 py-2.5 shadow-sm">
+            <div ref={barraRef} className="sticky top-[var(--wp-sticky-top,144px)] z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-4 py-2.5 shadow-sm">
               <p className="text-sm text-amber-900 dark:text-amber-100">
                 <strong>{seleccionadas.length}</strong> alta{seleccionadas.length === 1 ? "" : "s"} tildada{seleccionadas.length === 1 ? "" : "s"} · {[...new Set(seleccionadas.map((c) => c.empresa?.razonSocial || ""))].filter(Boolean).join(", ")}
               </p>

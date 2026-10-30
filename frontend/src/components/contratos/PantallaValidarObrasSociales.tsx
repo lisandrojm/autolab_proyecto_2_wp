@@ -10,6 +10,7 @@ import { sweetAlert } from '../../utils/sweetAlert';
 import { afipAPI } from '../../api/afip';
 import { Modal } from '../ui/Modal';
 import { UsuarioSimplificacion } from '../arca/UsuarioSimplificacion';
+import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 
 /**
  * Validar obras sociales contra ARCA. UNA pantalla, sirva para 1 o para 20.
@@ -901,71 +902,69 @@ export const PantallaValidarObrasSociales: React.FC<{
       )}
 
   {/* ── La tabla ────────────────────────────────────────────────────────── */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="text-left text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 border-b border-gray-200 dark:border-gray-700">
-              <th className="px-4 py-2.5 font-bold">Persona</th>
-              <th className="px-3 py-2.5 font-bold">CUIL</th>
-              {/* Qué pasa si NO validás. Es la pregunta que se hace quien duda si vale la pena el trámite. */}
-              <th className="px-3 py-2.5 font-bold">Qué va a quedar hoy</th>
-              <th className="px-3 py-2.5 font-bold">Resultado</th>
+      <TablaConEncabezadoFijo tabla="w-full text-[13px]">
+        <thead>
+          <tr className="text-left text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 border-b border-gray-200 dark:border-gray-700">
+            <th className="px-4 py-2.5 font-bold">Persona</th>
+            <th className="px-3 py-2.5 font-bold">CUIL</th>
+            {/* Qué pasa si NO validás. Es la pregunta que se hace quien duda si vale la pena el trámite. */}
+            <th className="px-3 py-2.5 font-bold">Qué va a quedar hoy</th>
+            <th className="px-3 py-2.5 font-bold">Resultado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {visibles.length === 0 ? (
+            <tr>
+              <td colSpan={4} className="px-4 py-6 text-center text-[12px] text-gray-500 dark:text-gray-400">
+                No hay obras sociales pendientes de validar en esta selección.
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {visibles.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-[12px] text-gray-500 dark:text-gray-400">
-                  No hay obras sociales pendientes de validar en esta selección.
-                </td>
-              </tr>
-            ) : (
-              visibles.map((f) => {
-                const k = clave(f.row);
-                const sugerido = f.valores.rnosSugerido ? `${f.valores.rnosSugerido}${f.valores.nombreObraSocialSugerida ? ` · ${f.valores.nombreObraSocialSugerida}` : ''}` : '';
-                return (
-                  <tr key={k} className="border-b border-gray-100 dark:border-gray-700/60 align-middle">
-                    <td className="px-4 py-2.5 text-gray-800 dark:text-gray-200">{f.row.userName}</td>
-                    <td className="px-3 py-2.5">
-                      <CeldaCuil cuil={f.row.cuit || ''} />
-                    </td>
-                    <td className="px-3 py-2.5 text-[11.5px] text-gray-500 dark:text-gray-400 font-mono">{sugerido || <span className="text-amber-700 dark:text-amber-400">sin default · el convenio no tiene obra social</span>}</td>
-                    <td className="px-3 py-2.5">
-                      {/*
-                        Si esta corrida tocó esta fila, se muestra lo que la corrida dijo — incluso
-                        después de recargar el listado. El estado recargado diría «afiliación propia»
-                        y perdería el dato que importa revisar: DE QUÉ a qué cambió. Ese registro
-                        tiene que sobrevivir hasta que se cierre la pantalla.
-                      */}
-                      {enVivo[soloDigitos(f.row.cuit || '')] ? (
-                        <CeldaEnVivo v={enVivo[soloDigitos(f.row.cuit || '')]} porDefecto={f.valores.rnosSugerido || ''} />
-                      ) : f.valores.constatacion === 'afiliada' ? (
-                        <span className="text-[11.5px] text-green-700 dark:text-green-400 font-mono inline-flex items-center gap-1.5">
-                          <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
-                          {f.valores.rnos} · afiliación propia
-                        </span>
-                      ) : f.valores.constatacion === 'no_figura' ? (
-                        /*
-                          «Sin afiliación» es un ÉXITO y se muestra como tal.
+          ) : (
+            visibles.map((f) => {
+              const k = clave(f.row);
+              const sugerido = f.valores.rnosSugerido ? `${f.valores.rnosSugerido}${f.valores.nombreObraSocialSugerida ? ` · ${f.valores.nombreObraSocialSugerida}` : ''}` : '';
+              return (
+                <tr key={k} className="border-b border-gray-100 dark:border-gray-700/60 align-middle">
+                  <td className="px-4 py-2.5 text-gray-800 dark:text-gray-200">{f.row.userName}</td>
+                  <td className="px-3 py-2.5">
+                    <CeldaCuil cuil={f.row.cuit || ''} />
+                  </td>
+                  <td className="px-3 py-2.5 text-[11.5px] text-gray-500 dark:text-gray-400 font-mono">{sugerido || <span className="text-amber-700 dark:text-amber-400">sin default · el convenio no tiene obra social</span>}</td>
+                  <td className="px-3 py-2.5">
+                    {/*
+                      Si esta corrida tocó esta fila, se muestra lo que la corrida dijo — incluso
+                      después de recargar el listado. El estado recargado diría «afiliación propia»
+                      y perdería el dato que importa revisar: DE QUÉ a qué cambió. Ese registro
+                      tiene que sobrevivir hasta que se cierre la pantalla.
+                    */}
+                    {enVivo[soloDigitos(f.row.cuit || '')] ? (
+                      <CeldaEnVivo v={enVivo[soloDigitos(f.row.cuit || '')]} porDefecto={f.valores.rnosSugerido || ''} />
+                    ) : f.valores.constatacion === 'afiliada' ? (
+                      <span className="text-[11.5px] text-green-700 dark:text-green-400 font-mono inline-flex items-center gap-1.5">
+                        <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
+                        {f.valores.rnos} · afiliación propia
+                      </span>
+                    ) : f.valores.constatacion === 'no_figura' ? (
+                      /*
+                        «Sin afiliación» es un ÉXITO y se muestra como tal.
 
-                          Es la respuesta más común de ARCA —la persona no tiene obra social propia, rige
-                          la del convenio— y como vacío se leía como si la consulta hubiera fallado.
-                        */
-                        <span className="text-[11.5px] text-gray-500 dark:text-gray-400 inline-flex items-center gap-1.5">
-                          <FontAwesomeIcon icon={faCheck} className="h-3 w-3 text-green-600 dark:text-green-400" />
-                          sin afiliación → queda <span className="font-mono">{f.valores.rnosSugerido || '—'}</span>
-                        </span>
-                      ) : (
-                        <CeldaEnVivo v={enVivo[soloDigitos(f.row.cuit || '')]} porDefecto={f.valores.rnosSugerido || ''} />
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                        Es la respuesta más común de ARCA —la persona no tiene obra social propia, rige
+                        la del convenio— y como vacío se leía como si la consulta hubiera fallado.
+                      */
+                      <span className="text-[11.5px] text-gray-500 dark:text-gray-400 inline-flex items-center gap-1.5">
+                        <FontAwesomeIcon icon={faCheck} className="h-3 w-3 text-green-600 dark:text-green-400" />
+                        sin afiliación → queda <span className="font-mono">{f.valores.rnosSugerido || '—'}</span>
+                      </span>
+                    ) : (
+                      <CeldaEnVivo v={enVivo[soloDigitos(f.row.cuit || '')]} porDefecto={f.valores.rnosSugerido || ''} />
+                    )}
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </TablaConEncabezadoFijo>
 
       {/* ── El pie: qué cambió, sin tener que contar ─────────────────────────── */}
       <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 text-[12px] text-gray-600 dark:text-gray-400">

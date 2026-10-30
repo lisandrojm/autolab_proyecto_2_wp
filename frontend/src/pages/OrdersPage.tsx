@@ -22,6 +22,7 @@ import { isBankingProposal } from "../config/personalDataFields";
 
 // 🔥 IMPORTAR HELP
 import { getHelp, hasHelp } from "../data/help/helpContent";
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 export const OrdersPage: React.FC = () => {
   // 🔥 DECLARAR LA CLAVE
@@ -1040,87 +1041,85 @@ export const OrdersPage: React.FC = () => {
               {viewMode === "cards" ? (
                 renderCardsView()
               ) : (
-                <div className="overflow-x-auto rounded border dark:border-slate-800">
-                  <table className="w-full dark:bg-slate-800/80 table-auto">
-                    <thead>
-                      <tr>
-                        <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
-                        {/*<th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cliente/s</th>*/}
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto/s</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Rol</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Documento</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
-                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
-                      </tr>
-                    </thead>
+                <TablaConEncabezadoFijo className="rounded border dark:border-slate-800" tabla="w-full dark:bg-slate-800/80 table-auto">
+                  <thead>
+                    <tr>
+                      <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Pedido</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
+                      {/*<th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cliente/s</th>*/}
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto/s</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Rol</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Documento</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
+                    </tr>
+                  </thead>
 
-                    <tbody>
-                      {filteredOrders.map((order) => {
-                        return (
-                          <tr
-                            key={order._id}
-                            className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
-                            onClick={() => {
-                              setSelectedOrder(order);
-                              setShowDetailModal(true);
-                            }}
-                          >
-                            <td className="py-3 px-4">
-                              <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedOrderNumber(order.orderNumber)}</span>
-                            </td>
-                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{formatDateShort(order.requestedAt)}</td>
-                            <td className="py-3 px-4">
-                              <div className="flex flex-col gap-2">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">{getCategoryName(order)}</span>
+                  <tbody>
+                    {filteredOrders.map((order) => {
+                      return (
+                        <tr
+                          key={order._id}
+                          className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setShowDetailModal(true);
+                          }}
+                        >
+                          <td className="py-3 px-4">
+                            <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedOrderNumber(order.orderNumber)}</span>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{formatDateShort(order.requestedAt)}</td>
+                          <td className="py-3 px-4">
+                            <div className="flex flex-col gap-2">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">{getCategoryName(order)}</span>
 
-                                {getSubcategoriesArray(order).map((subcategory, index) => (
-                                  <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mediumbg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 text-nowrap w-fit">
-                                    {subcategory}
-                                  </span>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap">{getUserName(order.userId)}</td>
-                            {/* <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{renderUserClientBadge(order.userId)}</td>*/}
-                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">
-                              <div className="flex flex-col gap-1">
-                                {renderUserProjectBadge(order.userId)}
-                                {renderProjectEmpresas(order)}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{renderUserRoleBadge(order.userId)}</td>
-                            <td className="py-3 px-4">
-                              <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
-                            </td>
-                            <td className="py-3 px-4">
-                              {(() => {
-                                const futureAction = order.futureActions && order.futureActions.length > 0 ? order.futureActions[0] : null;
-                                const docStatusType = mapDocumentStateToStatusType(futureAction);
-                                const isInFinalState = isOrderInFinalState(order.status);
+                              {getSubcategoriesArray(order).map((subcategory, index) => (
+                                <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mediumbg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 text-nowrap w-fit">
+                                  {subcategory}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap">{getUserName(order.userId)}</td>
+                          {/* <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{renderUserClientBadge(order.userId)}</td>*/}
+                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">
+                            <div className="flex flex-col gap-1">
+                              {renderUserProjectBadge(order.userId)}
+                              {renderProjectEmpresas(order)}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{renderUserRoleBadge(order.userId)}</td>
+                          <td className="py-3 px-4">
+                            <StatusBadge type={mapOrderStatusToStatusType(order.status)} size="sm" />
+                          </td>
+                          <td className="py-3 px-4">
+                            {(() => {
+                              const futureAction = order.futureActions && order.futureActions.length > 0 ? order.futureActions[0] : null;
+                              const docStatusType = mapDocumentStateToStatusType(futureAction);
+                              const isInFinalState = isOrderInFinalState(order.status);
 
-                                if (!docStatusType) {
-                                  return <span className="text-gray-400 dark:text-gray-600 text-sm">-</span>;
-                                }
+                              if (!docStatusType) {
+                                return <span className="text-gray-400 dark:text-gray-600 text-sm">-</span>;
+                              }
 
-                                return <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} />;
-                              })()}
-                            </td>
-                            <td className="py-3 px-4">{renderSignatureStatus(order)}</td>
-                            <td className="py-3 px-4 text-center">
-                              <button onClick={(e) => handleDelete(order._id, order.orderNumber, e)} className="text-gray-400 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Eliminar pedido" aria-label="Eliminar pedido">
-                                <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                              return <StatusBadge type={docStatusType} size="sm" overrideStyle={isInFinalState} />;
+                            })()}
+                          </td>
+                          <td className="py-3 px-4">{renderSignatureStatus(order)}</td>
+                          <td className="py-3 px-4 text-center">
+                            <button onClick={(e) => handleDelete(order._id, order.orderNumber, e)} className="text-gray-400 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors" title="Eliminar pedido" aria-label="Eliminar pedido">
+                              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </TablaConEncabezadoFijo>
               )}
 
               {filteredOrders.length === 0 && (

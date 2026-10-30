@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { faShieldHeart } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
 import { UsuarioSimplificacion } from '../components/arca/UsuarioSimplificacion';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 /**
  * La conexión con ARCA que sirve para VALIDAR OBRAS SOCIALES.
@@ -25,51 +26,49 @@ const COMPARACION = (
     <p>
       ARCA tiene <strong>dos conexiones distintas</strong> en WeProdu, y hacen cosas que no se parecen. Es fácil confundirlas porque las dos se configuran en el Administrador de Relaciones de AFIP.
     </p>
-    <div className="overflow-x-auto">
-      <table className="w-full text-[13px] border-collapse">
-        <thead>
-          <tr className="text-left text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 border-b border-gray-200 dark:border-gray-700">
-            <th className="py-2 pr-3 font-bold"> </th>
-            <th className="py-2 pr-3 font-bold">Constancia de CUIT</th>
-            <th className="py-2 font-bold">Obras sociales, nombres y documentos</th>
-          </tr>
-        </thead>
-        <tbody className="align-top">
-          <tr className="border-b border-gray-100 dark:border-gray-700/60">
-            <td className="py-2 pr-3 font-semibold">Qué se carga</td>
-            <td className="py-2 pr-3">Un certificado digital y su clave privada</td>
-            <td className="py-2">Un CUIT y una clave fiscal</td>
-          </tr>
-          <tr className="border-b border-gray-100 dark:border-gray-700/60">
-            <td className="py-2 pr-3 font-semibold">Cómo lo hace</td>
-            <td className="py-2 pr-3">Le pregunta a un webservice de ARCA. No abre ninguna pantalla.</td>
-            <td className="py-2">Abre un navegador en el servidor y opera la web de ARCA como lo haría una persona.</td>
-          </tr>
-          <tr className="border-b border-gray-100 dark:border-gray-700/60">
-            <td className="py-2 pr-3 font-semibold">Qué dato trae</td>
-            <td className="py-2 pr-3">Datos del contribuyente: estado del CUIT, denominación</td>
-            <td className="py-2">De un TRABAJADOR: su obra social y su nombre real, los dos de la misma pantalla de altas. El tipo y número de documento salen del propio CUIT.</td>
-          </tr>
-          <tr className="border-b border-gray-100 dark:border-gray-700/60">
-            <td className="py-2 pr-3 font-semibold">Para qué se usa</td>
-            <td className="py-2 pr-3">
-              La <strong>constancia de CUIT</strong> de los contratos de servicios, que son monotributistas. Es lo único para lo que hace falta.
-            </td>
-            <td className="py-2">
-              Validar <strong>obras sociales</strong>, y también el <strong>nombre real</strong> y el <strong>documento</strong> de cada persona. Son la misma consulta: la pantalla de altas muestra
-              las dos cosas al escribir un CUIL.
-            </td>
-          </tr>
-          <tr>
-            <td className="py-2 pr-3 font-semibold">Por qué no una sola</td>
-            <td className="py-2 pr-3" colSpan={2}>
-              Porque la obra social de un trabajador <strong>no la publica ningún webservice</strong>: solo aparece precompletada en la pantalla de altas de Simplificación Registral, adentro de una
-              sesión con clave fiscal. Si ARCA algún día la publica, esta segunda conexión deja de hacer falta.
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <TablaConEncabezadoFijo tabla="w-full text-[13px] border-collapse">
+      <thead>
+        <tr className="text-left text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 border-b border-gray-200 dark:border-gray-700">
+          <th className="py-2 pr-3 font-bold"> </th>
+          <th className="py-2 pr-3 font-bold">Constancia de CUIT</th>
+          <th className="py-2 font-bold">Obras sociales, nombres y documentos</th>
+        </tr>
+      </thead>
+      <tbody className="align-top">
+        <tr className="border-b border-gray-100 dark:border-gray-700/60">
+          <td className="py-2 pr-3 font-semibold">Qué se carga</td>
+          <td className="py-2 pr-3">Un certificado digital y su clave privada</td>
+          <td className="py-2">Un CUIT y una clave fiscal</td>
+        </tr>
+        <tr className="border-b border-gray-100 dark:border-gray-700/60">
+          <td className="py-2 pr-3 font-semibold">Cómo lo hace</td>
+          <td className="py-2 pr-3">Le pregunta a un webservice de ARCA. No abre ninguna pantalla.</td>
+          <td className="py-2">Abre un navegador en el servidor y opera la web de ARCA como lo haría una persona.</td>
+        </tr>
+        <tr className="border-b border-gray-100 dark:border-gray-700/60">
+          <td className="py-2 pr-3 font-semibold">Qué dato trae</td>
+          <td className="py-2 pr-3">Datos del contribuyente: estado del CUIT, denominación</td>
+          <td className="py-2">De un TRABAJADOR: su obra social y su nombre real, los dos de la misma pantalla de altas. El tipo y número de documento salen del propio CUIT.</td>
+        </tr>
+        <tr className="border-b border-gray-100 dark:border-gray-700/60">
+          <td className="py-2 pr-3 font-semibold">Para qué se usa</td>
+          <td className="py-2 pr-3">
+            La <strong>constancia de CUIT</strong> de los contratos de servicios, que son monotributistas. Es lo único para lo que hace falta.
+          </td>
+          <td className="py-2">
+            Validar <strong>obras sociales</strong>, y también el <strong>nombre real</strong> y el <strong>documento</strong> de cada persona. Son la misma consulta: la pantalla de altas muestra
+            las dos cosas al escribir un CUIL.
+          </td>
+        </tr>
+        <tr>
+          <td className="py-2 pr-3 font-semibold">Por qué no una sola</td>
+          <td className="py-2 pr-3" colSpan={2}>
+            Porque la obra social de un trabajador <strong>no la publica ningún webservice</strong>: solo aparece precompletada en la pantalla de altas de Simplificación Registral, adentro de una
+            sesión con clave fiscal. Si ARCA algún día la publica, esta segunda conexión deja de hacer falta.
+          </td>
+        </tr>
+      </tbody>
+    </TablaConEncabezadoFijo>
     <p>
       <strong>Se pueden usar credenciales de personas distintas</strong>, y conviene: el certificado lo suele tener el apoderado, y para esta pantalla lo correcto es un usuario creado aparte con
       «Simplificación Registral» como único servicio delegado.

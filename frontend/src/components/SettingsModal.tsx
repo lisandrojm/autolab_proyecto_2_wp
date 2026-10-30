@@ -4,6 +4,7 @@ import { useAuthStore } from "../stores/authStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCrown, faUsers, faHardDrive, faBuilding, faCreditCard, faBell, faClock, faCheckCircle, faExclamationTriangle, faDownload, faGlobe } from "@fortawesome/free-solid-svg-icons";
 import { sweetAlert } from "../utils/sweetAlert";
+import { TablaConEncabezadoFijo } from "./ui/TablaConEncabezadoFijo";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -251,40 +252,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
                 <div>
                   <h5 className="font-medium text-gray-900 dark:text-white mb-3">Historial de Facturas</h5>
-                  <div className="border border-gray-200 dark:border-gray-700 rounded overflow-hidden">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-700/50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Monto</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acción</th>
+                  <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700/50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Monto</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {[
+                        { date: "15 Oct 2025", desc: "Plan Pro - Mensual", amount: "$99.00", status: "Pagado" },
+                        { date: "15 Sep 2025", desc: "Plan Pro - Mensual", amount: "$99.00", status: "Pagado" },
+                        { date: "15 Ago 2025", desc: "Plan Pro - Mensual", amount: "$99.00", status: "Pagado" },
+                      ].map((invoice, idx) => (
+                        <tr key={idx}>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{invoice.date}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{invoice.desc}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{invoice.amount}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">{invoice.status}</span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
+                            <button className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                              <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+                            </button>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        {[
-                          { date: "15 Oct 2025", desc: "Plan Pro - Mensual", amount: "$99.00", status: "Pagado" },
-                          { date: "15 Sep 2025", desc: "Plan Pro - Mensual", amount: "$99.00", status: "Pagado" },
-                          { date: "15 Ago 2025", desc: "Plan Pro - Mensual", amount: "$99.00", status: "Pagado" },
-                        ].map((invoice, idx) => (
-                          <tr key={idx}>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{invoice.date}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{invoice.desc}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{invoice.amount}</td>
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">{invoice.status}</span>
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
-                              <button className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                                <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </TablaConEncabezadoFijo>
                 </div>
               </div>
             </div>

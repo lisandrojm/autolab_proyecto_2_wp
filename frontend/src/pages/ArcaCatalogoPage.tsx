@@ -4,6 +4,7 @@ import { faBook, faRotate, faSpinner, faCheck, faXmark } from "@fortawesome/free
 import { PageLayout } from "../components/ui/PageLayout";
 import { arcaCatalogoAPI, EmpleadoraCatalogo, LecturaCatalogoArca, DIAS_CATALOGO_VIEJO } from "../api/arcaCatalogo";
 import { sweetAlert } from "../utils/sweetAlert";
+import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
 
 /**
  * ARCA → CATÁLOGO: el espejo de lo que ARCA publica, y cómo se mantiene al día.
@@ -151,40 +152,38 @@ export const ArcaCatalogoPage: React.FC = () => {
       }}
       searchAndFilters={
         <div className="space-y-6">
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-900/50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Empleadora</th>
-                  <th className="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Última lectura desde ARCA</th>
-                  <th className="px-4 py-2" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                {empleadoras.map((e) => {
-                  const d = diasDesde(e.ultimaLectura);
-                  const vieja = d === null || d > DIAS_CATALOGO_VIEJO;
-                  return (
-                    <tr key={e._id}>
-                      <td className="px-4 py-2">
-                        {e.razonSocial} <span className="font-mono text-xs text-gray-500">{e.cuit}</span>
-                      </td>
-                      <td className={`px-4 py-2 text-xs ${vieja ? "text-amber-700 dark:text-amber-400 font-semibold" : "text-gray-600 dark:text-gray-300"}`}>
-                        {fecha(e.ultimaLectura)}
-                        {d !== null ? ` · hace ${d} día(s)` : ""}
-                      </td>
-                      <td className="px-4 py-2 text-right">
-                        <button type="button" onClick={() => leer(e)} disabled={!!leyendo} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
-                          <FontAwesomeIcon icon={leyendo === e.razonSocial ? faSpinner : faRotate} spin={leyendo === e.razonSocial} className="h-3 w-3" />
-                          Leer de ARCA
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <TablaConEncabezadoFijo className="rounded-lg border border-gray-200 dark:border-gray-700" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+            <thead className="bg-gray-50 dark:bg-gray-900/50">
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Empleadora</th>
+                <th className="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Última lectura desde ARCA</th>
+                <th className="px-4 py-2" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+              {empleadoras.map((e) => {
+                const d = diasDesde(e.ultimaLectura);
+                const vieja = d === null || d > DIAS_CATALOGO_VIEJO;
+                return (
+                  <tr key={e._id}>
+                    <td className="px-4 py-2">
+                      {e.razonSocial} <span className="font-mono text-xs text-gray-500">{e.cuit}</span>
+                    </td>
+                    <td className={`px-4 py-2 text-xs ${vieja ? "text-amber-700 dark:text-amber-400 font-semibold" : "text-gray-600 dark:text-gray-300"}`}>
+                      {fecha(e.ultimaLectura)}
+                      {d !== null ? ` · hace ${d} día(s)` : ""}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <button type="button" onClick={() => leer(e)} disabled={!!leyendo} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
+                        <FontAwesomeIcon icon={leyendo === e.razonSocial ? faSpinner : faRotate} spin={leyendo === e.razonSocial} className="h-3 w-3" />
+                        Leer de ARCA
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </TablaConEncabezadoFijo>
           {leyendo && (
             <p className="text-xs text-gray-600 dark:text-gray-300">
               Leyendo el catálogo con {leyendo}… {eventos.length ? `(${eventos[eventos.length - 1]?.tipo})` : ""}

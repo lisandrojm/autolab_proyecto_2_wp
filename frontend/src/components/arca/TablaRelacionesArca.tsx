@@ -1,5 +1,6 @@
 import React from "react";
 import type { RelacionLaboral } from "../../api/arcaRelaciones";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 /*
   EL DETALLE DE LAS RELACIONES LABORALES DE UNA PERSONA SEGÚN ARCA, de la más nueva a la más vieja (así
@@ -12,7 +13,7 @@ const importe = (n: number | null) => (n === null || n === undefined ? "—" : n
 const th = "px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 text-left";
 
 export const TablaRelacionesArca: React.FC<{ relaciones: RelacionLaboral[]; razonSocialDe: (cuit: string) => string }> = ({ relaciones, razonSocialDe }) => (
-  <table className="min-w-full text-xs">
+  <TablaConEncabezadoFijo tabla="min-w-full text-xs">
     <thead>
       <tr>
         <th className={th}>Empleadora</th>
@@ -44,5 +45,5 @@ export const TablaRelacionesArca: React.FC<{ relaciones: RelacionLaboral[]; razo
         </tr>
       ))}
     </tbody>
-  </table>
+  </TablaConEncabezadoFijo>
 );

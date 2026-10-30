@@ -6,6 +6,7 @@ import { BotonOrden, useOrdenTabla } from "../ui/OrdenTabla";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { TablaRelacionesArca } from "./TablaRelacionesArca";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 /*
   ANTIGÜEDAD SEGÚN ARCA: la copia local de las relaciones laborales de Simplificación Registral y la
@@ -220,7 +221,7 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
             </button>
             {ultima.htmlGuardado && <p className="mt-1 text-[11px] text-amber-600">Se guardó una pantalla de ARCA para revisar: <code>{ultima.htmlGuardado}</code></p>}
             {verUltima && (
-              <table className="mt-2 min-w-[480px] text-xs">
+              <TablaConEncabezadoFijo className="mt-2" tabla="min-w-[480px] text-xs">
                 <thead>
                   <tr>
                     <th className={th}>Empleadora</th>
@@ -243,7 +244,7 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </TablaConEncabezadoFijo>
             )}
           </div>
         )}
@@ -276,60 +277,58 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
           {estado && estado.totales.relaciones === 0 ? "Todavía no hay relaciones cargadas: corré el seed desde los TXT de Dropbox o «Sincronizar ahora»." : "No hay personas que coincidan."}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-          <table className="min-w-full">
-            <thead>
-              <tr>
-                <th className={th}><BotonOrden columna="colaborador" orden={orden} onAlternar={alternar}>Colaborador</BotonOrden></th>
-                {!empresaCuit && <th className={th}>Empresas</th>}
-                <th className={th}><BotonOrden columna="primeraAlta" orden={orden} onAlternar={alternar}>Primera alta</BotonOrden></th>
-                <th className={th}><BotonOrden columna="antiguedad" orden={orden} onAlternar={alternar}>Antigüedad</BotonOrden></th>
-                <th className={th}><BotonOrden columna="trabajados" orden={orden} onAlternar={alternar}>Trabajados</BotonOrden></th>
-                <th className={th}><BotonOrden columna="contratos" orden={orden} onAlternar={alternar}># Contratos</BotonOrden></th>
-                <th className={th}><BotonOrden columna="ultima" orden={orden} onAlternar={alternar}>Última fecha</BotonOrden></th>
-              </tr>
-            </thead>
-            <tbody>
-              {ordenados.map((f) => {
-                const clave = `${f.cuil}|${f.empleadoraCuit || ""}`;
-                const desplegada = abierta === f.cuil;
-                const rel = relaciones[f.cuil];
-                return (
-                  <React.Fragment key={clave}>
-                    <tr className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" onClick={() => void toggleFila(f.cuil)}>
-                      <td className={td}>
-                        <div className="flex items-center gap-2">
-                          <FontAwesomeIcon icon={desplegada ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400" />
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100">{f.apellidoNombre || "—"}</p>
-                            <p className="text-xs text-gray-500 font-mono">{fmtCuil(f.cuil)}{f.tieneRelacionAbierta && <span className="ml-2 px-1.5 rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-[10px] font-bold uppercase">activa</span>}</p>
-                          </div>
+        <TablaConEncabezadoFijo className="rounded-xl border border-gray-200 dark:border-gray-700" tabla="min-w-full">
+          <thead>
+            <tr>
+              <th className={th}><BotonOrden columna="colaborador" orden={orden} onAlternar={alternar}>Colaborador</BotonOrden></th>
+              {!empresaCuit && <th className={th}>Empresas</th>}
+              <th className={th}><BotonOrden columna="primeraAlta" orden={orden} onAlternar={alternar}>Primera alta</BotonOrden></th>
+              <th className={th}><BotonOrden columna="antiguedad" orden={orden} onAlternar={alternar}>Antigüedad</BotonOrden></th>
+              <th className={th}><BotonOrden columna="trabajados" orden={orden} onAlternar={alternar}>Trabajados</BotonOrden></th>
+              <th className={th}><BotonOrden columna="contratos" orden={orden} onAlternar={alternar}># Contratos</BotonOrden></th>
+              <th className={th}><BotonOrden columna="ultima" orden={orden} onAlternar={alternar}>Última fecha</BotonOrden></th>
+            </tr>
+          </thead>
+          <tbody>
+            {ordenados.map((f) => {
+              const clave = `${f.cuil}|${f.empleadoraCuit || ""}`;
+              const desplegada = abierta === f.cuil;
+              const rel = relaciones[f.cuil];
+              return (
+                <React.Fragment key={clave}>
+                  <tr className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer" onClick={() => void toggleFila(f.cuil)}>
+                    <td className={td}>
+                      <div className="flex items-center gap-2">
+                        <FontAwesomeIcon icon={desplegada ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400" />
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{f.apellidoNombre || "—"}</p>
+                          <p className="text-xs text-gray-500 font-mono">{fmtCuil(f.cuil)}{f.tieneRelacionAbierta && <span className="ml-2 px-1.5 rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-[10px] font-bold uppercase">activa</span>}</p>
                         </div>
+                      </div>
+                    </td>
+                    {!empresaCuit && <td className={`${td} text-xs`}>{f.empresas.map(razonSocialDe).join(" · ")}</td>}
+                    <td className={`${td} whitespace-nowrap`}>{fechaCorta(f.primeraAlta)}</td>
+                    <td className={`${td} whitespace-nowrap`} title={dias(f.antiguedadDesdePrimeraAlta.dias)}>{anios(f.antiguedadDesdePrimeraAlta.anios)}<span className="block text-[11px] text-gray-400">{dias(f.antiguedadDesdePrimeraAlta.dias)}</span></td>
+                    <td className={`${td} whitespace-nowrap`}>{anios(f.aniosTrabajados)}<span className="block text-[11px] text-gray-400">{dias(f.diasTrabajados)}</span></td>
+                    <td className={`${td} text-center`}>{f.cantidadContratos}</td>
+                    <td className={`${td} whitespace-nowrap`}>{fechaCorta(f.ultimaFecha)}</td>
+                  </tr>
+                  {desplegada && (
+                    <tr className="bg-gray-50 dark:bg-gray-900/40">
+                      <td colSpan={empresaCuit ? 6 : 7} className="px-6 py-3">
+                        {rel === "cargando" || !rel ? (
+                          <span className="text-xs text-gray-500"><FontAwesomeIcon icon={faSpinner} spin /> Cargando relaciones…</span>
+                        ) : (
+                          <TablaRelacionesArca relaciones={rel} razonSocialDe={razonSocialDe} />
+                        )}
                       </td>
-                      {!empresaCuit && <td className={`${td} text-xs`}>{f.empresas.map(razonSocialDe).join(" · ")}</td>}
-                      <td className={`${td} whitespace-nowrap`}>{fechaCorta(f.primeraAlta)}</td>
-                      <td className={`${td} whitespace-nowrap`} title={dias(f.antiguedadDesdePrimeraAlta.dias)}>{anios(f.antiguedadDesdePrimeraAlta.anios)}<span className="block text-[11px] text-gray-400">{dias(f.antiguedadDesdePrimeraAlta.dias)}</span></td>
-                      <td className={`${td} whitespace-nowrap`}>{anios(f.aniosTrabajados)}<span className="block text-[11px] text-gray-400">{dias(f.diasTrabajados)}</span></td>
-                      <td className={`${td} text-center`}>{f.cantidadContratos}</td>
-                      <td className={`${td} whitespace-nowrap`}>{fechaCorta(f.ultimaFecha)}</td>
                     </tr>
-                    {desplegada && (
-                      <tr className="bg-gray-50 dark:bg-gray-900/40">
-                        <td colSpan={empresaCuit ? 6 : 7} className="px-6 py-3">
-                          {rel === "cargando" || !rel ? (
-                            <span className="text-xs text-gray-500"><FontAwesomeIcon icon={faSpinner} spin /> Cargando relaciones…</span>
-                          ) : (
-                            <TablaRelacionesArca relaciones={rel} razonSocialDe={razonSocialDe} />
-                          )}
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </TablaConEncabezadoFijo>
       )}
     </div>
   );

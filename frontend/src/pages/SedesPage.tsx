@@ -12,6 +12,7 @@ import { Modal } from "../components/ui/Modal";
 import { sweetAlert } from "../utils/sweetAlert";
 
 import { getHelp, hasHelp } from "../data/help/helpContent";
+import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
 
 interface SedeForm {
   nombre: string;
@@ -335,28 +336,26 @@ export const SedesPage: React.FC = () => {
             </div>
           )}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={alSoltar}>
-        <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20">Ordenar</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16">Orden</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sede</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Externo</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Interno</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
-                </tr>
-              </thead>
-              <SortableContext items={(ordenando ? sedesTemp : filteredSedes).map((x) => x._id)} strategy={verticalListSortingStrategy}>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                  {(ordenando ? sedesTemp : filteredSedes).map((sede) => (
-                    <FilaSede key={sede._id} sede={sede} posicion={sedes.findIndex((x) => x._id === sede._id) + 1} indice={(ordenando ? sedesTemp : filteredSedes).indexOf(sede) + 1} ordenando={ordenando} onEmpezarOrden={empezarOrden} onEditar={abrirEditar} onEliminar={eliminar} />
-                  ))}
-                </tbody>
-              </SortableContext>
-            </table>
-          </div>
+        <div className="overflow-clip border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm">
+          <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20">Ordenar</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16">Orden</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sede</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Externo</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Interno</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
+              </tr>
+            </thead>
+            <SortableContext items={(ordenando ? sedesTemp : filteredSedes).map((x) => x._id)} strategy={verticalListSortingStrategy}>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                {(ordenando ? sedesTemp : filteredSedes).map((sede) => (
+                  <FilaSede key={sede._id} sede={sede} posicion={sedes.findIndex((x) => x._id === sede._id) + 1} indice={(ordenando ? sedesTemp : filteredSedes).indexOf(sede) + 1} ordenando={ordenando} onEmpezarOrden={empezarOrden} onEditar={abrirEditar} onEliminar={eliminar} />
+                ))}
+              </tbody>
+            </SortableContext>
+          </TablaConEncabezadoFijo>
         </div>
         </DndContext>
         </div>

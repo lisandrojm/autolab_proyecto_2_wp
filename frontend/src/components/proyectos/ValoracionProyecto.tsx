@@ -8,6 +8,7 @@ import { projectsAPI, Project, ContratosDesalineados } from "../../api/projects"
 import { sweetAlert } from "../../utils/sweetAlert";
 import { formatearFechaCalendario } from "../../utils/fechas";
 import { ChipValoracion, idValoracionDe, useValoraciones, useValoracionDelProyecto } from "./ChipValoracion";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 /**
  * LA VALORACIÓN DEL PROYECTO, A LA VISTA.
@@ -215,43 +216,41 @@ export const ValoracionProyecto: React.FC<{ project: Project; onGuardado: () => 
               ) : desalineados.contratos.length === 0 ? (
                 <p className="text-sm text-emerald-600 dark:text-emerald-400">Todos los contratos están alineados con la valoración del proyecto.</p>
               ) : (
-                <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
-                  <table className="min-w-full text-xs">
-                    <thead className="bg-gray-50 dark:bg-gray-800">
-                      <tr>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-500 uppercase">Persona</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-500 uppercase">Función · Categoría</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-500 uppercase">Contrato</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-500 uppercase">Proyecto</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-500 uppercase">Vigencia</th>
+                <TablaConEncabezadoFijo className="rounded border border-gray-200 dark:border-gray-700" tabla="min-w-full text-xs">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-500 uppercase">Persona</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-500 uppercase">Función · Categoría</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-500 uppercase">Contrato</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-500 uppercase">Proyecto</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-500 uppercase">Vigencia</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {desalineados.contratos.map((c) => (
+                      <tr key={`${c.userProjectId}-${c.contratoIndex}`} className={c.conOverride ? "opacity-70" : ""}>
+                        <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-100">{c.persona || "—"}</td>
+                        <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
+                          {c.funcion || "—"} · {c.categoria || "—"}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="font-semibold text-gray-800 dark:text-gray-100">{c.valoracionContrato || "—"}</span>
+                          {/* El salteo con motivo no es un problema: es una decisión auditada. */}
+                          {c.conOverride && (
+                            <span className="block text-[10px] text-gray-500 dark:text-gray-400" title={c.motivoOverride || ""}>
+                              elegida a mano: {c.motivoOverride}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{c.valoracionProyecto || "—"}</td>
+                        <td className="px-3 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                          {formatearFechaCalendario(c.desde)}
+                          {c.hasta ? ` → ${formatearFechaCalendario(c.hasta)}` : ""}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                      {desalineados.contratos.map((c) => (
-                        <tr key={`${c.userProjectId}-${c.contratoIndex}`} className={c.conOverride ? "opacity-70" : ""}>
-                          <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-100">{c.persona || "—"}</td>
-                          <td className="px-3 py-2 text-gray-600 dark:text-gray-300">
-                            {c.funcion || "—"} · {c.categoria || "—"}
-                          </td>
-                          <td className="px-3 py-2">
-                            <span className="font-semibold text-gray-800 dark:text-gray-100">{c.valoracionContrato || "—"}</span>
-                            {/* El salteo con motivo no es un problema: es una decisión auditada. */}
-                            {c.conOverride && (
-                              <span className="block text-[10px] text-gray-500 dark:text-gray-400" title={c.motivoOverride || ""}>
-                                elegida a mano: {c.motivoOverride}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{c.valoracionProyecto || "—"}</td>
-                          <td className="px-3 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                            {formatearFechaCalendario(c.desde)}
-                            {c.hasta ? ` → ${formatearFechaCalendario(c.hasta)}` : ""}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </TablaConEncabezadoFijo>
               )}
             </section>
           </div>

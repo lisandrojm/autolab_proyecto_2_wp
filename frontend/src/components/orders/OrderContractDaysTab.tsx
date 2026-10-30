@@ -5,6 +5,7 @@ import { faFileContract, faToggleOn, faToggleOff } from "@fortawesome/free-solid
 import { vacationConfigAPI, AvailableContract } from "../../api/vacationConfig";
 import { orderConfigAPI } from "../../api/orderConfig";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 interface ContractDayRule {
   saturday: boolean;
@@ -118,80 +119,78 @@ export const OrderContractDaysTab: React.FC = () => {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 mb-6">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-800">
+      <TablaConEncabezadoFijo className="rounded border border-gray-200 dark:border-gray-700 mb-6" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo de Contrato</th>
+            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sábado</th>
+            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Domingo</th>
+            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Feriados</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+          {contracts.length > 0 ? (
+            contracts.map((contract) => {
+              const rule = rules[contract.id] || { saturday: false, sunday: false, holiday: false };
+              return (
+                <tr key={contract.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">{contract.name}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <button type="button" onClick={() => handleToggle(contract.id, "saturday")} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${rule.saturday ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"}`}>
+                      <FontAwesomeIcon icon={rule.saturday ? faToggleOn : faToggleOff} className="mr-2" />
+                      {rule.saturday ? "Habilitado" : "Deshabilitado"}
+                    </button>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <button type="button" onClick={() => handleToggle(contract.id, "sunday")} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${rule.sunday ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"}`}>
+                      <FontAwesomeIcon icon={rule.sunday ? faToggleOn : faToggleOff} className="mr-2" />
+                      {rule.sunday ? "Habilitado" : "Deshabilitado"}
+                    </button>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <button type="button" onClick={() => handleToggle(contract.id, "holiday")} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${rule.holiday ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"}`}>
+                      <FontAwesomeIcon icon={rule.holiday ? faToggleOn : faToggleOff} className="mr-2" />
+                      {rule.holiday ? "Habilitado" : "Deshabilitado"}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })
+          ) : (
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo de Contrato</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sábado</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Domingo</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Feriados</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            {contracts.length > 0 ? (
-              contracts.map((contract) => {
-                const rule = rules[contract.id] || { saturday: false, sunday: false, holiday: false };
-                return (
-                  <tr key={contract.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{contract.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button type="button" onClick={() => handleToggle(contract.id, "saturday")} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${rule.saturday ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"}`}>
-                        <FontAwesomeIcon icon={rule.saturday ? faToggleOn : faToggleOff} className="mr-2" />
-                        {rule.saturday ? "Habilitado" : "Deshabilitado"}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button type="button" onClick={() => handleToggle(contract.id, "sunday")} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${rule.sunday ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"}`}>
-                        <FontAwesomeIcon icon={rule.sunday ? faToggleOn : faToggleOff} className="mr-2" />
-                        {rule.sunday ? "Habilitado" : "Deshabilitado"}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button type="button" onClick={() => handleToggle(contract.id, "holiday")} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${rule.holiday ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"}`}>
-                        <FontAwesomeIcon icon={rule.holiday ? faToggleOn : faToggleOff} className="mr-2" />
-                        {rule.holiday ? "Habilitado" : "Deshabilitado"}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                  No se encontraron tipos de contrato disponibles.
-                </td>
-              </tr>
-            )}
-            {/* Fila estática para usuarios sin contrato (Opcional, pero consistente con Vacation) */}
-            <tr className="bg-gray-50/50 dark:bg-gray-800/30">
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-500 dark:text-gray-400 italic">Sin contrato activo</div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-center">
-                <button type="button" disabled className="px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed opacity-70">
-                  <FontAwesomeIcon icon={faToggleOff} className="mr-2" />
-                  Deshabilitado
-                </button>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-center">
-                <button type="button" disabled className="px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed opacity-70">
-                  <FontAwesomeIcon icon={faToggleOff} className="mr-2" />
-                  Deshabilitado
-                </button>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-center">
-                <button type="button" disabled className="px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed opacity-70">
-                  <FontAwesomeIcon icon={faToggleOff} className="mr-2" />
-                  Deshabilitado
-                </button>
+              <td colSpan={4} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                No se encontraron tipos de contrato disponibles.
               </td>
             </tr>
-          </tbody>
-        </table>
-      </div>
+          )}
+          {/* Fila estática para usuarios sin contrato (Opcional, pero consistente con Vacation) */}
+          <tr className="bg-gray-50/50 dark:bg-gray-800/30">
+            <td className="px-6 py-4 whitespace-nowrap">
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400 italic">Sin contrato activo</div>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-center">
+              <button type="button" disabled className="px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed opacity-70">
+                <FontAwesomeIcon icon={faToggleOff} className="mr-2" />
+                Deshabilitado
+              </button>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-center">
+              <button type="button" disabled className="px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed opacity-70">
+                <FontAwesomeIcon icon={faToggleOff} className="mr-2" />
+                Deshabilitado
+              </button>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-center">
+              <button type="button" disabled className="px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed opacity-70">
+                <FontAwesomeIcon icon={faToggleOff} className="mr-2" />
+                Deshabilitado
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </TablaConEncabezadoFijo>
     </div>
   );
 };

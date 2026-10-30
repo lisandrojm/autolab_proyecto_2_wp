@@ -9,6 +9,7 @@ import { fechaCorta, diasEntre } from "@compartido/planVacaciones/fechas";
 import { repartirMes } from "@compartido/planVacaciones/repartirMes";
 import { CLASE_ESTADO_ITEM, mesCorto } from "./estilos";
 import { claveAreaTurno, claveFilaArea } from "@compartido/areaTurno";
+import { TablaConEncabezadoFijo } from "../../ui/TablaConEncabezadoFijo";
 
 /**
  * LA GRILLA DEL PLAN: filas = grupos (área › turno › rol), columnas = los meses de la ventana.
@@ -100,63 +101,60 @@ export const GrillaDelPlan: React.FC<Props> = ({ plan, acciones, ocupado }) => {
   return (
     <DndContext sensors={sensors} onDragStart={(e) => setArrastrando(String(e.active.id))} onDragEnd={onDragEnd} onDragCancel={() => setArrastrando(null)}>
       {/*
-        LA TABLA SCROLLEA ADENTRO DE SU CAJA, con el encabezado (Área › Turno › Rol y los meses) pegado arriba.
-        Mismo patrón que Gestión por Usuario: la caja mide lo que queda debajo de la parte fija de la pantalla
-        (`--wp-sticky-top`, que publica PageLayout) y el `<thead>` es sticky dentro de ella; un sticky contra la
-        página no serviría porque el `overflow-x` del scroll horizontal lo anula.
+        EL ENCABEZADO (Área › Turno › Rol y los meses) QUEDA PEGADO debajo del header de la pantalla con el
+        scroll de la página; el scroll lateral es de la tabla. Lo resuelve `TablaConEncabezadoFijo` (antes la
+        tabla scrolleaba adentro de una caja con alto propio: dos barras de scroll).
       */}
-      <div className="overflow-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 max-h-[calc(100svh-var(--wp-sticky-top,220px)-1.5rem)]">
-        <table className="min-w-full border-separate border-spacing-0">
-          <thead className="sticky top-0 z-20">
+      <TablaConEncabezadoFijo className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800" tabla="min-w-full border-separate border-spacing-0">
+        <thead>
+          <tr>
+            <th className={`${th} sticky left-0 z-30 min-w-[280px] max-w-[320px]`}>Área › Turno › Rol</th>
+            {plan.meses.map((mes) => (
+              <th key={mes} className={`${th} min-w-[240px]`}>
+                {mesCorto(mes)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {plan.grupos.length === 0 && (
             <tr>
-              <th className={`${th} sticky left-0 z-30 min-w-[280px] max-w-[320px]`}>Área › Turno › Rol</th>
-              {plan.meses.map((mes) => (
-                <th key={mes} className={`${th} min-w-[240px]`}>
-                  {mesCorto(mes)}
-                </th>
-              ))}
+              <td colSpan={plan.meses.length + 1} className="px-6 py-10 text-center text-sm text-gray-500">
+                El equipo del proyecto no tiene personas con contrato vigente y área/turno asignado. Asignalas desde Equipo › Jerarquía y después «Refrescar equipo».
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {plan.grupos.length === 0 && (
-              <tr>
-                <td colSpan={plan.meses.length + 1} className="px-6 py-10 text-center text-sm text-gray-500">
-                  El equipo del proyecto no tiene personas con contrato vigente y área/turno asignado. Asignalas desde Equipo › Jerarquía y después «Refrescar equipo».
+          )}
+          {plan.grupos.map((g, idx) => {
+            const anterior = plan.grupos[idx - 1];
+            // Un área en dos sedes son dos bloques («Edición · Huidobro», «Edición · Libertador»).
+            const nuevaArea = !anterior || claveFilaArea(anterior) !== claveFilaArea(g);
+            const nuevoTurno = nuevaArea || anterior.shiftId !== g.shiftId;
+            return (
+              <tr key={g.clave} className={nuevaArea ? "border-t-4" : ""}>
+                <td className={`sticky left-0 z-10 bg-white dark:bg-gray-800 align-top px-3 py-2 border-b border-gray-100 dark:border-gray-700 ${nuevaArea ? "border-t-2 border-t-gray-300 dark:border-t-gray-600" : ""}`}>
+                  <FilaGrupo grupo={g} miembroDe={miembroDe} mesDePersona={mesDePersona} avisosPorPersona={avisosPorPersona} puedeEditar={puedeEditar} mostrarArea={nuevaArea} mostrarTurno={nuevoTurno} />
                 </td>
+                {plan.meses.map((mes) => (
+                  <CeldaMes
+                    key={mes}
+                    plan={plan}
+                    grupo={g}
+                    mes={mes}
+                    items={itemsPorCelda.get(`${g.clave}|${mes}`) || []}
+                    miembroDe={miembroDe}
+                    avisosPorItem={avisosPorItem}
+                    acciones={acciones}
+                    puedeEditar={puedeEditar}
+                    ocupado={ocupado}
+                    arrastrandoDeEstaFila={!!arrastrando && arrastrando.split("|")[1] === g.clave}
+                    claseTop={nuevaArea ? "border-t-2 border-t-gray-300 dark:border-t-gray-600" : ""}
+                  />
+                ))}
               </tr>
-            )}
-            {plan.grupos.map((g, idx) => {
-              const anterior = plan.grupos[idx - 1];
-              // Un área en dos sedes son dos bloques («Edición · Huidobro», «Edición · Libertador»).
-              const nuevaArea = !anterior || claveFilaArea(anterior) !== claveFilaArea(g);
-              const nuevoTurno = nuevaArea || anterior.shiftId !== g.shiftId;
-              return (
-                <tr key={g.clave} className={nuevaArea ? "border-t-4" : ""}>
-                  <td className={`sticky left-0 z-10 bg-white dark:bg-gray-800 align-top px-3 py-2 border-b border-gray-100 dark:border-gray-700 ${nuevaArea ? "border-t-2 border-t-gray-300 dark:border-t-gray-600" : ""}`}>
-                    <FilaGrupo grupo={g} miembroDe={miembroDe} mesDePersona={mesDePersona} avisosPorPersona={avisosPorPersona} puedeEditar={puedeEditar} mostrarArea={nuevaArea} mostrarTurno={nuevoTurno} />
-                  </td>
-                  {plan.meses.map((mes) => (
-                    <CeldaMes
-                      key={mes}
-                      plan={plan}
-                      grupo={g}
-                      mes={mes}
-                      items={itemsPorCelda.get(`${g.clave}|${mes}`) || []}
-                      miembroDe={miembroDe}
-                      avisosPorItem={avisosPorItem}
-                      acciones={acciones}
-                      puedeEditar={puedeEditar}
-                      ocupado={ocupado}
-                      arrastrandoDeEstaFila={!!arrastrando && arrastrando.split("|")[1] === g.clave}
-                      claseTop={nuevaArea ? "border-t-2 border-t-gray-300 dark:border-t-gray-600" : ""}
-                    />
-                  ))}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+            );
+          })}
+        </tbody>
+      </TablaConEncabezadoFijo>
       <DragOverlay dropAnimation={null}>
         {arrastrando ? (
           <div className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold shadow-lg">

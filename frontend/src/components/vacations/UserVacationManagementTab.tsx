@@ -16,6 +16,7 @@ import { getContratoActivo, esContratoVigente, fechaISO } from "../../utils/cont
 import { projectsAPI, Project } from "../../api/projects";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 
 /**
  * Fecha de un contrato en DD/MM/YYYY. Pasa por `fechaISO` y no por el `formatDate` de más abajo porque
@@ -156,7 +157,7 @@ const DetalleContratosEmpresa: React.FC<{ fila: FilaEmpresa; arca: RelacionResum
         ) : arca.length === 0 ? (
           <p className="text-gray-500">{b.cuil ? 'ARCA no tiene relaciones de esta persona con esta empleadora.' : 'La persona no tiene CUIL cargado.'}</p>
         ) : (
-          <table className="min-w-full">
+          <TablaConEncabezadoFijo tabla="min-w-full">
             <thead><tr><th className={th}>Inicio</th><th className={th}>Fin</th><th className={th}>Modalidad</th><th className={th}>Puesto</th></tr></thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {arca.map((r, i) => (
@@ -168,7 +169,7 @@ const DetalleContratosEmpresa: React.FC<{ fila: FilaEmpresa; arca: RelacionResum
                 </tr>
               ))}
             </tbody>
-          </table>
+          </TablaConEncabezadoFijo>
         )}
       </div>
       <div>
@@ -176,7 +177,7 @@ const DetalleContratosEmpresa: React.FC<{ fila: FilaEmpresa; arca: RelacionResum
         {!e?.contratos || e.contratos.length === 0 ? (
           <p className="text-gray-500">Sin contratos cargados en WeProdu con esta empleadora.</p>
         ) : (
-          <table className="min-w-full">
+          <TablaConEncabezadoFijo tabla="min-w-full">
             <thead><tr><th className={th}>Tipo</th><th className={th}>Alta</th><th className={th}>Baja</th><th className={th}>Proyecto</th></tr></thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {e.contratos.map((ct, i) => (
@@ -188,7 +189,7 @@ const DetalleContratosEmpresa: React.FC<{ fila: FilaEmpresa; arca: RelacionResum
                 </tr>
               ))}
             </tbody>
-          </table>
+          </TablaConEncabezadoFijo>
         )}
       </div>
     </div>
@@ -237,89 +238,87 @@ const TablaPorEmpresa: React.FC<{ filas: FilaEmpresa[]; orden: Orden | null; onA
   const num = (v: number, color: string) => <span className={`inline-flex min-w-[2.5rem] justify-center px-2 py-1 rounded border font-bold text-sm ${color}`}>{v}</span>;
   const claveDe = (f: FilaEmpresa) => `${f.b.userId}-${f.e?.cuit || f.e?.nombre || 'sin'}`;
   return (
-    <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 mb-6 min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-10.5rem)]">
-      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 relative">
-        <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10 shadow-sm">
+    <TablaConEncabezadoFijo className="rounded border border-gray-200 dark:border-gray-700 mb-6" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700 relative">
+      <thead className="bg-gray-50 dark:bg-gray-800 shadow-sm">
+        <tr>
+          <th className={th()}><BotonOrden columna="empresa" orden={orden} onAlternar={onAlternar}>Empresa</BotonOrden></th>
+          <th className={th()}><BotonOrden columna="usuario" orden={orden} onAlternar={onAlternar}>Usuario</BotonOrden></th>
+          <th className={th()}><BotonOrden columna="antiguedad" orden={orden} onAlternar={onAlternar}>Antigüedad en la empresa</BotonOrden></th>
+          <th className={th()}><span className="inline-flex items-center gap-1.5"><FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500" />Contratos</span></th>
+          <th className={th('text-center text-violet-600 dark:text-violet-400 w-24')}><BotonOrden columna="total" orden={orden} onAlternar={onAlternar}>Total Anual (ley)</BotonOrden></th>
+          <th className={th('text-center text-red-600 dark:text-red-400 w-24')}><BotonOrden columna="tomados" orden={orden} onAlternar={onAlternar}>Tomados (Gozados)</BotonOrden></th>
+          <th className={th('text-center text-amber-600 dark:text-amber-400 w-24')}><BotonOrden columna="pendientes" orden={orden} onAlternar={onAlternar}>Pendientes</BotonOrden></th>
+          <th className={th('text-center text-emerald-600 dark:text-emerald-400 w-24')}><BotonOrden columna="disponibles" orden={orden} onAlternar={onAlternar}>Disponibles</BotonOrden></th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+        {filas.length === 0 ? (
           <tr>
-            <th className={th()}><BotonOrden columna="empresa" orden={orden} onAlternar={onAlternar}>Empresa</BotonOrden></th>
-            <th className={th()}><BotonOrden columna="usuario" orden={orden} onAlternar={onAlternar}>Usuario</BotonOrden></th>
-            <th className={th()}><BotonOrden columna="antiguedad" orden={orden} onAlternar={onAlternar}>Antigüedad en la empresa</BotonOrden></th>
-            <th className={th()}><span className="inline-flex items-center gap-1.5"><FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500" />Contratos</span></th>
-            <th className={th('text-center text-violet-600 dark:text-violet-400 w-24')}><BotonOrden columna="total" orden={orden} onAlternar={onAlternar}>Total Anual (ley)</BotonOrden></th>
-            <th className={th('text-center text-red-600 dark:text-red-400 w-24')}><BotonOrden columna="tomados" orden={orden} onAlternar={onAlternar}>Tomados (Gozados)</BotonOrden></th>
-            <th className={th('text-center text-amber-600 dark:text-amber-400 w-24')}><BotonOrden columna="pendientes" orden={orden} onAlternar={onAlternar}>Pendientes</BotonOrden></th>
-            <th className={th('text-center text-emerald-600 dark:text-emerald-400 w-24')}><BotonOrden columna="disponibles" orden={orden} onAlternar={onAlternar}>Disponibles</BotonOrden></th>
+            <td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-500">No hay filas para mostrar.</td>
           </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-          {filas.length === 0 ? (
-            <tr>
-              <td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-500">No hay filas para mostrar.</td>
-            </tr>
-          ) : (
-            filas.map((fila) => {
-              const { b, e } = fila;
-              const clave = claveDe(fila);
-              const desplegada = abierta === clave;
-              return (
-                <React.Fragment key={clave}>
-                  <tr onClick={() => setAbierta(desplegada ? null : clave)} title="Ver los contratos con esta empresa" className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer">
-                    <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                      <FontAwesomeIcon icon={desplegada ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400 mr-2" />
-                      {e ? e.nombre : <span className="text-gray-400 font-normal">Sin empresa</span>}
-                      {e && e.fuente === 'arca' && <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="Según las relaciones laborales registradas en ARCA">ARCA</span>}
-                      {e && e.tieneRelacionAbierta && <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">activa</span>}
+        ) : (
+          filas.map((fila) => {
+            const { b, e } = fila;
+            const clave = claveDe(fila);
+            const desplegada = abierta === clave;
+            return (
+              <React.Fragment key={clave}>
+                <tr onClick={() => setAbierta(desplegada ? null : clave)} title="Ver los contratos con esta empresa" className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer">
+                  <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                    <FontAwesomeIcon icon={desplegada ? faChevronDown : faChevronRight} className="h-3 w-3 text-gray-400 mr-2" />
+                    {e ? e.nombre : <span className="text-gray-400 font-normal">Sin empresa</span>}
+                    {e && e.fuente === 'arca' && <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="Según las relaciones laborales registradas en ARCA">ARCA</span>}
+                    {e && e.tieneRelacionAbierta && <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">activa</span>}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {b.firstName} {b.lastName}
+                    </div>
+                    <div className="text-xs text-gray-500">{b.email} · ingreso {formatDate(b.hireDate)}</div>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{e ? `${e.texto} (${e.dias.toLocaleString('es-AR')} días)` : '—'}</td>
+                  {/* Todos los contratos de ARCA con esta empleadora, del más nuevo al más viejo. */}
+                  <td className="px-4 py-3 text-xs text-gray-700 dark:text-gray-300 align-top">
+                    {(() => {
+                      const rel = relacionesDe(fila);
+                      if (rel === 'cargando') return <span className="text-gray-400"><FontAwesomeIcon icon={faSpinner} spin /> Cargando…</span>;
+                      if (rel === 'error') return <span className="text-red-600">No se pudieron leer.</span>;
+                      if (!b.cuil) return <span className="text-gray-400">Sin CUIL</span>;
+                      if (rel.length === 0) return <span className="text-gray-400">—</span>;
+                      const MAX = 6;
+                      return (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">{rel.length} {rel.length === 1 ? 'contrato' : 'contratos'}</span>
+                          {rel.slice(0, MAX).map((r, i) => (
+                            <span key={`${r.fechaInicio}-${i}`} className="whitespace-nowrap">
+                              <FontAwesomeIcon icon={faFileContract} className="h-2.5 w-2.5 text-gray-400 mr-1" />
+                              {fechaCorta(r.fechaInicio)} → {r.fechaFin ? fechaCorta(r.fechaFin) : <span className="text-green-600 font-semibold">abierta</span>}
+                              {r.modalidadContrato && <span className="text-gray-500"> · {r.modalidadContrato.length > 38 ? `${r.modalidadContrato.slice(0, 38)}…` : r.modalidadContrato}</span>}
+                            </span>
+                          ))}
+                          {rel.length > MAX && <span className="text-[11px] text-gray-500">+{rel.length - MAX} más · click en la fila para verlos todos</span>}
+                        </div>
+                      );
+                    })()}
+                  </td>
+                  <td className="px-4 py-3 text-center">{num(e?.totalAnnual ?? 0, 'border-violet-300 text-violet-700 dark:border-violet-700 dark:text-violet-300')}</td>
+                  <td className="px-4 py-3 text-center">{num(e?.taken ?? 0, 'border-red-300 text-red-700 dark:border-red-700 dark:text-red-300')}</td>
+                  <td className="px-4 py-3 text-center">{num(e?.pending ?? 0, 'border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300')}</td>
+                  <td className="px-4 py-3 text-center">{num(e?.available ?? 0, 'border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-300')}</td>
+                </tr>
+                {desplegada && (
+                  <tr>
+                    <td colSpan={8} className="p-0">
+                      <DetalleContratosEmpresa fila={fila} arca={relacionesDe(fila)} />
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {b.firstName} {b.lastName}
-                      </div>
-                      <div className="text-xs text-gray-500">{b.email} · ingreso {formatDate(b.hireDate)}</div>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{e ? `${e.texto} (${e.dias.toLocaleString('es-AR')} días)` : '—'}</td>
-                    {/* Todos los contratos de ARCA con esta empleadora, del más nuevo al más viejo. */}
-                    <td className="px-4 py-3 text-xs text-gray-700 dark:text-gray-300 align-top">
-                      {(() => {
-                        const rel = relacionesDe(fila);
-                        if (rel === 'cargando') return <span className="text-gray-400"><FontAwesomeIcon icon={faSpinner} spin /> Cargando…</span>;
-                        if (rel === 'error') return <span className="text-red-600">No se pudieron leer.</span>;
-                        if (!b.cuil) return <span className="text-gray-400">Sin CUIL</span>;
-                        if (rel.length === 0) return <span className="text-gray-400">—</span>;
-                        const MAX = 6;
-                        return (
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">{rel.length} {rel.length === 1 ? 'contrato' : 'contratos'}</span>
-                            {rel.slice(0, MAX).map((r, i) => (
-                              <span key={`${r.fechaInicio}-${i}`} className="whitespace-nowrap">
-                                <FontAwesomeIcon icon={faFileContract} className="h-2.5 w-2.5 text-gray-400 mr-1" />
-                                {fechaCorta(r.fechaInicio)} → {r.fechaFin ? fechaCorta(r.fechaFin) : <span className="text-green-600 font-semibold">abierta</span>}
-                                {r.modalidadContrato && <span className="text-gray-500"> · {r.modalidadContrato.length > 38 ? `${r.modalidadContrato.slice(0, 38)}…` : r.modalidadContrato}</span>}
-                              </span>
-                            ))}
-                            {rel.length > MAX && <span className="text-[11px] text-gray-500">+{rel.length - MAX} más · click en la fila para verlos todos</span>}
-                          </div>
-                        );
-                      })()}
-                    </td>
-                    <td className="px-4 py-3 text-center">{num(e?.totalAnnual ?? 0, 'border-violet-300 text-violet-700 dark:border-violet-700 dark:text-violet-300')}</td>
-                    <td className="px-4 py-3 text-center">{num(e?.taken ?? 0, 'border-red-300 text-red-700 dark:border-red-700 dark:text-red-300')}</td>
-                    <td className="px-4 py-3 text-center">{num(e?.pending ?? 0, 'border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-300')}</td>
-                    <td className="px-4 py-3 text-center">{num(e?.available ?? 0, 'border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-300')}</td>
                   </tr>
-                  {desplegada && (
-                    <tr>
-                      <td colSpan={8} className="p-0">
-                        <DetalleContratosEmpresa fila={fila} arca={relacionesDe(fila)} />
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              );
-            })
-          )}
-        </tbody>
-      </table>
-    </div>
+                )}
+              </React.Fragment>
+            );
+          })
+        )}
+      </tbody>
+    </TablaConEncabezadoFijo>
   );
 };
 
@@ -747,25 +746,9 @@ export const UserVacationManagementTab: React.FC = () => {
       </div>
 
       {/*
-        UNA SOLA BARRA VERTICAL.
-
-        El alto de la tabla es EL QUE QUEDA de pantalla: `100svh` menos lo fijo de arriba, que
-        `PageLayout` publica medido en `--wp-sticky-top`, menos lo que hay DEBAJO de la tabla dentro de
-        esta tarjeta. Ese segundo descuento es el que faltaba: el `mb-6` propio, el paginador y la barra
-        de Guardar sumaban casi diez rem de página sobrante, así que aparecía una segunda barra y llegar
-        al final de la tabla no era llegar al final de la página.
-
-        Los 10.5rem son alto de chrome fijo (1.5 del `mb-6` + 1.5 del `p-6` de la tarjeta + ~2.75 del
-        paginador + ~4.75 de la barra de Guardar), no un número atado a la pantalla. Cuando el paginador
-        no se dibuja —una sola página— sobra ese pedacito abajo: preferible a que falte, porque faltar
-        es justamente la segunda barra.
-
-        NO cambiar `overflow-x` por `clip` para empujar el scroll vertical a la página: rompe el
-        `<thead>` sticky, que se resuelve contra el scrollport más cercano y este div lo sigue siendo.
-        El eje X hace falta igual: la tabla es más ancha que la ventana.
-
-        `min-h` porque el cálculo puede dar muy poco en una pantalla baja, y una tabla de tres filas no
-        se puede usar. Cuando el mínimo y el máximo se cruzan, gana el mínimo.
+        UNA SOLA BARRA VERTICAL: la de la página. El encabezado de la tabla queda pegado debajo del header
+        con `TablaConEncabezadoFijo`; antes la tabla tenía un alto calculado y scroll propio, y la cuenta de
+        lo que había debajo (paginador, barra de Guardar) se desajustaba y aparecía una segunda barra.
       */}
       {/*
         DOS VISTAS DE LA MISMA CUENTA (pedido del 17/10/2026). «Acumulado» es la de siempre: una fila por
@@ -785,183 +768,181 @@ export const UserVacationManagementTab: React.FC = () => {
       {esPorEmpresa ? (
         <TablaPorEmpresa filas={filasEmpresaDeLaPagina} orden={ordenEmpresa.orden} onAlternar={ordenEmpresa.alternar} formatDate={formatDate} />
       ) : (
-      <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 mb-6 min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-10.5rem)]">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 relative">
-          <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10 shadow-sm">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="empresas" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Empresa/s</BotonOrden></th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="usuario" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Usuario</BotonOrden></th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><span className="inline-flex items-center gap-2"><BotonOrden columna="ingreso" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Ingreso</BotonOrden><span className="text-gray-300">/</span><BotonOrden columna="antiguedad" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Antigüedad</BotonOrden></span></th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="rol" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Rol Empresa</BotonOrden></th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="contrato" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Contrato</BotonOrden></th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-violet-600 dark:text-violet-400"><BotonOrden columna="total" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Total Anual</BotonOrden></th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-red-600 dark:text-red-400"><BotonOrden columna="tomados" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Tomados (Gozados)</BotonOrden></th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-amber-600 dark:text-amber-400"><BotonOrden columna="pendientes" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Pendientes</BotonOrden></th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-emerald-600 dark:text-emerald-400"><BotonOrden columna="disponibles" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Disponibles</BotonOrden></th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900">
-                <span className="inline-flex items-center gap-1.5">
-                  <BotonOrden columna="extra" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Días Extra</BotonOrden>
-                  <button
-                    type="button"
-                    onClick={() => setOpenInfoExtra(true)}
-                    title="Qué son los días extra"
-                    className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                  >
-                    <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
-                  </button>
-                </span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredBalances.length > 0 ? (
-              balancesDeLaPagina.map((balance) => {
-                const edits = editedValues[balance.userId] || {};
-                const isModified = hasRowChanges(balance) || hasExtraChange(balance);
+      <TablaConEncabezadoFijo className="rounded border border-gray-200 dark:border-gray-700 mb-6" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700 relative">
+        <thead className="bg-gray-50 dark:bg-gray-800 shadow-sm">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="empresas" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Empresa/s</BotonOrden></th>
+            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="usuario" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Usuario</BotonOrden></th>
+            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><span className="inline-flex items-center gap-2"><BotonOrden columna="ingreso" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Ingreso</BotonOrden><span className="text-gray-300">/</span><BotonOrden columna="antiguedad" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Antigüedad</BotonOrden></span></th>
+            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="rol" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Rol Empresa</BotonOrden></th>
+            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="contrato" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Contrato</BotonOrden></th>
+            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-violet-600 dark:text-violet-400"><BotonOrden columna="total" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Total Anual</BotonOrden></th>
+            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-red-600 dark:text-red-400"><BotonOrden columna="tomados" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Tomados (Gozados)</BotonOrden></th>
+            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-amber-600 dark:text-amber-400"><BotonOrden columna="pendientes" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Pendientes</BotonOrden></th>
+            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-emerald-600 dark:text-emerald-400"><BotonOrden columna="disponibles" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Disponibles</BotonOrden></th>
+            <th className="px-4 py-3 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900">
+              <span className="inline-flex items-center gap-1.5">
+                <BotonOrden columna="extra" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Días Extra</BotonOrden>
+                <button
+                  type="button"
+                  onClick={() => setOpenInfoExtra(true)}
+                  title="Qué son los días extra"
+                  className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+          {filteredBalances.length > 0 ? (
+            balancesDeLaPagina.map((balance) => {
+              const edits = editedValues[balance.userId] || {};
+              const isModified = hasRowChanges(balance) || hasExtraChange(balance);
 
-                const totalValue = edits.totalAnnual ?? balance.display.totalAnnual;
-                const takenValue = edits.taken ?? balance.display.taken;
-                const pendingValue = edits.pending ?? balance.display.pending;
-                const availableValue = edits.available ?? balance.display.available;
-                const extraValue = editedExtras[balance.userId] ?? balance.extraVacationDays ?? 0;
+              const totalValue = edits.totalAnnual ?? balance.display.totalAnnual;
+              const takenValue = edits.taken ?? balance.display.taken;
+              const pendingValue = edits.pending ?? balance.display.pending;
+              const availableValue = edits.available ?? balance.display.available;
+              const extraValue = editedExtras[balance.userId] ?? balance.extraVacationDays ?? 0;
 
-                return (
-                  <tr key={balance.userId} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${isModified ? "bg-amber-50/10 dark:bg-amber-900/5" : ""}`}>
-                    {/* Las empleadoras para las que trabajó, separadas por «|»; el detalle de cada una está en «Por empresa». */}
-                    <td className="px-6 py-4 text-xs text-gray-700 dark:text-gray-300 max-w-[220px]">
-                      {balance.empresas && balance.empresas.length > 0 ? (
-                        <span className="flex flex-wrap gap-x-1">
-                          {balance.empresas.map((e, i) => (
-                            <span key={e} className="whitespace-nowrap">
-                              {i > 0 && <span className="text-gray-400 mr-1">|</span>}
-                              {e}
-                            </span>
-                          ))}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 dark:text-gray-500">—</span>
+              return (
+                <tr key={balance.userId} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${isModified ? "bg-amber-50/10 dark:bg-amber-900/5" : ""}`}>
+                  {/* Las empleadoras para las que trabajó, separadas por «|»; el detalle de cada una está en «Por empresa». */}
+                  <td className="px-6 py-4 text-xs text-gray-700 dark:text-gray-300 max-w-[220px]">
+                    {balance.empresas && balance.empresas.length > 0 ? (
+                      <span className="flex flex-wrap gap-x-1">
+                        {balance.empresas.map((e, i) => (
+                          <span key={e} className="whitespace-nowrap">
+                            {i > 0 && <span className="text-gray-400 mr-1">|</span>}
+                            {e}
+                          </span>
+                        ))}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 dark:text-gray-500">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {balance.firstName} {balance.lastName}
+                      </div>
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${balance.metadata?.activo !== false ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
+                        {balance.metadata?.activo !== false ? "Activo" : "Inactivo"}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500">{balance.email}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                    <div>
+                      Ingreso: <span className="font-semibold text-gray-750 dark:text-gray-300">{formatDate(balance.hireDate)}</span>
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-1.5">
+                      Antigüedad: <span className="font-semibold text-gray-750 dark:text-gray-300">{balance.seniority}</span>
+                      {/* De dónde salió: ARCA (el registro oficial) o lo de WeProdu. El click abre la cuenta. */}
+                      {balance.antiguedad && balance.antiguedad.fuente !== "ninguna" && (
+                        <button
+                          type="button"
+                          onClick={() => setAntiguedadDe(balance)}
+                          title="Ver cómo se calculó la antigüedad y los días por ley"
+                          className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase font-bold hover:opacity-80 ${balance.antiguedad.fuente === "arca" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}
+                        >
+                          {balance.antiguedad.fuente === "arca" ? "ARCA" : balance.antiguedad.fuente === "contratos" ? "Contratos" : "Ingreso"}
+                        </button>
                       )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {balance.firstName} {balance.lastName}
-                        </div>
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${balance.metadata?.activo !== false ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
-                          {balance.metadata?.activo !== false ? "Activo" : "Inactivo"}
-                        </span>
-                      </div>
-                      <div className="text-xs text-gray-500">{balance.email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                      <div>
-                        Ingreso: <span className="font-semibold text-gray-750 dark:text-gray-300">{formatDate(balance.hireDate)}</span>
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-1.5">
-                        Antigüedad: <span className="font-semibold text-gray-750 dark:text-gray-300">{balance.seniority}</span>
-                        {/* De dónde salió: ARCA (el registro oficial) o lo de WeProdu. El click abre la cuenta. */}
-                        {balance.antiguedad && balance.antiguedad.fuente !== "ninguna" && (
-                          <button
-                            type="button"
-                            onClick={() => setAntiguedadDe(balance)}
-                            title="Ver cómo se calculó la antigüedad y los días por ley"
-                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase font-bold hover:opacity-80 ${balance.antiguedad.fuente === "arca" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}
-                          >
-                            {balance.antiguedad.fuente === "arca" ? "ARCA" : balance.antiguedad.fuente === "contratos" ? "Contratos" : "Ingreso"}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
-                      {getActiveRoleFrame(balance)}
-                    </td>
-                    {/* Contrato: el tipo, si está vigente y sus fechas — igual que en Contratos. */}
-                    <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
-                      {(() => {
-                        const contrato = contratoQueRige(balance);
-                        if (!contrato) return <span className="text-gray-400 dark:text-gray-500">Sin contrato</span>;
-                        const vigente = esContratoVigente(contrato);
-                        return (
-                          <div className="flex flex-col gap-1">
-                            <span>{contrato.nombre_contrato || contrato.tipo_contrato || "Sin tipo"}</span>
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
-                            <div className="flex flex-col gap-0.5">
-                              <span>
-                                <span className="text-gray-400 dark:text-gray-500">Alta:</span> {fechaContrato(contrato.fecha_alta_contrato)}
-                              </span>
-                              <span>
-                                {/* Sin baja = tiempo indeterminado, no un dato que falte. */}
-                                <span className="text-gray-400 dark:text-gray-500">Baja:</span> {fechaContrato(contrato.fecha_baja_contrato)}
-                              </span>
-                            </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
+                    {getActiveRoleFrame(balance)}
+                  </td>
+                  {/* Contrato: el tipo, si está vigente y sus fechas — igual que en Contratos. */}
+                  <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
+                    {(() => {
+                      const contrato = contratoQueRige(balance);
+                      if (!contrato) return <span className="text-gray-400 dark:text-gray-500">Sin contrato</span>;
+                      const vigente = esContratoVigente(contrato);
+                      return (
+                        <div className="flex flex-col gap-1">
+                          <span>{contrato.nombre_contrato || contrato.tipo_contrato || "Sin tipo"}</span>
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
+                          <div className="flex flex-col gap-0.5">
+                            <span>
+                              <span className="text-gray-400 dark:text-gray-500">Alta:</span> {fechaContrato(contrato.fecha_alta_contrato)}
+                            </span>
+                            <span>
+                              {/* Sin baja = tiempo indeterminado, no un dato que falte. */}
+                              <span className="text-gray-400 dark:text-gray-500">Baja:</span> {fechaContrato(contrato.fecha_baja_contrato)}
+                            </span>
                           </div>
-                        );
-                      })()}
-                    </td>
-                    {/* Total Annual */}
-                    <td className="px-4 py-4 text-center">
-                      <input
-                        type="number"
-                        min="0"
-                        value={totalValue}
-                        onChange={(e) => handleFieldChange(balance.userId, "totalAnnual", e.target.value)}
-                        className={claseCampo("total", edits.totalAnnual !== undefined && edits.totalAnnual !== balance.display.totalAnnual)}
-                      />
-                    </td>
-                    {/* Tomados */}
-                    <td className="px-4 py-4 text-center">
-                      <input
-                        type="number"
-                        min="0"
-                        value={takenValue}
-                        onChange={(e) => handleFieldChange(balance.userId, "taken", e.target.value)}
-                        className={claseCampo("tomados", edits.taken !== undefined && edits.taken !== balance.display.taken)}
-                      />
-                    </td>
-                    {/* Pendientes */}
-                    <td className="px-4 py-4 text-center">
-                      <input
-                        type="number"
-                        min="0"
-                        value={pendingValue}
-                        onChange={(e) => handleFieldChange(balance.userId, "pending", e.target.value)}
-                        className={claseCampo("pendientes", edits.pending !== undefined && edits.pending !== balance.display.pending)}
-                      />
-                    </td>
-                    {/* Disponibles */}
-                    <td className="px-4 py-4 text-center">
-                      <input
-                        type="number"
-                        min="0"
-                        value={availableValue}
-                        onChange={(e) => handleFieldChange(balance.userId, "available", e.target.value)}
-                        className={claseCampo("disponibles", edits.available !== undefined && edits.available !== balance.display.available)}
-                      />
-                    </td>
-                    {/* Días Extra (beneficio de la compañía): se guarda en el usuario, no en el balance del año */}
-                    <td className="px-4 py-4 text-center">
-                      <input
-                        type="number"
-                        min="0"
-                        value={extraValue}
-                        onChange={(e) => handleExtraChange(balance.userId, e.target.value)}
-                        title="Beneficio de la compañía: días de vacaciones que la empresa suma a los que fija la ley."
-                        className={claseCampo("extra", hasExtraChange(balance))}
-                      />
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                  No se encontraron usuarios con los filtros seleccionados
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                        </div>
+                      );
+                    })()}
+                  </td>
+                  {/* Total Annual */}
+                  <td className="px-4 py-4 text-center">
+                    <input
+                      type="number"
+                      min="0"
+                      value={totalValue}
+                      onChange={(e) => handleFieldChange(balance.userId, "totalAnnual", e.target.value)}
+                      className={claseCampo("total", edits.totalAnnual !== undefined && edits.totalAnnual !== balance.display.totalAnnual)}
+                    />
+                  </td>
+                  {/* Tomados */}
+                  <td className="px-4 py-4 text-center">
+                    <input
+                      type="number"
+                      min="0"
+                      value={takenValue}
+                      onChange={(e) => handleFieldChange(balance.userId, "taken", e.target.value)}
+                      className={claseCampo("tomados", edits.taken !== undefined && edits.taken !== balance.display.taken)}
+                    />
+                  </td>
+                  {/* Pendientes */}
+                  <td className="px-4 py-4 text-center">
+                    <input
+                      type="number"
+                      min="0"
+                      value={pendingValue}
+                      onChange={(e) => handleFieldChange(balance.userId, "pending", e.target.value)}
+                      className={claseCampo("pendientes", edits.pending !== undefined && edits.pending !== balance.display.pending)}
+                    />
+                  </td>
+                  {/* Disponibles */}
+                  <td className="px-4 py-4 text-center">
+                    <input
+                      type="number"
+                      min="0"
+                      value={availableValue}
+                      onChange={(e) => handleFieldChange(balance.userId, "available", e.target.value)}
+                      className={claseCampo("disponibles", edits.available !== undefined && edits.available !== balance.display.available)}
+                    />
+                  </td>
+                  {/* Días Extra (beneficio de la compañía): se guarda en el usuario, no en el balance del año */}
+                  <td className="px-4 py-4 text-center">
+                    <input
+                      type="number"
+                      min="0"
+                      value={extraValue}
+                      onChange={(e) => handleExtraChange(balance.userId, e.target.value)}
+                      title="Beneficio de la compañía: días de vacaciones que la empresa suma a los que fija la ley."
+                      className={claseCampo("extra", hasExtraChange(balance))}
+                    />
+                  </td>
+                </tr>
+              );
+            })
+          ) : (
+            <tr>
+              <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                No se encontraron usuarios con los filtros seleccionados
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </TablaConEncabezadoFijo>
 
       )}
 

@@ -15,6 +15,7 @@ import { clientsAPI, type Client } from '../api/clients';
 import { customAlphabet } from 'nanoid';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { fechaDeCalendario } from '../utils/fechas';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 const HELP_KEY = 'clients' as const;
 
@@ -416,46 +417,44 @@ export const ClientsPage: React.FC = () => {
         <>
           {/* Grid / tabla de clientes */}
           {effectiveViewMode === 'table' ? (
-            <div className="mt-6 overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800/50 shadow-sm">
-              <table className="w-full text-left text-sm border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    <th className="px-4 py-3">Cliente</th>
-                    <th className="px-4 py-3">Empresa</th>
-                    <th className="px-4 py-3">Email</th>
-                    <th className="px-4 py-3">Alta</th>
-                    <th className="px-4 py-3 text-right">Acciones</th>
+            <TablaConEncabezadoFijo className="mt-6 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800/50 shadow-sm" tabla="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3">Cliente</th>
+                  <th className="px-4 py-3">Empresa</th>
+                  <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Alta</th>
+                  <th className="px-4 py-3 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                {filteredClients.map((client) => (
+                  <tr key={client._id} onClick={() => navigate(`/clients/${client._id}`)} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer">
+                    <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">{client.name}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{client.company || '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{client.email}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{client.createdAt ? new Date(client.createdAt as any).toLocaleDateString() : '—'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                        {canManage && (
+                          <>
+                            <button onClick={() => openEdit(client)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Editar cliente">
+                              <FontAwesomeIcon icon={faEdit} />
+                            </button>
+                            <button onClick={() => openClone(client)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Clonar cliente">
+                              <FontAwesomeIcon icon={faClone} />
+                            </button>
+                            <button onClick={() => handleDeleteClient(client)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Eliminar cliente">
+                              <FontAwesomeIcon icon={faTrash} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                  {filteredClients.map((client) => (
-                    <tr key={client._id} onClick={() => navigate(`/clients/${client._id}`)} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer">
-                      <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100">{client.name}</td>
-                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{client.company || '—'}</td>
-                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{client.email}</td>
-                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{client.createdAt ? new Date(client.createdAt as any).toLocaleDateString() : '—'}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                          {canManage && (
-                            <>
-                              <button onClick={() => openEdit(client)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Editar cliente">
-                                <FontAwesomeIcon icon={faEdit} />
-                              </button>
-                              <button onClick={() => openClone(client)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Clonar cliente">
-                                <FontAwesomeIcon icon={faClone} />
-                              </button>
-                              <button onClick={() => handleDeleteClient(client)} className="p-1.5 text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Eliminar cliente">
-                                <FontAwesomeIcon icon={faTrash} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </TablaConEncabezadoFijo>
           ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             {filteredClients.map((client) => {

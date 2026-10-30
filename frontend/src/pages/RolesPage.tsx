@@ -18,6 +18,7 @@ import { avisosDeRol, CAPACIDAD_ITEMS, CAPACIDAD_PERMISSIONS, esPermisoMobile, e
 import { useNavigate } from "react-router-dom";
 import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 import { fechaDeCalendario } from "../utils/fechas";
+import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
 
 const HELP_KEY = "roles" as const;
 
@@ -1384,93 +1385,91 @@ export const RolesPage: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    {/*
-                      SIN LA COLUMNA TENANT.
+            <div className="overflow-clip border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
+              <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
+                <thead>
+                  {/*
+                    SIN LA COLUMNA TENANT.
 
-                      Decía lo mismo en todas las filas: un rol sólo puede ser del tenant en el que
-                      estás parado, y cuál es lo dice el selector del encabezado. Ocupaba una columna
-                      entera para repetir algo que ya está en pantalla.
-                    */}
-                    <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                      <CabeceraOrdenable etiqueta="Rol" columna="nombre" orden={orden} onOrdenar={ordenarPor} />
-                      <CabeceraOrdenable etiqueta="Permisos" columna="permisos" orden={orden} onOrdenar={ordenarPor} />
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                    {rolesOrdenados.map((role) => {
-                      const isSuperAdminRole = role.name.toLowerCase() === "superadmin";
-                      // const isActionDisabled = isSuperAdminRole && !isSuperAdmin; // Removed unsed var
-                      return (
-                        <tr key={role._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => openView(role)}>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col gap-1">
-                              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                {role.name}
-                                {role.permissions.some((p) => p.startsWith("tenants:")) && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800">SA</span>}
-                                {role.isSystem && <span className="text-[9px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 px-1.5 py-0.5 rounded uppercase tracking-wider">Sistema</span>}
-                                {role.isDefault && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">Default</span>}
-                              </span>
-                              {role.description && <span className="text-xs text-gray-500 dark:text-gray-500 line-clamp-1">{role.description}</span>}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            {isSuperAdminRole ? (
-                              <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400">
-                                <FontAwesomeIcon icon={faShieldHalved} className="h-3 w-3" />
-                                Total
-                              </span>
-                            ) : (
-                              // Mismo desglose que en las tarjetas: de qué es el rol, no cuántos permisos tiene.
-                              <ResumenPermisos permisos={role.permissions} />
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                              {!isSuperAdminRole && (
-                                <>
+                    Decía lo mismo en todas las filas: un rol sólo puede ser del tenant en el que
+                    estás parado, y cuál es lo dice el selector del encabezado. Ocupaba una columna
+                    entera para repetir algo que ya está en pantalla.
+                  */}
+                  <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                    <CabeceraOrdenable etiqueta="Rol" columna="nombre" orden={orden} onOrdenar={ordenarPor} />
+                    <CabeceraOrdenable etiqueta="Permisos" columna="permisos" orden={orden} onOrdenar={ordenarPor} />
+                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                  {rolesOrdenados.map((role) => {
+                    const isSuperAdminRole = role.name.toLowerCase() === "superadmin";
+                    // const isActionDisabled = isSuperAdminRole && !isSuperAdmin; // Removed unsed var
+                    return (
+                      <tr key={role._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => openView(role)}>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                              {role.name}
+                              {role.permissions.some((p) => p.startsWith("tenants:")) && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800">SA</span>}
+                              {role.isSystem && <span className="text-[9px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 px-1.5 py-0.5 rounded uppercase tracking-wider">Sistema</span>}
+                              {role.isDefault && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">Default</span>}
+                            </span>
+                            {role.description && <span className="text-xs text-gray-500 dark:text-gray-500 line-clamp-1">{role.description}</span>}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {isSuperAdminRole ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+                              <FontAwesomeIcon icon={faShieldHalved} className="h-3 w-3" />
+                              Total
+                            </span>
+                          ) : (
+                            // Mismo desglose que en las tarjetas: de qué es el rol, no cuántos permisos tiene.
+                            <ResumenPermisos permisos={role.permissions} />
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                            {!isSuperAdminRole && (
+                              <>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEdit(role);
+                                  }}
+                                  className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                                  title="Editar"
+                                >
+                                  <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                                </button>
+                                {hasPermission("admin_roles:view") && !role.isSystem && (
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      openEdit(role);
+                                      handleDelete(role);
                                     }}
-                                    className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
-                                    title="Editar"
+                                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                                    title="Eliminar"
                                   >
-                                    <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                                    <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                                   </button>
-                                  {hasPermission("admin_roles:view") && !role.isSystem && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDelete(role);
-                                      }}
-                                      className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
-                                      title="Eliminar"
-                                    >
-                                      <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                                    </button>
-                                  )}
-                                  {role.isSystem && (
-                                    <div className="p-1.5 text-gray-400" title="Rol de sistema protegido">
-                                      <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                              {isSuperAdminRole && <FontAwesomeIcon icon={faLock} className="text-gray-400 h-4 w-4 mx-2" title="Rol protegido" />}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                                )}
+                                {role.isSystem && (
+                                  <div className="p-1.5 text-gray-400" title="Rol de sistema protegido">
+                                    <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
+                                  </div>
+                                )}
+                              </>
+                            )}
+                            {isSuperAdminRole && <FontAwesomeIcon icon={faLock} className="text-gray-400 h-4 w-4 mx-2" title="Rol protegido" />}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </TablaConEncabezadoFijo>
             </div>
           )}
 

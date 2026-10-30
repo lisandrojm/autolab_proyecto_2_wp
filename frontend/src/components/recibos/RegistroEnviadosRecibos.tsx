@@ -7,6 +7,7 @@ import { recibosSueldoAPI, type PaginaEnviados, type ReciboEnviado } from "../..
 import { getImageUrl } from "../../utils/imageHelpers";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { DetalleRecibo, fechaHora, fmtCuil, periodoTexto, pesos } from "./DetalleRecibo";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 /*
   REGISTRO DE RECIBOS ENVIADOS (pedido del 21/10/2026: «que quede guardado lo enviado, no perder los
@@ -200,94 +201,92 @@ export const RegistroEnviadosRecibos: React.FC = () => {
           <LoadingSpinner />
         </div>
       ) : (
-        <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto ${cargando ? "opacity-60" : ""}`}>
-          <table className="w-full text-left border-collapse">
-            <thead>
+        <TablaConEncabezadoFijo className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 ${cargando ? "opacity-60" : ""}`} tabla="w-full text-left border-collapse">
+          <thead>
+            <tr>
+              <th className={th}>Enviado</th>
+              <th className={th}>Persona</th>
+              <th className={th}>Legajo</th>
+              <th className={th}>CUIL</th>
+              <th className={th}>Período</th>
+              <th className={th}>Categoría · Tarea</th>
+              <th className={`${th} text-right`}>Neto a cobrar</th>
+              <th className={th}>Código</th>
+              <th className={th}>Estado | Firma</th>
+              <th className={th}></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            {datos.items.length === 0 && (
               <tr>
-                <th className={th}>Enviado</th>
-                <th className={th}>Persona</th>
-                <th className={th}>Legajo</th>
-                <th className={th}>CUIL</th>
-                <th className={th}>Período</th>
-                <th className={th}>Categoría · Tarea</th>
-                <th className={`${th} text-right`}>Neto a cobrar</th>
-                <th className={th}>Código</th>
-                <th className={th}>Estado | Firma</th>
-                <th className={th}></th>
+                <td colSpan={10} className="px-4 py-10 text-center text-sm text-gray-500">
+                  {datos.total === 0 && !q && !periodo && !estado ? "Todavía no se envió ningún recibo a firmar." : "Ningún recibo enviado coincide con los filtros."}
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {datos.items.length === 0 && (
-                <tr>
-                  <td colSpan={10} className="px-4 py-10 text-center text-sm text-gray-500">
-                    {datos.total === 0 && !q && !periodo && !estado ? "Todavía no se envió ningún recibo a firmar." : "Ningún recibo enviado coincide con los filtros."}
-                  </td>
-                </tr>
-              )}
-              {datos.items.map((f) => (
-                <tr key={f._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col whitespace-nowrap">
-                      <span className="text-sm">{fechaHora(f.enviadoEl)}</span>
-                      {f.nombreEnviadoPor && <span className="text-[11px] text-gray-400">por {f.nombreEnviadoPor}</span>}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col min-w-[12rem]">
-                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{f.nombreUsuario || f.datos?.nombre || "—"}</span>
-                      {f.datos?.nombre && <span className="text-xs text-gray-500">En el recibo: {f.datos.nombre}</span>}
-                      {f.nombreProyecto && <span className="text-[11px] text-gray-400">{f.nombreProyecto}</span>}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm font-mono">{f.datos?.legajo || "—"}</td>
-                  <td className="px-4 py-3 text-sm font-mono whitespace-nowrap">{fmtCuil(f.datos?.cuil || "")}</td>
-                  <td className="px-4 py-3 text-sm whitespace-nowrap">{periodoTexto(f.periodo)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col min-w-[10rem]">
-                      <span className="text-sm">{f.datos?.categoria || "—"}</span>
-                      {f.datos?.tarea && <span className="text-xs text-gray-500">{f.datos.tarea}</span>}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm whitespace-nowrap text-right font-semibold">{pesos(f.datos?.neto)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-mono">{f.codigo || "—"}</span>
-                      <span className="text-[11px] text-gray-400 max-w-[16rem] truncate" title={f.nombreEnviado}>
-                        {f.nombreEnviado}
+            )}
+            {datos.items.map((f) => (
+              <tr key={f._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
+                <td className="px-4 py-3">
+                  <div className="flex flex-col whitespace-nowrap">
+                    <span className="text-sm">{fechaHora(f.enviadoEl)}</span>
+                    {f.nombreEnviadoPor && <span className="text-[11px] text-gray-400">por {f.nombreEnviadoPor}</span>}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-col min-w-[12rem]">
+                    <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{f.nombreUsuario || f.datos?.nombre || "—"}</span>
+                    {f.datos?.nombre && <span className="text-xs text-gray-500">En el recibo: {f.datos.nombre}</span>}
+                    {f.nombreProyecto && <span className="text-[11px] text-gray-400">{f.nombreProyecto}</span>}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-sm font-mono">{f.datos?.legajo || "—"}</td>
+                <td className="px-4 py-3 text-sm font-mono whitespace-nowrap">{fmtCuil(f.datos?.cuil || "")}</td>
+                <td className="px-4 py-3 text-sm whitespace-nowrap">{periodoTexto(f.periodo)}</td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-col min-w-[10rem]">
+                    <span className="text-sm">{f.datos?.categoria || "—"}</span>
+                    {f.datos?.tarea && <span className="text-xs text-gray-500">{f.datos.tarea}</span>}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-sm whitespace-nowrap text-right font-semibold">{pesos(f.datos?.neto)}</td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-mono">{f.codigo || "—"}</span>
+                    <span className="text-[11px] text-gray-400 max-w-[16rem] truncate" title={f.nombreEnviado}>
+                      {f.nombreEnviado}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  {f.estado === "firmado" ? (
+                    <span className="inline-flex flex-col">
+                      <span className="inline-flex w-fit items-center gap-1 rounded-full border border-green-200 bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300">
+                        <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" /> Firmado
                       </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {f.estado === "firmado" ? (
-                      <span className="inline-flex flex-col">
-                        <span className="inline-flex w-fit items-center gap-1 rounded-full border border-green-200 bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300">
-                          <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" /> Firmado
-                        </span>
-                        {f.firmadoEl && <span className="text-[11px] text-green-600">{fechaHora(f.firmadoEl)}</span>}
-                      </span>
-                    ) : (
-                      <span className="inline-flex w-fit items-center gap-1 rounded-full border border-purple-200 bg-purple-100 px-2 py-0.5 text-[11px] font-semibold text-purple-700 dark:border-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
-                        <FontAwesomeIcon icon={faClock} className="h-3 w-3" /> Esperando firma
-                      </span>
+                      {f.firmadoEl && <span className="text-[11px] text-green-600">{fechaHora(f.firmadoEl)}</span>}
+                    </span>
+                  ) : (
+                    <span className="inline-flex w-fit items-center gap-1 rounded-full border border-purple-200 bg-purple-100 px-2 py-0.5 text-[11px] font-semibold text-purple-700 dark:border-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                      <FontAwesomeIcon icon={faClock} className="h-3 w-3" /> Esperando firma
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    {f.archivoUrl && (
+                      <a href={getImageUrl(f.archivoUrl)} target="_blank" rel="noreferrer" className="p-2 text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-900/20 rounded-lg" title="Abrir el PDF que se envió">
+                        <FontAwesomeIcon icon={faFilePdf} />
+                      </a>
                     )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      {f.archivoUrl && (
-                        <a href={getImageUrl(f.archivoUrl)} target="_blank" rel="noreferrer" className="p-2 text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-900/20 rounded-lg" title="Abrir el PDF que se envió">
-                          <FontAwesomeIcon icon={faFilePdf} />
-                        </a>
-                      )}
-                      <button type="button" onClick={() => abrirDetalle(f)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Ver el detalle de lo que se envió">
-                        <FontAwesomeIcon icon={faAlignLeft} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    <button type="button" onClick={() => abrirDetalle(f)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Ver el detalle de lo que se envió">
+                      <FontAwesomeIcon icon={faAlignLeft} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </TablaConEncabezadoFijo>
       )}
 
       {datos && paginas > 1 && (

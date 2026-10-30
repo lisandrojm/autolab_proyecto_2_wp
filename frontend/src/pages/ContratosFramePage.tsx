@@ -22,6 +22,7 @@ import { PruebaFirmaPlantillaModal } from '../components/plantillas/PruebaFirmaP
 import { declaraFirma } from '../api/pruebaFirma';
 import { BadgeCustom, CuerpoPlantillaCustom, TildePlantillaCustom } from '../components/contratacion/PlantillaCustom';
 import { PLACEHOLDER_CONTRATO_CUSTOM } from '@compartido/textoCustom';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 const emptyForm = { nombre: '', externalId: '', content: '', contratoIds: [] as string[] };
 
@@ -434,92 +435,90 @@ export const ContratosFramePage: React.FC = () => {
           <Card variant="create" onClick={openCreate} header={{ title: 'Nuevo', subtitle: 'Agregar contrato', icon: faFileContract }} />
         </div>
       ) : (
-        <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900/50">
-              <tr>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contrato</th>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Membrete | Firma</th>
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
-                <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-              {filtered.map((item) => {
-                const sinContenido = !item.esCustom && !hasContent(item.content || '');
-                return (
-                  <tr key={item._id} className={`cursor-pointer ${sinContenido ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-900/20'}`} onClick={() => openEdit(item)}>
-                    <td className={`px-5 py-3 text-sm font-medium ${sinContenido ? 'text-red-700 dark:text-red-300' : 'text-gray-900 dark:text-white'}`}>
-                      <span className="inline-flex items-center gap-2">
-                        {item.name}
-                        {item.esCustom && <BadgeCustom />}
-                        {sinContenido && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowSinContenidoInfo(true);
-                            }}
-                            className="text-red-500 hover:text-red-600 transition-colors"
-                            title="Sin contenido"
-                            aria-label="Sin contenido"
-                          >
-                            <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-                          </button>
-                        )}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300" title={`${item.data?.cantidadJornadas ?? 0} jornadas · x${item.data?.multiplicadorDiario ?? 0}${item.data?.esTiempoIndeterminado ? ' · Tiempo indeterminado' : ''}`}>
-                      {nombresContratos(item)}
-                    </td>
-                    <td className="px-5 py-3 text-sm whitespace-nowrap">
-                      <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${item.isActive === false ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'}`}>{item.isActive === false ? 'Inactivo' : 'Activo'}</span>
-                    </td>
-                    <td className="px-5 py-3 text-sm whitespace-nowrap">
-                      <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${item.usaMembrete ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}>{item.usaMembrete ? 'Activo' : 'Inactivo'}</span>
-                    </td>
-                    <td className="px-5 py-3 text-sm hidden lg:table-cell">
-                      {sinContenido ? (
-                        <span className="font-medium text-red-600 dark:text-red-400">Sin contenido</span>
-                      ) : item.esCustom ? (
-                        <span className="text-gray-500 dark:text-gray-400 italic">Se escribe en Firma digital</span>
-                      ) : (
-                        <span className="truncate max-w-[280px] block text-gray-500 dark:text-gray-400" title="Contenido redactado">
-                          {contentPreview(item.content || '')}
-                        </span>
+        <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-900/50">
+            <tr>
+              <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+              <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contrato</th>
+              <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+              <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Membrete | Firma</th>
+              <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
+              <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+            {filtered.map((item) => {
+              const sinContenido = !item.esCustom && !hasContent(item.content || '');
+              return (
+                <tr key={item._id} className={`cursor-pointer ${sinContenido ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-900/20'}`} onClick={() => openEdit(item)}>
+                  <td className={`px-5 py-3 text-sm font-medium ${sinContenido ? 'text-red-700 dark:text-red-300' : 'text-gray-900 dark:text-white'}`}>
+                    <span className="inline-flex items-center gap-2">
+                      {item.name}
+                      {item.esCustom && <BadgeCustom />}
+                      {sinContenido && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowSinContenidoInfo(true);
+                          }}
+                          className="text-red-500 hover:text-red-600 transition-colors"
+                          title="Sin contenido"
+                          aria-label="Sin contenido"
+                        >
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
+                        </button>
                       )}
-                    </td>
-                    <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-2">
-                        {!sinContenido && (
-                          <button onClick={() => handlePreviewItem(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Previsualizar">
-                            <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
-                          </button>
-                        )}
-                        {!sinContenido && (
-                          <button onClick={() => handleDownloadFile(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar PDF de ejemplo">
-                            <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
-                          </button>
-                        )}
-                        <button onClick={() => openDuplicate(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Duplicar">
-                          <FontAwesomeIcon icon={faCopy} className="h-4 w-4" />
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300" title={`${item.data?.cantidadJornadas ?? 0} jornadas · x${item.data?.multiplicadorDiario ?? 0}${item.data?.esTiempoIndeterminado ? ' · Tiempo indeterminado' : ''}`}>
+                    {nombresContratos(item)}
+                  </td>
+                  <td className="px-5 py-3 text-sm whitespace-nowrap">
+                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${item.isActive === false ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'}`}>{item.isActive === false ? 'Inactivo' : 'Activo'}</span>
+                  </td>
+                  <td className="px-5 py-3 text-sm whitespace-nowrap">
+                    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${item.usaMembrete ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}>{item.usaMembrete ? 'Activo' : 'Inactivo'}</span>
+                  </td>
+                  <td className="px-5 py-3 text-sm hidden lg:table-cell">
+                    {sinContenido ? (
+                      <span className="font-medium text-red-600 dark:text-red-400">Sin contenido</span>
+                    ) : item.esCustom ? (
+                      <span className="text-gray-500 dark:text-gray-400 italic">Se escribe en Firma digital</span>
+                    ) : (
+                      <span className="truncate max-w-[280px] block text-gray-500 dark:text-gray-400" title="Contenido redactado">
+                        {contentPreview(item.content || '')}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-2">
+                      {!sinContenido && (
+                        <button onClick={() => handlePreviewItem(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Previsualizar">
+                          <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
                         </button>
-                        <button onClick={() => openEdit(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar">
-                          <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                      )}
+                      {!sinContenido && (
+                        <button onClick={() => handleDownloadFile(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Descargar PDF de ejemplo">
+                          <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
                         </button>
-                        {!item.delSistema && (<button onClick={() => handleDelete(item)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="Eliminar">
-                          <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                        </button>)}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      )}
+                      <button onClick={() => openDuplicate(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Duplicar">
+                        <FontAwesomeIcon icon={faCopy} className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => openEdit(item)} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar">
+                        <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                      </button>
+                      {!item.delSistema && (<button onClick={() => handleDelete(item)} className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="Eliminar">
+                        <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                      </button>)}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </TablaConEncabezadoFijo>
       )}
 
       <Modal

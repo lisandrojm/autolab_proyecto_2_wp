@@ -77,6 +77,7 @@ import { cachedFetch } from '../utils/refCache';
 import { BotonOrden, useOrden } from '../components/ui/OrdenTabla';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { LinkSiPuede } from '../components/LinkSiPuede';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 const HELP_KEY = 'projectTeam' as const;
 
@@ -3829,151 +3830,149 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar border border-gray-100 dark:border-gray-700 rounded-lg">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[800px]">
-                <thead>
-                  <tr className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
-                    <th className="px-4 py-3">Nombre</th>
-                    <th className="px-4 py-3">Rol</th>
-                    <th className="px-4 py-3">Rol/es Empresa</th>
-                    <th className="px-4 py-3">Proyecto/s</th>
-                    <th className="px-4 py-3">Turnos asociados</th>
-                    <th className="px-4 py-3">Contrato</th>
-                    <th className="px-4 py-3 text-right">Acciones</th>
+            <TablaConEncabezadoFijo tabla="w-full text-left border-collapse min-w-[800px]">
+              <thead>
+                <tr className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                  <th className="px-4 py-3">Nombre</th>
+                  <th className="px-4 py-3">Rol</th>
+                  <th className="px-4 py-3">Rol/es Empresa</th>
+                  <th className="px-4 py-3">Proyecto/s</th>
+                  <th className="px-4 py-3">Turnos asociados</th>
+                  <th className="px-4 py-3">Contrato</th>
+                  <th className="px-4 py-3 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-xs">
+                {searchingCandidates ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                      <FontAwesomeIcon icon={faSearch} className="animate-pulse mr-2" />
+                      Buscando candidatos...
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-xs">
-                  {searchingCandidates ? (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                        <FontAwesomeIcon icon={faSearch} className="animate-pulse mr-2" />
-                        Buscando candidatos...
-                      </td>
-                    </tr>
-                  ) : filteredCandidates.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                        {searchTerm ? `No se encontraron usuarios para "${searchTerm}"` : 'No hay usuarios disponibles para asignar'}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredCandidates.map((user) => {
-                      const isCoordinator = checkIsCoordinator(user);
-                      const metadataProjects = user.metadata?.projects || [];
-                      // Role frames desde contratos/proyectos (unificados por el backend) + los propios del usuario (metadata.roles_frame)
-                      const ownRolFrameNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[]).map((rf: any) => (typeof rf === 'object' ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name)).filter(Boolean) as string[];
-                      const rolFrames = Array.from(new Set([...(user.externalInfo?.rolFrames || []), ...ownRolFrameNames])).filter(Boolean);
-                      const activeProjects = Array.from(new Set(metadataProjects.map((p) => p.nombre_proyecto))).filter(Boolean);
+                ) : filteredCandidates.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                      {searchTerm ? `No se encontraron usuarios para "${searchTerm}"` : 'No hay usuarios disponibles para asignar'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredCandidates.map((user) => {
+                    const isCoordinator = checkIsCoordinator(user);
+                    const metadataProjects = user.metadata?.projects || [];
+                    // Role frames desde contratos/proyectos (unificados por el backend) + los propios del usuario (metadata.roles_frame)
+                    const ownRolFrameNames = (((user.metadata as any)?.rolesFrameIds || (user.metadata as any)?.roles_frame || []) as any[]).map((rf: any) => (typeof rf === 'object' ? rf?.name : allRoleFrames.find((i) => i._id === rf)?.name)).filter(Boolean) as string[];
+                    const rolFrames = Array.from(new Set([...(user.externalInfo?.rolFrames || []), ...ownRolFrameNames])).filter(Boolean);
+                    const activeProjects = Array.from(new Set(metadataProjects.map((p) => p.nombre_proyecto))).filter(Boolean);
 
-                      return (
-                        <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                          <td className="px-4 py-3">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}` : user.email}</span>
-                              <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px]">{user.email}</span>
+                    return (
+                      <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}` : user.email}</span>
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[180px]">{user.email}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1 max-w-[150px]">
+                            {(user.roles || []).map((r) => {
+                              const lower = r.name.toLowerCase();
+                              const isCoord = lower.includes('coordinador');
+                              const isResp = lower.includes('responsable');
+
+                              let classes = 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-100 dark:border-blue-800';
+                              if (isCoord) {
+                                classes = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800';
+                              } else if (isResp) {
+                                classes = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800';
+                              }
+
+                              return (
+                                <span key={r._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap border ${classes}`}>
+                                  {r.name}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {rolFrames.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 max-w-[180px]">
+                              {rolFrames.map((rf, idx) => (
+                                <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
+                                  {rf}
+                                </span>
+                              ))}
                             </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-wrap gap-1 max-w-[150px]">
-                              {(user.roles || []).map((r) => {
-                                const lower = r.name.toLowerCase();
-                                const isCoord = lower.includes('coordinador');
-                                const isResp = lower.includes('responsable');
-
-                                let classes = 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-100 dark:border-blue-800';
-                                if (isCoord) {
-                                  classes = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800';
-                                } else if (isResp) {
-                                  classes = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800';
-                                }
-
-                                return (
-                                  <span key={r._id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap border ${classes}`}>
-                                    {r.name}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            {rolFrames.length > 0 ? (
-                              <div className="flex flex-wrap gap-1 max-w-[180px]">
-                                {rolFrames.map((rf, idx) => (
-                                  <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
-                                    {rf}
-                                  </span>
-                                ))}
-                              </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-0.5">
+                            {activeProjects.length > 0 ? (
+                              activeProjects.map((p, idx) => (
+                                <span key={idx} className="text-[10px] text-gray-500 dark:text-gray-400 italic truncate max-w-[150px]">
+                                  {p}
+                                </span>
+                              ))
                             ) : (
-                              <span className="text-xs text-gray-400">-</span>
+                              <span className="text-xs text-gray-400">—</span>
                             )}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-col gap-0.5">
-                              {activeProjects.length > 0 ? (
-                                activeProjects.map((p, idx) => (
-                                  <span key={idx} className="text-[10px] text-gray-500 dark:text-gray-400 italic truncate max-w-[150px]">
-                                    {p}
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="text-xs text-gray-400">—</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-col gap-1.5">
-                              {user.turnos && user.turnos.length > 0 ? (
-                                user.turnos.map((t) => (
-                                  <div key={typeof t === 'string' ? t : t._id} className="flex flex-col gap-0.5">
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 uppercase w-fit">{typeof t === 'object' ? t.name : 'Turno'}</span>
-                                    {typeof t === 'object' && t.startTime && t.endTime && (
-                                      <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium ml-0.5 italic">
-                                        {t.startTime} - {t.endTime}
-                                      </span>
-                                    )}
-                                  </div>
-                                ))
-                              ) : (
-                                <span className="text-xs text-gray-400">—</span>
-                              )}
-                            </div>
-                          </td>
-                          {/* Su contrato que rige (vigente o no, en el proyecto que sea): decide cómo se lo puede agregar. */}
-                          <td className="px-4 py-3">
-                            {user.contratoQueRige ? <ContratoDeOtroProyecto contrato={user.contratoQueRige as any} conNombre /> : <span className="text-xs text-gray-400">Sin contrato</span>}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            {user.contratoQueRige && esContratoVigente(user.contratoQueRige as any) ? (
-                              <div className="flex flex-col items-end gap-1.5">
-                                <button
-                                  onClick={() => void agregarConContratoVigente(user)}
-                                  disabled={agregandoConContrato === user._id}
-                                  title="Entra a este proyecto con el mismo contrato que ya tiene vigente; el área y el turno se asignan después"
-                                  className="btn-primary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto font-bold disabled:opacity-60 whitespace-nowrap"
-                                >
-                                  <FontAwesomeIcon icon={agregandoConContrato === user._id ? faSpinner : faFileContract} spin={agregandoConContrato === user._id} className="text-[10px]" />
-                                  Agregar con contrato vigente
-                                </button>
-                                <button onClick={() => handleOpenWizard(user._id)} className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold whitespace-nowrap">
-                                  <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
-                                  Nuevo contrato
-                                </button>
-                              </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1.5">
+                            {user.turnos && user.turnos.length > 0 ? (
+                              user.turnos.map((t) => (
+                                <div key={typeof t === 'string' ? t : t._id} className="flex flex-col gap-0.5">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 uppercase w-fit">{typeof t === 'object' ? t.name : 'Turno'}</span>
+                                  {typeof t === 'object' && t.startTime && t.endTime && (
+                                    <span className="text-[9px] text-gray-400 dark:text-gray-500 font-medium ml-0.5 italic">
+                                      {t.startTime} - {t.endTime}
+                                    </span>
+                                  )}
+                                </div>
+                              ))
                             ) : (
-                              <button onClick={() => handleOpenWizard(user._id)} className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold">
-                                <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
-                                Agregar
+                              <span className="text-xs text-gray-400">—</span>
+                            )}
+                          </div>
+                        </td>
+                        {/* Su contrato que rige (vigente o no, en el proyecto que sea): decide cómo se lo puede agregar. */}
+                        <td className="px-4 py-3">
+                          {user.contratoQueRige ? <ContratoDeOtroProyecto contrato={user.contratoQueRige as any} conNombre /> : <span className="text-xs text-gray-400">Sin contrato</span>}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {user.contratoQueRige && esContratoVigente(user.contratoQueRige as any) ? (
+                            <div className="flex flex-col items-end gap-1.5">
+                              <button
+                                onClick={() => void agregarConContratoVigente(user)}
+                                disabled={agregandoConContrato === user._id}
+                                title="Entra a este proyecto con el mismo contrato que ya tiene vigente; el área y el turno se asignan después"
+                                className="btn-primary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto font-bold disabled:opacity-60 whitespace-nowrap"
+                              >
+                                <FontAwesomeIcon icon={agregandoConContrato === user._id ? faSpinner : faFileContract} spin={agregandoConContrato === user._id} className="text-[10px]" />
+                                Agregar con contrato vigente
                               </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                              <button onClick={() => handleOpenWizard(user._id)} className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold whitespace-nowrap">
+                                <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
+                                Nuevo contrato
+                              </button>
+                            </div>
+                          ) : (
+                            <button onClick={() => handleOpenWizard(user._id)} className="btn-secondary text-[11px] py-1.5 px-3 flex items-center gap-2 ml-auto hover:bg-primary-600 hover:text-white hover:border-primary-600 transition-all font-bold">
+                              <FontAwesomeIcon icon={faPlus} className="text-[10px]" />
+                              Agregar
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </TablaConEncabezadoFijo>
           </div>
 
           {/* Paginación de candidatos (misma UX que Contratos/Novedades) */}
@@ -5997,84 +5996,82 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   }
 
                   return effectiveViewMode === 'table' ? (
-                    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-opacity ${teamFetching ? 'opacity-60' : ''}`}>
-                      <div className="overflow-x-auto">
-                        {/*
-                          `border-separate` Y NO `border-collapse`, PARA PODER FIJAR «Usuario».
+                    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-clip transition-opacity ${teamFetching ? 'opacity-60' : ''}`}>
+                      <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0">
+                      {/*
+                        `border-separate` Y NO `border-collapse`, PARA PODER FIJAR «Usuario».
 
-                          Con el modelo colapsado los bordes no son de la celda sino de la grilla de
-                          la tabla, así que no acompañan a una celda `sticky`: la columna viaja y su
-                          filo se queda. Separado, cada celda pinta lo suyo y se mueve con ella —es
-                          la misma configuración que usan las tablas de Contratos, que tienen tres
-                          columnas fijas.
-                          A cambio, el modelo separado IGNORA los bordes puestos en `<tr>`: los que
-                          separan las filas pasan a las celdas (`[&>td]:border-b`), que es de donde
-                          sí se dibujan.
-                        */}
-                        <table className="w-full text-left border-separate border-spacing-0">
-                          <thead>
-                            <tr className="bg-gray-50 dark:bg-gray-900/50 [&>th]:border-b [&>th]:border-gray-200 dark:[&>th]:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              {/*
-                                «Usuario» fija a la izquierda: con dieciocho columnas, al llegar a
-                                Contrato o Estado Impositivo ya no se sabía de quién era la fila, y
-                                justamente ahí es donde se está completando.
-                                El fondo va OPACO y no `dark:bg-gray-900/50` como el resto de la
-                                fila: por una celda fija translúcida se ve pasar lo que scrollea.
-                                `#18202f` es ese mismo gris ya mezclado sobre el fondo del panel.
-                              */}
-                              <th className="sticky left-0 z-[15] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]"><BotonOrden columna="name" {...ordenEquipoProps}>Usuario</BotonOrden></th>
-                              {/*
-                                «Último Contrato», y no «Alta / Baja».
+                        Con el modelo colapsado los bordes no son de la celda sino de la grilla de
+                        la tabla, así que no acompañan a una celda `sticky`: la columna viaja y su
+                        filo se queda. Separado, cada celda pinta lo suyo y se mueve con ella —es
+                        la misma configuración que usan las tablas de Contratos, que tienen tres
+                        columnas fijas.
+                        A cambio, el modelo separado IGNORA los bordes puestos en `<tr>`: los que
+                        separan las filas pasan a las celdas (`[&>td]:border-b`), que es de donde
+                        sí se dibujan.
+                      */}
+                        <thead>
+                          <tr className="bg-gray-50 dark:bg-gray-900/50 [&>th]:border-b [&>th]:border-gray-200 dark:[&>th]:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            {/*
+                              «Usuario» fija a la izquierda: con dieciocho columnas, al llegar a
+                              Contrato o Estado Impositivo ya no se sabía de quién era la fila, y
+                              justamente ahí es donde se está completando.
+                              El fondo va OPACO y no `dark:bg-gray-900/50` como el resto de la
+                              fila: por una celda fija translúcida se ve pasar lo que scrollea.
+                              `#18202f` es ese mismo gris ya mezclado sobre el fondo del panel.
+                            */}
+                            <th className="sticky left-0 z-[15] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]"><BotonOrden columna="name" {...ordenEquipoProps}>Usuario</BotonOrden></th>
+                            {/*
+                              «Último Contrato», y no «Alta / Baja».
 
-                                Una persona puede tener varios contratos en el proyecto —la columna
-                                «Contratos» dice cuántos—, así que un par de fechas sueltas no decía
-                                de CUÁL eran. Estas son las del último, que es el que manda. El detalle
-                                no se pierde: la celda sigue rotulando sus dos líneas con «Alta:» y
-                                «Baja:».
-                              */}
-                              <th className="px-4 py-3 font-semibold whitespace-nowrap"><BotonOrden columna="ultimoContrato" {...ordenEquipoProps}>Último Contrato</BotonOrden></th>
-                              <th className="px-4 py-3 font-semibold text-center"><BotonOrden columna="contratosProyecto" {...ordenEquipoProps}>Contratos</BotonOrden></th>
-                              <th className="px-4 py-3 font-semibold"><BotonOrden columna="roles" {...ordenEquipoProps}>Rol/es</BotonOrden></th>
-                              <th className="px-4 py-3 font-semibold"><BotonOrden columna="rolEmpresa" {...ordenEquipoProps}>Rol/es Empresa</BotonOrden></th>
-                              <th className="px-4 py-3 font-semibold"><BotonOrden columna="estado" {...ordenEquipoProps}>Estado</BotonOrden></th>
-                              <th className="px-4 py-3 font-semibold">Área / Turno</th>
-                              <th className="px-4 py-3 font-semibold text-amber-600 dark:text-amber-400">
-                                <span className="inline-flex items-center gap-1.5">
-                                  Área/Turno Supervisada
-                                  <button type="button" onClick={() => setOpenCoordCountInfo(true)} className="text-amber-500/70 hover:text-amber-500 transition-colors" title="Qué significa el número entre paréntesis" aria-label="Información del número de personas supervisadas">
-                                    <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
-                                  </button>
-                                </span>
-                              </th>
-                              <th className="px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">Supervisores coordinados</th>
-                              <th className="px-4 py-3 font-semibold"><BotonOrden columna="tipoContrato" {...ordenEquipoProps}>Contrato</BotonOrden></th>
-                              <th className="px-4 py-3 font-semibold whitespace-nowrap"><BotonOrden columna="estadoContrato" {...ordenEquipoProps}>Estado Contrato</BotonOrden></th>
-                              <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Impositivo</th>
-                              <th className="px-4 py-3 font-semibold"><BotonOrden columna="reemplazo" {...ordenEquipoProps}>Reemplazo</BotonOrden></th>
-                              <th className="px-4 py-3 font-semibold text-right whitespace-nowrap"><BotonOrden columna="montoJornada" {...ordenEquipoProps}>Monto / Jorn.</BotonOrden></th>
-                              <th className="px-4 py-3 font-semibold text-right whitespace-nowrap"><BotonOrden columna="jornadas" {...ordenEquipoProps}>Jornadas</BotonOrden></th>
-                              <th className="px-4 py-3 font-semibold text-right whitespace-nowrap"><BotonOrden columna="diasPorSemana" {...ordenEquipoProps}>Días por semana</BotonOrden></th>
-                              <th className="px-4 py-3 font-semibold"><BotonOrden columna="horario" {...ordenEquipoProps}>Horario</BotonOrden></th>
-                              <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Horas / día</th>
-                              <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+                              Una persona puede tener varios contratos en el proyecto —la columna
+                              «Contratos» dice cuántos—, así que un par de fechas sueltas no decía
+                              de CUÁL eran. Estas son las del último, que es el que manda. El detalle
+                              no se pierde: la celda sigue rotulando sus dos líneas con «Alta:» y
+                              «Baja:».
+                            */}
+                            <th className="px-4 py-3 font-semibold whitespace-nowrap"><BotonOrden columna="ultimoContrato" {...ordenEquipoProps}>Último Contrato</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold text-center"><BotonOrden columna="contratosProyecto" {...ordenEquipoProps}>Contratos</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold"><BotonOrden columna="roles" {...ordenEquipoProps}>Rol/es</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold"><BotonOrden columna="rolEmpresa" {...ordenEquipoProps}>Rol/es Empresa</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold"><BotonOrden columna="estado" {...ordenEquipoProps}>Estado</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold">Área / Turno</th>
+                            <th className="px-4 py-3 font-semibold text-amber-600 dark:text-amber-400">
+                              <span className="inline-flex items-center gap-1.5">
+                                Área/Turno Supervisada
+                                <button type="button" onClick={() => setOpenCoordCountInfo(true)} className="text-amber-500/70 hover:text-amber-500 transition-colors" title="Qué significa el número entre paréntesis" aria-label="Información del número de personas supervisadas">
+                                  <FontAwesomeIcon icon={faInfoCircle} className="h-3.5 w-3.5" />
+                                </button>
+                              </span>
+                            </th>
+                            <th className="px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">Supervisores coordinados</th>
+                            <th className="px-4 py-3 font-semibold"><BotonOrden columna="tipoContrato" {...ordenEquipoProps}>Contrato</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold whitespace-nowrap"><BotonOrden columna="estadoContrato" {...ordenEquipoProps}>Estado Contrato</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Impositivo</th>
+                            <th className="px-4 py-3 font-semibold"><BotonOrden columna="reemplazo" {...ordenEquipoProps}>Reemplazo</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold text-right whitespace-nowrap"><BotonOrden columna="montoJornada" {...ordenEquipoProps}>Monto / Jorn.</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold text-right whitespace-nowrap"><BotonOrden columna="jornadas" {...ordenEquipoProps}>Jornadas</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold text-right whitespace-nowrap"><BotonOrden columna="diasPorSemana" {...ordenEquipoProps}>Días por semana</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold"><BotonOrden columna="horario" {...ordenEquipoProps}>Horario</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Horas / día</th>
+                            <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+                          </tr>
+                        </thead>
+                        {/* Sin `divide-y`: en el modelo separado los bordes de `<tr>` no se
+                            dibujan. La línea entre filas la pone cada celda (ver `renderUserRow`). */}
+                        <tbody>
+                          {/* Primera carga: sin filas y buscando. Con los encabezados solos la tabla parecía colgada. */}
+                          {rows.length === 0 && teamFetching ? (
+                            <tr>
+                              <td colSpan={99} className="py-16">
+                                <LoadingSpinner message="Cargando equipo..." />
+                              </td>
                             </tr>
-                          </thead>
-                          {/* Sin `divide-y`: en el modelo separado los bordes de `<tr>` no se
-                              dibujan. La línea entre filas la pone cada celda (ver `renderUserRow`). */}
-                          <tbody>
-                            {/* Primera carga: sin filas y buscando. Con los encabezados solos la tabla parecía colgada. */}
-                            {rows.length === 0 && teamFetching ? (
-                              <tr>
-                                <td colSpan={99} className="py-16">
-                                  <LoadingSpinner message="Cargando equipo..." />
-                                </td>
-                              </tr>
-                            ) : (
-                              rows.map((u) => renderUserRow(u))
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                          ) : (
+                            rows.map((u) => renderUserRow(u))
+                          )}
+                        </tbody>
+                      </TablaConEncabezadoFijo>
                     </div>
                   ) : (
                     rows.length === 0 && teamFetching ? (

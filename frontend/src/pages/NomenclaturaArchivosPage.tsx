@@ -9,6 +9,7 @@ import { ModalVariables } from "../components/ui/RichTextEditor";
 import { ViewToggle, ViewMode } from "../components/ui/ViewToggle";
 import { sweetAlert } from "../utils/sweetAlert";
 import { nomenclaturasAPI, Nomenclatura, ErrorPatron, ETIQUETA_TIPO, LargoNomenclatura } from "../api/nomenclaturas";
+import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
 
 /**
  * ABM de la nomenclatura de archivos.
@@ -643,50 +644,48 @@ export const NomenclaturaArchivosPage: React.FC = () => {
          * lee y que empujan fuera de la vista lo único que la tabla responde bien — qué tipos hay,
          * cuáles están personalizados y cuáles se van a acortar. El patrón se ve al editar.
          */
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                <tr className="text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  <th className="px-4 py-3 whitespace-nowrap">Tipo</th>
-                  <th className="px-4 py-3 whitespace-nowrap">Estado</th>
-                  <th className="px-4 py-3 whitespace-nowrap" title="Variables que no se pueden sacar / en cuántas partes queda dividido el nombre">
-                    Oblig. · Campos
-                  </th>
-                  <th className="px-4 py-3 whitespace-nowrap" title="Cuánto mide el nombre contra el tope de 255">
-                    Largo
-                  </th>
-                  <th className="px-4 py-3 text-right whitespace-nowrap">Acciones</th>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-clip">
+          <TablaConEncabezadoFijo tabla="w-full text-sm">
+            <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+              <tr className="text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 whitespace-nowrap">Tipo</th>
+                <th className="px-4 py-3 whitespace-nowrap">Estado</th>
+                <th className="px-4 py-3 whitespace-nowrap" title="Variables que no se pueden sacar / en cuántas partes queda dividido el nombre">
+                  Oblig. · Campos
+                </th>
+                <th className="px-4 py-3 whitespace-nowrap" title="Cuánto mide el nombre contra el tope de 255">
+                  Largo
+                </th>
+                <th className="px-4 py-3 text-right whitespace-nowrap">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+              {filtradas.map((fila) => (
+                <tr key={fila.tipo} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                  <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">{ETIQUETA_TIPO[fila.tipo] || fila.tipo}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex items-center w-fit rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap ${
+                        fila.personalizado ? "bg-blue-500/10 text-blue-500 border border-blue-500/50" : "bg-orange-500/10 text-orange-500 border border-orange-500/50"
+                      }`}
+                    >
+                      {fila.personalizado ? "Personalizado" : "Sistema"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    <strong>{fila.variables.filter((v) => v.requerida).length}</strong> · <strong>{fila.ejemplo.split("_").filter(Boolean).length}</strong>
+                  </td>
+                  <td className="px-4 py-3 min-w-[11rem]">{fila.largo && <MedidorLargo largo={fila.largo} />}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <CardFooterAction icon={faEdit} title="Editar la nomenclatura" onClick={() => setEditando(fila)} />
+                      {fila.personalizado && <CardFooterAction icon={faTrash} title="Volver al nombre de fábrica" onClick={() => restaurar(fila)} />}
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
-                {filtradas.map((fila) => (
-                  <tr key={fila.tipo} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                    <td className="px-4 py-3 font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">{ETIQUETA_TIPO[fila.tipo] || fila.tipo}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center w-fit rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap ${
-                          fila.personalizado ? "bg-blue-500/10 text-blue-500 border border-blue-500/50" : "bg-orange-500/10 text-orange-500 border border-orange-500/50"
-                        }`}
-                      >
-                        {fila.personalizado ? "Personalizado" : "Sistema"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                      <strong>{fila.variables.filter((v) => v.requerida).length}</strong> · <strong>{fila.ejemplo.split("_").filter(Boolean).length}</strong>
-                    </td>
-                    <td className="px-4 py-3 min-w-[11rem]">{fila.largo && <MedidorLargo largo={fila.largo} />}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <CardFooterAction icon={faEdit} title="Editar la nomenclatura" onClick={() => setEditando(fila)} />
-                        {fila.personalizado && <CardFooterAction icon={faTrash} title="Volver al nombre de fábrica" onClick={() => restaurar(fila)} />}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </TablaConEncabezadoFijo>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

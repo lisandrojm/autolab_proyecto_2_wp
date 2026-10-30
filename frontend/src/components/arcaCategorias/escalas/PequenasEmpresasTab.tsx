@@ -8,6 +8,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { sweetAlert } from '../../../utils/sweetAlert';
 import { formatearFechaCalendario } from '../../../utils/fechas';
 import { ChipOrigen, pesos, Th } from './piezas';
+import { TablaConEncabezadoFijo } from '../../ui/TablaConEncabezadoFijo';
 
 /**
  * El capítulo de PEQUEÑAS EMPRESAS del acta.
@@ -146,66 +147,64 @@ export const PequenasEmpresasTab: React.FC<Props> = ({ convenio, fecha, filas, c
           description="Los cuatro valores por grupo (semana, jornada adicional y las dos horas extra) salen del capítulo correspondiente del acta. No se pueden derivar de la escala mensual: hay que cargarlos."
         />
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gray-50 dark:bg-gray-900/50">
-                <tr>
-                  <Th className="text-left">Grupo</Th>
-                  <Th className="text-right">Semana 9 h (lun–vie)</Th>
-                  <Th className="text-right">Jornada adicional 9 h</Th>
-                  <Th className="text-right">Hora extra 50 %</Th>
-                  <Th className="text-right">Hora extra 100 %</Th>
-                  <Th className="text-left hidden lg:table-cell">Vigencia</Th>
-                  {canManage && <Th className="text-right">Acciones</Th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {filas.map((f) => {
-                  const desvio = desvios.get(f._id);
-                  return (
-                    <tr key={f._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-clip">
+          <TablaConEncabezadoFijo tabla="min-w-full">
+            <thead className="bg-gray-50 dark:bg-gray-900/50">
+              <tr>
+                <Th className="text-left">Grupo</Th>
+                <Th className="text-right">Semana 9 h (lun–vie)</Th>
+                <Th className="text-right">Jornada adicional 9 h</Th>
+                <Th className="text-right">Hora extra 50 %</Th>
+                <Th className="text-right">Hora extra 100 %</Th>
+                <Th className="text-left hidden lg:table-cell">Vigencia</Th>
+                {canManage && <Th className="text-right">Acciones</Th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {filas.map((f) => {
+                const desvio = desvios.get(f._id);
+                return (
+                  <tr key={f._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                    <td className="px-4 py-3">
+                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Grupo {f.grupo}</span>
+                      <div className="mt-1">
+                        <ChipOrigen origen={f.origen} />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right text-sm font-mono text-gray-900 dark:text-gray-100">{pesos(f.semana9hsLunVie)}</td>
+                    <td className="px-4 py-3 text-right text-sm font-mono text-gray-900 dark:text-gray-100">
+                      {pesos(f.jornadaAdicional9hs)}
+                      {desvio !== undefined && (
+                        <span className="block text-[11px] text-amber-600 dark:text-amber-400" title={`La semana ÷ 5 da ${pesos(redondear2(f.semana9hsLunVie / 5))}. El importe del acta es el que se paga.`}>
+                          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 mr-1" />
+                          {desvio > 0 ? '+' : ''}
+                          {desvio} vs semana ÷ 5
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right text-sm font-mono text-gray-700 dark:text-gray-300">{pesos(f.horaExtra50)}</td>
+                    <td className="px-4 py-3 text-right text-sm font-mono text-gray-700 dark:text-gray-300">{pesos(f.horaExtra100)}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                      {formatearFechaCalendario(f.desde)} → {f.hasta ? formatearFechaCalendario(f.hasta) : 'sin fin'}
+                      {f.tramo && <span className="block font-mono">{f.tramo}</span>}
+                    </td>
+                    {canManage && (
                       <td className="px-4 py-3">
-                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Grupo {f.grupo}</span>
-                        <div className="mt-1">
-                          <ChipOrigen origen={f.origen} />
+                        <div className="flex items-center justify-end gap-1">
+                          <button type="button" onClick={() => abrirEdicion(f)} title="Editar" className="p-1.5 rounded text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                            <FontAwesomeIcon icon={faPenToSquare} className="h-4 w-4" />
+                          </button>
+                          <button type="button" onClick={() => void borrar(f)} title="Borrar" className="p-1.5 rounded text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                          </button>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-right text-sm font-mono text-gray-900 dark:text-gray-100">{pesos(f.semana9hsLunVie)}</td>
-                      <td className="px-4 py-3 text-right text-sm font-mono text-gray-900 dark:text-gray-100">
-                        {pesos(f.jornadaAdicional9hs)}
-                        {desvio !== undefined && (
-                          <span className="block text-[11px] text-amber-600 dark:text-amber-400" title={`La semana ÷ 5 da ${pesos(redondear2(f.semana9hsLunVie / 5))}. El importe del acta es el que se paga.`}>
-                            <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 mr-1" />
-                            {desvio > 0 ? '+' : ''}
-                            {desvio} vs semana ÷ 5
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right text-sm font-mono text-gray-700 dark:text-gray-300">{pesos(f.horaExtra50)}</td>
-                      <td className="px-4 py-3 text-right text-sm font-mono text-gray-700 dark:text-gray-300">{pesos(f.horaExtra100)}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">
-                        {formatearFechaCalendario(f.desde)} → {f.hasta ? formatearFechaCalendario(f.hasta) : 'sin fin'}
-                        {f.tramo && <span className="block font-mono">{f.tramo}</span>}
-                      </td>
-                      {canManage && (
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-1">
-                            <button type="button" onClick={() => abrirEdicion(f)} title="Editar" className="p-1.5 rounded text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                              <FontAwesomeIcon icon={faPenToSquare} className="h-4 w-4" />
-                            </button>
-                            <button type="button" onClick={() => void borrar(f)} title="Borrar" className="p-1.5 rounded text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </TablaConEncabezadoFijo>
         </div>
       )}
 

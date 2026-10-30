@@ -8,6 +8,7 @@ import { useGuardarEmpresa } from './useGuardarEmpresa';
 import { SimpleCatalogApi, SimpleCatalogItem } from '../../api/simpleCatalog';
 import { CAMPO_IDS_DE_VINCULO } from '../../api/companies';
 import { Company } from '../../api/companies';
+import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 
 /**
  * EL VALOR POR DEFECTO DE UNA EMPLEADORA, MARCADO SOBRE EL NOMENCLADOR.
@@ -199,49 +200,47 @@ export const DefaultArcaEmpresa: React.FC<Props> = ({ empresa, recargar, campo, 
         cosa —el número suelto podía leerse como un orden y no como el código que viaja al TXT— y
         dejaba el control en el borde opuesto al de todas las demás pantallas.
       */}
-      <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-900/50">
+      <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-900/50">
+          <tr>
+            <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">Código</th>
+            <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+            <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">
+              <span className="inline-flex items-center gap-2">
+                Por defecto
+                <LimpiarDefaultEmpresa hayValor={!!marcado} onLimpiar={() => marcar(marcado)} queEs={queEs} disabled={guardando} />
+              </span>
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+          {visibles.length === 0 ? (
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">Código</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">
-                <span className="inline-flex items-center gap-2">
-                  Por defecto
-                  <LimpiarDefaultEmpresa hayValor={!!marcado} onLimpiar={() => marcar(marcado)} queEs={queEs} disabled={guardando} />
-                </span>
-              </th>
+              <td colSpan={3} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                No hay ninguno que coincida.
+              </td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-            {visibles.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                  No hay ninguno que coincida.
-                </td>
-              </tr>
-            ) : (
-              visibles.map((i) => {
-                const codigo = String(i.externalId || '');
-                const esDefecto = !!codigo && codigo === marcado;
-                return (
-                  <tr key={i._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-                    <td className="px-4 py-2.5 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{codigo || '—'}</span>
-                    </td>
-                    <td className="px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200">{i.name}</td>
-                    <td className="px-4 py-2.5">
-                      <button type="button" onClick={() => marcar(codigo)} disabled={guardando || !codigo} title={esDefecto ? `Es ${queEs} por defecto. Click para quitarlo.` : `Marcar como ${queEs} por defecto de esta empleadora`} aria-pressed={esDefecto} className={`shrink-0 transition-colors disabled:opacity-50 ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
-                        <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+          ) : (
+            visibles.map((i) => {
+              const codigo = String(i.externalId || '');
+              const esDefecto = !!codigo && codigo === marcado;
+              return (
+                <tr key={i._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                  <td className="px-4 py-2.5 whitespace-nowrap">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">{codigo || '—'}</span>
+                  </td>
+                  <td className="px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200">{i.name}</td>
+                  <td className="px-4 py-2.5">
+                    <button type="button" onClick={() => marcar(codigo)} disabled={guardando || !codigo} title={esDefecto ? `Es ${queEs} por defecto. Click para quitarlo.` : `Marcar como ${queEs} por defecto de esta empleadora`} aria-pressed={esDefecto} className={`shrink-0 transition-colors disabled:opacity-50 ${esDefecto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-gray-600 hover:text-amber-500'}`}>
+                      <FontAwesomeIcon icon={faStar} className="h-3.5 w-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </TablaConEncabezadoFijo>
     </SeccionEmpleador>
   );
 };

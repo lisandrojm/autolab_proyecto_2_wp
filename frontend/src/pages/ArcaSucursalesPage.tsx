@@ -15,6 +15,7 @@ import { DefaultArcaStar, LimpiarDefaultArca } from "../components/arca/DefaultA
 import { EmpresasDelItemArca, ColumnaEmpresasArca } from "../components/arca/EmpresasDelItemArca";
 import { companiesAPI, Company } from "../api/companies";
 import { CodigosDeSucursalPorEmpresa } from "../components/arca/CodigosDeSucursalPorEmpresa";
+import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
 
 const HELP_KEY = "arcaSucursales" as const;
 
@@ -180,58 +181,56 @@ export const ArcaSucursalesPage: React.FC = () => {
       ) : filtrados.length === 0 ? (
         <EmptyState icon={faLocationDot} title={items.length === 0 ? "Todavía no hay sucursales" : "Sin resultados"} description={items.length === 0 ? 'Cargá las sucursales del padrón de ARCA con el botón "+". Después se asignan a cada empresa desde Configuración → Empresas.' : "Probá con otra búsqueda."} />
       ) : (
-        <div className="mt-6 overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap" title="El código de sucursal es de cada CUIT: el mismo domicilio puede tener uno distinto para cada empresa">Código por empresa</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Domicilio</th>
-                  {/* Última antes de Acciones, como en todos los nomencladores: la ★ se busca
-                      recorriendo siempre el mismo borde de la tabla. Lleva rótulo porque una estrella
-                      sin nombre no dice qué marca, y acá no hay ninguna otra pista. */}
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="Cuántas empleadoras lo tienen declarado en su padrón de ARCA">Empresas</th>
-                  <th className="px-2 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="El domicilio que rige cuando el contrato y la empleadora no eligieron uno">
-                    <span className="inline-flex items-center gap-2">
-                      Por defecto
-                      <LimpiarDefaultArca campo="sucursalId" queEs="el domicilio de explotación" />
-                    </span>
-                  </th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
+        <div className="mt-6 overflow-clip border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm">
+          <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap" title="El código de sucursal es de cada CUIT: el mismo domicilio puede tener uno distinto para cada empresa">Código por empresa</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Domicilio</th>
+                {/* Última antes de Acciones, como en todos los nomencladores: la ★ se busca
+                    recorriendo siempre el mismo borde de la tabla. Lleva rótulo porque una estrella
+                    sin nombre no dice qué marca, y acá no hay ninguna otra pista. */}
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="Cuántas empleadoras lo tienen declarado en su padrón de ARCA">Empresas</th>
+                <th className="px-2 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px" title="El domicilio que rige cuando el contrato y la empleadora no eligieron uno">
+                  <span className="inline-flex items-center gap-2">
+                    Por defecto
+                    <LimpiarDefaultArca campo="sucursalId" queEs="el domicilio de explotación" />
+                  </span>
+                </th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+              {filtrados.map((s) => (
+                <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {/* El código es POR EMPRESA: se muestra el de cada una que tiene este domicilio. */}
+                    <CodigosDeSucursalPorEmpresa sucursalId={s._id} codigoDelCatalogo={s.codigo} empresas={empresas} />
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{s.domicilio}</p>
+                    {(s.localidad || s.codigoPostal) && <p className="text-xs text-gray-500 dark:text-gray-400">{[s.codigoPostal && `CP ${s.codigoPostal}`, s.localidad].filter(Boolean).join(" · ")}</p>}
+                  </td>
+                  <td className="px-6 py-4 w-px">
+                    <ColumnaEmpresasArca tipo="sucursal" itemId={s._id} itemLabel={`${s.codigo} — ${s.domicilio}`} empresas={empresas} asignadas={empresas.filter((e) => (e.sucursalIds || []).map(String).includes(s._id)).map((e) => e._id)} onGuardado={recargarEmpresas} />
+                  </td>
+                  <td className="px-2 py-4 w-px">
+                    <DefaultArcaStar campo="sucursalId" valor={String(s._id)} nombre={`${s.codigo} — ${s.domicilio}`} queEs="el domicilio de explotación" />
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => abrirEditar(s)} title="Editar sucursal" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                        <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => eliminar(s)} title="Eliminar sucursal" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                        <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                {filtrados.map((s) => (
-                  <tr key={s._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {/* El código es POR EMPRESA: se muestra el de cada una que tiene este domicilio. */}
-                      <CodigosDeSucursalPorEmpresa sucursalId={s._id} codigoDelCatalogo={s.codigo} empresas={empresas} />
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{s.domicilio}</p>
-                      {(s.localidad || s.codigoPostal) && <p className="text-xs text-gray-500 dark:text-gray-400">{[s.codigoPostal && `CP ${s.codigoPostal}`, s.localidad].filter(Boolean).join(" · ")}</p>}
-                    </td>
-                    <td className="px-6 py-4 w-px">
-                      <ColumnaEmpresasArca tipo="sucursal" itemId={s._id} itemLabel={`${s.codigo} — ${s.domicilio}`} empresas={empresas} asignadas={empresas.filter((e) => (e.sucursalIds || []).map(String).includes(s._id)).map((e) => e._id)} onGuardado={recargarEmpresas} />
-                    </td>
-                    <td className="px-2 py-4 w-px">
-                      <DefaultArcaStar campo="sucursalId" valor={String(s._id)} nombre={`${s.codigo} — ${s.domicilio}`} queEs="el domicilio de explotación" />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => abrirEditar(s)} title="Editar sucursal" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-                          <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => eliminar(s)} title="Eliminar sucursal" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                          <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </TablaConEncabezadoFijo>
         </div>
       )}
 

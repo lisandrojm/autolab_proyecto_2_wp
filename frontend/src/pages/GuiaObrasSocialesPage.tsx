@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faShieldHeart, faArrowRight, faTriangleExclamation, faBan } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
 import { PasosInstalacion, NotaSinFirma } from '../components/asistente/PasosInstalacion';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 /**
  * Guía de la validación de obras sociales contra ARCA.
@@ -214,46 +215,44 @@ export const GuiaObrasSocialesPage: React.FC = () => (
       </Seccion>
 
       <Seccion n={5} titulo="Los tres estados">
-        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-800/60">
-              <tr className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                <th className="text-left px-3 py-2">Estado</th>
-                <th className="text-left px-3 py-2">Qué significa</th>
-                <th className="text-left px-3 py-2">Qué se declara en el TXT</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              <tr>
-                <td className="px-3 py-2.5 align-top">
-                  <span className="text-[11px] px-2 py-0.5 rounded-full border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 whitespace-nowrap">sin validar</span>
-                </td>
-                <td className="px-3 py-2.5 align-top text-gray-700 dark:text-gray-300">Nadie consultó todavía qué obra social tiene esta persona.</td>
-                <td className="px-3 py-2.5 align-top text-gray-700 dark:text-gray-300">
-                  Nada — este contrato <strong>no entra</strong> al archivo.
-                </td>
-              </tr>
-              <tr>
-                <td className="px-3 py-2.5 align-top">
-                  <span className="text-[11px] px-2 py-0.5 rounded-full border border-green-300 dark:border-green-800 text-green-700 dark:text-green-400 whitespace-nowrap">validada</span>
-                </td>
-                <td className="px-3 py-2.5 align-top text-gray-700 dark:text-gray-300">ARCA devolvió una obra social propia: la persona ejerció la opción.</td>
-                <td className="px-3 py-2.5 align-top text-gray-700 dark:text-gray-300">
-                  <strong>Esa</strong> obra social. Queda fija.
-                </td>
-              </tr>
-              <tr>
-                <td className="px-3 py-2.5 align-top">
-                  <span className="text-[11px] px-2 py-0.5 rounded-full border border-green-300 dark:border-green-800 text-green-700 dark:text-green-400 whitespace-nowrap">validada · del convenio</span>
-                </td>
-                <td className="px-3 py-2.5 align-top text-gray-700 dark:text-gray-300">ARCA no tiene afiliación registrada para esta persona.</td>
-                <td className="px-3 py-2.5 align-top text-gray-700 dark:text-gray-300">
-                  La <strong>del convenio</strong>. También es una validación completa.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <TablaConEncabezadoFijo className="rounded-lg border border-gray-200 dark:border-gray-700" tabla="min-w-full text-sm">
+          <thead className="bg-gray-50 dark:bg-gray-800/60">
+            <tr className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              <th className="text-left px-3 py-2">Estado</th>
+              <th className="text-left px-3 py-2">Qué significa</th>
+              <th className="text-left px-3 py-2">Qué se declara en el TXT</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            <tr>
+              <td className="px-3 py-2.5 align-top">
+                <span className="text-[11px] px-2 py-0.5 rounded-full border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 whitespace-nowrap">sin validar</span>
+              </td>
+              <td className="px-3 py-2.5 align-top text-gray-700 dark:text-gray-300">Nadie consultó todavía qué obra social tiene esta persona.</td>
+              <td className="px-3 py-2.5 align-top text-gray-700 dark:text-gray-300">
+                Nada — este contrato <strong>no entra</strong> al archivo.
+              </td>
+            </tr>
+            <tr>
+              <td className="px-3 py-2.5 align-top">
+                <span className="text-[11px] px-2 py-0.5 rounded-full border border-green-300 dark:border-green-800 text-green-700 dark:text-green-400 whitespace-nowrap">validada</span>
+              </td>
+              <td className="px-3 py-2.5 align-top text-gray-700 dark:text-gray-300">ARCA devolvió una obra social propia: la persona ejerció la opción.</td>
+              <td className="px-3 py-2.5 align-top text-gray-700 dark:text-gray-300">
+                <strong>Esa</strong> obra social. Queda fija.
+              </td>
+            </tr>
+            <tr>
+              <td className="px-3 py-2.5 align-top">
+                <span className="text-[11px] px-2 py-0.5 rounded-full border border-green-300 dark:border-green-800 text-green-700 dark:text-green-400 whitespace-nowrap">validada · del convenio</span>
+              </td>
+              <td className="px-3 py-2.5 align-top text-gray-700 dark:text-gray-300">ARCA no tiene afiliación registrada para esta persona.</td>
+              <td className="px-3 py-2.5 align-top text-gray-700 dark:text-gray-300">
+                La <strong>del convenio</strong>. También es una validación completa.
+              </td>
+            </tr>
+          </tbody>
+        </TablaConEncabezadoFijo>
         <Clave>
           <strong>Que ARCA no devuelva nada es una respuesta, no un error.</strong> Significa que esa persona no eligió otra obra social, así que le corresponde la del convenio. Se registra con fecha y no vuelve
           a pedirse.

@@ -28,6 +28,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { modalidadesLiqOfrecidas } from '@compartido/arca/retribucionPactada';
+import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 
 // Nomencladores de ARCA de los que salen los tres códigos. Se leen enteros (153 / 293 / 8 / 2): son
 // chicos y se cargan una vez al abrir la pestaña.
@@ -1141,11 +1142,11 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
           <LoadingSpinner message="Cargando contratos..." />
         </div>
       ) : isReorderMode ? (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-clip">
           <p className="px-4 py-2 text-[11px] text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-900/40">Arrastrá las filas. Este es el orden en que los tipos aparecen al elegir un contrato en toda la plataforma.</p>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={contratos.map((ct) => ct._id)} strategy={verticalListSortingStrategy}>
-              <table className="w-full text-left border-collapse">
+              <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                     <th className="px-4 py-3 w-12 text-center">Ordenar</th>
@@ -1159,113 +1160,111 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                     <FilaOrdenable key={ct._id} contrato={ct} index={i} />
                   ))}
                 </tbody>
-              </table>
+              </TablaConEncabezadoFijo>
             </SortableContext>
           </DndContext>
         </div>
       ) : filtrados.length === 0 ? (
         <EmptyState icon={faFileContract} title={searchTerm ? 'Sin resultados' : 'Todavía no hay contratos'} description={searchTerm ? 'Probá con otra búsqueda.' : 'Creá el primer contrato para poder asignarle una Plantilla.'} />
       ) : viewMode === 'table' ? (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  <th className="px-4 py-3 font-semibold">Nombre</th>
-                  <th className="px-4 py-3 font-semibold">Jornadas</th>
-                  <th className="px-4 py-3 font-semibold">Mult. Diario</th>
-                  <th className="px-4 py-3 font-semibold">Horas</th>
-                  <th className="px-4 py-3 font-semibold">Días/sem.</th>
-                  <th className="px-4 py-3 font-semibold">Tiempo Indet.</th>
-                  <th className="px-4 py-3 font-semibold">Firma</th>
-                  <th className="px-4 py-3 font-semibold">Estado</th>
-                  <th className="px-4 py-3 font-semibold">Plantilla Contrato</th>
-                  <th className="px-4 py-3 font-semibold">Plantilla Release</th>
-                  <th className="px-4 py-3 font-semibold">Estados</th>
-                  <th className="px-4 py-3 font-semibold text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {filtrados.map((contrato) => {
-                  const cantPlantillas = plantillasPorContrato.get(contrato._id) || 0;
-                  const misEstados = estadosPorContrato.get(contrato._id) || [];
-                  return (
-                    <tr key={contrato._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
-                      <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">
-                        <span className="inline-flex items-center gap-2">
-                          {contrato.name}
-                          {tienePlantillaCustom(contrato._id) && <BadgeCustom />}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.cantidadJornadas ?? '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.multiplicadorDiario ?? '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.horasPorJornada ?? '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.diasPorSemana ?? '—'}</td>
-                      <td className="px-4 py-3">{contrato.data?.esTiempoIndeterminado ? <BadgeTiempoIndeterminado /> : <span className="text-xs text-gray-400">—</span>}</td>
-                      <td className="px-4 py-3">
-                        <BadgeFirma activo={contrato.data?.requiereFirma !== false} />
-                        <BadgeFirma activo={contrato.data?.requiereFirmaRelease !== false} que="el release" />
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${contrato.isActive === false ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}>
-                          {contrato.isActive === false ? 'Inactivo' : 'Activo'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {cantPlantillas === 0 ? (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-clip">
+          <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 font-semibold">Nombre</th>
+                <th className="px-4 py-3 font-semibold">Jornadas</th>
+                <th className="px-4 py-3 font-semibold">Mult. Diario</th>
+                <th className="px-4 py-3 font-semibold">Horas</th>
+                <th className="px-4 py-3 font-semibold">Días/sem.</th>
+                <th className="px-4 py-3 font-semibold">Tiempo Indet.</th>
+                <th className="px-4 py-3 font-semibold">Firma</th>
+                <th className="px-4 py-3 font-semibold">Estado</th>
+                <th className="px-4 py-3 font-semibold">Plantilla Contrato</th>
+                <th className="px-4 py-3 font-semibold">Plantilla Release</th>
+                <th className="px-4 py-3 font-semibold">Estados</th>
+                <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {filtrados.map((contrato) => {
+                const cantPlantillas = plantillasPorContrato.get(contrato._id) || 0;
+                const misEstados = estadosPorContrato.get(contrato._id) || [];
+                return (
+                  <tr key={contrato._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900 dark:text-gray-100">
+                      <span className="inline-flex items-center gap-2">
+                        {contrato.name}
+                        {tienePlantillaCustom(contrato._id) && <BadgeCustom />}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.cantidadJornadas ?? '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.multiplicadorDiario ?? '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.horasPorJornada ?? '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{contrato.data?.diasPorSemana ?? '—'}</td>
+                    <td className="px-4 py-3">{contrato.data?.esTiempoIndeterminado ? <BadgeTiempoIndeterminado /> : <span className="text-xs text-gray-400">—</span>}</td>
+                    <td className="px-4 py-3">
+                      <BadgeFirma activo={contrato.data?.requiereFirma !== false} />
+                      <BadgeFirma activo={contrato.data?.requiereFirmaRelease !== false} que="el release" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${contrato.isActive === false ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}>
+                        {contrato.isActive === false ? 'Inactivo' : 'Activo'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {cantPlantillas === 0 ? (
+                        <span className="text-xs text-gray-400">—</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {plantillasDe(contrato._id).map((p) => (
+                            <PlantillaChip key={p._id} plantilla={p} />
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {(() => {
+                        const { lista, generales } = releasesDe(contrato._id);
+                        return lista.length === 0 ? (
                           <span className="text-xs text-gray-400">—</span>
                         ) : (
                           <div className="flex flex-wrap gap-1 max-w-xs">
-                            {plantillasDe(contrato._id).map((p) => (
-                              <PlantillaChip key={p._id} plantilla={p} />
+                            {lista.map((rl) => (
+                              <ReleaseChip key={rl._id} release={rl} general={generales} />
                             ))}
                           </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {(() => {
-                          const { lista, generales } = releasesDe(contrato._id);
-                          return lista.length === 0 ? (
-                            <span className="text-xs text-gray-400">—</span>
-                          ) : (
-                            <div className="flex flex-wrap gap-1 max-w-xs">
-                              {lista.map((rl) => (
-                                <ReleaseChip key={rl._id} release={rl} general={generales} />
-                              ))}
-                            </div>
-                          );
-                        })()}
-                      </td>
-                      <td className="px-4 py-3">
-                        {misEstados.length === 0 ? (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap" title="Este tipo de contrato no tiene ningún estado asignado">
-                            <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />
-                            Sin estados
-                          </span>
-                        ) : (
-                          <div className="flex flex-wrap gap-1 max-w-xs">
-                            {misEstados.map((e) => (
-                              <React.Fragment key={e._id}>
-                                <EstadoBadge name={e.name} className="text-[10px]" />
-                                {e.data?.esImpositivo && <EstadoSecundarioBadge estado={e} className="text-[10px]" />}
-                              </React.Fragment>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <CardFooterAction icon={faCopy} title="Duplicar contrato" onClick={() => abrirDuplicar(contrato)} />
-                          <CardFooterAction icon={faEdit} title="Editar contrato" onClick={() => abrirEditar(contrato)} />
-                          {!contrato.delSistema && <CardFooterAction icon={faTrash} title="Eliminar contrato" onClick={() => eliminar(contrato)} />}
+                        );
+                      })()}
+                    </td>
+                    <td className="px-4 py-3">
+                      {misEstados.length === 0 ? (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap" title="Este tipo de contrato no tiene ningún estado asignado">
+                          <FontAwesomeIcon icon={faTriangleExclamation} className="h-2.5 w-2.5" />
+                          Sin estados
+                        </span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {misEstados.map((e) => (
+                            <React.Fragment key={e._id}>
+                              <EstadoBadge name={e.name} className="text-[10px]" />
+                              {e.data?.esImpositivo && <EstadoSecundarioBadge estado={e} className="text-[10px]" />}
+                            </React.Fragment>
+                          ))}
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <CardFooterAction icon={faCopy} title="Duplicar contrato" onClick={() => abrirDuplicar(contrato)} />
+                        <CardFooterAction icon={faEdit} title="Editar contrato" onClick={() => abrirEditar(contrato)} />
+                        {!contrato.delSistema && <CardFooterAction icon={faTrash} title="Eliminar contrato" onClick={() => eliminar(contrato)} />}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </TablaConEncabezadoFijo>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

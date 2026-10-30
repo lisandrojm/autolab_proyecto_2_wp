@@ -8,6 +8,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { ArchivoParaVer, VisorArchivoDropbox, esArchivoVisible } from "./VisorArchivoDropbox";
 import { BotonOrden, ordenarFilas, useOrden, type ValorOrden } from "../ui/OrdenTabla";
 import { fechaFirmaDeNombre, formatearFechaFirma } from "../../utils/fechaFirmaDropboxSign";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 const formatSize = (n?: number): string => {
   if (!n && n !== 0) return "";
@@ -596,112 +597,110 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
       )}
 
       {/* Lista */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-sm">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 uppercase tracking-wider">
-                <th className="px-4 py-3 w-10">
-                  <input
-                    type="checkbox"
-                    className="cursor-pointer accent-blue-600"
-                    checked={allFilesSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = !allFilesSelected && fileEntries.some((e) => selected.has(e.path));
-                    }}
-                    disabled={fileEntries.length === 0}
-                    onChange={toggleSelectAll}
-                    title="Seleccionar todos los archivos"
-                  />
-                </th>
-                {/* La fecha primero: es por lo que se ordena y lo primero que se mira. Son DOS fechas
-                    distintas (25/10/2026): cuándo entró el archivo a Dropbox («Registro») y cuándo se
-                    firmó, que Dropbox Sign escribe en el nombre del firmado. Con la integración cortada
-                    y rescatado después, el registro es días posterior a la firma. */}
-                <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Cuándo entró el archivo a esta carpeta de Dropbox">
-                  <BotonOrden columna="fecha" orden={orden} onAlternar={alternar}>
-                    Fecha Registro
-                  </BotonOrden>
-                </th>
-                {conFechaFirma && (
-                <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Cuándo se completó la firma, según el sello que Dropbox Sign pone en el nombre del firmado (hora argentina). Vacío si el archivo no es un firmado">
-                  <BotonOrden columna="firma" orden={orden} onAlternar={alternar}>
-                    Fecha Firma
-                  </BotonOrden>
-                </th>
-                )}
-                <th className="px-4 py-3 font-semibold">
-                  <BotonOrden columna="nombre" orden={orden} onAlternar={alternar}>
-                    Nombre
-                  </BotonOrden>
-                </th>
-                <th className="px-4 py-3 font-semibold whitespace-nowrap">
-                  <BotonOrden columna="tamanio" orden={orden} onAlternar={alternar}>
-                    Tamaño
-                  </BotonOrden>
-                </th>
-                <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-clip">
+        <TablaConEncabezadoFijo tabla="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 w-10">
+                <input
+                  type="checkbox"
+                  className="cursor-pointer accent-blue-600"
+                  checked={allFilesSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = !allFilesSelected && fileEntries.some((e) => selected.has(e.path));
+                  }}
+                  disabled={fileEntries.length === 0}
+                  onChange={toggleSelectAll}
+                  title="Seleccionar todos los archivos"
+                />
+              </th>
+              {/* La fecha primero: es por lo que se ordena y lo primero que se mira. Son DOS fechas
+                  distintas (25/10/2026): cuándo entró el archivo a Dropbox («Registro») y cuándo se
+                  firmó, que Dropbox Sign escribe en el nombre del firmado. Con la integración cortada
+                  y rescatado después, el registro es días posterior a la firma. */}
+              <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Cuándo entró el archivo a esta carpeta de Dropbox">
+                <BotonOrden columna="fecha" orden={orden} onAlternar={alternar}>
+                  Fecha Registro
+                </BotonOrden>
+              </th>
+              {conFechaFirma && (
+              <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Cuándo se completó la firma, según el sello que Dropbox Sign pone en el nombre del firmado (hora argentina). Vacío si el archivo no es un firmado">
+                <BotonOrden columna="firma" orden={orden} onAlternar={alternar}>
+                  Fecha Firma
+                </BotonOrden>
+              </th>
+              )}
+              <th className="px-4 py-3 font-semibold">
+                <BotonOrden columna="nombre" orden={orden} onAlternar={alternar}>
+                  Nombre
+                </BotonOrden>
+              </th>
+              <th className="px-4 py-3 font-semibold whitespace-nowrap">
+                <BotonOrden columna="tamanio" orden={orden} onAlternar={alternar}>
+                  Tamaño
+                </BotonOrden>
+              </th>
+              <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            {busy && filtered.length === 0 ? (
+              <tr>
+                <td colSpan={columnas} className="px-4 py-6">
+                  <LoadingSpinner size="sm" message="Cargando archivos..." />
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {busy && filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={columnas} className="px-4 py-6">
-                    <LoadingSpinner size="sm" message="Cargando archivos..." />
+            ) : filtered.length === 0 ? (
+              <tr><td colSpan={columnas} className="px-4 py-8 text-center text-gray-400 italic">{search ? "No hay resultados para el filtro." : "Carpeta vacía."}</td></tr>
+            ) : (
+              filtered.map((e) => (
+                <tr key={e.path} className={`hover:bg-gray-50 dark:hover:bg-gray-800/40 ${e.tag === "file" && selected.has(e.path) ? "bg-blue-50/60 dark:bg-blue-900/10" : ""}`}>
+                  <td className="px-4 py-2.5">
+                    {e.tag === "file" && (
+                      <input
+                        type="checkbox"
+                        className="cursor-pointer accent-blue-600"
+                        checked={selected.has(e.path)}
+                        onChange={() => toggleSelected(e.path)}
+                      />
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{e.tag === "file" ? formatDate(e.serverModified) : "—"}</td>
+                  {conFechaFirma && <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{e.tag === "file" ? formatearFechaFirma(fechaFirmaDeNombre(e.name)) || "—" : "—"}</td>}
+                  <td className="px-4 py-2.5">
+                    {e.tag === "folder" ? (
+                      <button onClick={() => loadFolder(e.path)} className="flex items-center gap-2 font-medium text-gray-800 dark:text-gray-100 hover:text-blue-600">
+                        <FontAwesomeIcon icon={faFolder} className="text-amber-500" /> {e.name}
+                      </button>
+                    ) : esArchivoVisible(e.name) ? (
+                      /* Los que se pueden ver se abren con un click en el nombre, como las carpetas. */
+                      <button onClick={() => handleVer(e)} title="Ver el contenido" className="flex items-center gap-2 text-left text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400">
+                        <FontAwesomeIcon icon={faFileCode} className="text-emerald-500" /> {e.name}
+                      </button>
+                    ) : (
+                      <span className="flex items-center gap-2 text-gray-700 dark:text-gray-200">
+                        <FontAwesomeIcon icon={faFileLines} className="text-blue-400" /> {e.name}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-gray-500 text-xs">{e.tag === "file" ? formatSize(e.size) : "—"}</td>
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center justify-end gap-1">
+                      {e.tag === "file" && esArchivoVisible(e.name) && (
+                        <button onClick={() => handleVer(e)} title="Ver el contenido sin descargar" className="p-2 rounded text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"><FontAwesomeIcon icon={faEye} /></button>
+                      )}
+                      {e.tag === "file" && (
+                        <button onClick={() => handleDownload(e)} title="Descargar" className="p-2 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"><FontAwesomeIcon icon={faDownload} /></button>
+                      )}
+                      <button onClick={() => handleRename(e)} title="Renombrar" className="p-2 rounded text-gray-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30"><FontAwesomeIcon icon={faPen} /></button>
+                      <button onClick={() => handleDelete(e)} title="Eliminar" className="p-2 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"><FontAwesomeIcon icon={faTrash} /></button>
+                    </div>
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={columnas} className="px-4 py-8 text-center text-gray-400 italic">{search ? "No hay resultados para el filtro." : "Carpeta vacía."}</td></tr>
-              ) : (
-                filtered.map((e) => (
-                  <tr key={e.path} className={`hover:bg-gray-50 dark:hover:bg-gray-800/40 ${e.tag === "file" && selected.has(e.path) ? "bg-blue-50/60 dark:bg-blue-900/10" : ""}`}>
-                    <td className="px-4 py-2.5">
-                      {e.tag === "file" && (
-                        <input
-                          type="checkbox"
-                          className="cursor-pointer accent-blue-600"
-                          checked={selected.has(e.path)}
-                          onChange={() => toggleSelected(e.path)}
-                        />
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{e.tag === "file" ? formatDate(e.serverModified) : "—"}</td>
-                    {conFechaFirma && <td className="px-4 py-2.5 text-gray-500 text-xs whitespace-nowrap">{e.tag === "file" ? formatearFechaFirma(fechaFirmaDeNombre(e.name)) || "—" : "—"}</td>}
-                    <td className="px-4 py-2.5">
-                      {e.tag === "folder" ? (
-                        <button onClick={() => loadFolder(e.path)} className="flex items-center gap-2 font-medium text-gray-800 dark:text-gray-100 hover:text-blue-600">
-                          <FontAwesomeIcon icon={faFolder} className="text-amber-500" /> {e.name}
-                        </button>
-                      ) : esArchivoVisible(e.name) ? (
-                        /* Los que se pueden ver se abren con un click en el nombre, como las carpetas. */
-                        <button onClick={() => handleVer(e)} title="Ver el contenido" className="flex items-center gap-2 text-left text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400">
-                          <FontAwesomeIcon icon={faFileCode} className="text-emerald-500" /> {e.name}
-                        </button>
-                      ) : (
-                        <span className="flex items-center gap-2 text-gray-700 dark:text-gray-200">
-                          <FontAwesomeIcon icon={faFileLines} className="text-blue-400" /> {e.name}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-gray-500 text-xs">{e.tag === "file" ? formatSize(e.size) : "—"}</td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center justify-end gap-1">
-                        {e.tag === "file" && esArchivoVisible(e.name) && (
-                          <button onClick={() => handleVer(e)} title="Ver el contenido sin descargar" className="p-2 rounded text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"><FontAwesomeIcon icon={faEye} /></button>
-                        )}
-                        {e.tag === "file" && (
-                          <button onClick={() => handleDownload(e)} title="Descargar" className="p-2 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"><FontAwesomeIcon icon={faDownload} /></button>
-                        )}
-                        <button onClick={() => handleRename(e)} title="Renombrar" className="p-2 rounded text-gray-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30"><FontAwesomeIcon icon={faPen} /></button>
-                        <button onClick={() => handleDelete(e)} title="Eliminar" className="p-2 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"><FontAwesomeIcon icon={faTrash} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </TablaConEncabezadoFijo>
       </div>
 
       {cargandoVista && (

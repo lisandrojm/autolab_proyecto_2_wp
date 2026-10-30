@@ -8,6 +8,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { sweetAlert } from '../../../utils/sweetAlert';
 import { formatearFechaCalendario } from '../../../utils/fechas';
 import { porciento, Th } from './piezas';
+import { TablaConEncabezadoFijo } from '../../ui/TablaConEncabezadoFijo';
 
 /**
  * Los ACUERDOS PARITARIOS: de dónde salió cada importe.
@@ -255,40 +256,38 @@ export const AcuerdosParitariosTab: React.FC<Props> = ({ convenio, acuerdos, can
               </div>
 
               {a.tramos.length > 0 && (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-900/50">
-                      <tr>
-                        <Th className="text-left">Tramo</Th>
-                        <Th className="text-left">Rige desde</Th>
-                        <Th className="text-right">Aumento</Th>
-                        <Th className="text-left">Base</Th>
-                        <Th className="text-left">Régimen</Th>
-                        <Th className="text-left hidden lg:table-cell">Nota</Th>
+                <TablaConEncabezadoFijo tabla="min-w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-900/50">
+                    <tr>
+                      <Th className="text-left">Tramo</Th>
+                      <Th className="text-left">Rige desde</Th>
+                      <Th className="text-right">Aumento</Th>
+                      <Th className="text-left">Base</Th>
+                      <Th className="text-left">Régimen</Th>
+                      <Th className="text-left hidden lg:table-cell">Nota</Th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {a.tramos.map((t) => (
+                      <tr key={`${a._id}-${t.codigo}`}>
+                        <td className="px-4 py-2 font-mono text-xs text-gray-900 dark:text-gray-100">{t.codigo}</td>
+                        <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{formatearFechaCalendario(t.desde)}</td>
+                        <td className="px-4 py-2 text-right text-sm font-mono font-semibold text-gray-900 dark:text-gray-100">{porciento(t.porcentaje)}</td>
+                        <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">
+                          {t.base || '—'}
+                          {!t.acumulativo && <span className="block text-[11px] text-gray-500 dark:text-gray-400">no acumulativo</span>}
+                          {t.absorbe && <span className="block text-[11px] text-amber-600 dark:text-amber-400">absorbe {t.absorbe}</span>}
+                        </td>
+                        <td className="px-4 py-2">
+                          <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${t.regimen === 'alternativo' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'}`}>
+                            {t.regimen === 'alternativo' ? 'Alternativo' : 'General'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{t.nota || '—'}</td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {a.tramos.map((t) => (
-                        <tr key={`${a._id}-${t.codigo}`}>
-                          <td className="px-4 py-2 font-mono text-xs text-gray-900 dark:text-gray-100">{t.codigo}</td>
-                          <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{formatearFechaCalendario(t.desde)}</td>
-                          <td className="px-4 py-2 text-right text-sm font-mono font-semibold text-gray-900 dark:text-gray-100">{porciento(t.porcentaje)}</td>
-                          <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">
-                            {t.base || '—'}
-                            {!t.acumulativo && <span className="block text-[11px] text-gray-500 dark:text-gray-400">no acumulativo</span>}
-                            {t.absorbe && <span className="block text-[11px] text-amber-600 dark:text-amber-400">absorbe {t.absorbe}</span>}
-                          </td>
-                          <td className="px-4 py-2">
-                            <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${t.regimen === 'alternativo' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'}`}>
-                              {t.regimen === 'alternativo' ? 'Alternativo' : 'General'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">{t.nota || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </TablaConEncabezadoFijo>
               )}
 
               {a.clausulaAbsorcion?.aplica && (

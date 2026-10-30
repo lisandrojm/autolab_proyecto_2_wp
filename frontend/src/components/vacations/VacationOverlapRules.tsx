@@ -14,6 +14,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { EmptyState } from "../ui/EmptyState";
 import { Modal } from "../ui/Modal";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 // Schema validación Zod
 const overlapSchema = z.object({
@@ -468,135 +469,133 @@ export const VacationOverlapRules: React.FC = () => {
       {rules.length === 0 ? (
         <EmptyState icon={faBan} title="No hay reglas definidas" description="Crea reglas para restringir el solapamiento de vacaciones." action={{ label: "Crear Regla", onClick: openCreate }} />
       ) : (
-        <div className="bg-white dark:bg-gray-800 shadow-sm rounded overflow-hidden border border-gray-200 dark:border-gray-700">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
-              <tr>
-                <th className="px-6 py-3 font-medium">Cliente</th>
-                <th className="px-6 py-3 font-medium">Proyecto</th>
-                <th className="px-6 py-3 font-medium">Role Frame</th>
-                <th className="px-6 py-3 font-medium text-center">Horario Contrato</th>
-                <th className="px-6 py-3 font-medium">Máx. Simultáneos</th>
-                <th className="px-6 py-3 font-medium">Estado</th>
-                <th className="px-6 py-3 font-medium text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {rules.map((rule) => {
-                const userCount = getRuleUserCount(rule);
-                const limitExceeded = rule.maxSimultaneousUsers > userCount && userCount > 0;
+        <TablaConEncabezadoFijo className="bg-white dark:bg-gray-800 shadow-sm rounded border border-gray-200 dark:border-gray-700" tabla="w-full text-left text-sm">
+          <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
+            <tr>
+              <th className="px-6 py-3 font-medium">Cliente</th>
+              <th className="px-6 py-3 font-medium">Proyecto</th>
+              <th className="px-6 py-3 font-medium">Role Frame</th>
+              <th className="px-6 py-3 font-medium text-center">Horario Contrato</th>
+              <th className="px-6 py-3 font-medium">Máx. Simultáneos</th>
+              <th className="px-6 py-3 font-medium">Estado</th>
+              <th className="px-6 py-3 font-medium text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            {rules.map((rule) => {
+              const userCount = getRuleUserCount(rule);
+              const limitExceeded = rule.maxSimultaneousUsers > userCount && userCount > 0;
 
-                return (
-                  <tr key={rule._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    {/* Col 1: Cliente */}
-                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white align-top">
-                      {(() => {
-                        let clientName = "";
-                        if (rule.clientId) {
-                          const client = typeof rule.clientId === "object" ? rule.clientId : clients.find((c) => c._id === rule.clientId);
+              return (
+                <tr key={rule._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                  {/* Col 1: Cliente */}
+                  <td className="px-6 py-4 font-medium text-gray-900 dark:text-white align-top">
+                    {(() => {
+                      let clientName = "";
+                      if (rule.clientId) {
+                        const client = typeof rule.clientId === "object" ? rule.clientId : clients.find((c) => c._id === rule.clientId);
+                        clientName = client?.name || "";
+                      } else if (rule.projectId) {
+                        const proj = typeof rule.projectId === "object" ? rule.projectId : projects.find((p) => p._id === rule.projectId);
+                        if (proj) {
+                          const pClientId = typeof proj.clientId === "object" ? proj.clientId._id : proj.clientId;
+                          const client = clients.find((cl) => cl._id === pClientId);
                           clientName = client?.name || "";
-                        } else if (rule.projectId) {
-                          const proj = typeof rule.projectId === "object" ? rule.projectId : projects.find((p) => p._id === rule.projectId);
-                          if (proj) {
-                            const pClientId = typeof proj.clientId === "object" ? proj.clientId._id : proj.clientId;
-                            const client = clients.find((cl) => cl._id === pClientId);
-                            clientName = client?.name || "";
-                          }
                         }
+                      }
 
-                        return clientName ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 w-fit">
-                            <FontAwesomeIcon icon={faBuilding} className="text-[10px]" /> {clientName}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 italic text-xs">Todos (Global)</span>
-                        );
-                      })()}
-                    </td>
-
-                    {/* Col 2: Proyecto */}
-                    <td className="px-6 py-4 font-medium text-gray-900 dark:text-white align-top">
-                      {rule.projectId ? (
-                        (() => {
-                          const proj = typeof rule.projectId === "object" ? rule.projectId : projects.find((p) => p._id === rule.projectId);
-                          let projName = proj?.name || "Desconocido";
-
-                          if (proj) {
-                            const fullProj = projects.find((p) => p._id === (proj._id || String(rule.projectId)));
-                            if (fullProj) projName = fullProj.name;
-                          }
-
-                          return (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-blue-600 text-white dark:bg-blue-900 dark:text-blue-300 w-fit">
-                              <FontAwesomeIcon icon={faBriefcase} className="text-[10px]" /> {projName}
-                            </span>
-                          );
-                        })()
-                      ) : (
-                        <span className="text-gray-400 italic text-xs">—</span>
-                      )}
-                    </td>
-
-                    {/* Col 3: Role Frame */}
-                    <td className="px-6 py-4 align-top">
-                      {rule.roleFrameId ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                          <FontAwesomeIcon icon={faIdCard} className="text-[10px]" /> {typeof rule.roleFrameId === "object" ? rule.roleFrameId.name : roleFrames.find((r) => r._id === rule.roleFrameId)?.name}
+                      return clientName ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 w-fit">
+                          <FontAwesomeIcon icon={faBuilding} className="text-[10px]" /> {clientName}
                         </span>
                       ) : (
-                        <span className="text-gray-400 italic text-xs">—</span>
-                      )}
-                    </td>
+                        <span className="text-gray-400 italic text-xs">Todos (Global)</span>
+                      );
+                    })()}
+                  </td>
 
-                    {/* Col 4: Horario Contrato */}
-                    <td className="px-6 py-4 align-top text-center">
-                      {rule.useActiveContractSchedule ? (
-                        <div className="flex flex-col items-center">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                            <FontAwesomeIcon icon={faClock} className="text-[10px]" /> Activo
+                  {/* Col 2: Proyecto */}
+                  <td className="px-6 py-4 font-medium text-gray-900 dark:text-white align-top">
+                    {rule.projectId ? (
+                      (() => {
+                        const proj = typeof rule.projectId === "object" ? rule.projectId : projects.find((p) => p._id === rule.projectId);
+                        let projName = proj?.name || "Desconocido";
+
+                        if (proj) {
+                          const fullProj = projects.find((p) => p._id === (proj._id || String(rule.projectId)));
+                          if (fullProj) projName = fullProj.name;
+                        }
+
+                        return (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-blue-600 text-white dark:bg-blue-900 dark:text-blue-300 w-fit">
+                            <FontAwesomeIcon icon={faBriefcase} className="text-[10px]" /> {projName}
                           </span>
-                        </div>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600">Inactivo</span>
-                      )}
-                    </td>
+                        );
+                      })()
+                    ) : (
+                      <span className="text-gray-400 italic text-xs">—</span>
+                    )}
+                  </td>
 
-                    {/* Col 5: Max Simultaneos */}
-                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300 align-top">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{rule.maxSimultaneousUsers} usuarios</span>
-                          {limitExceeded && (
-                            <div className="text-amber-500" title={`El límite (${rule.maxSimultaneousUsers}) es mayor que la cantidad de usuarios coincidentes (${userCount})`}>
-                              <FontAwesomeIcon icon={faTriangleExclamation} />
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">{userCount} coincidentes</div>
+                  {/* Col 3: Role Frame */}
+                  <td className="px-6 py-4 align-top">
+                    {rule.roleFrameId ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                        <FontAwesomeIcon icon={faIdCard} className="text-[10px]" /> {typeof rule.roleFrameId === "object" ? rule.roleFrameId.name : roleFrames.find((r) => r._id === rule.roleFrameId)?.name}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 italic text-xs">—</span>
+                    )}
+                  </td>
+
+                  {/* Col 4: Horario Contrato */}
+                  <td className="px-6 py-4 align-top text-center">
+                    {rule.useActiveContractSchedule ? (
+                      <div className="flex flex-col items-center">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                          <FontAwesomeIcon icon={faClock} className="text-[10px]" /> Activo
+                        </span>
                       </div>
-                    </td>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600">Inactivo</span>
+                    )}
+                  </td>
 
-                    {/* Col 6: Estado (moved description inside or removed) */}
-                    <td className="px-6 py-4 align-top">
-                      <button onClick={() => handleToggleActive(rule)} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${rule.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"}`}>
-                        <FontAwesomeIcon icon={rule.isActive ? faToggleOn : faToggleOff} className="mr-2" />
-                        {rule.isActive ? "Activa" : "Inactiva"}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 text-right space-x-2">
-                      <button onClick={() => openEdit(rule)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors" title="Editar">
-                        <FontAwesomeIcon icon={faEdit} />
-                      </button>
-                      <button onClick={() => handleDelete(rule)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors" title="Eliminar">
-                        <FontAwesomeIcon icon={faTrash} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  {/* Col 5: Max Simultaneos */}
+                  <td className="px-6 py-4 text-gray-600 dark:text-gray-300 align-top">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{rule.maxSimultaneousUsers} usuarios</span>
+                        {limitExceeded && (
+                          <div className="text-amber-500" title={`El límite (${rule.maxSimultaneousUsers}) es mayor que la cantidad de usuarios coincidentes (${userCount})`}>
+                            <FontAwesomeIcon icon={faTriangleExclamation} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">{userCount} coincidentes</div>
+                    </div>
+                  </td>
+
+                  {/* Col 6: Estado (moved description inside or removed) */}
+                  <td className="px-6 py-4 align-top">
+                    <button onClick={() => handleToggleActive(rule)} className={`px-3 py-1 rounded text-sm font-medium inline-flex items-center transition-colors ${rule.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"}`}>
+                      <FontAwesomeIcon icon={rule.isActive ? faToggleOn : faToggleOff} className="mr-2" />
+                      {rule.isActive ? "Activa" : "Inactiva"}
+                    </button>
+                  </td>
+                  <td className="px-6 py-4 text-right space-x-2">
+                    <button onClick={() => openEdit(rule)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors" title="Editar">
+                      <FontAwesomeIcon icon={faEdit} />
+                    </button>
+                    <button onClick={() => handleDelete(rule)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors" title="Eliminar">
+                      <FontAwesomeIcon icon={faTrash} />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </TablaConEncabezadoFijo>
       )}
 
       {/* Modal using UI Component */}

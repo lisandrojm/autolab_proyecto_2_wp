@@ -9,6 +9,7 @@ import { BotonOrden, useOrdenTabla } from "../components/ui/OrdenTabla";
 import { projectsAPI, horaTexto, type EstadoDescargasArca, type PendienteDeConstancia } from "../api/projects";
 import { sweetAlert } from "../utils/sweetAlert";
 import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
+import { TablaConEncabezadoFijo, useAltoDeBarra } from "../components/ui/TablaConEncabezadoFijo";
 
 /*
   A.R.C.A DESCARGAS AUTOMÁTICAS (pedido del 18/10/2026): la hermana de «A.R.C.A Altas Automáticas». Muestra
@@ -23,6 +24,8 @@ const fechaArgentina = (iso: string) => fechaCorta(new Intl.DateTimeFormat("en-C
 const claveDe = (p: PendienteDeConstancia) => `${p.userProjectId}:${p.contractIndex}`;
 
 export const DescargasArcaPage: React.FC = () => {
+  // La barra de «N tildadas» también se pega debajo del header: el encabezado de la tabla va debajo de ella.
+  const [barraRef, altoBarra] = useAltoDeBarra();
   const puedeAbrir = usePuedeAbrir();
   const [estado, setEstado] = useState<EstadoDescargasArca | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -215,7 +218,7 @@ export const DescargasArcaPage: React.FC = () => {
           )}
 
           {seleccionadas.length > 0 && (
-            <div className="sticky top-[var(--wp-sticky-top,144px)] z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 px-4 py-2.5 shadow-sm">
+            <div ref={barraRef} className="sticky top-[var(--wp-sticky-top,144px)] z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 px-4 py-2.5 shadow-sm">
               <p className="text-sm text-blue-900 dark:text-blue-100">
                 <strong>{seleccionadas.length}</strong> tildada{seleccionadas.length === 1 ? "" : "s"} · {[...new Set(seleccionadas.map((p) => p.empresa.razonSocial))].join(", ")}
               </p>
@@ -239,71 +242,69 @@ export const DescargasArcaPage: React.FC = () => {
             {pendientes.length === 0 ? (
               <p className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 px-6 py-10 text-center text-sm text-gray-500">No hay altas presentadas esperando su constancia.</p>
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                <table className="min-w-full">
-                  <thead>
-                    <tr>
-                      <th className={`${th} w-8`}>
-                        <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={filtrados.length > 0 && filtrados.every((p) => seleccion.has(claveDe(p)))} disabled={filtrados.length === 0} onChange={() => setSeleccion((prev) => { const s = new Set(prev); const todas = filtrados.every((p) => s.has(claveDe(p))); for (const p of filtrados) { if (todas) s.delete(claveDe(p)); else s.add(claveDe(p)); } return s; })} title="Tildar todas" />
-                      </th>
-                      <th className={th}>
-                        <BotonOrden columna="persona" orden={orden} onAlternar={alternar}>
-                          Persona
-                        </BotonOrden>
-                      </th>
-                      <th className={th}>
-                        <BotonOrden columna="empresa" orden={orden} onAlternar={alternar}>
-                          Empresa
-                        </BotonOrden>
-                      </th>
-                      <th className={th}>
-                        <BotonOrden columna="alta" orden={orden} onAlternar={alternar}>
-                          Alta
-                        </BotonOrden>
-                      </th>
-                      <th className={th}>
-                        <BotonOrden columna="presentada" orden={orden} onAlternar={alternar}>
-                          Presentada en ARCA
-                        </BotonOrden>
-                      </th>
-                      <th className={th}>Se baja en</th>
-                      <th className={`${th} text-right`}>Acción</th>
+              <TablaConEncabezadoFijo top={`calc(var(--wp-sticky-top, 144px) + ${altoBarra}px)`} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800" tabla="min-w-full">
+                <thead>
+                  <tr>
+                    <th className={`${th} w-8`}>
+                      <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={filtrados.length > 0 && filtrados.every((p) => seleccion.has(claveDe(p)))} disabled={filtrados.length === 0} onChange={() => setSeleccion((prev) => { const s = new Set(prev); const todas = filtrados.every((p) => s.has(claveDe(p))); for (const p of filtrados) { if (todas) s.delete(claveDe(p)); else s.add(claveDe(p)); } return s; })} title="Tildar todas" />
+                    </th>
+                    <th className={th}>
+                      <BotonOrden columna="persona" orden={orden} onAlternar={alternar}>
+                        Persona
+                      </BotonOrden>
+                    </th>
+                    <th className={th}>
+                      <BotonOrden columna="empresa" orden={orden} onAlternar={alternar}>
+                        Empresa
+                      </BotonOrden>
+                    </th>
+                    <th className={th}>
+                      <BotonOrden columna="alta" orden={orden} onAlternar={alternar}>
+                        Alta
+                      </BotonOrden>
+                    </th>
+                    <th className={th}>
+                      <BotonOrden columna="presentada" orden={orden} onAlternar={alternar}>
+                        Presentada en ARCA
+                      </BotonOrden>
+                    </th>
+                    <th className={th}>Se baja en</th>
+                    <th className={`${th} text-right`}>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ordenados.map((p) => (
+                    <tr key={claveDe(p)} className={`border-t border-gray-100 dark:border-gray-800 align-top ${seleccion.has(claveDe(p)) ? "bg-blue-50/60 dark:bg-blue-900/10" : ""}`}>
+                      <td className="px-3 py-3 w-8">
+                        <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={seleccion.has(claveDe(p))} onChange={() => setSeleccion((prev) => { const s = new Set(prev); if (s.has(claveDe(p))) s.delete(claveDe(p)); else s.add(claveDe(p)); return s; })} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{p.nombre}</p>
+                        <p className="text-xs font-mono text-gray-500">{fmtCuil(p.cuil)}</p>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{p.empresa.razonSocial}</td>
+                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{fechaCorta(p.fechaAlta)}</td>
+                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{p.presentadaEl ? `${new Date(p.presentadaEl).toLocaleDateString("es-AR")} ${new Date(p.presentadaEl).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}` : "—"}</td>
+                      <td className="px-4 py-3">
+                        {estado.proximaCorrida ? (
+                          <div className="space-y-1">
+                            <CuentaRegresiva destino={estado.proximaCorrida} ahora={ahoraServidor} />
+                            <p className="text-[11px] text-gray-500">{new Date(estado.proximaCorrida).getTime() <= ahoraServidor ? "En la descarga en curso" : `${fechaArgentina(estado.proximaCorrida)} a las ${horaTexto(estado.config)}`}</p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">Automática desactivada</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button type="button" onClick={() => forzar([p], `Bajar ahora la constancia de ${p.nombre}`)} disabled={forzando || enCurso} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap">
+                          <FontAwesomeIcon icon={faBolt} className="h-3 w-3" />
+                          Forzar descarga
+                        </button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {ordenados.map((p) => (
-                      <tr key={claveDe(p)} className={`border-t border-gray-100 dark:border-gray-800 align-top ${seleccion.has(claveDe(p)) ? "bg-blue-50/60 dark:bg-blue-900/10" : ""}`}>
-                        <td className="px-3 py-3 w-8">
-                          <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={seleccion.has(claveDe(p))} onChange={() => setSeleccion((prev) => { const s = new Set(prev); if (s.has(claveDe(p))) s.delete(claveDe(p)); else s.add(claveDe(p)); return s; })} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{p.nombre}</p>
-                          <p className="text-xs font-mono text-gray-500">{fmtCuil(p.cuil)}</p>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{p.empresa.razonSocial}</td>
-                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{fechaCorta(p.fechaAlta)}</td>
-                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{p.presentadaEl ? `${new Date(p.presentadaEl).toLocaleDateString("es-AR")} ${new Date(p.presentadaEl).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}` : "—"}</td>
-                        <td className="px-4 py-3">
-                          {estado.proximaCorrida ? (
-                            <div className="space-y-1">
-                              <CuentaRegresiva destino={estado.proximaCorrida} ahora={ahoraServidor} />
-                              <p className="text-[11px] text-gray-500">{new Date(estado.proximaCorrida).getTime() <= ahoraServidor ? "En la descarga en curso" : `${fechaArgentina(estado.proximaCorrida)} a las ${horaTexto(estado.config)}`}</p>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-gray-400">Automática desactivada</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <button type="button" onClick={() => forzar([p], `Bajar ahora la constancia de ${p.nombre}`)} disabled={forzando || enCurso} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap">
-                            <FontAwesomeIcon icon={faBolt} className="h-3 w-3" />
-                            Forzar descarga
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </TablaConEncabezadoFijo>
             )}
           </section>
         </div>

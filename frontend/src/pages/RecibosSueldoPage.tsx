@@ -11,6 +11,7 @@ import { sweetAlert } from "../utils/sweetAlert";
 import { DetalleRecibo, fmtCuil, fechaHora, periodoTexto, importeNumero, pesos } from "../components/recibos/DetalleRecibo";
 import { RegistroEnviadosRecibos } from "../components/recibos/RegistroEnviadosRecibos";
 import { BadgesLote, ElegirSabana, conteoDe } from "../components/recibos/ElegirSabana";
+import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
 
 /*
   RECIBOS DE SUELDO (Contratación, 20/10/2026). Se sube la sábana PDF con todos los recibos del mes (dos
@@ -451,193 +452,191 @@ export const RecibosSueldoPage: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
+                  <TablaConEncabezadoFijo className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700" tabla="w-full text-left border-collapse">
+                    <thead>
+                      <tr>
+                        <th className={th}>
+                          <input type="checkbox" checked={tildables.length > 0 && tildables.every((r) => seleccion.has(r._id))} onChange={(e) => setSeleccion(e.target.checked ? new Set(tildables.map((r) => r._id)) : new Set())} title="Tildar todas las filas que todavía no se enviaron (las de la búsqueda, si hay una)" />
+                        </th>
+                        <th className={th}>
+                          <BotonOrden columna="pagina" orden={orden} onAlternar={alternar}>
+                            Páginas
+                          </BotonOrden>
+                        </th>
+                        <th className={th}>
+                          <BotonOrden columna="persona" orden={orden} onAlternar={alternar}>
+                            Persona
+                          </BotonOrden>
+                        </th>
+                        <th className={th}>
+                          <BotonOrden columna="legajo" orden={orden} onAlternar={alternar}>
+                            Legajo
+                          </BotonOrden>
+                        </th>
+                        <th className={th}>
+                          <BotonOrden columna="cuil" orden={orden} onAlternar={alternar}>
+                            CUIL
+                          </BotonOrden>
+                        </th>
+                        <th className={th}>
+                          <BotonOrden columna="puesto" orden={orden} onAlternar={alternar}>
+                            Categoría · Tarea
+                          </BotonOrden>
+                        </th>
+                        <th className={th}>
+                          <BotonOrden columna="ingreso" orden={orden} onAlternar={alternar}>
+                            Ingreso
+                          </BotonOrden>
+                        </th>
+                        <th className={th}>Período</th>
+                        <th className={`${th} text-right`}>
+                          <BotonOrden columna="bruto" orden={orden} onAlternar={alternar}>
+                            Bruto
+                          </BotonOrden>
+                        </th>
+                        <th className={`${th} text-right`}>
+                          <BotonOrden columna="descuentos" orden={orden} onAlternar={alternar}>
+                            Descuentos
+                          </BotonOrden>
+                        </th>
+                        <th className={`${th} text-right`}>
+                          <BotonOrden columna="neto" orden={orden} onAlternar={alternar}>
+                            Neto a cobrar
+                          </BotonOrden>
+                        </th>
+                        <th className={th}>
+                          <BotonOrden columna="recibo" orden={orden} onAlternar={alternar}>
+                            Recibo
+                          </BotonOrden>
+                        </th>
+                        <th className={th}>PDF</th>
+                        <th className={th}>
+                          <BotonOrden columna="estado" orden={orden} onAlternar={alternar}>
+                            Estado | Firma
+                          </BotonOrden>
+                        </th>
+                        <th className={th}></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {ordenados.length === 0 && (
                         <tr>
-                          <th className={th}>
-                            <input type="checkbox" checked={tildables.length > 0 && tildables.every((r) => seleccion.has(r._id))} onChange={(e) => setSeleccion(e.target.checked ? new Set(tildables.map((r) => r._id)) : new Set())} title="Tildar todas las filas que todavía no se enviaron (las de la búsqueda, si hay una)" />
-                          </th>
-                          <th className={th}>
-                            <BotonOrden columna="pagina" orden={orden} onAlternar={alternar}>
-                              Páginas
-                            </BotonOrden>
-                          </th>
-                          <th className={th}>
-                            <BotonOrden columna="persona" orden={orden} onAlternar={alternar}>
-                              Persona
-                            </BotonOrden>
-                          </th>
-                          <th className={th}>
-                            <BotonOrden columna="legajo" orden={orden} onAlternar={alternar}>
-                              Legajo
-                            </BotonOrden>
-                          </th>
-                          <th className={th}>
-                            <BotonOrden columna="cuil" orden={orden} onAlternar={alternar}>
-                              CUIL
-                            </BotonOrden>
-                          </th>
-                          <th className={th}>
-                            <BotonOrden columna="puesto" orden={orden} onAlternar={alternar}>
-                              Categoría · Tarea
-                            </BotonOrden>
-                          </th>
-                          <th className={th}>
-                            <BotonOrden columna="ingreso" orden={orden} onAlternar={alternar}>
-                              Ingreso
-                            </BotonOrden>
-                          </th>
-                          <th className={th}>Período</th>
-                          <th className={`${th} text-right`}>
-                            <BotonOrden columna="bruto" orden={orden} onAlternar={alternar}>
-                              Bruto
-                            </BotonOrden>
-                          </th>
-                          <th className={`${th} text-right`}>
-                            <BotonOrden columna="descuentos" orden={orden} onAlternar={alternar}>
-                              Descuentos
-                            </BotonOrden>
-                          </th>
-                          <th className={`${th} text-right`}>
-                            <BotonOrden columna="neto" orden={orden} onAlternar={alternar}>
-                              Neto a cobrar
-                            </BotonOrden>
-                          </th>
-                          <th className={th}>
-                            <BotonOrden columna="recibo" orden={orden} onAlternar={alternar}>
-                              Recibo
-                            </BotonOrden>
-                          </th>
-                          <th className={th}>PDF</th>
-                          <th className={th}>
-                            <BotonOrden columna="estado" orden={orden} onAlternar={alternar}>
-                              Estado | Firma
-                            </BotonOrden>
-                          </th>
-                          <th className={th}></th>
+                          <td colSpan={16} className="px-4 py-10 text-center text-sm text-gray-500">
+                            Ningún recibo coincide con la búsqueda.
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {ordenados.length === 0 && (
-                          <tr>
-                            <td colSpan={16} className="px-4 py-10 text-center text-sm text-gray-500">
-                              Ningún recibo coincide con la búsqueda.
-                            </td>
-                          </tr>
-                        )}
-                        {ordenados.map((r) => (
-                          <tr key={r._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
-                            <td className="px-4 py-3">
-                              {sePuedeTildar(r) && (
-                                <input
-                                  type="checkbox"
-                                  checked={seleccion.has(r._id)}
-                                  onChange={(e) =>
-                                    setSeleccion((s) => {
-                                      const n = new Set(s);
-                                      if (e.target.checked) n.add(r._id);
-                                      else n.delete(r._id);
-                                      return n;
-                                    })
-                                  }
-                                />
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{r.paginas.join("-")}</td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col min-w-[12rem]">
-                                <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{r.nombreUsuario || <span className="italic text-amber-600 dark:text-amber-400">Sin persona en la plataforma</span>}</span>
-                                {/* Lo que dice el recibo, para cotejar con la persona asociada. */}
-                                {r.datos.nombre && <span className="text-xs text-gray-500">En el recibo: {r.datos.nombre}</span>}
-                                {r.nombreProyecto && (
-                                  <span className="text-[11px] text-gray-400">
-                                    {r.nombreProyecto}
-                                    {r.asignadoAMano ? " · elegida a mano" : ""}
-                                  </span>
-                                )}
-                                {r.asociadoPorNombre && !r.asignadoAMano && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Asociada por nombre (sin CUIL legible): revisá antes de enviar</span>}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-sm font-mono">{r.datos.legajo || "—"}</td>
-                            <td className="px-4 py-3 text-sm font-mono whitespace-nowrap">{fmtCuil(r.datos.cuil)}</td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col min-w-[10rem]">
-                                <span className="text-sm text-gray-800 dark:text-gray-200">{r.datos.categoria || "—"}</span>
-                                {r.datos.tarea && <span className="text-xs text-gray-500">{r.datos.tarea}</span>}
-                                {r.datos.sector && <span className="text-[11px] text-gray-400">Sector: {r.datos.sector}</span>}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col whitespace-nowrap">
-                                <span className="text-sm">{r.datos.ingreso || "—"}</span>
-                                {r.datos.antiguedad && <span className="text-xs text-gray-500">{r.datos.antiguedad}</span>}
-                                {r.datos.modalidad && (
-                                  <span className="text-[11px] text-gray-400 max-w-[12rem] truncate" title={r.datos.modalidad}>
-                                    {r.datos.modalidad}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-sm whitespace-nowrap">{periodoTexto(r.datos.periodo)}</td>
-                            <td className="px-4 py-3 text-sm whitespace-nowrap text-right" title={r.datos.basico ? `Básico ${r.datos.basico}` : ""}>
-                              {pesos(r.datos.sueldoBruto)}
-                            </td>
-                            <td className="px-4 py-3 text-sm whitespace-nowrap text-right text-red-600 dark:text-red-400">{pesos(r.datos.descuentos)}</td>
-                            <td className="px-4 py-3 text-sm whitespace-nowrap text-right font-semibold" title={r.datos.otros ? `Sueldo neto ${r.datos.sueldoNeto || "—"} · Otros ${r.datos.otros}` : ""}>
-                              {pesos(r.datos.neto)}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col whitespace-nowrap">
-                                <span className="text-sm font-mono">{r.datos.numeroRecibo ? `N° ${r.datos.numeroRecibo}` : "—"}</span>
-                                {r.datos.fechaPago && <span className="text-[11px] text-gray-400">Pago {r.datos.fechaPago}</span>}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <a href={getImageUrl(r.archivoUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300" title="Abrir el PDF de este recibo">
-                                <FontAwesomeIcon icon={faFilePdf} /> Ver
-                              </a>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col gap-1">
-                                <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[11px] font-semibold border ${CLASE_ESTADO[r.estado]}`} title={r.error || r.nombreEnviado || ""}>
-                                  <FontAwesomeIcon icon={ICONO_ESTADO[r.estado]} spin={r.estado === "enviando"} className="h-3 w-3" /> {ETIQUETA_ESTADO_RECIBO[r.estado]}
+                      )}
+                      {ordenados.map((r) => (
+                        <tr key={r._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
+                          <td className="px-4 py-3">
+                            {sePuedeTildar(r) && (
+                              <input
+                                type="checkbox"
+                                checked={seleccion.has(r._id)}
+                                onChange={(e) =>
+                                  setSeleccion((s) => {
+                                    const n = new Set(s);
+                                    if (e.target.checked) n.add(r._id);
+                                    else n.delete(r._id);
+                                    return n;
+                                  })
+                                }
+                              />
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{r.paginas.join("-")}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col min-w-[12rem]">
+                              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{r.nombreUsuario || <span className="italic text-amber-600 dark:text-amber-400">Sin persona en la plataforma</span>}</span>
+                              {/* Lo que dice el recibo, para cotejar con la persona asociada. */}
+                              {r.datos.nombre && <span className="text-xs text-gray-500">En el recibo: {r.datos.nombre}</span>}
+                              {r.nombreProyecto && (
+                                <span className="text-[11px] text-gray-400">
+                                  {r.nombreProyecto}
+                                  {r.asignadoAMano ? " · elegida a mano" : ""}
                                 </span>
-                                {r.enviadoEl && (
-                                  <span className="text-[11px] text-gray-400">
-                                    Enviado {fechaHora(r.enviadoEl)}
-                                    {r.codigo ? ` · ${r.codigo}` : ""}
-                                  </span>
-                                )}
-                                {r.firmadoEl && <span className="text-[11px] text-green-600">Firmado {fechaHora(r.firmadoEl)}</span>}
-                                {r.error && <span className="text-[11px] text-red-600 max-w-xs">{r.error}</span>}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                {(r.estado === "sin_persona" || r.estado === "listo" || r.estado === "error") && (
-                                  <button type="button" onClick={() => setAsignando(r)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg" title="Elegir la persona de este recibo">
-                                    <FontAwesomeIcon icon={faUserPen} />
-                                  </button>
-                                )}
-                                <button type="button" onClick={() => abrirTexto(r)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Ver el detalle del recibo: conceptos y el texto leído">
-                                  <FontAwesomeIcon icon={faAlignLeft} />
+                              )}
+                              {r.asociadoPorNombre && !r.asignadoAMano && <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">Asociada por nombre (sin CUIL legible): revisá antes de enviar</span>}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm font-mono">{r.datos.legajo || "—"}</td>
+                          <td className="px-4 py-3 text-sm font-mono whitespace-nowrap">{fmtCuil(r.datos.cuil)}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col min-w-[10rem]">
+                              <span className="text-sm text-gray-800 dark:text-gray-200">{r.datos.categoria || "—"}</span>
+                              {r.datos.tarea && <span className="text-xs text-gray-500">{r.datos.tarea}</span>}
+                              {r.datos.sector && <span className="text-[11px] text-gray-400">Sector: {r.datos.sector}</span>}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col whitespace-nowrap">
+                              <span className="text-sm">{r.datos.ingreso || "—"}</span>
+                              {r.datos.antiguedad && <span className="text-xs text-gray-500">{r.datos.antiguedad}</span>}
+                              {r.datos.modalidad && (
+                                <span className="text-[11px] text-gray-400 max-w-[12rem] truncate" title={r.datos.modalidad}>
+                                  {r.datos.modalidad}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm whitespace-nowrap">{periodoTexto(r.datos.periodo)}</td>
+                          <td className="px-4 py-3 text-sm whitespace-nowrap text-right" title={r.datos.basico ? `Básico ${r.datos.basico}` : ""}>
+                            {pesos(r.datos.sueldoBruto)}
+                          </td>
+                          <td className="px-4 py-3 text-sm whitespace-nowrap text-right text-red-600 dark:text-red-400">{pesos(r.datos.descuentos)}</td>
+                          <td className="px-4 py-3 text-sm whitespace-nowrap text-right font-semibold" title={r.datos.otros ? `Sueldo neto ${r.datos.sueldoNeto || "—"} · Otros ${r.datos.otros}` : ""}>
+                            {pesos(r.datos.neto)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col whitespace-nowrap">
+                              <span className="text-sm font-mono">{r.datos.numeroRecibo ? `N° ${r.datos.numeroRecibo}` : "—"}</span>
+                              {r.datos.fechaPago && <span className="text-[11px] text-gray-400">Pago {r.datos.fechaPago}</span>}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <a href={getImageUrl(r.archivoUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300" title="Abrir el PDF de este recibo">
+                              <FontAwesomeIcon icon={faFilePdf} /> Ver
+                            </a>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col gap-1">
+                              <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[11px] font-semibold border ${CLASE_ESTADO[r.estado]}`} title={r.error || r.nombreEnviado || ""}>
+                                <FontAwesomeIcon icon={ICONO_ESTADO[r.estado]} spin={r.estado === "enviando"} className="h-3 w-3" /> {ETIQUETA_ESTADO_RECIBO[r.estado]}
+                              </span>
+                              {r.enviadoEl && (
+                                <span className="text-[11px] text-gray-400">
+                                  Enviado {fechaHora(r.enviadoEl)}
+                                  {r.codigo ? ` · ${r.codigo}` : ""}
+                                </span>
+                              )}
+                              {r.firmadoEl && <span className="text-[11px] text-green-600">Firmado {fechaHora(r.firmadoEl)}</span>}
+                              {r.error && <span className="text-[11px] text-red-600 max-w-xs">{r.error}</span>}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              {(r.estado === "sin_persona" || r.estado === "listo" || r.estado === "error") && (
+                                <button type="button" onClick={() => setAsignando(r)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg" title="Elegir la persona de este recibo">
+                                  <FontAwesomeIcon icon={faUserPen} />
                                 </button>
-                                <button type="button" onClick={() => recibosSueldoAPI.descargarJsonDeRecibo(lote, r)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Bajar el JSON de este recibo (datos, persona y texto leído)">
-                                  <FontAwesomeIcon icon={faFileCode} />
+                              )}
+                              <button type="button" onClick={() => abrirTexto(r)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Ver el detalle del recibo: conceptos y el texto leído">
+                                <FontAwesomeIcon icon={faAlignLeft} />
+                              </button>
+                              <button type="button" onClick={() => recibosSueldoAPI.descargarJsonDeRecibo(lote, r)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Bajar el JSON de este recibo (datos, persona y texto leído)">
+                                <FontAwesomeIcon icon={faFileCode} />
+                              </button>
+                              {sePuedeReleer(r) && (
+                                <button type="button" disabled={releyendo === r._id} onClick={() => releer(r)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg disabled:opacity-50" title="Volver a leer el PDF de este recibo (OCR a más resolución)">
+                                  <FontAwesomeIcon icon={releyendo === r._id ? faSpinner : faRotateRight} spin={releyendo === r._id} />
                                 </button>
-                                {sePuedeReleer(r) && (
-                                  <button type="button" disabled={releyendo === r._id} onClick={() => releer(r)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg disabled:opacity-50" title="Volver a leer el PDF de este recibo (OCR a más resolución)">
-                                    <FontAwesomeIcon icon={releyendo === r._id ? faSpinner : faRotateRight} spin={releyendo === r._id} />
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </TablaConEncabezadoFijo>
                 </>
               )}
             </div>

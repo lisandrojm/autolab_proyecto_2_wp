@@ -18,6 +18,7 @@ import { getHelp, hasHelp, HelpKey } from '../../data/help/helpContent';
 import { colorTextoBadge, conAlpha } from '../EstadoSelect';
 import { useThemeStore } from '../../stores/themeStore';
 import { SelectorPuestoDesempenado } from '../arca/SelectorPuestoDesempenado';
+import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 
 /** Descriptor de un campo extra propio de un catálogo (además de nombre / ID externo). */
 export interface CatalogExtraField {
@@ -1177,36 +1178,34 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
       {ordenando ? (
         // La tabla de siempre no: esa pagina, tiene el interruptor de Estado activo y las acciones.
         // Acá sólo se arrastra, sobre la lista completa.
-        <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-          <DndContext sensors={sensoresOrden} collisionDetection={closestCenter} onDragEnd={alSoltar}>
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-900/50">
-                <tr>
-                  <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-14">Ordenar</th>
-                  <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-14">Orden</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-                  {columnasVisibles.map((f) => (
-                      <th key={f.key} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                        {f.columnLabel || f.label}
-                      </th>
-                    ))}
-                </tr>
-              </thead>
-              <SortableContext items={ordenando.map((it) => it._id)} strategy={verticalListSortingStrategy}>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                  {ordenando.map((item, i) => (
-                    <FilaParaOrdenar
-                      key={item._id}
-                      item={item}
-                      posicion={i + 1}
-                      columnas={columnasVisibles.map((f) => ({ key: f.key, render: (it) => (f.type === 'estado' ? extraDisplay(f, it[f.key]) : celdaExtra(f, it)) }))}
-                    />
+        <DndContext sensors={sensoresOrden} collisionDetection={closestCenter} onDragEnd={alSoltar}>
+          <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-900/50">
+              <tr>
+                <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-14">Ordenar</th>
+                <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-14">Orden</th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                {columnasVisibles.map((f) => (
+                    <th key={f.key} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                      {f.columnLabel || f.label}
+                    </th>
                   ))}
-                </tbody>
-              </SortableContext>
-            </table>
-          </DndContext>
-        </div>
+              </tr>
+            </thead>
+            <SortableContext items={ordenando.map((it) => it._id)} strategy={verticalListSortingStrategy}>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                {ordenando.map((item, i) => (
+                  <FilaParaOrdenar
+                    key={item._id}
+                    item={item}
+                    posicion={i + 1}
+                    columnas={columnasVisibles.map((f) => ({ key: f.key, render: (it) => (f.type === 'estado' ? extraDisplay(f, it[f.key]) : celdaExtra(f, it)) }))}
+                  />
+                ))}
+              </tbody>
+            </SortableContext>
+          </TablaConEncabezadoFijo>
+        </DndContext>
       ) : loading ? (
         <LoadingSpinner />
       ) : loadError ? (
@@ -1314,114 +1313,112 @@ export const SimpleCatalogManager: React.FC<SimpleCatalogManagerProps> = ({ titl
             ),
           })
         ) : (
-        <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900/50">
-              <tr>
-                {/* Con «Ordenar», las dos primeras columnas son las de Configuración → Estados: el
-                    agarre (que también activa el modo) y la posición. */}
+        <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-900/50">
+            <tr>
+              {/* Con «Ordenar», las dos primeras columnas son las de Configuración → Estados: el
+                  agarre (que también activa el modo) y la posición. */}
+              {ordenable && (
+                <>
+                  <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-14">Ordenar</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-14">Orden</th>
+                </>
+              )}
+              <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+              {columnasVisibles.map((f) => (
+                  <React.Fragment key={f.key}>
+                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{f.columnLabel || f.label}</th>
+                    {columnasCalculadas
+                      .filter((c) => c.despuesDe === f.key)
+                      .map((c) => (
+                        <th key={c.label} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                          {c.encabezado ?? c.label}
+                        </th>
+                      ))}
+                  </React.Fragment>
+                ))}
+              {/* `w-px` + `whitespace-nowrap`: la columna se encoge a lo que mide el código y no
+                  lo parte. Un RNOS cortado en dos renglones ("9-0500-" / "8") deja de leerse como
+                  un código y no se puede cotejar de un vistazo contra un padrón de ARCA. */}
+              {showExternalId && <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">{externalIdLabel}</th>}
+              {/*
+                ÚLTIMAS ANTES DE ACCIONES, en todas las pantallas.
+
+                Estaban antes del código, así que la ★ caía en un lugar distinto según qué columnas
+                tuviera cada catálogo: segunda en Actividades, primera en otros. Es un control que
+                se busca con el ojo recorriendo siempre el mismo borde de la tabla, y para eso tiene
+                que estar en la misma posición en todas.
+              */}
+              {columnasCalculadas
+                .filter((c) => !c.despuesDe || !columnasVisibles.some((f) => f.key === c.despuesDe))
+                .map((c) => (
+                <th key={c.label} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                  {c.encabezado ?? c.label}
+                </th>
+              ))}
+              <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+            {visibles.map((item) => (
+              <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
                 {ordenable && (
                   <>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-14">Ordenar</th>
-                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-14">Orden</th>
+                    <td className="px-4 py-3 text-center w-14">
+                      <button
+                        type="button"
+                        onClick={empezarAOrdenar}
+                        disabled={items.length < 2}
+                        title="Clic para activar el modo ordenar"
+                        aria-label="Activar el modo ordenar"
+                        className="text-gray-400 dark:text-gray-600 hover:text-blue-500 disabled:cursor-not-allowed disabled:hover:text-gray-400"
+                      >
+                        <FontAwesomeIcon icon={faGripVertical} className="h-4 w-4" />
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300 w-14">{Number.isFinite(posicionDe(item)) ? posicionDe(item) : '—'}</td>
                   </>
                 )}
-                <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                <td className={`px-5 py-3 text-sm font-medium ${estaInactivo(item) ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white'}`}>{item.name}</td>
+                {/*
+                  Los valores de un `extraField` son etiquetas de catálogo —«2 — DISCONTINUOS»,
+                  «1 — CONTINUOS»—, no texto corrido: partirlos en dos renglones por el guión hace
+                  que una tabla de 293 filas tenga la mitad con doble alto y sin ninguna razón. La
+                  columna se ensancha lo que haga falta; el ancho lo absorbe la de Nombre, que sí
+                  es texto largo.
+                */}
                 {columnasVisibles.map((f) => (
                     <React.Fragment key={f.key}>
-                      <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{f.columnLabel || f.label}</th>
+                      <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{f.type === 'estado' ? interruptorEstado(f, item) : celdaExtra(f, item)}</td>
                       {columnasCalculadas
                         .filter((c) => c.despuesDe === f.key)
                         .map((c) => (
-                          <th key={c.label} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                            {c.encabezado ?? c.label}
-                          </th>
+                          <td key={c.label} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">
+                            {c.render(item, items)}
+                          </td>
                         ))}
                     </React.Fragment>
                   ))}
-                {/* `w-px` + `whitespace-nowrap`: la columna se encoge a lo que mide el código y no
-                    lo parte. Un RNOS cortado en dos renglones ("9-0500-" / "8") deja de leerse como
-                    un código y no se puede cotejar de un vistazo contra un padrón de ARCA. */}
-                {showExternalId && <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">{externalIdLabel}</th>}
-                {/*
-                  ÚLTIMAS ANTES DE ACCIONES, en todas las pantallas.
-
-                  Estaban antes del código, así que la ★ caía en un lugar distinto según qué columnas
-                  tuviera cada catálogo: segunda en Actividades, primera en otros. Es un control que
-                  se busca con el ojo recorriendo siempre el mismo borde de la tabla, y para eso tiene
-                  que estar en la misma posición en todas.
-                */}
+                {showExternalId && <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap w-px">{item.externalId ? (formatExternalId ? formatExternalId(item.externalId) : item.externalId) : '—'}</td>}
                 {columnasCalculadas
                   .filter((c) => !c.despuesDe || !columnasVisibles.some((f) => f.key === c.despuesDe))
                   .map((c) => (
-                  <th key={c.label} className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                    {c.encabezado ?? c.label}
-                  </th>
-                ))}
-                <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-              {visibles.map((item) => (
-                <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-                  {ordenable && (
-                    <>
-                      <td className="px-4 py-3 text-center w-14">
-                        <button
-                          type="button"
-                          onClick={empezarAOrdenar}
-                          disabled={items.length < 2}
-                          title="Clic para activar el modo ordenar"
-                          aria-label="Activar el modo ordenar"
-                          className="text-gray-400 dark:text-gray-600 hover:text-blue-500 disabled:cursor-not-allowed disabled:hover:text-gray-400"
-                        >
-                          <FontAwesomeIcon icon={faGripVertical} className="h-4 w-4" />
-                        </button>
-                      </td>
-                      <td className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300 w-14">{Number.isFinite(posicionDe(item)) ? posicionDe(item) : '—'}</td>
-                    </>
-                  )}
-                  <td className={`px-5 py-3 text-sm font-medium ${estaInactivo(item) ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-white'}`}>{item.name}</td>
-                  {/*
-                    Los valores de un `extraField` son etiquetas de catálogo —«2 — DISCONTINUOS»,
-                    «1 — CONTINUOS»—, no texto corrido: partirlos en dos renglones por el guión hace
-                    que una tabla de 293 filas tenga la mitad con doble alto y sin ninguna razón. La
-                    columna se ensancha lo que haga falta; el ancho lo absorbe la de Nombre, que sí
-                    es texto largo.
-                  */}
-                  {columnasVisibles.map((f) => (
-                      <React.Fragment key={f.key}>
-                        <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{f.type === 'estado' ? interruptorEstado(f, item) : celdaExtra(f, item)}</td>
-                        {columnasCalculadas
-                          .filter((c) => c.despuesDe === f.key)
-                          .map((c) => (
-                            <td key={c.label} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">
-                              {c.render(item, items)}
-                            </td>
-                          ))}
-                      </React.Fragment>
-                    ))}
-                  {showExternalId && <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap w-px">{item.externalId ? (formatExternalId ? formatExternalId(item.externalId) : item.externalId) : '—'}</td>}
-                  {columnasCalculadas
-                    .filter((c) => !c.despuesDe || !columnasVisibles.some((f) => f.key === c.despuesDe))
-                    .map((c) => (
-                    <td key={c.label} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">
-                      {c.render(item, items)}
-                    </td>
-                  ))}
-                  <td className="px-5 py-3 text-sm text-right">
-                    <button onClick={() => openEdit(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mr-3" title="Editar">
-                      <FontAwesomeIcon icon={faEdit} />
-                    </button>
-                    <button onClick={() => handleDelete(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300" title="Eliminar">
-                      <FontAwesomeIcon icon={faTrash} />
-                    </button>
+                  <td key={c.label} className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">
+                    {c.render(item, items)}
                   </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                ))}
+                <td className="px-5 py-3 text-sm text-right">
+                  <button onClick={() => openEdit(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mr-3" title="Editar">
+                    <FontAwesomeIcon icon={faEdit} />
+                  </button>
+                  <button onClick={() => handleDelete(item)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300" title="Eliminar">
+                    <FontAwesomeIcon icon={faTrash} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </TablaConEncabezadoFijo>
         )
       )}
 

@@ -10,6 +10,7 @@ import { BandaEmpleador } from "./BandaEmpleador";
 import { FormularioArca } from "./FormularioArca";
 import { Company } from "../../api/companies";
 import { useResaltadoTramo } from "./useResaltadoTramo";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 /**
  * Detalle de "Datos ARCA" de un contrato.
@@ -211,7 +212,7 @@ const VistaPrevia: React.FC<{ campos: CampoRegistro[] }> = ({ campos }) => {
   const incompleto = campos.some((c) => c.contenido === null);
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-clip">
       <button type="button" onClick={() => setAbierto((v) => !v)} className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
         <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
           <FontAwesomeIcon icon={abierto ? faChevronDown : faChevronRight} className="h-3 w-3" />
@@ -225,39 +226,37 @@ const VistaPrevia: React.FC<{ campos: CampoRegistro[] }> = ({ campos }) => {
           {/* La línea entera, con los huecos visibles en su posición exacta. */}
           <pre className="text-[10px] leading-relaxed font-mono whitespace-pre-wrap break-all text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-950/50 rounded p-2 border border-gray-200 dark:border-gray-700">{linea.replace(/ /g, "␣")}</pre>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-[11px]">
-              <thead>
-                <tr className="text-gray-500 dark:text-gray-400 text-left">
-                  <th className="py-1 pr-3 font-semibold whitespace-nowrap">Pos.</th>
-                  <th className="py-1 pr-3 font-semibold">Campo</th>
-                  <th className="py-1 font-semibold">Valor</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
-                {campos.map((c) => {
-                  const falta = c.contenido === null;
-                  const noAplica = c.clase === "no_aplica";
-                  return (
-                    <tr key={`${c.desde}-${c.hasta}`} data-tramo={c.hasta !== c.desde ? `${c.desde}-${c.hasta}` : String(c.desde)} className={falta ? "bg-amber-50/60 dark:bg-amber-950/20" : ""}>
-                      <td className="py-1 pr-3 font-mono text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                        {c.desde}
-                        {c.hasta !== c.desde ? `-${c.hasta}` : ""}
-                      </td>
-                      <td className={`py-1 pr-3 ${noAplica || c.clase === "constante" ? "text-gray-400 dark:text-gray-500" : "text-gray-700 dark:text-gray-200"}`}>
-                        {c.nombre}
-                        {c.clase === "constante" && <span className="ml-1.5 text-[10px] uppercase tracking-wide text-gray-400">fijo</span>}
-                        {noAplica && <span className="ml-1.5 text-[10px] uppercase tracking-wide text-gray-400">no aplica</span>}
-                      </td>
-                      <td className="py-1 font-mono">
-                        {falta ? <span className="text-amber-600 dark:text-amber-400">{c.placeholder}</span> : <span className={noAplica || c.clase === "constante" ? "text-gray-400 dark:text-gray-500" : "text-gray-800 dark:text-gray-100"}>{(c.contenido || "").replace(/ /g, "␣") || "—"}</span>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <TablaConEncabezadoFijo tabla="w-full text-[11px]">
+            <thead>
+              <tr className="text-gray-500 dark:text-gray-400 text-left">
+                <th className="py-1 pr-3 font-semibold whitespace-nowrap">Pos.</th>
+                <th className="py-1 pr-3 font-semibold">Campo</th>
+                <th className="py-1 font-semibold">Valor</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">
+              {campos.map((c) => {
+                const falta = c.contenido === null;
+                const noAplica = c.clase === "no_aplica";
+                return (
+                  <tr key={`${c.desde}-${c.hasta}`} data-tramo={c.hasta !== c.desde ? `${c.desde}-${c.hasta}` : String(c.desde)} className={falta ? "bg-amber-50/60 dark:bg-amber-950/20" : ""}>
+                    <td className="py-1 pr-3 font-mono text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      {c.desde}
+                      {c.hasta !== c.desde ? `-${c.hasta}` : ""}
+                    </td>
+                    <td className={`py-1 pr-3 ${noAplica || c.clase === "constante" ? "text-gray-400 dark:text-gray-500" : "text-gray-700 dark:text-gray-200"}`}>
+                      {c.nombre}
+                      {c.clase === "constante" && <span className="ml-1.5 text-[10px] uppercase tracking-wide text-gray-400">fijo</span>}
+                      {noAplica && <span className="ml-1.5 text-[10px] uppercase tracking-wide text-gray-400">no aplica</span>}
+                    </td>
+                    <td className="py-1 font-mono">
+                      {falta ? <span className="text-amber-600 dark:text-amber-400">{c.placeholder}</span> : <span className={noAplica || c.clase === "constante" ? "text-gray-400 dark:text-gray-500" : "text-gray-800 dark:text-gray-100"}>{(c.contenido || "").replace(/ /g, "␣") || "—"}</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </TablaConEncabezadoFijo>
 
           <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed">
             La retribución se manda con <strong>2 decimales implícitos</strong> (importe × 100). Está pendiente de confirmar contra un alta real: si ARCA esperara pesos enteros, este campo tendría que salir sin el × 100.

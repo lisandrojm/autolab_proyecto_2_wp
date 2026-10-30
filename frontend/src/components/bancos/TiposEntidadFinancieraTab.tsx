@@ -7,6 +7,7 @@ import { sweetAlert } from '../../utils/sweetAlert';
 import { mensajeErrorApi } from '../../utils/errorApi';
 import { SimpleCatalogItem } from '../../api/simpleCatalog';
 import { tiposEntidadAPI, TipoEntidadFinanciera, RotuloCbu, ROTULOS_CBU } from '../../api/tiposEntidadFinanciera';
+import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -158,63 +159,61 @@ export const TiposEntidadFinancieraTab: React.FC<Props> = ({ entidades, onCambio
           <p className="text-sm text-amber-800 dark:text-amber-300">{error}</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900/50">
-              <tr>
-                {['Nombre', 'Datos que pide', 'Entidades', 'Estado'].map((h) => (
-                  <th key={h} className="whitespace-nowrap px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    {h}
-                  </th>
-                ))}
-                <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
-              {tipos.map((t) => {
-                const usadas = entidadesDe(t.clave);
-                return (
-                  <tr key={t._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-                    <td className="px-5 py-3">
-                      <p className={`text-sm font-medium ${t.activo ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>{t.nombre}</p>
-                      <p className="font-mono text-[11px] text-gray-400">{t.clave}</p>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {t.pideTipoCuenta && chipDato('Tipo de cuenta')}
-                        {t.pideNroCuenta && chipDato('Nro. de cuenta')}
-                        {chipDato(t.rotuloCbu)}
-                        {chipDato('Alias')}
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{usadas}</td>
-                    <td className="whitespace-nowrap px-5 py-3">
-                      <Interruptor encendido={t.activo} onClick={() => void alternarEstado(t)} disabled={cambiando === t._id} title={t.activo ? 'Desactivar: deja de ofrecerse en los selectores' : 'Activar: vuelve a ofrecerse en los selectores'}>
-                        {t.activo ? 'Activo' : 'Inactivo'}
-                      </Interruptor>
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-3 text-right text-sm">
-                      <button type="button" onClick={() => abrirEdicion(t)} className="mr-3 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300" title="Editar">
-                        <FontAwesomeIcon icon={faEdit} />
-                      </button>
-                      {/* En uso no se borra: el server también lo corta, pero se avisa antes de intentarlo. */}
-                      <button type="button" onClick={() => void eliminar(t)} disabled={usadas > 0} className="text-gray-600 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-30 dark:text-gray-400 dark:hover:text-gray-300" title={usadas > 0 ? `Lo usan ${usadas} entidades: desactivalo en lugar de eliminarlo` : 'Eliminar'}>
-                        <FontAwesomeIcon icon={faTrash} />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {tipos.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
-                    Todavía no hay tipos. Creá uno con «Nuevo tipo».
+        <TablaConEncabezadoFijo className="rounded-lg border border-gray-200 dark:border-gray-700" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-900/50">
+            <tr>
+              {['Nombre', 'Datos que pide', 'Entidades', 'Estado'].map((h) => (
+                <th key={h} className="whitespace-nowrap px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  {h}
+                </th>
+              ))}
+              <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
+            {tipos.map((t) => {
+              const usadas = entidadesDe(t.clave);
+              return (
+                <tr key={t._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                  <td className="px-5 py-3">
+                    <p className={`text-sm font-medium ${t.activo ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>{t.nombre}</p>
+                    <p className="font-mono text-[11px] text-gray-400">{t.clave}</p>
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {t.pideTipoCuenta && chipDato('Tipo de cuenta')}
+                      {t.pideNroCuenta && chipDato('Nro. de cuenta')}
+                      {chipDato(t.rotuloCbu)}
+                      {chipDato('Alias')}
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{usadas}</td>
+                  <td className="whitespace-nowrap px-5 py-3">
+                    <Interruptor encendido={t.activo} onClick={() => void alternarEstado(t)} disabled={cambiando === t._id} title={t.activo ? 'Desactivar: deja de ofrecerse en los selectores' : 'Activar: vuelve a ofrecerse en los selectores'}>
+                      {t.activo ? 'Activo' : 'Inactivo'}
+                    </Interruptor>
+                  </td>
+                  <td className="whitespace-nowrap px-5 py-3 text-right text-sm">
+                    <button type="button" onClick={() => abrirEdicion(t)} className="mr-3 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300" title="Editar">
+                      <FontAwesomeIcon icon={faEdit} />
+                    </button>
+                    {/* En uso no se borra: el server también lo corta, pero se avisa antes de intentarlo. */}
+                    <button type="button" onClick={() => void eliminar(t)} disabled={usadas > 0} className="text-gray-600 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-30 dark:text-gray-400 dark:hover:text-gray-300" title={usadas > 0 ? `Lo usan ${usadas} entidades: desactivalo en lugar de eliminarlo` : 'Eliminar'}>
+                      <FontAwesomeIcon icon={faTrash} />
+                    </button>
                   </td>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              );
+            })}
+            {tipos.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-5 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+                  Todavía no hay tipos. Creá uno con «Nuevo tipo».
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </TablaConEncabezadoFijo>
       )}
 
       <Modal

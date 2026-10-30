@@ -14,6 +14,7 @@ import { coordinaAreas, permisosDeRoles, PROJECT_SUPERVISOR } from "../../utils/
 import { sweetAlert } from "../../utils/sweetAlert";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSave, faUserTie, faInfoCircle, faTable, faLocationDot, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 interface TeamCoordinadoresTabProps {
   projectId: string;
@@ -393,60 +394,58 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                 </div>
 
                 {/* Table for Shifts under this Area */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700/50 text-xs text-gray-400 uppercase tracking-wider">
-                        <th className="px-6 py-2.5 font-semibold w-[40%]">Turno</th>
-                        <th className="px-6 py-2.5 font-semibold w-[60%] flex items-center gap-2">
-                          Supervisor Asignado
-                          <button
-                            onClick={() => setShowInfoModal(true)}
-                            className="text-gray-400 hover:text-blue-500 transition-colors"
-                            title="Información sobre supervisores"
-                          >
-                            <FontAwesomeIcon icon={faInfoCircle} />
-                          </button>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                      {shifts.map(shift => {
-                        const key = claveAreaTurno({ areaId: area._id, shiftId: shift._id, sedeId });
-                        const currentUserId = assignments[key] || "";
-                        
-                        return (
-                          <tr key={key} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
-                            <td className="px-6 py-3.5">
-                              <div className="flex flex-col">
-                                <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{shift.name}</span>
-                                <span className="text-xs text-gray-500 mt-0.5">{shift.startTime} - {shift.endTime}</span>
+                <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700/50 text-xs text-gray-400 uppercase tracking-wider">
+                      <th className="px-6 py-2.5 font-semibold w-[40%]">Turno</th>
+                      <th className="px-6 py-2.5 font-semibold w-[60%] flex items-center gap-2">
+                        Supervisor Asignado
+                        <button
+                          onClick={() => setShowInfoModal(true)}
+                          className="text-gray-400 hover:text-blue-500 transition-colors"
+                          title="Información sobre supervisores"
+                        >
+                          <FontAwesomeIcon icon={faInfoCircle} />
+                        </button>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {shifts.map(shift => {
+                      const key = claveAreaTurno({ areaId: area._id, shiftId: shift._id, sedeId });
+                      const currentUserId = assignments[key] || "";
+                      
+                      return (
+                        <tr key={key} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                          <td className="px-6 py-3.5">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{shift.name}</span>
+                              <span className="text-xs text-gray-500 mt-0.5">{shift.startTime} - {shift.endTime}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-3.5">
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 w-full max-w-[260px]">
+                                <select
+                                  className={`input-field w-full text-sm font-medium ${!currentUserId ? "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950" : ""}`}
+                                  value={currentUserId}
+                                  onChange={(e) => handleAssignmentChange(key, e.target.value)}
+                                >
+                                  <option value="">Sin supervisor</option>
+                                  {eligibleCoordinators.map((u) => (
+                                    <option key={u._id} value={u._id}>
+                                      {u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}` : u.email}
+                                    </option>
+                                  ))}
+                                </select>
                               </div>
-                            </td>
-                            <td className="px-6 py-3.5">
-                              <div className="flex items-center gap-3">
-                                <div className="flex-1 w-full max-w-[260px]">
-                                  <select
-                                    className={`input-field w-full text-sm font-medium ${!currentUserId ? "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950" : ""}`}
-                                    value={currentUserId}
-                                    onChange={(e) => handleAssignmentChange(key, e.target.value)}
-                                  >
-                                    <option value="">Sin supervisor</option>
-                                    {eligibleCoordinators.map((u) => (
-                                      <option key={u._id} value={u._id}>
-                                        {u.firstName || u.lastName ? `${u.firstName || ""} ${u.lastName || ""}` : u.email}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </TablaConEncabezadoFijo>
               </div>
             ))}
           </div>

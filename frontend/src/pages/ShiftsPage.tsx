@@ -14,6 +14,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { faEdit, faTrash, faPlus, faClock, faTable, faGrip, faGripVertical, faCheck, faMultiply, faLock } from '@fortawesome/free-solid-svg-icons';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 // Helper para días
 const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -332,28 +333,26 @@ export const ShiftsPage: React.FC = () => {
                 {canManage && !isReorderMode && <Card variant="create" onClick={openCreate} header={{ title: 'Nuevo Turno', subtitle: 'Definir horario', icon: faPlus }} />}
               </div>
             ) : (
-              <div className="overflow-x-auto rounded border dark:border-slate-800">
-                <table className="w-full dark:bg-slate-800/80 table-auto">
-                  <thead>
-                    <tr className="border-b dark:border-slate-700">
-                      {isReorderMode && <th className="py-3 px-4 text-center font-semibold text-gray-700 dark:text-gray-300 w-16">Ordenar</th>}
-                      {isReorderMode && <th className="py-3 px-4 text-center font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>}
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Nombre</th>
+              <TablaConEncabezadoFijo className="rounded border dark:border-slate-800" tabla="w-full dark:bg-slate-800/80 table-auto">
+                <thead>
+                  <tr className="border-b dark:border-slate-700">
+                    {isReorderMode && <th className="py-3 px-4 text-center font-semibold text-gray-700 dark:text-gray-300 w-16">Ordenar</th>}
+                    {isReorderMode && <th className="py-3 px-4 text-center font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>}
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Nombre</th>
 
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Horario</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Días</th>
-                      <th className="text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th>
-                    </tr>
-                  </thead>
-                  <SortableContext items={shifts.map((s) => s._id)} strategy={verticalListSortingStrategy}>
-                    <tbody>
-                      {shifts.map((shift, index) => (
-                        <SortableShiftRow key={shift._id} shift={shift} index={index} isReorderMode={isReorderMode} canManage={canManage} openEdit={openEdit} handleDelete={handleDelete} />
-                      ))}
-                    </tbody>
-                  </SortableContext>
-                </table>
-              </div>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Horario</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Días</th>
+                    <th className="text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th>
+                  </tr>
+                </thead>
+                <SortableContext items={shifts.map((s) => s._id)} strategy={verticalListSortingStrategy}>
+                  <tbody>
+                    {shifts.map((shift, index) => (
+                      <SortableShiftRow key={shift._id} shift={shift} index={index} isReorderMode={isReorderMode} canManage={canManage} openEdit={openEdit} handleDelete={handleDelete} />
+                    ))}
+                  </tbody>
+                </SortableContext>
+              </TablaConEncabezadoFijo>
             )}
 
             {!loading && shifts.length === 0 && <EmptyState icon={faClock} title="No hay turnos" description="No se encontraron turnos. Comienza creando el primero." action={canManage ? { label: 'Crear Turno', onClick: openCreate, icon: faPlus } : undefined} />}

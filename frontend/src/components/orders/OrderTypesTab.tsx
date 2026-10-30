@@ -12,6 +12,7 @@ import { OrderCategoryForm } from './OrderCategoryForm';
 import { tipoAccionFuturaLabels } from '../../types/orderFutureAction';
 import { pdfPreviewAPI } from '../../api/pdfPreview';
 import Swal from 'sweetalert2';
+import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 
 interface SortableRowProps {
   orderConfig: OrderConfig;
@@ -675,32 +676,30 @@ export const OrderTypesTab: React.FC = () => {
               </div>
             )}
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <div className="overflow-x-auto rounded border dark:border-slate-800">
-                <table className="w-full dark:bg-slate-800/80">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-24">Ordenar</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Nombre</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo de Dato</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acción Futura</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Plantilla PDF</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opción</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Fecha de Reset</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
-                    </tr>
-                  </thead>
-                  <SortableContext items={(isReorderMode ? tempOrderTypes : orderTypes).map((c) => c._id)} strategy={verticalListSortingStrategy}>
-                    <tbody>
-                      {(isReorderMode ? tempOrderTypes : orderTypes).map((orderConfig, index) => (
-                        <SortableRow key={orderConfig._id} orderConfig={orderConfig} index={index} isReorderMode={isReorderMode} onEdit={openEditModal} onDelete={handleDelete} onToggleActive={handleToggleActive} onEnableReorder={handleStartReorder} pdfTemplates={pdfTemplates} onPreviewPdf={handlePreviewPdf} />
-                      ))}
-                    </tbody>
-                  </SortableContext>
-                </table>
-              </div>
+              <TablaConEncabezadoFijo className="rounded border dark:border-slate-800" tabla="w-full dark:bg-slate-800/80">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-24">Ordenar</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Nombre</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Tipo de Dato</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acción Futura</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Plantilla PDF</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Opción</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Fecha de Reset</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
+                  </tr>
+                </thead>
+                <SortableContext items={(isReorderMode ? tempOrderTypes : orderTypes).map((c) => c._id)} strategy={verticalListSortingStrategy}>
+                  <tbody>
+                    {(isReorderMode ? tempOrderTypes : orderTypes).map((orderConfig, index) => (
+                      <SortableRow key={orderConfig._id} orderConfig={orderConfig} index={index} isReorderMode={isReorderMode} onEdit={openEditModal} onDelete={handleDelete} onToggleActive={handleToggleActive} onEnableReorder={handleStartReorder} pdfTemplates={pdfTemplates} onPreviewPdf={handlePreviewPdf} />
+                    ))}
+                  </tbody>
+                </SortableContext>
+              </TablaConEncabezadoFijo>
             </DndContext>
 
             {orderTypes.length === 0 && (

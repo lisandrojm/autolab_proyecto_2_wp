@@ -1,4 +1,5 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faClock, faRotateLeft, faTrash, faCommentDots, faEdit, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
@@ -318,41 +319,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
   };
 
 
-  /*
-    LOS ENCABEZADOS QUEDAN FIJOS debajo del header de la pantalla, CON EL SCROLL DE LA PÁGINA (30/10/2026).
-
-    Un `position: sticky` en el `<thead>` no alcanza: el `overflow-x-auto` del scroll lateral lo ata a la
-    caja de la tabla, que no scrollea en vertical. Darle a esa caja un alto con scroll propio dejaba dos
-    barras de scroll, y correr el `<thead>` con un `translateY` desde el evento de scroll iba un paso
-    atrás del scroll y saltaba. Así que el encabezado se dibuja DOS veces:
-      · en la tabla, invisible: es el que fija el ancho de cada columna;
-      · arriba, en una caja `sticky` contra la página (`--wp-sticky-top`, que publica PageLayout) con
-        su propio scroll lateral sin barra, copiando esos anchos y el scroll lateral de la tabla.
-    La tabla sube lo que mide el encabezado, así el de arriba queda exactamente en su lugar.
-  */
-  const cajaRef = useRef<HTMLDivElement>(null);
-  const encabezadoRef = useRef<HTMLDivElement>(null);
-  const tablaRef = useRef<HTMLTableElement>(null);
-  const theadRef = useRef<HTMLTableSectionElement>(null);
-  const [medidas, setMedidas] = useState<{ columnas: number[]; ancho: number; alto: number } | null>(null);
-  useLayoutEffect(() => {
-    const tabla = tablaRef.current;
-    const thead = theadRef.current;
-    if (!tabla || !thead) return;
-    const medir = () => {
-      const columnas = Array.from(thead.rows[0]?.cells || []).map((c) => c.getBoundingClientRect().width);
-      const nuevas = { columnas, ancho: tabla.getBoundingClientRect().width, alto: thead.getBoundingClientRect().height };
-      setMedidas((m) => (m && m.ancho === nuevas.ancho && m.alto === nuevas.alto && m.columnas.join() === nuevas.columnas.join() ? m : nuevas));
-    };
-    medir();
-    const observer = new ResizeObserver(medir);
-    observer.observe(tabla);
-    return () => observer.disconnect();
-  }, [solicitudes]);
-  const copiarScroll = (desde: HTMLDivElement | null, hacia: HTMLDivElement | null) => {
-    if (desde && hacia && hacia.scrollLeft !== desde.scrollLeft) hacia.scrollLeft = desde.scrollLeft;
-  };
-
+  /* Los encabezados quedan fijos con el scroll de la página: ver `TablaConEncabezadoFijo`. */
   const filaDeEncabezados = (
     <tr className="bg-gray-50 dark:bg-[#18202f] border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
       {/*
@@ -404,303 +371,281 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-clip">
       {/*
-        Encabezados fijos: ver `encabezadoRef`. Fondo opaco para que no se vea pasar lo de abajo.
         El borde de las columnas fijas (Nombre y Acciones) es una sombra inset: con border-collapse el
         border-l/r es de la tabla, no de la celda, y se iba con el scroll lateral.
       */}
-      <div
-        ref={encabezadoRef}
-        onScroll={() => copiarScroll(encabezadoRef.current, cajaRef.current)}
-        className="sticky z-20 overflow-x-auto shadow-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        style={{ top: "var(--wp-sticky-top, 64px)" }}
-      >
-        <table className="text-left border-collapse table-fixed" style={medidas ? { width: medidas.ancho } : undefined}>
-          {medidas && (
-            <colgroup>
-              {medidas.columnas.map((w, i) => (
-                <col key={i} style={{ width: w }} />
-              ))}
-            </colgroup>
-          )}
-          <thead>{filaDeEncabezados}</thead>
-        </table>
-      </div>
-      <div ref={cajaRef} onScroll={() => copiarScroll(cajaRef.current, encabezadoRef.current)} className="overflow-x-auto custom-scrollbar" style={{ marginTop: -(medidas?.alto ?? 0) }}>
-        <table ref={tablaRef} className="w-full text-left border-collapse">
-          <thead ref={theadRef} className="invisible" aria-hidden="true">
-            {filaDeEncabezados}
-          </thead>
-          <tbody>
-            {solicitudes.map((s) => {
-              const tramite = resolverTramite(s.tipoImpositivo);
-              // Las que ya no están en juego se atenúan, para que la fila no se lea igual que una pendiente.
-              const filaApagada = s.estado === "rechazada" || s.estado === "cancelada";
-              // El fondo OPACO de las celdas fijas, con el mismo estado que la fila (elegida, hover).
-              const fondoFijo = seleccionadas?.has(s._id) ? "bg-[#f7faff] dark:bg-[#1f2b3f]" : "bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634]";
+      <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
+        <thead>{filaDeEncabezados}</thead>
+        <tbody>
+          {solicitudes.map((s) => {
+            const tramite = resolverTramite(s.tipoImpositivo);
+            // Las que ya no están en juego se atenúan, para que la fila no se lea igual que una pendiente.
+            const filaApagada = s.estado === "rechazada" || s.estado === "cancelada";
+            // El fondo OPACO de las celdas fijas, con el mismo estado que la fila (elegida, hover).
+            const fondoFijo = seleccionadas?.has(s._id) ? "bg-[#f7faff] dark:bg-[#1f2b3f]" : "bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634]";
 
-              return (
-                /*
-                  LA FILA ENTERA ABRE EL DETALLE.
+            return (
+              /*
+                LA FILA ENTERA ABRE EL DETALLE.
 
-                  En las columnas entran unos pocos datos y la solicitud tiene treinta: quien aprueba
-                  necesita leerlos antes de decidir, no después. Los botones de la última columna
-                  siguen funcionando como atajo, cortando la propagación del click.
-                */
-                <tr key={s._id} onClick={onVerDetalle ? () => onVerDetalle(s) : undefined} className={`group border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${onVerDetalle ? "cursor-pointer" : ""} ${filaApagada ? "opacity-60 bg-gray-50/60 dark:bg-gray-900/30" : ""} ${seleccionadas?.has(s._id) ? "bg-blue-50/70 dark:bg-blue-900/20" : ""}`}>
-                  {conSeleccion && (
-                    <td className={`sticky left-0 z-[5] w-10 min-w-[2.5rem] pl-4 py-3 ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" checked={!!seleccionadas?.has(s._id)} onChange={() => alternar(s._id)} aria-label={`Seleccionar a ${s.nombre}`} className="h-4 w-4 rounded cursor-pointer" />
-                    </td>
-                  )}
-                  <td className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[5] px-4 py-3 min-w-[14rem] max-w-[20rem] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)] ${fondoFijo}`}>
-                    <div className="min-w-0">
-                      <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
-                        {s.nombre}
-                        {/* Extiende un contrato que estaba por vencer: no es un ingreso nuevo. */}
-                        {s.esRenovacion && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold align-middle bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>}
-                        {/*
-                          Se rechazó y volvió corregida: no es una solicitud nueva. El detalle dice qué
-                          se había objetado, que es la pregunta de quien la vuelve a mirar.
-                        */}
-                        {s.reenviada && (
-                          <span
-                            title={s.reenviada.motivoAnterior ? `Se había rechazado por: ${s.reenviada.motivoAnterior}` : "Se corrigió después de un rechazo"}
-                            className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold align-middle bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
-                          >
-                            Corregida{(s.reenviada.veces || 1) > 1 ? ` ×${s.reenviada.veces}` : ""}
-                          </span>
-                        )}
-                      </p>
-                      <p className="flex items-center gap-2 text-xs text-gray-500 truncate">
-                        {/* El mismo indicador que Usuarios y Contratos: si el nombre ya se confirmó contra el padrón. */}
-                        <NombreArca estado={estadoNombreArca({ cuit: s.cuit || undefined, sinCuit: s.sinCuit, validadoAt: s.nombreValidadoArcaAt })} fecha={s.nombreValidadoArcaAt} conTexto />
-                      </p>
+                En las columnas entran unos pocos datos y la solicitud tiene treinta: quien aprueba
+                necesita leerlos antes de decidir, no después. Los botones de la última columna
+                siguen funcionando como atajo, cortando la propagación del click.
+              */
+              <tr key={s._id} onClick={onVerDetalle ? () => onVerDetalle(s) : undefined} className={`group border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${onVerDetalle ? "cursor-pointer" : ""} ${filaApagada ? "opacity-60 bg-gray-50/60 dark:bg-gray-900/30" : ""} ${seleccionadas?.has(s._id) ? "bg-blue-50/70 dark:bg-blue-900/20" : ""}`}>
+                {conSeleccion && (
+                  <td className={`sticky left-0 z-[5] w-10 min-w-[2.5rem] pl-4 py-3 ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={!!seleccionadas?.has(s._id)} onChange={() => alternar(s._id)} aria-label={`Seleccionar a ${s.nombre}`} className="h-4 w-4 rounded cursor-pointer" />
+                  </td>
+                )}
+                <td className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[5] px-4 py-3 min-w-[14rem] max-w-[20rem] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)] ${fondoFijo}`}>
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
+                      {s.nombre}
+                      {/* Extiende un contrato que estaba por vencer: no es un ingreso nuevo. */}
+                      {s.esRenovacion && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold align-middle bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>}
                       {/*
-                        EL COMENTARIO DE QUIEN PIDIÓ EL ALTA.
-
-                        Va acá y no en una columna propia: es texto libre de largo impredecible y
-                        una columna lo cortaría en dos palabras, que es no mostrarlo. Debajo del
-                        nombre entra completo y solo aparece cuando hay algo escrito.
+                        Se rechazó y volvió corregida: no es una solicitud nueva. El detalle dice qué
+                        se había objetado, que es la pregunta de quien la vuelve a mirar.
                       */}
-                      {s.comentarios && (
-                        <p className="mt-1 text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1.5">
-                          <FontAwesomeIcon icon={faCommentDots} className="h-3 w-3 mt-0.5 shrink-0" />
-                          <span className="whitespace-pre-wrap break-words">{s.comentarios}</span>
-                        </p>
+                      {s.reenviada && (
+                        <span
+                          title={s.reenviada.motivoAnterior ? `Se había rechazado por: ${s.reenviada.motivoAnterior}` : "Se corrigió después de un rechazo"}
+                          className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold align-middle bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                        >
+                          Corregida{(s.reenviada.veces || 1) > 1 ? ` ×${s.reenviada.veces}` : ""}
+                        </span>
                       )}
-                      {/*
-                        Y LA RESPUESTA: POR QUÉ SE RECHAZÓ.
+                    </p>
+                    <p className="flex items-center gap-2 text-xs text-gray-500 truncate">
+                      {/* El mismo indicador que Usuarios y Contratos: si el nombre ya se confirmó contra el padrón. */}
+                      <NombreArca estado={estadoNombreArca({ cuit: s.cuit || undefined, sinCuit: s.sinCuit, validadoAt: s.nombreValidadoArcaAt })} fecha={s.nombreValidadoArcaAt} conTexto />
+                    </p>
+                    {/*
+                      EL COMENTARIO DE QUIEN PIDIÓ EL ALTA.
 
-                        Va acá, debajo del comentario de quien pidió el alta, porque las dos cosas se
-                        leen juntas: una pide y la otra contesta. En la columna Estado entraba apretado
-                        al lado del badge y se cortaba, que en el único dato que se busca al mirar una
-                        rechazada —qué hay que corregir para volver a mandarla— es no mostrarlo.
-                      */}
-                      {s.motivoRechazo && (
-                        <p className="mt-1 text-xs text-red-600 dark:text-red-400 flex items-start gap-1.5">
-                          <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 mt-0.5 shrink-0" />
-                          <span className="whitespace-pre-wrap break-words">
-                            <span className="font-semibold">Rechazo: </span>
-                            {s.motivoRechazo}
-                          </span>
-                        </p>
-                      )}
-                    </div>
-                  </td>
-
-                  {/*
-                    CUÁNDO SE HIZO LA SOLICITUD, en una columna propia después del nombre: día de la
-                    semana, fecha y hora en horario argentino. No va debajo del nombre de la persona
-                    porque ahí se leía como una fecha del contrato (al lado del período «24 oct → 24 oct»
-                    no se distinguía), y en una tanda del mismo día sólo la hora dice cuál se pidió primero.
-                  */}
-                  <td className="px-4 py-3 whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">
-                    <FechaHoraCelda valor={s.creadaEl} />
-                  </td>
-
-                  {/*
-                    QUIÉN LA PIDIÓ, con sus roles de coordinación o supervisión debajo: es lo que dice
-                    con qué autoridad se pidió el alta. Los demás roles (administrativos, etc.) no
-                    suman a esa lectura y se omiten. Las solicitudes viejas sin autor muestran un guión.
-                  */}
-                  <td className="px-4 py-3">
-                    <div className="min-w-0">
-                      {s.solicitante?.nombre ? <p className="text-sm text-gray-900 dark:text-white truncate">{s.solicitante.nombre}</p> : <span className="text-sm text-gray-400">—</span>}
-                      {s.solicitante?.nombre && s.solicitante.roles.some((r) => ROL_QUE_SOLICITA.test(r)) && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {s.solicitante.roles.filter((r) => ROL_QUE_SOLICITA.test(r)).map((r) => (
-                              <span key={r} className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">
-                                {r}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                    </div>
-                  </td>
-
-                  {renderObraSocial && (
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      {renderObraSocial(s)}
-                    </td>
-                  )}
-                  {/*
-                    CLIENTE Y PROYECTO SON DOS COLUMNAS, NO UN TEXTO CON UN PUNTO EN EL MEDIO.
-
-                    Las dos listas se recorren igual y con la misma tipografía, así el proyecto de
-                    cada línea queda enfrentado a su cliente cuando la solicitud tiene más de uno.
-                    Por eso el cliente vacío muestra un guión en vez de no ocupar la línea: sin él,
-                    las filas se corren y el proyecto queda leído bajo el cliente de otro.
-                  */}
-                  {mostrarProyectos && (
-                    <>
-                      <td className="px-4 py-3">
-                        {s.proyectos && s.proyectos.length > 0 ? (
-                          <div className="flex flex-col gap-1">
-                            {s.proyectos.map((p) => (
-                              <span key={p._id} className="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                {p.clienteNombre || <span className="text-gray-400">-</span>}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {s.proyectos && s.proyectos.length > 0 ? (
-                          <div className="flex flex-col gap-1">
-                            {s.proyectos.map((p) => (
-                              <span key={p._id} className="text-xs font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                {p.name}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-400 italic">Sin proyecto</span>
-                        )}
-                      </td>
-                    </>
-                  )}
-
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{resolverRolFrame(s)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{resolverTipoContrato(s) || <span className="text-gray-400">-</span>}</td>
-                  {/* El último contrato de la PERSONA anterior a lo pedido (en cualquier proyecto), pegado a «Fechas» para compararlos. */}
-                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos anteriores a lo pedido"}>
-                    {s.ultimoContrato ? (
-                      (() => {
-                        const vigente = isContractVigente(s.ultimoContrato.alta, s.ultimoContrato.baja || undefined);
-                        return (
-                          <div className="flex flex-col gap-1">
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
-                            <div className="flex flex-col gap-0.5 text-xs">
-                              <span><span className="text-gray-400">Alta:</span> {formatDate(s.ultimoContrato.alta)}</span>
-                              <span><span className="text-gray-400">Baja:</span> {s.ultimoContrato.baja ? formatDate(s.ultimoContrato.baja) : "—"}</span>
-                            </div>
-                            {/* El período pedido (columna «Fechas», al lado) se pisa con este contrato. */}
-                            {seSuperpone(s.startDate, s.dueDate, s.ultimoContrato.alta, s.ultimoContrato.baja) && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400" title="Las fechas pedidas se superponen con este contrato">
-                                <FontAwesomeIcon icon={faTriangleExclamation} /> Se superpone con lo pedido
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })()
-                    ) : (
-                      <span className="text-gray-300 dark:text-gray-600">—</span>
+                      Va acá y no en una columna propia: es texto libre de largo impredecible y
+                      una columna lo cortaría en dos palabras, que es no mostrarlo. Debajo del
+                      nombre entra completo y solo aparece cuando hay algo escrito.
+                    */}
+                    {s.comentarios && (
+                      <p className="mt-1 text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1.5">
+                        <FontAwesomeIcon icon={faCommentDots} className="h-3 w-3 mt-0.5 shrink-0" />
+                        <span className="whitespace-pre-wrap break-words">{s.comentarios}</span>
+                      </p>
                     )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                      <span>{formatDiaSolicitud(s.startDate)}</span>
-                      <span className="mx-1 text-gray-300">→</span>
-                      <span>{s.dueDate ? formatDiaSolicitud(s.dueDate) : "Indef."}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{s.schedule || "-"}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${ESTADO_SOLICITUD[s.estado].clase}`}>
-                      <FontAwesomeIcon icon={ESTADO_SOLICITUD[s.estado].icono} className="text-[8px]" />
-                      {ESTADO_SOLICITUD[s.estado].texto}
-                    </span>
-                  </td>
-                  {/*
-                    POR QUÉ VÍA SE PIDIÓ CONTRATAR: alta temprana ante ARCA o servicios. Con el mismo
-                    badge que se ve en Contratos, para que quien aprueba lo reconozca como lo mismo
-                    que después va a ver en el contrato.
+                    {/*
+                      Y LA RESPUESTA: POR QUÉ SE RECHAZÓ.
 
-                    «Sin definir» es literal y no un valor por defecto: las solicitudes cargadas antes
-                    de que este campo existiera no lo declararon, y suponerles un trámite sería
-                    inventar el dato del que depende el TXT de ARCA.
-                  */}
-                  <td className="px-4 py-3">{tramite ? <EstadoBadge name={tramite.name} /> : <span className="text-xs text-gray-400 italic">Sin definir</span>}</td>
-                  <td className={`sticky right-0 z-[5] px-4 py-3 text-right shadow-[inset_1px_0_0_#e5e7eb,-4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_1px_0_0_#4b5563,-4px_0_6px_-4px_rgba(0,0,0,0.4)] ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
-                    {/* Una solicitud rechazada o cancelada no se aprueba de una: primero se reabre,
-                        así queda explícito que se está deshaciendo la decisión. */}
-                    <div className="flex items-center justify-end gap-1.5">
-                      {s.estado === "pendiente" ? (
-                        <>
-                          {/*
-                            «APROBAR» (azul como los botones de acción, con tilde) Y «RECHAZAR» (rojo, con cruz), CON TEXTO: sólo con
-                            los íconos no se entendía qué hacía cada uno (30/10/2026).
+                      Va acá, debajo del comentario de quien pidió el alta, porque las dos cosas se
+                      leen juntas: una pide y la otra contesta. En la columna Estado entraba apretado
+                      al lado del badge y se cortaba, que en el único dato que se busca al mirar una
+                      rechazada —qué hay que corregir para volver a mandarla— es no mostrarlo.
+                    */}
+                    {s.motivoRechazo && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400 flex items-start gap-1.5">
+                        <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 mt-0.5 shrink-0" />
+                        <span className="whitespace-pre-wrap break-words">
+                          <span className="font-semibold">Rechazo: </span>
+                          {s.motivoRechazo}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                </td>
 
-                            Aprobar no se resuelve con este click: abre el alta con lo que pidió la solicitud
-                            para completar contrato, área y turno, y recién al guardar ahí queda aprobada. Por
-                            eso el hover dice «Editar y aprobar».
-                          */}
-                          {onAprobar && (
-                            <button onClick={() => onAprobar(s)} className="px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap" title="Editar y aprobar">
-                              <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
-                              Aprobar
-                            </button>
-                          )}
-                          <button onClick={() => onRechazar(s)} className="px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded transition-colors flex items-center gap-1.5 whitespace-nowrap" title="Rechazar">
-                            <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
-                            Rechazar
-                          </button>
-                        </>
-                      ) : s.estado === "aprobada" ? (
-                        /*
-                          EDITAR UNA APROBADA ES CORREGIR SU CONTRATO, no el pedido: la solicitud ya
-                          cumplió su función y cambiarla no movería nada. Abre el contrato que creó en
-                          el mismo formulario con que se aprobó.
-                        */
-                        onEditarAprobada ? (
-                          <button onClick={() => onEditarAprobada(s)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors" title="Editar el contrato que se creó al aprobarla">
-                            <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
-                          </button>
-                        ) : (
-                          <span className="text-xs text-gray-400 italic">Ya aprobada</span>
-                        )
-                      ) : (
-                        <button onClick={() => onReabrir(s)} className="px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded transition-colors flex items-center gap-1.5 whitespace-nowrap" title="Volver a dejarla pendiente">
-                          <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
-                          Volver a pendiente
-                        </button>
+                {/*
+                  CUÁNDO SE HIZO LA SOLICITUD, en una columna propia después del nombre: día de la
+                  semana, fecha y hora en horario argentino. No va debajo del nombre de la persona
+                  porque ahí se leía como una fecha del contrato (al lado del período «24 oct → 24 oct»
+                  no se distinguía), y en una tanda del mismo día sólo la hora dice cuál se pidió primero.
+                */}
+                <td className="px-4 py-3 whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">
+                  <FechaHoraCelda valor={s.creadaEl} />
+                </td>
+
+                {/*
+                  QUIÉN LA PIDIÓ, con sus roles de coordinación o supervisión debajo: es lo que dice
+                  con qué autoridad se pidió el alta. Los demás roles (administrativos, etc.) no
+                  suman a esa lectura y se omiten. Las solicitudes viejas sin autor muestran un guión.
+                */}
+                <td className="px-4 py-3">
+                  <div className="min-w-0">
+                    {s.solicitante?.nombre ? <p className="text-sm text-gray-900 dark:text-white truncate">{s.solicitante.nombre}</p> : <span className="text-sm text-gray-400">—</span>}
+                    {s.solicitante?.nombre && s.solicitante.roles.some((r) => ROL_QUE_SOLICITA.test(r)) && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {s.solicitante.roles.filter((r) => ROL_QUE_SOLICITA.test(r)).map((r) => (
+                            <span key={r} className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">
+                              {r}
+                            </span>
+                          ))}
+                        </div>
                       )}
+                  </div>
+                </td>
 
-                      {/*
-                        BORRAR, EN CUALQUIER ESTADO.
-
-                        Rechazar y borrar contestan cosas distintas: rechazar es una decisión sobre un pedido
-                        real y queda en el historial con su motivo; borrar es para lo que no aporta historial
-                        —una prueba, una cargada dos veces—. Ofrecerlo recién después de rechazar obligaba a
-                        inventar un motivo de rechazo para poder sacar de la lista algo que nunca fue un pedido.
-
-                        Esta tabla es del panel, así que también se ofrece sobre una APROBADA (en la app no:
-                        el server se la niega a quien no administra). Ahí deshace la contratación: se va
-                        también el contrato que creó al aprobarse (ver `DELETE /users/:id/solicitud`).
-                      */}
-                      <button onClick={() => onEliminar(s)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar" aria-label="Eliminar">
-                        <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                      </button>
-                    </div>
+                {renderObraSocial && (
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    {renderObraSocial(s)}
                   </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                )}
+                {/*
+                  CLIENTE Y PROYECTO SON DOS COLUMNAS, NO UN TEXTO CON UN PUNTO EN EL MEDIO.
+
+                  Las dos listas se recorren igual y con la misma tipografía, así el proyecto de
+                  cada línea queda enfrentado a su cliente cuando la solicitud tiene más de uno.
+                  Por eso el cliente vacío muestra un guión en vez de no ocupar la línea: sin él,
+                  las filas se corren y el proyecto queda leído bajo el cliente de otro.
+                */}
+                {mostrarProyectos && (
+                  <>
+                    <td className="px-4 py-3">
+                      {s.proyectos && s.proyectos.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          {s.proyectos.map((p) => (
+                            <span key={p._id} className="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                              {p.clienteNombre || <span className="text-gray-400">-</span>}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {s.proyectos && s.proyectos.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          {s.proyectos.map((p) => (
+                            <span key={p._id} className="text-xs font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                              {p.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">Sin proyecto</span>
+                      )}
+                    </td>
+                  </>
+                )}
+
+                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{resolverRolFrame(s)}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{resolverTipoContrato(s) || <span className="text-gray-400">-</span>}</td>
+                {/* El último contrato de la PERSONA anterior a lo pedido (en cualquier proyecto), pegado a «Fechas» para compararlos. */}
+                <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos anteriores a lo pedido"}>
+                  {s.ultimoContrato ? (
+                    (() => {
+                      const vigente = isContractVigente(s.ultimoContrato.alta, s.ultimoContrato.baja || undefined);
+                      return (
+                        <div className="flex flex-col gap-1">
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
+                          <div className="flex flex-col gap-0.5 text-xs">
+                            <span><span className="text-gray-400">Alta:</span> {formatDate(s.ultimoContrato.alta)}</span>
+                            <span><span className="text-gray-400">Baja:</span> {s.ultimoContrato.baja ? formatDate(s.ultimoContrato.baja) : "—"}</span>
+                          </div>
+                          {/* El período pedido (columna «Fechas», al lado) se pisa con este contrato. */}
+                          {seSuperpone(s.startDate, s.dueDate, s.ultimoContrato.alta, s.ultimoContrato.baja) && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400" title="Las fechas pedidas se superponen con este contrato">
+                              <FontAwesomeIcon icon={faTriangleExclamation} /> Se superpone con lo pedido
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <span className="text-gray-300 dark:text-gray-600">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    <span>{formatDiaSolicitud(s.startDate)}</span>
+                    <span className="mx-1 text-gray-300">→</span>
+                    <span>{s.dueDate ? formatDiaSolicitud(s.dueDate) : "Indef."}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{s.schedule || "-"}</td>
+                <td className="px-4 py-3 text-center">
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${ESTADO_SOLICITUD[s.estado].clase}`}>
+                    <FontAwesomeIcon icon={ESTADO_SOLICITUD[s.estado].icono} className="text-[8px]" />
+                    {ESTADO_SOLICITUD[s.estado].texto}
+                  </span>
+                </td>
+                {/*
+                  POR QUÉ VÍA SE PIDIÓ CONTRATAR: alta temprana ante ARCA o servicios. Con el mismo
+                  badge que se ve en Contratos, para que quien aprueba lo reconozca como lo mismo
+                  que después va a ver en el contrato.
+
+                  «Sin definir» es literal y no un valor por defecto: las solicitudes cargadas antes
+                  de que este campo existiera no lo declararon, y suponerles un trámite sería
+                  inventar el dato del que depende el TXT de ARCA.
+                */}
+                <td className="px-4 py-3">{tramite ? <EstadoBadge name={tramite.name} /> : <span className="text-xs text-gray-400 italic">Sin definir</span>}</td>
+                <td className={`sticky right-0 z-[5] px-4 py-3 text-right shadow-[inset_1px_0_0_#e5e7eb,-4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_1px_0_0_#4b5563,-4px_0_6px_-4px_rgba(0,0,0,0.4)] ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
+                  {/* Una solicitud rechazada o cancelada no se aprueba de una: primero se reabre,
+                      así queda explícito que se está deshaciendo la decisión. */}
+                  <div className="flex items-center justify-end gap-1.5">
+                    {s.estado === "pendiente" ? (
+                      <>
+                        {/*
+                          «APROBAR» (azul como los botones de acción, con tilde) Y «RECHAZAR» (rojo, con cruz), CON TEXTO: sólo con
+                          los íconos no se entendía qué hacía cada uno (30/10/2026).
+
+                          Aprobar no se resuelve con este click: abre el alta con lo que pidió la solicitud
+                          para completar contrato, área y turno, y recién al guardar ahí queda aprobada. Por
+                          eso el hover dice «Editar y aprobar».
+                        */}
+                        {onAprobar && (
+                          <button onClick={() => onAprobar(s)} className="px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap" title="Editar y aprobar">
+                            <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
+                            Aprobar
+                          </button>
+                        )}
+                        <button onClick={() => onRechazar(s)} className="px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded transition-colors flex items-center gap-1.5 whitespace-nowrap" title="Rechazar">
+                          <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                          Rechazar
+                        </button>
+                      </>
+                    ) : s.estado === "aprobada" ? (
+                      /*
+                        EDITAR UNA APROBADA ES CORREGIR SU CONTRATO, no el pedido: la solicitud ya
+                        cumplió su función y cambiarla no movería nada. Abre el contrato que creó en
+                        el mismo formulario con que se aprobó.
+                      */
+                      onEditarAprobada ? (
+                        <button onClick={() => onEditarAprobada(s)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors" title="Editar el contrato que se creó al aprobarla">
+                          <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">Ya aprobada</span>
+                      )
+                    ) : (
+                      <button onClick={() => onReabrir(s)} className="px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded transition-colors flex items-center gap-1.5 whitespace-nowrap" title="Volver a dejarla pendiente">
+                        <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
+                        Volver a pendiente
+                      </button>
+                    )}
+
+                    {/*
+                      BORRAR, EN CUALQUIER ESTADO.
+
+                      Rechazar y borrar contestan cosas distintas: rechazar es una decisión sobre un pedido
+                      real y queda en el historial con su motivo; borrar es para lo que no aporta historial
+                      —una prueba, una cargada dos veces—. Ofrecerlo recién después de rechazar obligaba a
+                      inventar un motivo de rechazo para poder sacar de la lista algo que nunca fue un pedido.
+
+                      Esta tabla es del panel, así que también se ofrece sobre una APROBADA (en la app no:
+                      el server se la niega a quien no administra). Ahí deshace la contratación: se va
+                      también el contrato que creó al aprobarse (ver `DELETE /users/:id/solicitud`).
+                    */}
+                    <button onClick={() => onEliminar(s)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar" aria-label="Eliminar">
+                      <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </TablaConEncabezadoFijo>
     </div>
   );
 };

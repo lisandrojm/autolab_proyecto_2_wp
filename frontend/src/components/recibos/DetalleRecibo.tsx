@@ -1,5 +1,6 @@
 import React from "react";
 import type { DatosRecibo } from "../../api/recibosSueldo";
+import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
 /* Lo que comparten la pantalla de Recibos de sueldo y su registro de enviados: formatos y el detalle del recibo. */
 
@@ -81,7 +82,7 @@ export const DetalleRecibo: React.FC<{ datos: DatosRecibo }> = ({ datos: d }) =>
         </dl>
       )}
       {secciones.length > 0 && (
-        <table className="w-full text-xs border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg" tabla="w-full text-xs">
           <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500">
             <tr>
               <th className="px-2 py-1 text-left">Código</th>
@@ -111,7 +112,7 @@ export const DetalleRecibo: React.FC<{ datos: DatosRecibo }> = ({ datos: d }) =>
               </React.Fragment>
             ))}
           </tbody>
-        </table>
+        </TablaConEncabezadoFijo>
       )}
     </div>
   );

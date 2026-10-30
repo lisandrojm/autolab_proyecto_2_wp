@@ -13,6 +13,7 @@ import {
   faClock,
   faDatabase
 } from "@fortawesome/free-solid-svg-icons";
+import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
 
 interface SyncStats {
   createdUsers: number;
@@ -425,60 +426,58 @@ export const ImportUsersWpPage: React.FC = () => {
                     No se crearon nuevos usuarios en la última ejecución exitosa.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-900/50">
-                        <tr>
-                          <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre Completo</th>
-                          <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Correo Electrónico</th>
-                          <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contraseña (DNI)</th>
-                          <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyectos · Rol Empresa · Contrato</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                        {(() => {
-                          return addedUsersDetails.map((u, i) => {
-                            const projects = u.projects || [];
-                            return (
-                              <tr key={u.email || i} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 align-top">
-                                <td className="px-5 py-4 text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{u.name}</td>
-                                <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{u.email}</td>
-                                <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap">{u.dni || "—"}</td>
-                                <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                  {projects.length === 0 ? (
-                                    <span className="text-gray-400">Sin proyectos</span>
-                                  ) : (
-                                    <div className="space-y-2">
-                                      {projects.map((p, pi) => (
-                                        <div key={pi} className="rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2">
-                                          <div className="font-semibold text-gray-900 dark:text-white">{p.nombre_proyecto || "—"}</div>
-                                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                                            Rol Empresa: <span className="font-medium text-gray-700 dark:text-gray-200">{p.nombre_rol_frame || "—"}</span>
-                                          </div>
-                                          {p.contracts.length > 0 && (
-                                            <ul className="mt-1 space-y-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                              {p.contracts.map((c, ci) => (
-                                                <li key={ci}>
-                                                  Contrato: <span className="font-medium text-gray-700 dark:text-gray-200">{c.nombre_contrato || "—"}</span>
-                                                  {c.fecha_alta_contrato && (
-                                                    <span> ({c.fecha_alta_contrato}{c.fecha_baja_contrato ? ` → ${c.fecha_baja_contrato}` : ""})</span>
-                                                  )}
-                                                </li>
-                                              ))}
-                                            </ul>
-                                          )}
+                  <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-900/50">
+                      <tr>
+                        <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre Completo</th>
+                        <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Correo Electrónico</th>
+                        <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contraseña (DNI)</th>
+                        <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyectos · Rol Empresa · Contrato</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                      {(() => {
+                        return addedUsersDetails.map((u, i) => {
+                          const projects = u.projects || [];
+                          return (
+                            <tr key={u.email || i} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 align-top">
+                              <td className="px-5 py-4 text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{u.name}</td>
+                              <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{u.email}</td>
+                              <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap">{u.dni || "—"}</td>
+                              <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                {projects.length === 0 ? (
+                                  <span className="text-gray-400">Sin proyectos</span>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {projects.map((p, pi) => (
+                                      <div key={pi} className="rounded-md border border-gray-200 dark:border-gray-700 px-3 py-2">
+                                        <div className="font-semibold text-gray-900 dark:text-white">{p.nombre_proyecto || "—"}</div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                          Rol Empresa: <span className="font-medium text-gray-700 dark:text-gray-200">{p.nombre_rol_frame || "—"}</span>
                                         </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          });
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
+                                        {p.contracts.length > 0 && (
+                                          <ul className="mt-1 space-y-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                            {p.contracts.map((c, ci) => (
+                                              <li key={ci}>
+                                                Contrato: <span className="font-medium text-gray-700 dark:text-gray-200">{c.nombre_contrato || "—"}</span>
+                                                {c.fecha_alta_contrato && (
+                                                  <span> ({c.fecha_alta_contrato}{c.fecha_baja_contrato ? ` → ${c.fecha_baja_contrato}` : ""})</span>
+                                                )}
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
+                    </tbody>
+                  </TablaConEncabezadoFijo>
                 )}
               </div>
             )}
@@ -496,24 +495,22 @@ export const ImportUsersWpPage: React.FC = () => {
                     No se detectaron nuevas asignaciones de proyectos en la última ejecución exitosa.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-900/50">
-                        <tr>
-                          <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre del Proyecto</th>
-                          <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Proyecto en FRAME</th>
+                  <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-900/50">
+                      <tr>
+                        <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre del Proyecto</th>
+                        <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Proyecto en FRAME</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                      {latestSync.addedProjects.map((p, i) => (
+                        <tr key={p._id || i} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                          <td className="px-5 py-4 text-sm font-semibold text-gray-900 dark:text-white">{p.name}</td>
+                          <td className="px-5 py-4 text-sm font-mono text-gray-550 dark:text-gray-400">{p.externalId}</td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                        {latestSync.addedProjects.map((p, i) => (
-                          <tr key={p._id || i} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-                            <td className="px-5 py-4 text-sm font-semibold text-gray-900 dark:text-white">{p.name}</td>
-                            <td className="px-5 py-4 text-sm font-mono text-gray-550 dark:text-gray-400">{p.externalId}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </TablaConEncabezadoFijo>
                 )}
               </div>
             )}
@@ -531,48 +528,46 @@ export const ImportUsersWpPage: React.FC = () => {
                     Aún no se registran ejecuciones históricas de sincronización.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-900/50">
-                        <tr>
-                          <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha / Hora</th>
-                          <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ejecutor</th>
-                          <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-                          <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creados</th>
-                          <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actualizados</th>
-                          <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Omitidos</th>
-                          <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Errores</th>
-                          <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Detalles</th>
+                  <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-900/50">
+                      <tr>
+                        <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha / Hora</th>
+                        <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ejecutor</th>
+                        <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+                        <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creados</th>
+                        <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actualizados</th>
+                        <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Omitidos</th>
+                        <th className="px-5 py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Errores</th>
+                        <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Detalles</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                      {history.map((h) => (
+                        <tr key={h._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                          <td className="px-5 py-4 text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{formatDate(h.createdAt)}</td>
+                          <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{getExecutorName(h)}</td>
+                          <td className="px-5 py-4 text-sm whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                              h.status === "success"
+                                ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400"
+                                : h.status === "running"
+                                  ? "bg-blue-50 text-blue-800 dark:bg-blue-950/20 dark:text-blue-400"
+                                  : "bg-rose-50 text-rose-800 dark:bg-rose-950/20 dark:text-rose-400"
+                            }`}>
+                              {h.status === "success" ? "Exitoso" : h.status === "running" ? "En curso" : "Fallido"}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-sm text-center text-blue-600 dark:text-blue-400 font-bold">{h.stats.createdUsers}</td>
+                          <td className="px-5 py-4 text-sm text-center text-amber-600 dark:text-amber-400 font-bold">{h.stats.updatedUsers ?? 0}</td>
+                          <td className="px-5 py-4 text-sm text-center text-emerald-600 dark:text-emerald-400 font-bold">{h.stats.skippedUsers ?? 0}</td>
+                          <td className="px-5 py-4 text-sm text-center text-rose-600 dark:text-rose-400 font-bold">{h.stats.errorsUsers}</td>
+                          <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title={h.errorDetails}>
+                            {h.errorDetails || "-"}
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                        {history.map((h) => (
-                          <tr key={h._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-                            <td className="px-5 py-4 text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{formatDate(h.createdAt)}</td>
-                            <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{getExecutorName(h)}</td>
-                            <td className="px-5 py-4 text-sm whitespace-nowrap">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
-                                h.status === "success"
-                                  ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400"
-                                  : h.status === "running"
-                                    ? "bg-blue-50 text-blue-800 dark:bg-blue-950/20 dark:text-blue-400"
-                                    : "bg-rose-50 text-rose-800 dark:bg-rose-950/20 dark:text-rose-400"
-                              }`}>
-                                {h.status === "success" ? "Exitoso" : h.status === "running" ? "En curso" : "Fallido"}
-                              </span>
-                            </td>
-                            <td className="px-5 py-4 text-sm text-center text-blue-600 dark:text-blue-400 font-bold">{h.stats.createdUsers}</td>
-                            <td className="px-5 py-4 text-sm text-center text-amber-600 dark:text-amber-400 font-bold">{h.stats.updatedUsers ?? 0}</td>
-                            <td className="px-5 py-4 text-sm text-center text-emerald-600 dark:text-emerald-400 font-bold">{h.stats.skippedUsers ?? 0}</td>
-                            <td className="px-5 py-4 text-sm text-center text-rose-600 dark:text-rose-400 font-bold">{h.stats.errorsUsers}</td>
-                            <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title={h.errorDetails}>
-                              {h.errorDetails || "-"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </TablaConEncabezadoFijo>
                 )}
               </div>
             )}

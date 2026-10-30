@@ -26,6 +26,7 @@ import { PruebaFirmaPlantillaModal } from "../components/plantillas/PruebaFirmaP
 import { declaraFirma } from "../api/pruebaFirma";
 import { BadgeCustom, CuerpoPlantillaCustom, TildePlantillaCustom } from "../components/contratacion/PlantillaCustom";
 import { PLACEHOLDER_RELEASE_CUSTOM } from "@compartido/textoCustom";
+import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
 
 interface ReleaseFormData {
   name: string;
@@ -460,75 +461,73 @@ export function ReleasesPage() {
               />
             </div>
           ) : (
-            <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg mx-0.5 lg:mx-0">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-900/50">
-                  <tr>
-                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Versión</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Membrete | Firma</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
-                    <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                  {filteredReleases.map((release) => (
-                    <tr key={release._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 cursor-pointer" onClick={() => openEdit(release)}>
-                      <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                        <span className="inline-flex items-center gap-2">
-                          {release.name}
-                          {release.esCustom && <BadgeCustom />}
+            <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg mx-0.5 lg:mx-0" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900/50">
+                <tr>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Versión</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Membrete | Firma</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contenido</th>
+                  <th className="px-5 py-3 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                {filteredReleases.map((release) => (
+                  <tr key={release._id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20 cursor-pointer" onClick={() => openEdit(release)}>
+                    <td className="px-5 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                      <span className="inline-flex items-center gap-2">
+                        {release.name}
+                        {release.esCustom && <BadgeCustom />}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{release.version}</td>
+                    <td className="px-5 py-3 text-sm whitespace-nowrap">
+                      <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>{release.isActive ? "Activo" : "Inactivo"}</span>
+                    </td>
+                    <td className="px-5 py-3 text-sm whitespace-nowrap">
+                      <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.usaMembrete ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"}`}>{release.usaMembrete ? "Activo" : "Inactivo"}</span>
+                    </td>
+                    <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                      {release.esCustom ? (
+                        <span className="italic">Se escribe en Firma digital</span>
+                      ) : hasContent(release.content || "") ? (
+                        <span className="truncate max-w-[260px] block" title="Contenido redactado">
+                          {(release.content || "")
+                            .replace(/<[^>]*>/g, " ")
+                            .replace(/&nbsp;/g, " ")
+                            .trim()
+                            .slice(0, 60)}
+                          …
                         </span>
-                      </td>
-                      <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-300">{release.version}</td>
-                      <td className="px-5 py-3 text-sm whitespace-nowrap">
-                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.isActive ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}`}>{release.isActive ? "Activo" : "Inactivo"}</span>
-                      </td>
-                      <td className="px-5 py-3 text-sm whitespace-nowrap">
-                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${release.usaMembrete ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"}`}>{release.usaMembrete ? "Activo" : "Inactivo"}</span>
-                      </td>
-                      <td className="px-5 py-3 text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
-                        {release.esCustom ? (
-                          <span className="italic">Se escribe en Firma digital</span>
-                        ) : hasContent(release.content || "") ? (
-                          <span className="truncate max-w-[260px] block" title="Contenido redactado">
-                            {(release.content || "")
-                              .replace(/<[^>]*>/g, " ")
-                              .replace(/&nbsp;/g, " ")
-                              .trim()
-                              .slice(0, 60)}
-                            …
-                          </span>
-                        ) : (
-                          <span className="text-amber-600 dark:text-amber-400">Sin contenido</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2">
-                          {release.content && (
-                            <button onClick={() => handlePreviewItem(release)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Previsualizar">
-                              <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
-                            </button>
-                          )}
-                          {release.content && (
-                            <button onClick={() => handleDownload(release)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Descargar PDF de ejemplo">
-                              <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
-                            </button>
-                          )}
-                          <button onClick={() => openEdit(release)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Editar">
-                            <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                      ) : (
+                        <span className="text-amber-600 dark:text-amber-400">Sin contenido</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-sm text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-2">
+                        {release.content && (
+                          <button onClick={() => handlePreviewItem(release)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Previsualizar">
+                            <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
                           </button>
-                          {!release.delSistema && (<button onClick={() => handleDelete(release)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Eliminar">
-                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                          </button>)}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        )}
+                        {release.content && (
+                          <button onClick={() => handleDownload(release)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Descargar PDF de ejemplo">
+                            <FontAwesomeIcon icon={faDownload} className="h-4 w-4" />
+                          </button>
+                        )}
+                        <button onClick={() => openEdit(release)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Editar">
+                          <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                        </button>
+                        {!release.delSistema && (<button onClick={() => handleDelete(release)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 rounded transition-colors" title="Eliminar">
+                          <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                        </button>)}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </TablaConEncabezadoFijo>
           )}
 
           {filteredReleases.length === 0 && (

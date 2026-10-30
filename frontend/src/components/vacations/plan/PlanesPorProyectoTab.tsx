@@ -11,6 +11,7 @@ import { fechaCorta } from "@compartido/planVacaciones/fechas";
 import { ModalNuevoPlan } from "./ModalNuevoPlan";
 import { PlanVacacionesProyecto } from "./PlanVacacionesProyecto";
 import { CLASE_ESTADO_PLAN } from "./estilos";
+import { TablaConEncabezadoFijo } from "../../ui/TablaConEncabezadoFijo";
 
 interface Props {
   /** Dentro de un proyecto: sólo sus planes, sin selector. */
@@ -107,74 +108,72 @@ export const PlanesPorProyectoTab: React.FC<Props> = ({ projectIdFijo }) => {
           <p>Todavía no hay planes{projectId ? " para este proyecto" : ""}. Creá uno con la ventana de la temporada y repartí cada mes por rol.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead>
-              <tr>
+        <TablaConEncabezadoFijo className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead>
+            <tr>
+              <th className={th}>
+                <BotonOrden columna="nombre" orden={orden} onAlternar={alternar}>
+                  Plan
+                </BotonOrden>
+              </th>
+              {!projectIdFijo && (
                 <th className={th}>
-                  <BotonOrden columna="nombre" orden={orden} onAlternar={alternar}>
-                    Plan
+                  <BotonOrden columna="proyecto" orden={orden} onAlternar={alternar}>
+                    Proyecto
                   </BotonOrden>
                 </th>
-                {!projectIdFijo && (
-                  <th className={th}>
-                    <BotonOrden columna="proyecto" orden={orden} onAlternar={alternar}>
-                      Proyecto
-                    </BotonOrden>
-                  </th>
-                )}
-                <th className={th}>
-                  <BotonOrden columna="ventana" orden={orden} onAlternar={alternar}>
-                    Ventana
-                  </BotonOrden>
-                </th>
-                <th className={th}>
-                  <BotonOrden columna="anio" orden={orden} onAlternar={alternar}>
-                    Saldo
-                  </BotonOrden>
-                </th>
-                <th className={th}>
-                  <BotonOrden columna="estado" orden={orden} onAlternar={alternar}>
-                    Estado
-                  </BotonOrden>
-                </th>
-                <th className={th}>
-                  <BotonOrden columna="bloques" orden={orden} onAlternar={alternar}>
-                    Bloques
-                  </BotonOrden>
-                </th>
-                <th className={th}>
-                  <BotonOrden columna="actualizado" orden={orden} onAlternar={alternar}>
-                    Actualizado
-                  </BotonOrden>
-                </th>
+              )}
+              <th className={th}>
+                <BotonOrden columna="ventana" orden={orden} onAlternar={alternar}>
+                  Ventana
+                </BotonOrden>
+              </th>
+              <th className={th}>
+                <BotonOrden columna="anio" orden={orden} onAlternar={alternar}>
+                  Saldo
+                </BotonOrden>
+              </th>
+              <th className={th}>
+                <BotonOrden columna="estado" orden={orden} onAlternar={alternar}>
+                  Estado
+                </BotonOrden>
+              </th>
+              <th className={th}>
+                <BotonOrden columna="bloques" orden={orden} onAlternar={alternar}>
+                  Bloques
+                </BotonOrden>
+              </th>
+              <th className={th}>
+                <BotonOrden columna="actualizado" orden={orden} onAlternar={alternar}>
+                  Actualizado
+                </BotonOrden>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            {ordenados.map((p) => (
+              <tr key={p._id} onClick={() => abrir(p._id)} className="cursor-pointer hover:bg-blue-50/60 dark:hover:bg-blue-900/10">
+                <td className={`${td} font-semibold text-gray-900 dark:text-white`}>{p.nombre}</td>
+                {!projectIdFijo && <td className={td}>{p.proyecto}</td>}
+                <td className={`${td} whitespace-nowrap`}>
+                  {fechaCorta(p.ventanaDesde)} → {fechaCorta(p.ventanaHasta)}
+                </td>
+                <td className={td}>
+                  {p.anioDeSaldo} · tope {p.topeDiasPorPersona}
+                </td>
+                <td className={td}>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${CLASE_ESTADO_PLAN[p.estado]}`}>{TEXTO_ESTADO_PLAN[p.estado]}</span>
+                </td>
+                <td className={`${td} text-xs`}>
+                  {p.contadores.total} · <span title="propuestos">{p.contadores.propuestos} prop.</span> · <span className="text-amber-700" title="esperando al coordinador">{p.contadores.enviados} env.</span> · <span className="text-green-700" title="aprobados">{p.contadores.aprobados} aprob.</span>
+                  {p.contadores.rechazados > 0 && <span className="text-red-700"> · {p.contadores.rechazados} rech.</span>}
+                  {p.contadores.reemplazos > 0 && <span className="text-violet-700"> · {p.contadores.reemplazos} reempl.</span>}
+                </td>
+                <td className={`${td} text-xs whitespace-nowrap`}>{new Date(p.updatedAt).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}</td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {ordenados.map((p) => (
-                <tr key={p._id} onClick={() => abrir(p._id)} className="cursor-pointer hover:bg-blue-50/60 dark:hover:bg-blue-900/10">
-                  <td className={`${td} font-semibold text-gray-900 dark:text-white`}>{p.nombre}</td>
-                  {!projectIdFijo && <td className={td}>{p.proyecto}</td>}
-                  <td className={`${td} whitespace-nowrap`}>
-                    {fechaCorta(p.ventanaDesde)} → {fechaCorta(p.ventanaHasta)}
-                  </td>
-                  <td className={td}>
-                    {p.anioDeSaldo} · tope {p.topeDiasPorPersona}
-                  </td>
-                  <td className={td}>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${CLASE_ESTADO_PLAN[p.estado]}`}>{TEXTO_ESTADO_PLAN[p.estado]}</span>
-                  </td>
-                  <td className={`${td} text-xs`}>
-                    {p.contadores.total} · <span title="propuestos">{p.contadores.propuestos} prop.</span> · <span className="text-amber-700" title="esperando al coordinador">{p.contadores.enviados} env.</span> · <span className="text-green-700" title="aprobados">{p.contadores.aprobados} aprob.</span>
-                    {p.contadores.rechazados > 0 && <span className="text-red-700"> · {p.contadores.rechazados} rech.</span>}
-                    {p.contadores.reemplazos > 0 && <span className="text-violet-700"> · {p.contadores.reemplazos} reempl.</span>}
-                  </td>
-                  <td className={`${td} text-xs whitespace-nowrap`}>{new Date(p.updatedAt).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </TablaConEncabezadoFijo>
       )}
 
       <ModalNuevoPlan

@@ -11,6 +11,7 @@ import { isContractVigente, formatDate } from '../../components/team/EmployeeCon
 import { cuitDisplay } from '../../components/contratos/ConstanciaBulk';
 import { usersAPI, ContractOverviewRow } from '../../api/users';
 import { Company } from '../../api/companies';
+import { TablaConEncabezadoFijo } from '../../components/ui/TablaConEncabezadoFijo';
 
 const PAGE_SIZE = 25;
 
@@ -95,49 +96,47 @@ const ContratosBody: React.FC<{ empresa: Company }> = ({ empresa }) => {
       ) : rows.length === 0 ? (
         <EmptyState icon={faFileContract} title="Sin contratos" description={search || vigencia ? 'Ningún contrato de esta empleadora coincide con los filtros.' : `Todavía ningún contrato eligió a ${empresa.razonSocial} como empleadora.`} />
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Persona</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">CUIT</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyecto</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contrato</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-                  <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                {rows.map((r) => {
-                  const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
-                  return (
-                    <tr key={`${r._id}-${r.contractIndex}`} onClick={() => navigate(`/projects/${r.projectId}/team`)} title="Ir al equipo del proyecto" className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <FontAwesomeIcon icon={faUser} className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{r.userName}</p>
-                            <p className="text-xs text-gray-500 truncate">{r.userEmail}</p>
-                          </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-clip">
+          <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Persona</th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">CUIT</th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyecto</th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Contrato</th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Alta / Baja</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+              {rows.map((r) => {
+                const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
+                return (
+                  <tr key={`${r._id}-${r.contractIndex}`} onClick={() => navigate(`/projects/${r.projectId}/team`)} title="Ir al equipo del proyecto" className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <FontAwesomeIcon icon={faUser} className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{r.userName}</p>
+                          <p className="text-xs text-gray-500 truncate">{r.userEmail}</p>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-mono whitespace-nowrap w-px">{cuitDisplay(r.cuit, r.sinCuit)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{r.projectName}</td>
-                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 hidden lg:table-cell">{r.nombre_contrato || '—'}</td>
-                      <td className="px-4 py-3">{r.nombre_estado_empleado ? <EstadoBadge name={r.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
-                        <div className="mt-1">
-                          {formatDate(r.fecha_alta_contrato)} — {r.fecha_baja_contrato ? formatDate(r.fecha_baja_contrato) : '—'}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-mono whitespace-nowrap w-px">{cuitDisplay(r.cuit, r.sinCuit)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{r.projectName}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 hidden lg:table-cell">{r.nombre_contrato || '—'}</td>
+                    <td className="px-4 py-3">{r.nombre_estado_empleado ? <EstadoBadge name={r.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
+                      <div className="mt-1">
+                        {formatDate(r.fecha_alta_contrato)} — {r.fecha_baja_contrato ? formatDate(r.fecha_baja_contrato) : '—'}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </TablaConEncabezadoFijo>
 
           <div className="bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
             <span className="text-xs text-gray-500 dark:text-gray-400">

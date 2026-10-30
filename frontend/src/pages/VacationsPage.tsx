@@ -19,6 +19,7 @@ import { sweetAlert } from '../utils/sweetAlert';
 import { getHelp, hasHelp } from '../data/help/helpContent';
 import { mapVacationStatusToStatusType, mapVacationSignatureStateToStatusType, isVacationInFinalState } from '../utils/statusHelpers';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 const HELP_KEY = 'vacations' as const;
 
@@ -930,127 +931,125 @@ export const VacationsPage: React.FC = () => {
                 {viewMode === 'cards' ? (
                   renderCardsView()
                 ) : (
-                  <div className="overflow-x-auto rounded border dark:border-slate-800">
-                    <table className="w-full dark:bg-slate-800/80 table-auto">
-                      <thead>
-                        <tr>
-                          <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Solicitud</th>
-                          <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
-                          {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Regla/s</th> */}
-                          <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
-                          {/*<th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cliente</th>*/}
-                          <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
-                          <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Role Frame</th>
-                          <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
-                          <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
-                          <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Período</th>
-                          <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
-                        </tr>
-                      </thead>
+                  <TablaConEncabezadoFijo className="rounded border dark:border-slate-800" tabla="w-full dark:bg-slate-800/80 table-auto">
+                    <thead>
+                      <tr>
+                        <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Solicitud</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
+                        {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Regla/s</th> */}
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
+                        {/*<th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cliente</th>*/}
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Role Frame</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Período</th>
+                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
+                      </tr>
+                    </thead>
 
-                      <tbody>
-                        {filteredVacations.map((vacation) => (
-                          <tr key={vacation.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleOpenModal(vacation)}>
-                            <td className="py-3 px-4">
-                              <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedVacationNumber(vacation.numeroPedido)}</span>
-                            </td>
-                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</td>
-                            {/*                         <td className="py-3 px-4">
-                          <div className="flex flex-col gap-2">
-                            {vacation.reglas.map((regla, index) => (
-                              <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">
-                                {regla}
-                              </span>
-                            ))}
-                          </div>
+                    <tbody>
+                      {filteredVacations.map((vacation) => (
+                        <tr key={vacation.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleOpenModal(vacation)}>
+                          <td className="py-3 px-4">
+                            <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedVacationNumber(vacation.numeroPedido)}</span>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</td>
+                          {/*                         <td className="py-3 px-4">
+                        <div className="flex flex-col gap-2">
+                          {vacation.reglas.map((regla, index) => (
+                            <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/50 dark:text-gray-300 text-nowrap w-fit">
+                              {regla}
+                            </span>
+                          ))}
+                        </div>
+                      </td> */}
+                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap">{getUserName(vacation.solicitante)}</td>
+                          {/* <td className="py-3 px-4">
+                          {(() => {
+                            // Calculate client from project
+                            const clientNames: string[] = [];
+                            if (vacation.projectsInfo && vacation.projectsInfo.length > 0) {
+                              vacation.projectsInfo.forEach((pInfo) => {
+                                const fullProject = allProjects.find((proj) => proj.name === pInfo.name);
+                                if (fullProject && fullProject.clientId) {
+                                  const cid = typeof fullProject.clientId === "object" ? (fullProject.clientId as any)._id : fullProject.clientId;
+                                  const client = allClients.find((c) => c._id === cid);
+                                  if (client && client.name && !clientNames.includes(client.name)) {
+                                    clientNames.push(client.name);
+                                  }
+                                }
+                              });
+                            }
+                            if (clientNames.length > 0) {
+                              return <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 whitespace-nowrap">{clientNames.join(", ")}</span>;
+                            }
+                            return <span className="text-xs text-gray-500">-</span>;
+                          })()}
                         </td> */}
-                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap">{getUserName(vacation.solicitante)}</td>
-                            {/* <td className="py-3 px-4">
-                            {(() => {
-                              // Calculate client from project
-                              const clientNames: string[] = [];
-                              if (vacation.projectsInfo && vacation.projectsInfo.length > 0) {
-                                vacation.projectsInfo.forEach((pInfo) => {
-                                  const fullProject = allProjects.find((proj) => proj.name === pInfo.name);
-                                  if (fullProject && fullProject.clientId) {
-                                    const cid = typeof fullProject.clientId === "object" ? (fullProject.clientId as any)._id : fullProject.clientId;
-                                    const client = allClients.find((c) => c._id === cid);
-                                    if (client && client.name && !clientNames.includes(client.name)) {
-                                      clientNames.push(client.name);
-                                    }
-                                  }
-                                });
-                              }
-                              if (clientNames.length > 0) {
-                                return <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-cyan-100 dark:bg-cyan-900 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 whitespace-nowrap">{clientNames.join(", ")}</span>;
-                              }
-                              return <span className="text-xs text-gray-500">-</span>;
-                            })()}
-                          </td> */}
-                            <td className="py-3 px-4">
-                              <div className="flex flex-col gap-1">
-                                <div className="flex flex-wrap gap-1">
-                                  {vacation.userSnapshot?.projects && vacation.userSnapshot.projects.length > 0 ? (
-                                    vacation.userSnapshot.projects.map((p, idx) => (
-                                      <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-600 text-white shadow-sm">
-                                        {p.name}
-                                      </span>
-                                    ))
-                                  ) : (
-                                    <span className="text-xs text-gray-500">-</span>
-                                  )}
-                                </div>
-                                {renderVacationProjectEmpresas(vacation)}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
+                          <td className="py-3 px-4">
+                            <div className="flex flex-col gap-1">
                               <div className="flex flex-wrap gap-1">
-                                {(() => {
-                                  const rfIds = vacation.userSnapshot?.rolesFrameIds || [];
-                                  if (rfIds.length === 0) {
-                                    const oldFrames = vacation.userSnapshot?.rolFrames || [];
-                                    if (oldFrames.length === 0) return <span className="text-xs text-gray-500">-</span>;
-                                    return oldFrames.map((rf, idx) => (
-                                      <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
-                                        {rf}
-                                      </span>
-                                    ));
-                                  }
-                                  return rfIds.map((rfId, idx) => {
-                                    const roleFrameObj = allRoleFrames.find((item) => item._id === rfId);
-                                    const name = roleFrameObj ? roleFrameObj.name : rfId;
-                                    return (
-                                      <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
-                                        {name}
-                                      </span>
-                                    );
-                                  });
-                                })()}
+                                {vacation.userSnapshot?.projects && vacation.userSnapshot.projects.length > 0 ? (
+                                  vacation.userSnapshot.projects.map((p, idx) => (
+                                    <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-600 text-white shadow-sm">
+                                      {p.name}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-xs text-gray-500">-</span>
+                                )}
                               </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <StatusBadge type={mapVacationStatusToStatusType(vacation.estado)} size="sm" />
-                            </td>
-                            <td className="py-3 px-4">{renderSignatureStatus(vacation)}</td>
-                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">
-                              {vacation.startDate && vacation.endDate ? (
-                                <>
-                                  {formatDateShort(vacation.startDate)} - {formatDateShort(vacation.endDate)}
-                                </>
-                              ) : (
-                                <span className="text-gray-400 dark:text-gray-500">-</span>
-                              )}
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, e)} className="text-gray-400 dark:text-gray-400 hover:text-gray-300 dark:hover:text-gray-300 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
-                                <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                              {renderVacationProjectEmpresas(vacation)}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex flex-wrap gap-1">
+                              {(() => {
+                                const rfIds = vacation.userSnapshot?.rolesFrameIds || [];
+                                if (rfIds.length === 0) {
+                                  const oldFrames = vacation.userSnapshot?.rolFrames || [];
+                                  if (oldFrames.length === 0) return <span className="text-xs text-gray-500">-</span>;
+                                  return oldFrames.map((rf, idx) => (
+                                    <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
+                                      {rf}
+                                    </span>
+                                  ));
+                                }
+                                return rfIds.map((rfId, idx) => {
+                                  const roleFrameObj = allRoleFrames.find((item) => item._id === rfId);
+                                  const name = roleFrameObj ? roleFrameObj.name : rfId;
+                                  return (
+                                    <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
+                                      {name}
+                                    </span>
+                                  );
+                                });
+                              })()}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <StatusBadge type={mapVacationStatusToStatusType(vacation.estado)} size="sm" />
+                          </td>
+                          <td className="py-3 px-4">{renderSignatureStatus(vacation)}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">
+                            {vacation.startDate && vacation.endDate ? (
+                              <>
+                                {formatDateShort(vacation.startDate)} - {formatDateShort(vacation.endDate)}
+                              </>
+                            ) : (
+                              <span className="text-gray-400 dark:text-gray-500">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, e)} className="text-gray-400 dark:text-gray-400 hover:text-gray-300 dark:hover:text-gray-300 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
+                              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </TablaConEncabezadoFijo>
                 )}
 
                 {!loading && filteredVacations.length === 0 && (

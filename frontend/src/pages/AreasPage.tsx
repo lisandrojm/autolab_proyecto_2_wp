@@ -18,6 +18,7 @@ import { payloadDeArea } from '../utils/areasRoles';
 import { useNavigate } from 'react-router-dom';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { fechaDeCalendario } from '../utils/fechas';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 // const HELP_KEY = "areas" as const; // TODO: Add help content if needed
 
@@ -563,80 +564,78 @@ export const AreasPage: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Roles empresa</th>
-                      <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creado</th>
-                      {canManage && <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                    {filteredAreas.map((area) => (
-                      <tr key={area._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => openView(area)}>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center shrink-0">
-                              <FontAwesomeIcon icon={faLayerGroup} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{area.name}</span>
-                              <div className="flex items-center gap-2">
-                                {area.isSystem && <span className="text-[9px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 px-1.5 py-0.5 rounded uppercase tracking-wider">Sistema</span>}
-                              </div>
+            <div className="overflow-clip border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm mx-0.5 lg:mx-0">
+              <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descripción</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Roles empresa</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creado</th>
+                    {canManage && <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                  {filteredAreas.map((area) => (
+                    <tr key={area._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => openView(area)}>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center shrink-0">
+                            <FontAwesomeIcon icon={faLayerGroup} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{area.name}</span>
+                            <div className="flex items-center gap-2">
+                              {area.isSystem && <span className="text-[9px] font-bold bg-orange-500/10 text-orange-500 border border-orange-500/50 px-1.5 py-0.5 rounded uppercase tracking-wider">Sistema</span>}
                             </div>
                           </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{area.description || '—'}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <RolesDelArea ids={area.rolesFrame || []} nombres={nombreRolPorId} />
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{area.createdAt ? new Date(area.createdAt).toLocaleDateString() : '—'}</span>
-                        </td>
-                        {canManage && (
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">{area.description || '—'}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <RolesDelArea ids={area.rolesFrame || []} nombres={nombreRolPorId} />
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">{area.createdAt ? new Date(area.createdAt).toLocaleDateString() : '—'}</span>
+                      </td>
+                      {canManage && (
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEdit(area);
+                              }}
+                              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                              title="Editar"
+                            >
+                              <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                            </button>
+                            {!area.isSystem ? (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  openEdit(area);
+                                  handleDelete(area);
                                 }}
-                                className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
-                                title="Editar"
+                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                                title="Eliminar"
                               >
-                                <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
+                                <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                               </button>
-                              {!area.isSystem ? (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDelete(area);
-                                  }}
-                                  className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
-                                  title="Eliminar"
-                                >
-                                  <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                                </button>
-                              ) : (
-                                <div className="p-1.5 text-gray-400" title="Área de sistema protegida">
-                                  <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                            ) : (
+                              <div className="p-1.5 text-gray-400" title="Área de sistema protegida">
+                                <FontAwesomeIcon icon={faLock} className="h-4 w-4" />
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </TablaConEncabezadoFijo>
             </div>
           )}
 

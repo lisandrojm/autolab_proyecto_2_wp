@@ -6,6 +6,7 @@ import { AcuerdoParitario, escalasConvenioAPI, PreviewParitaria } from '../../..
 import { Modal } from '../../ui/Modal';
 import { sweetAlert } from '../../../utils/sweetAlert';
 import { pesos, porciento, Th } from './piezas';
+import { TablaConEncabezadoFijo } from '../../ui/TablaConEncabezadoFijo';
 
 /**
  * APLICAR UNA PARITARIA POR PORCENTAJE, con previsualización editable.
@@ -211,99 +212,95 @@ export const AplicarParitariaModal: React.FC<Props> = ({ isOpen, onClose, conven
               </span>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-clip">
               <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-700 dark:text-gray-200">Escala por grupo</div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-900/50">
-                    <tr>
-                      <Th className="text-left">Grupo</Th>
-                      <Th className="text-right">Básico actual</Th>
-                      <Th className="text-right">Básico propuesto (editable)</Th>
-                      <Th className="text-right hidden lg:table-cell">% Adic.</Th>
-                      <Th className="text-right hidden lg:table-cell">Adicional</Th>
-                      <Th className="text-right hidden xl:table-cell">Presentismo</Th>
-                      <Th className="text-right">Total actual</Th>
-                      <Th className="text-right">Total propuesto</Th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {preview.escala.map((f) => {
-                      const clave = String(f.grupo ?? '');
-                      return (
-                        <tr key={clave} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
-                          <td className="px-4 py-2 text-sm font-bold text-gray-900 dark:text-gray-100">{f.grupo == null ? '—' : `G${f.grupo}`}</td>
-                          <td className="px-4 py-2 text-right text-sm font-mono text-gray-500 dark:text-gray-400">{pesos(f.basicoActual)}</td>
-                          <td className="px-4 py-2 text-right">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={basicoEditado[clave] ?? String(f.basicoPropuesto)}
-                              onChange={(e) => setBasicoEditado({ ...basicoEditado, [clave]: e.target.value })}
-                              className="w-32 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm text-right font-mono"
-                            />
-                          </td>
-                          <td className="px-4 py-2 text-right text-xs font-mono text-gray-600 dark:text-gray-300 hidden lg:table-cell">{porciento(f.propuesta.adicionalPct)}</td>
-                          <td className="px-4 py-2 text-right text-sm font-mono text-gray-700 dark:text-gray-300 hidden lg:table-cell">{pesos(f.propuesta.adicionalMonto)}</td>
-                          <td className="px-4 py-2 text-right text-sm font-mono text-gray-700 dark:text-gray-300 hidden xl:table-cell">{pesos(f.propuesta.presentismoMonto)}</td>
-                          <td className="px-4 py-2 text-right text-sm font-mono text-gray-500 dark:text-gray-400">{pesos(f.totalActual)}</td>
-                          <td className="px-4 py-2 text-right text-sm font-mono font-semibold text-gray-900 dark:text-gray-100">
-                            <FontAwesomeIcon icon={faArrowRight} className="h-3 w-3 mr-1 text-green-600 dark:text-green-400" />
-                            {pesos(f.propuesta.total)}
-                            {f.avisos.length > 0 && (
-                              <span className="block text-[11px] text-amber-600 dark:text-amber-400" title={f.avisos.join('\n')}>
-                                {f.avisos.length} aviso(s)
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <TablaConEncabezadoFijo tabla="min-w-full">
+                <thead className="bg-gray-50 dark:bg-gray-900/50">
+                  <tr>
+                    <Th className="text-left">Grupo</Th>
+                    <Th className="text-right">Básico actual</Th>
+                    <Th className="text-right">Básico propuesto (editable)</Th>
+                    <Th className="text-right hidden lg:table-cell">% Adic.</Th>
+                    <Th className="text-right hidden lg:table-cell">Adicional</Th>
+                    <Th className="text-right hidden xl:table-cell">Presentismo</Th>
+                    <Th className="text-right">Total actual</Th>
+                    <Th className="text-right">Total propuesto</Th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {preview.escala.map((f) => {
+                    const clave = String(f.grupo ?? '');
+                    return (
+                      <tr key={clave} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                        <td className="px-4 py-2 text-sm font-bold text-gray-900 dark:text-gray-100">{f.grupo == null ? '—' : `G${f.grupo}`}</td>
+                        <td className="px-4 py-2 text-right text-sm font-mono text-gray-500 dark:text-gray-400">{pesos(f.basicoActual)}</td>
+                        <td className="px-4 py-2 text-right">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={basicoEditado[clave] ?? String(f.basicoPropuesto)}
+                            onChange={(e) => setBasicoEditado({ ...basicoEditado, [clave]: e.target.value })}
+                            className="w-32 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm text-right font-mono"
+                          />
+                        </td>
+                        <td className="px-4 py-2 text-right text-xs font-mono text-gray-600 dark:text-gray-300 hidden lg:table-cell">{porciento(f.propuesta.adicionalPct)}</td>
+                        <td className="px-4 py-2 text-right text-sm font-mono text-gray-700 dark:text-gray-300 hidden lg:table-cell">{pesos(f.propuesta.adicionalMonto)}</td>
+                        <td className="px-4 py-2 text-right text-sm font-mono text-gray-700 dark:text-gray-300 hidden xl:table-cell">{pesos(f.propuesta.presentismoMonto)}</td>
+                        <td className="px-4 py-2 text-right text-sm font-mono text-gray-500 dark:text-gray-400">{pesos(f.totalActual)}</td>
+                        <td className="px-4 py-2 text-right text-sm font-mono font-semibold text-gray-900 dark:text-gray-100">
+                          <FontAwesomeIcon icon={faArrowRight} className="h-3 w-3 mr-1 text-green-600 dark:text-green-400" />
+                          {pesos(f.propuesta.total)}
+                          {f.avisos.length > 0 && (
+                            <span className="block text-[11px] text-amber-600 dark:text-amber-400" title={f.avisos.join('\n')}>
+                              {f.avisos.length} aviso(s)
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </TablaConEncabezadoFijo>
             </div>
 
             {incluirAdicionales && preview.adicionales.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-clip">
                 <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-700 dark:text-gray-200">Adicionales</div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-900/50">
-                      <tr>
-                        <Th className="text-left">Adicional</Th>
-                        <Th className="text-right">Actual</Th>
-                        <Th className="text-right">Propuesto (editable)</Th>
-                        <Th className="text-left">Avisos</Th>
+                <TablaConEncabezadoFijo tabla="min-w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-900/50">
+                    <tr>
+                      <Th className="text-left">Adicional</Th>
+                      <Th className="text-right">Actual</Th>
+                      <Th className="text-right">Propuesto (editable)</Th>
+                      <Th className="text-left">Avisos</Th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {preview.adicionales.map((a) => (
+                      <tr key={a.clave}>
+                        <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
+                          {a.nombre || a.clave}
+                          <span className="block font-mono text-[11px] text-gray-500 dark:text-gray-400">{a.clave}</span>
+                        </td>
+                        <td className="px-4 py-2 text-right text-sm font-mono text-gray-500 dark:text-gray-400">{pesos(a.monto)}</td>
+                        <td className="px-4 py-2 text-right">
+                          {a.montoPropuesto === null ? (
+                            <span className="text-xs text-amber-600 dark:text-amber-400">sin importe base</span>
+                          ) : (
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={adicionalEditado[a.clave] ?? String(a.montoPropuesto)}
+                              onChange={(e) => setAdicionalEditado({ ...adicionalEditado, [a.clave]: e.target.value })}
+                              className="w-32 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm text-right font-mono"
+                            />
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{a.avisos.join(' · ') || '—'}</td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {preview.adicionales.map((a) => (
-                        <tr key={a.clave}>
-                          <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
-                            {a.nombre || a.clave}
-                            <span className="block font-mono text-[11px] text-gray-500 dark:text-gray-400">{a.clave}</span>
-                          </td>
-                          <td className="px-4 py-2 text-right text-sm font-mono text-gray-500 dark:text-gray-400">{pesos(a.monto)}</td>
-                          <td className="px-4 py-2 text-right">
-                            {a.montoPropuesto === null ? (
-                              <span className="text-xs text-amber-600 dark:text-amber-400">sin importe base</span>
-                            ) : (
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={adicionalEditado[a.clave] ?? String(a.montoPropuesto)}
-                                onChange={(e) => setAdicionalEditado({ ...adicionalEditado, [a.clave]: e.target.value })}
-                                className="w-32 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm text-right font-mono"
-                              />
-                            )}
-                          </td>
-                          <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{a.avisos.join(' · ') || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </TablaConEncabezadoFijo>
               </div>
             )}
 

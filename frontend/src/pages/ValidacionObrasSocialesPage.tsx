@@ -6,6 +6,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { projectsAPI, type ContratoDeValidacionOS, type EstadoValidacionAutomaticaOS, type PendienteValidacionOS } from "../api/projects";
 import { sweetAlert } from "../utils/sweetAlert";
+import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
 
 /*
   O.S VALIDACIÓN AUTOMÁTICA: qué está esperando que ARCA le valide la obra social, en qué estado está
@@ -228,44 +229,42 @@ export const ValidacionObrasSocialesPage: React.FC = () => {
             {estado.pendientes.length === 0 ? (
               <p className="text-sm text-gray-500">No hay obras sociales sin validar entre los contratos de los últimos 30 días.</p>
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                <table className="min-w-full">
-                  <thead>
-                    <tr>
-                      <th className={th}>Colaborador</th>
-                      <th className={th}>Empresa</th>
-                      <th className={th}>Contrato</th>
-                      <th className={th}>Cargado el</th>
-                      <th className={th}>Validación</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {estado.pendientes.map((p) => {
-                      const e = ESTADO[p.estado] || ESTADO.pendiente;
-                      return (
-                        <tr key={`${p.cuil}-${p.empresaId}`} className="border-t border-gray-100 dark:border-gray-800 align-top">
-                          <td className="px-4 py-3">
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white">{p.nombre}</p>
-                            <p className="text-xs font-mono text-gray-500">{fmtCuil(p.cuil)}</p>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{p.empresa}</td>
-                          <td className="px-4 py-3">
-                            <Contrato c={p.contrato ? { ...p.contrato, proyecto: p.contrato.proyecto || p.proyecto } : null} />
-                          </td>
-                          <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{fechaCorta(p.fechaCarga)}</td>
-                          <td className="px-4 py-3 text-xs">
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border ${e.clase}`}>
-                              <FontAwesomeIcon icon={e.icono} spin={p.estado === "en_corrida"} className="h-2.5 w-2.5" />
-                              {e.texto}
-                            </span>
-                            {p.detalle && <p className="mt-1 text-gray-500">{p.detalle}</p>}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <TablaConEncabezadoFijo className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800" tabla="min-w-full">
+                <thead>
+                  <tr>
+                    <th className={th}>Colaborador</th>
+                    <th className={th}>Empresa</th>
+                    <th className={th}>Contrato</th>
+                    <th className={th}>Cargado el</th>
+                    <th className={th}>Validación</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {estado.pendientes.map((p) => {
+                    const e = ESTADO[p.estado] || ESTADO.pendiente;
+                    return (
+                      <tr key={`${p.cuil}-${p.empresaId}`} className="border-t border-gray-100 dark:border-gray-800 align-top">
+                        <td className="px-4 py-3">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{p.nombre}</p>
+                          <p className="text-xs font-mono text-gray-500">{fmtCuil(p.cuil)}</p>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{p.empresa}</td>
+                        <td className="px-4 py-3">
+                          <Contrato c={p.contrato ? { ...p.contrato, proyecto: p.contrato.proyecto || p.proyecto } : null} />
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{fechaCorta(p.fechaCarga)}</td>
+                        <td className="px-4 py-3 text-xs">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border ${e.clase}`}>
+                            <FontAwesomeIcon icon={e.icono} spin={p.estado === "en_corrida"} className="h-2.5 w-2.5" />
+                            {e.texto}
+                          </span>
+                          {p.detalle && <p className="mt-1 text-gray-500">{p.detalle}</p>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </TablaConEncabezadoFijo>
             )}
           </section>
 
@@ -295,44 +294,42 @@ export const ValidacionObrasSocialesPage: React.FC = () => {
                         <span className="text-[11px] text-gray-400 whitespace-nowrap shrink-0">{new Date(u.fecha).toLocaleString("es-AR")}</span>
                       </button>
                       {abiertaEsta && u.detalle.length > 0 && (
-                        <div className="mt-2 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                          <table className="min-w-full">
-                            <thead>
-                              <tr>
-                                <th className={th}>Colaborador</th>
-                                <th className={th}>Empresa</th>
-                                <th className={th}>Contrato</th>
-                                <th className={th}>Resultado en ARCA</th>
+                        <TablaConEncabezadoFijo className="mt-2 rounded-lg border border-gray-200 dark:border-gray-700" tabla="min-w-full">
+                          <thead>
+                            <tr>
+                              <th className={th}>Colaborador</th>
+                              <th className={th}>Empresa</th>
+                              <th className={th}>Contrato</th>
+                              <th className={th}>Resultado en ARCA</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {u.detalle.map((d, i) => (
+                              <tr key={`${d.cuil}-${i}`} className="border-t border-gray-100 dark:border-gray-800 align-top">
+                                <td className="px-4 py-2">
+                                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{d.nombre || "(sin ficha)"}</p>
+                                  <p className="text-xs font-mono text-gray-500">{fmtCuil(d.cuil)}</p>
+                                </td>
+                                <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{d.empresa || u.empresaRazonSocial}</td>
+                                <td className="px-4 py-2">
+                                  <Contrato c={d.contrato} />
+                                </td>
+                                <td className="px-4 py-2 text-xs max-w-[360px]">
+                                  {d.error ? (
+                                    <span className="text-red-600 dark:text-red-400">{d.error}</span>
+                                  ) : d.rnos ? (
+                                    <span className="text-green-700 dark:text-green-400">
+                                      <span className="font-mono">{d.rnos}</span>
+                                      {d.obraSocial ? ` · ${d.obraSocial}` : ""}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-500">Sin obra social declarada en ARCA: rige la del convenio.</span>
+                                  )}
+                                </td>
                               </tr>
-                            </thead>
-                            <tbody>
-                              {u.detalle.map((d, i) => (
-                                <tr key={`${d.cuil}-${i}`} className="border-t border-gray-100 dark:border-gray-800 align-top">
-                                  <td className="px-4 py-2">
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{d.nombre || "(sin ficha)"}</p>
-                                    <p className="text-xs font-mono text-gray-500">{fmtCuil(d.cuil)}</p>
-                                  </td>
-                                  <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{d.empresa || u.empresaRazonSocial}</td>
-                                  <td className="px-4 py-2">
-                                    <Contrato c={d.contrato} />
-                                  </td>
-                                  <td className="px-4 py-2 text-xs max-w-[360px]">
-                                    {d.error ? (
-                                      <span className="text-red-600 dark:text-red-400">{d.error}</span>
-                                    ) : d.rnos ? (
-                                      <span className="text-green-700 dark:text-green-400">
-                                        <span className="font-mono">{d.rnos}</span>
-                                        {d.obraSocial ? ` · ${d.obraSocial}` : ""}
-                                      </span>
-                                    ) : (
-                                      <span className="text-gray-500">Sin obra social declarada en ARCA: rige la del convenio.</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                            ))}
+                          </tbody>
+                        </TablaConEncabezadoFijo>
                       )}
                     </li>
                   );

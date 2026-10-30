@@ -8,6 +8,7 @@ import { projectsAPI, Project } from "../../api/projects";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { sweetAlert } from "../../utils/sweetAlert";
 import axios from "../../api/axiosConfig";
+import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 
 interface UserOrderBalance {
   userId: string;
@@ -558,135 +559,133 @@ export const UserOrderManagementTab: React.FC = () => {
         </div>
       ) : selectedOrderConfigId ? (
         <>
-          <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700 mb-6 min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-1.5rem)]">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 relative">
-              <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10 shadow-sm">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Usuario</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Ingreso / Antigüedad</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Rol Frame</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Contrato</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900">{getHeaderLabel("total")}</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900">{getHeaderLabel("taken")}</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900">{getHeaderLabel("pending")}</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900">{getHeaderLabel("available")}</th>
-                  {isDinero && (
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32 bg-gray-50 dark:bg-gray-900">Cuotas</th>
-                  )}
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-28 bg-gray-50 dark:bg-gray-900">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredBalances.length > 0 ? (
-                  filteredBalances.map((balance) => {
-                    const edits = editedValues[balance.userId] || {};
-                    const isModified = hasRowChanges(balance);
+          <TablaConEncabezadoFijo className="rounded border border-gray-200 dark:border-gray-700 mb-6" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700 relative">
+            <thead className="bg-gray-50 dark:bg-gray-800 shadow-sm">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Usuario</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Ingreso / Antigüedad</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Rol Frame</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Contrato</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900">{getHeaderLabel("total")}</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900">{getHeaderLabel("taken")}</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900">{getHeaderLabel("pending")}</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900">{getHeaderLabel("available")}</th>
+                {isDinero && (
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32 bg-gray-50 dark:bg-gray-900">Cuotas</th>
+                )}
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-28 bg-gray-50 dark:bg-gray-900">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              {filteredBalances.length > 0 ? (
+                filteredBalances.map((balance) => {
+                  const edits = editedValues[balance.userId] || {};
+                  const isModified = hasRowChanges(balance);
 
-                    const totalValue = edits.totalAnnual ?? balance.display.totalAnnual;
-                    const takenValue = edits.taken ?? balance.display.taken;
-                    const pendingValue = edits.pending ?? balance.display.pending;
-                    const availableValue = edits.available ?? balance.display.available;
+                  const totalValue = edits.totalAnnual ?? balance.display.totalAnnual;
+                  const takenValue = edits.taken ?? balance.display.taken;
+                  const pendingValue = edits.pending ?? balance.display.pending;
+                  const availableValue = edits.available ?? balance.display.available;
 
-                    return (
-                      <tr key={balance.userId} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${isModified ? "bg-amber-50/10 dark:bg-amber-900/5" : ""}`}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {balance.firstName} {balance.lastName}
+                  return (
+                    <tr key={balance.userId} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${isModified ? "bg-amber-50/10 dark:bg-amber-900/5" : ""}`}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {balance.firstName} {balance.lastName}
+                          </div>
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${balance.metadata?.activo !== false ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
+                            {balance.metadata?.activo !== false ? "Activo" : "Inactivo"}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500">{balance.email}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                        <div>
+                          Ingreso: <span className="font-semibold text-gray-750 dark:text-gray-300">{formatDate(balance.hireDate)}</span>
+                        </div>
+                        <div className="mt-0.5">
+                          Antigüedad: <span className="font-semibold text-gray-750 dark:text-gray-300">{balance.seniority}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
+                        {getActiveRoleFrame(balance)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
+                        {getActiveContractType(balance) || "Sin contrato"}
+                      </td>
+                      {/* Total Annual */}
+                      <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                        {isDinero ? (
+                          !activeConfig?.limitType ? "Sin límite" : `$ ${totalValue.toLocaleString("es-AR")}`
+                        ) : totalValue}
+                      </td>
+                      {/* Tomados */}
+                      <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                        {activeConfig?.categoryType === "fecha" ? (
+                          <input
+                            type="number"
+                            min="0"
+                            value={takenValue}
+                            onChange={(e) => handleFieldChange(balance.userId, "taken", e.target.value)}
+                            className={`w-20 px-2 py-1 text-center border rounded text-sm focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white
+                              ${edits.taken !== undefined && edits.taken !== balance.display.taken
+                                ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20 font-bold"
+                                : "border-gray-300 dark:border-gray-600"
+                              }
+                            `}
+                          />
+                        ) : (
+                          isDinero ? `$ ${takenValue.toLocaleString("es-AR")}` : takenValue
+                        )}
+                      </td>
+                      {/* Pendientes */}
+                      <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                        {isDinero ? `$ ${pendingValue.toLocaleString("es-AR")}` : pendingValue}
+                      </td>
+                      {/* Disponibles */}
+                      <td className="px-4 py-4 text-center text-sm font-semibold text-gray-750 dark:text-gray-300 whitespace-nowrap">
+                        {isDinero ? (
+                          !activeConfig?.limitType ? "Sin límite" : `$ ${availableValue.toLocaleString("es-AR")}`
+                        ) : availableValue}
+                      </td>
+                      {/* Installments info (Dinero only) */}
+                      {isDinero && (
+                        <td className="px-4 py-4 whitespace-nowrap text-xs text-gray-750 dark:text-gray-300 text-center">
+                          {balance.installmentsInfo && balance.installmentsInfo.total > 0 ? (
+                            <div className="inline-block text-left text-[11px] leading-relaxed">
+                              <div>Totales: <span className="font-semibold text-gray-900 dark:text-white">{balance.installmentsInfo.total}</span></div>
+                              <div className="text-[10px] text-green-600 dark:text-green-400 font-medium">Pasadas: {balance.installmentsInfo.passed}</div>
+                              <div className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Restantes: {balance.installmentsInfo.remaining}</div>
                             </div>
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${balance.metadata?.activo !== false ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
-                              {balance.metadata?.activo !== false ? "Activo" : "Inactivo"}
-                            </span>
-                          </div>
-                          <div className="text-xs text-gray-500">{balance.email}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                          <div>
-                            Ingreso: <span className="font-semibold text-gray-750 dark:text-gray-300">{formatDate(balance.hireDate)}</span>
-                          </div>
-                          <div className="mt-0.5">
-                            Antigüedad: <span className="font-semibold text-gray-750 dark:text-gray-300">{balance.seniority}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
-                          {getActiveRoleFrame(balance)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
-                          {getActiveContractType(balance) || "Sin contrato"}
-                        </td>
-                        {/* Total Annual */}
-                        <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                          {isDinero ? (
-                            !activeConfig?.limitType ? "Sin límite" : `$ ${totalValue.toLocaleString("es-AR")}`
-                          ) : totalValue}
-                        </td>
-                        {/* Tomados */}
-                        <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                          {activeConfig?.categoryType === "fecha" ? (
-                            <input
-                              type="number"
-                              min="0"
-                              value={takenValue}
-                              onChange={(e) => handleFieldChange(balance.userId, "taken", e.target.value)}
-                              className={`w-20 px-2 py-1 text-center border rounded text-sm focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:text-white
-                                ${edits.taken !== undefined && edits.taken !== balance.display.taken
-                                  ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20 font-bold"
-                                  : "border-gray-300 dark:border-gray-600"
-                                }
-                              `}
-                            />
                           ) : (
-                            isDinero ? `$ ${takenValue.toLocaleString("es-AR")}` : takenValue
+                            <span className="text-gray-400 dark:text-gray-600">—</span>
                           )}
                         </td>
-                        {/* Pendientes */}
-                        <td className="px-4 py-4 text-center text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                          {isDinero ? `$ ${pendingValue.toLocaleString("es-AR")}` : pendingValue}
-                        </td>
-                        {/* Disponibles */}
-                        <td className="px-4 py-4 text-center text-sm font-semibold text-gray-750 dark:text-gray-300 whitespace-nowrap">
-                          {isDinero ? (
-                            !activeConfig?.limitType ? "Sin límite" : `$ ${availableValue.toLocaleString("es-AR")}`
-                          ) : availableValue}
-                        </td>
-                        {/* Installments info (Dinero only) */}
-                        {isDinero && (
-                          <td className="px-4 py-4 whitespace-nowrap text-xs text-gray-750 dark:text-gray-300 text-center">
-                            {balance.installmentsInfo && balance.installmentsInfo.total > 0 ? (
-                              <div className="inline-block text-left text-[11px] leading-relaxed">
-                                <div>Totales: <span className="font-semibold text-gray-900 dark:text-white">{balance.installmentsInfo.total}</span></div>
-                                <div className="text-[10px] text-green-600 dark:text-green-400 font-medium">Pasadas: {balance.installmentsInfo.passed}</div>
-                                <div className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Restantes: {balance.installmentsInfo.remaining}</div>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400 dark:text-gray-600">—</span>
-                            )}
-                          </td>
-                        )}
-                        {/* Acciones */}
-                        <td className="px-4 py-4 whitespace-nowrap text-center text-xs font-medium">
-                          <button
-                            type="button"
-                            onClick={() => handleReset(balance)}
-                            title="Resetear"
-                            className="px-2.5 py-1 bg-red-50 text-red-650 hover:bg-red-100 hover:text-red-800 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-900/30 dark:hover:text-red-300 rounded border border-red-200 dark:border-red-900/40 transition-colors font-medium"
-                          >
-                            <FontAwesomeIcon icon={faUndo} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={isDinero ? 10 : 9} className="px-6 py-8 text-center text-gray-500">
-                      No se encontraron usuarios con los filtros seleccionados
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                      )}
+                      {/* Acciones */}
+                      <td className="px-4 py-4 whitespace-nowrap text-center text-xs font-medium">
+                        <button
+                          type="button"
+                          onClick={() => handleReset(balance)}
+                          title="Resetear"
+                          className="px-2.5 py-1 bg-red-50 text-red-650 hover:bg-red-100 hover:text-red-800 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-900/30 dark:hover:text-red-300 rounded border border-red-200 dark:border-red-900/40 transition-colors font-medium"
+                        >
+                          <FontAwesomeIcon icon={faUndo} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={isDinero ? 10 : 9} className="px-6 py-8 text-center text-gray-500">
+                    No se encontraron usuarios con los filtros seleccionados
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </TablaConEncabezadoFijo>
 
           <div className="flex justify-end gap-3 py-4 border-t border-gray-100 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800">
             <button

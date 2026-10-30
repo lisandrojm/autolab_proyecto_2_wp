@@ -32,6 +32,7 @@ import { ValoracionesPorRol } from '../components/proyectos/ValoracionesPorRol';
 import { RotuloConInfo } from '../components/proyectos/RotuloConInfo';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { fechaDeCalendario } from '../utils/fechas';
+import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 const HELP_KEY = 'clientProjects' as const;
 
@@ -651,118 +652,116 @@ export const ClientProjectsPage: React.FC = () => {
       {loading ? (
         <LoadingSpinner message="Cargando proyectos..." />
       ) : effectiveViewMode === 'table' ? (
-        <div className="mt-6 overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/50 shadow-sm">
+        <TablaConEncabezadoFijo className="mt-6 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800/50 shadow-sm" tabla="w-full text-left border-collapse">
           {/*
             LAS MISMAS COLUMNAS, EN EL MISMO ORDEN, QUE ADMIN › PROYECTOS (pedido del 16/10/2026): es el mismo
             listado acotado a un cliente, y tiene que leerse igual. Si cambia una, cambian las dos
             (`ProjectsPage.tsx`).
           */}
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Centro de Costo</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyecto</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valoración</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sede/s</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Coordinador</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creado</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
+          <thead>
+            <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Centro de Costo</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proyecto</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valoración</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sede/s</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Coordinador</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creado</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+            {visibleProjects.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  No se encontraron proyectos
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
-              {visibleProjects.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                    No se encontraron proyectos
-                  </td>
-                </tr>
-              ) : (
-                visibleProjects.map((p) => {
-                  /* «ID: n» y no un guion cuando el id no resuelve: distingue «no tiene centro de costo» de
-                     «apunta a uno que no está en el catálogo». */
-                  const centroCosto = nombreCentroCosto(p);
-                  const statusColors: Record<string, string> = {
-                    active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-                    on_hold: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-                    completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-                    archived: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
-                  };
-                  const statusLabel: Record<string, string> = { active: 'Activo', on_hold: 'En Espera', completed: 'Completado', archived: 'Archivado' };
-                  return (
-                    <tr key={p._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => navigate(`/projects/${p._id}`)}>
-                      <td className="px-6 py-4">
-                        {centroCosto ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 whitespace-nowrap">{centroCosto}</span>
-                        ) : (
-                          <span className="text-sm text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center shrink-0">
-                            <FontAwesomeIcon icon={faBriefcase} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{p.name}</span>
-                            <span className="text-xs text-gray-500 truncate max-w-[200px]">{p.description || 'Sin descripción'}</span>
-                          </div>
+            ) : (
+              visibleProjects.map((p) => {
+                /* «ID: n» y no un guion cuando el id no resuelve: distingue «no tiene centro de costo» de
+                   «apunta a uno que no está en el catálogo». */
+                const centroCosto = nombreCentroCosto(p);
+                const statusColors: Record<string, string> = {
+                  active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                  on_hold: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                  completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                  archived: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
+                };
+                const statusLabel: Record<string, string> = { active: 'Activo', on_hold: 'En Espera', completed: 'Completado', archived: 'Archivado' };
+                return (
+                  <tr key={p._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer" onClick={() => navigate(`/projects/${p._id}`)}>
+                    <td className="px-6 py-4">
+                      {centroCosto ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50 whitespace-nowrap">{centroCosto}</span>
+                      ) : (
+                        <span className="text-sm text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center shrink-0">
+                          <FontAwesomeIcon icon={faBriefcase} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300">{client?.name || 'Cliente'}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${statusColors[p.status] || statusColors.archived}`}>{statusLabel[p.status] || p.status}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {idValoracionDe(p.valoracionId) ? (
-                          <ChipValoracionDelProyecto project={p} valoraciones={valoraciones} className="py-1 rounded-md" />
-                        ) : (
-                          <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">{nombresDeSedes(p).join(', ') || '-'}</span>
-                      </td>
-                      <td className="px-6 py-4">
                         <div className="flex flex-col">
-                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{p.metadataResolutions?.responsable ? `${p.metadataResolutions.responsable.firstName} ${p.metadataResolutions.responsable.lastName || ''}` : p.metadata?.responsableId ? `ID: ${p.metadata.responsableId}` : '-'}</span>
+                          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{p.name}</span>
+                          <span className="text-xs text-gray-500 truncate max-w-[200px]">{p.description || 'Sin descripción'}</span>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-500">{new Date(p.createdAt).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEdit(p);
-                            }}
-                            className="p-1.5 text-gray-400 hover:text-gray-300 rounded transition-colors"
-                            title="Editar"
-                          >
-                            <FontAwesomeIcon icon={faEdit} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteProject(p._id);
-                            }}
-                            className="p-1.5 text-gray-400 hover:text-gray-300 rounded transition-colors"
-                            title="Eliminar"
-                          >
-                            <FontAwesomeIcon icon={faTrash} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300">{client?.name || 'Cliente'}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${statusColors[p.status] || statusColors.archived}`}>{statusLabel[p.status] || p.status}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {idValoracionDe(p.valoracionId) ? (
+                        <ChipValoracionDelProyecto project={p} valoraciones={valoraciones} className="py-1 rounded-md" />
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">{nombresDeSedes(p).join(', ') || '-'}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{p.metadataResolutions?.responsable ? `${p.metadataResolutions.responsable.firstName} ${p.metadataResolutions.responsable.lastName || ''}` : p.metadata?.responsableId ? `ID: ${p.metadata.responsableId}` : '-'}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-500">{new Date(p.createdAt).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEdit(p);
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-gray-300 rounded transition-colors"
+                          title="Editar"
+                        >
+                          <FontAwesomeIcon icon={faEdit} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteProject(p._id);
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-gray-300 rounded transition-colors"
+                          title="Eliminar"
+                        >
+                          <FontAwesomeIcon icon={faTrash} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </TablaConEncabezadoFijo>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
           {/* Tarjetas de proyecto */}
