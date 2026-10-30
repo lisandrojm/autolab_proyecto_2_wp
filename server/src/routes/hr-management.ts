@@ -18,7 +18,7 @@ import { User } from "../models/User.js";
 import { Project } from "../models/Project.js";
 import { Client } from "../models/Client.js";
 import UserProject from "../models/UserProject.js";
-import { sanitizePersonalData, buildUserPersonalDataSet, includesBankingChange } from "../utils/personalDataFields.js";
+import { sanitizePersonalData, buildUserPersonalDataSet, includesBankingChange, rolesTrasAprobarPedido } from "../utils/personalDataFields.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { requireTenant, TenantRequest } from "../middleware/tenant.js";
 import { Types } from "mongoose";
@@ -812,7 +812,11 @@ router.put("/orders/:id/approve", async (req: AuthenticatedRequest & TenantReque
         const proposed = (order.metadata as any)?.proposedUserData || {};
         const sanitized = sanitizePersonalData(proposed, enabled);
         if (Object.keys(sanitized).length > 0) {
-          const targetUser = await User.findById(order.userId).select("firstName lastName").lean();
+          const targetUser: any = await User.findById(order.userId).select("firstName lastName metadata.roles_frame").lean();
+          if (sanitized.rolesFrameIds !== undefined) {
+            const propuestos = Array.isArray(sanitized.rolesFrameIds) ? sanitized.rolesFrameIds : sanitized.rolesFrameIds ? [sanitized.rolesFrameIds] : [];
+            sanitized.rolesFrameIds = rolesTrasAprobarPedido(targetUser?.metadata?.roles_frame || [], (order.metadata as any)?.rolesFrameAlPedir, propuestos);
+          }
           const set = buildUserPersonalDataSet(sanitized, {
             firstName: targetUser?.firstName,
             lastName: targetUser?.lastName,

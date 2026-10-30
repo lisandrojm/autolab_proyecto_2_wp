@@ -2762,6 +2762,16 @@ router.patch("/:id", requireTenant, authenticateToken, permisoSobreSolicitudProp
       aprobación, el registro público): se arrastran del documento actual cuando no vienen en el body.
     */
     if ((data as any).metadata && currentUser.metadata) {
+      /*
+        Los roles de la ficha y los vínculos con proyectos tampoco se pierden por no venir (30/10/2026):
+        un formulario que no los manda los borraba. `projects` además es del servidor (lo escriben el alta en
+        el equipo y quitar del equipo): se conserva SIEMPRE el de la base, aunque el cliente mande otro.
+      */
+      for (const campo of ["roles_frame", "rolesFrameIds"]) {
+        const actual = (currentUser.metadata as any)[campo];
+        if ((data as any).metadata[campo] === undefined && actual !== undefined) (data as any).metadata[campo] = actual;
+      }
+      if ((currentUser.metadata as any).projects !== undefined) (data as any).metadata.projects = (currentUser.metadata as any).projects;
       const deGestion = ["isSolicitud", "solicitudStatus", "solicitudCreadaPor", "solicitudUserId", "solicitudMotivoRechazo", "solicitudRechazadaPor", "solicitudRechazadaEl", "solicitudReenviada", "solicitudRevision", "registro", "loteId", "plantillaEquipoId", "loteNombre"];
       deGestion.forEach((campo) => {
         const actual = (currentUser.metadata as any)[campo];

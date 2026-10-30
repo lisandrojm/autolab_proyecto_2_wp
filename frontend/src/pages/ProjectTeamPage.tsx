@@ -368,6 +368,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     sólo lo que el usuario cambió), si el contrato que se edita es el que rige, y el área/rol que el
     miembro tiene hoy en el equipo (para preguntar antes de cambiarlos al aprobar o renovar).
   */
+  // Si la lista del equipo no cargó, no se sabe quién ya está: el wizard no guarda (ver `guardarWizard`).
+  const equipoCargado = useRef(false);
   const equipoAlAbrir = useRef<{ precarga: { rolFrameId: string; areas: string }; editaElQueRige: boolean; areasEquipo: string; rolEquipo: string } | null>(null);
   /*
     LO QUE QUIEN APRUEBA LE QUIERE DECIR A QUIEN PIDIÓ EL ALTA.
@@ -761,9 +763,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     try {
       const resp = await usersAPI.list({ projectId, limit: 10000, lightweight: true });
       setAllUsers(resp.users);
+      equipoCargado.current = true;
       return resp.users;
     } catch (e) {
       console.error('Error fetching full team (lite):', e);
+      equipoCargado.current = false;
       return [];
     }
   };
@@ -2328,10 +2332,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // Primary source: project teamConfig
     const existingConfig = teamConfig.find((c) => String(c.userId) === String(user._id));
     /*
-      UNA TARJETA PUNTUAL ABRE CON SU ÁREA. El equipo tiene el área de HOY: precargada en un contrato
-      viejo, guardarlo se lo cambiaba. Renovar no: el contrato nuevo parte del área que tiene hoy.
+      EDITAR UN CONTRATO ABRE CON SU ÁREA (también el que rige, 30/10/2026). Con la del equipo primero,
+      guardar sin tocar nada le copiaba al contrato el área del equipo. Un contrato nuevo (alta, aprobar,
+      renovar) sí parte del área que tiene hoy en el equipo.
     */
-    const delContratoEditado: any[] = !renovar ? ((contratoPorIndice || contractOverride) as any)?.areaShiftAssignments || [] : [];
+    const editaContratoExistente = !approveSolicitudId && !renovar && !nuevoEnEsteProyecto && !!currentProjectMeta && lastProject === currentProjectMeta && !!lastContract;
+    const delContratoEditado: any[] = editaContratoExistente ? (lastContract as any)?.areaShiftAssignments || [] : [];
     let existingAssignments = delContratoEditado.length ? delContratoEditado : existingConfig?.areaShiftAssignments || [];
 
     // Secondary source: user contract history (if teamConfig is missing it)
@@ -2562,8 +2568,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       estado_id: initialEstadoId,
       empresaContratoId: lastContract?.empresaContratoId ? String(lastContract.empresaContratoId) : '',
       empresaReleaseId: lastContract?.empresaReleaseId ? String(lastContract.empresaReleaseId) : '',
-      hora_inicio: lastContract?.hora_inicio || metaHoraInicio || '09:00',
-      hora_fin: lastContract?.hora_fin || metaHoraFin || '18:00',
+      // Editando un contrato, su horario o vacío (se pide al guardar): inventarle 09:00–18:00 lo cambiaba sin avisar.
+      hora_inicio: lastContract?.hora_inicio || (editaContratoExistente ? '' : metaHoraInicio || '09:00'),
+      hora_fin: lastContract?.hora_fin || (editaContratoExistente ? '' : metaHoraFin || '18:00'),
       // Renovar deja el período vacío: es lo único que cambia, y precargar el vencido invita a guardarlo igual.
       fecha_alta_contrato: sinFechasPrecargadas ? '' : formatDate(lastContract?.fecha_alta_contrato) || formatDate(new Date()),
       fecha_baja_contrato: sinFechasPrecargadas ? '' : formatDate(lastContract?.fecha_baja_contrato),
@@ -2773,6 +2780,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       return;
     }
 
+    /*
+      SIN LA LISTA DEL EQUIPO NO SE GUARDA. Si falló al cargar, todos parecen nuevos: guardar a alguien que
+      ya está le agregaba un contrato y le reescribía el área y el rol del equipo.
+    */
+    if (!equipoCargado.current) {
+      sweetAlert.error('No se cargó el equipo', 'No se pudo leer quiénes forman el equipo, así que no se puede saber si esta persona ya está. Recargá la página y volvé a intentar.');
+      return;
+    }
     // Determine if this is an update (existing member) or new assignment
     const isExistingMember = teamMembers.some((m) => m._id === selectedUserForWizard._id);
 

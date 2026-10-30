@@ -1692,10 +1692,14 @@ router.patch("/projects/:projectId/team-config/:userId/areas", requireTenant, au
     if (entrada) {
       if (firmaDeAreas(entrada.areaShiftAssignments) !== firmaDeAreas(asignaciones)) Object.assign(entrada, marca);
       entrada.areaShiftAssignments = asignaciones;
+      // Los campos viejos (un área, un turno) siguen a la primera asignación: el parte del móvil los leía
+      // primero y anotaba a quien se movió en su área anterior.
+      entrada.areaId = asignaciones[0]?.areaId;
+      entrada.shiftId = asignaciones[0]?.shiftIds?.[0];
     } else {
       // Alguien del equipo que todavía no tenía fila propia en `teamConfig`: se crea con los defaults
       // del modelo, sin inventarle horario.
-      config.push({ userId: new Types.ObjectId(userId), canRegister: true, useProjectSchedule: true, areaShiftAssignments: asignaciones, ...marca });
+      config.push({ userId: new Types.ObjectId(userId), canRegister: true, useProjectSchedule: true, areaShiftAssignments: asignaciones, areaId: asignaciones[0]?.areaId, shiftId: asignaciones[0]?.shiftIds?.[0], ...marca });
     }
 
     project.teamConfig = config;

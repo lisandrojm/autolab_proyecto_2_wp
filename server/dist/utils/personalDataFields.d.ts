@@ -24,6 +24,14 @@ export declare function includesBankingChange(sanitized: Record<string, any> | u
  */
 export declare function sanitizePersonalData(proposed: Record<string, any> | undefined | null, enabledKeys: string[] | undefined | null): Record<string, any>;
 /**
+ * LOS ROLES DE LA FICHA AL APROBAR UN PEDIDO DE DATOS PERSONALES (30/10/2026). El pedido trae la lista
+ * entera que la persona veía al pedirlo; aplicarla tal cual borraba los roles agregados después. Se
+ * aplica sólo lo que el pedido CAMBIÓ: lo que sacó respecto de la ficha de ese momento se saca, lo que
+ * agregó se agrega, y el resto queda como está hoy. Sin la foto del momento (pedidos viejos), sólo se
+ * agrega: nunca se quita un rol que no se sabe si la persona quiso quitar.
+ */
+export declare function rolesTrasAprobarPedido(actuales: any[], alPedir: any[] | null | undefined, propuestos: any[]): string[];
+/**
  * Construye el `$set` para User a partir de datos personales sanitizados.
  * Casos especiales:
  *  - nombre/apellido: además de metadata.*, actualizan firstName/lastName top-level y metadata.fullName / name.

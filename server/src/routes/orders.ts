@@ -1091,6 +1091,11 @@ router.post("/", uploadOrderImage, async (req: AuthenticatedRequest & TenantRequ
         const enabled = ((category.config as any)?.camposEditables as string[]) || [];
         const sanitized = sanitizePersonalData(data.dynamicValue, enabled);
         orderData.metadata = { ...(orderData.metadata || {}), proposedUserData: sanitized };
+        // La foto de los roles al pedir: al aprobar se aplica sólo lo que el pedido cambió (`rolesTrasAprobarPedido`).
+        if (sanitized.rolesFrameIds !== undefined) {
+          const quien: any = await User.findById(orderData.userId).select("metadata.roles_frame").lean();
+          orderData.metadata.rolesFrameAlPedir = ((quien?.metadata?.roles_frame || []) as any[]).map((r) => String(r?._id ?? r));
+        }
       }
     }
 

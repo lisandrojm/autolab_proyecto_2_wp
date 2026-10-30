@@ -15,7 +15,7 @@ import { Notification } from "../models/Notification.js";
 import { Tenant } from "../models/Tenant.js";
 import { Pdf } from "../models/Pdf.js";
 import { User } from "../models/User.js";
-import { sanitizePersonalData, buildUserPersonalDataSet, includesBankingChange } from "../utils/personalDataFields.js";
+import { sanitizePersonalData, buildUserPersonalDataSet, includesBankingChange, rolesTrasAprobarPedido } from "../utils/personalDataFields.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { Types } from "mongoose";
@@ -748,7 +748,11 @@ router.put("/orders/:id/approve", async (req, res) => {
                 const proposed = order.metadata?.proposedUserData || {};
                 const sanitized = sanitizePersonalData(proposed, enabled);
                 if (Object.keys(sanitized).length > 0) {
-                    const targetUser = await User.findById(order.userId).select("firstName lastName").lean();
+                    const targetUser = await User.findById(order.userId).select("firstName lastName metadata.roles_frame").lean();
+                    if (sanitized.rolesFrameIds !== undefined) {
+                        const propuestos = Array.isArray(sanitized.rolesFrameIds) ? sanitized.rolesFrameIds : sanitized.rolesFrameIds ? [sanitized.rolesFrameIds] : [];
+                        sanitized.rolesFrameIds = rolesTrasAprobarPedido(targetUser?.metadata?.roles_frame || [], order.metadata?.rolesFrameAlPedir, propuestos);
+                    }
                     const set = buildUserPersonalDataSet(sanitized, {
                         firstName: targetUser?.firstName,
                         lastName: targetUser?.lastName,

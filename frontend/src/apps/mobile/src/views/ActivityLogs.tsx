@@ -485,12 +485,15 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
       return false;
     });
 
+    // Los campos viejos (`areaId`/`shiftId`, un área y un turno) sólo si no hay asignaciones: la Jerarquía
+    // movía a la persona en `areaShiftAssignments` y el parte la seguía anotando en su área anterior.
+    const tieneAsignaciones = !!teamConfigMember?.areaShiftAssignments?.length;
     if (teamConfigMember) {
-      if (!areaId && teamConfigMember.areaId) {
+      if (!areaId && teamConfigMember.areaId && !tieneAsignaciones) {
         areaId = String(teamConfigMember.areaId?._id || teamConfigMember.areaId);
         if (!areaName && teamConfigMember.areaId?.name) areaName = teamConfigMember.areaId.name;
       }
-      if (!shiftId && teamConfigMember.shiftId) {
+      if (!shiftId && teamConfigMember.shiftId && !tieneAsignaciones) {
         shiftId = String(teamConfigMember.shiftId?._id || teamConfigMember.shiftId);
         if (!shiftName && teamConfigMember.shiftId?.name) shiftName = teamConfigMember.shiftId.name;
       }

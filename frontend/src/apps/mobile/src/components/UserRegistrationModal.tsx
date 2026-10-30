@@ -1167,8 +1167,11 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     if (opcionesAreaTurno.length === 1) {
       const { areaId, shiftId } = opcionesAreaTurno[0];
       const sedeId = sedeAGuardar(opcionesAreaTurno[0]);
+      // Sólo si no había nada elegido: una renovación o una solicitud que se edita traen su área, y si es
+      // una opción válida se respeta (si no lo es, la limpia el caso de abajo y entonces se completa).
+      const yaElegidaValida = (p: typeof formData) => p.areaShiftAssignments.some((a) => a.areaId === areaId && a.shiftIds.includes(shiftId));
       setFormData((p) =>
-        p.areaShiftAssignments.length === 1 && p.areaShiftAssignments[0].areaId === areaId && p.areaShiftAssignments[0].shiftIds.includes(shiftId) && sedeDe(p.areaShiftAssignments[0].sedeId) === sedeId
+        yaElegidaValida(p) || (p.areaShiftAssignments.length === 1 && p.areaShiftAssignments[0].areaId === areaId && p.areaShiftAssignments[0].shiftIds.includes(shiftId) && sedeDe(p.areaShiftAssignments[0].sedeId) === sedeId)
           ? p
           : { ...p, areaShiftAssignments: [{ areaId, shiftIds: [shiftId], ...(sedeId ? { sedeId } : {}) }], ...(sedeId ? { sedeId: String(sedeId) } : {}) },
       );

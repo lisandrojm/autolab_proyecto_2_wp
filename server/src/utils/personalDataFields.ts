@@ -189,6 +189,24 @@ export function sanitizePersonalData(
 }
 
 /**
+ * LOS ROLES DE LA FICHA AL APROBAR UN PEDIDO DE DATOS PERSONALES (30/10/2026). El pedido trae la lista
+ * entera que la persona veía al pedirlo; aplicarla tal cual borraba los roles agregados después. Se
+ * aplica sólo lo que el pedido CAMBIÓ: lo que sacó respecto de la ficha de ese momento se saca, lo que
+ * agregó se agrega, y el resto queda como está hoy. Sin la foto del momento (pedidos viejos), sólo se
+ * agrega: nunca se quita un rol que no se sabe si la persona quiso quitar.
+ */
+export function rolesTrasAprobarPedido(actuales: any[], alPedir: any[] | null | undefined, propuestos: any[]): string[] {
+  const ids = (l: any[] | null | undefined) => [...new Set((l || []).map((x) => String(x?._id ?? x)).filter(Boolean))];
+  const hoy = ids(actuales);
+  const pedidos = ids(propuestos);
+  if (!alPedir) return [...new Set([...hoy, ...pedidos])];
+  const antes = new Set(ids(alPedir));
+  const quitados = new Set([...antes].filter((id) => !pedidos.includes(id)));
+  const agregados = pedidos.filter((id) => !antes.has(id));
+  return [...new Set([...hoy.filter((id) => !quitados.has(id)), ...agregados])];
+}
+
+/**
  * Construye el `$set` para User a partir de datos personales sanitizados.
  * Casos especiales:
  *  - nombre/apellido: además de metadata.*, actualizan firstName/lastName top-level y metadata.fullName / name.
