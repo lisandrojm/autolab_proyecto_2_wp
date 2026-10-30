@@ -5385,7 +5385,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       <span className={`flex h-6 w-10 shrink-0 items-center rounded-full p-1 duration-300 ease-in-out ${wizardData.reemplazo ? 'bg-blue-500 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}>
                         <span className={`h-4 w-4 transform rounded-full bg-white shadow-md duration-300 ease-in-out ${wizardData.reemplazo ? 'translate-x-4' : ''}`} />
                       </span>
-                      Es reemplazo
+                      <span className="flex flex-col">
+                        Es reemplazo
+                        {/* El período a la vista al decidir si es reemplazo (al aprobar, el de la solicitud). */}
+                        {resumenDelTotalWizard.periodo && (
+                          <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">
+                            <span className="font-semibold">Período:</span> {resumenDelTotalWizard.periodo}
+                          </span>
+                        )}
+                      </span>
                     </label>
                   </div>
 
