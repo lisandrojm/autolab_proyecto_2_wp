@@ -5389,7 +5389,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         Es reemplazo
                         {/* El período a la vista al decidir si es reemplazo (al aprobar, el de la solicitud); también en «Agregar Miembro». */}
                         <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">
-                          <span className="font-semibold">Período:</span> {resumenDelTotalWizard.periodo || <span className="italic">sin fechas cargadas</span>}
+                          {resumenDelTotalWizard.periodo || <span className="italic">sin fechas cargadas</span>}
                         </span>
                       </span>
                     </label>
