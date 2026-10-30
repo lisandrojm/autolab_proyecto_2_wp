@@ -319,12 +319,19 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div className="overflow-x-auto">
-        {/* El borde de las columnas fijas (Nombre y Acciones) es una sombra inset: con border-collapse el
-            border-l/r es de la tabla, no de la celda, y se iba con el scroll lateral. */}
+      {/*
+        LOS ENCABEZADOS QUEDAN FIJOS debajo del header de la pantalla (30/10/2026), como en Contratos: la
+        tabla scrollea dentro de una caja del alto que queda libre (`--wp-sticky-top`, que publica
+        PageLayout) y el `<thead>` es sticky dentro de ella. Un sticky contra la página no funciona: el
+        `overflow-x-auto` del scroll lateral lo ataría a esta caja igual. Fondo opaco para que no se vea
+        pasar lo de abajo.
+        El borde de las columnas fijas (Nombre y Acciones) es una sombra inset: con border-collapse el
+        border-l/r es de la tabla, no de la celda, y se iba con el scroll lateral.
+      */}
+      <div className="overflow-x-auto custom-scrollbar min-h-[22rem] max-h-[calc(100svh-var(--wp-sticky-top,220px)-1.5rem)]">
         <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          <thead className="sticky top-0 z-10 shadow-sm">
+            <tr className="bg-gray-50 dark:bg-[#18202f] border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               {/*
                 LA CASILLA Y EL NOMBRE QUEDAN FIJOS al correr la tabla de costado (pedido del 20/10/2026):
                 con muchas columnas, al llegar a Estado o Acciones ya no se veía de quién era la fila.
