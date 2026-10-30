@@ -273,8 +273,6 @@ interface SolicitudesTableProps {
   onEliminar: (s: SolicitudVista) => void;
   /** Corrige el contrato que creó una solicitud APROBADA. Sin esto, la fila aprobada sólo dice «Ya aprobada». */
   onEditarAprobada?: (s: SolicitudVista) => void;
-  /** Texto del botón de aprobar; en la vista global dice a qué proyecto lleva. */
-  tituloAprobar?: (s: SolicitudVista) => string;
   /** Abre el detalle completo de la solicitud. Sin esto la fila no es clickeable. */
   onVerDetalle?: (s: SolicitudVista) => void;
   /** SELECCIÓN para acciones masivas (eliminar): con esto aparece la columna de casillas. */
@@ -291,7 +289,7 @@ interface SolicitudesTableProps {
   totalSeleccionable?: number;
 }
 
-export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, onEditarAprobada, tituloAprobar, onVerDetalle, seleccionadas, onCambiarSeleccion, renderObraSocial, onSeleccionarTodas, totalSeleccionable }) => {
+export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, onEditarAprobada, onVerDetalle, seleccionadas, onCambiarSeleccion, renderObraSocial, onSeleccionarTodas, totalSeleccionable }) => {
   const { resolverRolFrame, resolverTramite, resolverTipoContrato } = catalogos;
   const conSeleccion = !!seleccionadas && !!onCambiarSeleccion;
   // La casilla del encabezado marca o desmarca las de ESTA página (la selección de otras páginas se conserva).
@@ -580,18 +578,18 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                       {s.estado === "pendiente" ? (
                         <>
                           {/*
-                            TILDE VERDE = «Editar para aprobar» (pedido del 30/10/2026; antes era un lápiz).
+                            TILDE VERDE = «Editar y aprobar» (pedido del 30/10/2026; antes era un lápiz).
 
                             Aprobar no se resuelve con este click: abre el alta con lo que pidió la solicitud
-                            para completar contrato, área y turno, y recién al guardar ahí queda aprobada. Por
-                            eso el title lo dice. Sólo íconos, con el texto en el title.
+                            para completar contrato, área y turno, y recién al guardar ahí queda aprobada. Sólo
+                            íconos; el hover dice «Editar y aprobar», «Rechazar» y «Eliminar».
                           */}
                           {onAprobar && (
-                            <button onClick={() => onAprobar(s)} className="p-1.5 rounded text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors" title={`Editar para aprobar${tituloAprobar ? ` · ${tituloAprobar(s)}` : ""}`} aria-label="Editar para aprobar">
+                            <button onClick={() => onAprobar(s)} className="p-1.5 rounded text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors" title="Editar y aprobar" aria-label="Editar y aprobar">
                               <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
                             </button>
                           )}
-                          <button onClick={() => onRechazar(s)} className="p-1.5 rounded text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Rechazar solicitud" aria-label="Rechazar solicitud">
+                          <button onClick={() => onRechazar(s)} className="p-1.5 rounded text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Rechazar" aria-label="Rechazar">
                             <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
                           </button>
                         </>
@@ -627,7 +625,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                         el server se la niega a quien no administra). Ahí deshace la contratación: se va
                         también el contrato que creó al aprobarse (ver `DELETE /users/:id/solicitud`).
                       */}
-                      <button onClick={() => onEliminar(s)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors" title={s.estado === "aprobada" ? "Eliminar la solicitud y su contrato" : "Eliminar definitivamente"}>
+                      <button onClick={() => onEliminar(s)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar" aria-label="Eliminar">
                         <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
                       </button>
                     </div>
