@@ -150,6 +150,9 @@ export interface IProject extends Document {
             shiftIds: Types.ObjectId[];
             sedeId?: number;
         }[];
+        /** Quién y cuándo cambió por última vez el área/turno (el detalle, en `historial_equipo`). */
+        updatedBy?: Types.ObjectId;
+        updatedAt?: Date;
     }[];
     favorite?: boolean;
     vacationConfig?: {

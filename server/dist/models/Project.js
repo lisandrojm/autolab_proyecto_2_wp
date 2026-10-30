@@ -50,6 +50,8 @@ const projectSchema = new Schema({
                     sedeId: { type: Number },
                 },
             ],
+            updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+            updatedAt: { type: Date },
         },
     ],
     favorite: { type: Boolean, default: false, index: true },

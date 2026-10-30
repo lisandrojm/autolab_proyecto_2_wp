@@ -105,6 +105,8 @@ function sumarAlFiltro(filter, condicion) {
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 import { NOVEDAD_SOLICITUD_APROBADA, nombreDePersona, notificar } from "../services/novedadesNotificaciones.js";
 import { esContratoVigente, hoyArgentina } from "../utils/contratoVigencia.js";
+import { filaDelEquipoTrasGuardar, firmaDeAreas, rolDelEquipoTrasGuardar, tieneRol } from "../compartido/configDelEquipo.js";
+import { cambiosDeAreas, fotoDeAreas, registrarCambiosDelEquipo } from "../services/historialEquipo.js";
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { quitarContrato } from "../services/contratoDeSolicitud.js";
 import { Contrato } from "../models/Contrato.js";
@@ -1562,16 +1564,21 @@ router.patch("/projects/:projectId/team-config/:userId/areas", requireTenant, au
         }));
         const config = project.teamConfig || [];
         const entrada = config.find((c) => String(c.userId) === String(userId));
+        const antes = fotoDeAreas(config);
+        const marca = { updatedBy: req.user?.userId && Types.ObjectId.isValid(req.user.userId) ? new Types.ObjectId(req.user.userId) : undefined, updatedAt: new Date() };
         if (entrada) {
+            if (firmaDeAreas(entrada.areaShiftAssignments) !== firmaDeAreas(asignaciones))
+                Object.assign(entrada, marca);
             entrada.areaShiftAssignments = asignaciones;
         }
         else {
             // Alguien del equipo que todavía no tenía fila propia en `teamConfig`: se crea con los defaults
             // del modelo, sin inventarle horario.
-            config.push({ userId: new Types.ObjectId(userId), canRegister: true, useProjectSchedule: true, areaShiftAssignments: asignaciones });
+            config.push({ userId: new Types.ObjectId(userId), canRegister: true, useProjectSchedule: true, areaShiftAssignments: asignaciones, ...marca });
         }
         project.teamConfig = config;
         await project.save();
+        await registrarCambiosDelEquipo({ tenantId: req.tenantObjectId, projectId: project._id, porUserId: req.user?.userId, origen: "jerarquia", payload: { areaShiftAssignments }, cambios: cambiosDeAreas(antes, fotoDeAreas(config)) });
         res.json({ teamConfig: project.teamConfig });
     }
     catch (error) {
@@ -1599,9 +1606,17 @@ router.patch("/projects/:projectId/team-config/sede-de-area", requireTenant, aut
         const project = await Project.findOne({ _id: req.params.projectId, tenantId: req.tenantObjectId });
         if (!project)
             return res.status(404).json({ error: "Project not found" });
+        const antes = fotoDeAreas(project.teamConfig);
         const cambiadas = await ponerSedeEnArea(req.tenantObjectId, project, areaId, sedeId, { userIds });
-        if (cambiadas > 0)
+        if (cambiadas > 0) {
+            const cambios = cambiosDeAreas(antes, fotoDeAreas(project.teamConfig));
+            const quienes = new Set(cambios.map((c) => String(c.userId)));
+            for (const c of (project.teamConfig || []))
+                if (quienes.has(String(c.userId)))
+                    Object.assign(c, { updatedBy: req.user?.userId && Types.ObjectId.isValid(req.user.userId) ? new Types.ObjectId(req.user.userId) : undefined, updatedAt: new Date() });
             await project.save();
+            await registrarCambiosDelEquipo({ tenantId: req.tenantObjectId, projectId: project._id, porUserId: req.user?.userId, origen: "sede-de-area", payload: { areaId, sedeId, userIds: userIds.length }, cambios });
+        }
         res.json({ cambiadas });
     }
     catch (error) {
@@ -1618,10 +1633,20 @@ router.patch("/projects/:projectId/team-config", requireTenant, authenticateToke
     try {
         const { projectId } = req.params;
         const { config } = updateTeamConfigSchema.parse(req.body);
-        const project = await Project.findOneAndUpdate({ _id: projectId, tenantId: req.tenantObjectId }, { teamConfig: config }, { new: true, runValidators: true });
+        const previo = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("teamConfig").lean();
+        if (!previo)
+            return res.status(404).json({ error: "Project not found" });
+        // Reemplaza `teamConfig` entero: se conserva la marca de quién tocó cada fila, y se renueva en las que cambiaron de área.
+        const cambios = cambiosDeAreas(previo.teamConfig, config);
+        const cambiaron = new Set(cambios.map((c) => String(c.userId)));
+        const filaPrevia = new Map((previo.teamConfig || []).map((c) => [String(c.userId), c]));
+        const porQuien = req.user?.userId && Types.ObjectId.isValid(req.user.userId) ? new Types.ObjectId(req.user.userId) : undefined;
+        const conMarca = config.map((c) => (cambiaron.has(String(c.userId)) ? { ...c, updatedBy: porQuien, updatedAt: new Date() } : { ...c, updatedBy: filaPrevia.get(String(c.userId))?.updatedBy, updatedAt: filaPrevia.get(String(c.userId))?.updatedAt }));
+        const project = await Project.findOneAndUpdate({ _id: projectId, tenantId: req.tenantObjectId }, { teamConfig: conMarca }, { new: true, runValidators: true });
         if (!project) {
             return res.status(404).json({ error: "Project not found" });
         }
+        await registrarCambiosDelEquipo({ tenantId: req.tenantObjectId, projectId: project._id, porUserId: req.user?.userId, origen: "team-config", payload: { filas: config.length }, cambios });
         res.json(project);
     }
     catch (error) {
@@ -2000,6 +2025,9 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
     try {
         const { projectId } = req.params;
         const { userId, contract, isUpdate, contractIndex, approveSolicitud, comentarioRevision } = req.body;
+        // Qué de lo del EQUIPO (área/turno, rol de la tabla) pide escribir el wizard. Sin esto, sólo se completa
+        // lo que falte: ver `compartido/configDelEquipo.ts`.
+        const actualizarEquipo = req.body?.actualizarEquipo && typeof req.body.actualizarEquipo === "object" ? req.body.actualizarEquipo : {};
         if (!userId || !contract) {
             return res.status(400).json({ error: "userId and contract data are required" });
         }
@@ -2260,6 +2288,8 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         const idFrame = (v) => (Number(v) > 0 ? Number(v) : undefined);
         const extProjId = idFrame(enrichedContract.proyecto_id);
         const extEmpId = idFrame(enrichedContract.empleado_id);
+        // Lo que cambie del equipo (área/turno, rol), para el historial (`registrarCambiosDelEquipo`).
+        const cambiosDelEquipo = [];
         let userProject = await UserProject.findOne({
             $or: [
                 { projectId, userId },
@@ -2267,6 +2297,8 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             ],
         });
         if (!userProject) {
+            if (tieneRol(rolFrameName))
+                cambiosDelEquipo.push({ userId: user._id, campo: "rol", antes: "", despues: rolFrameName });
             userProject = new UserProject({
                 projectId: project._id,
                 userId: user._id,
@@ -2324,8 +2356,13 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
                 userProject.externalProjectId = extProjId;
             if (extEmpId)
                 userProject.externalEmployeeId = extEmpId;
-            if (rolFrameName)
-                userProject.nombre_rol_frame = rolFrameName;
+            // El rol del equipo no sigue al último contrato guardado (una jornada con otro rol, una tarjeta vieja
+            // o una aprobación lo pisaban): se completa si no tiene, o se cambia si el wizard lo pide.
+            const rolNuevo = rolDelEquipoTrasGuardar(userProject.nombre_rol_frame, rolFrameName, actualizarEquipo.rol);
+            if (rolNuevo !== null) {
+                cambiosDelEquipo.push({ userId: user._id, campo: "rol", antes: userProject.nombre_rol_frame || "", despues: rolNuevo });
+                userProject.nombre_rol_frame = rolNuevo;
+            }
         }
         await userProject.save();
         /*
@@ -2340,25 +2377,38 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         if (!project.assignedUsers.some(id => id.toString() === user._id.toString())) {
             project.assignedUsers.push(user._id);
         }
-        // Update teamConfig (replace if exists)
+        /*
+          EL ÁREA/TURNO DEL EQUIPO, SÓLO SI CORRESPONDE (ver `compartido/configDelEquipo.ts`). Antes se
+          reemplazaba la fila entera en cada guardado: abrir el wizard para tocar otra cosa, editar una
+          tarjeta vieja o aprobar una solicitud le cambiaba el área al miembro, y de paso perdía su horario
+          propio y volvía `canRegister`/`useProjectSchedule` a true.
+        */
         if (!project.teamConfig)
             project.teamConfig = [];
         const configIndex = project.teamConfig.findIndex(c => c.userId.toString() === user._id.toString());
-        const newConfig = {
-            userId: user._id,
+        const filaPrevia = configIndex > -1 ? project.teamConfig[configIndex].toObject?.() ?? project.teamConfig[configIndex] : null;
+        const filaNueva = filaDelEquipoTrasGuardar(filaPrevia, {
             areaId: isValidId(contract.areaId) ? new Types.ObjectId(contract.areaId) : undefined,
             shiftId: isValidId(contract.shiftId) ? new Types.ObjectId(contract.shiftId) : undefined,
             areaShiftAssignments: sanitizedAssignments,
-            canRegister: true,
-            useProjectSchedule: true
-        };
-        if (configIndex > -1) {
-            project.teamConfig[configIndex] = newConfig;
-        }
-        else {
-            project.teamConfig.push(newConfig);
+        }, actualizarEquipo.areas);
+        if (filaNueva) {
+            const fila = { ...filaNueva, userId: user._id, updatedBy: req.user?.userId && Types.ObjectId.isValid(req.user.userId) ? new Types.ObjectId(req.user.userId) : undefined, updatedAt: new Date() };
+            cambiosDelEquipo.push({ userId: user._id, campo: "areas", antes: JSON.parse(firmaDeAreas(filaPrevia?.areaShiftAssignments)), despues: JSON.parse(firmaDeAreas(sanitizedAssignments)) });
+            if (configIndex > -1)
+                project.teamConfig[configIndex] = fila;
+            else
+                project.teamConfig.push(fila);
         }
         await project.save();
+        await registrarCambiosDelEquipo({
+            tenantId: req.tenantObjectId,
+            projectId: project._id,
+            porUserId: req.user?.userId,
+            origen: idSolicitud ? "assign-member:aprobar" : isUpdate || (contractIndex !== undefined && contractIndex !== null && contractIndex !== "") ? "assign-member:editar" : "assign-member:nuevo",
+            payload: { contractIndex, isUpdate: !!isUpdate, approveSolicitud: approveSolicitud || null, actualizarEquipo, rol_frame_id: contract.rol_frame_id ?? null, nombre_rol_frame: rolFrameName, areaShiftAssignments: contract.areaShiftAssignments ?? null },
+            cambios: cambiosDelEquipo,
+        });
         // Update User metadata and projectIds
         const userUpdate = {
             $addToSet: {

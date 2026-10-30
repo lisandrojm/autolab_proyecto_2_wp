@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { valoracionesDeCategoria } from '@compartido/valoracionesDeCategoria';
+import { diferenciasConElEquipo, firmaDeAreas, horarioAlElegirTurno, queActualizarDelEquipo } from '@compartido/configDelEquipo';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from '../api/axiosConfig';
 import { projectsAPI, Project, AreaShiftMembersResponse } from '../api/projects';
@@ -362,6 +363,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     mismo tipo (misma plantilla); si se cambió el tipo, el texto viejo no tiene nada que ver.
   */
   const textoCustomDeRenovacion = useRef<{ nombreContrato: string; texto: string } | null>(null);
+  /*
+    LO DEL EQUIPO AL ABRIR EL WIZARD (ver `compartido/configDelEquipo.ts`): lo precargado (para mandar
+    sólo lo que el usuario cambió), si el contrato que se edita es el que rige, y el área/rol que el
+    miembro tiene hoy en el equipo (para preguntar antes de cambiarlos al aprobar o renovar).
+  */
+  const equipoAlAbrir = useRef<{ precarga: { rolFrameId: string; areas: string }; editaElQueRige: boolean; areasEquipo: string; rolEquipo: string } | null>(null);
   /*
     LO QUE QUIEN APRUEBA LE QUIERE DECIR A QUIEN PIDIÓ EL ALTA.
 
@@ -2307,9 +2314,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       .filter(Boolean);
     const rolDeLaFicha = rolesDeLaFicha.map((id) => allRoleFrames.find((rf) => String(rf._id) === id)).find((rf) => rf?.data?.rol?.id != null);
     let initialRolFrameId = nuevoEnEsteProyecto && rolDeLaFicha ? String(rolDeLaFicha.data.rol.id) : lastContract?.rol_frame_id ? String(lastContract.rol_frame_id) : '';
-    if (!initialRolFrameId && lastProject?.nombre_rol_frame) {
-      // Find role frame by name
-      const foundRF = allRoleFrames.find((rf) => rf.name === lastProject.nombre_rol_frame);
+    // Sin rol en el contrato: el del equipo en ESTE proyecto (el de otro proyecto no es el suyo acá).
+    if (!initialRolFrameId && currentProjectMeta?.nombre_rol_frame) {
+      const foundRF = allRoleFrames.find((rf) => rf.name === currentProjectMeta.nombre_rol_frame);
       if (foundRF) initialRolFrameId = String(foundRF.data.rol.id);
     }
     if (!initialRolFrameId && rolDeLaFicha) initialRolFrameId = String(rolDeLaFicha.data.rol.id);
@@ -2320,7 +2327,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // Pre-fill assignments if they already exist in teamConfig
     // Primary source: project teamConfig
     const existingConfig = teamConfig.find((c) => String(c.userId) === String(user._id));
-    let existingAssignments = existingConfig?.areaShiftAssignments || [];
+    /*
+      UNA TARJETA PUNTUAL ABRE CON SU ÁREA. El equipo tiene el área de HOY: precargada en un contrato
+      viejo, guardarlo se lo cambiaba. Renovar no: el contrato nuevo parte del área que tiene hoy.
+    */
+    const delContratoEditado: any[] = !renovar ? ((contratoPorIndice || contractOverride) as any)?.areaShiftAssignments || [] : [];
+    let existingAssignments = delContratoEditado.length ? delContratoEditado : existingConfig?.areaShiftAssignments || [];
 
     // Secondary source: user contract history (if teamConfig is missing it)
     if (existingAssignments.length === 0 && lastContract?.areaShiftAssignments) {
@@ -2353,6 +2365,17 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         ...(sedeId === undefined ? { pendienteSede: true } : {}),
       };
     });
+
+    // ¿El contrato que se edita es el que rige? Sin tarjeta puntual, sí: se está configurando al miembro.
+    const contratosAca = currentProjectMeta && lastProject === currentProjectMeta && Array.isArray(lastProject?.contracts) ? (lastProject!.contracts as any[]) : [];
+    const indiceQueRige = elQueRige ? contratosAca.indexOf(elQueRige) : contratosAca.length - 1;
+    const editaElQueRige = typeof contractIndex === 'number' ? contractIndex === indiceQueRige : !contractOverride;
+    equipoAlAbrir.current = {
+      precarga: { rolFrameId: String(initialRolFrameId), areas: firmaDeAreas(areaShiftAssignments) },
+      editaElQueRige,
+      areasEquipo: firmaDeAreas(existingConfig?.areaShiftAssignments as any),
+      rolEquipo: String(currentProjectMeta?.nombre_rol_frame || ''),
+    };
 
     setSelectedUserForWizard(user);
     setWizardStep(1);
@@ -2753,6 +2776,40 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // Determine if this is an update (existing member) or new assignment
     const isExistingMember = teamMembers.some((m) => m._id === selectedUserForWizard._id);
 
+    /*
+      QUÉ DE LO DEL EQUIPO SE ESCRIBE (ver `compartido/configDelEquipo.ts`). Editando, sólo lo que el
+      usuario cambió y si es el contrato que rige. Un contrato NUEVO de alguien que ya está (aprobar o
+      renovar) con otra área o rol que los que tiene hoy en el equipo: se pregunta, no se pisa en silencio.
+    */
+    const contratoNuevoDeMiembro = isExistingMember && (!!approvingSolicitudId || renovando);
+    const nombreRolElegido = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || '';
+    const nombreDeAreas = (firma: string) =>
+      (JSON.parse(firma) as { a: string; s: string[]; sede: number | null }[])
+        .map((f) => `${allAreas.find((ar) => String(ar._id) === f.a)?.name || 'Área'}${f.sede ? ` · ${nombreDeSedeId(f.sede)}` : ''} (${f.s.map((id) => allShifts.find((sh) => String(sh._id) === id)?.name || 'turno').join(', ')})`)
+        .join(' + ') || 'sin área';
+    const alAbrir = equipoAlAbrir.current;
+    let confirmado: { areas?: boolean; rol?: boolean } = {};
+    if (contratoNuevoDeMiembro && alAbrir) {
+      const areasContrato = firmaDeAreas(wizardData.areaShiftAssignments);
+      const dif = diferenciasConElEquipo({ areasEquipo: alAbrir.areasEquipo, areasContrato, rolEquipo: alAbrir.rolEquipo, rolContrato: nombreRolElegido });
+      if (dif.areas || dif.rol) {
+        const lineas = [
+          ...(dif.areas ? [`Área y turno: ${approvingSolicitudId ? 'la solicitud declara' : 'el contrato nuevo tiene'} ${nombreDeAreas(areasContrato)}; hoy en el equipo tiene ${nombreDeAreas(alAbrir.areasEquipo)}.`] : []),
+          ...(dif.rol ? [`Rol: ${approvingSolicitudId ? 'la solicitud declara' : 'el contrato nuevo tiene'} ${nombreRolElegido}; hoy en el equipo es ${alAbrir.rolEquipo}.`] : []),
+        ];
+        const r = await sweetAlert.confirm('¿Cambiar también en el equipo?', `${lineas.join(' ')} El contrato se guarda igual con lo elegido; «No» deja el equipo como está.`, 'Sí, cambiar en el equipo', 'No, sólo el contrato');
+        confirmado = r.isConfirmed ? dif : {};
+      }
+    }
+    const actualizarEquipo = queActualizarDelEquipo({
+      nuevoEnElEquipo: !isExistingMember,
+      contratoNuevo: contratoNuevoDeMiembro,
+      editaElQueRige: !!alAbrir?.editaElQueRige,
+      precarga: alAbrir?.precarga || null,
+      ahora: { rolFrameId: String(wizardData.rol_frame_id || ''), areas: firmaDeAreas(wizardData.areaShiftAssignments) },
+      confirmado,
+    });
+
     try {
       setLoading(true);
       // Construct the data to send to specific assignment endpoint
@@ -2785,6 +2842,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         approveSolicitud: approvingSolicitudId || undefined,
         // Sólo al aprobar: queda guardado en la solicitud y se lee desde la app (ver `solicitudRevision`).
         comentarioRevision: approvingSolicitudId ? comentarioRevision.trim() || undefined : undefined,
+        actualizarEquipo,
         contract: {
           ...wizardData,
           ...(renovando && textoCustomDeRenovacion.current && textoCustomDeRenovacion.current.nombreContrato === wizardData.nombre_contrato ? { contenidoCustomContrato: textoCustomDeRenovacion.current.texto } : {}),
@@ -4946,7 +5004,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                                               hora. Al DESELECCIONARLO no se toca: borrar el horario de un contrato
                                               porque se destildó un turno sería perder un dato que nadie pidió cambiar.
                                             */
-                                            ...(isSelected || !shift.startTime || !shift.endTime ? {} : { hora_inicio: shift.startTime, hora_fin: shift.endTime }),
+                                            // Salvo que tuviera un horario PROPIO (distinto del default del turno que tenía): ése se conserva.
+                                            ...(isSelected
+                                              ? {}
+                                              : horarioAlElegirTurno({
+                                                  horaInicio: prev.hora_inicio,
+                                                  horaFin: prev.hora_fin,
+                                                  turnoAnterior: allShifts.find((sh) => String(sh._id) === String(prev.areaShiftAssignments[0]?.shiftIds?.[0])) || null,
+                                                  turnoNuevo: shift,
+                                                }) || {}),
                                           }));
                                         }}
                                         className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-all ${isSelected ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/20 dark:text-blue-300' : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-300 dark:hover:border-blue-600'}`}

@@ -688,7 +688,7 @@ class ProjectsAPI {
     return data;
   }
 
-  async assignMember(projectId: string, data: { userId: string; contract: any; isUpdate?: boolean; contractIndex?: number; approveSolicitud?: string | boolean }): Promise<void> {
+  async assignMember(projectId: string, data: { userId: string; contract: any; isUpdate?: boolean; contractIndex?: number; approveSolicitud?: string | boolean; comentarioRevision?: string; actualizarEquipo?: { areas: boolean; rol: boolean } }): Promise<void> {
     await axios.post(`/projects/${projectId}/assign-member`, data, {
       headers: this.getHeaders(),
     });
