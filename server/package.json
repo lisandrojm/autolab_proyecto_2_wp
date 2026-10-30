@@ -190,6 +190,7 @@
     "plantillas:auditar": "dotenv -e .env.production -- tsx src/scripts/auditarPlantillas.ts",
     "contratos:pasar-a-contratados": "dotenv -e .env.production -- tsx src/scripts/pasarAContratados.ts",
     "solicitudes:alinear-con-contrato": "dotenv -e .env.production -- tsx src/scripts/alinearSolicitudesAprobadas.ts",
+    "contratos:corregir-jornadas": "dotenv -e .env.production -- tsx src/scripts/contratosCorregirJornadas.ts",
     "equipo:completar-areas": "dotenv -e .env.production -- tsx src/scripts/equipoCompletarAreas.ts",
     "equipo:diagnosticar": "dotenv -e .env.production -- tsx src/scripts/equipoDiagnosticar.ts",
     "estados:configurar-contratados": "dotenv -e .env.production -- tsx src/scripts/configurarContratados.ts",

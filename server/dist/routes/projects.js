@@ -44,7 +44,7 @@ import { puestoParaGuardar } from "../services/arca/puestosDesempenados.js";
 import { actividadesDeSucursalParaEmpresa, codigoDeSucursalParaEmpresa } from "../compartido/sucursalesDeEmpresa.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { buscarCategoriaCompatPorLegacyId } from "../utils/categoriaCompat.js";
-import { importePorJornada, jornadasFijadasPorElTipo, periodoDeCalculo, sueldosDelContrato } from "../compartido/jornadas.js";
+import { CAMPOS_DEL_TIPO_PARA_IMPORTES, jornadasQueFijaElTipo, sueldosConEscala } from "../services/importesDelContrato.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
@@ -114,7 +114,6 @@ import { FormaPago } from "../models/FormaPago.js";
 import { formasDelTipo, rechazoPorDatosBancarios } from "../compartido/formasPago.js";
 import { registrarAltaDeContrato } from "../services/altaTempranaService.js";
 import { arrancarDescargaConstancias, descargaConstanciasDe, pendientesDeConstancia } from "../services/arca/constanciasAltas.js";
-import { numeroALetras } from "../utils/numeroALetras.js";
 import { cambiosAlAprobar, solicitudSegunElContrato } from "../services/revisionDeSolicitud.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -1770,25 +1769,7 @@ const contratoIdDeContrato = async (c) => {
  * su categoría: la cuenta de `sueldosDelContrato`, la misma del móvil y del formulario. Sin categoría
  * (un servicio) neto = bruto. Devuelve los cinco campos más el sueldo en mano en letras.
  */
-/**
- * LOS IMPORTES DE UN TIPO «IMPORTES EN 0» (cambio de franco, 27/10/2026): todos en cero, digan lo que
- * digan el formulario o la escala. El día trabajado reemplaza a uno de franco y no se paga.
- */
-const IMPORTES_EN_CERO = { sueldo_jornada: 0, sueldo_mano: 0, sueldo_mano_texto: "CERO 00/100", sueldo_neto: 0, sueldo_bruto: 0, sueldo_diario_neto: 0, diferencia_diaria_neto: 0 };
-const sueldosConEscala = async (contrato, tipoContrato) => {
-    if (tipoContrato?.data?.importesEnCero)
-        return { ...IMPORTES_EN_CERO };
-    const cat = contrato?.categoria_sat_id != null && contrato.categoria_sat_id !== "" ? await buscarCategoriaCompatPorLegacyId(Number(contrato.categoria_sat_id)) : null;
-    const bruto = Number(cat?.data?.sueldoBruto) || 0;
-    const neto = Number(cat?.data?.neto) || 0;
-    const s = sueldosDelContrato({
-        jornadaBruto: Number(contrato?.sueldo_jornada) || 0,
-        jornadas: Number(contrato?.cantidad_jornadas_laborales) || 0,
-        proporcionNeto: bruto > 0 && neto > 0 ? neto / bruto : null,
-        jornadaBrutoEscala: cat ? importePorJornada(cat.data, tipoContrato?.data?.multiplicadorDiario, tipoContrato?.data?.cantidadJornadas) : null,
-    });
-    return { ...s, sueldo_mano_texto: numeroALetras(s.sueldo_mano) };
-};
+// Los importes de un tipo «importes en 0» y los sueldos con la escala: ver `services/importesDelContrato`.
 /**
  * CONTRA QUÉ VALORACIÓN SE MIDE UN CONTRATO.
  *
@@ -2256,12 +2237,9 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             }
             contract.puestoDesempenado = puesto.valor || "";
         }
-        const tipoContrato = isValidId(contract.contrato_id) ? await Contrato.findById(contract.contrato_id).select("data.cantidadJornadas data.modoFechas data.multiplicadorDiario data.importesEnCero data.esTiempoIndeterminado").lean() : null;
-        const porDiasSueltos = tipoContrato?.data?.modoFechas === "dias";
-        const periodo = periodoDeCalculo(contract.fecha_alta_contrato, contract.fecha_baja_contrato, !!tipoContrato?.data?.esTiempoIndeterminado && !porDiasSueltos);
-        const diasQueTrabaja = contract.dias_rotativos || !Array.isArray(contract.dias_semana) ? [] : contract.dias_semana.map(Number);
-        const fijas = jornadasFijadasPorElTipo(tipoContrato?.data?.cantidadJornadas, porDiasSueltos, periodo.desde, periodo.hasta, diasQueTrabaja);
-        if (fijas !== null && fijas > 0 && Number(contract.cantidad_jornadas_laborales) !== fijas)
+        const tipoContrato = isValidId(contract.contrato_id) ? await Contrato.findById(contract.contrato_id).select(CAMPOS_DEL_TIPO_PARA_IMPORTES).lean() : null;
+        const fijas = jornadasQueFijaElTipo(contract, tipoContrato);
+        if (fijas !== null && Number(contract.cantidad_jornadas_laborales) !== fijas)
             contract.cantidad_jornadas_laborales = fijas;
         // Los sueldos, con la misma cuenta que la solicitud del móvil y el formulario (ver `sueldosConEscala`).
         if (Number(contract.sueldo_jornada) > 0 || tipoContrato?.data?.importesEnCero)
