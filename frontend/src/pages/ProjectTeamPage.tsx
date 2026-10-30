@@ -35,6 +35,7 @@ import { SelectorHora } from '../components/contratacion/SelectorHora';
 import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from '../utils/horario';
 import { numeroALetras } from '../utils/numeroALetras';
 import { avisoIndeterminado, erroresDeJornadas, sueldosDelContrato, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
+import { formatDiaSolicitud } from '../components/solicitudes/SolicitudesTable';
 import { CustomMultiDatePicker } from '../apps/mobile/src/components/CustomMultiDatePicker';
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
 import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
@@ -1246,6 +1247,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         ? 'Rotativos'
         : [textoDeDias(wizardData.dias_semana), wizardData.dias_por_semana ? `${wizardData.dias_por_semana} por semana` : ''].filter(Boolean).join(' · '),
   };
+  /** «01 nov 2026 → 01 nov 2026», como la columna Fechas de Solicitudes: por días sueltos, del primero al último. */
+  const periodoFlechaWizard = (() => {
+    const fechas = porDiasSueltosWizard ? [...wizardData.fechas_trabajadas].sort() : [wizardData.fecha_alta_contrato, wizardData.fecha_baja_contrato];
+    const desde = fechas[0];
+    const hasta = fechas[fechas.length - 1];
+    if (!desde) return null;
+    return { desde: formatDiaSolicitud(desde), hasta: hasta ? formatDiaSolicitud(hasta) : 'Indef.' };
+  })();
   const periodoWizard = periodoDeCalculo(wizardData.fecha_alta_contrato, wizardData.fecha_baja_contrato, indeterminadoWizard && !porDiasSueltosWizard);
   // «Cantidad de jornadas» del tipo de contrato (un plazo fijo, 30): manda sobre el calendario y no se ajusta.
   const tipoDelWizard = contratos.find((c) => c._id === wizardData.contrato_id);
@@ -5388,8 +5397,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       <span className="flex flex-col">
                         Es reemplazo
                         {/* El período a la vista al decidir si es reemplazo (al aprobar, el de la solicitud); también en «Agregar Miembro». */}
-                        <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">
-                          {resumenDelTotalWizard.periodo || <span className="italic">sin fechas cargadas</span>}
+                        <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                          {periodoFlechaWizard ? (
+                            <>
+                              <span>{periodoFlechaWizard.desde}</span>
+                              <span className="mx-1 text-gray-300 dark:text-gray-600">→</span>
+                              <span>{periodoFlechaWizard.hasta}</span>
+                            </>
+                          ) : (
+                            <span className="italic">sin fechas cargadas</span>
+                          )}
                         </span>
                       </span>
                     </label>
