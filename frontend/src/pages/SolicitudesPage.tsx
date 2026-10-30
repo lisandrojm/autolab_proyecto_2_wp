@@ -398,7 +398,7 @@ export const SolicitudesPage: React.FC = () => {
     if (!lista.length) return;
     const r = await sweetAlert.confirm(
       `¿Aprobar ${lista.length} ${lista.length === 1 ? "solicitud" : "solicitudes"}?`,
-      "Se aprueban tal cual se pidieron: cada una crea su contrato en el equipo del proyecto, igual que el tilde verde («Editar y aprobar») sin cambiar nada. Las que tengan datos incompletos quedan pendientes y te digo por qué.",
+      "Se aprueban tal cual se pidieron: cada una crea su contrato en el equipo del proyecto, igual que «Aprobar» sin cambiar nada. Las que tengan datos incompletos quedan pendientes y te digo por qué.",
       `Aprobar ${lista.length}`,
     );
     if (!r.isConfirmed) return;
@@ -451,7 +451,7 @@ export const SolicitudesPage: React.FC = () => {
     if (pendientes.length) {
       sweetAlert.warningAlert(
         `Se aprobaron ${aprobadas} de ${lista.length}`,
-        `Quedaron pendientes (y seleccionadas); aprobalas con el tilde verde («Editar y aprobar»):\n\n${pendientes.join("\n")}`,
+        `Quedaron pendientes (y seleccionadas); aprobalas con «Aprobar»:\n\n${pendientes.join("\n")}`,
       );
     } else sweetAlert.success("Solicitudes aprobadas", `Se aprobaron ${aprobadas}: cada una ya tiene su contrato.`);
     cargar(page);

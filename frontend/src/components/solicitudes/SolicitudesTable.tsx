@@ -578,19 +578,22 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                       {s.estado === "pendiente" ? (
                         <>
                           {/*
-                            TILDE VERDE = «Editar y aprobar» (pedido del 30/10/2026; antes era un lápiz).
+                            «APROBAR» (verde, con tilde) Y «RECHAZAR» (rojo, con cruz), CON TEXTO: sólo con
+                            los íconos no se entendía qué hacía cada uno (30/10/2026).
 
                             Aprobar no se resuelve con este click: abre el alta con lo que pidió la solicitud
-                            para completar contrato, área y turno, y recién al guardar ahí queda aprobada. Sólo
-                            íconos; el hover dice «Editar y aprobar», «Rechazar» y «Eliminar».
+                            para completar contrato, área y turno, y recién al guardar ahí queda aprobada. Por
+                            eso el hover dice «Editar y aprobar».
                           */}
                           {onAprobar && (
-                            <button onClick={() => onAprobar(s)} className="p-1.5 rounded text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors" title="Editar y aprobar" aria-label="Editar y aprobar">
-                              <FontAwesomeIcon icon={faCheck} className="h-4 w-4" />
+                            <button onClick={() => onAprobar(s)} className="px-2.5 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap" title="Editar y aprobar">
+                              <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
+                              Aprobar
                             </button>
                           )}
-                          <button onClick={() => onRechazar(s)} className="p-1.5 rounded text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Rechazar" aria-label="Rechazar">
-                            <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
+                          <button onClick={() => onRechazar(s)} className="px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded transition-colors flex items-center gap-1.5 whitespace-nowrap" title="Rechazar">
+                            <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
+                            Rechazar
                           </button>
                         </>
                       ) : s.estado === "aprobada" ? (
