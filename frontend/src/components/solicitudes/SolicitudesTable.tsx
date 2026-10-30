@@ -580,22 +580,20 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                       {s.estado === "pendiente" ? (
                         <>
                           {/*
-                            DICE «EDITAR PARA APROBAR», Y LLEVA EL LÁPIZ, PORQUE ESO ES LO QUE HACE.
+                            EL LÁPIZ (no un tilde) PORQUE ESO ES LO QUE HACE: «Editar para aprobar».
 
                             Aprobar no se resuelve con este click: abre el alta con lo que pidió la solicitud
                             para completar contrato, área y turno, y recién al guardar ahí queda aprobada. Con
-                            el tilde y la palabra «Aprobar» sola parecía la decisión final —y quien lo tocaba
-                            creía haber aprobado algo que seguía pendiente si cerraba el formulario—.
+                            un tilde parecía la decisión final —y quien lo tocaba creía haber aprobado algo que
+                            seguía pendiente si cerraba el formulario—. Sólo íconos, con el texto en el title.
                           */}
                           {onAprobar && (
-                            <button onClick={() => onAprobar(s)} className="px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap" title={tituloAprobar ? tituloAprobar(s) : "Aprobar y agregar al equipo"}>
-                              <FontAwesomeIcon icon={faEdit} className="text-[10px]" />
-                              Editar para Aprobar
+                            <button onClick={() => onAprobar(s)} className="p-1.5 rounded text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors" title={`Editar para aprobar${tituloAprobar ? ` · ${tituloAprobar(s)}` : ""}`} aria-label="Editar para aprobar">
+                              <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
                             </button>
                           )}
-                          <button onClick={() => onRechazar(s)} className="px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded transition-colors flex items-center gap-1.5 whitespace-nowrap" title="Rechazar solicitud">
-                            <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
-                            Rechazar
+                          <button onClick={() => onRechazar(s)} className="p-1.5 rounded text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Rechazar solicitud" aria-label="Rechazar solicitud">
+                            <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
                           </button>
                         </>
                       ) : s.estado === "aprobada" ? (
