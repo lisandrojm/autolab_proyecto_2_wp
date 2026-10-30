@@ -320,6 +320,8 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div className="overflow-x-auto">
+        {/* El borde de las columnas fijas (Nombre y Acciones) es una sombra inset: con border-collapse el
+            border-l/r es de la tabla, no de la celda, y se iba con el scroll lateral. */}
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -344,7 +346,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   />
                 </th>
               )}
-              <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] border-r border-gray-200 dark:border-gray-700 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]`}>Nombre</th>
+              <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)]`}>Nombre</th>
               <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">Fecha de creación</th>
               {/* Las columnas que comparte con Contratos → Alta temprana de ARCA van en SU orden (27/10/2026):
                   Nombre, Fecha de creación, Obra social, Cliente, Proyecto, Estado y Tipo de alta (allá, «Estado
@@ -365,7 +367,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
               <th className="px-4 py-3 font-semibold text-center">Estado</th>
               <th className="px-4 py-3 font-semibold">Tipo de alta</th>
               {/* Las acciones quedan FIJAS a la derecha (27/10/2026): con la tabla ancha, «Editar para Aprobar» y «Rechazar» quedaban fuera de la vista. */}
-              <th className="sticky right-0 z-[6] px-4 py-3 font-semibold text-right bg-gray-50 dark:bg-[#18202f] border-l border-gray-200 dark:border-gray-700 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
+              <th className="sticky right-0 z-[6] px-4 py-3 font-semibold text-right bg-gray-50 dark:bg-[#18202f] shadow-[inset_1px_0_0_#e5e7eb,-4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_1px_0_0_#4b5563,-4px_0_6px_-4px_rgba(0,0,0,0.4)]">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -390,7 +392,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                       <input type="checkbox" checked={!!seleccionadas?.has(s._id)} onChange={() => alternar(s._id)} aria-label={`Seleccionar a ${s.nombre}`} className="h-4 w-4 rounded cursor-pointer" />
                     </td>
                   )}
-                  <td className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[5] px-4 py-3 min-w-[14rem] max-w-[20rem] border-r border-gray-200 dark:border-gray-700 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)] ${fondoFijo}`}>
+                  <td className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[5] px-4 py-3 min-w-[14rem] max-w-[20rem] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)] ${fondoFijo}`}>
                     <div className="min-w-0">
                       <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
                         {s.nombre}
@@ -571,7 +573,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                     inventar el dato del que depende el TXT de ARCA.
                   */}
                   <td className="px-4 py-3">{tramite ? <EstadoBadge name={tramite.name} /> : <span className="text-xs text-gray-400 italic">Sin definir</span>}</td>
-                  <td className={`sticky right-0 z-[5] px-4 py-3 text-right border-l border-gray-200 dark:border-gray-700 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.25)] ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
+                  <td className={`sticky right-0 z-[5] px-4 py-3 text-right shadow-[inset_1px_0_0_#e5e7eb,-4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_1px_0_0_#4b5563,-4px_0_6px_-4px_rgba(0,0,0,0.4)] ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
                     {/* Una solicitud rechazada o cancelada no se aprueba de una: primero se reabre,
                         así queda explícito que se está deshaciendo la decisión. */}
                     <div className="flex items-center justify-end gap-1.5">
