@@ -3686,7 +3686,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             );
           })()}
         </td>
-        <td className="px-4 py-3 text-right">
+        {/* «Acciones» fija a la derecha, con su borde (pedido del 30/10/2026): mismo esquema que «Usuario». */}
+        <td className="sticky right-0 z-[5] px-4 py-3 text-right bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 border-l-2 border-gray-300 dark:border-gray-600 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.25)]">
           <div className="flex items-center justify-end gap-1">
             <button
               onClick={(e) => {
@@ -6054,7 +6055,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                             <th className="px-4 py-3 font-semibold text-right whitespace-nowrap"><BotonOrden columna="diasPorSemana" {...ordenEquipoProps}>Días por semana</BotonOrden></th>
                             <th className="px-4 py-3 font-semibold"><BotonOrden columna="horario" {...ordenEquipoProps}>Horario</BotonOrden></th>
                             <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Horas / día</th>
-                            <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+                            {/* «Acciones» fija a la derecha, con su borde: los botones siempre a mano aunque la tabla esté corrida. */}
+                            <th className="sticky right-0 z-[15] px-4 py-3 font-semibold text-right bg-gray-50 dark:bg-[#18202f] border-l-2 border-gray-300 dark:border-gray-600 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
                           </tr>
                         </thead>
                         {/* Sin `divide-y`: en el modelo separado los bordes de `<tr>` no se
