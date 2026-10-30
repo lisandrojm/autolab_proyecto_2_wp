@@ -44,7 +44,7 @@ import { puestoParaGuardar } from "../services/arca/puestosDesempenados.js";
 import { actividadesDeSucursalParaEmpresa, codigoDeSucursalParaEmpresa } from "../compartido/sucursalesDeEmpresa.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { buscarCategoriaCompatPorLegacyId } from "../utils/categoriaCompat.js";
-import { importePorJornada, sueldosDelContrato } from "../compartido/jornadas.js";
+import { importePorJornada, jornadasFijadasPorElTipo, periodoDeCalculo, sueldosDelContrato } from "../compartido/jornadas.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
@@ -2236,6 +2236,12 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
           uno: una aprobación se guardó con las 27 del calendario de octubre en vez de las 30 del tipo, y
           con el importe recalculado para abajo. Acá se corrige a la fuerza, y el sueldo en mano se rehace con
           el importe por jornada (que es lo que se pidió). No aplica a los tipos por días sueltos.
+    
+          Con la MISMA cuenta que el formulario (`jornadasFijadasPorElTipo`, regla del 19/10/2026): un mes
+          completo vale lo que dice el tipo; un tramo de mes, los días que trabaja en él. Antes se ponían
+          las del tipo enteras: un Servicios del 1 al 9 de octubre (7 jornadas, total $510.000) se guardaba
+          con 22 y el sueldo en mano pasaba a ser el mensual ($1.602.857); al reabrirlo, el formulario
+          mostraba eso hasta que se tocaba algo (30/10/2026).
         */
         /*
           EL PUESTO DESEMPEÑADO ELEGIDO EN EL FORMULARIO. Vacío = el contrato hereda el que le toca, que
@@ -2250,9 +2256,12 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             }
             contract.puestoDesempenado = puesto.valor || "";
         }
-        const tipoContrato = isValidId(contract.contrato_id) ? await Contrato.findById(contract.contrato_id).select("data.cantidadJornadas data.modoFechas data.multiplicadorDiario data.importesEnCero").lean() : null;
-        const fijas = Math.trunc(Number(tipoContrato?.data?.cantidadJornadas) || 0);
-        if (fijas > 0 && tipoContrato?.data?.modoFechas !== "dias" && Number(contract.cantidad_jornadas_laborales) !== fijas)
+        const tipoContrato = isValidId(contract.contrato_id) ? await Contrato.findById(contract.contrato_id).select("data.cantidadJornadas data.modoFechas data.multiplicadorDiario data.importesEnCero data.esTiempoIndeterminado").lean() : null;
+        const porDiasSueltos = tipoContrato?.data?.modoFechas === "dias";
+        const periodo = periodoDeCalculo(contract.fecha_alta_contrato, contract.fecha_baja_contrato, !!tipoContrato?.data?.esTiempoIndeterminado && !porDiasSueltos);
+        const diasQueTrabaja = contract.dias_rotativos || !Array.isArray(contract.dias_semana) ? [] : contract.dias_semana.map(Number);
+        const fijas = jornadasFijadasPorElTipo(tipoContrato?.data?.cantidadJornadas, porDiasSueltos, periodo.desde, periodo.hasta, diasQueTrabaja);
+        if (fijas !== null && fijas > 0 && Number(contract.cantidad_jornadas_laborales) !== fijas)
             contract.cantidad_jornadas_laborales = fijas;
         // Los sueldos, con la misma cuenta que la solicitud del móvil y el formulario (ver `sueldosConEscala`).
         if (Number(contract.sueldo_jornada) > 0 || tipoContrato?.data?.importesEnCero)
