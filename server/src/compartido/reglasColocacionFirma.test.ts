@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { REGLAS_BASE, buscarTexto, coincidencias, colocacionDesdeMarcas, contienePalabra, deteccionDesdeDeclarada, distanciaARect, extenderAPalabra, motivoPaginaIntermedia, motivoPorTipo, motivosDesactualizado, pdfAPantalla, pantallaAPdf, reglaDe, resolverColocacion, validarPunto, validarReglas, vecesFirmaEnPlantilla, type ColocacionDeclarada, type PaginaPdf, type ReglaColocacion } from "./reglasColocacionFirma.js";
+import { REGLAS_BASE, buscarTexto, coincidencias, colocacionDesdeMarcas, contienePalabra, deteccionDesdeDeclarada, distanciaARect, extenderAPalabra, motivoPorTipo, motivosDesactualizado, pdfAPantalla, pantallaAPdf, reglaDe, resolverColocacion, validarPunto, validarReglas, vecesFirmaEnPlantilla, type ColocacionDeclarada, type PaginaPdf, type ReglaColocacion } from "./reglasColocacionFirma.js";
 
 const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), "../services/dropboxSignBot/fixtures");
 const fixture = (nombre: string): { archivo: string; firmante: string; paginas: PaginaPdf[] } => JSON.parse(readFileSync(resolve(FIXTURES, `${nombre}.json`), "utf8"));
@@ -317,9 +317,12 @@ describe("8. posición DECLARADA por la plantilla ({{firma}}, 25/10/2026)", () =
     assert.equal(d.colocacion.origen, "plantilla");
     assert.deepEqual(d.colocacion.puntoPdf, { x: 210, y: 362.5 });
   });
-  it("en una página del medio no se coloca (el motor sólo navega a la primera o a la última)", () => {
+  it("en una página del medio también se coloca (31/10/2026: el motor va a cualquier página)", () => {
     const d = deteccionDesdeDeclarada(declarada(2, 3));
-    assert.equal(d.ok, false);
+    assert.equal(d.ok, true);
+    if (d.ok !== true) return;
+    assert.equal(d.colocacion.pagina, "otra");
+    assert.equal(d.colocacion.paginaIndex, 1);
   });
 });
 
@@ -345,9 +348,11 @@ describe("9. cuándo una verificación guardada quedó desactualizada", () => {
 });
 
 describe("10. firma en una página del medio", () => {
-  it("es motivo de revisión del documento (no llega al motor)", () => {
-    assert.match(motivoPaginaIntermedia({ pagina: "otra", paginaIndex: 1, totalPaginas: 3 }), /página 2 de 3, una del medio/);
-    assert.equal(motivoPaginaIntermedia({ pagina: "ultima", paginaIndex: 2, totalPaginas: 3 }), "");
-    assert.equal(motivoPaginaIntermedia({ pagina: "primera", paginaIndex: 0 }), "");
+  it("la plantilla que firma en la página 2 de 3 no avisa que va a quedar en revisión", () => {
+    const r = colocacionDesdeMarcas([pagina([["Cláusulas", 86, 300, 252, 11]], 1), pagina([["Firma: ______________________________", 86, 500, 252, 11]], 2), pagina([["Anexo", 86, 300, 252, 11]], 3)], 1);
+    assert.equal(r.ok, true);
+    if (r.ok !== true) return;
+    assert.equal(r.pagina, 2);
+    assert.ok(!r.avisos.some((a) => /revisión|sólo coloca/.test(a)));
   });
 });

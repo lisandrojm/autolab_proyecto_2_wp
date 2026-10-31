@@ -27,7 +27,8 @@ export interface CategoriaTrabado {
 const CATEGORIAS: Record<TipoTrabado, Omit<CategoriaTrabado, "tipo">> = {
   sin_regla: { titulo: "sin regla de colocación de la firma (y el PDF no trae posición declarada)", accion: { texto: "Definir regla", destino: "/dropbox-sign?tab=envio#reglas" } },
   ancla: { titulo: "la regla existe pero su rótulo no aparece en el PDF", accion: { texto: "Ver el PDF y ajustar la regla", destino: "previsualizar" } },
-  pagina_intermedia: { titulo: "la firma cae en una página del medio (el bot sólo coloca en la primera o la última)", accion: { texto: "Abrir la plantilla", destino: "/contratos-frame" } },
+  // Motivo viejo (hasta el 31/10/2026 el bot no iba a páginas del medio; ahora sí): se destraba verificando de nuevo.
+  pagina_intermedia: { titulo: "la firma cae en una página del medio: el bot ya la coloca, verificá de nuevo para devolverlos a la cola", accion: { texto: "Verificar de nuevo", destino: "/dropbox-sign?tab=envio#reglas" } },
   sin_firmante: { titulo: "sin firmante: falta el nombre o el email en la base", accion: { texto: "Completar en la ficha", destino: "/users" } },
   pdf_cambiado: { titulo: "el PDF del Outbox no es el que se generó con la plantilla", accion: { texto: "Ver el PDF", destino: "previsualizar" } },
   fuera_outbox: { titulo: "ya no está en el Outbox (se movió a Pendbox o se borró)", accion: { texto: "Sacar de la lista", destino: "descartar" } },

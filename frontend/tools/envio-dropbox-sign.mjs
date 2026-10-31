@@ -1218,7 +1218,8 @@ async function enviarParaFirmar(page) {
 export async function enviarDocumento({ page, rutaPdf, archivo, firmante, cc, colocacion, geometria, enSeco = true, señal = { cortada: false }, onProgreso = () => {}, antesDelIrreversible = () => {}, guard, esLimite }) {
   if (!colocacion) return { resultado: "requiere_revision", detalle: "Tipo de documento sin regla de colocación: no se envía." };
   if (!colocacion.campo || !colocacion.puntoPdf || !colocacion.tamanoPagina) return { resultado: "requiere_revision", detalle: "La colocación llegó sin el campo resuelto (sin ancla): no se envía." };
-  if (colocacion.pagina === "otra") return { resultado: "requiere_revision", detalle: `El ancla está en la página ${colocacion.paginaIndex + 1}, una del medio: el motor sólo navega a la primera o a la última. No se envía.` };
+  // Página del medio (31/10/2026): sin rechazo. `traerALaVista` lleva a la vista la hoja `paginaIndex`
+  // (scroll o ventana más alta) y la verificación del campo se hace contra esa misma hoja.
   if (typeof guard !== "function" || typeof esLimite !== "function") throw new Error("Faltan el guard y el detector de límite del server.");
   if (!geometria || typeof geometria.pdfAPantalla !== "function" || typeof geometria.pantallaAPdf !== "function") throw new Error("Falta la geometría (pdfAPantalla/pantallaAPdf) del server.");
   const captura = async () => page.screenshot({ fullPage: false }).catch(() => undefined);
