@@ -48,7 +48,7 @@ export interface PruebaFirma {
         h: number;
     };
     avisos: string[];
-    /** El bot coloca en la primera o la última página; en otra, el documento queda en revisión. */
+    /** Si el bot puede colocar la firma. Desde el 31/10/2026 va a cualquier página: con la prueba bien, siempre. */
     enviable: boolean;
     imagen?: {
         base64: string;

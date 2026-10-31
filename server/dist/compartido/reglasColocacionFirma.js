@@ -376,16 +376,12 @@ export function validarReglas(entrada) {
     return { ok: true, reglas };
 }
 const paginaDe = (idx, total) => (idx === 0 ? "primera" : idx === total - 1 ? "ultima" : "otra");
-/**
- * Una firma en una página del medio no se puede mandar: el motor sólo navega a la primera o a la última.
- * Es del DOCUMENTO, no de la pantalla: va a revisión antes de abrir el wizard. Si llegaba al motor, su
- * rechazo contaba como falla de pantalla y cortaba la corrida cada 4 h con los mismos tres (30/10/2026).
- */
-export function motivoPaginaIntermedia(c) {
-    if (c.pagina !== "otra")
-        return "";
-    return `El ancla está en la página ${c.paginaIndex + 1}${c.totalPaginas ? ` de ${c.totalPaginas}` : ""}, una del medio: el motor sólo navega a la primera o a la última. No se envía.`;
-}
+/*
+  UNA FIRMA EN UNA PÁGINA DEL MEDIO SE ENVÍA (31/10/2026). El motor mide todas las hojas del editor y
+  lleva a la vista la de `paginaIndex` (scroll o agrandando la ventana), y verifica el campo contra esa
+  misma hoja: no depende de que sea la primera o la última. Antes se rechazaba y 26 Contrato_Jornada
+  (firma en la página 2 de 3) quedaban trabados para siempre.
+*/
 const resumenDeRect = (r) => `(${Math.round(r.x)}, ${Math.round(r.y)}) ${Math.round(r.w)}×${Math.round(r.h)} pt`;
 /** Lo que dice una columna debajo de un rectángulo (ítems que arrancan a la misma x, hasta `alto` pt más abajo). */
 function textoDeColumna(pagina, ref, alto, toleranciaX = 25) {
@@ -604,8 +600,6 @@ export function colocacionDesdeMarcas(paginas, vecesDeclarada) {
     const campo = { x: m.linea.x, y: m.linea.y - ALTO_CAMPO_PLANTILLA, w: m.linea.w, h: ALTO_CAMPO_PLANTILLA };
     if (campo.x < 0 || campo.y < 0 || campo.x + campo.w > pag.ancho || campo.y + campo.h > pag.alto)
         return { ok: false, motivo: `el campo de firma (${resumenDeRect(campo)}) se sale de la página ${m.paginaIndex + 1}` };
-    if (m.paginaIndex !== 0 && m.paginaIndex !== paginas.length - 1)
-        avisos.push(`La firma cae en la página ${m.paginaIndex + 1} de ${paginas.length}: el bot sólo coloca en la primera o la última, así que estos documentos quedan en revisión. Conviene que la línea de firma sea lo último del documento.`);
     return { ok: true, pagina: m.paginaIndex + 1, totalPaginas: paginas.length, campo, linea: m.linea, paginaSize: { w: pag.ancho, h: pag.alto }, avisos };
 }
 /** La detección que consume el bot, armada desde la posición declarada: sin rótulo, sin OCR. */
@@ -613,9 +607,6 @@ export function deteccionDesdeDeclarada(d) {
     const paginaIndex = d.pagina - 1;
     const tamanoPagina = { ancho: d.paginaSize.w, alto: d.paginaSize.h };
     const pagina = paginaDe(paginaIndex, d.totalPaginas);
-    if (pagina === "otra") {
-        return { ok: false, motivo: `La plantilla «${d.plantillaNombre}» pone la firma en la página ${d.pagina} de ${d.totalPaginas}: el bot sólo sabe colocar en la primera o la última página.`, descartados: [], paginaIndex, tamanoPagina };
-    }
     const punto = centroDe(d.campo);
     const ancla = { pagina: d.pagina, paginaIndex, texto: "Firma: ____ ({{firma}})", renglon: "", rect: d.linea, fuente: "texto", ancla: "derechaDelRotulo", rotulo: "{{firma}}" };
     return {

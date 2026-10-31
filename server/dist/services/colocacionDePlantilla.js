@@ -60,6 +60,6 @@ export async function probarFirmaDePlantilla(contenido, membrete) {
         return { declara: true, ok: false, motivo: `Tiene {{firma}}, pero ${r.motivo}.`, avisos: [], enviable: false };
     const { renderizarPaginaPng } = await import("./dropboxSignBot/ocrAnclas.js");
     const { png, ancho, alto } = await renderizarPaginaPng(buffer, r.pagina, 1.5);
-    const enviable = r.pagina === 1 || r.pagina === r.totalPaginas;
+    const enviable = true;
     return { declara: true, ok: true, pagina: r.pagina, totalPaginas: r.totalPaginas, campo: r.campo, paginaSize: r.paginaSize, avisos: r.avisos, enviable, imagen: { base64: png.toString("base64"), ancho, alto } };
 }
