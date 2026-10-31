@@ -2302,7 +2302,7 @@ export const ContractBulkAfipTab: React.FC<{
         <Paginador pagina={pag.pagina} totalPaginas={pag.totalPaginas} total={pag.total} desde={pag.desde} mostrados={pag.visibles.length} onPagina={pag.setPagina} />
         </>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-clip">
           {/*
             UNA SOLA BARRA DE SCROLL: la de la página.
 
@@ -2311,12 +2311,11 @@ export const ContractBulkAfipTab: React.FC<{
             página, se llegaba a la tabla y la rueda pasaba a moverla a ella. Ahora el contenedor
             crece con su contenido y el único scroll vertical es el de la página.
 
-            EL COSTO, QUE ES REAL Y ELEGIDO: el `<thead>` ya no queda fijo. No es que falte ponerlo
-            —es que no se puede tener las dos cosas—. `overflow-x: auto` hace falta para las
-            diecinueve columnas, y CSS obliga entonces a que el eje Y compute `auto` también: este
-            div es sí o sí un scrollport vertical. Un `position: sticky` del thead se resuelve contra
-            ÉL, no contra el documento, así que solo se activa si este div scrollea — que es
-            exactamente lo que acabamos de sacar. Por eso el sticky del thead se fue con el alto.
+            EL ENCABEZADO FIJO lo pone `TablaConEncabezadoFijo` (una copia sticky contra la página).
+            Por eso esta caja va con `overflow-clip` y NO `overflow-hidden` (31/10/2026): un
+            `overflow-hidden` es un contenedor de scroll, la copia se pegaba a ÉL y no a la página, y
+            bajaba lo que mide el header de la pantalla sin scrollear — tapaba la primera fila y dejaba
+            un hueco arriba. `overflow-clip` recorta las esquinas redondeadas sin ser contenedor.
 
             Lo que lo hace aceptable es el paginado (ver `usePaginado`): el recorrido es de 25 filas,
             no de 860, así que el encabezado nunca queda muy lejos.
@@ -4162,7 +4161,7 @@ export const ContractBulkFirmaTab: React.FC<{
       ) : filtered.length === 0 ? (
         <EmptyState icon={faFileSignature} title="Sin contratos para firmar" description={rowsEnEnvio.length === 0 ? 'Ningún contrato está hoy en el estado de "Envío de documentación" (se llega ahí automáticamente al archivar el Alta temprana de ARCA o la Constancia de CUIT).' : 'No hay resultados con los filtros aplicados.'} />
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-clip">
           {/*
             UNA SOLA BARRA DE SCROLL: la de la página.
 
@@ -4171,12 +4170,11 @@ export const ContractBulkFirmaTab: React.FC<{
             página, se llegaba a la tabla y la rueda pasaba a moverla a ella. Ahora el contenedor
             crece con su contenido y el único scroll vertical es el de la página.
 
-            EL COSTO, QUE ES REAL Y ELEGIDO: el `<thead>` ya no queda fijo. No es que falte ponerlo
-            —es que no se puede tener las dos cosas—. `overflow-x: auto` hace falta para las
-            diecinueve columnas, y CSS obliga entonces a que el eje Y compute `auto` también: este
-            div es sí o sí un scrollport vertical. Un `position: sticky` del thead se resuelve contra
-            ÉL, no contra el documento, así que solo se activa si este div scrollea — que es
-            exactamente lo que acabamos de sacar. Por eso el sticky del thead se fue con el alto.
+            EL ENCABEZADO FIJO lo pone `TablaConEncabezadoFijo` (una copia sticky contra la página).
+            Por eso esta caja va con `overflow-clip` y NO `overflow-hidden` (31/10/2026): un
+            `overflow-hidden` es un contenedor de scroll, la copia se pegaba a ÉL y no a la página, y
+            bajaba lo que mide el header de la pantalla sin scrollear — tapaba la primera fila y dejaba
+            un hueco arriba. `overflow-clip` recorta las esquinas redondeadas sin ser contenedor.
 
             Lo que lo hace aceptable es el paginado (ver `usePaginado`): el recorrido es de 25 filas,
             no de 860, así que el encabezado nunca queda muy lejos.
