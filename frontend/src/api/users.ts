@@ -765,7 +765,7 @@ class UsersAPI {
    * `User` completo para pasárselo al wizard de aprobación. Acá vuelven filas ya armadas: una por
    * solicitud, con sus proyectos y clientes resueltos.
    */
-  async listSolicitudesOverview(params: { search?: string; estado?: string; clientId?: string; projectId?: string; orden?: "recientes" | "aprobadas" | "desde"; page?: number; limit?: number } = {}): Promise<{ rows: SolicitudOverviewRow[]; total: number; page: number; totalPages: number }> {
+  async listSolicitudesOverview(params: { search?: string; estado?: string; clientId?: string; projectId?: string; orden?: "antiguas" | "recientes" | "aprobadas" | "desde"; page?: number; limit?: number } = {}): Promise<{ rows: SolicitudOverviewRow[]; total: number; page: number; totalPages: number }> {
     const sp = new URLSearchParams();
     if (params.search) sp.append("search", params.search);
     if (params.estado) sp.append("estado", params.estado);

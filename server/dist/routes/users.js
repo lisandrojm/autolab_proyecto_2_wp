@@ -1758,8 +1758,8 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
         const projectId = req.query.projectId ? String(req.query.projectId) : "";
         const page = Math.max(1, Number(req.query.page) || 1);
         const limit = Math.max(1, Number(req.query.limit) || 25);
-        /** «recientes» (por defecto, la última cargada arriba), «aprobadas» o «desde» (ver el orden más abajo). */
-        const orden = ["aprobadas", "desde"].includes(String(req.query.orden)) ? String(req.query.orden) : "recientes";
+        /** «recientes» (por defecto, la última cargada arriba), «antiguas» (la primera cargada arriba), «aprobadas» o «desde» (ver el orden más abajo). */
+        const orden = ["antiguas", "aprobadas", "desde"].includes(String(req.query.orden)) ? String(req.query.orden) : "recientes";
         const and = [{ tenantId: req.tenantObjectId }, { "metadata.solicitudStatus": { $exists: true, $ne: null } }];
         if (estado)
             and.push({ "metadata.solicitudStatus": estado });
@@ -1799,6 +1799,9 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
         const traerPagina = async () => {
             if (orden === "recientes")
                 return conPopulate(User.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit));
+            // La que más espera, arriba (01/11/2026: es el orden con el que abre la pantalla).
+            if (orden === "antiguas")
+                return conPopulate(User.find(filter).sort({ createdAt: 1, _id: 1 }).skip((page - 1) * limit).limit(limit));
             const ids = await User.aggregate([
                 { $match: filter },
                 {
