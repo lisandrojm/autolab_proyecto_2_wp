@@ -190,7 +190,8 @@ export const EstadoBadge: React.FC<{ name: string; etiqueta?: string; className?
   const texto = etiqueta || labelFor(configurado?.name || name);
   const esImpositivo = !!configurado?.data?.esImpositivo;
 
-  const clases = `inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide whitespace-nowrap ${className}`;
+  // Mismo tamaño que los tags de Solicitudes y Contratos («SOLICITUD PENDIENTE», «NO VIGENTE»): 10 px, más compacto (01/11/2026).
+  const clases = `inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide whitespace-nowrap ${className}`;
   const iconoImpositivo = esImpositivo ? <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" title="Estado impositivo" /> : null;
 
   if (color) {
@@ -238,7 +239,7 @@ export const EstadoSecundarioBadge: React.FC<{ estado: { name: string; data?: { 
   const color = estado?.data?.colorEtiquetaSecundaria || estadoColorPorDefecto(estado!.name);
   const textoColor = colorTextoBadge(color, theme === "dark");
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide whitespace-nowrap ${className}`} style={{ color: textoColor, backgroundColor: conAlpha(color, 0.14), border: `1px solid ${conAlpha(color, 0.35)}` }}>
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide whitespace-nowrap ${className}`} style={{ color: textoColor, backgroundColor: conAlpha(color, 0.14), border: `1px solid ${conAlpha(color, 0.35)}` }}>
       <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" title="Estado impositivo" />
       {texto}
     </span>
