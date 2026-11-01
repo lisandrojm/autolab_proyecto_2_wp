@@ -2428,11 +2428,7 @@ export const ContractBulkAfipTab: React.FC<{
                 {/* Sin «Alta ARCA» en Alta temprana (01/11/2026): una vez presentado en ARCA el contrato pasa a
                     Generar documentos, así que acá esa columna nunca tiene nada. */}
                 {filterTipo !== 'sin_cuit' && filterTipo !== 'alta_temprana_afip' && <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel="Alta Servicios" />}
-                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                  <BotonOrden columna="cuit" {...ordenProps}>
-                    CUIT
-                  </BotonOrden>
-                </th>
+                {/* Sin columna «CUIT» (01/11/2026): lo pidió el usuario; el CUIT se ve en el detalle de la fila. */}
                 {/* El fondo y el borde de «grupo encuadre» solo cuando hay grupo: sin las tres
                     columnas de al lado, abrir un grupo en Empresa Contrato lo dejaría sin cerrar. */}
                 <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${hayEncuadre ? GRUPO_ENCUADRE_TH_INICIO : ''}`}>
@@ -2623,7 +2619,6 @@ export const ContractBulkAfipTab: React.FC<{
                     </>
                   )}
                   {filterTipo !== 'sin_cuit' && filterTipo !== 'alta_temprana_afip' && <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel onConstanciaEliminada={() => load(true)} />}
-                  <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                   <td className={`px-4 py-3 ${hayEncuadre ? GRUPO_ENCUADRE_INICIO : ''}`} onClick={(e) => e.stopPropagation()}>
                     <EmpresaSelectCell record={r} campo="contrato" requerido={filterTipo === 'alta_temprana_afip'} onGuardado={(patch) => aplicarCambio(r, patch)} />
                   </td>
