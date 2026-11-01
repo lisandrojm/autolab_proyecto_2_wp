@@ -1737,6 +1737,8 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
     const projectId = req.query.projectId ? String(req.query.projectId) : "";
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.max(1, Number(req.query.limit) || 25);
+    /** «recientes» (por defecto, la última cargada arriba), «aprobadas» o «desde» (ver el orden más abajo). */
+    const orden = ["aprobadas", "desde"].includes(String(req.query.orden)) ? String(req.query.orden) : "recientes";
 
     const and: any[] = [{ tenantId: req.tenantObjectId }, { "metadata.solicitudStatus": { $exists: true, $ne: null } }];
 
@@ -1748,7 +1750,8 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
      * significa "alguno coincide", así que no hace falta nada más.
      */
     if (projectId) {
-      and.push({ "metadata.projectIds": projectId });
+      // Ya como ObjectId: el orden va por `aggregate`, que no castea como `find`.
+      and.push({ "metadata.projectIds": Types.ObjectId.isValid(projectId) ? new Types.ObjectId(projectId) : projectId });
     } else if (clientId) {
       const delCliente = await Project.find({ tenantId: req.tenantObjectId, clientId }).distinct("_id");
       and.push({ "metadata.projectIds": { $in: delCliente } }); // sin proyectos → 0 resultados
@@ -1766,16 +1769,37 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
 
     const filter = { $and: and };
 
-    const [docs, total] = await Promise.all([
-      User.find(filter)
-        .select("firstName lastName email createdAt metadata")
-        .populate({ path: "metadata.projectIds", select: "name clientId", model: Project, populate: { path: "clientId", select: "name", model: Client } })
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean(),
-      User.countDocuments(filter),
-    ]);
+    /*
+      EL BOTÓN «ORDENAR» (31/10/2026). Con la paginación en el server, el orden tiene que ser acá: en
+      el navegador sólo se ordenaría la página que se ve.
+        · «aprobadas»: las aprobadas primero; dentro de cada grupo, por fecha Desde de menor a mayor.
+        · «desde»: por fecha Desde (`metadata.startDate`, «YYYY-MM-DD», así que ordena como texto) de
+          menor a mayor.
+      En los dos, las que no tienen fecha Desde van al final, y el empate se rompe por la más nueva.
+      Se ordenan los ids con un aggregate (hace falta un campo calculado) y después se traen las filas.
+    */
+    const conPopulate = (q: any) => q.select("firstName lastName email createdAt metadata").populate({ path: "metadata.projectIds", select: "name clientId", model: Project, populate: { path: "clientId", select: "name", model: Client } }).lean();
+    const traerPagina = async (): Promise<any[]> => {
+      if (orden === "recientes") return conPopulate(User.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit));
+      const ids: any[] = await User.aggregate([
+        { $match: filter },
+        {
+          $addFields: {
+            _noAprobada: { $cond: [{ $eq: ["$metadata.solicitudStatus", "aprobada"] }, 0, 1] },
+            _sinDesde: { $cond: [{ $gt: [{ $ifNull: ["$metadata.startDate", ""] }, ""] }, 0, 1] },
+          },
+        },
+        { $sort: { ...(orden === "aprobadas" ? { _noAprobada: 1 } : {}), _sinDesde: 1, "metadata.startDate": 1, createdAt: -1, _id: -1 } },
+        { $skip: (page - 1) * limit },
+        { $limit: limit },
+        { $project: { _id: 1 } },
+      ]);
+      const filas: any[] = await conPopulate(User.find({ _id: { $in: ids.map((x) => x._id) } }));
+      const porId = new Map(filas.map((f) => [String(f._id), f]));
+      return ids.map((x) => porId.get(String(x._id))).filter(Boolean);
+    };
+
+    const [docs, total] = await Promise.all([traerPagina(), User.countDocuments(filter)]);
 
     /*
       LA OBRA SOCIAL DE LAS APROBADAS, para la columna de Solicitudes.

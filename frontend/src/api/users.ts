@@ -765,12 +765,13 @@ class UsersAPI {
    * `User` completo para pasárselo al wizard de aprobación. Acá vuelven filas ya armadas: una por
    * solicitud, con sus proyectos y clientes resueltos.
    */
-  async listSolicitudesOverview(params: { search?: string; estado?: string; clientId?: string; projectId?: string; page?: number; limit?: number } = {}): Promise<{ rows: SolicitudOverviewRow[]; total: number; page: number; totalPages: number }> {
+  async listSolicitudesOverview(params: { search?: string; estado?: string; clientId?: string; projectId?: string; orden?: "recientes" | "aprobadas" | "desde"; page?: number; limit?: number } = {}): Promise<{ rows: SolicitudOverviewRow[]; total: number; page: number; totalPages: number }> {
     const sp = new URLSearchParams();
     if (params.search) sp.append("search", params.search);
     if (params.estado) sp.append("estado", params.estado);
     if (params.clientId) sp.append("clientId", params.clientId);
     if (params.projectId) sp.append("projectId", params.projectId);
+    if (params.orden && params.orden !== "recientes") sp.append("orden", params.orden);
     sp.append("page", String(params.page ?? 1));
     sp.append("limit", String(params.limit ?? 25));
     const { data } = await axios.get(`/users/solicitudes-overview?${sp.toString()}`, { headers: this.getHeaders() });

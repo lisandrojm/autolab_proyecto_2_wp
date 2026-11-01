@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserPlus, faChevronLeft, faChevronRight, faTrash, faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
+import { MenuOrdenar, type OpcionOrden } from "../components/ui/MenuOrdenar";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { usersAPI, SolicitudOverviewRow, ObraSocialDeSolicitud } from "../api/users";
 import { clientsAPI } from "../api/clients";
@@ -46,6 +47,14 @@ import { ProjectTeamPage } from "./ProjectTeamPage";
  */
 
 const PAGE_SIZE = 25;
+
+/** El botón «Ordenar» de al lado de los filtros. Ordena el server: la tabla está paginada allá. */
+type OrdenSolicitudes = "recientes" | "aprobadas" | "desde";
+const OPCIONES_ORDEN: OpcionOrden<OrdenSolicitudes>[] = [
+  { valor: "recientes", texto: "Más recientes primero" },
+  { valor: "aprobadas", texto: "Aprobadas primero" },
+  { valor: "desde", texto: "Fecha Desde: de menor a mayor" },
+];
 
 const CLAVE_AYUDA = "solicitudes" as const;
 
@@ -144,6 +153,7 @@ export const SolicitudesPage: React.FC = () => {
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroCliente, setFiltroCliente] = useState("");
   const [filtroProyecto, setFiltroProyecto] = useState("");
+  const [orden, setOrden] = useState<OrdenSolicitudes>("recientes");
 
   const [clientes, setClientes] = useState<{ _id: string; name: string }[]>([]);
   const [proyectos, setProyectos] = useState<{ _id: string; name: string; clientId: any }[]>([]);
@@ -176,6 +186,7 @@ export const SolicitudesPage: React.FC = () => {
           estado: filtroEstado || undefined,
           clientId: filtroCliente || undefined,
           projectId: filtroProyecto || undefined,
+          orden,
           page: pagina,
           limit: PAGE_SIZE,
         });
@@ -191,7 +202,7 @@ export const SolicitudesPage: React.FC = () => {
         setRefrescando(false);
       }
     },
-    [busqueda, filtroEstado, filtroCliente, filtroProyecto],
+    [busqueda, filtroEstado, filtroCliente, filtroProyecto, orden],
   );
 
   // La búsqueda va con debounce; el resto de los filtros, al toque. Cualquier cambio vuelve a la
@@ -577,6 +588,7 @@ export const SolicitudesPage: React.FC = () => {
           searchTerm={busqueda}
           onSearchChange={setBusqueda}
           searchPlaceholder="Buscar por nombre o email..."
+          extraActions={<MenuOrdenar valor={orden} opciones={OPCIONES_ORDEN} onChange={setOrden} />}
           selectFilters={[
             {
               label: "Cliente",
