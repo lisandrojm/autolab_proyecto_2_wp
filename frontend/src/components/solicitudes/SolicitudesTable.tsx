@@ -346,15 +346,15 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
         </th>
       )}
       <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)]`}>Colaborador</th>
-      {/* El orden de las columnas lo fijó el usuario el 01/11/2026: Fechas Solicitud, Último contrato, Horario, Solicitó, Roles,
-          Tipo de contrato (con el tipo de alta arriba), Cliente, Proyecto (con el centro de costo en un badge al lado), Fecha de
+      {/* El orden de las columnas lo fijó el usuario el 01/11/2026: Último contrato, Solicitud, Tipo de contrato (con el tipo de
+          alta arriba), Horario, Solicitó, Roles, Cliente, Proyecto (con el centro de costo en un badge al lado), Fecha de
           creación. El estado va en el tag de «Fechas Solicitud» (no hay columna «Estado»). «Obra social» salió de Solicitudes el mismo día (sigue como opción del componente). */}
-      <th className="px-4 py-3 font-semibold" title="El período que se pidió en la solicitud">Solicitud</th>
       <th className="px-4 py-3 font-semibold" title="El último contrato de la persona ANTERIOR a lo pedido (alta antes del inicio de la solicitud), en cualquier proyecto. Avisa si se superpone con las fechas pedidas.">Último<br />contrato</th>
+      <th className="px-4 py-3 font-semibold" title="El período que se pidió en la solicitud">Solicitud</th>
+      <th className="px-4 py-3 font-semibold whitespace-nowrap">Tipo de contrato</th>
       <th className="px-4 py-3 font-semibold">Horario</th>
       <th className="px-4 py-3 font-semibold">Solicitó</th>
       <th className="px-4 py-3 font-semibold">Rol/es Empresa</th>
-      <th className="px-4 py-3 font-semibold whitespace-nowrap">Tipo de contrato</th>
       {renderObraSocial && <th className="px-4 py-3 font-semibold">Obra social</th>}
       {mostrarProyectos && (
         <>
@@ -470,6 +470,25 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   </div>
                 </td>
 
+                {/* El último contrato de la PERSONA anterior a lo pedido (en cualquier proyecto); si se pisa con lo pedido, lo avisa «Fechas Solicitud». */}
+                <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos anteriores a lo pedido"}>
+                  {s.ultimoContrato ? (
+                    (() => {
+                      const vigente = isContractVigente(s.ultimoContrato.alta, s.ultimoContrato.baja || undefined);
+                      return (
+                        <div className="flex flex-col gap-1">
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
+                          <div className="flex flex-col gap-0.5 text-xs">
+                            <span><span className="text-gray-400">Alta:</span> {formatDate(s.ultimoContrato.alta)}</span>
+                            <span><span className="text-gray-400">Baja:</span> {s.ultimoContrato.baja ? formatDate(s.ultimoContrato.baja) : "—"}</span>
+                          </div>
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <span className="text-gray-300 dark:text-gray-600">—</span>
+                  )}
+                </td>
                 {/* EL PERÍODO PEDIDO, con el mismo formato que «Último contrato» (Alta / Baja, DD/MM/AAAA) para
                     compararlos de un vistazo y ocupar menos ancho (01/11/2026). Sin fin: «Indef.». ARRIBA, un tag del
                     mismo tamaño que VIGENTE / NO VIGENTE de la columna de al lado, así las fechas quedan a la misma
@@ -494,24 +513,21 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                     )}
                   </div>
                 </td>
-                {/* El último contrato de la PERSONA anterior a lo pedido (en cualquier proyecto); si se pisa con lo pedido, lo avisa «Fechas Solicitud». */}
-                <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos anteriores a lo pedido"}>
-                  {s.ultimoContrato ? (
-                    (() => {
-                      const vigente = isContractVigente(s.ultimoContrato.alta, s.ultimoContrato.baja || undefined);
-                      return (
-                        <div className="flex flex-col gap-1">
-                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
-                          <div className="flex flex-col gap-0.5 text-xs">
-                            <span><span className="text-gray-400">Alta:</span> {formatDate(s.ultimoContrato.alta)}</span>
-                            <span><span className="text-gray-400">Baja:</span> {s.ultimoContrato.baja ? formatDate(s.ultimoContrato.baja) : "—"}</span>
-                          </div>
-                        </div>
-                      );
-                    })()
-                  ) : (
-                    <span className="text-gray-300 dark:text-gray-600">—</span>
-                  )}
+                {/*
+                  TIPO DE CONTRATO, Y ARRIBA EL TIPO DE ALTA (01/11/2026: sin columna propia, están íntimamente
+                  relacionados). El tipo de alta es por qué vía se pidió contratar: alta temprana ante ARCA o
+                  servicios, con el mismo badge que se ve en Contratos, para que quien aprueba lo reconozca como
+                  lo mismo que después va a ver en el contrato.
+
+                  «Sin definir» es literal y no un valor por defecto: las solicitudes cargadas antes de que este
+                  campo existiera no lo declararon, y suponerles un trámite sería inventar el dato del que
+                  depende el TXT de ARCA.
+                */}
+                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                  <div className="flex flex-col items-start gap-1">
+                    {tramite ? <EstadoBadge name={tramite.name} /> : <span className="text-xs text-gray-400 italic">Alta sin definir</span>}
+                    <span>{resolverTipoContrato(s) || <span className="text-gray-400">-</span>}</span>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{s.schedule || "-"}</td>
 
@@ -537,22 +553,6 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 </td>
 
                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{resolverRolFrame(s)}</td>
-                {/*
-                  TIPO DE CONTRATO, Y ARRIBA EL TIPO DE ALTA (01/11/2026: sin columna propia, están íntimamente
-                  relacionados). El tipo de alta es por qué vía se pidió contratar: alta temprana ante ARCA o
-                  servicios, con el mismo badge que se ve en Contratos, para que quien aprueba lo reconozca como
-                  lo mismo que después va a ver en el contrato.
-
-                  «Sin definir» es literal y no un valor por defecto: las solicitudes cargadas antes de que este
-                  campo existiera no lo declararon, y suponerles un trámite sería inventar el dato del que
-                  depende el TXT de ARCA.
-                */}
-                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                  <div className="flex flex-col items-start gap-1">
-                    {tramite ? <EstadoBadge name={tramite.name} /> : <span className="text-xs text-gray-400 italic">Alta sin definir</span>}
-                    <span>{resolverTipoContrato(s) || <span className="text-gray-400">-</span>}</span>
-                  </div>
-                </td>
                 {renderObraSocial && (
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     {renderObraSocial(s)}
