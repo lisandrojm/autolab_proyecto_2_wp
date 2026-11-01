@@ -2419,7 +2419,9 @@ export const ContractBulkAfipTab: React.FC<{
                     </th>
                   </>
                 )}
-                {filterTipo !== 'sin_cuit' && <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel={filterTipo === 'alta_temprana_afip' ? 'Alta ARCA' : 'Alta Servicios'} />}
+                {/* Sin «Alta ARCA» en Alta temprana (01/11/2026): una vez presentado en ARCA el contrato pasa a
+                    Generar documentos, así que acá esa columna nunca tiene nada. */}
+                {filterTipo !== 'sin_cuit' && filterTipo !== 'alta_temprana_afip' && <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel="Alta Servicios" />}
                 <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
                   <BotonOrden columna="cuit" {...ordenProps}>
                     CUIT
@@ -2612,7 +2614,7 @@ export const ContractBulkAfipTab: React.FC<{
                       </td>
                     </>
                   )}
-                  {filterTipo !== 'sin_cuit' && <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel onConstanciaEliminada={() => load(true)} />}
+                  {filterTipo !== 'sin_cuit' && filterTipo !== 'alta_temprana_afip' && <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel onConstanciaEliminada={() => load(true)} />}
                   <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                   <td className={`px-4 py-3 ${hayEncuadre ? GRUPO_ENCUADRE_INICIO : ''}`} onClick={(e) => e.stopPropagation()}>
                     <EmpresaSelectCell record={r} campo="contrato" requerido={filterTipo === 'alta_temprana_afip'} onGuardado={(patch) => aplicarCambio(r, patch)} />
