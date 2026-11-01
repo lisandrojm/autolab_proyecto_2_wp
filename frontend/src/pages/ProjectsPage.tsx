@@ -442,7 +442,7 @@ export const ProjectsPage: React.FC = () => {
                 header={{
                   title: project.name,
                   // Su centro de costo al lado del nombre, que es como se lo nombra muchas veces («el 426»).
-                  titleExtra: <BadgeCentroCosto codigo={centroCostoTarjeta} className="ml-1" />,
+                  titlePrefix: <BadgeCentroCosto codigo={centroCostoTarjeta} className="mr-1" />,
                   subtitle: project.description,
                   icon: faBriefcase,
                   avatar: logoUrl

@@ -779,7 +779,7 @@ export const ClientProjectsPage: React.FC = () => {
                   // Sólo el nombre: la pantalla es Proyectos y la tarjeta ya se lee como uno.
                   title: project.name,
                   // Y su centro de costo al lado, que es como se lo nombra muchas veces («el 426»).
-                  titleExtra: <BadgeCentroCosto codigo={nombreCentroCosto(project)} className="ml-1" />,
+                  titlePrefix: <BadgeCentroCosto codigo={nombreCentroCosto(project)} className="mr-1" />,
                   subtitle: project.description,
                   badges: [
                     {

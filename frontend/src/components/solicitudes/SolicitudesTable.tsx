@@ -571,9 +571,9 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                         <div className="flex flex-col gap-1">
                           {s.proyectos.map((p) => (
                             <span key={p._id} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                              {p.name}
-                              {/* El centro de costo del proyecto, al lado, con el badge violeta de su ficha (01/11/2026). */}
+                              {/* El centro de costo del proyecto, ADELANTE del nombre, con el badge violeta de su ficha (01/11/2026). */}
                               {p.centroCosto && <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold leading-none bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50">{p.centroCosto}</span>}
+                              {p.name}
                             </span>
                           ))}
                         </div>

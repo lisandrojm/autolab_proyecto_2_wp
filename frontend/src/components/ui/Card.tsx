@@ -59,8 +59,8 @@ interface CardHeaderProps {
    * alcanza para distinguirlo de los otros tres que empiezan igual.
    */
   titleLines?: 1 | 2;
-  /** Algo chico al lado del título, dentro de la misma línea (p. ej. el centro de costo de un proyecto). Deja el tooltip del título intacto. */
-  titleExtra?: React.ReactNode;
+  /** Algo chico ADELANTE del título, en la misma línea (p. ej. el centro de costo de un proyecto). Deja el tooltip del título intacto. */
+  titlePrefix?: React.ReactNode;
   subtitle?: string;
   icon?: IconDefinition;
   iconClassName?: string;
@@ -245,8 +245,8 @@ export const Card: React.FC<CardProps> = ({ header, children, footer, onClick, c
                         tooltip es la única forma de leerlo entero sin abrir la tarjeta. Solo se pone
                         cuando el título es texto — un nodo React no se puede volcar a un atributo. */}
                     <h3 title={typeof header.title === 'string' ? header.title : undefined} className={`font-semibold text-gray-900 dark:text-white text-sm ${header.titleLines === 2 ? 'line-clamp-2' : 'truncate'}`}>
+                      {header.titlePrefix && <>{header.titlePrefix} </>}
                       {header.title}
-                      {header.titleExtra && <> {header.titleExtra}</>}
                     </h3>
                     {header.subtitle && <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{header.subtitle}</p>}
                   </div>

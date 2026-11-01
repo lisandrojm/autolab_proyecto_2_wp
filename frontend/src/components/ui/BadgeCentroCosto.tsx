@@ -1,5 +1,5 @@
 /*
-  EL CÓDIGO DEL CENTRO DE COSTO EN UN BADGE VIOLETA, al lado del nombre del proyecto (01/11/2026): el
+  EL CÓDIGO DEL CENTRO DE COSTO EN UN BADGE VIOLETA, adelante del nombre del proyecto (01/11/2026): el
   centro se usa mucho para nombrar a los proyectos («el 426»), así que va pegado al nombre y no sólo en
   su fila de la ficha. Mismos colores que el badge de «Centro de Costo» de la tarjeta y la ficha.
   Sin código no se dibuja nada.
