@@ -8,6 +8,28 @@ import { soltarCandado, tomarCandado } from "./candadoArca.js";
 import { ItemLoteAltas, LoteAltasError, LoteAltasValidado, validarLoteAltas } from "./validarLoteAltas.js";
 import { EventoTandas, GuardadoTandas, ItemTanda, ResultadoTandas, correrTandas } from "./tandasAltas.js";
 import type { ModoAltas } from "./cotejoAltas.js";
+import { aplicarTransicion, estadoDestinoPorProposito } from "../estadoTransicionAutomaticaService.js";
+
+/**
+ * PRESENTADA EN ARCA → GENERAR DOCUMENTOS (01/11/2026, pedido del usuario). Apenas ARCA confirma el
+ * alta, el trámite impositivo terminó: el contrato pasa al estado que alimenta la carpeta de altas
+ * (el mismo al que lo lleva la constancia, ver `registrarAltaDeContrato`), sin esperar a que se baje
+ * la constancia. La constancia se sigue bajando igual —la busca por `altaArcaPresentada`, no por el
+ * estado— y cuando llega ya no mueve nada («ya_estaba»).
+ *
+ * Sólo hacia adelante (`aplicarTransicion`), y nunca corta la corrida: si falla, queda el log.
+ */
+async function avanzarPresentada(userProjectId: string, contractIndex: number): Promise<void> {
+  try {
+    const destino = await estadoDestinoPorProposito("alta_temprana");
+    if (!destino) return;
+    const up = await UserProject.findById(userProjectId);
+    if (!up?.contracts[contractIndex]) return;
+    await aplicarTransicion(up, contractIndex, destino);
+  } catch (e: any) {
+    console.error("Altas ARCA: la presentada no pudo pasar a Generar Documentos:", e?.message || e);
+  }
+}
 
 /**
  * PRESENTAR ALTAS EN ARCA DESDE EL SERVIDOR: Carga Masiva (archivo de 130) o Altas Masivas (pegado
@@ -276,6 +298,7 @@ async function correr(o: { corrida: CorridaAltas; lote: LoteAltasValidado; tenan
           $inc: { [`contracts.${i.contractIndex}.enviosArca`]: 1 },
         },
       ).catch((e: any) => console.error("Altas ARCA: no pude marcar el contrato:", e?.message || e));
+      if (x.contrato === "presentada") await avanzarPresentada(i.userProjectId, i.contractIndex);
     }
   }
 }
@@ -379,6 +402,7 @@ async function correrPorTandas(o: { corrida: CorridaAltas; lote: LoteAltasValida
       // Un envío a ARCA es un resultado de una tanda presentada; el de una consulta de una incierta de
       // otra corrida (sin tanda) no se volvió a mandar.
       await marcar(x.item, { resultado: res, tanda: x.tanda, motivo: x.motivo, cat: x.cat, porConsulta: x.porConsulta || undefined, ...(conteo || {}) }, x.tanda !== undefined);
+      if (res === "presentada") await avanzarPresentada(x.item.userProjectId, x.item.contractIndex);
     },
     tanda: async (t, resultados) => {
       if (!log) return;

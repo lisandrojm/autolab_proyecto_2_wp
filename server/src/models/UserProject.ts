@@ -217,9 +217,10 @@ interface IContract {
   /**
    * La PRESENTACIÓN del alta en ARCA hecha por la corrida automática (Carga Masiva o Altas Masivas).
    *
-   * NO cambia el estado del contrato: el avance a «Generar Documentos» lo sigue haciendo la
-   * constancia que llega por Dropbox. Esto es la constancia de NUESTRO lado —qué se presentó, cuándo
-   * y con qué número— y la traba para no presentar dos veces la misma alta.
+   * Con `presentada`, el contrato pasa a «Generar Documentos» en ese momento (01/11/2026, ver
+   * `avanzarPresentada` en `arca/corridaAltas.ts`), sin esperar la constancia. Esto es la constancia de
+   * NUESTRO lado —qué se presentó, cuándo y con qué número— y la traba para no presentar dos veces la
+   * misma alta.
    *
    * `resultado`: `presentada` (ARCA lo confirmó), `indeterminado` (se apretó y no se pudo leer el
    * resultado: hay que mirarlo en ARCA, NO volver a presentar) o `fallida` (rechazada: se puede
