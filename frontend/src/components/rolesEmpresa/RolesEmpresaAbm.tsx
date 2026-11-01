@@ -778,7 +778,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID Externo</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Puesto ARCA</th>
                 <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Categorías</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Acciones</th>
+                <th className="col-acciones px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
@@ -892,8 +892,8 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Nombre</th>
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Valoración</th>
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Grupo</th>
-                      <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Bruto</th>
-                      <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Neto</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Bruto</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Neto</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -1005,7 +1005,7 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                     <tr className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                       <th className="px-3 py-2 text-left">Convenio</th>
                       <th className="px-3 py-2 text-left">Categoría</th>
-                      <th className="px-3 py-2 text-right">Bruto</th>
+                      <th className="px-3 py-2 text-left">Bruto</th>
                       <th className="px-3 py-2 text-left">Valoración</th>
                       <th className="px-2 py-2 w-8" aria-label="Quitar" />
                     </tr>

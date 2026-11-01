@@ -656,7 +656,7 @@ export const NomenclaturaArchivosPage: React.FC = () => {
                 <th className="px-4 py-3 whitespace-nowrap" title="Cuánto mide el nombre contra el tope de 255">
                   Largo
                 </th>
-                <th className="px-4 py-3 text-right whitespace-nowrap">Acciones</th>
+                <th className="col-acciones px-4 py-3 text-left whitespace-nowrap">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60">

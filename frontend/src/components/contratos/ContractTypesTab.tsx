@@ -1149,8 +1149,8 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
               <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                    <th className="px-4 py-3 w-12 text-center">Ordenar</th>
-                    <th className="px-4 py-3 w-16 text-center">Orden</th>
+                    <th className="px-4 py-3 w-12 text-left">Ordenar</th>
+                    <th className="px-4 py-3 w-16 text-left">Orden</th>
                     <th className="px-4 py-3">Nombre</th>
                     <th className="px-4 py-3">Estado</th>
                   </tr>
@@ -1182,7 +1182,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                 <th className="px-4 py-3 font-semibold">Plantilla Contrato</th>
                 <th className="px-4 py-3 font-semibold">Plantilla Release</th>
                 <th className="px-4 py-3 font-semibold">Estados</th>
-                <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+                <th className="col-acciones px-4 py-3 font-semibold text-left">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">

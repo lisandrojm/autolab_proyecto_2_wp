@@ -245,10 +245,10 @@ const TablaPorEmpresa: React.FC<{ filas: FilaEmpresa[]; orden: Orden | null; onA
           <th className={th()}><BotonOrden columna="usuario" orden={orden} onAlternar={onAlternar}>Usuario</BotonOrden></th>
           <th className={th()}><BotonOrden columna="antiguedad" orden={orden} onAlternar={onAlternar}>Antigüedad en la empresa</BotonOrden></th>
           <th className={th()}><span className="inline-flex items-center gap-1.5"><FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500" />Contratos</span></th>
-          <th className={th('text-center text-violet-600 dark:text-violet-400 w-24')}><BotonOrden columna="total" orden={orden} onAlternar={onAlternar}>Total Anual (ley)</BotonOrden></th>
-          <th className={th('text-center text-red-600 dark:text-red-400 w-24')}><BotonOrden columna="tomados" orden={orden} onAlternar={onAlternar}>Tomados (Gozados)</BotonOrden></th>
-          <th className={th('text-center text-amber-600 dark:text-amber-400 w-24')}><BotonOrden columna="pendientes" orden={orden} onAlternar={onAlternar}>Pendientes</BotonOrden></th>
-          <th className={th('text-center text-emerald-600 dark:text-emerald-400 w-24')}><BotonOrden columna="disponibles" orden={orden} onAlternar={onAlternar}>Disponibles</BotonOrden></th>
+          <th className={th('text-left text-violet-600 dark:text-violet-400 w-24')}><BotonOrden columna="total" orden={orden} onAlternar={onAlternar}>Total Anual (ley)</BotonOrden></th>
+          <th className={th('text-left text-red-600 dark:text-red-400 w-24')}><BotonOrden columna="tomados" orden={orden} onAlternar={onAlternar}>Tomados (Gozados)</BotonOrden></th>
+          <th className={th('text-left text-amber-600 dark:text-amber-400 w-24')}><BotonOrden columna="pendientes" orden={orden} onAlternar={onAlternar}>Pendientes</BotonOrden></th>
+          <th className={th('text-left text-emerald-600 dark:text-emerald-400 w-24')}><BotonOrden columna="disponibles" orden={orden} onAlternar={onAlternar}>Disponibles</BotonOrden></th>
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -776,11 +776,11 @@ export const UserVacationManagementTab: React.FC = () => {
             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><span className="inline-flex items-center gap-2"><BotonOrden columna="ingreso" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Ingreso</BotonOrden><span className="text-gray-300">/</span><BotonOrden columna="antiguedad" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Antigüedad</BotonOrden></span></th>
             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="rol" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Rol Empresa</BotonOrden></th>
             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="contrato" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Contrato</BotonOrden></th>
-            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-violet-600 dark:text-violet-400"><BotonOrden columna="total" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Total Anual</BotonOrden></th>
-            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-red-600 dark:text-red-400"><BotonOrden columna="tomados" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Tomados (Gozados)</BotonOrden></th>
-            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-amber-600 dark:text-amber-400"><BotonOrden columna="pendientes" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Pendientes</BotonOrden></th>
-            <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-emerald-600 dark:text-emerald-400"><BotonOrden columna="disponibles" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Disponibles</BotonOrden></th>
-            <th className="px-4 py-3 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900">
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-violet-600 dark:text-violet-400"><BotonOrden columna="total" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Total Anual</BotonOrden></th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-red-600 dark:text-red-400"><BotonOrden columna="tomados" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Tomados (Gozados)</BotonOrden></th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-amber-600 dark:text-amber-400"><BotonOrden columna="pendientes" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Pendientes</BotonOrden></th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-emerald-600 dark:text-emerald-400"><BotonOrden columna="disponibles" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Disponibles</BotonOrden></th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900">
               <span className="inline-flex items-center gap-1.5">
                 <BotonOrden columna="extra" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Días Extra</BotonOrden>
                 <button

@@ -489,17 +489,17 @@ export const RecibosSueldoPage: React.FC = () => {
                           </BotonOrden>
                         </th>
                         <th className={th}>Período</th>
-                        <th className={`${th} text-right`}>
+                        <th className={`${th} text-left`}>
                           <BotonOrden columna="bruto" orden={orden} onAlternar={alternar}>
                             Bruto
                           </BotonOrden>
                         </th>
-                        <th className={`${th} text-right`}>
+                        <th className={`${th} text-left`}>
                           <BotonOrden columna="descuentos" orden={orden} onAlternar={alternar}>
                             Descuentos
                           </BotonOrden>
                         </th>
-                        <th className={`${th} text-right`}>
+                        <th className={`${th} text-left`}>
                           <BotonOrden columna="neto" orden={orden} onAlternar={alternar}>
                             Neto a cobrar
                           </BotonOrden>

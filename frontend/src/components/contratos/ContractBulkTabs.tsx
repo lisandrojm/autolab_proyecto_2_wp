@@ -2365,7 +2365,7 @@ export const ContractBulkAfipTab: React.FC<{
                 <tr>
                   <th colSpan={COLUMNAS_FIJAS} className="sticky left-0 z-[15] p-0 bg-gray-50 dark:bg-gray-900" />
                   <th colSpan={COLUMNAS_ANTES_DEL_GRUPO - COLUMNAS_FIJAS} className="p-0 bg-gray-50 dark:bg-gray-900" />
-                  <th colSpan={6} className={`px-4 pt-2.5 pb-1 text-[10px] font-bold uppercase tracking-widest text-blue-700/80 dark:text-blue-400/80 text-center ${GRUPO_ENCUADRE_TH}`}>
+                  <th colSpan={6} className={`px-4 pt-2.5 pb-1 text-[10px] font-bold uppercase tracking-widest text-blue-700/80 dark:text-blue-400/80 text-left ${GRUPO_ENCUADRE_TH}`}>
                     Datos que declara la empleadora ante ARCA
                   </th>
                   <th colSpan={COLUMNAS_DESPUES_DEL_GRUPO} className="p-0 bg-gray-50 dark:bg-gray-900" />

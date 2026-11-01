@@ -157,7 +157,7 @@ export const ColaDeEnvioFirma: React.FC<{ vista: BotCola; actual: string | null;
               <thead className="bg-gray-50 text-[10px] uppercase text-gray-500 dark:bg-gray-900/40">
                 <tr>
                   <th className="w-6 px-2 py-1.5" />
-                  <th className="w-8 px-2 py-1.5 text-right">#</th>
+                  <th className="w-8 px-2 py-1.5 text-left">#</th>
                   <th className="px-2 py-1.5 text-left">Documento</th>
                   <th className="px-2 py-1.5 text-left">Firmante</th>
                   <th className="px-2 py-1.5 text-left">Sale</th>

@@ -722,13 +722,13 @@ export const RequestsConfigPage: React.FC = () => {
                   <TablaConEncabezadoFijo tabla="w-full text-sm text-left">
                     <thead className="text-xs uppercase bg-gray-900 text-gray-400 font-medium">
                       <tr>
-                        <th className="py-4 px-6 w-16 text-center">Ordenar</th>
-                        <th className="py-4 px-6 w-16 text-center">Orden</th>
+                        <th className="py-4 px-6 w-16 text-left">Ordenar</th>
+                        <th className="py-4 px-6 w-16 text-left">Orden</th>
                         <th className="py-4 px-6">Tipo de ausencia</th>
-                        <th className="py-4 px-6 text-center">Visibilidad</th>
-                        <th className="py-4 px-6 text-center">Reemplazo Opcional</th>
-                        <th className="py-4 px-6 text-center">Estado</th>
-                        <th className="py-4 px-6 text-right w-32"></th>
+                        <th className="py-4 px-6 text-left">Visibilidad</th>
+                        <th className="py-4 px-6 text-left">Reemplazo Opcional</th>
+                        <th className="py-4 px-6 text-left">Estado</th>
+                        <th className="py-4 px-6 text-left w-32"></th>
                       </tr>
                     </thead>
                     <SortableContext items={activityTypes.map((item) => item.id)} strategy={verticalListSortingStrategy}>

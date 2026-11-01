@@ -3686,8 +3686,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             );
           })()}
         </td>
-        {/* «Acciones» fija a la derecha, con su borde (pedido del 30/10/2026): mismo esquema que «Usuario». */}
-        <td className="sticky right-0 z-[5] px-4 py-3 text-right bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 border-l-2 border-gray-300 dark:border-gray-600 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.25)]">
+        {/* «Acciones» fija a la derecha, con su borde: la fija la regla `col-acciones` de index.css (01/11/2026, igual en todas las tablas). */}
+        <td className="px-4 py-3 text-right bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-800">
           <div className="flex items-center justify-end gap-1">
             <button
               onClick={(e) => {
@@ -3840,7 +3840,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   <th className="px-4 py-3">Proyecto/s</th>
                   <th className="px-4 py-3">Turnos asociados</th>
                   <th className="px-4 py-3">Contrato</th>
-                  <th className="px-4 py-3 text-right">Acciones</th>
+                  <th className="col-acciones px-4 py-3 text-left">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-xs">
@@ -6032,7 +6032,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                               «Baja:».
                             */}
                             <th className="px-4 py-3 font-semibold whitespace-nowrap"><BotonOrden columna="ultimoContrato" {...ordenEquipoProps}>Último Contrato</BotonOrden></th>
-                            <th className="px-4 py-3 font-semibold text-center"><BotonOrden columna="contratosProyecto" {...ordenEquipoProps}>Contratos</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold text-left"><BotonOrden columna="contratosProyecto" {...ordenEquipoProps}>Contratos</BotonOrden></th>
                             <th className="px-4 py-3 font-semibold"><BotonOrden columna="roles" {...ordenEquipoProps}>Rol/es</BotonOrden></th>
                             <th className="px-4 py-3 font-semibold"><BotonOrden columna="rolEmpresa" {...ordenEquipoProps}>Rol/es Empresa</BotonOrden></th>
                             <th className="px-4 py-3 font-semibold"><BotonOrden columna="estado" {...ordenEquipoProps}>Estado</BotonOrden></th>
@@ -6050,13 +6050,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                             <th className="px-4 py-3 font-semibold whitespace-nowrap"><BotonOrden columna="estadoContrato" {...ordenEquipoProps}>Estado Contrato</BotonOrden></th>
                             <th className="px-4 py-3 font-semibold whitespace-nowrap">Estado Impositivo</th>
                             <th className="px-4 py-3 font-semibold"><BotonOrden columna="reemplazo" {...ordenEquipoProps}>Reemplazo</BotonOrden></th>
-                            <th className="px-4 py-3 font-semibold text-right whitespace-nowrap"><BotonOrden columna="montoJornada" {...ordenEquipoProps}>Monto / Jorn.</BotonOrden></th>
-                            <th className="px-4 py-3 font-semibold text-right whitespace-nowrap"><BotonOrden columna="jornadas" {...ordenEquipoProps}>Jornadas</BotonOrden></th>
-                            <th className="px-4 py-3 font-semibold text-right whitespace-nowrap"><BotonOrden columna="diasPorSemana" {...ordenEquipoProps}>Días por semana</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold text-left whitespace-nowrap"><BotonOrden columna="montoJornada" {...ordenEquipoProps}>Monto / Jorn.</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold text-left whitespace-nowrap"><BotonOrden columna="jornadas" {...ordenEquipoProps}>Jornadas</BotonOrden></th>
+                            <th className="px-4 py-3 font-semibold text-left whitespace-nowrap"><BotonOrden columna="diasPorSemana" {...ordenEquipoProps}>Días por semana</BotonOrden></th>
                             <th className="px-4 py-3 font-semibold"><BotonOrden columna="horario" {...ordenEquipoProps}>Horario</BotonOrden></th>
-                            <th className="px-4 py-3 font-semibold text-right whitespace-nowrap">Horas / día</th>
+                            <th className="px-4 py-3 font-semibold text-left whitespace-nowrap">Horas / día</th>
                             {/* «Acciones» fija a la derecha, con su borde: los botones siempre a mano aunque la tabla esté corrida. */}
-                            <th className="sticky right-0 z-[15] px-4 py-3 font-semibold text-right bg-gray-50 dark:bg-[#18202f] border-l-2 border-gray-300 dark:border-gray-600 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.25)]">Acciones</th>
+                            <th className="col-acciones px-4 py-3 font-semibold text-left bg-gray-50 dark:bg-[#18202f]">Acciones</th>
                           </tr>
                         </thead>
                         {/* Sin `divide-y`: en el modelo separado los bordes de `<tr>` no se

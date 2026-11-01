@@ -87,8 +87,8 @@ export const DetalleRecibo: React.FC<{ datos: DatosRecibo }> = ({ datos: d }) =>
             <tr>
               <th className="px-2 py-1 text-left">Código</th>
               <th className="px-2 py-1 text-left">Concepto</th>
-              <th className="px-2 py-1 text-right">Unidad</th>
-              <th className="px-2 py-1 text-right">Monto</th>
+              <th className="px-2 py-1 text-left">Unidad</th>
+              <th className="px-2 py-1 text-left">Monto</th>
             </tr>
           </thead>
           <tbody>

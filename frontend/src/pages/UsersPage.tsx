@@ -2230,13 +2230,13 @@ export const UsersPage: React.FC = () => {
                     <SortableTh columna="roles" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden md:table-cell">Roles</SortableTh>
                     <SortableTh columna="cuit" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden lg:table-cell">CUIT</SortableTh>
                     <SortableTh columna="contratos" activa={sortBy} direccion={sortDir} onSort={toggleSort} className="hidden md:table-cell text-center">Contratos</SortableTh>
-                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-center" title="Nombre confirmado contra el Padrón de ARCA">ARCA</th>
+                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-left" title="Nombre confirmado contra el Padrón de ARCA">ARCA</th>
                     {/* `hidden lg:table-cell`: la tabla ya venía con siete columnas, y en pantallas
                         chicas esta es la primera que sobra — el dato completo sigue en la ficha. */}
                     <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest hidden lg:table-cell" title="Sindicato al que está afiliada la persona">Sindicato</th>
                     <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest hidden md:table-cell" title="Promedio de sus calificaciones (1 a 5 estrellas). Click para verlas o calificar.">Calificación</th>
                     <SortableTh columna="estado" activa={sortBy} direccion={sortDir} onSort={toggleSort}>Estado</SortableTh>
-                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Acciones</th>
+                    <th className="col-acciones py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-left">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-800">

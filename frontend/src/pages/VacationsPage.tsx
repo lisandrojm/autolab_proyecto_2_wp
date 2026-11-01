@@ -944,7 +944,7 @@ export const VacationsPage: React.FC = () => {
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Período</th>
-                        <th className="text-center py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
                       </tr>
                     </thead>
 

@@ -424,7 +424,7 @@ export const ClientsPage: React.FC = () => {
                   <th className="px-4 py-3">Empresa</th>
                   <th className="px-4 py-3">Email</th>
                   <th className="px-4 py-3">Alta</th>
-                  <th className="px-4 py-3 text-right">Acciones</th>
+                  <th className="col-acciones px-4 py-3 text-left">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">

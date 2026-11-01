@@ -336,13 +336,13 @@ export const ShiftsPage: React.FC = () => {
               <TablaConEncabezadoFijo className="rounded border dark:border-slate-800" tabla="w-full dark:bg-slate-800/80 table-auto">
                 <thead>
                   <tr className="border-b dark:border-slate-700">
-                    {isReorderMode && <th className="py-3 px-4 text-center font-semibold text-gray-700 dark:text-gray-300 w-16">Ordenar</th>}
-                    {isReorderMode && <th className="py-3 px-4 text-center font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>}
+                    {isReorderMode && <th className="py-3 px-4 text-left font-semibold text-gray-700 dark:text-gray-300 w-16">Ordenar</th>}
+                    {isReorderMode && <th className="py-3 px-4 text-left font-semibold text-gray-700 dark:text-gray-300 w-16">Orden</th>}
                     <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Nombre</th>
 
                     <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Horario</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Días</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th>
+                    <th className="col-acciones text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th>
                   </tr>
                 </thead>
                 <SortableContext items={shifts.map((s) => s._id)} strategy={verticalListSortingStrategy}>

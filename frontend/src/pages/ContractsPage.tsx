@@ -703,7 +703,7 @@ export const ContractsPage: React.FC = () => {
                         CUIT
                       </BotonOrden>
                     </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center bg-gray-50 dark:bg-gray-900">
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-left bg-gray-50 dark:bg-gray-900">
                       <BotonOrden columna="contratos" {...ordenProps}>
                         Contratos
                       </BotonOrden>
@@ -756,9 +756,9 @@ export const ContractsPage: React.FC = () => {
                         Alta / Baja
                       </BotonOrden>
                     </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right bg-gray-50 dark:bg-gray-900">Monto / Jorn.</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-left bg-gray-50 dark:bg-gray-900">Monto / Jorn.</th>
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Horario</th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right bg-gray-50 dark:bg-gray-900">Acciones</th>
+                    <th className="col-acciones px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-left bg-gray-50 dark:bg-gray-900">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">

@@ -58,6 +58,68 @@
 }
 
 @layer components {
+  /*
+    «ACCIONES» FIJA A LA DERECHA, EN TODAS LAS TABLAS (pedido del 01/11/2026). Con poner `col-acciones`
+    en el <th> alcanza: la regla fija ese encabezado y la última celda de cada fila de esa tabla (las
+    filas de una sola celda con colSpan —vacío, detalle— quedan como están), con un borde a la
+    izquierda y una sombra para que al correr la tabla se note que queda fija.
+
+    EL FONDO, sin tocar cada tabla. Una celda fija tiene que ser opaca, pero el color lo pone la fila
+    (hover, seleccionada) o el tbody. La cadena: la fila hereda el fondo del tbody/thead (con
+    especificidad 0, así que cualquier `bg-*`/`hover:bg-*` de la fila gana), la celda hereda el de la
+    fila, y ese color se pinta en un ::before ENCIMA de una base opaca (la imagen de fondo de la
+    celda). Si nadie pone color, queda la base: el blanco (o el gris del modo oscuro) de las tarjetas.
+
+    El encabezado invisible de `TablaConEncabezadoFijo` saca el sticky con `[&_th]:static` (las
+    utilidades le ganan a esta capa): ahí no tiene que estar fijo.
+  */
+  th.col-acciones,
+  table:has(> thead > tr > th.col-acciones) > tbody > tr > td:last-child:not([colspan]) {
+    --acciones-base: #ffffff;
+    --acciones-borde: #d1d5db;
+    position: sticky;
+    right: 0;
+    z-index: 5;
+    background-image: linear-gradient(var(--acciones-base), var(--acciones-base));
+  }
+  th.col-acciones {
+    z-index: 7;
+  }
+  /* Un menú que se abre desde la celda tiene que quedar arriba de las celdas fijas de las filas de abajo. */
+  table:has(> thead > tr > th.col-acciones) > tbody > tr > td:last-child:not([colspan]):is(:hover, :focus-within) {
+    z-index: 8;
+  }
+  .dark th.col-acciones,
+  .dark table:has(> thead > tr > th.col-acciones) > tbody > tr > td:last-child:not([colspan]) {
+    --acciones-base: #1f2937;
+    --acciones-borde: #4b5563;
+  }
+  :where(table:has(> thead > tr > th.col-acciones) > thead > tr, table:has(> thead > tr > th.col-acciones) > tbody > tr),
+  :where(th.col-acciones, table:has(> thead > tr > th.col-acciones) > tbody > tr > td:last-child:not([colspan])) {
+    background-color: inherit;
+  }
+  th.col-acciones::before,
+  table:has(> thead > tr > th.col-acciones) > tbody > tr > td:last-child:not([colspan])::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-color: inherit;
+    pointer-events: none;
+  }
+  th.col-acciones::after,
+  table:has(> thead > tr > th.col-acciones) > tbody > tr > td:last-child:not([colspan])::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    background-color: var(--acciones-borde);
+    box-shadow: -4px 0 6px -2px rgba(0, 0, 0, 0.25);
+    pointer-events: none;
+  }
+
   .btn-primary {
     @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
   }

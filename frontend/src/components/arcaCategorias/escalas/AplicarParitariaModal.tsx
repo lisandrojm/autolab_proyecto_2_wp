@@ -218,13 +218,13 @@ export const AplicarParitariaModal: React.FC<Props> = ({ isOpen, onClose, conven
                 <thead className="bg-gray-50 dark:bg-gray-900/50">
                   <tr>
                     <Th className="text-left">Grupo</Th>
-                    <Th className="text-right">Básico actual</Th>
-                    <Th className="text-right">Básico propuesto (editable)</Th>
-                    <Th className="text-right hidden lg:table-cell">% Adic.</Th>
-                    <Th className="text-right hidden lg:table-cell">Adicional</Th>
-                    <Th className="text-right hidden xl:table-cell">Presentismo</Th>
-                    <Th className="text-right">Total actual</Th>
-                    <Th className="text-right">Total propuesto</Th>
+                    <Th className="text-left">Básico actual</Th>
+                    <Th className="text-left">Básico propuesto (editable)</Th>
+                    <Th className="text-left hidden lg:table-cell">% Adic.</Th>
+                    <Th className="text-left hidden lg:table-cell">Adicional</Th>
+                    <Th className="text-left hidden xl:table-cell">Presentismo</Th>
+                    <Th className="text-left">Total actual</Th>
+                    <Th className="text-left">Total propuesto</Th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -270,8 +270,8 @@ export const AplicarParitariaModal: React.FC<Props> = ({ isOpen, onClose, conven
                   <thead className="bg-gray-50 dark:bg-gray-900/50">
                     <tr>
                       <Th className="text-left">Adicional</Th>
-                      <Th className="text-right">Actual</Th>
-                      <Th className="text-right">Propuesto (editable)</Th>
+                      <Th className="text-left">Actual</Th>
+                      <Th className="text-left">Propuesto (editable)</Th>
                       <Th className="text-left">Avisos</Th>
                     </tr>
                   </thead>

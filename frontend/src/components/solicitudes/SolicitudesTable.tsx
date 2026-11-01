@@ -361,10 +361,10 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
       <th className="px-4 py-3 font-semibold whitespace-nowrap" title="El último contrato de la persona ANTERIOR a lo pedido (alta antes del inicio de la solicitud), en cualquier proyecto. Avisa si se superpone con las fechas pedidas.">Último contrato</th>
       <th className="px-4 py-3 font-semibold">Fechas</th>
       <th className="px-4 py-3 font-semibold">Horario</th>
-      <th className="px-4 py-3 font-semibold text-center">Estado</th>
+      <th className="px-4 py-3 font-semibold text-left">Estado</th>
       <th className="px-4 py-3 font-semibold">Tipo de alta</th>
       {/* Las acciones quedan FIJAS a la derecha (27/10/2026): con la tabla ancha, «Editar para Aprobar» y «Rechazar» quedaban fuera de la vista. */}
-      <th className="sticky right-0 z-[6] px-4 py-3 font-semibold text-right bg-gray-50 dark:bg-[#18202f] shadow-[inset_1px_0_0_#e5e7eb,-4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_1px_0_0_#4b5563,-4px_0_6px_-4px_rgba(0,0,0,0.4)]">Acciones</th>
+      <th className="col-acciones px-4 py-3 font-semibold text-left bg-gray-50 dark:bg-[#18202f]">Acciones</th>
     </tr>
   );
 
@@ -579,7 +579,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   inventar el dato del que depende el TXT de ARCA.
                 */}
                 <td className="px-4 py-3">{tramite ? <EstadoBadge name={tramite.name} /> : <span className="text-xs text-gray-400 italic">Sin definir</span>}</td>
-                <td className={`sticky right-0 z-[5] px-4 py-3 text-right shadow-[inset_1px_0_0_#e5e7eb,-4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_1px_0_0_#4b5563,-4px_0_6px_-4px_rgba(0,0,0,0.4)] ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
+                <td className={`px-4 py-3 text-right ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
                   {/* Una solicitud rechazada o cancelada no se aprueba de una: primero se reabre,
                       así queda explícito que se está deshaciendo la decisión. */}
                   <div className="flex items-center justify-end gap-1.5">

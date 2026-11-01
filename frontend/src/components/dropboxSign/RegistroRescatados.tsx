@@ -105,7 +105,7 @@ export const RegistroRescatados: React.FC<{ onClose: () => void }> = ({ onClose 
                   <th className="px-3 py-2 text-left">Archivo subido a la carpeta de firmados</th>
                   <th className="px-3 py-2 text-left">Código</th>
                   <th className="px-3 py-2 text-left">Firmante</th>
-                  <th className="px-3 py-2 text-right">Tamaño</th>
+                  <th className="px-3 py-2 text-left">Tamaño</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">

@@ -76,15 +76,15 @@ const AttendanceTable: React.FC<{ attendance: AttendanceRecord[] }> = ({ attenda
       <thead className="shadow-sm bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold outline outline-1 outline-gray-200 dark:outline-gray-700">
         <tr>
           <th className="py-3 px-4">Colaborador</th>
-          <th className="py-3 px-4 text-center">Presente</th>
+          <th className="py-3 px-4 text-left">Presente</th>
           <th className="py-3 px-4">Motivo</th>
           <th className="py-3 px-4">Area</th>
-          <th className="py-3 px-4 text-center">Entrada</th>
-          <th className="py-3 px-4 text-center">Salida</th>
-          <th className="py-3 px-4 text-center">Hs. Exts.</th>
-          <th className="py-3 px-4 text-center">Entrada Exts.</th>
-          <th className="py-3 px-4 text-center">Salida Exts.</th>
-          <th className="py-3 px-4 text-center">Reemplazo</th>
+          <th className="py-3 px-4 text-left">Entrada</th>
+          <th className="py-3 px-4 text-left">Salida</th>
+          <th className="py-3 px-4 text-left">Hs. Exts.</th>
+          <th className="py-3 px-4 text-left">Entrada Exts.</th>
+          <th className="py-3 px-4 text-left">Salida Exts.</th>
+          <th className="py-3 px-4 text-left">Reemplazo</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -176,17 +176,17 @@ const AbsenceBlock: React.FC<{ title: string; records: AttendanceRecord[] }> = (
                   <th rowSpan={2} className="py-2 px-4 text-left font-black text-gray-400 border-r border-gray-100 dark:border-gray-700 align-middle w-[180px]">
                     Colaborador Ausente
                   </th>
-                  <th colSpan={6} className="py-1 px-4 text-center font-black bg-blue-50/50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 border-b border-blue-100 dark:border-blue-900/30">
+                  <th colSpan={6} className="py-1 px-4 text-left font-black bg-blue-50/50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 border-b border-blue-100 dark:border-blue-900/30">
                     Información del Reemplazo / Jornalero
                   </th>
                 </tr>
                 <tr>
                   <th className="py-1.5 px-4 text-left font-semibold text-blue-500/80">Nombre / Detalle</th>
-                  <th className="py-1.5 px-2 text-center font-medium">Entrada</th>
-                  <th className="py-1.5 px-2 text-center font-medium">Salida</th>
-                  <th className="py-1.5 px-2 text-center font-medium">Hs. Exts.</th>
-                  <th className="py-1.5 px-2 text-center font-medium text-[8px]">Entr. Exts.</th>
-                  <th className="py-1.5 px-2 text-center font-medium text-[8px]">Sal. Exts.</th>
+                  <th className="py-1.5 px-2 text-left font-medium">Entrada</th>
+                  <th className="py-1.5 px-2 text-left font-medium">Salida</th>
+                  <th className="py-1.5 px-2 text-left font-medium">Hs. Exts.</th>
+                  <th className="py-1.5 px-2 text-left font-medium text-[8px]">Entr. Exts.</th>
+                  <th className="py-1.5 px-2 text-left font-medium text-[8px]">Sal. Exts.</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -1356,7 +1356,7 @@ export const RequestsPage: React.FC = () => {
                   Comentarios
                 </th>
                 <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Enviado Por</th>
-                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
+                <th className="bg-gray-50 dark:bg-slate-800 shadow-[inset_0_-1px_0_0_rgb(229_231_235)] dark:shadow-[inset_0_-1px_0_0_rgb(51_65_85)] text-nowrap text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
               </tr>
             </thead>
             <tbody>

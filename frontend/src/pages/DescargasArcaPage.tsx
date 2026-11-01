@@ -269,7 +269,7 @@ export const DescargasArcaPage: React.FC = () => {
                       </BotonOrden>
                     </th>
                     <th className={th}>Se baja en</th>
-                    <th className={`${th} text-right`}>Acción</th>
+                    <th className={`${th} text-left`}>Acción</th>
                   </tr>
                 </thead>
                 <tbody>

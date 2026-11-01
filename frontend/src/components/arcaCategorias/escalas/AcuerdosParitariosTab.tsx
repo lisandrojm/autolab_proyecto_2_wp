@@ -261,7 +261,7 @@ export const AcuerdosParitariosTab: React.FC<Props> = ({ convenio, acuerdos, can
                     <tr>
                       <Th className="text-left">Tramo</Th>
                       <Th className="text-left">Rige desde</Th>
-                      <Th className="text-right">Aumento</Th>
+                      <Th className="text-left">Aumento</Th>
                       <Th className="text-left">Base</Th>
                       <Th className="text-left">Régimen</Th>
                       <Th className="text-left hidden lg:table-cell">Nota</Th>

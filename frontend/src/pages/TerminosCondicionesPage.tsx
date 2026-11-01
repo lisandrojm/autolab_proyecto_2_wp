@@ -171,7 +171,7 @@ export const TerminosCondicionesPage: React.FC = () => {
                 <th className="px-4 py-3 font-semibold">Versión</th>
                 <th className="px-4 py-3 font-semibold">Aceptaciones</th>
                 <th className="px-4 py-3 font-semibold">Modificado</th>
-                <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+                <th className="col-acciones px-4 py-3 font-semibold text-left">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">

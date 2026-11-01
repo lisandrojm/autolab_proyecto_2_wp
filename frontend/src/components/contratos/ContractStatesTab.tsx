@@ -525,14 +525,14 @@ export const ContractStatesTab: React.FC = () => {
               <TablaConEncabezadoFijo tabla="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    <th className="px-4 py-3 font-semibold text-center w-14">Ordenar</th>
-                    <th className="px-4 py-3 font-semibold text-center w-14">Orden</th>
+                    <th className="px-4 py-3 font-semibold text-left w-14">Ordenar</th>
+                    <th className="px-4 py-3 font-semibold text-left w-14">Orden</th>
                     <th className="px-4 py-3 font-semibold">Badge</th>
                     <th className="px-4 py-3 font-semibold">Dependencias</th>
                     <th className="px-4 py-3 font-semibold">Impositivo</th>
                     <th className="px-4 py-3 font-semibold">Badge Secundario</th>
                     <th className="px-4 py-3 font-semibold">Tipos de contrato</th>
-                    <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+                    <th className="col-acciones px-4 py-3 font-semibold text-left">Acciones</th>
                   </tr>
                 </thead>
                 <SortableContext items={mostrar.map((e) => e._id)} strategy={verticalListSortingStrategy}>

@@ -356,7 +356,7 @@ export const PresentacionesArcaPage: React.FC = () => {
           <th className={th}>Contrato</th>
           <th className={th}>Estado</th>
           <th className={th}>Se presenta en</th>
-          <th className={`${th} text-right`}>Acción</th>
+          <th className={`${th} text-left`}>Acción</th>
         </tr>
       </thead>
       <tbody>{lista.map((c) => fila(c))}</tbody>

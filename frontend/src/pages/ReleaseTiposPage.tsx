@@ -256,7 +256,7 @@ export const ReleaseTiposPage: React.FC = () => {
                 <th className="px-4 py-3 font-semibold">Nombre</th>
                 <th className="px-4 py-3 font-semibold">Estado</th>
                 <th className="px-4 py-3 font-semibold">Firma</th>
-                <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+                <th className="col-acciones px-4 py-3 font-semibold text-left">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">

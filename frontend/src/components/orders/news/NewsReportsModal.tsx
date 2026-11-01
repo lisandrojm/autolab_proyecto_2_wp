@@ -591,11 +591,11 @@ const DailyDetailModal: React.FC<DailyDetailModalProps> = ({ isOpen, onClose, st
             <thead className="sticky top-0 bg-[#121826] shadow-md z-10">
               <tr className="bg-gray-800/50 text-[10px] uppercase tracking-wider text-gray-400 font-bold border-b border-gray-700">
                 <th className="py-3 px-6">Fecha / Día</th>
-                <th className="py-3 px-6 text-center">Estado de Asistencia</th>
+                <th className="py-3 px-6 text-left">Estado de Asistencia</th>
                 <th className="py-3 px-6">Área / Turno</th>
                 <th className="py-3 px-6">Cargó el informe</th>
                 <th className="py-3 px-6">Motivo / Detalle de Novedad</th>
-                <th className="py-3 px-6 text-right">Información de Hs. Extras</th>
+                <th className="py-3 px-6 text-left">Información de Hs. Extras</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800">
@@ -2713,14 +2713,14 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             <table className="w-full text-sm text-left">
               <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold shadow-sm">
                 <tr>
-                  <th className="py-2.5 px-3 text-center w-8"></th>
+                  <th className="py-2.5 px-3 text-left w-8"></th>
                   <th className="py-2.5 px-3 text-left">Empleado</th>
-                  <th className="py-2.5 px-3 text-right whitespace-nowrap">S. Jornada</th>
-                  <th className="py-2.5 px-3 text-right whitespace-nowrap">S. Mano</th>
-                  <th className="py-2.5 px-3 text-right whitespace-nowrap">P. Hora</th>
-                  <th className="py-2.5 px-3 text-right text-[10px] leading-tight whitespace-nowrap">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <div className="flex flex-col items-end">
+                  <th className="py-2.5 px-3 text-left whitespace-nowrap">S. Jornada</th>
+                  <th className="py-2.5 px-3 text-left whitespace-nowrap">S. Mano</th>
+                  <th className="py-2.5 px-3 text-left whitespace-nowrap">P. Hora</th>
+                  <th className="py-2.5 px-3 text-left text-[10px] leading-tight whitespace-nowrap">
+                    <div className="flex items-center justify-start gap-1.5">
+                      <div className="flex flex-col items-start">
                         <span>P. Hora Extra</span>
                         <span className="text-[8px] opacity-60">Base | 50% | 100%</span>
                       </div>
@@ -2729,27 +2729,27 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                       </button>
                     </div>
                   </th>
-                  <th className="py-2.5 px-3 text-center whitespace-nowrap">Jornadas</th>
+                  <th className="py-2.5 px-3 text-left whitespace-nowrap">Jornadas</th>
                   <th className="py-2.5 px-3 text-left whitespace-nowrap">Centro de costo</th>
                   <th className="py-2.5 px-3 text-left">Proyectos</th>
                   {/* Pegada a Proyectos y con los mismos badges que el listado de Novedades: es el
                       mismo dato leído desde otra pantalla. */}
                   <th className="py-2.5 px-3 text-left whitespace-nowrap">Área | Turno</th>
-                  <th className="py-2.5 px-2 text-center text-[10px] leading-tight">
+                  <th className="py-2.5 px-2 text-left text-[10px] leading-tight">
                     Horario
                     <br />
                     Base
                   </th>
                   <th className="py-2.5 px-3 text-left whitespace-nowrap">Contrato</th>
                   <th className="py-2.5 px-3 text-left whitespace-nowrap">Tipo de Contrato</th>
-                  <th className="py-2.5 px-3 text-center whitespace-nowrap">Asistencias: Pres | Aus</th>
+                  <th className="py-2.5 px-3 text-left whitespace-nowrap">Asistencias: Pres | Aus</th>
                   {/* «Detalle» porque la columna no trae un total —eso está en Hs. 50% y Hs. 100%—
                       sino día por día: la fecha, el tramo horario y el recargo de cada uno. */}
                   <th className="py-2.5 px-2 text-left text-[10px] leading-tight text-nowrap">Horario Extra detalle</th>
-                  <th className="py-2.5 px-2 text-right text-[10px] leading-tight text-nowrap">Hs. 50%</th>
-                  <th className="py-2.5 px-2 text-right text-[10px] leading-tight text-nowrap">Hs. 100%</th>
-                  <th className="py-2.5 px-2 text-right text-[10px] leading-tight whitespace-nowrap">Extras Total</th>
-                  <th className="py-2.5 px-3 text-right whitespace-nowrap">Monto Total</th>
+                  <th className="py-2.5 px-2 text-left text-[10px] leading-tight text-nowrap">Hs. 50%</th>
+                  <th className="py-2.5 px-2 text-left text-[10px] leading-tight text-nowrap">Hs. 100%</th>
+                  <th className="py-2.5 px-2 text-left text-[10px] leading-tight whitespace-nowrap">Extras Total</th>
+                  <th className="py-2.5 px-3 text-left whitespace-nowrap">Monto Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">

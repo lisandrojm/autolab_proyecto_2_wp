@@ -261,7 +261,7 @@ export const ArcaComoFuncionaPage: React.FC = () => {
                 <th className="px-4 py-2.5 whitespace-nowrap w-px">Pos.</th>
                 <th className="px-4 py-2.5">Campo</th>
                 <th className="px-4 py-2.5">De dónde sale</th>
-                <th className="px-4 py-2.5 text-right whitespace-nowrap w-px" />
+                <th className="px-4 py-2.5 text-left whitespace-nowrap w-px" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60 bg-white dark:bg-gray-800">

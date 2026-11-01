@@ -152,12 +152,12 @@ export const PequenasEmpresasTab: React.FC<Props> = ({ convenio, fecha, filas, c
             <thead className="bg-gray-50 dark:bg-gray-900/50">
               <tr>
                 <Th className="text-left">Grupo</Th>
-                <Th className="text-right">Semana 9 h (lun–vie)</Th>
-                <Th className="text-right">Jornada adicional 9 h</Th>
-                <Th className="text-right">Hora extra 50 %</Th>
-                <Th className="text-right">Hora extra 100 %</Th>
+                <Th className="text-left">Semana 9 h (lun–vie)</Th>
+                <Th className="text-left">Jornada adicional 9 h</Th>
+                <Th className="text-left">Hora extra 50 %</Th>
+                <Th className="text-left">Hora extra 100 %</Th>
                 <Th className="text-left hidden lg:table-cell">Vigencia</Th>
-                {canManage && <Th className="text-right">Acciones</Th>}
+                {canManage && <Th className="col-acciones text-left">Acciones</Th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
