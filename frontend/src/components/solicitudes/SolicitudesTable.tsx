@@ -614,7 +614,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                     {s.estado === "pendiente" ? (
                       <div className="flex flex-col items-stretch gap-2">
                         {/*
-                          «APROBAR» (azul, tilde) Y «RECHAZAR» (rojo, cruz), SÓLO ÍCONOS (01/11/2026, pedido del
+                          «APROBAR» (verde como el tag SOLICITUD APROBADA, tilde) Y «RECHAZAR» (rojo, cruz), SÓLO ÍCONOS (01/11/2026, pedido del
                           usuario: toda la columna en iconografía, para ganar ancho). El color y el hover («Editar y
                           aprobar», «Rechazar») dicen qué hace cada uno; el aria-label lo dice para lectores de pantalla.
 
@@ -623,7 +623,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                           eso el hover dice «Editar y aprobar».
                         */}
                         {onAprobar && (
-                          <button onClick={() => onAprobar(s)} className="h-8 w-8 text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors flex items-center justify-center shadow-sm" title="Editar y aprobar" aria-label="Editar y aprobar">
+                          <button onClick={() => onAprobar(s)} className="h-8 w-8 rounded transition-colors flex items-center justify-center bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50" title="Editar y aprobar" aria-label="Editar y aprobar">
                             <FontAwesomeIcon icon={faCheck} className="h-3.5 w-3.5" />
                           </button>
                         )}
