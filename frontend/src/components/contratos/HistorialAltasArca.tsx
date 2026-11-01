@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleCheck, faCircleXmark, faCircleQuestion, faCircle, faSpinner, faDownload } from '@fortawesome/free-solid-svg-icons';
+import { faCircleCheck, faCircleXmark, faCircleQuestion, faCircle, faSpinner, faDownload, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { Modal } from '../ui/Modal';
 import { projectsAPI, CorridaAltasGuardada, EstadoConstanciasAlta } from '../../api/projects';
 import { detalleDeLoPresentado } from './progresoTandas';
@@ -117,6 +117,38 @@ export function filasDelHistorial(corridas: CorridaAltasGuardada[]): Fila[] {
     })),
   );
 }
+
+/**
+ * UNA FILA POR PERSONA Y CONTRATO (01/11/2026): la misma persona aparecía una vez por corrida (rechazada,
+ * después registrada…) y la tabla no se entendía. Se agrupa por CUIL + empleadora + contrato; la fila
+ * muestra el intento que vale —el último registrado, o si ninguno se registró, el último— y los demás
+ * se ven al abrirla.
+ */
+export interface Grupo {
+  clave: string;
+  principal: Fila;
+  /** Todos los intentos, del más nuevo al más viejo. */
+  intentos: Fila[];
+}
+
+export function agruparPorPersona(filas: Fila[]): Grupo[] {
+  const porClave = new Map<string, Fila[]>();
+  for (const f of filas) {
+    const k = `${f.cuil}|${f.empresa}|${f.contrato?.alta || ''}|${f.contrato?.baja || ''}`;
+    const lista = porClave.get(k);
+    if (lista) lista.push(f);
+    else porClave.set(k, [f]);
+  }
+  return [...porClave.entries()]
+    .map(([clave, fs]) => {
+      const intentos = [...fs].sort((a, b) => b.fecha.localeCompare(a.fecha));
+      return { clave, principal: intentos.find((f) => f.resultado === 'presentada' && !f.enSeco) || intentos[0], intentos };
+    })
+    .sort((a, b) => b.intentos[0].fecha.localeCompare(a.intentos[0].fecha));
+}
+
+/** Para buscar sin que importen mayúsculas ni acentos («garcia» encuentra a «GARCÍA»). */
+const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 /** «Qué devolvió ARCA» en la tanda de una persona: motivo o error, diálogos, y la pantalla si se guardó. */
 const RespuestaDeArca: React.FC<{ f: Fila }> = ({ f }) => {
@@ -252,12 +284,27 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
       .catch((e: any) => setError(e?.response?.status === 404 ? 'El servidor todavía no tiene el registro de altas: hay que actualizarlo (git pull) y reiniciarlo. Las corridas ya están guardadas y van a aparecer acá.' : e?.response?.data?.error || 'No se pudo leer el registro de altas.'));
   }, [isOpen, empresaId, descargando]);
 
-  const filas = useMemo(() => {
-    const q = buscar.trim().toLowerCase();
-    return filasDelHistorial(corridas || [])
-      .filter((f) => todo || (!f.enSeco && f.resultado !== 'pendiente' && f.resultado !== 'seco'))
-      .filter((f) => !q || f.nombre.toLowerCase().includes(q) || f.cuil.includes(q.replace(/\D/g, '') || '§') || f.empresa.toLowerCase().includes(q));
+  /*
+    EL BUSCADOR: por nombre (cada palabra, en cualquier orden y sin acentos: «ramirez lucas»), por CUIL
+    (con o sin guiones, también un pedazo) o por empleadora.
+  */
+  const grupos = useMemo(() => {
+    const q = normalizar(buscar.trim());
+    const palabras = q.split(/\s+/).filter(Boolean);
+    const digitos = q.replace(/\D/g, '');
+    const intentos = filasDelHistorial(corridas || []).filter((f) => todo || (!f.enSeco && f.resultado !== 'pendiente' && f.resultado !== 'seco'));
+    return agruparPorPersona(intentos).filter(({ principal: f }) => {
+      if (!q) return true;
+      const nombre = normalizar(f.nombre);
+      if (palabras.every((p) => nombre.includes(p))) return true;
+      if (digitos.length >= 3 && digitos.length === q.replace(/[\s-]/g, '').length && f.cuil.includes(digitos)) return true;
+      return normalizar(f.empresa).includes(q);
+    });
   }, [corridas, buscar, todo]);
+  // El CSV sigue llevando cada intento, no sólo el que se muestra.
+  const filas = useMemo(() => grupos.flatMap((g) => g.intentos), [grupos]);
+  // Qué intento se ve en el detalle de la fila abierta (por defecto, el que muestra la fila).
+  const [intentoSel, setIntentoSel] = useState<string | null>(null);
 
   const bajar = () => {
     const celda = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -274,20 +321,8 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Registro de Altas Masivas en ARCA" size="xl" zIndex={80}>
+    <Modal isOpen={isOpen} onClose={onClose} title="Registro de Altas Masivas en ARCA" size="95" zIndex={80}>
       <div className="space-y-3 text-sm text-gray-700 dark:text-gray-200">
-        <div className="flex flex-wrap items-center gap-3">
-          <input value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por nombre, CUIL o empleadora…" className="flex-1 min-w-[220px] px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm" />
-          <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-            <input type="checkbox" checked={todo} onChange={(e) => setTodo(e.target.checked)} />
-            Mostrar también pruebas en seco y lo que no se presentó
-          </label>
-          <button type="button" onClick={bajar} disabled={filas.length === 0} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50">
-            <FontAwesomeIcon icon={faDownload} className="h-3 w-3" />
-            Bajar
-          </button>
-        </div>
-
         {/* ── Descargar altas tempranas ── */}
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -327,6 +362,27 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
           )}
         </div>
 
+        {/* El buscador, pegado a la tabla: es lo que se viene a hacer acá (01/11/2026). */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[260px]">
+            <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+            <input value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar persona por nombre o CUIL…" className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm" />
+          </div>
+          <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+            <input type="checkbox" checked={todo} onChange={(e) => setTodo(e.target.checked)} />
+            Mostrar también pruebas en seco y lo que no se presentó
+          </label>
+          <button type="button" onClick={bajar} disabled={filas.length === 0} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50">
+            <FontAwesomeIcon icon={faDownload} className="h-3 w-3" />
+            Bajar
+          </button>
+        </div>
+        {corridas && grupos.length > 0 && (
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            {grupos.length === 1 ? '1 persona' : `${grupos.length} personas`} · {filas.length === 1 ? '1 intento' : `${filas.length} intentos`}
+          </p>
+        )}
+
         {error && <p className="text-xs text-red-700 dark:text-red-400">{error}</p>}
         {!corridas && !error && (
           <p className="text-xs text-gray-500">
@@ -334,15 +390,16 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
             Leyendo el registro…
           </p>
         )}
-        {corridas && filas.length === 0 && <p className="text-xs text-gray-500 dark:text-gray-400">No hay altas presentadas{buscar ? ' que coincidan con la búsqueda' : ''}.</p>}
+        {corridas && grupos.length === 0 && <p className="text-xs text-gray-500 dark:text-gray-400">No hay altas presentadas{buscar ? ' que coincidan con la búsqueda' : ''}.</p>}
 
-        {filas.length > 0 && (
+        {grupos.length > 0 && (
           <TablaConEncabezadoFijo className="border border-gray-200 dark:border-gray-700 rounded-lg" tabla="w-full text-xs">
             <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-[10px]">
               <tr>
                 <th className="px-3 py-2 text-left">Fecha</th>
                 <th className="px-3 py-2 text-left">Persona</th>
                 <th className="px-3 py-2 text-left">CUIL</th>
+                <th className="px-3 py-2 text-left">Contrato</th>
                 <th className="px-3 py-2 text-left">Empleadora</th>
                 <th className="px-3 py-2 text-left">Resultado</th>
                 <th className="px-3 py-2 text-left">Constancia</th>
@@ -350,22 +407,36 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {filas.map((f) => {
+              {grupos.map((g) => {
+                const f = g.principal;
                 const v = vista(f.resultado);
+                // El intento que se ve en el detalle: el elegido en la lista de intentos, o el de la fila.
+                const det = g.intentos.find((i) => i.clave === intentoSel) || f;
                 return (
-                  <React.Fragment key={f.clave}>
-                    <tr onClick={() => setAbierta(abierta === f.clave ? null : f.clave)} title="Ver el registro que se mandó a ARCA" className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                  <React.Fragment key={g.clave}>
+                    <tr
+                      onClick={() => {
+                        setAbierta(abierta === g.clave ? null : g.clave);
+                        setIntentoSel(null);
+                      }} title="Ver el registro que se mandó a ARCA" className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/60">
                       <td className="px-3 py-1.5 whitespace-nowrap text-gray-600 dark:text-gray-400">{fmtFecha(f.fecha)}</td>
                       <td className="px-3 py-1.5 font-semibold text-gray-900 dark:text-gray-100">
                         {f.nombre}
-                        {/* El contrato al que corresponde el alta: con dos altas de la misma persona y empleadora, es lo que las distingue. */}
-                        {f.contrato && (
-                          <span className="block font-normal text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                            {fechaCortaIso(f.contrato.alta)} → {f.contrato.baja ? fechaCortaIso(f.contrato.baja) : 'indeterminado'}
-                          </span>
+                      </td>
+                      <td className="px-3 py-1.5 font-mono whitespace-nowrap">{fmtCuit(f.cuil)}</td>
+                      {/* El contrato al que corresponde el alta, en su columna (01/11/2026): con dos altas de la misma persona y empleadora, es lo que las distingue. */}
+                      <td className="px-3 py-1.5 whitespace-nowrap text-gray-600 dark:text-gray-400">
+                        {f.contrato ? (
+                          <>
+                            <span className="text-gray-400">Alta:</span> {fechaCortaIso(f.contrato.alta)}
+                            <span className="block">
+                              <span className="text-gray-400">Baja:</span> {f.contrato.baja ? fechaCortaIso(f.contrato.baja) : 'indeterminado'}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-gray-300 dark:text-gray-600">—</span>
                         )}
                       </td>
-                      <td className="px-3 py-1.5 font-mono">{fmtCuit(f.cuil)}</td>
                       <td className="px-3 py-1.5 text-gray-600 dark:text-gray-400">{f.empresa}</td>
                       <td className="px-3 py-1.5">
                         <FontAwesomeIcon icon={v.icon} className={`h-3 w-3 mr-1.5 ${v.clase}`} />
@@ -375,6 +446,11 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
                         {f.cat ? ` · C.A.T. ${f.cat}` : ''}
                         {f.porConsulta ? ' · por consulta' : ''}
                         {f.motivo && <span className="block text-[11px] text-red-700 dark:text-red-400">{f.motivo}</span>}
+                        {g.intentos.length > 1 && (
+                          <span className="block mt-0.5 text-[10px] text-gray-500 dark:text-gray-400" title="Click en la fila para ver todos los intentos">
+                            {g.intentos.length} intentos · ver todos
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-1.5">
                         {f.constancia ? (
@@ -400,14 +476,38 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
                       </td>
                       <td className="px-3 py-1.5 text-gray-600 dark:text-gray-400">{f.usuario || '—'}</td>
                     </tr>
-                    {abierta === f.clave && (
+                    {abierta === g.clave && (
                       <tr>
-                        <td colSpan={7} className="px-3 py-2 bg-gray-50 dark:bg-gray-900/40">
-                          {f.registro ? (
+                        <td colSpan={8} className="px-3 py-2 bg-gray-50 dark:bg-gray-900/40">
+                          {g.intentos.length > 1 && (
+                            <div className="mb-3">
+                              <p className="font-bold uppercase tracking-wider text-[10px] text-gray-500 dark:text-gray-400 mb-1">Intentos · click para ver el detalle de cada uno</p>
+                              <ul className="divide-y divide-gray-100 dark:divide-gray-800 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                                {g.intentos.map((i) => {
+                                  const vi = vista(i.resultado);
+                                  return (
+                                    <li key={i.clave}>
+                                      <button type="button" onClick={() => setIntentoSel(i.clave)} className={`w-full text-left px-2 py-1 flex flex-wrap items-baseline gap-x-2 hover:bg-gray-50 dark:hover:bg-gray-800 ${i.clave === det.clave ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                                        <span className="whitespace-nowrap text-gray-600 dark:text-gray-400">{fmtFecha(i.fecha)}</span>
+                                        <span className="whitespace-nowrap">
+                                          <FontAwesomeIcon icon={vi.icon} className={`h-3 w-3 mr-1 ${vi.clase}`} />
+                                          {vi.texto}
+                                          {i.tanda ? ` · tanda ${i.tanda}` : ''}
+                                        </span>
+                                        {i.motivo && <span className="text-red-700 dark:text-red-400">{i.motivo}</span>}
+                                        <span className="ml-auto whitespace-nowrap text-gray-500 dark:text-gray-400">{i.usuario || '—'}</span>
+                                      </button>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </div>
+                          )}
+                          {det.registro ? (
                             <>
-                              <pre className="font-mono text-[11px] p-2 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-pre">{f.registro}</pre>
+                              <pre className="font-mono text-[11px] p-2 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-pre">{det.registro}</pre>
                               <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                                {detalleDeLoPresentado(f.registro).map((c) => (
+                                {detalleDeLoPresentado(det.registro).map((c) => (
                                   <p key={c.posiciones} className="flex justify-between gap-2 py-0.5 border-b border-gray-100 dark:border-gray-800">
                                     <span className="text-gray-600 dark:text-gray-400">{c.nombre}</span>
                                     <span className="font-mono text-gray-900 dark:text-gray-100 whitespace-pre">
@@ -421,7 +521,7 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
                           ) : (
                             <p className="text-gray-500 dark:text-gray-400">Esta corrida es anterior a que se guardara el registro enviado: queda el resultado, no el detalle.</p>
                           )}
-                          <RespuestaDeArca f={f} />
+                          <RespuestaDeArca key={det.clave} f={det} />
                         </td>
                       </tr>
                     )}
@@ -431,7 +531,7 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
             </tbody>
           </TablaConEncabezadoFijo>
         )}
-        <p className="text-[11px] text-gray-500 dark:text-gray-400">Últimas 200 corridas. Click en una fila para ver el registro que se le mandó a ARCA, campo por campo.</p>
+        <p className="text-[11px] text-gray-500 dark:text-gray-400">Últimas 200 corridas, una fila por persona y contrato. Click en una fila para ver sus intentos y el registro que se le mandó a ARCA, campo por campo.</p>
       </div>
     </Modal>
   );
