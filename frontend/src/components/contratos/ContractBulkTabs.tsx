@@ -891,8 +891,8 @@ const CeldaColaborador: React.FC<{ r: ContractOverviewRow }> = ({ r }) => (
         <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>
       </div>
     )}
-    <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
-      {r.userName}
+    <p className="text-sm font-semibold whitespace-nowrap flex items-center gap-1.5 min-w-0 text-gray-900 dark:text-white">
+      <span className="truncate" title={r.userName}>{r.userName}</span>
       <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} rotuloEnTooltip />
       {r.solicitudComentarios && (
         <button
@@ -1680,9 +1680,14 @@ export const ContractBulkAfipTab: React.FC<{
    * («Completo», «12/13»), en Sin CUIT es un botón que dice «Enviar a Generar Documentos».
    */
   const anchoColFija = filterTipo === 'sin_cuit' ? 'w-60 min-w-[15rem] max-w-[15rem]' : 'w-44 min-w-[11rem] max-w-[11rem]';
-  /** 3rem del check + el ancho de arriba: donde arranca «Usuario», la última fija. */
-  const izquierdaColUsuario = filterTipo === 'sin_cuit' ? 'left-[18rem]' : 'left-[14rem]';
-  /** El borde marcado y la sombra van en la ÚLTIMA fija, que ahora es «Usuario». */
+  /**
+   * «COLABORADOR» VA SEGUNDA, ANTES QUE «DATOS ARCA» (01/11/2026): primero de quién es la fila. Ahora es
+   * la del medio, así que su ancho es el que se fija (los nombres largos se cortan con «…» y el nombre
+   * entero queda en el hover), y la de «Datos ARCA» / «Acciones» arranca en 3rem del check + 20rem.
+   */
+  const anchoColColaborador = 'w-80 min-w-[20rem] max-w-[20rem]';
+  const izquierdaColDatos = 'left-[23rem]';
+  /** El borde marcado y la sombra van en la ÚLTIMA fija, que ahora es «Datos ARCA» / «Acciones». */
   const bordeFinDeFijas = 'border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]';
 
   /**
@@ -2352,8 +2357,14 @@ export const ContractBulkAfipTab: React.FC<{
                   *  - en Constancia de CUIT y Sin CUIT se mantiene «Acciones», porque ahí sí
                   *    lleva la única forma de hacer el trámite de esa fila.
                   */}
+                {/* «COLABORADOR», FIJA Y PRIMERA DESPUÉS DEL CHECK: de quién es la fila (ver `anchoColColaborador`). */}
+                <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColColaborador}`}>
+                  <BotonOrden columna="usuario" {...ordenProps}>
+                    Colaborador
+                  </BotonOrden>
+                </th>
                 {filterTipo === 'alta_temprana_afip' ? (
-                  <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColFija}`}>
+                  <th className={`sticky ${izquierdaColDatos} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 ${anchoColFija} ${bordeFinDeFijas}`}>
                     <span className="inline-flex items-center gap-1.5">
                       <BotonOrden columna="datosArca" {...ordenProps} title="Ordenar por lo que falta para el TXT">
                         Datos ARCA
@@ -2364,19 +2375,23 @@ export const ContractBulkAfipTab: React.FC<{
                     </span>
                   </th>
                 ) : (
-                  <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColFija}`}>Acciones</th>
+                  <th className={`sticky ${izquierdaColDatos} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 ${anchoColFija} ${bordeFinDeFijas}`}>Acciones</th>
                 )}
                 {/*
-                  «USUARIO», PEGADA A LA ANTERIOR Y TAMBIÉN FIJA.
+                  «Último Contrato», y no «Alta / Baja».
 
-                  Es de quién es la fila: con diecinueve columnas, al llegar a Convenio o a Estado
-                  Impositivo el nombre ya había quedado fuera de pantalla y había que volver al
-                  principio para saber a quién se le estaba tocando el contrato. Ver `anchoColFija`
-                  para por qué el ancho de la de al lado está fijado a mano.
+                  Una persona puede tener varios contratos en el proyecto, así que un par de fechas
+                  sueltas no decía de CUÁL eran. Estas son las del último, que es el que manda para
+                  el alta. El detalle no se pierde: la celda sigue rotulando sus dos líneas con
+                  «Alta:» y «Baja:», y arriba lleva el badge de vigencia. Es la primera después de las
+                  fijas (01/11/2026): en Alta temprana es la solicitud, lo primero que se mira.
                 */}
-                <th className={`sticky ${izquierdaColUsuario} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 ${bordeFinDeFijas}`}>
-                  <BotonOrden columna="usuario" {...ordenProps}>
-                    Colaborador
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
+                  {/* EN ALTA TEMPRANA ES LA SOLICITUD APROBADA (01/11/2026): todavía no se presentó en ARCA, así
+                      que «Último contrato» confundía —se leía como uno anterior y ya vigente—. Son las fechas
+                      que se aprobaron y que van a ir al alta. En las otras pestañas sigue «Último contrato». */}
+                  <BotonOrden columna="ultimoContrato" {...ordenProps} title={hayEncuadre ? "Ordenar por la fecha de alta de la solicitud aprobada" : "Ordenar por la fecha de alta del último contrato"}>
+                    {hayEncuadre ? "Solicitud" : "Último Contrato"}
                   </BotonOrden>
                 </th>
                 {/* «Fecha de creación»: cuándo se cargó el contrato. Es el orden con el que abre la tabla. */}
@@ -2392,30 +2407,6 @@ export const ContractBulkAfipTab: React.FC<{
                     para «Sin CUIT», donde el contenido es otro. */}
                 {filterTipo === 'sin_cuit' && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Validación</th>}
                 {filterTipo === 'sin_cuit' && <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Documentación</th>}
-                {/*
-                  «Último Contrato», y no «Alta / Baja».
-
-                  Una persona puede tener varios contratos en el proyecto, así que un par de fechas
-                  sueltas no decía de CUÁL eran. Estas son las del último, que es el que manda para
-                  el alta. El detalle no se pierde: la celda sigue rotulando sus dos líneas con
-                  «Alta:» y «Baja:», y arriba lleva el badge de vigencia.
-                */}
-                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                  {/* EN ALTA TEMPRANA ES LA SOLICITUD APROBADA (01/11/2026): todavía no se presentó en ARCA, así
-                      que «Último contrato» confundía —se leía como uno anterior y ya vigente—. Son las fechas
-                      que se aprobaron y que van a ir al alta. En las otras pestañas sigue «Último contrato». */}
-                  <BotonOrden columna="ultimoContrato" {...ordenProps} title={hayEncuadre ? "Ordenar por la fecha de alta de la solicitud aprobada" : "Ordenar por la fecha de alta del último contrato"}>
-                    {hayEncuadre ? (
-                      <span className="text-left">
-                        Fechas
-                        <br />
-                        Solicitud
-                      </span>
-                    ) : (
-                      "Último Contrato"
-                    )}
-                  </BotonOrden>
-                </th>
                 {layoutConstancia && (
                   <>
                     {filterTipo !== 'sin_cuit' && (
@@ -2549,7 +2540,11 @@ export const ContractBulkAfipTab: React.FC<{
                   <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                     <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={tituloCheck(r)} className={`rounded border-gray-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${omitidaEnValidacion(r) ? 'text-amber-500 focus:ring-amber-500' : 'text-emerald-600 focus:ring-emerald-500'}`} />
                   </td>
-                  <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${anchoColFija} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
+                  {/* «Colaborador», fija y primera después del check (ver `anchoColColaborador`). */}
+                  <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${anchoColColaborador} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
+                    <CeldaColaborador r={r} />
+                  </td>
+                  <td className={`sticky ${izquierdaColDatos} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${anchoColFija} ${bordeFinDeFijas} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                     {filterTipo === 'alta_temprana_afip' ? (
                       <div className="flex flex-col items-start gap-1.5">
                         <BadgeArca result={result} onClick={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })} />
@@ -2564,32 +2559,18 @@ export const ContractBulkAfipTab: React.FC<{
                       </div>
                     )}
                   </td>
-                  {/* «Usuario», la otra columna fija: de quién es la fila. Ver `anchoColFija`. */}
-                  <td className={`sticky ${izquierdaColUsuario} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${bordeFinDeFijas} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
-                    <CeldaColaborador r={r} />
-                  </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                    <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>} />
-                  </td>
-                  {filterTipo === 'sin_cuit' && (
-                    <td className="px-4 py-3">
-                      <CeldaValidacionSinCuit row={r} onAbrir={() => setValidacionRow(r)} onCambio={(v) => aplicarValidacionSinCuit(r, v)} />
-                    </td>
-                  )}
-                  {filterTipo === 'sin_cuit' && (
-                    <td className="px-4 py-3">
-                      <CeldaDocumentacionSinCuit row={r} onAbrir={() => setValidacionRow(r)} onCambio={(v) => aplicarValidacionSinCuit(r, v)} />
-                    </td>
-                  )}
                   <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
                     {(() => {
                       const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
                       return (
                         <div className="flex flex-col gap-1">
                           {/* En Alta temprana todavía no se presentó: no es un contrato vigente o vencido sino la
-                              solicitud aprobada, con el tag azul de Solicitudes (01/11/2026). Sin renovar al lado. */}
+                              solicitud aprobada, con el tag verde de Solicitudes (01/11/2026). Sin renovar al lado. */}
                           {hayEncuadre ? (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Solicitud aprobada</span>
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                              <FontAwesomeIcon icon={faCheck} className="text-[8px]" />
+                              Solicitud aprobada
+                            </span>
                           ) : (
                             <div className="flex items-center gap-1.5">
                               <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
@@ -2608,6 +2589,19 @@ export const ContractBulkAfipTab: React.FC<{
                       );
                     })()}
                   </td>
+                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                    <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>} />
+                  </td>
+                  {filterTipo === 'sin_cuit' && (
+                    <td className="px-4 py-3">
+                      <CeldaValidacionSinCuit row={r} onAbrir={() => setValidacionRow(r)} onCambio={(v) => aplicarValidacionSinCuit(r, v)} />
+                    </td>
+                  )}
+                  {filterTipo === 'sin_cuit' && (
+                    <td className="px-4 py-3">
+                      <CeldaDocumentacionSinCuit row={r} onAbrir={() => setValidacionRow(r)} onCambio={(v) => aplicarValidacionSinCuit(r, v)} />
+                    </td>
+                  )}
                   {layoutConstancia && (
                     <>
                       {filterTipo !== 'sin_cuit' && (
