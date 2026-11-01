@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { valoracionesDeCategoria } from '@compartido/valoracionesDeCategoria';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt, faRotateRight, faPenToSquare, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faCommentDots, faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt, faRotateRight, faPenToSquare, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { BotonOrden, useOrdenTabla } from '../ui/OrdenTabla';
 import { fechaISO } from '../../utils/contratoVigencia';
 import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
@@ -877,6 +877,40 @@ const FIRMA_IZQ_FECHA = 'left-[13rem]';
 const FIRMA_ANCHO_FECHA = 'w-32 min-w-[8rem] max-w-[8rem]';
 const FIRMA_IZQ_USUARIO = 'left-[21rem]';
 const FIRMA_FIN_DE_FIJAS = 'border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]';
+
+/**
+ * EL COLABORADOR, IGUAL QUE EN SOLICITUDES (01/11/2026): arriba el badge «Renovación» si el contrato
+ * salió de una solicitud de renovación; el nombre con el check de ARCA (el rótulo en el hover) y, si
+ * quien pidió el alta dejó un comentario, su ícono —el hover lo muestra y el click lo abre—. Sin el
+ * email debajo: ocupaba un renglón por fila y está en la ficha.
+ */
+const CeldaColaborador: React.FC<{ r: ContractOverviewRow }> = ({ r }) => (
+  <div className="min-w-0">
+    {r.esRenovacion && (
+      <div className="mb-1">
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>
+      </div>
+    )}
+    <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
+      {r.userName}
+      <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} rotuloEnTooltip />
+      {r.solicitudComentarios && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            void sweetAlert.mensaje(`Comentario de la solicitud · ${r.userName}`, r.solicitudComentarios || '');
+          }}
+          title={r.solicitudComentarios}
+          aria-label="Ver el comentario de la solicitud"
+          className="shrink-0 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300"
+        >
+          <FontAwesomeIcon icon={faCommentDots} className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </p>
+  </div>
+);
 
 const FlechaEncuadre = () => <span className="text-blue-500/70 dark:text-blue-400/70 font-normal ml-1">→</span>;
 
@@ -2532,11 +2566,7 @@ export const ContractBulkAfipTab: React.FC<{
                   </td>
                   {/* «Usuario», la otra columna fija: de quién es la fila. Ver `anchoColFija`. */}
                   <td className={`sticky ${izquierdaColUsuario} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${bordeFinDeFijas} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
-                    <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
-                      {r.userName}
-                      <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} rotuloEnTooltip />
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
+                    <CeldaColaborador r={r} />
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                     <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>} />
@@ -4221,11 +4251,7 @@ export const ContractBulkFirmaTab: React.FC<{
                       <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>} />
                     </td>
                     <td className={`sticky ${FIRMA_IZQ_USUARIO} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${FIRMA_FIN_DE_FIJAS} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
-                      <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
-                        {r.userName}
-                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} rotuloEnTooltip />
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
+                      <CeldaColaborador r={r} />
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
                       {(() => {
@@ -4456,11 +4482,7 @@ export const ContractBulkContratadosTab: React.FC<{
                       <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato sin fecha de carga">—</span>} />
                     </td>
                     <td className="px-4 py-3">
-                      <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
-                        {r.userName}
-                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} rotuloEnTooltip />
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
+                      <CeldaColaborador r={r} />
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                       <div className="flex flex-col gap-1">

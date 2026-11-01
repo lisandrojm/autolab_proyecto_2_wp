@@ -95,6 +95,11 @@ export const sweetAlert = {
     });
   },
 
+  /** Un texto para leer con calma: queda abierto hasta que se cierra (sin timer). */
+  mensaje: (title: string, text: string) => {
+    return Swal.fire({ title, text, confirmButtonText: "Cerrar" });
+  },
+
   info: (title: string, text: string, timer = 1800) => {
     return Swal.fire({
       icon: "info",

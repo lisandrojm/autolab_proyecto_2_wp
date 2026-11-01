@@ -46,6 +46,10 @@ export interface ContractOverviewRow {
     /** El nombre es el que ARCA tiene registrado para el CUIT: se tomó del Padrón al validar. */
     userNombreValidadoArca?: boolean;
     userEmail: string;
+    /** El comentario de quien pidió el alta, de la solicitud que originó el contrato ("" si no hay). */
+    solicitudComentarios?: string;
+    /** La solicitud que lo originó era una renovación. */
+    esRenovacion?: boolean;
     userActivo: boolean;
     /** id externo (FRAME) del usuario — para resolver a quién reemplaza otro contrato de la misma página. */
     userExternalId: number | null;
