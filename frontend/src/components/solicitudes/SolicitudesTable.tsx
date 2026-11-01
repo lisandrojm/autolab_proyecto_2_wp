@@ -349,7 +349,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
       {/* El orden de las columnas lo fijó el usuario el 01/11/2026: Último contrato, Fechas Solicitud, Horario, Estado, Solicitó, Roles,
           Tipo de contrato, Tipo de alta, Cliente, Proyecto (con el centro de costo en un badge al lado) y Fecha de
           creación. «Obra social» salió de Solicitudes el mismo día (sigue como opción del componente). */}
-      <th className="px-4 py-3 font-semibold whitespace-nowrap" title="El último contrato de la persona ANTERIOR a lo pedido (alta antes del inicio de la solicitud), en cualquier proyecto. Avisa si se superpone con las fechas pedidas.">Último contrato</th>
+      <th className="px-4 py-3 font-semibold" title="El último contrato de la persona ANTERIOR a lo pedido (alta antes del inicio de la solicitud), en cualquier proyecto. Avisa si se superpone con las fechas pedidas.">Último<br />contrato</th>
       <th className="px-4 py-3 font-semibold" title="El período que se pidió en la solicitud">Fechas Solicitud</th>
       <th className="px-4 py-3 font-semibold">Horario</th>
       <th className="px-4 py-3 font-semibold text-left">Estado</th>
@@ -477,7 +477,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                           {/* El período pedido (columna «Fechas») se pisa con este contrato. */}
                           {seSuperpone(s.startDate, s.dueDate, s.ultimoContrato.alta, s.ultimoContrato.baja) && (
                             <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400" title="Las fechas pedidas se superponen con este contrato">
-                              <FontAwesomeIcon icon={faTriangleExclamation} /> Se superpone con lo pedido
+                              <FontAwesomeIcon icon={faTriangleExclamation} /> Superpone con lo Solicitado
                             </span>
                           )}
                         </div>
