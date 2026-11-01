@@ -2440,8 +2440,11 @@ export const ContractBulkAfipTab: React.FC<{
                   «Alta:» y «Baja:», y arriba lleva el badge de vigencia.
                 */}
                 <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                  <BotonOrden columna="ultimoContrato" {...ordenProps} title="Ordenar por la fecha de alta del último contrato">
-                    Último Contrato
+                  {/* EN ALTA TEMPRANA ES LA SOLICITUD APROBADA (01/11/2026): todavía no se presentó en ARCA, así
+                      que «Último contrato» confundía —se leía como uno anterior y ya vigente—. Son las fechas
+                      que se aprobaron y que van a ir al alta. En las otras pestañas sigue «Último contrato». */}
+                  <BotonOrden columna="ultimoContrato" {...ordenProps} title={hayEncuadre ? "Ordenar por la fecha de alta de la solicitud aprobada" : "Ordenar por la fecha de alta del último contrato"}>
+                    {hayEncuadre ? "Solicitud aprobada" : "Último Contrato"}
                   </BotonOrden>
                 </th>
                 {layoutConstancia && (
