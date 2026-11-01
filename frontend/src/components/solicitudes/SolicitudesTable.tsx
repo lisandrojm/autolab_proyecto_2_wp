@@ -582,9 +582,9 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 <td className={`px-4 py-3 text-right ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
                   {/* Una solicitud rechazada o cancelada no se aprueba de una: primero se reabre,
                       así queda explícito que se está deshaciendo la decisión.
-                      APROBAR ENCIMA DE RECHAZAR (con aire entre los dos) y el tacho al lado, centrado en alto (01/11/2026): la columna fija ocupa
+                      APROBAR ENCIMA DE RECHAZAR (con aire entre los dos) y el tacho al lado, centrado en alto; todo centrado en el ancho, así editar + tacho (sin Aprobar/Rechazar) no quedan tirados a la derecha (01/11/2026): la columna fija ocupa
                       menos ancho y deja ver más de la tabla. */}
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center justify-center gap-2">
                     {s.estado === "pendiente" ? (
                       <div className="flex flex-col items-stretch gap-2">
                         {/*
