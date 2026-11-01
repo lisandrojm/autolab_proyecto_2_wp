@@ -478,7 +478,7 @@ export const VacationOverlapRules: React.FC = () => {
               <th className="px-6 py-3 font-medium text-left">Horario Contrato</th>
               <th className="px-6 py-3 font-medium">Máx. Simultáneos</th>
               <th className="px-6 py-3 font-medium">Estado</th>
-              <th className="col-acciones px-6 py-3 font-medium text-left">Acciones</th>
+              <th className="col-acciones px-6 py-3 font-medium text-left"><span className="sr-only">Acciones</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">

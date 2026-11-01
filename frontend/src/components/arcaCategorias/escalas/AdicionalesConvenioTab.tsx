@@ -211,7 +211,7 @@ export const AdicionalesConvenioTab: React.FC<Props> = ({ convenio, fecha, adici
             <Th className="text-left">Remunerativo</Th>
             <Th className="text-left">Valor al {formatearFechaCalendario(fecha)}</Th>
             <Th className="text-left hidden lg:table-cell">Vigencia</Th>
-            <Th className="col-acciones text-left">Acciones</Th>
+            <Th className="col-acciones text-left"><span className="sr-only">Acciones</span></Th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -407,7 +407,7 @@ export const AdicionalesConvenioTab: React.FC<Props> = ({ convenio, fecha, adici
                 <Th className="text-left">Hasta</Th>
                 <Th className="text-left">Importe</Th>
                 <Th className="text-left">Origen</Th>
-                {canManage && <Th className="col-acciones text-left">Acciones</Th>}
+                {canManage && <Th className="col-acciones text-left"><span className="sr-only">Acciones</span></Th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">

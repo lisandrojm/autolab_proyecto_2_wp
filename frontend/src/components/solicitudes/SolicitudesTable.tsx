@@ -366,7 +366,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
       )}
       <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">Fecha de creación</th>
       {/* Las acciones quedan FIJAS a la derecha (27/10/2026): con la tabla ancha, «Editar para Aprobar» y «Rechazar» quedaban fuera de la vista. */}
-      <th className="col-acciones px-4 py-3 font-semibold text-left bg-gray-50 dark:bg-[#18202f]">Acciones</th>
+      <th className="col-acciones px-4 py-3 font-semibold text-left bg-gray-50 dark:bg-[#18202f]"><span className="sr-only">Acciones</span></th>
     </tr>
   );
 
@@ -557,23 +557,6 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                               {p.clienteNombre || <span className="text-gray-400">-</span>}
                             </span>
                           ))}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {s.proyectos && s.proyectos.length > 0 ? (
-                        <div className="flex flex-col items-start gap-1">
-                          {s.proyectos.map((p) =>
-                            p.centroCosto ? (
-                              <span key={p._id} className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-bold leading-4 whitespace-nowrap bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50">
-                                {p.centroCosto}
-                              </span>
-                            ) : (
-                              <span key={p._id} className="text-xs text-gray-400">-</span>
-                            ),
-                          )}
                         </div>
                       ) : (
                         <span className="text-xs text-gray-400">-</span>

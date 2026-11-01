@@ -532,7 +532,7 @@ export const ContractStatesTab: React.FC = () => {
                     <th className="px-4 py-3 font-semibold">Impositivo</th>
                     <th className="px-4 py-3 font-semibold">Badge Secundario</th>
                     <th className="px-4 py-3 font-semibold">Tipos de contrato</th>
-                    <th className="col-acciones px-4 py-3 font-semibold text-left">Acciones</th>
+                    <th className="col-acciones px-4 py-3 font-semibold text-left"><span className="sr-only">Acciones</span></th>
                   </tr>
                 </thead>
                 <SortableContext items={mostrar.map((e) => e._id)} strategy={verticalListSortingStrategy}>

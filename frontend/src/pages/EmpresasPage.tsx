@@ -509,7 +509,7 @@ export const EmpresasPage: React.FC = () => {
               <th className="px-4 py-3">Obras Sociales</th>
               <th className="px-4 py-3">Sucursales ARCA</th>
               <th className="px-4 py-3">Sedes</th>
-              <th className="col-acciones px-4 py-3 text-left">Acciones</th>
+              <th className="col-acciones px-4 py-3 text-left"><span className="sr-only">Acciones</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">

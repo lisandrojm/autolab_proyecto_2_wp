@@ -342,7 +342,7 @@ export const ShiftsPage: React.FC = () => {
 
                     <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Horario</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Días</th>
-                    <th className="col-acciones text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th>
+                    <th className="col-acciones text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"><span className="sr-only">Acciones</span></th>
                   </tr>
                 </thead>
                 <SortableContext items={shifts.map((s) => s._id)} strategy={verticalListSortingStrategy}>

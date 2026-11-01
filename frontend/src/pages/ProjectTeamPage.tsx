@@ -3840,7 +3840,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   <th className="px-4 py-3">Proyecto/s</th>
                   <th className="px-4 py-3">Turnos asociados</th>
                   <th className="px-4 py-3">Contrato</th>
-                  <th className="col-acciones px-4 py-3 text-left">Acciones</th>
+                  <th className="col-acciones px-4 py-3 text-left"><span className="sr-only">Acciones</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-xs">
@@ -6056,7 +6056,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                             <th className="px-4 py-3 font-semibold"><BotonOrden columna="horario" {...ordenEquipoProps}>Horario</BotonOrden></th>
                             <th className="px-4 py-3 font-semibold text-left whitespace-nowrap">Horas / día</th>
                             {/* «Acciones» fija a la derecha, con su borde: los botones siempre a mano aunque la tabla esté corrida. */}
-                            <th className="col-acciones px-4 py-3 font-semibold text-left bg-gray-50 dark:bg-[#18202f]">Acciones</th>
+                            <th className="col-acciones px-4 py-3 font-semibold text-left bg-gray-50 dark:bg-[#18202f]"><span className="sr-only">Acciones</span></th>
                           </tr>
                         </thead>
                         {/* Sin `divide-y`: en el modelo separado los bordes de `<tr>` no se

@@ -525,7 +525,7 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
                     </BotonOrden>
                   </th>
                 )}
-                <th className="col-acciones px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-left bg-gray-50 dark:bg-gray-900">Acciones</th>
+                <th className="col-acciones px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-left bg-gray-50 dark:bg-gray-900"><span className="sr-only">Acciones</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">

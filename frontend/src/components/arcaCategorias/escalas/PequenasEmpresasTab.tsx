@@ -157,7 +157,7 @@ export const PequenasEmpresasTab: React.FC<Props> = ({ convenio, fecha, filas, c
                 <Th className="text-left">Hora extra 50 %</Th>
                 <Th className="text-left">Hora extra 100 %</Th>
                 <Th className="text-left hidden lg:table-cell">Vigencia</Th>
-                {canManage && <Th className="col-acciones text-left">Acciones</Th>}
+                {canManage && <Th className="col-acciones text-left"><span className="sr-only">Acciones</span></Th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">

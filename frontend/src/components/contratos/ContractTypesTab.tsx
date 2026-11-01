@@ -1182,7 +1182,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
                 <th className="px-4 py-3 font-semibold">Plantilla Contrato</th>
                 <th className="px-4 py-3 font-semibold">Plantilla Release</th>
                 <th className="px-4 py-3 font-semibold">Estados</th>
-                <th className="col-acciones px-4 py-3 font-semibold text-left">Acciones</th>
+                <th className="col-acciones px-4 py-3 font-semibold text-left"><span className="sr-only">Acciones</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
