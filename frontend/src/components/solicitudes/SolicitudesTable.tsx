@@ -346,10 +346,11 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
         </th>
       )}
       <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)]`}>Nombre</th>
-      {/* El orden de las columnas lo fijó el usuario el 01/11/2026: Fechas, Horario, Estado, Solicitó, Roles,
-          Tipo de contrato, Tipo de alta, Cliente, Centro de costo, Proyecto, Último contrato y Fecha de
+      {/* El orden de las columnas lo fijó el usuario el 01/11/2026: Último contrato, Fechas Solicitud, Horario, Estado, Solicitó, Roles,
+          Tipo de contrato, Tipo de alta, Cliente, Proyecto (con el centro de costo en un badge al lado) y Fecha de
           creación. «Obra social» salió de Solicitudes el mismo día (sigue como opción del componente). */}
-      <th className="px-4 py-3 font-semibold">Fechas</th>
+      <th className="px-4 py-3 font-semibold whitespace-nowrap" title="El último contrato de la persona ANTERIOR a lo pedido (alta antes del inicio de la solicitud), en cualquier proyecto. Avisa si se superpone con las fechas pedidas.">Último contrato</th>
+      <th className="px-4 py-3 font-semibold" title="El período que se pidió en la solicitud">Fechas Solicitud</th>
       <th className="px-4 py-3 font-semibold">Horario</th>
       <th className="px-4 py-3 font-semibold text-left">Estado</th>
       <th className="px-4 py-3 font-semibold">Solicitó</th>
@@ -360,11 +361,9 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
       {mostrarProyectos && (
         <>
           <th className="px-4 py-3 font-semibold">Cliente</th>
-          <th className="px-4 py-3 font-semibold whitespace-nowrap">Centro de costo</th>
           <th className="px-4 py-3 font-semibold">Proyecto</th>
         </>
       )}
-      <th className="px-4 py-3 font-semibold whitespace-nowrap" title="El último contrato de la persona ANTERIOR a lo pedido (alta antes del inicio de la solicitud), en cualquier proyecto. Avisa si se superpone con las fechas pedidas.">Último contrato</th>
       <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">Fecha de creación</th>
       {/* Las acciones quedan FIJAS a la derecha (27/10/2026): con la tabla ancha, «Editar para Aprobar» y «Rechazar» quedaban fuera de la vista. */}
       <th className="col-acciones px-4 py-3 font-semibold text-left bg-gray-50 dark:bg-[#18202f]">Acciones</th>
@@ -463,6 +462,31 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   </div>
                 </td>
 
+                {/* El último contrato de la PERSONA anterior a lo pedido (en cualquier proyecto); avisa si se pisa con «Fechas». */}
+                <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos anteriores a lo pedido"}>
+                  {s.ultimoContrato ? (
+                    (() => {
+                      const vigente = isContractVigente(s.ultimoContrato.alta, s.ultimoContrato.baja || undefined);
+                      return (
+                        <div className="flex flex-col gap-1">
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
+                          <div className="flex flex-col gap-0.5 text-xs">
+                            <span><span className="text-gray-400">Alta:</span> {formatDate(s.ultimoContrato.alta)}</span>
+                            <span><span className="text-gray-400">Baja:</span> {s.ultimoContrato.baja ? formatDate(s.ultimoContrato.baja) : "—"}</span>
+                          </div>
+                          {/* El período pedido (columna «Fechas») se pisa con este contrato. */}
+                          {seSuperpone(s.startDate, s.dueDate, s.ultimoContrato.alta, s.ultimoContrato.baja) && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400" title="Las fechas pedidas se superponen con este contrato">
+                              <FontAwesomeIcon icon={faTriangleExclamation} /> Se superpone con lo pedido
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <span className="text-gray-300 dark:text-gray-600">—</span>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <div className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                     <span>{formatDiaSolicitud(s.startDate)}</span>
@@ -538,10 +562,6 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                         <span className="text-xs text-gray-400">-</span>
                       )}
                     </td>
-                    {/*
-                      EL CENTRO DE COSTO DE CADA PROYECTO (01/11/2026), con el badge violeta de la ficha del
-                      proyecto. Una línea por proyecto, enfrentada a su cliente y a su nombre.
-                    */}
                     <td className="px-4 py-3">
                       {s.proyectos && s.proyectos.length > 0 ? (
                         <div className="flex flex-col items-start gap-1">
@@ -563,8 +583,10 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                       {s.proyectos && s.proyectos.length > 0 ? (
                         <div className="flex flex-col gap-1">
                           {s.proyectos.map((p) => (
-                            <span key={p._id} className="text-xs font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                            <span key={p._id} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
                               {p.name}
+                              {/* El centro de costo del proyecto, al lado, con el badge violeta de su ficha (01/11/2026). */}
+                              {p.centroCosto && <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold leading-none bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50">{p.centroCosto}</span>}
                             </span>
                           ))}
                         </div>
@@ -575,31 +597,6 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   </>
                 )}
 
-                {/* El último contrato de la PERSONA anterior a lo pedido (en cualquier proyecto); avisa si se pisa con «Fechas». */}
-                <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos anteriores a lo pedido"}>
-                  {s.ultimoContrato ? (
-                    (() => {
-                      const vigente = isContractVigente(s.ultimoContrato.alta, s.ultimoContrato.baja || undefined);
-                      return (
-                        <div className="flex flex-col gap-1">
-                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>{vigente ? "VIGENTE" : "NO VIGENTE"}</span>
-                          <div className="flex flex-col gap-0.5 text-xs">
-                            <span><span className="text-gray-400">Alta:</span> {formatDate(s.ultimoContrato.alta)}</span>
-                            <span><span className="text-gray-400">Baja:</span> {s.ultimoContrato.baja ? formatDate(s.ultimoContrato.baja) : "—"}</span>
-                          </div>
-                          {/* El período pedido (columna «Fechas») se pisa con este contrato. */}
-                          {seSuperpone(s.startDate, s.dueDate, s.ultimoContrato.alta, s.ultimoContrato.baja) && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400" title="Las fechas pedidas se superponen con este contrato">
-                              <FontAwesomeIcon icon={faTriangleExclamation} /> Se superpone con lo pedido
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })()
-                  ) : (
-                    <span className="text-gray-300 dark:text-gray-600">—</span>
-                  )}
-                </td>
 
                 {/*
                   CUÁNDO SE HIZO LA SOLICITUD, en una columna propia (la última, 01/11/2026): día de la

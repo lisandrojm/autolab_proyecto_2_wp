@@ -54,6 +54,7 @@ import { claveEstado } from "../utils/estadoClave.js";
 import { estadoDeRenovacion, procesoTerminadoSegunEstados } from "../utils/estadoDeRenovacion.js";
 import { antiguedadArcaPorCuil } from "../services/arca/relacionesArcaStore.js";
 import { nombreParaSellar } from "../services/arca/nombreArca.js";
+import { etiquetaCentroCostoDe, resolverCentroCostoDeProyectos } from "../services/centroCostoDeProyectos.js";
 const router = Router();
 /* ------------------- Filtros del equipo de un proyecto (client-side → server) -------------------
  * Estos filtros dependen del ÚLTIMO contrato del miembro en el proyecto o de su asignación de
@@ -1707,7 +1708,7 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
           En los dos, las que no tienen fecha Desde van al final, y el empate se rompe por la más nueva.
           Se ordenan los ids con un aggregate (hace falta un campo calculado) y después se traen las filas.
         */
-        const conPopulate = (q) => q.select("firstName lastName email createdAt metadata").populate({ path: "metadata.projectIds", select: "name clientId", model: Project, populate: { path: "clientId", select: "name", model: Client } }).lean();
+        const conPopulate = (q) => q.select("firstName lastName email createdAt metadata").populate({ path: "metadata.projectIds", select: "name clientId metadata.centroCostoId metadata.centroCostoEmpresaTangoId", model: Project, populate: { path: "clientId", select: "name", model: Client } }).lean();
         const traerPagina = async () => {
             if (orden === "recientes")
                 return conPopulate(User.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit));
@@ -1729,6 +1730,8 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
             return ids.map((x) => porId.get(String(x._id))).filter(Boolean);
         };
         const [docs, total] = await Promise.all([traerPagina(), User.countDocuments(filter)]);
+        // El centro de costo de cada proyecto, para su columna (01/11/2026): una consulta para toda la página.
+        await resolverCentroCostoDeProyectos(docs.flatMap((u) => (u.metadata?.projectIds || []).filter((p) => p && typeof p === "object")));
         /*
           LA OBRA SOCIAL DE LAS APROBADAS, para la columna de Solicitudes.
     
@@ -1884,7 +1887,7 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
             const ficha = fichaDe.get(personaId) || m;
             const proyectos = (m.projectIds || [])
                 .filter((p) => p && typeof p === "object")
-                .map((p) => ({ _id: String(p._id), name: p.name || "", clienteId: p.clientId?._id ? String(p.clientId._id) : "", clienteNombre: p.clientId?.name || "" }));
+                .map((p) => ({ _id: String(p._id), name: p.name || "", clienteId: p.clientId?._id ? String(p.clientId._id) : "", clienteNombre: p.clientId?.name || "", centroCosto: etiquetaCentroCostoDe(p) }));
             return {
                 _id: String(u._id),
                 // El alta desde mobile guarda el nombre en `metadata.fullName` y deja firstName/lastName vacíos.

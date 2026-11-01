@@ -17,7 +17,6 @@ import { contratosAPI } from "../api/contratos";
 import { CatalogosAprobacion, contratoDesdeSolicitud } from "../utils/aprobacionMasiva";
 import { afipAPI } from "../api/afip";
 import { Modal } from "../components/ui/Modal";
-import { CeldaObraSocial, EstadoObraSocial, VistaObraSocial } from "../components/contratos/CeldaObraSocial";
 import { FilaConstatacion, PantallaValidarObrasSociales } from "../components/contratos/PantallaValidarObrasSociales";
 import { cuitEsValido } from "../utils/cuit";
 import { sweetAlert } from "../utils/sweetAlert";
@@ -57,40 +56,6 @@ const OPCIONES_ORDEN: OpcionOrden<OrdenSolicitudes>[] = [
 ];
 
 const CLAVE_AYUDA = "solicitudes" as const;
-
-const digitosDe = (v?: string | null) => String(v || "").replace(/\D/g, "");
-
-/**
- * LA VISTA DE LA CELDA, desde lo que el server resolvió para la solicitud. Es el gemelo del adaptador
- * de Contratos (`ObraSocialCell` en ContractBulkTabs): mismas reglas, otra fuente. Sin contrato
- * (pendiente, rechazada), `null`: todavía no hay dónde guardarla.
- */
-const vistaObraSocialDe = (nombre: string, os: ObraSocialDeSolicitud | null | undefined): VistaObraSocial | null => {
-  if (!os) return null;
-  const sugerido = digitosDe(os.rnosSugerido);
-  const propio = digitosDe(os.rnos);
-  const base: EstadoObraSocial = os.estado === "no_figura" ? "validada_default" : os.estado === "afiliada" ? "validada_arca" : "sin_validar";
-  // El error va primero, como en Contratos: una obra social que la empleadora no registró hace que ARCA rechace el alta.
-  const estado: EstadoObraSocial = base !== "sin_validar" && os.registrada === false ? "no_registrada" : base;
-  const codigo = base === "validada_arca" ? propio : base === "validada_default" ? sugerido : "";
-  const cuil = digitosDe(os.cuil);
-  return {
-    estado,
-    codigo,
-    nombre: os.nombre || os.nombreSugerida || "",
-    fecha: os.constatadaEl ? new Date(os.constatadaEl).toLocaleDateString("es-AR") : "",
-    delConvenio: os.convenioCct ? `convenio ${os.convenioCct}` : "convenio",
-    rnosSugerido: sugerido,
-    nombreSugerida: os.nombreSugerida || "",
-    distintaDelConvenio: base === "validada_arca" && propio !== sugerido,
-    // `tieneCategoria` sólo apaga el botón cuando el server dice EXPRESAMENTE que no hay categoría: un
-    // server que todavía no manda el campo (deploy a medias) no puede dejar sin validar lo que sí se puede.
-    puedeValidar: !!os.empresaContratoId && os.tieneCategoria !== false && cuil.length === 11,
-    motivoNoPuede: !os.empresaContratoId ? "Todavía no se puede validar: el contrato no tiene Empresa Contrato. Asignala en Contratos." : os.tieneCategoria === false ? "Todavía no se puede validar: el contrato no tiene categoría (de ella sale el convenio y su obra social). Elegila en Contratos." : "Todavía no se puede validar: la persona no tiene un CUIL válido.",
-    nombrePersona: nombre,
-    quitar: { projectId: os.projectId, userId: os.userId, ref: os.contratoId },
-  };
-};
 
 /** Un grupo de la cola de validación: una empleadora y sus filas, en la forma que pide la pantalla de Contratos. */
 type GrupoOS = { empresaId: string; empleadora: string; empleadoraCuit: string; filas: FilaConstatacion[] };
