@@ -398,7 +398,7 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
             otras solicitudes suyas): la foto la sacó el server al crearla. Arriba, porque cambia qué se
             aprueba. Ver `server/src/services/superposicion.ts`.
           */}
-          {Array.isArray(m.avisosSuperposicion) && m.avisosSuperposicion.length > 0 && <AvisosSuperposicion avisos={m.avisosSuperposicion} titulo="Al pedirla, se superponía con lo que ya tenía" />}
+          {Array.isArray(m.avisosSuperposicion) && m.avisosSuperposicion.length > 0 && <AvisosSuperposicion avisos={m.avisosSuperposicion} titulo="Se superpone con contrato que ya tiene" />}
 
           {/* Por qué se rechazó: lo primero, porque explica todo lo que sigue. */}
           {estado === "rechazada" && m.solicitudMotivoRechazo && (
