@@ -6,6 +6,7 @@ import { projectsAPI, EstadoCorridaAltas, ModoAltasArca } from '../../api/projec
 import { MAX_ALTAS_MASIVAS } from '@compartido/layoutAltaArca';
 import { ETIQUETA_ESTADO, EstadoPersonaTanda, detalleDeLoPresentado, progresoPorTandas, resumenCsv } from './progresoTandas';
 import { sweetAlert } from '../../utils/sweetAlert';
+import { buildAltasMasivasTexto } from './afipTxt85';
 
 /**
  * EL TRÁMITE DE ALTA EN ARCA, EN VIVO: Carga Masiva (archivo) o Altas Masivas (pegado, URGENTE).
@@ -65,6 +66,26 @@ const VISTA_ESTADO: Record<EstadoPersonaTanda, { icon: typeof faCircle; clase: s
   incierta: { icon: faCircleQuestion, clase: 'text-amber-600 dark:text-amber-400' },
   seco: { icon: faFlask, clase: 'text-gray-400' },
 };
+
+/*
+  LAS ALTAS QUE REPITEN PERSONA (01/11/2026). El server rechaza el lote ENTERO si un CUIL aparece dos
+  veces («El lote repite personas»). De cada CUIL repetido queda la de Fecha Alta más temprana y se
+  excluyen las posteriores (a igual fecha, la primera de la lista). Las excluidas no se tocan: siguen en
+  Trámite impositivo para la próxima presentación. Devuelve las posiciones a excluir.
+*/
+export function posteriorasRepetidas(personas: LoteParaPresentar['personas']): Set<number> {
+  const primeraPorCuil = new Map<string, number>();
+  const fecha = (i: number) => personas[i].altaISO || '9999-99-99'; // sin fecha, nunca es «la primera»
+  personas.forEach((p, i) => {
+    const j = primeraPorCuil.get(p.cuil);
+    if (j === undefined || fecha(i) < fecha(j)) primeraPorCuil.set(p.cuil, i);
+  });
+  const fuera = new Set<number>();
+  personas.forEach((p, i) => {
+    if (primeraPorCuil.get(p.cuil) !== i) fuera.add(i);
+  });
+  return fuera;
+}
 
 const fmtCuit = (c: string) => (c && c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}` : c);
 
@@ -156,7 +177,25 @@ function avisarCierreDeCorrida(r: EstadoCorridaAltas) {
   }
 }
 
-export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTerminado }) => {
+export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote: loteRecibido, onTerminado }) => {
+  /*
+    EXCLUIR LAS REPETIDAS: tildado de entrada (con repetidas el server no acepta el lote). `lote` es lo
+    que se presenta de verdad: sin las excluidas y con el texto rearmado sin sus registros.
+  */
+  const [excluirRepetidas, setExcluirRepetidas] = useState(true);
+  useEffect(() => setExcluirRepetidas(true), [loteRecibido]);
+  const repetidas = useMemo(() => (loteRecibido ? posteriorasRepetidas(loteRecibido.personas) : new Set<number>()), [loteRecibido]);
+  const lote = useMemo<LoteParaPresentar | null>(() => {
+    if (!loteRecibido || !excluirRepetidas || repetidas.size === 0) return loteRecibido;
+    const queda = (_: unknown, i: number) => !repetidas.has(i);
+    const items = loteRecibido.items.filter(queda);
+    return { ...loteRecibido, personas: loteRecibido.personas.filter(queda), items, texto: loteRecibido.texto ? buildAltasMasivasTexto(items.map((x) => x.registro)) : undefined };
+  }, [loteRecibido, excluirRepetidas, repetidas]);
+  // Lo que está en el portapapeles tiene que ser lo que se presenta.
+  useEffect(() => {
+    if (!lote?.texto || lote === loteRecibido) return;
+    navigator.clipboard.writeText(lote.texto).catch(() => {});
+  }, [lote, loteRecibido]);
   const [estado, setEstado] = useState<EstadoCorridaAltas | null>(null);
   const [confirmado, setConfirmado] = useState(false);
   const [arrancando, setArrancando] = useState(false);
@@ -433,6 +472,31 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote, onTer
                 </div>
               );
             })()}
+            {loteRecibido && repetidas.size > 0 && (
+              <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input type="checkbox" className="mt-1" checked={excluirRepetidas} onChange={(e) => setExcluirRepetidas(e.target.checked)} />
+                  <span>
+                    <strong>Excluir {repetidas.size} alta(s) de personas repetidas.</strong> ARCA no acepta a la misma persona dos veces en el mismo lote: de cada CUIL queda la de Fecha Alta más temprana y las posteriores se presentan después (siguen en Trámite impositivo).
+                  </span>
+                </label>
+                {excluirRepetidas && (
+                  <details className="mt-1 ml-6 text-xs">
+                    <summary className="cursor-pointer">Ver las excluidas</summary>
+                    <ul className="mt-1 space-y-0.5">
+                      {[...repetidas].map((i) => {
+                        const p = loteRecibido.personas[i];
+                        return (
+                          <li key={i}>
+                            {p.nombre} · {fmtCuit(p.cuil)} · <span className="opacity-70">Alta:</span> {p.alta || '—'}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </details>
+                )}
+              </div>
+            )}
             <ul className="max-h-48 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg">
               {lote.personas.map((p, i) => (
                 <li key={`${p.cuil}-${i}`} className="px-3 py-1.5 flex justify-between gap-3">
