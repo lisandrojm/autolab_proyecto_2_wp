@@ -33,6 +33,7 @@ import { RotuloConInfo } from '../components/proyectos/RotuloConInfo';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { fechaDeCalendario } from '../utils/fechas';
 import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
+import { BadgeCentroCosto } from '../components/ui/BadgeCentroCosto';
 
 const HELP_KEY = 'clientProjects' as const;
 
@@ -777,6 +778,8 @@ export const ClientProjectsPage: React.FC = () => {
                 header={{
                   // Sólo el nombre: la pantalla es Proyectos y la tarjeta ya se lee como uno.
                   title: project.name,
+                  // Y su centro de costo al lado, que es como se lo nombra muchas veces («el 426»).
+                  titleExtra: <BadgeCentroCosto codigo={nombreCentroCosto(project)} className="ml-1" />,
                   subtitle: project.description,
                   badges: [
                     {

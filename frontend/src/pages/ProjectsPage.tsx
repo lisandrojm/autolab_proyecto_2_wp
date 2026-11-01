@@ -38,6 +38,7 @@ import { getHelp, hasHelp } from '../data/help/helpContent';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { fechaDeCalendario } from '../utils/fechas';
 import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
+import { BadgeCentroCosto } from '../components/ui/BadgeCentroCosto';
 
 export const ProjectsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -440,6 +441,8 @@ export const ProjectsPage: React.FC = () => {
                 className="hover:scale-105 hover:shadow-lg transition-all duration-200 cursor-pointer"
                 header={{
                   title: project.name,
+                  // Su centro de costo al lado del nombre, que es como se lo nombra muchas veces («el 426»).
+                  titleExtra: <BadgeCentroCosto codigo={centroCostoTarjeta} className="ml-1" />,
                   subtitle: project.description,
                   icon: faBriefcase,
                   avatar: logoUrl
