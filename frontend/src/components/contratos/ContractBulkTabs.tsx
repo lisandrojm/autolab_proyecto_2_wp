@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCommentDots, faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt, faRotateRight, faPenToSquare, faPlus } from '@fortawesome/free-solid-svg-icons';
-import { BotonOrden, useOrdenTabla } from '../ui/OrdenTabla';
+import { BotonOrden, useOrdenTabla, type Orden } from '../ui/OrdenTabla';
+import { MenuOrdenar, type OpcionOrden } from '../ui/MenuOrdenar';
 import { fechaISO } from '../../utils/contratoVigencia';
 import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
 import { MOBILE_ACTIVITY_LOGS as PERMISO_NOVEDADES_MOBILE } from '../../utils/permisosMobile';
@@ -217,6 +218,25 @@ const TIPO_LABEL: Record<TipoImpositivo, string> = {
  * agrupa acá, donde en vez de "Generar TXT"/"Validar ARCA" se la manda a generar documentos.
  */
 type TabTramite = TipoImpositivo | 'sin_cuit';
+
+/*
+  EL BOTÓN «ORDENAR», COMO EN SOLICITUDES (01/11/2026). No es otro orden: elige el MISMO que los
+  encabezados (`useOrdenTabla`), así que el botón y la flecha de la columna dicen siempre lo mismo.
+  «Fecha Solicitud» es la columna `fechaCarga`; «Fecha Alta», la de las fechas del contrato de cada
+  tabla (`columnaAlta`).
+*/
+type OrdenContratos = 'solicitud_asc' | 'solicitud_desc' | 'alta_asc' | 'alta_desc';
+const OPCIONES_ORDEN_CONTRATOS: OpcionOrden<OrdenContratos>[] = [
+  { valor: 'solicitud_asc', texto: 'Fecha Solicitud de menor a mayor' },
+  { valor: 'solicitud_desc', texto: 'Fecha Solicitud de mayor a menor' },
+  { valor: 'alta_asc', texto: 'Fecha Alta de menor a mayor' },
+  { valor: 'alta_desc', texto: 'Fecha Alta de mayor a menor' },
+];
+const MenuOrdenContratos: React.FC<{ orden: Orden | null; setOrden: (o: Orden) => void; columnaAlta: string; porDefecto: OrdenContratos }> = ({ orden, setOrden, columnaAlta, porDefecto }) => {
+  const aOrden = (v: OrdenContratos): Orden => ({ columna: v.startsWith('solicitud') ? 'fechaCarga' : columnaAlta, direccion: v.endsWith('asc') ? 'asc' : 'desc' });
+  const valor = OPCIONES_ORDEN_CONTRATOS.find((o) => orden && aOrden(o.valor).columna === orden.columna && aOrden(o.valor).direccion === orden.direccion)?.valor ?? null;
+  return <MenuOrdenar valor={valor} opciones={OPCIONES_ORDEN_CONTRATOS} porDefecto={porDefecto} onChange={(v) => setOrden(aOrden(v))} />;
+};
 
 /** Fila de contrato enriquecida con el trámite impositivo de su estado actual. */
 type ImpositivoRow = ContractOverviewRow & { _tipo?: TipoImpositivo; _estadoName: string; /** El estado admite gente sin CUIT: a esa gente el badge le dice "Sin CUIT". */ _aceptaSinCuit?: boolean };
@@ -1475,7 +1495,7 @@ export const ContractBulkAfipTab: React.FC<{
     el orden de «primero lo que hay que resolver»—. Las de selectores leen el mismo valor resuelto
     que dibuja la celda (`resolveAfipValues`).
   */
-  const { ordenados, orden, alternar } = useOrdenTabla(filtered, {
+  const { ordenados, orden, setOrden, alternar } = useOrdenTabla(filtered, {
     datosArca: ({ result }) => (result.completo ? 0 : result.faltantes),
     fechaCarga: ({ row }) => row.fecha_carga || '', // ISO o YYYY-MM-DD: los dos ordenan bien como texto
     usuario: ({ row }) => row.userName,
@@ -1495,8 +1515,8 @@ export const ContractBulkAfipTab: React.FC<{
     proyecto: ({ row }) => row.projectName,
     contrato: ({ row }) => row.nombre_contrato,
     estado: ({ row }) => row._estadoName,
-    // Por defecto, lo último que se cargó arriba: es lo que se viene a buscar a esta pantalla.
-  }, { columna: 'fechaCarga', direccion: 'desc' });
+    // Por defecto, el alta más próxima arriba, como Solicitudes (01/11/2026; antes, lo último cargado).
+  }, { columna: 'ultimoContrato', direccion: 'asc' });
   const ordenProps = { orden, onAlternar: alternar };
 
   // Ojo: esto NO acota `filtered`. Solo dice qué filas se dibujan. Ver `usePaginado`.
@@ -1720,6 +1740,7 @@ export const ContractBulkAfipTab: React.FC<{
             searchTerm={search}
             onSearchChange={setSearch}
             searchPlaceholder="Buscar por usuario, proyecto o contrato..."
+            extraActions={<MenuOrdenContratos orden={orden} setOrden={setOrden} columnaAlta="ultimoContrato" porDefecto="alta_asc" />}
             radioFilters={[
               {
                 label: 'Estado de usuarios',
@@ -3502,7 +3523,7 @@ export const ContractBulkFirmaTab: React.FC<{
 
   // Igual que en la otra pestaña: acota el render, no el conjunto. Ver `usePaginado`.
   // Mismo orden por columna que Trámite impositivo: se ordena todo lo filtrado y después se pagina.
-  const { ordenados: ordenadosFirma, orden, alternar } = useOrdenTabla(filtered, {
+  const { ordenados: ordenadosFirma, orden, setOrden, alternar } = useOrdenTabla(filtered, {
     fechaCarga: (r) => r.fecha_carga || '', // ISO o YYYY-MM-DD: los dos ordenan bien como texto
     altaBaja: (r) => fechaISO(r.fecha_alta_contrato),
     tramite: (r) => (tipoDelRow(r) ? TIPO_LABEL[tipoDelRow(r)!] : ''),
@@ -3512,8 +3533,8 @@ export const ContractBulkFirmaTab: React.FC<{
     proyecto: (r) => r.projectName,
     tipoContrato: (r) => r.nombre_contrato,
     estado: (r) => estadoLabel(r.nombre_estado_empleado || ''),
-    // Igual que en el trámite impositivo: por defecto, lo último que se cargó arriba.
-  }, { columna: 'fechaCarga', direccion: 'desc' });
+    // Igual que en el trámite impositivo: por defecto, el alta más próxima arriba.
+  }, { columna: 'altaBaja', direccion: 'asc' });
   const ordenProps = { orden, onAlternar: alternar };
   const pag = usePaginado(ordenadosFirma);
   /*
@@ -3714,6 +3735,7 @@ export const ContractBulkFirmaTab: React.FC<{
             searchTerm={search}
             onSearchChange={setSearch}
             searchPlaceholder="Buscar por usuario, proyecto o contrato..."
+            extraActions={<MenuOrdenContratos orden={orden} setOrden={setOrden} columnaAlta="altaBaja" porDefecto="alta_asc" />}
             radioFilters={[
               { label: 'Estado de usuarios', value: filterUserStatus, onChange: setFilterUserStatus, options: OPCIONES_ESTADO_USUARIOS },
               { label: 'Contratos', value: filterVigencia, onChange: setFilterVigencia, options: OPCIONES_VIGENCIA },
@@ -4019,7 +4041,7 @@ export const ContractBulkContratadosTab: React.FC<{
   }, [rows, filterClientId]);
   const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(rows), [rows]);
 
-  const { ordenados, orden, alternar } = useOrdenTabla(
+  const { ordenados, orden, setOrden, alternar } = useOrdenTabla(
     filtered,
     {
       fechaCarga: (r) => r.fecha_carga || '',
@@ -4046,6 +4068,7 @@ export const ContractBulkContratadosTab: React.FC<{
             searchTerm={search}
             onSearchChange={setSearch}
             searchPlaceholder="Buscar por colaborador, CUIT, proyecto o contrato..."
+            extraActions={<MenuOrdenContratos orden={orden} setOrden={setOrden} columnaAlta="altaBaja" porDefecto="solicitud_desc" />}
             radioFilters={[{ label: 'Contratos', value: filterVigencia, onChange: setFilterVigencia, options: OPCIONES_VIGENCIA }]}
             selectFilters={[
               { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },

@@ -52,10 +52,10 @@ type OrdenSolicitudes = "antiguas" | "recientes" | "desde" | "desde_desc";
 /* «Fecha Solicitud» es cuándo se cargó la solicitud; «Fecha Alta», la fecha Desde pedida. Abre por
    Fecha Alta de menor a mayor: el alta más próxima arriba (01/11/2026, pedido del usuario). */
 const OPCIONES_ORDEN: OpcionOrden<OrdenSolicitudes>[] = [
-  { valor: "antiguas", texto: "Fecha Solicitud: de menor a mayor" },
-  { valor: "recientes", texto: "Fecha Solicitud: de mayor a menor" },
-  { valor: "desde", texto: "Fecha Alta: de menor a mayor" },
-  { valor: "desde_desc", texto: "Fecha Alta: de mayor a menor" },
+  { valor: "antiguas", texto: "Fecha Solicitud de menor a mayor" },
+  { valor: "recientes", texto: "Fecha Solicitud de mayor a menor" },
+  { valor: "desde", texto: "Fecha Alta de menor a mayor" },
+  { valor: "desde_desc", texto: "Fecha Alta de mayor a menor" },
 ];
 
 const CLAVE_AYUDA = "solicitudes" as const;
@@ -565,7 +565,7 @@ export const SolicitudesPage: React.FC = () => {
           searchTerm={busqueda}
           onSearchChange={setBusqueda}
           searchPlaceholder="Buscar por nombre o email..."
-          extraActions={<MenuOrdenar valor={orden} opciones={OPCIONES_ORDEN} onChange={setOrden} />}
+          extraActions={<MenuOrdenar valor={orden} opciones={OPCIONES_ORDEN} onChange={setOrden} porDefecto="desde" />}
           selectFilters={[
             {
               label: "Cliente",
