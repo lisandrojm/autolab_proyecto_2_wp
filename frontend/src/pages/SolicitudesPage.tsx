@@ -21,7 +21,7 @@ import { FilaConstatacion, PantallaValidarObrasSociales } from "../components/co
 import { cuitEsValido } from "../utils/cuit";
 import { sweetAlert } from "../utils/sweetAlert";
 import { getHelp, hasHelp } from "../data/help/helpContent";
-import { ESTADOS_SOLICITUD, ESTADO_SOLICITUD, SolicitudVista, SolicitudesTable, resultadoEliminarSolicitud, textoEliminarSolicitud, useCatalogosDeSolicitudes } from "../components/solicitudes/SolicitudesTable";
+import { SolicitudVista, SolicitudesTable, resultadoEliminarSolicitud, textoEliminarSolicitud, useCatalogosDeSolicitudes } from "../components/solicitudes/SolicitudesTable";
 import { SolicitudDetalleModal } from "../components/solicitudes/SolicitudDetalleModal";
 import { CalificacionesModal } from "../components/calificaciones/CalificacionesModal";
 import { calificacionesAPI } from "../api/calificaciones";
@@ -48,14 +48,21 @@ import { ProjectTeamPage } from "./ProjectTeamPage";
 const PAGE_SIZE = 25;
 
 /** El botón «Ordenar» de al lado de los filtros. Ordena el server: la tabla está paginada allá. */
-type OrdenSolicitudes = "recientes" | "aprobadas" | "desde";
+type OrdenSolicitudes = "recientes" | "desde";
 const OPCIONES_ORDEN: OpcionOrden<OrdenSolicitudes>[] = [
   { valor: "recientes", texto: "Más recientes primero" },
-  { valor: "aprobadas", texto: "Aprobadas primero" },
   { valor: "desde", texto: "Fecha Desde: de menor a mayor" },
 ];
 
 const CLAVE_AYUDA = "solicitudes" as const;
+
+/*
+  SÓLO LAS PENDIENTES (01/11/2026, pedido del usuario). Aprobar crea el contrato, y desde ahí la
+  persona se sigue en Contratos: el estado elegido al aprobar la pone en Alta temprana de ARCA,
+  Constancia de CUIT o Sin CUIT. Por eso esta pantalla ya no lista aprobadas (ni rechazadas), ni
+  tiene filtro de estado ni el orden «Aprobadas primero».
+*/
+const ESTADO_LISTADO = "pendiente";
 
 /** Un grupo de la cola de validación: una empleadora y sus filas, en la forma que pide la pantalla de Contratos. */
 type GrupoOS = { empresaId: string; empleadora: string; empleadoraCuit: string; filas: FilaConstatacion[] };
@@ -115,7 +122,6 @@ export const SolicitudesPage: React.FC = () => {
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
 
   const [busqueda, setBusqueda] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroCliente, setFiltroCliente] = useState("");
   const [filtroProyecto, setFiltroProyecto] = useState("");
   const [orden, setOrden] = useState<OrdenSolicitudes>("recientes");
@@ -148,13 +154,15 @@ export const SolicitudesPage: React.FC = () => {
         setRefrescando(true);
         const resp = await usersAPI.listSolicitudesOverview({
           search: busqueda || undefined,
-          estado: filtroEstado || undefined,
+          estado: ESTADO_LISTADO,
           clientId: filtroCliente || undefined,
           projectId: filtroProyecto || undefined,
           orden,
           page: pagina,
           limit: PAGE_SIZE,
         });
+        // Aprobar o rechazar saca filas: si la página quedó vacía y no es la primera, se va a la anterior.
+        if (!resp.rows.length && pagina > 1) return void cargar(pagina - 1);
         setRows(resp.rows);
         setTotal(resp.total);
         setTotalPages(resp.totalPages);
@@ -167,7 +175,7 @@ export const SolicitudesPage: React.FC = () => {
         setRefrescando(false);
       }
     },
-    [busqueda, filtroEstado, filtroCliente, filtroProyecto, orden],
+    [busqueda, filtroCliente, filtroProyecto, orden],
   );
 
   // La búsqueda va con debounce; el resto de los filtros, al toque. Cualquier cambio vuelve a la
@@ -268,12 +276,12 @@ export const SolicitudesPage: React.FC = () => {
     [rows],
   );
 
-  const hayFiltros = !!(busqueda || filtroEstado || filtroCliente || filtroProyecto);
+  const hayFiltros = !!(busqueda || filtroCliente || filtroProyecto);
 
   useEffect(() => {
     soltarSeleccion();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busqueda, filtroEstado, filtroCliente, filtroProyecto]);
+  }, [busqueda, filtroCliente, filtroProyecto]);
 
   const cambiarSeleccion = (ids: Set<string>) =>
     setSeleccion((antes) => {
@@ -309,7 +317,7 @@ export const SolicitudesPage: React.FC = () => {
     if (enPagina.size >= total) return;
     setSeleccionandoTodas(true);
     try {
-      const resp = await usersAPI.listSolicitudesOverview({ search: busqueda || undefined, estado: filtroEstado || undefined, clientId: filtroCliente || undefined, projectId: filtroProyecto || undefined, page: 1, limit: Math.max(total, 1) });
+      const resp = await usersAPI.listSolicitudesOverview({ search: busqueda || undefined, estado: ESTADO_LISTADO, clientId: filtroCliente || undefined, projectId: filtroProyecto || undefined, page: 1, limit: Math.max(total, 1) });
       if (vuelta !== vueltaSeleccion.current) return;
       setSeleccion((antes) => {
         const nueva = new Map(antes);
@@ -429,7 +437,7 @@ export const SolicitudesPage: React.FC = () => {
         `Se aprobaron ${aprobadas} de ${lista.length}`,
         `Quedaron pendientes (y seleccionadas); aprobalas con «Aprobar»:\n\n${pendientes.join("\n")}`,
       );
-    } else sweetAlert.success("Solicitudes aprobadas", `Se aprobaron ${aprobadas}: cada una ya tiene su contrato.`);
+    } else sweetAlert.success("Solicitudes aprobadas", `Se aprobaron ${aprobadas}: cada una ya tiene su contrato y se sigue en Contratos.`);
     cargar(page);
   };
 
@@ -574,13 +582,6 @@ export const SolicitudesPage: React.FC = () => {
               placeholder: "Todos los proyectos",
               options: proyectosDelFiltro.map((p) => ({ value: p._id, label: p.name })),
             },
-            {
-              label: "Estado",
-              value: filtroEstado,
-              onChange: setFiltroEstado,
-              placeholder: "Todos los estados",
-              options: ESTADOS_SOLICITUD.map((e) => ({ value: e, label: ESTADO_SOLICITUD[e].texto })),
-            },
           ]}
         />
       }
@@ -592,7 +593,7 @@ export const SolicitudesPage: React.FC = () => {
       ) : solicitudes.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center h-48 text-gray-500">
           <FontAwesomeIcon icon={faUserPlus} className="h-10 w-10 mb-3 opacity-10" />
-          <p className="text-sm font-medium">{hayFiltros ? "Ninguna solicitud coincide con los filtros" : "Todavía no hay solicitudes de alta"}</p>
+          <p className="text-sm font-medium">{hayFiltros ? "Ninguna solicitud coincide con los filtros" : "No hay solicitudes pendientes"}</p>
           <p className="text-xs mt-1 text-gray-400">Las solicitudes de alta desde mobile aparecen acá.</p>
         </div>
       ) : (
@@ -717,7 +718,8 @@ export const SolicitudesPage: React.FC = () => {
                 onAprobada: () => {
                   // La fila pasa a «aprobada» en el acto y después se recarga del server (el estado ya está guardado).
                   const id = aprobando.solicitudId;
-                  setRows((prev) => prev.map((r: any) => (r._id === id ? { ...r, estado: "aprobada" } : r)));
+                  // Aprobada ya no es de esta pantalla: sale de la lista en el acto (sigue en Contratos).
+                  setRows((prev) => prev.filter((r: any) => r._id !== id));
                   setAprobando(null);
                   cargar(page);
                 },
