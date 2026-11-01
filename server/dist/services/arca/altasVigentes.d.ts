@@ -36,6 +36,18 @@ export interface RelacionArcaResumida {
     fin: string;
 }
 /**
+ * Las Relaciones Laborales de ARCA de esas personas (con todas las empleadoras), resumidas. Con `desde`
+ * ("YYYY-MM-DD"), sólo las abiertas o que terminan desde ese día: las que terminaron antes no pisan nada y
+ * una persona con historia desde 2010 trae decenas de filas (ver memoria «Latencia = bytes»).
+ */
+export declare function relacionesArcaDe(tenantId: Types.ObjectId | string, cuils: Iterable<string>, desde?: string): Promise<RelacionArcaResumida[]>;
+/**
+ * Cuándo fue la última sincronización de Relaciones Laborales que leyó bien cada empleadora (CUIT →
+ * ISO). Destraba los rechazos por alta activa (ver `rechazoAltaActivaDestrabado`). Una empleadora con
+ * error en esa corrida no figura: sus datos no se refrescaron.
+ */
+export declare function ultimaSyncOkPorCuit(tenantId: Types.ObjectId | string): Promise<Map<string, string>>;
+/**
  * LAS BAJAS LAS DICE ARCA (pedido del 18/10/2026). Un contrato de WeProdu puede no tener fecha de baja
  * (tiempo indeterminado) aunque en ARCA la relación ya terminó (renuncia, fin de plazo): si se lo toma
  * como vigente, bloquea altas nuevas que en ARCA son perfectamente posibles. Para cada alta presentada se

@@ -3,6 +3,7 @@ import UserProject from "../../models/UserProject.js";
 import { User } from "../../models/User.js";
 import { Company } from "../../models/Company.js";
 import { RelacionLaboralArca } from "../../models/RelacionLaboralArca.js";
+import { Tenant } from "../../models/Tenant.js";
 import { fechaISO } from "../../utils/contratoVigencia.js";
 
 /**
@@ -83,10 +84,9 @@ export async function altasPresentadasDe(proyectosDelTenant: Array<string | Type
   const cuitDe = new Map((empresas as any[]).map((e) => [String(e._id), digitos(e.cuit)]));
   const cuils = [...new Set([...cuilDe.values()].filter((c) => c.length === 11))];
   if (cuils.length === 0) return out;
-  const rels: any[] = await RelacionLaboralArca.find({ tenantId: new Types.ObjectId(String(tenantId)), cuil: { $in: cuils } }).select("cuil empleadoraCuit fechaInicio fechaFin").lean();
   return aplicarBajasDeArca(
     out,
-    rels.map((r) => ({ cuil: r.cuil, empleadoraCuit: r.empleadoraCuit, inicio: r.fechaInicio ? new Date(r.fechaInicio).toISOString().slice(0, 10) : "", fin: r.fechaFin ? new Date(r.fechaFin).toISOString().slice(0, 10) : "" })),
+    await relacionesArcaDe(tenantId, cuils),
     (p) => cuilDe.get(p.userId) || "",
     (p) => cuitDe.get(p.empresaId) || "",
   );
@@ -99,6 +99,35 @@ export interface RelacionArcaResumida {
   inicio: string;
   /** "YYYY-MM-DD"; vacío = relación abierta en ARCA. */
   fin: string;
+}
+
+/**
+ * Las Relaciones Laborales de ARCA de esas personas (con todas las empleadoras), resumidas. Con `desde`
+ * ("YYYY-MM-DD"), sólo las abiertas o que terminan desde ese día: las que terminaron antes no pisan nada y
+ * una persona con historia desde 2010 trae decenas de filas (ver memoria «Latencia = bytes»).
+ */
+export async function relacionesArcaDe(tenantId: Types.ObjectId | string, cuils: Iterable<string>, desde?: string): Promise<RelacionArcaResumida[]> {
+  const lista = [...new Set([...cuils].map((c) => String(c || "").replace(/\D/g, "")).filter((c) => c.length === 11))];
+  if (lista.length === 0) return [];
+  const filtro: any = { tenantId: new Types.ObjectId(String(tenantId)), cuil: { $in: lista } };
+  if (desde && /^\d{4}-\d{2}-\d{2}$/.test(desde)) filtro.$or = [{ fechaFin: null }, { fechaFin: { $gte: new Date(`${desde}T00:00:00.000Z`) } }];
+  const rels: any[] = await RelacionLaboralArca.find(filtro).select("-_id cuil empleadoraCuit fechaInicio fechaFin").lean();
+  const iso = (d: unknown) => (d ? new Date(d as any).toISOString().slice(0, 10) : "");
+  return rels.map((r) => ({ cuil: r.cuil, empleadoraCuit: r.empleadoraCuit, inicio: iso(r.fechaInicio), fin: iso(r.fechaFin) }));
+}
+
+/**
+ * Cuándo fue la última sincronización de Relaciones Laborales que leyó bien cada empleadora (CUIT →
+ * ISO). Destraba los rechazos por alta activa (ver `rechazoAltaActivaDestrabado`). Una empleadora con
+ * error en esa corrida no figura: sus datos no se refrescaron.
+ */
+export async function ultimaSyncOkPorCuit(tenantId: Types.ObjectId | string): Promise<Map<string, string>> {
+  const t: any = await Tenant.findById(tenantId).select("integrations.arcaSimplificacion.sincronizacionRelaciones.ultimaSync.fecha integrations.arcaSimplificacion.sincronizacionRelaciones.ultimaSync.empresas.cuit integrations.arcaSimplificacion.sincronizacionRelaciones.ultimaSync.empresas.error integrations.arcaSimplificacion.sincronizacionRelaciones.ultimaSync.empresas.meses.resultado").lean();
+  const u = t?.integrations?.arcaSimplificacion?.sincronizacionRelaciones?.ultimaSync;
+  const out = new Map<string, string>();
+  if (!u?.fecha) return out;
+  for (const e of u.empresas || []) if (e?.cuit && !e.error && !(e.meses || []).some((m: any) => m?.resultado === "error")) out.set(String(e.cuit).replace(/\D/g, ""), String(u.fecha));
+  return out;
 }
 
 /**
