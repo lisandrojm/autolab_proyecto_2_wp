@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { valoracionesDeCategoria } from '@compartido/valoracionesDeCategoria';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCommentDots, faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt, faRotateRight, faPenToSquare, faPlus } from '@fortawesome/free-solid-svg-icons';
@@ -31,9 +30,8 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { ContractDocsColumns as ContractDocsColumnsBase, ContractDocsHeaders, ContractActionsButtons, ContractActionsCell as ContractActionsCellBase, ContractActionsHeader, downloadContractRow, downloadReleaseRow, uploadAltaRow } from './ContractRowDocs';
-import { resolveAfip, resolveAfip85, resolveAfipValues, esResuelto, problemasDeSucursalParaTxt, mensajeDeSucursalParaTxt, AfipRowResult, AfipValues, AfipCatalogs } from './afipCompleteness';
+import { resolveAfip, resolveAfip85, resolveAfipValues, esResuelto, problemasDeSucursalParaTxt, mensajeDeSucursalParaTxt, AfipRowResult, AfipValues } from './afipCompleteness';
 import { CLAVE_CACHE_FUNCIONES, roleFrameAPI, RoleFrameItem } from '../../api/roleFrames';
-import { useValoraciones } from '../proyectos/ChipValoracion';
 import { buildAltaRecord, buildAltaTxt, downloadTxt } from './afipTxt';
 import { buildAltaRecord85, buildAltasMasivasTexto } from './afipTxt85';
 import { MAX_ALTAS_MASIVAS } from '@compartido/layoutAltaArca';
@@ -42,7 +40,7 @@ import { HistorialAltasArca } from './HistorialAltasArca';
 import { EstadoValidacionAutomaticaOS } from './EstadoValidacionAutomaticaOS';
 import { arcaCatalogoAPI, DIAS_CATALOGO_VIEJO } from '../../api/arcaCatalogo';
 import { PantallaValidarObrasSociales, FilaConstatacion } from './PantallaValidarObrasSociales';
-import { CeldaObraSocial as CeldaObraSocialBase, EstadoObraSocial, VistaObraSocial } from './CeldaObraSocial';
+import { EstadoObraSocial } from './CeldaObraSocial';
 import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfipBulk, BotonValidarCuit, constanciaPendiente, cuitEsValido, fmtCuit, cuitDisplay, noPoseeCuit } from './ConstanciaBulk';
 import { NombreArca, estadoNombreArca } from '../arca/NombreArca';
 import { sweetAlert } from '../../utils/sweetAlert';
@@ -450,214 +448,9 @@ export const parcheEmpresa = (campo: 'contrato' | 'release', empresaId: string, 
       }
     : { empresaReleaseId: empresaId, nombre_empresa_release: label };
 
-/**
- * Convenio y categoría, resueltos DESDE LA FILA.
- *
- * Existen porque validar la obra social exige tenerlos: la que rige cuando ARCA no devuelve una propia
- * es la del CONVENIO, y el convenio sale de la categoría. Sin esto había que abrir el modal de cada
- * persona para resolver dos selects y volver — y la tabla es justamente donde se trabaja de a muchos.
- *
- * SON DOS COLUMNAS y no una: son dos decisiones distintas, y apiladas en una celda no se podían
- * comparar entre filas — que es para lo que sirve una tabla.
- *
- * El convenio NO se guarda: filtra la lista de categorías, igual que en el modal. Por eso su estado
- * vive en la FILA (`convenioFila`, en el componente de arriba) y no acá: dos celdas hermanas en
- * columnas distintas tienen que compartirlo, y una de ellas no puede ser dueña del estado de la otra.
- */
-const ConvenioSelectCellBase: React.FC<{ record: ContractOverviewRow; valores: AfipValues; cat: AfipCatalogs; convenio: string; onConvenio: (cct: string) => void }> = ({ record, valores, cat, convenio, onConvenio }) => {
-  // Con categoría cargada manda ELLA: el convenio del alta es el de su categoría, no una preferencia.
-  const efectivo = valores.convenioCategoria || convenio;
-  if (!record.empresaContratoId) return <span className="text-xs text-gray-400">Elegí la empleadora</span>;
-  if ((valores.conveniosEmpresa || []).length === 0) return <span className="text-xs text-amber-600 dark:text-amber-400">Sin convenios registrados</span>;
-  return (
-    <select
-      value={efectivo}
-      onChange={(e) => onConvenio(e.target.value)}
-      title="Filtra las categorías. No se guarda: ARCA lo deduce de la categoría."
-      className={`text-[11px] rounded border px-1.5 py-1 max-w-[15rem] ${efectivo ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200' : 'border-amber-400 dark:border-amber-700 bg-white dark:bg-gray-800 text-amber-700 dark:text-amber-400'}`}
-    >
-      <option value="">Elegí el convenio…</option>
-      {(valores.conveniosEmpresa || []).map((cct) => {
-        // El nombre va SIEMPRE: «0322/75» solo no dice nada, y esta empleadora tiene dos convenios
-        // de ACTORES y dos de TELEVISIÓN que por código no se distinguen de memoria.
-        const nombre = cat.convenios?.find((c) => String(c.externalId || '').trim() === cct)?.name || '';
-        return (
-          <option key={cct} value={cct}>
-            {cct}
-            {nombre ? ` — ${nombre}` : ''}
-          </option>
-        );
-      })}
-    </select>
-  );
-};
 
-/**
- * SUCURSAL Y ACTIVIDAD, EN LA GRILLA. Los dos últimos campos editables que solo vivían en el modal.
- *
- * La regla de esta tabla es que todo lo que se puede modificar tenga su columna: se completan quince
- * contratos seguidos, y bajar al modal de cada uno para elegir un domicilio es el mismo viaje quince
- * veces. Empresa, convenio, categoría y obra social ya estaban; faltaban estos dos.
- *
- * SON UN PAR, y en ese orden: las actividades que ARCA acepta son las que la empleadora declaró en
- * ESE domicilio. Por eso Actividad no se puede elegir antes que la Sucursal, y cambiar la sucursal
- * borra la actividad (lo hace el server, y por eso el parche de abajo la limpia también acá).
- */
-const SucursalSelectCellBase: React.FC<{ record: ContractOverviewRow; valores: AfipValues; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, onGuardado }) => {
-  const [guardando, setGuardando] = useState(false);
 
-  const guardar = async (sucursalId: string) => {
-    setGuardando(true);
-    try {
-      const res = await projectsAPI.updateSucursalArca(record.projectId, record.userId, record.contractIndex, sucursalId);
-      // La actividad viene en la respuesta porque el server la recalcula: con una sola declarada la
-      // hereda, y si cambió el domicilio la limpia. Tomar solo la sucursal dejaría la de antes.
-      onGuardado({ sucursalArcaId: res.sucursalArcaId || '', actividadArca: res.actividadArca || '' } as Partial<ContractOverviewRow>);
-    } catch (e: any) {
-      sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo guardar la sucursal.');
-    } finally {
-      setGuardando(false);
-    }
-  };
 
-  if (!record.empresaContratoId) return <span className="text-xs text-amber-600 dark:text-amber-400">Elegí la empleadora</span>;
-  if (valores.sucursalesDisponibles.length === 0) {
-    return (
-      <span className="text-xs text-amber-600 dark:text-amber-400" title="Cargá los domicilios de explotación en la ficha de la empresa, en ARCA → Domicilios">
-        Sin domicilios
-      </span>
-    );
-  }
-
-  return (
-    <select
-      value={valores.sucursal ? valores.sucursalesDisponibles.find((s) => s.codigo === valores.sucursal)?._id || '' : ''}
-      onChange={(e) => guardar(e.target.value)}
-      disabled={guardando}
-      className={`input-field py-1 text-xs min-w-[13rem] ${!valores.sucursal ? 'border-amber-400 dark:border-amber-600' : ''}`}
-    >
-      <option value="">Elegí el domicilio…</option>
-      {valores.sucursalesDisponibles.map((s) => (
-        <option key={s._id} value={s._id}>
-          {s.codigo} — {s.domicilio}
-          {s.actividades.length === 0 ? ' (sin actividades)' : ''}
-        </option>
-      ))}
-    </select>
-  );
-};
-
-/**
- * La actividad SOLO es un selector cuando hay algo que elegir.
- *
- * Con una sola declarada en ese domicilio el valor queda determinado y se hereda: mostrar un combo de
- * una opción sería pedir una decisión que no existe. Es la misma regla que en el modal — acá se ve el
- * valor heredado, en texto, y el selector aparece recién con dos o más.
- */
-const ActividadSelectCellBase: React.FC<{ record: ContractOverviewRow; valores: AfipValues; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, onGuardado }) => {
-  const [guardando, setGuardando] = useState(false);
-  const disponibles = valores.actividadesDisponibles;
-
-  const guardar = async (codigo: string) => {
-    setGuardando(true);
-    try {
-      await projectsAPI.updateActividadArca(record.projectId, record.userId, record.contractIndex, codigo);
-      onGuardado({ actividadArca: codigo } as Partial<ContractOverviewRow>);
-    } catch (e: any) {
-      sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo guardar la actividad.');
-    } finally {
-      setGuardando(false);
-    }
-  };
-
-  if (!valores.sucursal) return <span className="text-xs text-gray-400">Elegí la sucursal</span>;
-  if (disponibles.length === 0) {
-    return (
-      <span className="text-xs text-amber-600 dark:text-amber-400" title="La empleadora no declaró actividades en ese domicilio: cargalas en ARCA → Sucursales">
-        Sin actividades
-      </span>
-    );
-  }
-  if (disponibles.length === 1) {
-    // Heredada: no hay decisión. Se muestra el valor para que la fila no se lea como incompleta.
-    return (
-      <span className="text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap" title={`${disponibles[0].descripcion || ''} — única declarada en ese domicilio, se hereda`}>
-        <span className="font-mono">{disponibles[0].codigo}</span> <span className="text-gray-400">única</span>
-      </span>
-    );
-  }
-
-  return (
-    <select
-      value={valores.actividad || ''}
-      onChange={(e) => guardar(e.target.value)}
-      disabled={guardando}
-      className={`input-field py-1 text-xs min-w-[13rem] ${!valores.actividad ? 'border-amber-400 dark:border-amber-600' : ''}`}
-    >
-      <option value="">Elegí la actividad…</option>
-      {disponibles.map((a) => (
-        <option key={a.codigo} value={a.codigo}>
-          {a.codigo} — {a.descripcion}
-        </option>
-      ))}
-    </select>
-  );
-};
-
-const CategoriaSelectCellBase: React.FC<{ record: ContractOverviewRow; valores: AfipValues; cat: AfipCatalogs; convenio: string; nivelDeCategoria?: (rolFrameId: unknown, categoriaDataId: unknown) => string; onGuardado: (patch?: Partial<ContractOverviewRow>) => void }> = ({ record, valores, cat, convenio, nivelDeCategoria, onGuardado }) => {
-  const [guardando, setGuardando] = useState(false);
-  const efectivo = valores.convenioCategoria || convenio;
-
-  const categorias = useMemo(
-    () =>
-      cat.categorias
-        .filter((c: any) => c.isActive !== false)
-        .filter((c: any) => {
-          const cct = String(c.data?.convenio || '').trim();
-          if (!cct) return false;
-          return efectivo ? cct === efectivo : (valores.conveniosEmpresa || []).includes(cct);
-        }),
-    [cat.categorias, efectivo, valores.conveniosEmpresa],
-  );
-
-  const guardar = async (id: string) => {
-    setGuardando(true);
-    try {
-      const res = await projectsAPI.updateCategoriaSat(record.projectId, record.userId, record.contractIndex, id === '' ? null : Number(id));
-      onGuardado({ categoria_sat_id: res.categoria_sat_id, nombre_categoria_sat: res.nombre_categoria_sat, sueldo_neto: res.sueldo_neto, sueldo_bruto: res.sueldo_bruto } as any);
-    } catch (e: any) {
-      sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo guardar la categoría.');
-    } finally {
-      setGuardando(false);
-    }
-  };
-
-  if (!record.empresaContratoId) return <span className="text-xs text-gray-400">—</span>;
-  if (!efectivo) return <span className="text-xs text-gray-400">Elegí el convenio</span>;
-
-  return (
-    <select
-      value={valores.categoriaProf ? String(cat.categorias.find((c: any) => String(c.data?.codigoAfip ?? '') === valores.categoriaProf)?.data?.id ?? '') : ''}
-      onChange={(e) => guardar(e.target.value)}
-      disabled={guardando}
-      title="Categoría profesional: es lo único del encuadre que viaja al archivo (pos. 101-106)."
-      className={`text-[11px] rounded border px-1.5 py-1 max-w-[16rem] disabled:opacity-50 ${valores.categoriaProf ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200' : 'border-amber-400 dark:border-amber-700 bg-white dark:bg-gray-800 text-amber-700 dark:text-amber-400'}`}
-    >
-      <option value="">Elegí la categoría…</option>
-      {categorias.map((c: any) => (
-        <option key={String(c.data?.id)} value={String(c.data?.id ?? '')}>
-          {c.data?.codigoArca || c.data?.codigoAfip} — {c.name}
-          {/* El nivel, en el texto: un `<option>` no admite colores, y sin esto hay que elegir la
-              categoría para recién después saber con qué valoración quedó el contrato. */}
-          {(() => {
-            const n = nivelDeCategoria?.(record.rol_frame_id, c.data?.id) || '';
-            return n ? ` · ${n}` : '';
-          })()}
-        </option>
-      ))}
-    </select>
-  );
-};
 
 /**
  * «Renovar» un contrato vencido: abre el wizard del equipo con ESE contrato precargado tal cual y las
@@ -829,25 +622,6 @@ export const FILTROS_OBRA_SOCIAL: Array<{ value: EstadoObraSocial; label: string
   El grupo se marca con un borde a los costados y un fondo tenue —el mismo azul del rail de
   dependencias del modal, para que sea el mismo idioma en las dos pantallas— y las cabeceras llevan
   una flecha que dice la dirección. Sin la flecha, el borde agrupa pero no dice cuál manda.
-*/
-const GRUPO_ENCUADRE = 'bg-blue-500/[0.04] dark:bg-blue-400/[0.05]';
-/**
- * EL MISMO ENCUADRE, PERO OPACO, para el encabezado.
- *
- * En el cuerpo el azul va translúcido a propósito: deja pasar el rayado de filas alternas y el
- * resaltado de la fila activa. En el `<thead>` sticky eso es un agujero — las filas se ven pasando
- * por debajo del encabezado mientras se scrollea, y el título queda ilegible sobre el texto de los
- * datos.
- *
- * No se resuelve apilando `bg-gray-50` con el azul: dos `bg-*` en el mismo elemento no se superponen,
- * gana el que el CSS declare último. Hay que pintar un color opaco que YA tenga el matiz, y por eso
- * son colores distintos y no el mismo con opacidad.
- */
-const GRUPO_ENCUADRE_TH = 'bg-blue-50 dark:bg-slate-900';
-const GRUPO_ENCUADRE_INICIO = `${GRUPO_ENCUADRE} border-l-2 border-l-blue-500/40 dark:border-l-blue-400/40`;
-const GRUPO_ENCUADRE_TH_INICIO = `${GRUPO_ENCUADRE_TH} border-l-2 border-l-blue-500/40 dark:border-l-blue-400/40`;
-const GRUPO_ENCUADRE_FIN = `${GRUPO_ENCUADRE} border-r-2 border-r-blue-500/40 dark:border-r-blue-400/40`;
-const GRUPO_ENCUADRE_TH_FIN = `${GRUPO_ENCUADRE_TH} border-r-2 border-r-blue-500/40 dark:border-r-blue-400/40`;
 /** La flecha que va al final de cada cabecera del grupo menos la última. */
 /**
  * EL ANCHO DE LA COLUMNA DEL CHECK: 3rem EXACTAS, EN LAS DOS CELDAS.
@@ -913,49 +687,7 @@ const CeldaColaborador: React.FC<{ r: ContractOverviewRow }> = ({ r }) => (
   </div>
 );
 
-const FlechaEncuadre = () => <span className="text-blue-500/70 dark:text-blue-400/70 font-normal ml-1">→</span>;
 
-const ObraSocialCellBase: React.FC<{
-  record: ContractOverviewRow;
-  valores: AfipValues;
-  onAbrir: () => void;
-  onValidar: () => void;
-  onSinEmpresa: () => void;
-  onQuitado: (patch: Partial<ContractOverviewRow>) => void;
-}> = ({ record, valores, onAbrir, onValidar, onSinEmpresa, onQuitado }) => {
-  /*
-    EL DIBUJO VIVE EN `CeldaObraSocial`, compartida con Solicitudes. Acá sólo se arma la vista desde el
-    checklist de ARCA, que es lo que esta grilla tiene y Solicitudes no (allá la resuelve el server).
-  */
-  const estado = estadoObraSocial(record, valores);
-  const codigo = String(valores.rnos || '').replace(/\D/g, '');
-  const sugerido = String(valores.rnosSugerido || '').replace(/\D/g, '');
-  // Para validar hacen falta empleadora Y categoría: la obra social que rige cuando ARCA no devuelve
-  // una propia es la del CONVENIO, y el convenio sale de la categoría.
-  const vista: VistaObraSocial = {
-    estado,
-    codigo,
-    nombre: valores.nombreObraSocial || '',
-    fecha: valores.constatadaEl ? new Date(valores.constatadaEl).toLocaleDateString('es-AR') : '',
-    delConvenio: valores.convenioCategoria ? `convenio ${valores.convenioCategoria}` : 'convenio',
-    rnosSugerido: sugerido,
-    nombreSugerida: valores.nombreObraSocialSugerida || '',
-    distintaDelConvenio: estado === 'validada_arca' && codigo !== sugerido,
-    puedeValidar: !!record.empresaContratoId && !!valores.categoriaProf,
-    motivoNoPuede: record.empresaContratoId ? 'Todavía no se puede validar: falta la Categoría (y su convenio). Elegila en la columna de al lado.' : 'Todavía no se puede validar: falta la Empresa Contrato. Tocá para ver por qué.',
-    nombrePersona: record.userName,
-    quitar: { projectId: record.projectId, userId: record.userId, ref: record.contratoId || record.contractIndex },
-  };
-  return (
-    <CeldaObraSocial
-      vista={vista}
-      onAbrir={onAbrir}
-      onValidar={onValidar}
-      onSinEmpresa={onSinEmpresa}
-      onQuitado={() => onQuitado({ osId: null, obraSocialOrigen: '', obraSocialConstatadaEn: '', obraSocialConstatadaEl: '', obraSocialNoFigura: false, obraSocialBloqueada: false } as Partial<ContractOverviewRow>)}
-    />
-  );
-};
 
 /**
  * Sub-pestaña "Altas de ARCA | Constancia de CUIT": lista SOLO lectura de los contratos cuyo estado
@@ -992,15 +724,9 @@ function memoSinFunciones<P extends object>(C: React.ComponentType<P>): React.FC
   return React.memo(C, (a, b) => igualesSinFunciones(a as Record<string, unknown>, b as Record<string, unknown>)) as unknown as React.FC<P>;
 }
 const EmpresaSelectCell = memoSinFunciones(EmpresaSelectCellBase);
-const ConvenioSelectCell = memoSinFunciones(ConvenioSelectCellBase);
-const CategoriaSelectCell = memoSinFunciones(CategoriaSelectCellBase);
-const ObraSocialCell = memoSinFunciones(ObraSocialCellBase);
-const ActividadSelectCell = memoSinFunciones(ActividadSelectCellBase);
-const SucursalSelectCell = memoSinFunciones(SucursalSelectCellBase);
 const ContractDocsColumns = memoSinFunciones(ContractDocsColumnsBase);
 const ContractActionsCell = memoSinFunciones(ContractActionsCellBase);
 const BadgeArca = memoSinFunciones(BadgeArcaBase);
-const CeldaObraSocial = memoSinFunciones(CeldaObraSocialBase);
 export const EstadoImpositivoCell = memoSinFunciones(EstadoImpositivoCellBase);
 
 /**
@@ -1159,26 +885,12 @@ export const ContractBulkAfipTab: React.FC<{
     fila, no con la categoría sola.
   */
   const [rolesFrame, setRolesFrame] = useState<RoleFrameItem[]>([]);
-  const valoracionesCatalogo = useValoraciones();
   useEffect(() => {
     void roleFrameAPI
       .list()
       .then(setRolesFrame)
       .catch(() => setRolesFrame([]));
   }, []);
-  const nivelDeCategoria = useMemo(() => {
-    const porRol = new Map<string, Map<string, string[]>>();
-    for (const rf of rolesFrame) {
-      const porCategoria = new Map<string, string[]>();
-      for (const c of (rf.data?.categoriasSat as any[]) || []) if (valoracionesDeCategoria(c).length > 0) porCategoria.set(String(c.id), valoracionesDeCategoria(c));
-      porRol.set(String(rf.data?.rol?.id ?? ""), porCategoria);
-    }
-    // Con varios niveles se nombran todos: «Oro / Plata».
-    return (rolFrameId: unknown, categoriaDataId: unknown) => {
-      const ids = porRol.get(String(rolFrameId ?? ""))?.get(String(categoriaDataId ?? "")) || [];
-      return ids.map((id) => valoracionesCatalogo.find((x) => String(x._id) === id)).filter(Boolean).map((v: any) => String(v.name)).join(" / ");
-    };
-  }, [rolesFrame, valoracionesCatalogo]);
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
@@ -1390,13 +1102,6 @@ export const ContractBulkAfipTab: React.FC<{
    * son dos formas de que diverjan.
    */
   const [loteObrasSociales, setLoteObrasSociales] = useState<Set<string> | null>(null);
-  /**
-   * El convenio elegido en cada fila. NO se guarda: filtra las categorías de esa fila.
-   *
-   * Vive acá y no en la celda porque son DOS celdas —dos columnas— y las dos lo necesitan. Se indexa
-   * por `rowKey`, que es lo único estable entre renders cuando el listado se reordena.
-   */
-  const [convenioFila, setConvenioFila] = useState<Record<string, string>>({});
   /** Progreso de la corrida automática, para no dejar la pantalla muda mientras guarda. */
 
   // Filtros de la barra superior (búsqueda + filtro avanzado), sin el trámite ni los toggles propios
@@ -2424,62 +2129,11 @@ export const ContractBulkAfipTab: React.FC<{
                 {filterTipo !== 'sin_cuit' && filterTipo !== 'alta_temprana_afip' && <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel="Alta Servicios" />}
                 {/* Sin columna «CUIT» (01/11/2026): lo pidió el usuario; el CUIT se ve en el detalle de la fila. */}
                 {/*
-                  SIN «EMPRESA CONTRATO» NI «EMPRESA RELEASE» (01/11/2026): la empresa ya la dicen las pestañas de
-                  arriba. Si a una fila le falta la Empresa Contrato (obligatoria para el TXT), el selector aparece
-                  debajo del contrato, en la columna «Contrato». El grupo encuadre ahora abre en «Convenio».
+                  SIN EMPRESAS NI DATOS DEL ALTA (01/11/2026, pedido del usuario): fuera «Empresa Contrato», «Empresa
+                  Release», «Convenio», «Categoría», «Obra Social», «Sucursal» y «Actividad». Todo eso se ve y se
+                  edita en el modal de «Datos ARCA» (el badge «Completo» / «Falta…» de cada fila). Si a una fila le
+                  falta la Empresa Contrato, el selector aparece debajo del contrato.
                 */}
-                {/* Entre Empresa Contrato y Obra Social, que es el orden en que se resuelven: la
-                    obra social por defecto sale del convenio, y el convenio de la categoría. */}
-                {hayEncuadre && (
-                  <>
-                    <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH_INICIO}`}>
-                      <BotonOrden columna="convenio" {...ordenProps}>
-                        Convenio
-                      </BotonOrden>
-                      <FlechaEncuadre />
-                    </th>
-                    <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`}>
-                      <BotonOrden columna="categoria" {...ordenProps}>
-                        Categoría
-                      </BotonOrden>
-                      <FlechaEncuadre />
-                    </th>
-                  </>
-                )}
-                {/* Pegada a Empresa Contrato: la obra social se valida contra el CUIT de la
-                    empleadora, así que las dos columnas se leen juntas —sin empresa, esta no se
-                    puede resolver—. */}
-                {hayEncuadre && (
-                  <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`} title="Código RNOS (pos. 40-45). Ordena por estado: primero lo que hay que resolver.">
-                    <BotonOrden columna="obraSocial" {...ordenProps} title="Ordena por estado: primero lo que hay que resolver">
-                      Obra Social
-                    </BotonOrden>
-                  </th>
-                )}
-                {/*
-                  SUCURSAL Y ACTIVIDAD, ADENTRO DE LA BANDA. Son datos del alta igual que los otros.
-
-                  Quedaron afuera al agregarlas y eso las hacía leer como algo aparte, cuando salen
-                  del mismo lugar: los domicilios de explotación son los que la EMPLEADORA declaró
-                  ante ARCA, igual que sus convenios y sus obras sociales registradas. La banda es
-                  justamente «todo lo que cuelga de la empleadora», así que el cierre pasa a ser la
-                  Actividad y ya no la Obra Social.
-                */}
-                {hayEncuadre && (
-                  <>
-                    <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`} title="Domicilio de explotación declarado por la empleadora (pos. 74-78)">
-                      <BotonOrden columna="sucursal" {...ordenProps}>
-                        Sucursal
-                      </BotonOrden>
-                      <FlechaEncuadre />
-                    </th>
-                    <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH_FIN}`} title="Actividad declarada en ese domicilio (pos. 79-84). Con una sola, se hereda.">
-                      <BotonOrden columna="actividad" {...ordenProps}>
-                        Actividad
-                      </BotonOrden>
-                    </th>
-                  </>
-                )}
                 <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
                   <BotonOrden columna="cliente" {...ordenProps}>
                     Cliente
@@ -2605,60 +2259,6 @@ export const ContractBulkAfipTab: React.FC<{
                     </>
                   )}
                   {filterTipo !== 'sin_cuit' && filterTipo !== 'alta_temprana_afip' && <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel onConstanciaEliminada={() => load(true)} />}
-                  {hayEncuadre && (
-                    <>
-                      <td className={`px-4 py-3 ${GRUPO_ENCUADRE_INICIO}`} onClick={(e) => e.stopPropagation()}>
-                        <ConvenioSelectCell
-                          record={r}
-                          valores={resolveAfipValues(r, afipCat)}
-                          cat={afipCat}
-                          convenio={convenioFila[rowKey(r)] || ''}
-                          onConvenio={async (cct) => {
-                            setConvenioFila((prev) => ({ ...prev, [rowKey(r)]: cct }));
-                            // Cambiar de convenio limpia la categoría de otro: misma regla que el
-                            // modal. Sin eso queda convenio A con categoría de B, que ARCA rechaza
-                            // aunque la fila se vea completa.
-                            const v = resolveAfipValues(r, afipCat);
-                            const actual = afipCat.categorias.find((c: any) => String(c.data?.codigoAfip ?? '') === v.categoriaProf);
-                            if (cct && v.categoriaProf && String(actual?.data?.convenio || '').trim() !== cct) {
-                              try {
-                                const res = await projectsAPI.updateCategoriaSat(r.projectId, r.userId, r.contractIndex, null);
-                                aplicarCambio(r, { categoria_sat_id: res.categoria_sat_id, nombre_categoria_sat: res.nombre_categoria_sat, sueldo_neto: res.sueldo_neto, sueldo_bruto: res.sueldo_bruto } as any);
-                              } catch (e: any) {
-                                sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo limpiar la categoría.');
-                              }
-                            }
-                          }}
-                        />
-                      </td>
-                      <td className={`px-4 py-3 ${GRUPO_ENCUADRE}`} onClick={(e) => e.stopPropagation()}>
-                        <CategoriaSelectCell record={r} valores={resolveAfipValues(r, afipCat)} cat={afipCat} convenio={convenioFila[rowKey(r)] || ''} nivelDeCategoria={nivelDeCategoria} onGuardado={(patch) => aplicarCambio(r, patch)} />
-                      </td>
-                    </>
-                  )}
-                  {hayEncuadre && (
-                    <td className={`px-4 py-3 ${GRUPO_ENCUADRE}`} onClick={(e) => e.stopPropagation()}>
-                      <ObraSocialCell
-                        record={r}
-                        valores={resolveAfipValues(r, afipCat)}
-                        onAbrir={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })}
-                        onValidar={() => setLoteObrasSociales(new Set([rowKey(r)]))}
-                        onSinEmpresa={() => setObraSocialSinEmpresa(r)}
-                        onQuitado={(patch) => aplicarCambio(r, patch)}
-                      />
-                    </td>
-                  )}
-                  {/* Mismo orden que los encabezados: Sucursal y después Actividad, que depende de ella. */}
-                  {hayEncuadre && (
-                    <>
-                      <td className={`px-4 py-3 ${GRUPO_ENCUADRE}`} onClick={(e) => e.stopPropagation()}>
-                        <SucursalSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
-                      </td>
-                      <td className={`px-4 py-3 ${GRUPO_ENCUADRE_FIN}`} onClick={(e) => e.stopPropagation()}>
-                        <ActividadSelectCell record={r} valores={resolveAfipValues(r, afipCat)} onGuardado={(patch) => aplicarCambio(r, patch)} />
-                      </td>
-                    </>
-                  )}
                   <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                   <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
                   <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
