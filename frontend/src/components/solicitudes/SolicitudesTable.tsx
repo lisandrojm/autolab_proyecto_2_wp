@@ -346,11 +346,11 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
         </th>
       )}
       <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)]`}>Nombre</th>
-      {/* El orden de las columnas lo fijó el usuario el 01/11/2026: Último contrato, Fechas Solicitud, Horario, Estado, Solicitó, Roles,
+      {/* El orden de las columnas lo fijó el usuario el 01/11/2026: Fechas Solicitud, Último contrato, Horario, Estado, Solicitó, Roles,
           Tipo de contrato, Tipo de alta, Cliente, Proyecto (con el centro de costo en un badge al lado) y Fecha de
           creación. «Obra social» salió de Solicitudes el mismo día (sigue como opción del componente). */}
-      <th className="px-4 py-3 font-semibold" title="El último contrato de la persona ANTERIOR a lo pedido (alta antes del inicio de la solicitud), en cualquier proyecto. Avisa si se superpone con las fechas pedidas.">Último<br />contrato</th>
       <th className="px-4 py-3 font-semibold" title="El período que se pidió en la solicitud">Fechas Solicitud</th>
+      <th className="px-4 py-3 font-semibold" title="El último contrato de la persona ANTERIOR a lo pedido (alta antes del inicio de la solicitud), en cualquier proyecto. Avisa si se superpone con las fechas pedidas.">Último<br />contrato</th>
       <th className="px-4 py-3 font-semibold">Horario</th>
       <th className="px-4 py-3 font-semibold text-left">Estado</th>
       <th className="px-4 py-3 font-semibold">Solicitó</th>
@@ -462,7 +462,21 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   </div>
                 </td>
 
-                {/* El último contrato de la PERSONA anterior a lo pedido (en cualquier proyecto); avisa si se pisa con «Fechas». */}
+                {/* EL PERÍODO PEDIDO, con el mismo formato que «Último contrato» (Alta / Baja, DD/MM/AAAA) para
+                    compararlos de un vistazo y ocupar menos ancho (01/11/2026). Sin fin: «Indef.». Debajo, si se
+                    pisa con el último contrato de la persona, el aviso (estaba en «Último contrato»). */}
+                <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
+                  <div className="flex flex-col gap-0.5 text-xs">
+                    <span><span className="text-gray-400">Alta:</span> {formatDate(s.startDate || undefined) || "—"}</span>
+                    <span><span className="text-gray-400">Baja:</span> {s.dueDate ? formatDate(s.dueDate) : "Indef."}</span>
+                    {s.ultimoContrato && seSuperpone(s.startDate, s.dueDate, s.ultimoContrato.alta, s.ultimoContrato.baja) && (
+                      <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400" title="Las fechas pedidas se superponen con el último contrato de la persona">
+                        <FontAwesomeIcon icon={faTriangleExclamation} /> Superpone con Contrato
+                      </span>
+                    )}
+                  </div>
+                </td>
+                {/* El último contrato de la PERSONA anterior a lo pedido (en cualquier proyecto); si se pisa con lo pedido, lo avisa «Fechas Solicitud». */}
                 <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos anteriores a lo pedido"}>
                   {s.ultimoContrato ? (
                     (() => {
@@ -474,26 +488,12 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                             <span><span className="text-gray-400">Alta:</span> {formatDate(s.ultimoContrato.alta)}</span>
                             <span><span className="text-gray-400">Baja:</span> {s.ultimoContrato.baja ? formatDate(s.ultimoContrato.baja) : "—"}</span>
                           </div>
-                          {/* El período pedido (columna «Fechas») se pisa con este contrato. */}
-                          {seSuperpone(s.startDate, s.dueDate, s.ultimoContrato.alta, s.ultimoContrato.baja) && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400" title="Las fechas pedidas se superponen con este contrato">
-                              <FontAwesomeIcon icon={faTriangleExclamation} /> Superpone con lo Solicitado
-                            </span>
-                          )}
                         </div>
                       );
                     })()
                   ) : (
                     <span className="text-gray-300 dark:text-gray-600">—</span>
                   )}
-                </td>
-                {/* EL PERÍODO PEDIDO, con el mismo formato que «Último contrato» (Alta / Baja, DD/MM/AAAA) para
-                    compararlos de un vistazo y ocupar menos ancho (01/11/2026). Sin fin: «Indef.». */}
-                <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                  <div className="flex flex-col gap-0.5 text-xs">
-                    <span><span className="text-gray-400">Alta:</span> {formatDate(s.startDate || undefined) || "—"}</span>
-                    <span><span className="text-gray-400">Baja:</span> {s.dueDate ? formatDate(s.dueDate) : "Indef."}</span>
-                  </div>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{s.schedule || "-"}</td>
                 <td className="px-4 py-3">
