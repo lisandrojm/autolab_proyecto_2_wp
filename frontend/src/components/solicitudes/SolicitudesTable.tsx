@@ -487,11 +487,12 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                     <span className="text-gray-300 dark:text-gray-600">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3">
-                  <div className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                    <span>{formatDiaSolicitud(s.startDate)}</span>
-                    <span className="mx-1 text-gray-300">→</span>
-                    <span>{s.dueDate ? formatDiaSolicitud(s.dueDate) : "Indef."}</span>
+                {/* EL PERÍODO PEDIDO, con el mismo formato que «Último contrato» (Alta / Baja, DD/MM/AAAA) para
+                    compararlos de un vistazo y ocupar menos ancho (01/11/2026). Sin fin: «Indef.». */}
+                <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
+                  <div className="flex flex-col gap-0.5 text-xs">
+                    <span><span className="text-gray-400">Alta:</span> {formatDate(s.startDate || undefined) || "—"}</span>
+                    <span><span className="text-gray-400">Baja:</span> {s.dueDate ? formatDate(s.dueDate) : "Indef."}</span>
                   </div>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{s.schedule || "-"}</td>
