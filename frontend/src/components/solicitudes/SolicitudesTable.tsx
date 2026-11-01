@@ -351,7 +351,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
           creación. El estado va en el tag de «Fechas Solicitud» (no hay columna «Estado»). «Obra social» salió de Solicitudes el mismo día (sigue como opción del componente). */}
       <th className="px-4 py-3 font-semibold" title="El último contrato de la persona ANTERIOR a lo pedido (alta antes del inicio de la solicitud), en cualquier proyecto. Avisa si se superpone con las fechas pedidas.">Último<br />contrato</th>
       <th className="px-4 py-3 font-semibold" title="El período que se pidió en la solicitud">Solicitud</th>
-      <th className="px-4 py-3 font-semibold whitespace-nowrap">Tipo de contrato</th>
+      <th className="px-4 py-3 font-semibold whitespace-nowrap">Contrato</th>
       <th className="px-4 py-3 font-semibold">Horario</th>
       <th className="px-4 py-3 font-semibold">Solicitó</th>
       <th className="px-4 py-3 font-semibold">Rol/es Empresa</th>
