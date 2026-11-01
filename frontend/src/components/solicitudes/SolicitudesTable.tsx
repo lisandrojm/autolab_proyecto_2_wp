@@ -103,7 +103,7 @@ export interface SolicitudVista {
 }
 
 /** Roles del solicitante que se muestran como badge en la columna «Solicitó». */
-const ROL_QUE_SOLICITA = /coordinador|supervisor/i;
+export const ROL_QUE_SOLICITA = /coordinador|supervisor/i;
 
 /** Adapta un `User` con `metadata.isSolicitud` a la forma de la tabla. */
 export const solicitudDesdeUser = (u: any): SolicitudVista => {

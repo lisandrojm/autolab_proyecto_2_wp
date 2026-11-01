@@ -48,6 +48,7 @@ import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/ref
 import { arcaDefaultsAPI, ArcaDefaults, CLAVE_CACHE_DEFAULTS_ARCA } from "../../api/arcaDefaults";
 import { LinkSiPuede } from '../LinkSiPuede';
 import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
+import { seSuperpone, ROL_QUE_SOLICITA } from '../solicitudes/SolicitudesTable';
 import { useAnchoAcciones } from '../ui/useAnchoAcciones';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
@@ -2081,12 +2082,22 @@ export const ContractBulkAfipTab: React.FC<{
                   «Alta:» y «Baja:», y arriba lleva el badge de vigencia. Es la primera después de las
                   fijas (01/11/2026): en Alta temprana es la solicitud, lo primero que se mira.
                 */}
+                {/*
+                  LAS COLUMNAS DE SOLICITUDES, EN EL MISMO ORDEN (01/11/2026, pedido del usuario): Colaborador, Último
+                  contrato, Solicitud, Contrato, Horario, Solicitó, Rol/es Empresa, Cliente, Proyecto y Fecha de
+                  creación. «Último contrato» es el ANTERIOR a éste de la persona (lo trae el server).
+                */}
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900" title="El último contrato de la persona ANTERIOR a éste, en cualquier proyecto">
+                  Último
+                  <br />
+                  contrato
+                </th>
                 <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
                   {/* EN ALTA TEMPRANA ES LA SOLICITUD APROBADA (01/11/2026): todavía no se presentó en ARCA, así
                       que «Último contrato» confundía —se leía como uno anterior y ya vigente—. Son las fechas
                       que se aprobaron y que van a ir al alta. En las otras pestañas sigue «Último contrato». */}
                   <BotonOrden columna="ultimoContrato" {...ordenProps} title={hayEncuadre ? "Ordenar por la fecha de alta de la solicitud aprobada" : "Ordenar por la fecha de alta del último contrato"}>
-                    {hayEncuadre ? "Solicitud" : "Último Contrato"}
+                    {hayEncuadre ? "Solicitud" : "Vigencia"}
                   </BotonOrden>
                 </th>
                 {/* «Contrato» (con el estado arriba) pegada a «Solicitud» (01/11/2026). */}
@@ -2095,6 +2106,9 @@ export const ContractBulkAfipTab: React.FC<{
                     Contrato
                   </BotonOrden>
                 </th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 whitespace-nowrap">Horario</th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 whitespace-nowrap" title="Quién cargó la solicitud que originó el contrato">Solicitó</th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 whitespace-nowrap">Rol/es Empresa</th>
                 {/* Acá vivía «Verificar (Opc)», una columna entera para un botón que copiaba el CUIT
                     y abría el portal de ARCA a mano. Se sacó: al lado de «Validar», que consulta el
                     Padrón sola y deja el resultado archivado, un segundo botón que manda a hacer lo
@@ -2179,6 +2193,25 @@ export const ContractBulkAfipTab: React.FC<{
                   <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${bordeFinDeFijas} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                     <CeldaColaborador r={r} />
                   </td>
+                  {/* Último contrato: el anterior de la persona, como en Solicitudes. */}
+                  <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={r.ultimoContrato ? [r.ultimoContrato.nombre, r.ultimoContrato.proyecto].filter(Boolean).join(' · ') : 'Sin contratos anteriores a éste'}>
+                    {r.ultimoContrato ? (
+                      (() => {
+                        const vigenteAnterior = isContractVigente(r.ultimoContrato.alta, r.ultimoContrato.baja || undefined);
+                        return (
+                          <div className="flex flex-col gap-1">
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigenteAnterior ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigenteAnterior ? 'VIGENTE' : 'NO VIGENTE'}</span>
+                            <div className="flex flex-col gap-0.5 text-xs">
+                              <span><span className="text-gray-400">Alta:</span> {formatDate(r.ultimoContrato.alta)}</span>
+                              <span><span className="text-gray-400">Baja:</span> {r.ultimoContrato.baja ? formatDate(r.ultimoContrato.baja) : '—'}</span>
+                            </div>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <span className="text-gray-300 dark:text-gray-600">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
                     {(() => {
                       const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
@@ -2205,6 +2238,12 @@ export const ContractBulkAfipTab: React.FC<{
                               <span className="text-gray-400">Baja:</span> {r.fecha_baja_contrato ? formatDate(r.fecha_baja_contrato) : '—'}
                             </span>
                           </div>
+                          {/* Como en Solicitudes: si se pisa con el último contrato de la persona. */}
+                          {r.ultimoContrato && seSuperpone(r.fecha_alta_contrato, r.fecha_baja_contrato || null, r.ultimoContrato.alta, r.ultimoContrato.baja) && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" title="Las fechas se superponen con el último contrato de la persona">
+                              <FontAwesomeIcon icon={faTriangleExclamation} /> Superpone
+                            </span>
+                          )}
                         </div>
                       );
                     })()}
@@ -2222,6 +2261,25 @@ export const ContractBulkAfipTab: React.FC<{
                       )}
                     </div>
                   </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.hora_inicio && r.hora_fin ? `${r.hora_inicio} - ${r.hora_fin}` : '-'}</td>
+                  {/* Solicitó: los roles de coordinación o supervisión ARRIBA del nombre, como en Solicitudes. */}
+                  <td className="px-4 py-3">
+                    <div className="min-w-0">
+                      {r.solicitante?.nombre && r.solicitante.roles.some((x) => ROL_QUE_SOLICITA.test(x)) && (
+                        <div className="mb-1 flex flex-wrap gap-1">
+                          {r.solicitante.roles
+                            .filter((x) => ROL_QUE_SOLICITA.test(x))
+                            .map((x) => (
+                              <span key={x} className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">
+                                {x}
+                              </span>
+                            ))}
+                        </div>
+                      )}
+                      {r.solicitante?.nombre ? <p className="text-sm text-gray-900 dark:text-white truncate">{r.solicitante.nombre}</p> : <span className="text-sm text-gray-400">—</span>}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.nombreRolFrame || 'Sin rol'}</td>
                   {filterTipo === 'sin_cuit' && (
                     <td className="px-4 py-3">
                       <CeldaValidacionSinCuit row={r} onAbrir={() => setValidacionRow(r)} onCambio={(v) => aplicarValidacionSinCuit(r, v)} />
@@ -2260,7 +2318,13 @@ export const ContractBulkAfipTab: React.FC<{
                   )}
                   {filterTipo !== 'sin_cuit' && filterTipo !== 'alta_temprana_afip' && <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel onConstanciaEliminada={() => load(true)} />}
                   <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
+                  {/* El centro de costo ADELANTE del nombre, con el badge violeta, como en Solicitudes. */}
+                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1.5">
+                      {r.centroCosto && <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold leading-none bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50" title="Centro de costo">{r.centroCosto}</span>}
+                      {r.projectName || '—'}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                     <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>} />
                   </td>
