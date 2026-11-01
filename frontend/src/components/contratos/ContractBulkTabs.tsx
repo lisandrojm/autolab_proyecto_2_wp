@@ -2444,7 +2444,15 @@ export const ContractBulkAfipTab: React.FC<{
                       que «Último contrato» confundía —se leía como uno anterior y ya vigente—. Son las fechas
                       que se aprobaron y que van a ir al alta. En las otras pestañas sigue «Último contrato». */}
                   <BotonOrden columna="ultimoContrato" {...ordenProps} title={hayEncuadre ? "Ordenar por la fecha de alta de la solicitud aprobada" : "Ordenar por la fecha de alta del último contrato"}>
-                    {hayEncuadre ? "Solicitud aprobada" : "Último Contrato"}
+                    {hayEncuadre ? (
+                      <span className="text-left">
+                        Fechas
+                        <br />
+                        Solicitud
+                      </span>
+                    ) : (
+                      "Último Contrato"
+                    )}
                   </BotonOrden>
                 </th>
                 {layoutConstancia && (
@@ -2621,10 +2629,16 @@ export const ContractBulkAfipTab: React.FC<{
                       const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
                       return (
                         <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
-                            <EstadoRenovacion record={r} />
-                          </div>
+                          {/* En Alta temprana todavía no se presentó: no es un contrato vigente o vencido sino la
+                              solicitud aprobada, con el tag azul de Solicitudes (01/11/2026). Sin renovar al lado. */}
+                          {hayEncuadre ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Solicitud aprobada</span>
+                          ) : (
+                            <div className="flex items-center gap-1.5">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
+                              <EstadoRenovacion record={r} />
+                            </div>
+                          )}
                           <div className="flex flex-col gap-0.5 text-xs">
                             <span>
                               <span className="text-gray-400">Alta:</span> {formatDate(r.fecha_alta_contrato)}
