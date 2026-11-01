@@ -54,6 +54,12 @@ export interface ContractOverviewRow {
   solicitudComentarios?: string;
   /** La solicitud que lo originó era una renovación. */
   esRenovacion?: boolean;
+  /** Quién cargó la solicitud que lo originó, con sus roles (columna «Solicitó», como en Solicitudes). */
+  solicitante?: { nombre: string; roles: string[] } | null;
+  /** El último contrato de la persona ANTERIOR a éste, en cualquier proyecto (columna «Último contrato»). */
+  ultimoContrato?: { alta: string; baja: string | null; nombre: string; proyecto: string } | null;
+  /** El centro de costo del proyecto, ya resuelto (badge violeta de «Proyecto»). */
+  centroCosto?: string;
   userActivo: boolean;
   /** id externo (FRAME) del usuario — para resolver a quién reemplaza otro contrato de la misma página. */
   userExternalId: number | null;

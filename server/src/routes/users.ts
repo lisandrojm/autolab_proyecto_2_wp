@@ -52,7 +52,7 @@ import { toObjectIdArray } from "../utils/mongoIds.js";
 import { createUserSchema, normalizarRolesFrame } from "../validators/usuarioSchemas.js";
 import { createFuzzySearchRegex } from "../utils/searchHelpers.js";
 import { esContratoVigente, fechaISO, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
-import { contratosQueRigenDeLasPersonas, contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
+import { contratosQueRigenDeLasPersonas, contratosQueRigenDelProyecto, fechaISOExpr } from "../utils/contratosQueRigen.js";
 import { momentoDeCarga } from "../utils/archivoDeContrato.js";
 import { claveEstado } from "../utils/estadoClave.js";
 import { estadoDeRenovacion, procesoTerminadoSegunEstados } from "../utils/estadoDeRenovacion.js";
@@ -1538,10 +1538,71 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
     */
     const idsSolicitud = [...new Set([...contratoPorFila.values()].map((c: any) => (c?.solicitudId ? String(c.solicitudId) : "")).filter((id) => Types.ObjectId.isValid(id)))];
     const solicitudPorId = new Map<string, any>();
-    if (idsSolicitud.length > 0) {
-      const sols: any[] = await User.find({ tenantId: req.tenantObjectId, _id: { $in: idsSolicitud.map((id) => new Types.ObjectId(id)) } }).select("metadata.comentarios metadata.esRenovacion").lean();
-      for (const s of sols) solicitudPorId.set(String(s._id), s.metadata || {});
-    }
+
+    /*
+      Y LO DEMÁS QUE CONTRATOS MUESTRA IGUAL QUE SOLICITUDES (01/11/2026): quién pidió el alta, con sus
+      roles («Solicitó»), el último contrato ANTERIOR de la persona («Último contrato») y el centro de
+      costo del proyecto (el badge violeta de «Proyecto»). Una consulta por cosa para toda la página, en
+      paralelo.
+
+      El último contrato es el de alta más reciente ANTES del día de alta de este contrato, en cualquier
+      proyecto, como en Solicitudes. Se resuelve en Mongo con una ventana por persona (`$setWindowFields`,
+      rango «todo lo anterior, hasta el día antes»): viaja un contrato por fila y no el historial entero
+      de cada persona, que es lo que pesa (ver `contratosQueRigen`). Esta ruta también sirve listados de
+      miles de filas (Firmados), por eso no es una consulta por fila. Si falla, la columna queda vacía.
+    */
+    const solicitantePorSolicitud = new Map<string, { nombre: string; roles: string[] } | null>();
+    const ultimoPorFila = new Map<string, { alta: string; baja: string | null; nombre: string; proyecto: string }>();
+    const centroCostoPorProyecto = new Map<string, string>();
+    const consultasUltimo = pageRows
+      .map((r: any) => {
+        const c: any = contratoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || {};
+        return { upId: String(r._id), idx: Number(r.contractIndex) || 0, userId: String(r.userId || ""), alta: fechaISO(c.fecha_alta_contrato) };
+      })
+      .filter((q) => q.alta && Types.ObjectId.isValid(q.userId) && Types.ObjectId.isValid(q.upId));
+    const idsProyectoPagina = [...new Set(pageRows.map((r: any) => String(r.projectId || "")).filter((id) => Types.ObjectId.isValid(id)))];
+    await Promise.all([
+      (async () => {
+        if (idsSolicitud.length === 0) return;
+        const sols: any[] = await User.find({ tenantId: req.tenantObjectId, _id: { $in: idsSolicitud.map((id) => new Types.ObjectId(id)) } }).select("metadata.comentarios metadata.esRenovacion metadata.solicitudCreadaPor").lean();
+        for (const s of sols) solicitudPorId.set(String(s._id), s.metadata || {});
+        const quienes = await solicitantesDe(req.tenantObjectId as Types.ObjectId, sols);
+        for (const s of sols) solicitantePorSolicitud.set(String(s._id), s.metadata?.solicitudCreadaPor ? quienes.get(String(s.metadata.solicitudCreadaPor)) || null : null);
+      })(),
+      (async () => {
+        if (consultasUltimo.length === 0) return;
+        try {
+          const previos: any[] = await UserProject.aggregate([
+            { $match: { userId: { $in: [...new Set(consultasUltimo.map((q) => q.userId))].map((id) => new Types.ObjectId(id)) } } },
+            { $unwind: { path: "$contracts", includeArrayIndex: "i" } },
+            { $project: { _id: 0, up: "$_id", i: 1, u: "$userId", alta: fechaISOExpr("$contracts.fecha_alta_contrato"), baja: fechaISOExpr("$contracts.fecha_baja_contrato"), nombre: "$contracts.nombre_contrato", proyecto: "$nombre_proyecto" } },
+            { $match: { alta: { $ne: "" } } },
+            { $set: { dia: { $dateFromString: { dateString: "$alta", format: "%Y-%m-%d", onError: null, onNull: null } } } },
+            { $match: { dia: { $ne: null } } },
+            {
+              $setWindowFields: {
+                partitionBy: "$u",
+                sortBy: { dia: 1 },
+                output: { previo: { $last: { alta: "$alta", baja: "$baja", nombre: "$nombre", proyecto: "$proyecto" }, window: { range: ["unbounded", -1], unit: "day" } } },
+              },
+            },
+            { $match: { $or: consultasUltimo.map((q) => ({ up: new Types.ObjectId(q.upId), i: q.idx })) } },
+            { $project: { up: 1, i: 1, previo: 1 } },
+          ]);
+          for (const x of previos) {
+            if (x.previo?.alta) ultimoPorFila.set(claveFila(String(x.up), Number(x.i)), { alta: x.previo.alta, baja: x.previo.baja || null, nombre: String(x.previo.nombre || ""), proyecto: String(x.previo.proyecto || "") });
+          }
+        } catch (e: any) {
+          console.error("contracts-overview: no pude calcular el último contrato:", e?.message || e);
+        }
+      })(),
+      (async () => {
+        if (idsProyectoPagina.length === 0) return;
+        const proyectos: any[] = await Project.find({ _id: { $in: idsProyectoPagina.map((id) => new Types.ObjectId(id)) } }).select("metadata.centroCostoId metadata.centroCostoEmpresaTangoId").lean();
+        await resolverCentroCostoDeProyectos(proyectos);
+        for (const p of proyectos) centroCostoPorProyecto.set(String(p._id), etiquetaCentroCostoDe(p));
+      })(),
+    ]);
 
     const fullRows = pageRows.map(({ _alta, _orden, _contratoOrden, ...r }) => {
       const c: any = contratoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || {};
@@ -1550,6 +1611,9 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         ...r,
         solicitudComentarios: String(sol?.comentarios || ""),
         esRenovacion: !!sol?.esRenovacion,
+        solicitante: c.solicitudId ? solicitantePorSolicitud.get(String(c.solicitudId)) || null : null,
+        ultimoContrato: ultimoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || null,
+        centroCosto: centroCostoPorProyecto.get(String(r.projectId)) || "",
         nombre_contrato: c.nombre_contrato || "",
         nombre_estado_empleado: c.nombre_estado_empleado || "",
         nombre_sede: c.nombre_sede || "",
