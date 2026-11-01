@@ -344,11 +344,15 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
         </th>
       )}
       <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)]`}>Nombre</th>
-      <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">Fecha de creación</th>
-      {/* Las columnas que comparte con Contratos → Alta temprana de ARCA van en SU orden (27/10/2026):
-          Nombre, Fecha de creación, Obra social, Cliente, Proyecto, Estado y Tipo de alta (allá, «Estado
-          Impositivo»). «Último contrato» va pegado a «Fechas», para ver si se superponen. */}
+      {/* El orden de las columnas lo fijó el usuario el 01/11/2026: Fechas, Horario, Estado, Solicitó, Roles,
+          Tipo de contrato, Tipo de alta, (Obra social), Cliente, Proyecto, Último contrato y Fecha de creación. */}
+      <th className="px-4 py-3 font-semibold">Fechas</th>
+      <th className="px-4 py-3 font-semibold">Horario</th>
+      <th className="px-4 py-3 font-semibold text-left">Estado</th>
       <th className="px-4 py-3 font-semibold">Solicitó</th>
+      <th className="px-4 py-3 font-semibold">Rol/es Empresa</th>
+      <th className="px-4 py-3 font-semibold whitespace-nowrap">Tipo de contrato</th>
+      <th className="px-4 py-3 font-semibold">Tipo de alta</th>
       {renderObraSocial && <th className="px-4 py-3 font-semibold">Obra social</th>}
       {mostrarProyectos && (
         <>
@@ -356,13 +360,8 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
           <th className="px-4 py-3 font-semibold">Proyecto</th>
         </>
       )}
-      <th className="px-4 py-3 font-semibold">Rol/es Empresa</th>
-      <th className="px-4 py-3 font-semibold whitespace-nowrap">Tipo de contrato</th>
       <th className="px-4 py-3 font-semibold whitespace-nowrap" title="El último contrato de la persona ANTERIOR a lo pedido (alta antes del inicio de la solicitud), en cualquier proyecto. Avisa si se superpone con las fechas pedidas.">Último contrato</th>
-      <th className="px-4 py-3 font-semibold">Fechas</th>
-      <th className="px-4 py-3 font-semibold">Horario</th>
-      <th className="px-4 py-3 font-semibold text-left">Estado</th>
-      <th className="px-4 py-3 font-semibold">Tipo de alta</th>
+      <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">Fecha de creación</th>
       {/* Las acciones quedan FIJAS a la derecha (27/10/2026): con la tabla ancha, «Editar para Aprobar» y «Rechazar» quedaban fuera de la vista. */}
       <th className="col-acciones px-4 py-3 font-semibold text-left bg-gray-50 dark:bg-[#18202f]">Acciones</th>
     </tr>
@@ -454,14 +453,19 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   </div>
                 </td>
 
-                {/*
-                  CUÁNDO SE HIZO LA SOLICITUD, en una columna propia después del nombre: día de la
-                  semana, fecha y hora en horario argentino. No va debajo del nombre de la persona
-                  porque ahí se leía como una fecha del contrato (al lado del período «24 oct → 24 oct»
-                  no se distinguía), y en una tanda del mismo día sólo la hora dice cuál se pidió primero.
-                */}
-                <td className="px-4 py-3 whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">
-                  <FechaHoraCelda valor={s.creadaEl} />
+                <td className="px-4 py-3">
+                  <div className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    <span>{formatDiaSolicitud(s.startDate)}</span>
+                    <span className="mx-1 text-gray-300">→</span>
+                    <span>{s.dueDate ? formatDiaSolicitud(s.dueDate) : "Indef."}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{s.schedule || "-"}</td>
+                <td className="px-4 py-3">
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${ESTADO_SOLICITUD[s.estado].clase}`}>
+                    <FontAwesomeIcon icon={ESTADO_SOLICITUD[s.estado].icono} className="text-[8px]" />
+                    {ESTADO_SOLICITUD[s.estado].texto}
+                  </span>
                 </td>
 
                 {/*
@@ -484,6 +488,18 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   </div>
                 </td>
 
+                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{resolverRolFrame(s)}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{resolverTipoContrato(s) || <span className="text-gray-400">-</span>}</td>
+                {/*
+                  POR QUÉ VÍA SE PIDIÓ CONTRATAR: alta temprana ante ARCA o servicios. Con el mismo
+                  badge que se ve en Contratos, para que quien aprueba lo reconozca como lo mismo
+                  que después va a ver en el contrato.
+
+                  «Sin definir» es literal y no un valor por defecto: las solicitudes cargadas antes
+                  de que este campo existiera no lo declararon, y suponerles un trámite sería
+                  inventar el dato del que depende el TXT de ARCA.
+                */}
+                <td className="px-4 py-3">{tramite ? <EstadoBadge name={tramite.name} /> : <span className="text-xs text-gray-400 italic">Sin definir</span>}</td>
                 {renderObraSocial && (
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     {renderObraSocial(s)}
@@ -528,9 +544,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   </>
                 )}
 
-                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{resolverRolFrame(s)}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{resolverTipoContrato(s) || <span className="text-gray-400">-</span>}</td>
-                {/* El último contrato de la PERSONA anterior a lo pedido (en cualquier proyecto), pegado a «Fechas» para compararlos. */}
+                {/* El último contrato de la PERSONA anterior a lo pedido (en cualquier proyecto); avisa si se pisa con «Fechas». */}
                 <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap" title={s.ultimoContrato ? [s.ultimoContrato.nombre, s.ultimoContrato.proyecto].filter(Boolean).join(" · ") : "Sin contratos anteriores a lo pedido"}>
                   {s.ultimoContrato ? (
                     (() => {
@@ -542,7 +556,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                             <span><span className="text-gray-400">Alta:</span> {formatDate(s.ultimoContrato.alta)}</span>
                             <span><span className="text-gray-400">Baja:</span> {s.ultimoContrato.baja ? formatDate(s.ultimoContrato.baja) : "—"}</span>
                           </div>
-                          {/* El período pedido (columna «Fechas», al lado) se pisa con este contrato. */}
+                          {/* El período pedido (columna «Fechas») se pisa con este contrato. */}
                           {seSuperpone(s.startDate, s.dueDate, s.ultimoContrato.alta, s.ultimoContrato.baja) && (
                             <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400" title="Las fechas pedidas se superponen con este contrato">
                               <FontAwesomeIcon icon={faTriangleExclamation} /> Se superpone con lo pedido
@@ -555,30 +569,16 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                     <span className="text-gray-300 dark:text-gray-600">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3">
-                  <div className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                    <span>{formatDiaSolicitud(s.startDate)}</span>
-                    <span className="mx-1 text-gray-300">→</span>
-                    <span>{s.dueDate ? formatDiaSolicitud(s.dueDate) : "Indef."}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{s.schedule || "-"}</td>
-                <td className="px-4 py-3 text-center">
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${ESTADO_SOLICITUD[s.estado].clase}`}>
-                    <FontAwesomeIcon icon={ESTADO_SOLICITUD[s.estado].icono} className="text-[8px]" />
-                    {ESTADO_SOLICITUD[s.estado].texto}
-                  </span>
-                </td>
-                {/*
-                  POR QUÉ VÍA SE PIDIÓ CONTRATAR: alta temprana ante ARCA o servicios. Con el mismo
-                  badge que se ve en Contratos, para que quien aprueba lo reconozca como lo mismo
-                  que después va a ver en el contrato.
 
-                  «Sin definir» es literal y no un valor por defecto: las solicitudes cargadas antes
-                  de que este campo existiera no lo declararon, y suponerles un trámite sería
-                  inventar el dato del que depende el TXT de ARCA.
+                {/*
+                  CUÁNDO SE HIZO LA SOLICITUD, en una columna propia (la última, 01/11/2026): día de la
+                  semana, fecha y hora en horario argentino. No va debajo del nombre de la persona
+                  porque ahí se leía como una fecha del contrato (al lado del período «24 oct → 24 oct»
+                  no se distinguía), y en una tanda del mismo día sólo la hora dice cuál se pidió primero.
                 */}
-                <td className="px-4 py-3">{tramite ? <EstadoBadge name={tramite.name} /> : <span className="text-xs text-gray-400 italic">Sin definir</span>}</td>
+                <td className="px-4 py-3 whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">
+                  <FechaHoraCelda valor={s.creadaEl} />
+                </td>
                 <td className={`px-4 py-3 text-right ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
                   {/* Una solicitud rechazada o cancelada no se aprueba de una: primero se reabre,
                       así queda explícito que se está deshaciendo la decisión. */}
