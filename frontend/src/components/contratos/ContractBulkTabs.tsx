@@ -889,7 +889,7 @@ export const ContractBulkAfipTab: React.FC<{
   // Explicación de qué son y de dónde salen los datos que exige la columna "Datos ARCA".
   const [datosAfipInfoOpen, setDatosAfipInfoOpen] = useState(false);
   /** El ⓘ de una pestaña de empleadora: de cuál se está mirando el resumen ('' = Todas). */
-  /** El ⓘ de «Presentar A.R.C.A»: qué hace falta para poder presentar. */
+  /** El ⓘ de «Forzar Masivo A.R.C.A»: qué hace falta para poder presentar. */
   const [presentarInfoOpen, setPresentarInfoOpen] = useState(false);
   const [resumenEmpresa, setResumenEmpresa] = useState<{ id: string; nombre: string } | null>(null);
   // Explicación de qué es la columna "Datos CUIT/CUIL" y por qué gatea Validar / Validar ARCA Masivo.
@@ -1697,7 +1697,7 @@ export const ContractBulkAfipTab: React.FC<{
   };
 
   /*
-    PRESENTAR UNA SOLA PERSONA: el mismo modal de «Presentar Masivo en A.R.C.A» con esta fila sola.
+    PRESENTAR UNA SOLA PERSONA: el mismo modal de «Forzar Masivo A.R.C.A» con esta fila sola.
     La empresa es la de la pestaña o, desde «Todas», la Empresa Contrato de la fila: el alta va a nombre
     de su empleadora igual. Sin empresa asignada no hay a nombre de quién presentarla.
   */
@@ -1715,7 +1715,7 @@ export const ContractBulkAfipTab: React.FC<{
         className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
       >
         <FontAwesomeIcon icon={faBolt} className="h-2.5 w-2.5" />
-        Presentar A.R.C.A
+        Forzar Alta A.R.C.A
       </button>
     );
   };
@@ -1903,7 +1903,7 @@ export const ContractBulkAfipTab: React.FC<{
             >
               <FontAwesomeIcon icon={faBolt} className="h-4 w-4" />
               {/* El número es lo que va a ARCA: los tildados completos, no todos los tildados. */}
-              Presentar Masivo en A.R.C.A{completos85.length > 0 ? ` (${completos85.length})` : ''}
+              Forzar Masivo A.R.C.A{completos85.length > 0 ? ` (${completos85.length})` : ''}
             </button>
             <button type="button" onClick={() => setPresentarInfoOpen(true)} title="Qué hace falta para presentar en ARCA" aria-label="Qué hace falta para presentar en ARCA" className="-ml-1 text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 shrink-0">
               <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
@@ -2535,7 +2535,7 @@ export const ContractBulkAfipTab: React.FC<{
             <ol className="list-decimal list-inside space-y-1 text-gray-600 dark:text-gray-300">
               <li>Elegí la pestaña de la empresa.</li>
               <li>Tildá los contratos a presentar (el check de la cabecera toma todos, de todas las páginas).</li>
-              <li>Tocá «Presentar Masivo en A.R.C.A»: el número entre paréntesis es lo que va a ARCA, los tildados que están completos.</li>
+              <li>Tocá «Forzar Masivo A.R.C.A»: el número entre paréntesis es lo que va a ARCA, los tildados que están completos.</li>
             </ol>
           </div>
         </Modal>
