@@ -463,15 +463,17 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 </td>
 
                 {/* EL PERÍODO PEDIDO, con el mismo formato que «Último contrato» (Alta / Baja, DD/MM/AAAA) para
-                    compararlos de un vistazo y ocupar menos ancho (01/11/2026). Sin fin: «Indef.». ARRIBA, si se
-                    pisa con el último contrato de la persona, el aviso, a la altura del badge VIGENTE / NO VIGENTE
-                    de la columna de al lado (misma estructura: badge y debajo Alta / Baja). */}
+                    compararlos de un vistazo y ocupar menos ancho (01/11/2026). Sin fin: «Indef.». ARRIBA, un tag del
+                    mismo tamaño que VIGENTE / NO VIGENTE de la columna de al lado, así las fechas quedan a la misma
+                    altura: «SOLICITUD» (azul), o «SUPERPONE» (ámbar) si se pisa con el último contrato de la persona. */}
                 <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                   <div className="flex flex-col gap-1">
-                    {s.ultimoContrato && seSuperpone(s.startDate, s.dueDate, s.ultimoContrato.alta, s.ultimoContrato.baja) && (
-                      <span className="inline-flex items-center gap-1 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400 w-fit" title="Las fechas pedidas se superponen con el último contrato de la persona">
-                        <FontAwesomeIcon icon={faTriangleExclamation} /> Superpone con Contrato
+                    {s.ultimoContrato && seSuperpone(s.startDate, s.dueDate, s.ultimoContrato.alta, s.ultimoContrato.baja) ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" title="Las fechas pedidas se superponen con el último contrato de la persona">
+                        <FontAwesomeIcon icon={faTriangleExclamation} /> Superpone
                       </span>
+                    ) : (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Solicitud</span>
                     )}
                     <div className="flex flex-col gap-0.5 text-xs">
                       <span><span className="text-gray-400">Alta:</span> {formatDate(s.startDate || undefined) || "—"}</span>
