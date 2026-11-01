@@ -49,7 +49,7 @@ interface Props {
   className?: string;
   /** Clases de la `<table>`. */
   tabla?: string;
-  /** A qué altura se pega. Por defecto se detecta: `0` dentro de un contenedor con scroll, `--wp-sticky-top` en la página. */
+  /** A qué altura se pega. Por defecto se detecta: el borde de arriba de un contenedor con scroll (menos su padding), `--wp-sticky-top` en la página. */
   top?: string;
   tablaRef?: React.Ref<HTMLTableElement>;
 }
@@ -161,7 +161,10 @@ export const TablaConEncabezadoFijo: React.FC<Props> = ({ children, className = 
       const scrollea = overflowY === 'auto' || overflowY === 'scroll';
       // `overflow-x: hidden` solo hace que `overflow-y` compute `auto` sin que la caja scrollee de verdad.
       if (scrollea && (overflowX !== 'hidden' || el.scrollHeight > el.clientHeight + 1)) {
-        setTopDetectado('0px');
+        // El sticky se pega debajo del padding del contenedor (el `pt-4` del cuerpo del Modal), y en ese
+        // hueco se veían pasar las filas: se sube lo que mide el padding para pegarlo al borde (01/11/2026).
+        const padding = parseFloat(getComputedStyle(el).paddingTop) || 0;
+        setTopDetectado(`${-padding}px`);
         return;
       }
       if (import.meta.env.DEV && (overflowY === 'hidden' || (scrollea && overflowX === 'hidden'))) {
