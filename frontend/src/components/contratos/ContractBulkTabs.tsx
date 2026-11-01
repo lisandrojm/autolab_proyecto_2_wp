@@ -2530,7 +2530,7 @@ export const ContractBulkAfipTab: React.FC<{
                     Estado
                   </BotonOrden>
                 </th>
-                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Impositivo</th>
+                {/* Sin «Estado Impositivo» (01/11/2026): repetía lo que ya dicen la pestaña y el estado. */}
                 <ContractActionsHeader />
               </tr>
             </thead>
@@ -2694,20 +2694,8 @@ export const ContractBulkAfipTab: React.FC<{
                   <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
                   <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || '—'}</td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-col items-start gap-1">
-                      <EstadoBadge name={r._estadoName} />
-                      {r._tipo ? (
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap ${r._tipo === 'alta_temprana_afip' ? 'bg-purple-600 text-white border-purple-600 dark:bg-purple-500 dark:border-purple-500' : 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700'}`}>
-                          <FontAwesomeIcon icon={faFileInvoiceDollar} className="h-2.5 w-2.5" />
-                          {TIPO_LABEL[r._tipo]}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-gray-400 italic">Sin trámite definido</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
+                    {/* Sólo el estado: el badge del trámite («Alta temprana de ARCA»…) repetía la pestaña (01/11/2026). */}
+                    <EstadoBadge name={r._estadoName} />
                   </td>
                   <ContractActionsCell record={r} onDeleted={() => load(true)} />
                 </tr>
