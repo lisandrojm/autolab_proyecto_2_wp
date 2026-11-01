@@ -627,7 +627,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                             <FontAwesomeIcon icon={faCheck} className="h-3.5 w-3.5" />
                           </button>
                         )}
-                        <button onClick={() => onRechazar(s)} className="h-8 w-8 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded transition-colors flex items-center justify-center" title="Rechazar" aria-label="Rechazar">
+                        <button onClick={() => onRechazar(s)} className="h-8 w-8 rounded transition-colors flex items-center justify-center bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50" title="Rechazar" aria-label="Rechazar">
                           <FontAwesomeIcon icon={faTimes} className="h-3.5 w-3.5" />
                         </button>
                       </div>
