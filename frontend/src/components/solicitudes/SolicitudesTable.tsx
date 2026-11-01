@@ -581,10 +581,12 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 </td>
                 <td className={`px-4 py-3 text-right ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
                   {/* Una solicitud rechazada o cancelada no se aprueba de una: primero se reabre,
-                      así queda explícito que se está deshaciendo la decisión. */}
-                  <div className="flex items-center justify-end gap-1.5">
+                      así queda explícito que se está deshaciendo la decisión.
+                      APROBAR ENCIMA DE RECHAZAR y el tacho al lado, abajo (01/11/2026): la columna fija ocupa
+                      menos ancho y deja ver más de la tabla. */}
+                  <div className="flex items-end justify-end gap-1.5">
                     {s.estado === "pendiente" ? (
-                      <>
+                      <div className="flex flex-col items-stretch gap-1">
                         {/*
                           «APROBAR» (azul como los botones de acción, con tilde) Y «RECHAZAR» (rojo, con cruz), CON TEXTO: sólo con
                           los íconos no se entendía qué hacía cada uno (30/10/2026).
@@ -594,16 +596,16 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                           eso el hover dice «Editar y aprobar».
                         */}
                         {onAprobar && (
-                          <button onClick={() => onAprobar(s)} className="px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap" title="Editar y aprobar">
+                          <button onClick={() => onAprobar(s)} className="px-2.5 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors flex items-center justify-center gap-1.5 shadow-sm whitespace-nowrap" title="Editar y aprobar">
                             <FontAwesomeIcon icon={faCheck} className="text-[10px]" />
                             Aprobar
                           </button>
                         )}
-                        <button onClick={() => onRechazar(s)} className="px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded transition-colors flex items-center gap-1.5 whitespace-nowrap" title="Rechazar">
+                        <button onClick={() => onRechazar(s)} className="px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap" title="Rechazar">
                           <FontAwesomeIcon icon={faTimes} className="text-[10px]" />
                           Rechazar
                         </button>
-                      </>
+                      </div>
                     ) : s.estado === "aprobada" ? (
                       /*
                         EDITAR UNA APROBADA ES CORREGIR SU CONTRATO, no el pedido: la solicitud ya
