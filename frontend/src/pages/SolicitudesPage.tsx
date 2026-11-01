@@ -50,7 +50,7 @@ const PAGE_SIZE = 25;
 /** El botón «Ordenar» de al lado de los filtros. Ordena el server: la tabla está paginada allá. */
 type OrdenSolicitudes = "recientes" | "desde";
 const OPCIONES_ORDEN: OpcionOrden<OrdenSolicitudes>[] = [
-  { valor: "recientes", texto: "Más recientes primero" },
+  { valor: "recientes", texto: "Solicitudes recientes primero" },
   { valor: "desde", texto: "Fecha Desde: de menor a mayor" },
 ];
 
