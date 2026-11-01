@@ -178,16 +178,6 @@ async function resolveProjectGlobalConfig(project: any, tenantId: any) {
   }
 }
 
-/**
- * EL CENTRO DE COSTO DE CADA PROYECTO, RESUELTO POR EL SERVER.
- *
- * Lo necesita cualquier listado que dibuje el badge del centro: sin esto la pantalla se queda
- * esperando a `cargarCentrosCosto` —los 2204 centros del catálogo de Tango— para traducir un número,
- * y hasta que llega muestra «ID: 46» en cada tarjeta. Acá es una consulta por página de proyectos.
- *
- * Estaba escrito adentro de `GET /projects` y el listado por cliente no lo tenía, que es justamente
- * la pantalla donde se veían los ids: el mismo badge resolvía distinto según de qué lista saliera.
- */
 async function resolveProjectsGlobalConfig(projects: any[], tenantId: any) {
   if (!projects || projects.length === 0) return;
   const generalConfig = await ActivityLogGeneralConfig.getOrCreateDefault(tenantId);

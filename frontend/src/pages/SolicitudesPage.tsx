@@ -298,7 +298,7 @@ export const SolicitudesPage: React.FC = () => {
     () =>
       rows.map((r) => ({
         ...r,
-        proyectos: r.proyectos?.map((p) => ({ _id: p._id, name: p.name, clienteNombre: p.clienteNombre })),
+        proyectos: r.proyectos?.map((p) => ({ _id: p._id, name: p.name, clienteNombre: p.clienteNombre, centroCosto: p.centroCosto })),
       })),
     [rows],
   );
@@ -708,10 +708,6 @@ export const SolicitudesPage: React.FC = () => {
             onReabrir={(s) => cambiarEstado(s, "pendiente")}
             onEliminar={eliminar}
             onEditarAprobada={editarAprobada}
-            renderObraSocial={(s) => {
-              const vista = vistaObraSocialDe(s.nombre, s.obraSocial);
-              return vista ? <CeldaObraSocial vista={vista} onValidar={() => s.obraSocial && setColaOS(gruposDeValidacion([{ nombre: s.nombre, os: s.obraSocial }]))} onQuitado={() => cargar(page)} /> : <span className="text-xs text-gray-400">—</span>;
-            }}
           />
 
           {/* Revisar acá; aprobar sigue llevando al equipo del proyecto, que es donde se carga el contrato. */}

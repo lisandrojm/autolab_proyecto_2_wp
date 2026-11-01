@@ -112,7 +112,7 @@ export interface SolicitudOverviewRow {
   creadaEl?: string;
   /** Quién la cargó (`solicitudCreadaPor`), para la columna «Solicitó». */
   solicitante?: { nombre: string; roles: string[] } | null;
-  proyectos: { _id: string; name: string; clienteId: string; clienteNombre: string }[];
+  proyectos: { _id: string; name: string; clienteId: string; clienteNombre: string; /** El código del centro de costo del proyecto ("" si no tiene). */ centroCosto?: string }[];
   roleFrameId?: any;
   rolesFrameIds?: any[] | null;
   roles_frame?: any[] | null;

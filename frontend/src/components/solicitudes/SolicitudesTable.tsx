@@ -43,6 +43,8 @@ export interface ProyectoDeSolicitud {
   _id: string;
   name: string;
   clienteNombre?: string;
+  /** El centro de costo del proyecto, ya como etiqueta (código de Tango). */
+  centroCosto?: string;
 }
 
 /**
@@ -345,7 +347,8 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
       )}
       <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)]`}>Nombre</th>
       {/* El orden de las columnas lo fijó el usuario el 01/11/2026: Fechas, Horario, Estado, Solicitó, Roles,
-          Tipo de contrato, Tipo de alta, (Obra social), Cliente, Proyecto, Último contrato y Fecha de creación. */}
+          Tipo de contrato, Tipo de alta, Cliente, Centro de costo, Proyecto, Último contrato y Fecha de
+          creación. «Obra social» salió de Solicitudes el mismo día (sigue como opción del componente). */}
       <th className="px-4 py-3 font-semibold">Fechas</th>
       <th className="px-4 py-3 font-semibold">Horario</th>
       <th className="px-4 py-3 font-semibold text-left">Estado</th>
@@ -357,6 +360,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
       {mostrarProyectos && (
         <>
           <th className="px-4 py-3 font-semibold">Cliente</th>
+          <th className="px-4 py-3 font-semibold whitespace-nowrap">Centro de costo</th>
           <th className="px-4 py-3 font-semibold">Proyecto</th>
         </>
       )}
@@ -529,6 +533,27 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                               {p.clienteNombre || <span className="text-gray-400">-</span>}
                             </span>
                           ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">-</span>
+                      )}
+                    </td>
+                    {/*
+                      EL CENTRO DE COSTO DE CADA PROYECTO (01/11/2026), con el badge violeta de la ficha del
+                      proyecto. Una línea por proyecto, enfrentada a su cliente y a su nombre.
+                    */}
+                    <td className="px-4 py-3">
+                      {s.proyectos && s.proyectos.length > 0 ? (
+                        <div className="flex flex-col items-start gap-1">
+                          {s.proyectos.map((p) =>
+                            p.centroCosto ? (
+                              <span key={p._id} className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-bold leading-4 whitespace-nowrap bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50">
+                                {p.centroCosto}
+                              </span>
+                            ) : (
+                              <span key={p._id} className="text-xs text-gray-400">-</span>
+                            ),
+                          )}
                         </div>
                       ) : (
                         <span className="text-xs text-gray-400">-</span>
