@@ -2390,12 +2390,6 @@ export const ContractBulkAfipTab: React.FC<{
                     Contrato
                   </BotonOrden>
                 </th>
-                {/* «Fecha de creación»: cuándo se cargó el contrato. Es el orden con el que abre la tabla. */}
-                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Cuándo se cargó el contrato en WeProdu">
-                  <BotonOrden columna="fechaCarga" {...ordenProps}>
-                    Fecha de creación
-                  </BotonOrden>
-                </th>
                 {/* Acá vivía «Verificar (Opc)», una columna entera para un botón que copiaba el CUIT
                     y abría el portal de ARCA a mano. Se sacó: al lado de «Validar», que consulta el
                     Padrón sola y deja el resultado archivado, un segundo botón que manda a hacer lo
@@ -2496,6 +2490,13 @@ export const ContractBulkAfipTab: React.FC<{
                     Proyecto
                   </BotonOrden>
                 </th>
+                {/* «Fecha de creación»: cuándo se cargó el contrato. Es el orden con el que abre la tabla.
+                    La última de las que scrollean, pegada a las fijas de la derecha (01/11/2026). */}
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Cuándo se cargó el contrato en WeProdu">
+                  <BotonOrden columna="fechaCarga" {...ordenProps}>
+                    Fecha de creación
+                  </BotonOrden>
+                </th>
                 {/* Sin «Estado» (va como badge arriba del contrato) ni «Estado Impositivo» (repetía la pestaña), 01/11/2026. */}
                 {filterTipo === 'alta_temprana_afip' ? (
                   <th className={`sticky right-[var(--ancho-acciones,100px)] z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 ${anchoColFija} ${bordeInicioFijasDerecha}`}>
@@ -2566,9 +2567,6 @@ export const ContractBulkAfipTab: React.FC<{
                         </div>
                       )}
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                    <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>} />
                   </td>
                   {filterTipo === 'sin_cuit' && (
                     <td className="px-4 py-3">
@@ -2663,6 +2661,9 @@ export const ContractBulkAfipTab: React.FC<{
                   )}
                   <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                   <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
+                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                    <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>} />
+                  </td>
                   <td className={`sticky right-[var(--ancho-acciones,100px)] z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${anchoColFija} ${bordeInicioFijasDerecha} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                     {filterTipo === 'alta_temprana_afip' ? (
                       <div className="flex flex-col items-start gap-1.5">
