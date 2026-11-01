@@ -2384,6 +2384,12 @@ export const ContractBulkAfipTab: React.FC<{
                     {hayEncuadre ? "Solicitud" : "Último Contrato"}
                   </BotonOrden>
                 </th>
+                {/* «Contrato» (con el estado arriba) pegada a «Solicitud» (01/11/2026). */}
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
+                  <BotonOrden columna="contrato" {...ordenProps}>
+                    Contrato
+                  </BotonOrden>
+                </th>
                 {/* «Fecha de creación»: cuándo se cargó el contrato. Es el orden con el que abre la tabla. */}
                 <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Cuándo se cargó el contrato en WeProdu">
                   <BotonOrden columna="fechaCarga" {...ordenProps}>
@@ -2512,11 +2518,6 @@ export const ContractBulkAfipTab: React.FC<{
                     Proyecto
                   </BotonOrden>
                 </th>
-                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                  <BotonOrden columna="contrato" {...ordenProps}>
-                    Contrato
-                  </BotonOrden>
-                </th>
                 {/* Sin «Estado» (va como badge arriba del contrato) ni «Estado Impositivo» (repetía la pestaña), 01/11/2026. */}
                 {filterTipo === 'alta_temprana_afip' ? (
                   <th className={`sticky right-[var(--ancho-acciones,100px)] z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 ${anchoColFija} ${bordeInicioFijasDerecha}`}>
@@ -2574,6 +2575,13 @@ export const ContractBulkAfipTab: React.FC<{
                         </div>
                       );
                     })()}
+                  </td>
+                  {/* El estado, arriba del contrato como en Solicitudes (01/11/2026): sin columna propia. */}
+                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                    <div className="flex flex-col items-start gap-1">
+                      <EstadoBadge name={r._estadoName} />
+                      <span>{r.nombre_contrato || '—'}</span>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                     <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>} />
@@ -2678,13 +2686,6 @@ export const ContractBulkAfipTab: React.FC<{
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                   <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
-                  {/* El estado, arriba del contrato como en Solicitudes (01/11/2026): sin columna propia. */}
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                    <div className="flex flex-col items-start gap-1">
-                      <EstadoBadge name={r._estadoName} />
-                      <span>{r.nombre_contrato || '—'}</span>
-                    </div>
-                  </td>
                   <td className={`sticky right-[var(--ancho-acciones,100px)] z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${anchoColFija} ${bordeInicioFijasDerecha} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                     {filterTipo === 'alta_temprana_afip' ? (
                       <div className="flex flex-col items-start gap-1.5">
