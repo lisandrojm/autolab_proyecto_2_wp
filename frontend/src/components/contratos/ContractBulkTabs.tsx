@@ -849,24 +849,6 @@ const GRUPO_ENCUADRE_FIN = `${GRUPO_ENCUADRE} border-r-2 border-r-blue-500/40 da
 const GRUPO_ENCUADRE_TH_FIN = `${GRUPO_ENCUADRE_TH} border-r-2 border-r-blue-500/40 dark:border-r-blue-400/40`;
 /** La flecha que va al final de cada cabecera del grupo menos la última. */
 /**
- * Cuántas columnas hay antes de que empiece la banda, en la pestaña de Alta temprana.
- *
- * Son: el check, «Datos ARCA», «Usuario», «Fecha de creación», «Alta / Baja», «Alta ARCA» y «CUIT». Lo usa el colSpan
- * de la fila que rotula el grupo: si se agrega una columna a la izquierda y esto no se actualiza,
- * el rótulo se corre y termina titulando columnas que no son.
- */
-const COLUMNAS_ANTES_DEL_GRUPO = 7;
-/**
- * Cuántas columnas viajan FIJAS a la izquierda: el check, «Datos ARCA» y «Usuario». («Fecha de
- * creación» fue fija un tiempo, entre las dos; se sacó de ahí el 10/10/2026: va después de Usuario y scrollea.)
- *
- * La fila que rotula el grupo la usa para que su primer relleno tape exactamente ese bloque y se
- * quede quieto con él. El resto del hueco de la izquierda se calcula contra
- * `COLUMNAS_ANTES_DEL_GRUPO` en vez de ir como un tercer número suelto: así el bloque sigue sumando
- * lo mismo aunque cambie el offset del grupo.
- */
-const COLUMNAS_FIJAS = 3;
-/**
  * EL ANCHO DE LA COLUMNA DEL CHECK: 3rem EXACTAS, EN LAS DOS CELDAS.
  *
  * Es donde `left-12` ancla a «Datos ARCA», y ese 12 es un número escrito a mano. El ancho estaba
@@ -895,20 +877,6 @@ const FIRMA_IZQ_FECHA = 'left-[13rem]';
 const FIRMA_ANCHO_FECHA = 'w-32 min-w-[8rem] max-w-[8rem]';
 const FIRMA_IZQ_USUARIO = 'left-[21rem]';
 const FIRMA_FIN_DE_FIJAS = 'border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]';
-/**
- * Cuántas columnas quedan DESPUÉS de la banda, para taparlas con el mismo fondo.
- *
- * La fila que rotula el grupo terminaba en el rótulo y no completaba las de la derecha: una fila
- * con menos celdas es válida en HTML, pero lo que queda no es blanco, es un agujero — y como el
- * `<thead>` es sticky, por ahí se veían pasar las filas de datos mientras se scrollea. El síntoma
- * era que «desde Empresa Release en adelante» el encabezado parecía transparente.
- *
- * Son: Empresa Release, Cliente, Proyecto, Contrato, Estado, Estado Impositivo y Acciones. A
- * diferencia de las de la izquierda, ninguna es condicional —no dependen de `filterTipo` ni de
- * `layoutConstancia`—, así que el número es estable; igual, si se agrega una columna al final hay
- * que sumarla acá o el agujero vuelve.
- */
-const COLUMNAS_DESPUES_DEL_GRUPO = 7;
 
 const FlechaEncuadre = () => <span className="text-blue-500/70 dark:text-blue-400/70 font-normal ml-1">→</span>;
 
@@ -2336,47 +2304,6 @@ export const ContractBulkAfipTab: React.FC<{
           )}
           <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1650px]">
             <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
-              {/*
-                LA FILA QUE NOMBRA AL GRUPO. Seis columnas que son una sola cosa.
-
-                Empresa Contrato, Convenio, Categoría, Obra Social, Sucursal y Actividad no son seis
-                datos sueltos: son los que la EMPLEADORA declaró ante ARCA y los que se eligen dentro
-                de eso. La banda azul ya los pintaba juntos, pero un color no dice de qué son — con
-                quince columnas al lado, había que deducirlo.
-
-                `COLUMNAS_ANTES_DEL_GRUPO` es el offset hasta ahí. Va como constante y no como número
-                suelto porque si mañana se agrega una columna a la izquierda, el rótulo se corre y
-                queda titulando las columnas equivocadas — un error que se ve pero no se entiende.
-
-                Las de la derecha SÍ se completan, aunque vayan vacías: ver `COLUMNAS_DESPUES_DEL_GRUPO`.
-
-                EL PRIMER RELLENO VA FIJO, como las columnas que tiene abajo.
-
-                Abarca justo las tres fijas —por eso usa `COLUMNAS_FIJAS`—, pero sin `sticky` esta
-                fila entera scrolleaba a lo ancho mientras la de abajo se quedaba quieta: la banda
-                de arriba de «Datos ARCA» y «Usuario» mostraba lo que iba pasando. Las dos filas del
-                encabezado tienen que quedarse juntas o no se queda ninguna.
-
-                Va sin el borde de cierre: el filo del bloque fijo ya lo dibujan la fila de abajo y
-                las celdas del cuerpo. Repetirlo acá, en una banda vacía y más baja, se leía como
-                una rayita suelta fuera de lugar en vez de como el borde de una columna.
-              */}
-              {hayEncuadre && (
-                <tr>
-                  <th colSpan={COLUMNAS_FIJAS} className="sticky left-0 z-[15] p-0 bg-gray-50 dark:bg-gray-900" />
-                  <th colSpan={COLUMNAS_ANTES_DEL_GRUPO - COLUMNAS_FIJAS} className="p-0 bg-gray-50 dark:bg-gray-900" />
-                  <th colSpan={6} className={`px-4 pt-2.5 pb-1 text-[10px] font-bold uppercase tracking-widest text-blue-700/80 dark:text-blue-400/80 text-left ${GRUPO_ENCUADRE_TH}`}>
-                    Datos que declara la empleadora ante ARCA
-                  </th>
-                  <th colSpan={COLUMNAS_DESPUES_DEL_GRUPO - 1} className="p-0 bg-gray-50 dark:bg-gray-900" />
-                  {/*
-                    ARRIBA DE «ACCIONES», UNA CELDA FIJA COMO LA DE ABAJO (01/11/2026): sin ella, al correr
-                    la tabla, el rótulo «Datos que declara la empleadora…» pasaba por encima de la columna
-                    fija. Con `col-acciones` las dos filas del encabezado quedan pegadas a la derecha juntas.
-                  */}
-                  <th className="col-acciones p-0 bg-gray-50 dark:bg-gray-900" />
-                </tr>
-              )}
               <tr className="border-b border-gray-100 dark:border-gray-800">
                 <th className={`sticky left-0 z-[15] px-4 py-3 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK}`}>
                   <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={selectableFiltered.length === 0} title={`Seleccionar los ${selectableFiltered.length} del listado (todas las páginas, no sólo la que se ve)`} className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
