@@ -1056,6 +1056,8 @@ const CAMPOS_FILA_CONTRATO = [
   "categoria_sat_id", "rol_frame_id", "sede_id", "tipo_contrato_id", "sucursalArcaId", "actividadArca",
   "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "obraSocialBloqueada",
   "sinCuitValidacion", "puestoDesempenado", "contrato_id",
+  // La solicitud que lo originó: de ella sale el comentario de quien pidió el alta y si es una renovación.
+  "solicitudId",
   // La retribución pactada de ARCA sale de uno de estos según la modalidad de liquidación (`retribucionPactada.ts`).
   "sueldo_jornada", "sueldo_bruto", "sueldo_neto", "sueldo_diario_neto", "dias_semana", "dias_por_semana", "dias_rotativos", "fechas_trabajadas",
 ];
@@ -1529,10 +1531,25 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
       for (const u of reemplazados) nombreReemplazado.set(String(u.metadata?.id), `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email);
     }
 
+    /*
+      LA SOLICITUD DE CADA CONTRATO DE LA PÁGINA (01/11/2026): Contratos muestra al colaborador igual que
+      Solicitudes —el ícono del comentario de quien pidió el alta y el badge «Renovación»—. Una consulta
+      para toda la página, sólo con esos dos campos.
+    */
+    const idsSolicitud = [...new Set([...contratoPorFila.values()].map((c: any) => (c?.solicitudId ? String(c.solicitudId) : "")).filter((id) => Types.ObjectId.isValid(id)))];
+    const solicitudPorId = new Map<string, any>();
+    if (idsSolicitud.length > 0) {
+      const sols: any[] = await User.find({ tenantId: req.tenantObjectId, _id: { $in: idsSolicitud.map((id) => new Types.ObjectId(id)) } }).select("metadata.comentarios metadata.esRenovacion").lean();
+      for (const s of sols) solicitudPorId.set(String(s._id), s.metadata || {});
+    }
+
     const fullRows = pageRows.map(({ _alta, _orden, _contratoOrden, ...r }) => {
       const c: any = contratoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || {};
+      const sol = c.solicitudId ? solicitudPorId.get(String(c.solicitudId)) : undefined;
       return {
         ...r,
+        solicitudComentarios: String(sol?.comentarios || ""),
+        esRenovacion: !!sol?.esRenovacion,
         nombre_contrato: c.nombre_contrato || "",
         nombre_estado_empleado: c.nombre_estado_empleado || "",
         nombre_sede: c.nombre_sede || "",
