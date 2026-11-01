@@ -2429,29 +2429,16 @@ export const ContractBulkAfipTab: React.FC<{
                     Generar documentos, así que acá esa columna nunca tiene nada. */}
                 {filterTipo !== 'sin_cuit' && filterTipo !== 'alta_temprana_afip' && <ContractDocsHeaders showContrato={false} showRelease={false} altaLabel="Alta Servicios" />}
                 {/* Sin columna «CUIT» (01/11/2026): lo pidió el usuario; el CUIT se ve en el detalle de la fila. */}
-                {/* El fondo y el borde de «grupo encuadre» solo cuando hay grupo: sin las tres
-                    columnas de al lado, abrir un grupo en Empresa Contrato lo dejaría sin cerrar. */}
-                <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${hayEncuadre ? GRUPO_ENCUADRE_TH_INICIO : ''}`}>
-                  <span className="inline-flex items-center gap-1.5">
-                    <BotonOrden columna="empresaContrato" {...ordenProps}>
-                      Empresa Contrato
-                    </BotonOrden>
-                    {filterTipo === 'alta_temprana_afip' && (
-                      <>
-                        <span className="text-red-500">*</span>
-                        <button type="button" onClick={() => setEmpresaContratoInfoOpen(true)} title="Por qué es obligatoria" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
-                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                        </button>
-                      </>
-                    )}
-                    {hayEncuadre && <FlechaEncuadre />}
-                  </span>
-                </th>
+                {/*
+                  SIN «EMPRESA CONTRATO» NI «EMPRESA RELEASE» (01/11/2026): la empresa ya la dicen las pestañas de
+                  arriba. Si a una fila le falta la Empresa Contrato (obligatoria para el TXT), el selector aparece
+                  debajo del contrato, en la columna «Contrato». El grupo encuadre ahora abre en «Convenio».
+                */}
                 {/* Entre Empresa Contrato y Obra Social, que es el orden en que se resuelven: la
                     obra social por defecto sale del convenio, y el convenio de la categoría. */}
                 {hayEncuadre && (
                   <>
-                    <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH}`}>
+                    <th className={`px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${GRUPO_ENCUADRE_TH_INICIO}`}>
                       <BotonOrden columna="convenio" {...ordenProps}>
                         Convenio
                       </BotonOrden>
@@ -2499,11 +2486,6 @@ export const ContractBulkAfipTab: React.FC<{
                     </th>
                   </>
                 )}
-                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                  <BotonOrden columna="empresaRelease" {...ordenProps}>
-                    Empresa Release
-                  </BotonOrden>
-                </th>
                 <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
                   <BotonOrden columna="cliente" {...ordenProps}>
                     Cliente
@@ -2577,6 +2559,12 @@ export const ContractBulkAfipTab: React.FC<{
                     <div className="flex flex-col items-start gap-1">
                       <EstadoBadge name={r._estadoName} />
                       <span>{r.nombre_contrato || '—'}</span>
+                      {/* Sin columna de empresa: si falta la Empresa Contrato, se elige acá. */}
+                      {!r.empresaContratoId && (
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <EmpresaSelectCell record={r} campo="contrato" requerido={filterTipo === 'alta_temprana_afip'} onGuardado={(patch) => aplicarCambio(r, patch)} />
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
@@ -2619,12 +2607,9 @@ export const ContractBulkAfipTab: React.FC<{
                     </>
                   )}
                   {filterTipo !== 'sin_cuit' && filterTipo !== 'alta_temprana_afip' && <ContractDocsColumns record={r} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContract} onDownloadRelease={handleDownloadRelease} onUploadAlta={handleUploadAlta} showContrato={false} showRelease={false} hideAltaLabel onConstanciaEliminada={() => load(true)} />}
-                  <td className={`px-4 py-3 ${hayEncuadre ? GRUPO_ENCUADRE_INICIO : ''}`} onClick={(e) => e.stopPropagation()}>
-                    <EmpresaSelectCell record={r} campo="contrato" requerido={filterTipo === 'alta_temprana_afip'} onGuardado={(patch) => aplicarCambio(r, patch)} />
-                  </td>
                   {hayEncuadre && (
                     <>
-                      <td className={`px-4 py-3 ${GRUPO_ENCUADRE}`} onClick={(e) => e.stopPropagation()}>
+                      <td className={`px-4 py-3 ${GRUPO_ENCUADRE_INICIO}`} onClick={(e) => e.stopPropagation()}>
                         <ConvenioSelectCell
                           record={r}
                           valores={resolveAfipValues(r, afipCat)}
@@ -2676,9 +2661,6 @@ export const ContractBulkAfipTab: React.FC<{
                       </td>
                     </>
                   )}
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                    <EmpresaSelectCell record={r} campo="release" requerido={false} onGuardado={(patch) => aplicarCambio(r, patch)} />
-                  </td>
                   <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                   <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
                   <td className={`sticky right-[var(--ancho-acciones,100px)] z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${anchoColFija} ${bordeInicioFijasDerecha} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
@@ -2847,7 +2829,7 @@ export const ContractBulkAfipTab: React.FC<{
               <strong>{obraSocialSinEmpresa.userName}</strong> no tiene asignada una <strong>Empresa Contrato</strong>, y la obra social se consulta en ARCA con el CUIL de la persona <strong>contra el CUIT de la empleadora</strong>: sin empresa no hay contra qué validar.
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              Elegí la empresa en la columna <strong>Empresa Contrato</strong> de esta misma fila —o en masa, tildando filas y usando el selector «Empresa Contrato…» + <strong>Aplicar</strong>—. Apenas la tenga, este ⓘ se convierte en el botón <strong>Validar</strong>.
+              Elegí la empresa en el selector que aparece debajo del contrato, en la columna <strong>Contrato</strong> de esta misma fila. Apenas la tenga, este ⓘ se convierte en el botón <strong>Validar</strong>.
             </p>
             <p className="text-[11px] text-gray-500 dark:text-gray-400">Hasta validarse, la obra social queda vacía y el contrato no entra en el TXT de Alta temprana.</p>
           </div>
