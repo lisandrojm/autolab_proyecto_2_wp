@@ -50,6 +50,7 @@ import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/ref
 import { arcaDefaultsAPI, ArcaDefaults, CLAVE_CACHE_DEFAULTS_ARCA } from "../../api/arcaDefaults";
 import { LinkSiPuede } from '../LinkSiPuede';
 import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
+import { useAnchoAcciones } from '../ui/useAnchoAcciones';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 const CLAVE_CACHE_OBRAS_SOCIALES = claveCacheCatalogo('/obras-sociales');
@@ -1681,13 +1682,15 @@ export const ContractBulkAfipTab: React.FC<{
    */
   const anchoColFija = filterTipo === 'sin_cuit' ? 'w-60 min-w-[15rem] max-w-[15rem]' : 'w-44 min-w-[11rem] max-w-[11rem]';
   /**
-   * «COLABORADOR» VA SEGUNDA, ANTES QUE «DATOS ARCA» (01/11/2026): primero de quién es la fila. Ahora es
-   * la del medio, así que su ancho es el que se fija (los nombres largos se cortan con «…» y el nombre
-   * entero queda en el hover), y la de «Datos ARCA» / «Acciones» arranca en 3rem del check + 20rem.
+   * LAS FIJAS (01/11/2026): a la izquierda el check y «Colaborador» (de quién es la fila); a la DERECHA,
+   * pegada a las acciones, «Datos ARCA» (o «Acciones» en las otras pestañas). Esa se pega a la distancia
+   * que mide la columna de acciones (--ancho-acciones, ver `useAnchoAcciones`), y la primera que scrollea
+   * después de «Colaborador» es «Solicitud».
    */
-  const anchoColColaborador = 'w-80 min-w-[20rem] max-w-[20rem]';
-  const izquierdaColDatos = 'left-[23rem]';
-  /** El borde marcado y la sombra van en la ÚLTIMA fija, que ahora es «Datos ARCA» / «Acciones». */
+  const cajaAccionesRef = useAnchoAcciones<HTMLDivElement>();
+  /** El borde que abre el bloque fijo de la derecha, como el que cierra el de la izquierda. */
+  const bordeInicioFijasDerecha = 'border-l-2 border-gray-300 dark:border-gray-600 shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.25)]';
+  /** El borde marcado y la sombra van en la ÚLTIMA fija de la izquierda, que es «Colaborador». */
   const bordeFinDeFijas = 'border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]';
 
   /**
@@ -2341,6 +2344,7 @@ export const ContractBulkAfipTab: React.FC<{
               </button>
             </div>
           )}
+          <div ref={cajaAccionesRef} className="contents">
           <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1650px]">
             <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
               <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -2357,26 +2361,12 @@ export const ContractBulkAfipTab: React.FC<{
                   *  - en Constancia de CUIT y Sin CUIT se mantiene «Acciones», porque ahí sí
                   *    lleva la única forma de hacer el trámite de esa fila.
                   */}
-                {/* «COLABORADOR», FIJA Y PRIMERA DESPUÉS DEL CHECK: de quién es la fila (ver `anchoColColaborador`). */}
-                <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColColaborador}`}>
+                {/* «COLABORADOR», FIJA Y PRIMERA DESPUÉS DEL CHECK: de quién es la fila. */}
+                <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 ${bordeFinDeFijas}`}>
                   <BotonOrden columna="usuario" {...ordenProps}>
                     Colaborador
                   </BotonOrden>
                 </th>
-                {filterTipo === 'alta_temprana_afip' ? (
-                  <th className={`sticky ${izquierdaColDatos} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 ${anchoColFija} ${bordeFinDeFijas}`}>
-                    <span className="inline-flex items-center gap-1.5">
-                      <BotonOrden columna="datosArca" {...ordenProps} title="Ordenar por lo que falta para el TXT">
-                        Datos ARCA
-                      </BotonOrden>
-                      <button type="button" onClick={() => setDatosAfipInfoOpen(true)} title="Por qué a veces no se puede generar el TXT" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
-                        <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                      </button>
-                    </span>
-                  </th>
-                ) : (
-                  <th className={`sticky ${izquierdaColDatos} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 ${anchoColFija} ${bordeFinDeFijas}`}>Acciones</th>
-                )}
                 {/*
                   «Último Contrato», y no «Alta / Baja».
 
@@ -2531,6 +2521,20 @@ export const ContractBulkAfipTab: React.FC<{
                   </BotonOrden>
                 </th>
                 {/* Sin «Estado Impositivo» (01/11/2026): repetía lo que ya dicen la pestaña y el estado. */}
+                {filterTipo === 'alta_temprana_afip' ? (
+                  <th className={`sticky right-[var(--ancho-acciones,100px)] z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 ${anchoColFija} ${bordeInicioFijasDerecha}`}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <BotonOrden columna="datosArca" {...ordenProps} title="Ordenar por lo que falta para el TXT">
+                        Datos ARCA
+                      </BotonOrden>
+                      <button type="button" onClick={() => setDatosAfipInfoOpen(true)} title="Por qué a veces no se puede generar el TXT" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 normal-case tracking-normal font-normal shrink-0">
+                        <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                      </button>
+                    </span>
+                  </th>
+                ) : (
+                  <th className={`sticky right-[var(--ancho-acciones,100px)] z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 ${anchoColFija} ${bordeInicioFijasDerecha}`}>Acciones</th>
+                )}
                 <ContractActionsHeader />
               </tr>
             </thead>
@@ -2540,24 +2544,9 @@ export const ContractBulkAfipTab: React.FC<{
                   <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                     <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={tituloCheck(r)} className={`rounded border-gray-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${omitidaEnValidacion(r) ? 'text-amber-500 focus:ring-amber-500' : 'text-emerald-600 focus:ring-emerald-500'}`} />
                   </td>
-                  {/* «Colaborador», fija y primera después del check (ver `anchoColColaborador`). */}
-                  <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${anchoColColaborador} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
+                  {/* «Colaborador», fija y primera después del check. */}
+                  <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${bordeFinDeFijas} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                     <CeldaColaborador r={r} />
-                  </td>
-                  <td className={`sticky ${izquierdaColDatos} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${anchoColFija} ${bordeFinDeFijas} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
-                    {filterTipo === 'alta_temprana_afip' ? (
-                      <div className="flex flex-col items-start gap-1.5">
-                        <BadgeArca result={result} onClick={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })} />
-                        {result.completo && <BotonPresentarFila row={r} result={result} />}
-                      </div>
-                    ) : noPoseeCuit(r.cuit, r.sinCuit) ? (
-                      // Sin CUIT los trámites de ARCA no aplican: la salida es generar los documentos.
-                      <BotonHabilitarFirma row={r} tramite={r._tipo || 'constancia_cuit'} validado={!!r.sinCuitValidacion?.validado} onHabilitado={() => load(true)} />
-                    ) : (
-                      <div className="flex items-center gap-1.5 whitespace-nowrap">
-                        <BotonValidarCuit row={r} onConsultado={() => load(true)} compacto />
-                      </div>
-                    )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500 whitespace-nowrap">
                     {(() => {
@@ -2697,11 +2686,27 @@ export const ContractBulkAfipTab: React.FC<{
                     {/* Sólo el estado: el badge del trámite («Alta temprana de ARCA»…) repetía la pestaña (01/11/2026). */}
                     <EstadoBadge name={r._estadoName} />
                   </td>
+                  <td className={`sticky right-[var(--ancho-acciones,100px)] z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${anchoColFija} ${bordeInicioFijasDerecha} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
+                    {filterTipo === 'alta_temprana_afip' ? (
+                      <div className="flex flex-col items-start gap-1.5">
+                        <BadgeArca result={result} onClick={() => setDetalleRef({ _id: r._id, contractIndex: r.contractIndex })} />
+                        {result.completo && <BotonPresentarFila row={r} result={result} />}
+                      </div>
+                    ) : noPoseeCuit(r.cuit, r.sinCuit) ? (
+                      // Sin CUIT los trámites de ARCA no aplican: la salida es generar los documentos.
+                      <BotonHabilitarFirma row={r} tramite={r._tipo || 'constancia_cuit'} validado={!!r.sinCuitValidacion?.validado} onHabilitado={() => load(true)} />
+                    ) : (
+                      <div className="flex items-center gap-1.5 whitespace-nowrap">
+                        <BotonValidarCuit row={r} onConsultado={() => load(true)} compacto />
+                      </div>
+                    )}
+                  </td>
                   <ContractActionsCell record={r} onDeleted={() => load(true)} />
                 </tr>
               ))}
             </tbody>
           </TablaConEncabezadoFijo>
+          </div>
           <Paginador pagina={pag.pagina} totalPaginas={pag.totalPaginas} total={pag.total} desde={pag.desde} mostrados={pag.visibles.length} onPagina={pag.setPagina} />
         </div>
       )}
