@@ -2515,12 +2515,7 @@ export const ContractBulkAfipTab: React.FC<{
                     Contrato
                   </BotonOrden>
                 </th>
-                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                  <BotonOrden columna="estado" {...ordenProps}>
-                    Estado
-                  </BotonOrden>
-                </th>
-                {/* Sin «Estado Impositivo» (01/11/2026): repetía lo que ya dicen la pestaña y el estado. */}
+                {/* Sin «Estado» (va como badge arriba del contrato) ni «Estado Impositivo» (repetía la pestaña), 01/11/2026. */}
                 {filterTipo === 'alta_temprana_afip' ? (
                   <th className={`sticky right-[var(--ancho-acciones,100px)] z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 ${anchoColFija} ${bordeInicioFijasDerecha}`}>
                     <span className="inline-flex items-center gap-1.5">
@@ -2681,10 +2676,12 @@ export const ContractBulkAfipTab: React.FC<{
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                   <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || '—'}</td>
-                  <td className="px-4 py-3">
-                    {/* Sólo el estado: el badge del trámite («Alta temprana de ARCA»…) repetía la pestaña (01/11/2026). */}
-                    <EstadoBadge name={r._estadoName} />
+                  {/* El estado, arriba del contrato como en Solicitudes (01/11/2026): sin columna propia. */}
+                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                    <div className="flex flex-col items-start gap-1">
+                      <EstadoBadge name={r._estadoName} />
+                      <span>{r.nombre_contrato || '—'}</span>
+                    </div>
                   </td>
                   <td className={`sticky right-[var(--ancho-acciones,100px)] z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${anchoColFija} ${bordeInicioFijasDerecha} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                     {filterTipo === 'alta_temprana_afip' ? (
@@ -4210,11 +4207,7 @@ export const ContractBulkFirmaTab: React.FC<{
                     Proyecto
                   </BotonOrden>
                 </th>
-                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                  <BotonOrden columna="estado" {...ordenProps}>
-                    Estado
-                  </BotonOrden>
-                </th>
+                {/* Sin «Estado»: va como badge arriba del contrato (01/11/2026). */}
                 <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Impositivo</th>
                 <ContractActionsHeader />
               </tr>
@@ -4268,7 +4261,12 @@ export const ContractBulkFirmaTab: React.FC<{
                         <span className="text-[11px] text-gray-400 italic">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                      <div className="flex flex-col items-start gap-1">
+                        <EstadoBadge name={r.nombre_estado_empleado || ''} />
+                        <span>{r.nombre_contrato || '—'}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       <FirmaContratoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} onGenerado={(patch) => aplicarCambio(r, patch)} />
                     </td>
@@ -4278,9 +4276,6 @@ export const ContractBulkFirmaTab: React.FC<{
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
-                    <td className="px-4 py-3">
-                      <EstadoBadge name={r.nombre_estado_empleado || ''} />
-                    </td>
                     <td className="px-4 py-3">
                       <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
                     </td>
@@ -4455,7 +4450,7 @@ export const ContractBulkContratadosTab: React.FC<{
                 <th className={th}>
                   <BotonOrden columna="proyecto" {...ordenProps}>Proyecto</BotonOrden>
                 </th>
-                <th className={th}>Estado</th>
+                {/* Sin «Estado»: va como badge arriba del tipo de contrato (01/11/2026). */}
                 <th className={th}>Estado Impositivo</th>
                 <ContractActionsHeader />
               </tr>
@@ -4484,13 +4479,15 @@ export const ContractBulkContratadosTab: React.FC<{
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.nombre_contrato || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                      <div className="flex flex-col items-start gap-1">
+                        <EstadoBadge name={r.nombre_estado_empleado || ''} />
+                        <span>{r.nombre_contrato || '—'}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
-                    <td className="px-4 py-3">
-                      <EstadoBadge name={r.nombre_estado_empleado || ''} />
-                    </td>
                     <td className="px-4 py-3">
                       <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
                     </td>
