@@ -48,7 +48,17 @@ export interface LoteAltasValidado {
 export declare class LoteAltasError extends Error {
     status: number;
     detalle: Array<string | Diferencia>;
-    constructor(message: string, status?: number, detalle?: Array<string | Diferencia>);
+    /** Los contratos que tienen algún problema: la pantalla ofrece sacarlos del lote y presentar el resto. */
+    conProblema: Array<{
+        userProjectId: string;
+        contractIndex: number;
+    }>;
+    constructor(message: string, status?: number, detalle?: Array<string | Diferencia>, 
+    /** Los contratos que tienen algún problema: la pantalla ofrece sacarlos del lote y presentar el resto. */
+    conProblema?: Array<{
+        userProjectId: string;
+        contractIndex: number;
+    }>);
 }
 export declare function validarLoteAltas(o: {
     tenantObjectId: any;

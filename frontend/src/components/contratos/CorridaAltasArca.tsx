@@ -183,14 +183,24 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote: loteR
     que se presenta de verdad: sin las excluidas y con el texto rearmado sin sus registros.
   */
   const [excluirRepetidas, setExcluirRepetidas] = useState(true);
-  useEffect(() => setExcluirRepetidas(true), [loteRecibido]);
+  /*
+    LAS QUE EL SERVER RECHAZÓ (01/11/2026): con un solo contrato con problema no se manda nada, así que
+    se ofrece sacarlos del lote y presentar el resto. Clave «userProjectId-contractIndex».
+  */
+  const [excluidasPorProblema, setExcluidasPorProblema] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    setExcluirRepetidas(true);
+    setExcluidasPorProblema(new Set());
+  }, [loteRecibido]);
+  const claveItem = (x: { userProjectId: string; contractIndex: number }) => `${x.userProjectId}-${x.contractIndex}`;
   const repetidas = useMemo(() => (loteRecibido ? posteriorasRepetidas(loteRecibido.personas) : new Set<number>()), [loteRecibido]);
   const lote = useMemo<LoteParaPresentar | null>(() => {
-    if (!loteRecibido || !excluirRepetidas || repetidas.size === 0) return loteRecibido;
-    const queda = (_: unknown, i: number) => !repetidas.has(i);
+    if (!loteRecibido || ((!excluirRepetidas || repetidas.size === 0) && excluidasPorProblema.size === 0)) return loteRecibido;
+    const queda = (_: unknown, i: number) => !(excluirRepetidas && repetidas.has(i)) && !excluidasPorProblema.has(claveItem(loteRecibido.items[i]));
     const items = loteRecibido.items.filter(queda);
     return { ...loteRecibido, personas: loteRecibido.personas.filter(queda), items, texto: loteRecibido.texto ? buildAltasMasivasTexto(items.map((x) => x.registro)) : undefined };
-  }, [loteRecibido, excluirRepetidas, repetidas]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loteRecibido, excluirRepetidas, repetidas, excluidasPorProblema]);
   // Lo que está en el portapapeles tiene que ser lo que se presenta.
   useEffect(() => {
     if (!lote?.texto || lote === loteRecibido) return;
@@ -205,7 +215,27 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote: loteR
     hay nada, se dice.
   */
   const [esperandoArranque, setEsperandoArranque] = useState(false);
-  const [error, setError] = useState<{ mensaje: string; detalle?: Array<string | { etiqueta: string; campo: string; esperado: string; recibido: string }> } | null>(null);
+  const [error, setError] = useState<{ mensaje: string; detalle?: Array<string | { etiqueta: string; campo: string; esperado: string; recibido: string }>; conProblema?: Array<{ userProjectId: string; contractIndex: number }> } | null>(null);
+  /*
+    Los contratos del lote que el error señala. El server los manda en `conProblema`; uno sin publicar
+    todavía no, y ahí se leen del texto: «NOMBRE (contrato N): …», con N = índice + 1.
+  */
+  const conProblema = useMemo(() => {
+    if (!error || !lote) return [] as string[];
+    if (error.conProblema?.length) return [...new Set(error.conProblema.map(claveItem))].filter((k) => lote.items.some((x) => claveItem(x) === k));
+    const norm = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+    const claves = new Set<string>();
+    for (const d of error.detalle || []) {
+      const texto = typeof d === 'string' ? d : d.etiqueta;
+      const m = /^(.+) \(contrato (\d+)\)/.exec(texto || '');
+      if (!m) continue;
+      lote.items.forEach((x, i) => {
+        if (x.contractIndex + 1 === Number(m[2]) && norm(lote.personas[i]?.nombre || '') === norm(m[1])) claves.add(claveItem(x));
+      });
+    }
+    return [...claves];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error, lote]);
   const [enSecoPedido, setEnSecoPedido] = useState(false);
   const [ultimoCambio, setUltimoCambio] = useState(Date.now());
   const [deteniendo, setDeteniendo] = useState(false);
@@ -308,7 +338,7 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote: loteR
       await consultar();
       seguir();
     } catch (e: any) {
-      setError({ mensaje: e?.response?.data?.error || e?.message || 'No se pudo arrancar la corrida.', detalle: e?.response?.data?.detalle });
+      setError({ mensaje: e?.response?.data?.error || e?.message || 'No se pudo arrancar la corrida.', detalle: e?.response?.data?.detalle, conProblema: e?.response?.data?.conProblema });
     } finally {
       setArrancando(false);
     }
@@ -497,6 +527,20 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote: loteR
                 )}
               </div>
             )}
+            {loteRecibido && excluidasPorProblema.size > 0 && (
+              <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                <span className="flex-1">
+                  <strong>{excluidasPorProblema.size} excluida(s) por problemas</strong> (siguen en Trámite impositivo):{' '}
+                  {loteRecibido.items
+                    .map((x, i) => (excluidasPorProblema.has(claveItem(x)) ? `${loteRecibido.personas[i].nombre} (${loteRecibido.personas[i].alta || '—'})` : null))
+                    .filter(Boolean)
+                    .join(', ')}
+                </span>
+                <button type="button" onClick={() => setExcluidasPorProblema(new Set())} className="underline shrink-0">
+                  Volver a incluir
+                </button>
+              </div>
+            )}
             <ul className="max-h-48 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg">
               {lote.personas.map((p, i) => (
                 <li key={`${p.cuil}-${i}`} className="px-3 py-1.5 flex justify-between gap-3">
@@ -549,6 +593,18 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote: loteR
                   <li key={i}>{typeof d === 'string' ? d : `${d.etiqueta}: ${d.campo} — se esperaba «${d.esperado}» y vino «${d.recibido}»`}</li>
                 ))}
               </ul>
+            )}
+            {!confirmado && !corriendo && conProblema.length > 0 && conProblema.length < (lote?.items.length || 0) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setExcluidasPorProblema((antes) => new Set([...antes, ...conProblema]));
+                  setError(null);
+                }}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-red-300 dark:border-red-700 px-2.5 py-1 font-semibold hover:bg-red-100 dark:hover:bg-red-900/40"
+              >
+                Excluir {conProblema.length === 1 ? 'el que tiene problema' : `los ${conProblema.length} que tienen problemas`} y presentar el resto ({(lote?.items.length || 0) - conProblema.length})
+              </button>
             )}
           </div>
         )}

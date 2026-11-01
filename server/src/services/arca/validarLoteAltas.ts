@@ -62,6 +62,8 @@ export class LoteAltasError extends Error {
     message: string,
     public status = 400,
     public detalle: Array<string | Diferencia> = [],
+    /** Los contratos que tienen algún problema: la pantalla ofrece sacarlos del lote y presentar el resto. */
+    public conProblema: Array<{ userProjectId: string; contractIndex: number }> = [],
   ) {
     super(message);
   }
@@ -167,12 +169,17 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
   const errores: Array<string | Diferencia> = [];
   const salida: LoteAltasValidado["items"] = [];
   const descartadas: LoteAltasValidado["descartadas"] = [];
+  const conProblema: Array<{ userProjectId: string; contractIndex: number }> = [];
 
   items.forEach((it, n) => {
+    const falla = (...m: Array<string | Diferencia>) => {
+      errores.push(...m);
+      conProblema.push({ userProjectId: it.userProjectId, contractIndex: it.contractIndex });
+    };
     const up = upPorId.get(it.userProjectId);
     const nro = `Registro ${n + 1}`;
     if (!up || !proyectosDelTenant.has(String(up.projectId))) {
-      errores.push(`${nro}: el contrato no existe en esta cuenta.`);
+      falla(`${nro}: el contrato no existe en esta cuenta.`);
       return;
     }
     const c: any = (up.contracts || [])[it.contractIndex];
@@ -180,15 +187,15 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
     const nombre = `${u?.firstName || ""} ${u?.lastName || ""}`.trim() || "(sin nombre)";
     const etiqueta = `${nombre} (contrato ${it.contractIndex + 1})`;
     if (!c) {
-      errores.push(`${etiqueta}: el contrato ya no existe.`);
+      falla(`${etiqueta}: el contrato ya no existe.`);
       return;
     }
     if (String(c.empresaContratoId || "") !== String(empresaId)) {
-      errores.push(`${etiqueta}: su Empresa Contrato no es ${empresa.razonSocial}. Un lote es de UNA empleadora.`);
+      falla(`${etiqueta}: su Empresa Contrato no es ${empresa.razonSocial}. Un lote es de UNA empleadora.`);
       return;
     }
     if (!clavesAltaTemprana.has(claveEstado(String(c.nombre_estado_empleado || "")))) {
-      errores.push(`${etiqueta}: no está en el estado de Alta temprana de ARCA (está en «${c.nombre_estado_empleado || "sin estado"}»).`);
+      falla(`${etiqueta}: no está en el estado de Alta temprana de ARCA (está en «${c.nombre_estado_empleado || "sin estado"}»).`);
       return;
     }
     if (!o.forzar && o.descartarPresentadas && c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") {
@@ -198,13 +205,13 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
       return;
     }
     if (!o.forzar && c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") {
-      errores.push(`${etiqueta}: ya se presentó en ARCA (${c.altaArcaPresentada.via === "altas_masivas" ? "Altas Masivas" : "Carga Masiva"}, ${new Date(c.altaArcaPresentada.fecha).toLocaleDateString("es-AR")}). No se presenta dos veces.`);
+      falla(`${etiqueta}: ya se presentó en ARCA (${c.altaArcaPresentada.via === "altas_masivas" ? "Altas Masivas" : "Carga Masiva"}, ${new Date(c.altaArcaPresentada.fecha).toLocaleDateString("es-AR")}). No se presenta dos veces.`);
       return;
     }
 
     const pisa = altaQueSePisa({ userId: String(up.userId), userProjectId: it.userProjectId, contractIndex: it.contractIndex, empresaId: String(empresaId), alta: c.fecha_alta_contrato, baja: c.fecha_baja_contrato }, presentadasPrevias);
     if (pisa) {
-      errores.push(`${etiqueta}: ${textoAltaQueSePisa(pisa)}.`);
+      falla(`${etiqueta}: ${textoAltaQueSePisa(pisa)}.`);
       return;
     }
 
@@ -214,7 +221,7 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
     // pasa todos los demás chequeos —es un código válido, de otra categoría— y ARCA lo acepta.
     const est = categoria?.data?.estadoArca;
     if (est && est !== "ok" && !(est === "nombre_distinto" && categoria?.data?.estadoArcaConfirmada)) {
-      errores.push(`${etiqueta}: la categoría «${categoria?.data?.nombre || categoria?.name}» tiene el código ${categoria?.data?.codigoArca}, que ARCA describe como «${categoria?.data?.descripcionArca || "—"}» (${est}). Corregila en Configuración → ARCA → Categorías.`);
+      falla(`${etiqueta}: la categoría «${categoria?.data?.nombre || categoria?.name}» tiene el código ${categoria?.data?.codigoArca}, que ARCA describe como «${categoria?.data?.descripcionArca || "—"}» (${est}). Corregila en Configuración → ARCA → Categorías.`);
       return;
     }
 
@@ -250,13 +257,13 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
     };
     const dif = cotejarRegistro(modo, it.registro, esperado, cat);
     if (dif.length > 0) {
-      errores.push(...dif);
+      falla(...dif);
       return;
     }
     salida.push({ userProjectId: it.userProjectId, contractIndex: it.contractIndex, cuil: esperado.cuil, nombre, registro: it.registro });
   });
 
-  if (errores.length > 0) throw new LoteAltasError(`Hay ${errores.length} problema(s) en el lote: no se mandó nada a ARCA.`, 400, errores);
+  if (errores.length > 0) throw new LoteAltasError(`Hay ${errores.length} problema(s) en el lote: no se mandó nada a ARCA.`, 400, errores, conProblema);
 
   const registros = salida.map((s) => s.registro);
   return {

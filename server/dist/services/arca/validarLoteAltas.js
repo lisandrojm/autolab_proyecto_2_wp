@@ -27,10 +27,14 @@ import { cotejarRegistro, cuilDeRegistro, problemasDeForma } from "./cotejoAltas
 export class LoteAltasError extends Error {
     status;
     detalle;
-    constructor(message, status = 400, detalle = []) {
+    conProblema;
+    constructor(message, status = 400, detalle = [], 
+    /** Los contratos que tienen algún problema: la pantalla ofrece sacarlos del lote y presentar el resto. */
+    conProblema = []) {
         super(message);
         this.status = status;
         this.detalle = detalle;
+        this.conProblema = conProblema;
     }
 }
 const digitos = (v) => String(v ?? "").replace(/\D/g, "");
@@ -123,11 +127,16 @@ export async function validarLoteAltas(o) {
     const errores = [];
     const salida = [];
     const descartadas = [];
+    const conProblema = [];
     items.forEach((it, n) => {
+        const falla = (...m) => {
+            errores.push(...m);
+            conProblema.push({ userProjectId: it.userProjectId, contractIndex: it.contractIndex });
+        };
         const up = upPorId.get(it.userProjectId);
         const nro = `Registro ${n + 1}`;
         if (!up || !proyectosDelTenant.has(String(up.projectId))) {
-            errores.push(`${nro}: el contrato no existe en esta cuenta.`);
+            falla(`${nro}: el contrato no existe en esta cuenta.`);
             return;
         }
         const c = (up.contracts || [])[it.contractIndex];
@@ -135,15 +144,15 @@ export async function validarLoteAltas(o) {
         const nombre = `${u?.firstName || ""} ${u?.lastName || ""}`.trim() || "(sin nombre)";
         const etiqueta = `${nombre} (contrato ${it.contractIndex + 1})`;
         if (!c) {
-            errores.push(`${etiqueta}: el contrato ya no existe.`);
+            falla(`${etiqueta}: el contrato ya no existe.`);
             return;
         }
         if (String(c.empresaContratoId || "") !== String(empresaId)) {
-            errores.push(`${etiqueta}: su Empresa Contrato no es ${empresa.razonSocial}. Un lote es de UNA empleadora.`);
+            falla(`${etiqueta}: su Empresa Contrato no es ${empresa.razonSocial}. Un lote es de UNA empleadora.`);
             return;
         }
         if (!clavesAltaTemprana.has(claveEstado(String(c.nombre_estado_empleado || "")))) {
-            errores.push(`${etiqueta}: no está en el estado de Alta temprana de ARCA (está en «${c.nombre_estado_empleado || "sin estado"}»).`);
+            falla(`${etiqueta}: no está en el estado de Alta temprana de ARCA (está en «${c.nombre_estado_empleado || "sin estado"}»).`);
             return;
         }
         if (!o.forzar && o.descartarPresentadas && c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") {
@@ -153,12 +162,12 @@ export async function validarLoteAltas(o) {
             return;
         }
         if (!o.forzar && c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") {
-            errores.push(`${etiqueta}: ya se presentó en ARCA (${c.altaArcaPresentada.via === "altas_masivas" ? "Altas Masivas" : "Carga Masiva"}, ${new Date(c.altaArcaPresentada.fecha).toLocaleDateString("es-AR")}). No se presenta dos veces.`);
+            falla(`${etiqueta}: ya se presentó en ARCA (${c.altaArcaPresentada.via === "altas_masivas" ? "Altas Masivas" : "Carga Masiva"}, ${new Date(c.altaArcaPresentada.fecha).toLocaleDateString("es-AR")}). No se presenta dos veces.`);
             return;
         }
         const pisa = altaQueSePisa({ userId: String(up.userId), userProjectId: it.userProjectId, contractIndex: it.contractIndex, empresaId: String(empresaId), alta: c.fecha_alta_contrato, baja: c.fecha_baja_contrato }, presentadasPrevias);
         if (pisa) {
-            errores.push(`${etiqueta}: ${textoAltaQueSePisa(pisa)}.`);
+            falla(`${etiqueta}: ${textoAltaQueSePisa(pisa)}.`);
             return;
         }
         const categoria = categorias.find((x) => Number(x?.data?.id) === Number(c.categoria_sat_id));
@@ -167,7 +176,7 @@ export async function validarLoteAltas(o) {
         // pasa todos los demás chequeos —es un código válido, de otra categoría— y ARCA lo acepta.
         const est = categoria?.data?.estadoArca;
         if (est && est !== "ok" && !(est === "nombre_distinto" && categoria?.data?.estadoArcaConfirmada)) {
-            errores.push(`${etiqueta}: la categoría «${categoria?.data?.nombre || categoria?.name}» tiene el código ${categoria?.data?.codigoArca}, que ARCA describe como «${categoria?.data?.descripcionArca || "—"}» (${est}). Corregila en Configuración → ARCA → Categorías.`);
+            falla(`${etiqueta}: la categoría «${categoria?.data?.nombre || categoria?.name}» tiene el código ${categoria?.data?.codigoArca}, que ARCA describe como «${categoria?.data?.descripcionArca || "—"}» (${est}). Corregila en Configuración → ARCA → Categorías.`);
             return;
         }
         // La misma cascada de obra social que `resolveAfipValues`: validada en ARCA, o la del convenio
@@ -207,13 +216,13 @@ export async function validarLoteAltas(o) {
         };
         const dif = cotejarRegistro(modo, it.registro, esperado, cat);
         if (dif.length > 0) {
-            errores.push(...dif);
+            falla(...dif);
             return;
         }
         salida.push({ userProjectId: it.userProjectId, contractIndex: it.contractIndex, cuil: esperado.cuil, nombre, registro: it.registro });
     });
     if (errores.length > 0)
-        throw new LoteAltasError(`Hay ${errores.length} problema(s) en el lote: no se mandó nada a ARCA.`, 400, errores);
+        throw new LoteAltasError(`Hay ${errores.length} problema(s) en el lote: no se mandó nada a ARCA.`, 400, errores, conProblema);
     const registros = salida.map((s) => s.registro);
     return {
         modo,

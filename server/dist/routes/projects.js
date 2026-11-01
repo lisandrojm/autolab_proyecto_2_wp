@@ -3205,7 +3205,7 @@ router.post("/contratos/altas-arca/corrida", requireTenant, authenticateToken, r
     }
     catch (error) {
         if (error instanceof LoteAltasError) {
-            res.status(error.status).json({ error: error.message, detalle: error.detalle });
+            res.status(error.status).json({ error: error.message, detalle: error.detalle, conProblema: error.conProblema });
             return;
         }
         if (error instanceof CandadoArcaOcupado) {
@@ -3392,7 +3392,7 @@ router.post("/contratos/altas-arca/automatica/forzar", requireTenant, authentica
     }
     catch (error) {
         if (error instanceof LoteAltasError) {
-            res.status(error.status).json({ error: error.message, detalle: error.detalle });
+            res.status(error.status).json({ error: error.message, detalle: error.detalle, conProblema: error.conProblema });
             return;
         }
         if (error instanceof CandadoArcaOcupado) {
