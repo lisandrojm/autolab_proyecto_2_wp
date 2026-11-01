@@ -2198,7 +2198,7 @@ export const ContractBulkAfipTab: React.FC<{
                     <div className="min-w-0">
                       <p className="text-sm font-bold truncate inline-flex items-center gap-1.5 text-gray-900 dark:text-gray-100">
                         <span className="truncate">{r.userName}</span>
-                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
+                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} rotuloEnTooltip />
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{r.userEmail}</p>
                       {fmtCuit(r.cuit) && <p className="text-[10px] text-gray-400 font-mono truncate">CUIT {fmtCuit(r.cuit)}</p>}
@@ -2534,7 +2534,7 @@ export const ContractBulkAfipTab: React.FC<{
                   <td className={`sticky ${izquierdaColUsuario} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${bordeFinDeFijas} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                     <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
                       {r.userName}
-                      <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
+                      <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} rotuloEnTooltip />
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                   </td>
@@ -4223,7 +4223,7 @@ export const ContractBulkFirmaTab: React.FC<{
                     <td className={`sticky ${FIRMA_IZQ_USUARIO} z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${FIRMA_FIN_DE_FIJAS} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
                       <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
                         {r.userName}
-                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
+                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} rotuloEnTooltip />
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                     </td>
@@ -4458,7 +4458,7 @@ export const ContractBulkContratadosTab: React.FC<{
                     <td className="px-4 py-3">
                       <p className="text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1.5 text-gray-900 dark:text-white">
                         {r.userName}
-                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} conInfo />
+                        <NombreArca estado={estadoNombreArca({ cuit: r.cuit, sinCuit: r.sinCuit, validado: r.userNombreValidadoArca })} rotuloEnTooltip />
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{r.userEmail}</p>
                     </td>
