@@ -345,7 +345,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
           />
         </th>
       )}
-      <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)]`}>Nombre</th>
+      <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)]`}>Colaborador</th>
       {/* El orden de las columnas lo fijó el usuario el 01/11/2026: Fechas Solicitud, Último contrato, Horario, Solicitó, Roles,
           Tipo de contrato, Tipo de alta, Cliente, Proyecto (con el centro de costo en un badge al lado), Fecha de
           creación. El estado va en el tag de «Fechas Solicitud» (no hay columna «Estado»). «Obra social» salió de Solicitudes el mismo día (sigue como opción del componente). */}
