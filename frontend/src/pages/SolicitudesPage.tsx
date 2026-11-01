@@ -48,12 +48,14 @@ import { ProjectTeamPage } from "./ProjectTeamPage";
 const PAGE_SIZE = 25;
 
 /** El botón «Ordenar» de al lado de los filtros. Ordena el server: la tabla está paginada allá. */
-type OrdenSolicitudes = "antiguas" | "recientes" | "desde";
+type OrdenSolicitudes = "antiguas" | "recientes" | "desde" | "desde_desc";
+/* «Fecha Solicitud» es cuándo se cargó la solicitud; «Fecha Alta», la fecha Desde pedida. Abre por
+   Fecha Alta de menor a mayor: el alta más próxima arriba (01/11/2026, pedido del usuario). */
 const OPCIONES_ORDEN: OpcionOrden<OrdenSolicitudes>[] = [
-  // Por defecto, la que más espera arriba (01/11/2026, pedido del usuario).
-  { valor: "antiguas", texto: "Solicitudes antiguas primero" },
-  { valor: "recientes", texto: "Solicitudes recientes primero" },
-  { valor: "desde", texto: "Fecha Desde: de menor a mayor" },
+  { valor: "antiguas", texto: "Fecha Solicitud: de menor a mayor" },
+  { valor: "recientes", texto: "Fecha Solicitud: de mayor a menor" },
+  { valor: "desde", texto: "Fecha Alta: de menor a mayor" },
+  { valor: "desde_desc", texto: "Fecha Alta: de mayor a menor" },
 ];
 
 const CLAVE_AYUDA = "solicitudes" as const;
@@ -126,7 +128,7 @@ export const SolicitudesPage: React.FC = () => {
   const [busqueda, setBusqueda] = useState("");
   const [filtroCliente, setFiltroCliente] = useState("");
   const [filtroProyecto, setFiltroProyecto] = useState("");
-  const [orden, setOrden] = useState<OrdenSolicitudes>("antiguas");
+  const [orden, setOrden] = useState<OrdenSolicitudes>("desde");
 
   const [clientes, setClientes] = useState<{ _id: string; name: string }[]>([]);
   const [proyectos, setProyectos] = useState<{ _id: string; name: string; clientId: any }[]>([]);
