@@ -294,8 +294,20 @@ describe("8. código cortado en el asunto («…_ID-0.pdf», 2 casos reales del 
         assert.equal(r.logs[0].resultado, "error");
         assert.deepEqual(subidas, []);
     });
+    it("sin coincidencia pero con carpeta para los sin código (31/10/2026): sube igual a Pendbox, una sola vez", async () => {
+        const subidas = [];
+        const d = base({ carpetaSinCodigo: "/Pendbox/", documentoPorPrefijo: async () => null }, subidas);
+        const r = await rescatarFirmados([aviso, { ...aviso, uid: 10 }], d);
+        assert.equal(r.sinCodigo, 1);
+        assert.equal(r.errores.length, 0);
+        assert.equal(r.logs[0].resultado, "firmado-sin-codigo");
+        assert.deepEqual(subidas, [`/Pendbox/${CORTADO}_ Firma solicitada por Sun, 25 Oct 2026 08h02m44s.pdf`]);
+        const otra = await rescatarFirmados([aviso], base({ carpetaSinCodigo: "/Pendbox", documentoPorPrefijo: async () => null, subir: async () => Promise.reject({ response: { data: { error_summary: "path/conflict/file/" } } }) }, []));
+        assert.equal(otra.yaEstaban, 1);
+        assert.equal(otra.sinCodigo, 0);
+    });
 });
-describe("9. firmado sin código en el título, al que la limpieza ya le insertó el código", () => {
+describe("9.firmado sin código en el título, al que la limpieza ya le insertó el código", () => {
     it("«<título>_ID-000010.pdf_ Firma…» es el firmado de «<título>.pdf»; otro título no", () => {
         const t = "426_LN+_CASTRO_AltaAFIP_Plazo-fijo-6x6_D-20261001_H-20261031_20412923767_fulano-ARROBA-gmail.com_Empresa-30717068374.pdf";
         const enCarpeta = [{ name: t.replace(/\.pdf$/, "_ID-000010.pdf_ Firma solicitada po Thu, 08 Oct 2026 14h55m56s.pdf"), path: "/x" }];

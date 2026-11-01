@@ -75,7 +75,7 @@ export declare function yaEstaEnPendbox(entries: {
 }[], archivo: string, _ident?: AnclasNombre): boolean;
 /** Una línea por aviso encontrado: qué se decidió y por qué. Lo consume el modal de Logs. */
 export interface LineaLog {
-    resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error" | "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto" | "firmado-faltante";
+    resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error" | "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto" | "firmado-faltante" | "firmado-sin-codigo";
     asunto?: string;
     archivo?: string;
     cuit?: string;
@@ -121,6 +121,13 @@ export declare function leerCasillaDropboxSign(tenantId: string, soloPrueba?: bo
 /**
  * El documento generado del tenant cuyo nombre empieza con `prefijo`, si es UNO solo (si no, null).
  * Para el aviso de firmado con el código cortado en el asunto (ver `rescatarFirmados`).
+ *
+ * DOS CASOS REALES DEL 31/10/2026 (recibos de sueldo de setiembre, «…_ID-0.pdf»):
+ *  · el generado empezaba distinto que el título del envío («426_426-LN+_…» contra «426_LN+_…»): si
+ *    por el comienzo no hay ninguno, se busca el resto del título sin su primer tramo (lleva el CUIL y
+ *    el período, así que no se confunde con otro);
+ *  · el recibo se había generado dos veces con el mismo nombre (ID-000450 e ID-000512) y sólo uno salió
+ *    a la firma: entre varios, gana el único que figura como enviado (recibo enviado o envío del bot).
  */
 export declare const documentoPorPrefijo: (tenantId: string) => (prefijo: string) => Promise<{
     codigo: string;

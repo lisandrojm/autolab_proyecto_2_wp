@@ -373,12 +373,13 @@ const ESTILO_LOG: Record<LineaLog["resultado"], { label: string; icon: any; clas
   error: { label: "Error", icon: faCircleXmark, clase: "text-red-600 dark:text-red-400", ayuda: "Falló algún paso al procesar este aviso." },
   "firmado-rescatado": { label: "Firmado rescatado del email", icon: faCircleCheck, clase: "text-green-600 dark:text-green-400", ayuda: "La integración de Dropbox no había depositado el PDF firmado: se subió desde el adjunto del aviso. El escaneo de carpetas avanza el contrato a Firmados." },
   "firmado-ya-estaba": { label: "Firmado ya en la carpeta", icon: faCircleMinus, clase: "text-gray-500 dark:text-gray-400", ayuda: "El PDF firmado ya estaba en la carpeta de firmados (lo depositó la integración de Dropbox): no se hizo nada." },
+  "firmado-sin-codigo": { label: "Firmado sin código, subido a Pendbox", icon: faTriangleExclamation, clase: "text-amber-600 dark:text-amber-400", ayuda: "El título del aviso no trae el código ID-NNNNNN y no se pudo saber de qué documento es: el PDF firmado se subió igual a Pendbox, con «Firma solicitada por» en el nombre. No avanza ningún estado: hay que ubicarlo a mano." },
   "firmado-sin-adjunto": { label: "Firmado sin PDF adjunto", icon: faTriangleExclamation, clase: "text-amber-600 dark:text-amber-400", ayuda: "El aviso de firmado no trae el PDF y la carpeta no lo tiene: activá en Dropbox Sign la opción de adjuntar el documento firmado en los correos." },
 };
 
 /** Las líneas de una corrida, agrupadas por resultado. */
 const LineasCorrida: React.FC<{ logs: LineaLog[] }> = ({ logs }) => {
-  const orden: LineaLog["resultado"][] = ["archivado", "firmado-rescatado", "firmado-sin-adjunto", "sin-archivo", "error", "duplicado", "firmado-ya-estaba", "ignorado"];
+  const orden: LineaLog["resultado"][] = ["archivado", "firmado-rescatado", "firmado-sin-codigo", "firmado-sin-adjunto", "sin-archivo", "error", "duplicado", "firmado-ya-estaba", "ignorado"];
   const grupos = orden.map((r) => ({ resultado: r, items: logs.filter((l) => l.resultado === r) })).filter((g) => g.items.length > 0);
 
   return (

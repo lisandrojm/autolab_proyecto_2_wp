@@ -181,7 +181,7 @@ export function esConflictoDeNombre(e) {
 }
 /** Por cada aviso de firmado: ¿está en la carpeta? Si no, bajar el adjunto, validarlo y subirlo. Idempotente. */
 export async function rescatarFirmados(avisos, deps) {
-    const r = { avisos: 0, yaEstaban: 0, rescatados: 0, sinAdjunto: 0, faltan: 0, errores: [], logs: [] };
+    const r = { avisos: 0, yaEstaban: 0, rescatados: 0, sinAdjunto: 0, faltan: 0, sinCodigo: 0, errores: [], logs: [] };
     const carpeta = deps.carpetaFirmados.replace(/\/$/, "");
     /** Nunca se sube dos veces el mismo código en una corrida (dos avisos del mismo documento). */
     const subidos = new Set();
@@ -232,9 +232,65 @@ export async function rescatarFirmados(avisos, deps) {
                     }
                 }
             }
-            if (!codigo) {
+            if (!codigo && !deps.carpetaSinCodigo) {
                 r.errores.push(`${a.titulo}: sin código`);
                 r.logs.push({ ...base, resultado: "error", detalle: "El título no trae el código ID-NNNNNN: no se puede atribuir a un documento de la plataforma y no se sube." });
+                continue;
+            }
+            if (!codigo && deps.carpetaSinCodigo) {
+                /*
+                  SIN CÓDIGO, SE SUBE IGUAL A PENDBOX (31/10/2026). No se puede atribuir a un documento, así que
+                  no va a la carpeta de firmados ni avanza nada: queda en Pendbox, al lado del original, con el
+                  nombre de la integración («…_ Firma solicitada por <fecha>.pdf») para que se vea que es el
+                  firmado. El nombre sale de la fecha del aviso, así que la próxima lectura choca con el mismo
+                  archivo y cuenta «ya estaba» (no se duplica).
+                */
+                const carpetaSin = deps.carpetaSinCodigo.replace(/\/$/, "");
+                const nombre = a.fecha ? nombreComoIntegracion(a.titulo, "", a.fecha) : nombreDestino(a.titulo);
+                const clave = `sin-codigo:${nombre.toLowerCase()}`;
+                if (subidos.has(clave)) {
+                    r.yaEstaban++;
+                    continue;
+                }
+                if (a.adjuntos.length === 0) {
+                    r.sinAdjunto++;
+                    if (!deps.soloPrueba)
+                        deps.verificados.add(a.uid);
+                    r.logs.push({ ...base, resultado: "firmado-sin-adjunto", detalle: "El título no trae el código y el aviso no trae el PDF firmado adjunto: no hay nada que subir." });
+                    continue;
+                }
+                const adjunto = a.adjuntos[0];
+                if (adjunto.bytes && adjunto.bytes > MAX_BYTES_PDF * 1.4) {
+                    r.errores.push(`${a.titulo}: adjunto demasiado grande`);
+                    r.logs.push({ ...base, resultado: "error", detalle: `El adjunto es demasiado grande (${Math.round(adjunto.bytes / 1024 / 1024)} MB): no se baja.` });
+                    continue;
+                }
+                if (deps.soloPrueba) {
+                    r.faltan++;
+                    subidos.add(clave);
+                    r.logs.push({ ...base, resultado: "firmado-faltante", archivo: nombre, detalle: `Sin código: se subiría igual a «${carpetaSin}» como «${nombre}».` });
+                    continue;
+                }
+                const buffer = await deps.descargar(a.uid, adjunto);
+                const v = validarAdjunto(buffer);
+                if (v.ok === false) {
+                    r.errores.push(`${a.titulo}: ${v.motivo}`);
+                    r.logs.push({ ...base, resultado: "error", detalle: `No se sube: ${v.motivo}.` });
+                    continue;
+                }
+                subidos.add(clave);
+                deps.verificados.add(a.uid);
+                try {
+                    await deps.subir(`${carpetaSin}/${nombre}`, buffer);
+                }
+                catch (e) {
+                    if (!esConflictoDeNombre(e))
+                        throw e;
+                    r.yaEstaban++;
+                    continue;
+                }
+                r.sinCodigo++;
+                r.logs.push({ ...base, resultado: "firmado-sin-codigo", archivo: nombre, detalle: `El título no trae el código ID-NNNNNN y no se pudo atribuir a un documento: se subió igual a «${carpetaSin}» (${Math.round(buffer.length / 1024)} KB). No avanza ningún estado.` });
                 continue;
             }
             if (subidos.has(codigo)) {

@@ -39,7 +39,7 @@ export interface CorridaLog {
 
 /** Una línea del log: qué se decidió para un aviso y por qué. */
 export interface LineaLog {
-  resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error" | "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto";
+  resultado: "archivado" | "duplicado" | "sin-archivo" | "ignorado" | "error" | "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto" | "firmado-sin-codigo";
   asunto?: string;
   archivo?: string;
   cuit?: string;

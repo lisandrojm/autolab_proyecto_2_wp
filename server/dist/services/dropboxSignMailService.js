@@ -13,6 +13,8 @@ import { Info } from "../models/Info.js";
 import { fechaISO } from "../utils/contratoVigencia.js";
 import { aplicarTransicion } from "./estadoTransicionAutomaticaService.js";
 import { DocumentoGenerado } from "../models/DocumentoGenerado.js";
+import { ReciboSueldoEnviado } from "../models/ReciboSueldoEnviado.js";
+import { DropboxSignEnvio } from "../models/DropboxSignEnvio.js";
 /**
  * Detección de "documento enviado a firmar" leyendo la casilla de correo.
  *
@@ -302,13 +304,33 @@ export function leerCasillaDropboxSign(tenantId, soloPrueba = false) {
 /**
  * El documento generado del tenant cuyo nombre empieza con `prefijo`, si es UNO solo (si no, null).
  * Para el aviso de firmado con el código cortado en el asunto (ver `rescatarFirmados`).
+ *
+ * DOS CASOS REALES DEL 31/10/2026 (recibos de sueldo de setiembre, «…_ID-0.pdf»):
+ *  · el generado empezaba distinto que el título del envío («426_426-LN+_…» contra «426_LN+_…»): si
+ *    por el comienzo no hay ninguno, se busca el resto del título sin su primer tramo (lleva el CUIL y
+ *    el período, así que no se confunde con otro);
+ *  · el recibo se había generado dos veces con el mismo nombre (ID-000450 e ID-000512) y sólo uno salió
+ *    a la firma: entre varios, gana el único que figura como enviado (recibo enviado o envío del bot).
  */
 export const documentoPorPrefijo = (tenantId) => async (prefijo) => {
     const p = String(prefijo || "").trim();
     if (p.length < 20)
         return null;
-    const re = new RegExp(`^${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
-    const docs = await DocumentoGenerado.find({ tenantId, archivo: re }).select("codigo archivo").limit(2).lean();
+    const escapar = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const buscar = (re) => DocumentoGenerado.find({ tenantId, archivo: re }).select("codigo archivo").limit(10).lean();
+    let docs = await buscar(new RegExp(`^${escapar(p)}`));
+    const cuerpo = p.replace(/^[^_]+_/, "");
+    if (docs.length === 0 && cuerpo !== p && cuerpo.length >= 20)
+        docs = await buscar(new RegExp(escapar(cuerpo)));
+    if (docs.length > 1) {
+        const codigos = docs.map((d) => String(d.codigo));
+        const [recibos, envios] = await Promise.all([
+            ReciboSueldoEnviado.find({ tenantId, codigo: { $in: codigos } }).select("codigo").lean(),
+            DropboxSignEnvio.find({ tenantId, codigo: { $in: codigos }, estado: "enviado" }).select("codigo").lean(),
+        ]);
+        const enviados = new Set([...recibos, ...envios].map((x) => String(x.codigo)));
+        docs = docs.filter((d) => enviados.has(String(d.codigo)));
+    }
     return docs.length === 1 ? { codigo: String(docs[0].codigo), archivo: String(docs[0].archivo) } : null;
 };
 /** Arma el cliente IMAP de la casilla configurada. */
@@ -496,6 +518,7 @@ async function leerCasillaAhora(tenantId, soloPrueba = false) {
                         if (errores.length === 0 || enFirmados.length > 0) {
                             rescate = await rescatarFirmados(avisosFirmado, {
                                 carpetaFirmados,
+                                carpetaSinCodigo: pendbox || undefined,
                                 enFirmados,
                                 soloPrueba,
                                 existeDocumento: async (codigo) => !!(await DocumentoGenerado.exists({ tenantId, codigo })),
@@ -557,6 +580,7 @@ async function leerCasillaAhora(tenantId, soloPrueba = false) {
             rescatar ? `${avisosFirmado} aviso(s) de firmado (${firmadosYaEstaban} ya en la carpeta)` : "",
             rescatados ? `${rescatados} firmado(s) rescatado(s) del email` : "",
             sinAdjunto ? `${sinAdjunto} firmado(s) sin adjunto` : "",
+            rescate?.sinCodigo ? `${rescate.sinCodigo} firmado(s) sin código subido(s) igual a Pendbox` : "",
         ]
             .filter(Boolean)
             .join(" · ") + (errores.length ? ` · ${errores.length} con error: ${errores.slice(0, 3).join(" | ")}` : "");
@@ -574,7 +598,7 @@ async function leerCasillaAhora(tenantId, soloPrueba = false) {
  * del tenant sin aportar nada. Se conservan las últimas 50, de la más reciente a la más vieja.
  */
 /** Lo que vale guardar de una lectura: lo que se movió y lo que falló. Lo demás se repite en cada una. */
-const LINEAS_QUE_SE_GUARDAN = new Set(["archivado", "error", "firmado-rescatado", "firmado-sin-adjunto"]);
+const LINEAS_QUE_SE_GUARDAN = new Set(["archivado", "error", "firmado-rescatado", "firmado-sin-adjunto", "firmado-sin-codigo"]);
 export function registrarLectura(r) {
     const update = {
         $set: {

@@ -102,7 +102,7 @@ export interface AvisoFirmado {
     fecha?: Date;
 }
 /** «firmado-faltante» sólo sale en una prueba detallada: faltaba y se habría subido con ese nombre. */
-export type ResultadoRescate = "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto" | "firmado-faltante" | "error";
+export type ResultadoRescate = "firmado-rescatado" | "firmado-ya-estaba" | "firmado-sin-adjunto" | "firmado-faltante" | "firmado-sin-codigo" | "error";
 export interface LineaRescate {
     resultado: ResultadoRescate;
     /** El mensaje de la casilla del que salió la línea. */
@@ -125,6 +125,12 @@ export interface LineaRescate {
 }
 export interface DepsRescate {
     carpetaFirmados: string;
+    /**
+     * Adónde se sube IGUAL el firmado que no se pudo atribuir a un documento (sin código, ni entero ni
+     * cortado que se pueda completar): Pendbox (pedido del 31/10/2026, «que se suban igual aunque no
+     * tengan id»). Nunca Outbox: el bot volvería a mandarlo a firmar. Sin esto, ese aviso es un error.
+     */
+    carpetaSinCodigo?: string;
     /** El listado de la carpeta, UNA vez por corrida. Se actualiza en memoria con lo que se sube. */
     enFirmados: ArchivoConNombre[];
     /** Con `soloPrueba` cuenta cuántos faltan sin bajar ni subir nada. */
@@ -160,6 +166,8 @@ export interface ResumenRescate {
     sinAdjunto: number;
     /** Sólo en prueba: cuántos no están en la carpeta (se rescatarían). */
     faltan: number;
+    /** Firmados sin código que se subieron igual a `carpetaSinCodigo`. */
+    sinCodigo: number;
     errores: string[];
     logs: LineaRescate[];
     /** La pasada se cortó por `limite`: quedaron avisos sin mirar. */
