@@ -399,23 +399,29 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 )}
                 <td className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[5] px-4 py-3 min-w-[14rem] max-w-[20rem] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)] ${fondoFijo}`}>
                   <div className="min-w-0">
-                    <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
-                      {s.nombre}
-                      {/* Extiende un contrato que estaba por vencer: no es un ingreso nuevo. */}
-                      {s.esRenovacion && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold align-middle bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>}
-                      {/*
-                        Se rechazó y volvió corregida: no es una solicitud nueva. El detalle dice qué
-                        se había objetado, que es la pregunta de quien la vuelve a mirar.
-                      */}
-                      {s.reenviada && (
-                        <span
-                          title={s.reenviada.motivoAnterior ? `Se había rechazado por: ${s.reenviada.motivoAnterior}` : "Se corrigió después de un rechazo"}
-                          className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold align-middle bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
-                        >
-                          Corregida{(s.reenviada.veces || 1) > 1 ? ` ×${s.reenviada.veces}` : ""}
-                        </span>
-                      )}
-                    </p>
+                    {/*
+                      LOS BADGES VAN ARRIBA DEL NOMBRE, NO A SU DERECHA (01/11/2026): la columna es fija y
+                      un badge al lado del nombre la ensanchaba, comiéndose el lugar del resto de la tabla.
+                    */}
+                    {(s.esRenovacion || s.reenviada) && (
+                      <div className="mb-1 flex flex-wrap items-center gap-1">
+                        {/* Extiende un contrato que estaba por vencer: no es un ingreso nuevo. */}
+                        {s.esRenovacion && <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Renovación</span>}
+                        {/*
+                          Se rechazó y volvió corregida: no es una solicitud nueva. El detalle dice qué
+                          se había objetado, que es la pregunta de quien la vuelve a mirar.
+                        */}
+                        {s.reenviada && (
+                          <span
+                            title={s.reenviada.motivoAnterior ? `Se había rechazado por: ${s.reenviada.motivoAnterior}` : "Se corrigió después de un rechazo"}
+                            className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300"
+                          >
+                            Corregida{(s.reenviada.veces || 1) > 1 ? ` ×${s.reenviada.veces}` : ""}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{s.nombre}</p>
                     <p className="flex items-center gap-2 text-xs text-gray-500 truncate">
                       {/* El mismo indicador que Usuarios y Contratos: si el nombre ya se confirmó contra el padrón. */}
                       <NombreArca estado={estadoNombreArca({ cuit: s.cuit || undefined, sinCuit: s.sinCuit, validadoAt: s.nombreValidadoArcaAt })} fecha={s.nombreValidadoArcaAt} conTexto />
