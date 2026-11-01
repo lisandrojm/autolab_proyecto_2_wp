@@ -640,7 +640,7 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
                   Tamaño
                 </BotonOrden>
               </th>
-              <th className="col-acciones px-4 py-3 font-semibold text-left"><span className="sr-only">Acciones</span></th>
+              <th className="col-acciones px-4 py-3 font-semibold text-left">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">

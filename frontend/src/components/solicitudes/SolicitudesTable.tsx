@@ -369,7 +369,7 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
           distancia que mide la columna de acciones (--ancho-acciones, ver `cajaRef`). */}
       <th className="sticky right-[var(--ancho-acciones,100px)] z-[7] px-4 py-3 font-semibold text-left bg-gray-50 dark:bg-[#18202f] shadow-[inset_1px_0_0_#e5e7eb,-4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_1px_0_0_#4b5563,-4px_0_6px_-4px_rgba(0,0,0,0.4)]">Estado</th>
       {/* Las acciones quedan FIJAS a la derecha (27/10/2026): con la tabla ancha, «Editar para Aprobar» y «Rechazar» quedaban fuera de la vista. */}
-      <th className="col-acciones px-4 py-3 font-semibold text-left bg-gray-50 dark:bg-[#18202f]"><span className="sr-only">Acciones</span></th>
+      <th className="col-acciones px-4 py-3 font-semibold text-left bg-gray-50 dark:bg-[#18202f]">Acciones</th>
     </tr>
   );
 

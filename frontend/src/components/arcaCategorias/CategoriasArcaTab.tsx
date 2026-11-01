@@ -1084,7 +1084,7 @@ export const CategoriasArcaTab: React.FC = () => {
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden xl:table-cell">Presentismo</th>
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Neto</th>
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Actualización</th>
-                    {canManage && <th className="col-acciones px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left"><span className="sr-only">Acciones</span></th>}
+                    {canManage && <th className="col-acciones px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
@@ -1175,7 +1175,7 @@ export const CategoriasArcaTab: React.FC = () => {
                                           <LimpiarDefaultArca campo="categoria" queEs="la categoría que se ofrece primero" />
                                         </span>
                                       </th>
-                                      {canManage && <th className="col-acciones px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-left"><span className="sr-only">Acciones</span></th>}
+                                      {canManage && <th className="col-acciones px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-left">Acciones</th>}
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -1279,7 +1279,7 @@ export const CategoriasArcaTab: React.FC = () => {
                         <LimpiarDefaultArca campo="categoria" queEs="la categoría que se ofrece primero" />
                       </span>
                     </th>
-                    {canManage && <th className="col-acciones px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left"><span className="sr-only">Acciones</span></th>}
+                    {canManage && <th className="col-acciones px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">

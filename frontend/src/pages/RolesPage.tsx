@@ -1398,7 +1398,7 @@ export const RolesPage: React.FC = () => {
                   <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                     <CabeceraOrdenable etiqueta="Rol" columna="nombre" orden={orden} onOrdenar={ordenarPor} />
                     <CabeceraOrdenable etiqueta="Permisos" columna="permisos" orden={orden} onOrdenar={ordenarPor} />
-                    <th className="col-acciones px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left"><span className="sr-only">Acciones</span></th>
+                    <th className="col-acciones px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-left">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">

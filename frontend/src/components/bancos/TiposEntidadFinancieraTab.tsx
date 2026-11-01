@@ -167,7 +167,7 @@ export const TiposEntidadFinancieraTab: React.FC<Props> = ({ entidades, onCambio
                   {h}
                 </th>
               ))}
-              <th className="col-acciones px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"><span className="sr-only">Acciones</span></th>
+              <th className="col-acciones px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">

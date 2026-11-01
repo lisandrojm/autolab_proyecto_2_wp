@@ -129,7 +129,7 @@ export const ConveniosTable: React.FC<Props> = ({ convenios, obraSocialDe, rende
             </span>
           </th>
         )}
-        {renderAcciones && <th className="col-acciones px-4 py-2.5 text-left whitespace-nowrap w-px"><span className="sr-only">Acciones</span></th>}
+        {renderAcciones && <th className="col-acciones px-4 py-2.5 text-left whitespace-nowrap w-px">Acciones</th>}
       </tr>
     </thead>
     <tbody className="divide-y divide-gray-100 dark:divide-gray-700/60 bg-white dark:bg-gray-800">

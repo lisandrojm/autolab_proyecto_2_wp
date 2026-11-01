@@ -2397,7 +2397,7 @@ export const ContractBulkAfipTab: React.FC<{
                     </span>
                   </th>
                 ) : (
-                  <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColFija}`}><span className="sr-only">Acciones</span></th>
+                  <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${anchoColFija}`}>Acciones</th>
                 )}
                 {/*
                   «USUARIO», PEGADA A LA ANTERIOR Y TAMBIÉN FIJA.
@@ -4199,7 +4199,7 @@ export const ContractBulkFirmaTab: React.FC<{
                 <th className={`sticky left-0 z-[15] px-4 py-3 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK}`}>
                   <input type="checkbox" checked={allSel} onChange={toggleAll} disabled={seleccionables.length === 0} title="Seleccionar todas las filas sin enviar, de todas las páginas" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                 </th>
-                <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_ACCIONES}`}><span className="sr-only">Acciones</span></th>
+                <th className={`sticky left-12 z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_ACCIONES}`}>Acciones</th>
                 {/* «Fecha de creación» y «Usuario», fijas con Acciones: ver `FIRMA_ANCHO_ACCIONES`. */}
                 <th className={`sticky ${FIRMA_IZQ_FECHA} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_FECHA}`}>
                   <BotonOrden columna="fechaCarga" {...ordenProps}>

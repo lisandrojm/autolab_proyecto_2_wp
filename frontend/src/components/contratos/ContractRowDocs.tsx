@@ -337,7 +337,7 @@ export const ContractDocsColumns: React.FC<{
 
 /** Cabecera de la columna de acciones (misma que la tabla de Contratos). */
 /** El fondo opaco, por lo mismo que en `ContractDocsHeaders`: es la última celda de un thead sticky. */
-export const ContractActionsHeader: React.FC = () => <th className="col-acciones px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-left whitespace-nowrap bg-gray-50 dark:bg-gray-900"><span className="sr-only">Acciones</span></th>;
+export const ContractActionsHeader: React.FC = () => <th className="col-acciones px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-left whitespace-nowrap bg-gray-50 dark:bg-gray-900">Acciones</th>;
 
 /**
  * Editar y eliminar el contrato de la fila, con el mismo comportamiento que la tabla de Contratos:

@@ -76,7 +76,7 @@ export const TablaCategorias: React.FC<Props> = ({ filas, cargando, busqueda, on
             <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">Contratos</th>
             {/* Última antes de Acciones, como en todos los nomencladores. */}
             <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">{encabezadoPorDefecto}</th>
-            {onAbrirConvenio && <th className="col-acciones px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px"><span className="sr-only">Acciones</span></th>}
+            {onAbrirConvenio && <th className="col-acciones px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">Acciones</th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">

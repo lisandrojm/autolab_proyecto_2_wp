@@ -573,7 +573,7 @@ export const UserOrderManagementTab: React.FC = () => {
                 {isDinero && (
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32 bg-gray-50 dark:bg-gray-900">Cuotas</th>
                 )}
-                <th className="col-acciones px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-28 bg-gray-50 dark:bg-gray-900"><span className="sr-only">Acciones</span></th>
+                <th className="col-acciones px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-28 bg-gray-50 dark:bg-gray-900">Acciones</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">

@@ -2236,7 +2236,7 @@ export const UsersPage: React.FC = () => {
                     <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest hidden lg:table-cell" title="Sindicato al que está afiliada la persona">Sindicato</th>
                     <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest hidden md:table-cell" title="Promedio de sus calificaciones (1 a 5 estrellas). Click para verlas o calificar.">Calificación</th>
                     <SortableTh columna="estado" activa={sortBy} direccion={sortDir} onSort={toggleSort}>Estado</SortableTh>
-                    <th className="col-acciones py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-left"><span className="sr-only">Acciones</span></th>
+                    <th className="col-acciones py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-widest text-left">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-800">

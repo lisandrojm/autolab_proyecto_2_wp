@@ -286,7 +286,7 @@ const TablaCentrosCosto: React.FC<{ items: CentroCosto[]; renderAcciones: (item:
             <th className="px-5 py-3">Descripción</th>
             <th className="px-5 py-3">Empresa</th>
             <th className="px-5 py-3 text-left">Habilitado</th>
-            <th className="col-acciones px-5 py-3 text-left"><span className="sr-only">Acciones</span></th>
+            <th className="col-acciones px-5 py-3 text-left">Acciones</th>
           </tr>
         </thead>
         <tbody>

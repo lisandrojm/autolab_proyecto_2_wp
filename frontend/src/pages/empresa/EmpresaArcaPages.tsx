@@ -744,7 +744,7 @@ const DomiciliosBody: React.FC<{ empresa: Company; recargar: () => Promise<void>
                     <FontAwesomeIcon icon={faCircleInfo} title="El domicilio habitual de esta empleadora: en el alta aparece PRIMERO en el select y marcado con ★. No obliga a usarlo — se puede elegir cualquiera de los otros declarados." className="h-3 w-3 text-gray-400 normal-case" />
                   </span>
                 </th>
-                <th className="col-acciones px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px"><span className="sr-only">Acciones</span></th>
+                <th className="col-acciones px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-px">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
