@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faClock, faRotateLeft, faTrash, faCommentDots, faEdit, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
@@ -346,13 +346,12 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
         </th>
       )}
       <th className={`sticky ${conSeleccion ? "left-10" : "left-0"} z-[6] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] shadow-[inset_-1px_0_0_#e5e7eb,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-1px_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.4)]`}>Nombre</th>
-      {/* El orden de las columnas lo fijó el usuario el 01/11/2026: Fechas Solicitud, Último contrato, Horario, Estado, Solicitó, Roles,
-          Tipo de contrato, Tipo de alta, Cliente, Proyecto (con el centro de costo en un badge al lado) y Fecha de
-          creación. «Obra social» salió de Solicitudes el mismo día (sigue como opción del componente). */}
+      {/* El orden de las columnas lo fijó el usuario el 01/11/2026: Fechas Solicitud, Último contrato, Horario, Solicitó, Roles,
+          Tipo de contrato, Tipo de alta, Cliente, Proyecto (con el centro de costo en un badge al lado), Fecha de
+          creación y Estado (fijo, al lado de las acciones). «Obra social» salió de Solicitudes el mismo día (sigue como opción del componente). */}
       <th className="px-4 py-3 font-semibold" title="El período que se pidió en la solicitud">Fechas<br />Solicitud</th>
       <th className="px-4 py-3 font-semibold" title="El último contrato de la persona ANTERIOR a lo pedido (alta antes del inicio de la solicitud), en cualquier proyecto. Avisa si se superpone con las fechas pedidas.">Último<br />contrato</th>
       <th className="px-4 py-3 font-semibold">Horario</th>
-      <th className="px-4 py-3 font-semibold text-left">Estado</th>
       <th className="px-4 py-3 font-semibold">Solicitó</th>
       <th className="px-4 py-3 font-semibold">Rol/es Empresa</th>
       <th className="px-4 py-3 font-semibold whitespace-nowrap">Tipo de contrato</th>
@@ -365,13 +364,37 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
         </>
       )}
       <th className="px-4 py-3 font-semibold whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">Fecha de creación</th>
+      {/* «ESTADO» FIJO A LA IZQUIERDA DE LAS ACCIONES (01/11/2026): en Solicitudes lo que importa es si está
+          pendiente o aprobada, y con la tabla corrida quedaba fuera de la vista. Se pega a la derecha a la
+          distancia que mide la columna de acciones (--ancho-acciones, ver `cajaRef`). */}
+      <th className="sticky right-[var(--ancho-acciones,100px)] z-[7] px-4 py-3 font-semibold text-left bg-gray-50 dark:bg-[#18202f] shadow-[inset_1px_0_0_#e5e7eb,-4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_1px_0_0_#4b5563,-4px_0_6px_-4px_rgba(0,0,0,0.4)]">Estado</th>
       {/* Las acciones quedan FIJAS a la derecha (27/10/2026): con la tabla ancha, «Editar para Aprobar» y «Rechazar» quedaban fuera de la vista. */}
       <th className="col-acciones px-4 py-3 font-semibold text-left bg-gray-50 dark:bg-[#18202f]"><span className="sr-only">Acciones</span></th>
     </tr>
   );
 
+
+  /*
+    CUÁNTO MIDE LA COLUMNA DE ACCIONES, para que «Estado» se pegue justo a su izquierda. Depende de los
+    botones de cada estado (aprobar/rechazar, editar, volver a pendiente), así que se mide en vez de
+    fijarla: se observa el encabezado de acciones y su ancho queda en la variable --ancho-acciones.
+  */
+  const cajaRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const raiz = cajaRef.current;
+    if (!raiz || typeof ResizeObserver === "undefined") return;
+    const poner = () => {
+      const anchos = Array.from(raiz.querySelectorAll<HTMLElement>("th.col-acciones")).map((th) => th.getBoundingClientRect().width);
+      const ancho = Math.max(0, ...anchos);
+      if (ancho > 0) raiz.style.setProperty("--ancho-acciones", `${ancho}px`);
+    };
+    poner();
+    const observador = new ResizeObserver(poner);
+    raiz.querySelectorAll("th.col-acciones").forEach((th) => observador.observe(th));
+    return () => observador.disconnect();
+  });
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-clip">
+    <div ref={cajaRef} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-clip">
       {/*
         El borde de las columnas fijas (Nombre y Acciones) es una sombra inset: con border-collapse el
         border-l/r es de la tabla, no de la celda, y se iba con el scroll lateral.
@@ -501,12 +524,6 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                   )}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{s.schedule || "-"}</td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${ESTADO_SOLICITUD[s.estado].clase}`}>
-                    <FontAwesomeIcon icon={ESTADO_SOLICITUD[s.estado].icono} className="text-[8px]" />
-                    {ESTADO_SOLICITUD[s.estado].texto}
-                  </span>
-                </td>
 
                 {/*
                   QUIÉN LA PIDIÓ, con sus roles de coordinación o supervisión debajo: es lo que dice
@@ -596,6 +613,13 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 <td className="px-4 py-3 whitespace-nowrap" title="Día y hora en que se hizo la solicitud (horario argentino)">
                   <FechaHoraCelda valor={s.creadaEl} />
                 </td>
+                {/* Estado, fijo a la izquierda de las acciones (ver el encabezado). */}
+                <td className={`sticky right-[var(--ancho-acciones,100px)] z-[5] px-4 py-3 shadow-[inset_1px_0_0_#e5e7eb,-4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_1px_0_0_#4b5563,-4px_0_6px_-4px_rgba(0,0,0,0.4)] ${fondoFijo}`}>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${ESTADO_SOLICITUD[s.estado].clase}`}>
+                    <FontAwesomeIcon icon={ESTADO_SOLICITUD[s.estado].icono} className="text-[8px]" />
+                    {ESTADO_SOLICITUD[s.estado].texto}
+                  </span>
+                </td>
                 <td className={`px-4 py-3 text-right ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
                   {/* Una solicitud rechazada o cancelada no se aprueba de una: primero se reabre,
                       así queda explícito que se está deshaciendo la decisión.
@@ -636,9 +660,9 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                         <span className="text-xs text-gray-400 italic">Ya aprobada</span>
                       )
                     ) : (
-                      <button onClick={() => onReabrir(s)} className="px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded transition-colors flex items-center gap-1.5 whitespace-nowrap" title="Volver a dejarla pendiente">
-                        <FontAwesomeIcon icon={faRotateLeft} className="text-[10px]" />
-                        Volver a pendiente
+                      // Sólo el ícono, como aprobar y rechazar: con el texto, la columna fija de acciones se ensanchaba para todas las filas.
+                      <button onClick={() => onReabrir(s)} className="h-8 w-8 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded transition-colors flex items-center justify-center" title="Volver a pendiente" aria-label="Volver a pendiente">
+                        <FontAwesomeIcon icon={faRotateLeft} className="h-3.5 w-3.5" />
                       </button>
                     )}
 
