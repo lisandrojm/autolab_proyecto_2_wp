@@ -2162,7 +2162,7 @@ export const ContractBulkAfipTab: React.FC<{
                     La última de las que scrollean, pegada a las fijas de la derecha (01/11/2026). */}
                 <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Cuándo se cargó el contrato en WeProdu">
                   <BotonOrden columna="fechaCarga" {...ordenProps}>
-                    Fecha de creación
+                    Fecha Solicitud
                   </BotonOrden>
                 </th>
                 {/* Sin «Estado» (va como badge arriba del contrato) ni «Estado Impositivo» (repetía la pestaña), 01/11/2026. */}
@@ -3812,7 +3812,7 @@ export const ContractBulkFirmaTab: React.FC<{
                 {/* «Fecha de creación» y «Usuario», fijas con Acciones: ver `FIRMA_ANCHO_ACCIONES`. */}
                 <th className={`sticky ${FIRMA_IZQ_FECHA} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_FECHA}`}>
                   <BotonOrden columna="fechaCarga" {...ordenProps}>
-                    Fecha de creación
+                    Fecha Solicitud
                   </BotonOrden>
                 </th>
                 <th className={`sticky ${FIRMA_IZQ_USUARIO} z-[15] px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900 ${FIRMA_FIN_DE_FIJAS}`}>
@@ -4075,7 +4075,7 @@ export const ContractBulkContratadosTab: React.FC<{
             <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
               <tr>
                 <th className={th}>
-                  <BotonOrden columna="fechaCarga" {...ordenProps}>Fecha de creación</BotonOrden>
+                  <BotonOrden columna="fechaCarga" {...ordenProps}>Fecha Solicitud</BotonOrden>
                 </th>
                 <th className={th}>
                   <BotonOrden columna="usuario" {...ordenProps}>Colaborador</BotonOrden>
