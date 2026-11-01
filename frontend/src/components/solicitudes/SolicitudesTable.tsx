@@ -423,24 +423,34 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                         )}
                       </div>
                     )}
-                    <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{s.nombre}</p>
-                    <p className="flex items-center gap-2 text-xs text-gray-500 truncate">
-                      {/* El mismo indicador que Usuarios y Contratos: si el nombre ya se confirmó contra el padrón. */}
-                      <NombreArca estado={estadoNombreArca({ cuit: s.cuit || undefined, sinCuit: s.sinCuit, validadoAt: s.nombreValidadoArcaAt })} fecha={s.nombreValidadoArcaAt} conTexto />
-                    </p>
                     {/*
-                      EL COMENTARIO DE QUIEN PIDIÓ EL ALTA.
-
-                      Va acá y no en una columna propia: es texto libre de largo impredecible y
-                      una columna lo cortaría en dos palabras, que es no mostrarlo. Debajo del
-                      nombre entra completo y solo aparece cuando hay algo escrito.
+                      El mismo indicador que Usuarios y Contratos —si el nombre ya se confirmó contra el padrón—,
+                      SÓLO EL ÍCONO a la derecha del nombre y el rótulo («Validado en ARCA») en el hover
+                      (01/11/2026): como renglón aparte ocupaba mucho alto en cada fila.
                     */}
-                    {s.comentarios && (
-                      <p className="mt-1 text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1.5">
-                        <FontAwesomeIcon icon={faCommentDots} className="h-3 w-3 mt-0.5 shrink-0" />
-                        <span className="whitespace-pre-wrap break-words">{s.comentarios}</span>
-                      </p>
-                    )}
+                    <p className="flex items-center gap-1.5 font-medium text-gray-900 dark:text-white text-sm min-w-0">
+                      <span className="truncate">{s.nombre}</span>
+                      <NombreArca estado={estadoNombreArca({ cuit: s.cuit || undefined, sinCuit: s.sinCuit, validadoAt: s.nombreValidadoArcaAt })} fecha={s.nombreValidadoArcaAt} rotuloEnTooltip />
+                      {/*
+                        EL COMENTARIO DE QUIEN PIDIÓ EL ALTA, SÓLO EL ÍCONO (01/11/2026): debajo del nombre, entero,
+                        ocupaba varias líneas por fila. El hover lo muestra y el click abre el detalle, que lo trae
+                        completo.
+                      */}
+                      {s.comentarios && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onVerDetalle?.(s);
+                          }}
+                          title={s.comentarios}
+                          aria-label="Ver el comentario"
+                          className="shrink-0 text-amber-500 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-300"
+                        >
+                          <FontAwesomeIcon icon={faCommentDots} className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </p>
                     {/*
                       Y LA RESPUESTA: POR QUÉ SE RECHAZÓ.
 
@@ -507,22 +517,23 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{s.schedule || "-"}</td>
 
                 {/*
-                  QUIÉN LA PIDIÓ, con sus roles de coordinación o supervisión debajo: es lo que dice
+                  QUIÉN LA PIDIÓ, con sus roles de coordinación o supervisión arriba: es lo que dice
                   con qué autoridad se pidió el alta. Los demás roles (administrativos, etc.) no
                   suman a esa lectura y se omiten. Las solicitudes viejas sin autor muestran un guión.
                 */}
                 <td className="px-4 py-3">
                   <div className="min-w-0">
-                    {s.solicitante?.nombre ? <p className="text-sm text-gray-900 dark:text-white truncate">{s.solicitante.nombre}</p> : <span className="text-sm text-gray-400">—</span>}
+                    {/* Los roles ARRIBA del nombre (01/11/2026), como «Renovación» arriba del colaborador. */}
                     {s.solicitante?.nombre && s.solicitante.roles.some((r) => ROL_QUE_SOLICITA.test(r)) && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {s.solicitante.roles.filter((r) => ROL_QUE_SOLICITA.test(r)).map((r) => (
-                            <span key={r} className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">
-                              {r}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <div className="mb-1 flex flex-wrap gap-1">
+                        {s.solicitante.roles.filter((r) => ROL_QUE_SOLICITA.test(r)).map((r) => (
+                          <span key={r} className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">
+                            {r}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {s.solicitante?.nombre ? <p className="text-sm text-gray-900 dark:text-white truncate">{s.solicitante.nombre}</p> : <span className="text-sm text-gray-400">—</span>}
                   </div>
                 </td>
 

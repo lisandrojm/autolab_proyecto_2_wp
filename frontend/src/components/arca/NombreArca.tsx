@@ -75,7 +75,9 @@ export const NombreArca: React.FC<{
   conTexto?: boolean;
   /** Agrega el ⓘ que abre la explicación completa. */
   conInfo?: boolean;
-}> = ({ estado, antes, fecha, conTexto, conInfo }) => {
+  /** Sólo el ícono, con el rótulo («Validado en ARCA»…) como tooltip en vez de la explicación larga. */
+  rotuloEnTooltip?: boolean;
+}> = ({ estado, antes, fecha, conTexto, conInfo, rotuloEnTooltip }) => {
   const [abierto, setAbierto] = useState(false);
   if (estado === 'no_aplica') return null;
   const cfg = CFG[estado];
@@ -84,7 +86,7 @@ export const NombreArca: React.FC<{
   return (
     <>
       <span className={`inline-flex items-center gap-1.5 ${conTexto ? 'text-[11.5px] font-semibold' : ''} ${conTexto ? cfg.clase : ''}`}>
-        <FontAwesomeIcon icon={cfg.icono} title={validado && fecha ? `${cfg.title}. Confirmado el ${new Date(fecha).toLocaleDateString('es-AR')}.` : cfg.title} className={`h-3 w-3 shrink-0 ${cfg.clase}`} />
+        <FontAwesomeIcon icon={cfg.icono} title={`${rotuloEnTooltip ? cfg.texto : cfg.title}${validado && fecha ? `${rotuloEnTooltip ? ' ·' : '.'} Confirmado el ${new Date(fecha).toLocaleDateString('es-AR')}.` : ''}`} className={`h-3 w-3 shrink-0 ${cfg.clase}`} />
         {conTexto && cfg.texto}
         {conInfo && (
           // `stopPropagation` porque estos indicadores viven en filas clickeables: pedir la
