@@ -4463,6 +4463,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         <div className="flex flex-col h-[520px]">
           {/* Un solo formulario, en una sola columna con scroll: el orden va de arriba hacia abajo. */}
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-4">
+            {/*
+              EL COMENTARIO DE QUIEN PIDIÓ EL ALTA, ARRIBA DE TODO (01/11/2026, pedido del usuario): el mismo
+              aviso amarillo que el detalle de la solicitud. Es contexto para decidir antes de completar nada.
+            */}
+            {approvingSolicitudId && (selectedUserForWizard as any)?.metadata?.comentarios && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300">
+                <p className="flex items-start gap-2">
+                  <FontAwesomeIcon icon={faCommentDots} className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span className="whitespace-pre-wrap">{(selectedUserForWizard as any).metadata.comentarios}</span>
+                </p>
+              </div>
+            )}
             {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/*
