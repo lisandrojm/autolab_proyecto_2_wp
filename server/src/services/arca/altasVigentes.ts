@@ -29,6 +29,8 @@ export interface AltaPresentada {
   baja: string;
   /** La baja la puso ARCA (Relaciones Laborales sincronizadas), no el contrato de WeProdu. */
   bajaSegunArca?: boolean;
+  /** Cuándo se presentó (ISO): si fue después de la última sincronización, ARCA todavía la tiene activa (ver `secuenciaPorPersona.ts`). */
+  presentadaEl?: string;
 }
 
 const ABIERTA = "9999-12-31";
@@ -58,7 +60,7 @@ export async function altasPresentadasDe(proyectosDelTenant: Array<string | Type
             in: {
               $let: {
                 vars: { k: { $arrayElemAt: ["$contracts", "$$i"] } },
-                in: { i: "$$i", r: "$$k.altaArcaPresentada.resultado", e: "$$k.empresaContratoId", a: "$$k.fecha_alta_contrato", b: "$$k.fecha_baja_contrato" },
+                in: { i: "$$i", r: "$$k.altaArcaPresentada.resultado", f: "$$k.altaArcaPresentada.fecha", e: "$$k.empresaContratoId", a: "$$k.fecha_alta_contrato", b: "$$k.fecha_baja_contrato" },
               },
             },
           },
@@ -70,7 +72,8 @@ export async function altasPresentadasDe(proyectosDelTenant: Array<string | Type
   for (const f of filas) {
     for (const c of f.c || []) {
       if (!["presentada", "indeterminado", "presentando"].includes(String(c.r || ""))) continue;
-      out.push({ userId: String(f.userId), userProjectId: String(f._id), contractIndex: Number(c.i), empresaId: String(c.e || ""), alta: fechaISO(c.a), baja: fechaISO(c.b) });
+      const presentadaEl = c.f && !Number.isNaN(new Date(c.f).getTime()) ? new Date(c.f).toISOString() : undefined;
+      out.push({ userId: String(f.userId), userProjectId: String(f._id), contractIndex: Number(c.i), empresaId: String(c.e || ""), alta: fechaISO(c.a), baja: fechaISO(c.b), ...(presentadaEl ? { presentadaEl } : {}) });
     }
   }
   if (!tenantId || out.length === 0) return out;
@@ -99,21 +102,26 @@ export interface RelacionArcaResumida {
   inicio: string;
   /** "YYYY-MM-DD"; vacío = relación abierta en ARCA. */
   fin: string;
+  /**
+   * ARCA ya procesó la baja («SITUACION De BAJA» cargada). Una relación con fecha de fin pero SIN esto
+   * sigue ACTIVA para ARCA: rechaza otra alta de la persona con esa empleadora (ver `secuenciaPorPersona.ts`).
+   */
+  cerrada?: boolean;
 }
 
 /**
  * Las Relaciones Laborales de ARCA de esas personas (con todas las empleadoras), resumidas. Con `desde`
- * ("YYYY-MM-DD"), sólo las abiertas o que terminan desde ese día: las que terminaron antes no pisan nada y
- * una persona con historia desde 2010 trae decenas de filas (ver memoria «Latencia = bytes»).
+ * ("YYYY-MM-DD"), sólo las que pueden importar: las activas (sin baja procesada), las abiertas y las que
+ * terminan desde ese día. Una persona con historia desde 2010 trae decenas de filas (memoria «Latencia = bytes»).
  */
 export async function relacionesArcaDe(tenantId: Types.ObjectId | string, cuils: Iterable<string>, desde?: string): Promise<RelacionArcaResumida[]> {
   const lista = [...new Set([...cuils].map((c) => String(c || "").replace(/\D/g, "")).filter((c) => c.length === 11))];
   if (lista.length === 0) return [];
   const filtro: any = { tenantId: new Types.ObjectId(String(tenantId)), cuil: { $in: lista } };
-  if (desde && /^\d{4}-\d{2}-\d{2}$/.test(desde)) filtro.$or = [{ fechaFin: null }, { fechaFin: { $gte: new Date(`${desde}T00:00:00.000Z`) } }];
-  const rels: any[] = await RelacionLaboralArca.find(filtro).select("-_id cuil empleadoraCuit fechaInicio fechaFin").lean();
+  if (desde && /^\d{4}-\d{2}-\d{2}$/.test(desde)) filtro.$or = [{ fechaFin: null }, { situacionBaja: { $in: ["", null] } }, { fechaFin: { $gte: new Date(`${desde}T00:00:00.000Z`) } }];
+  const rels: any[] = await RelacionLaboralArca.find(filtro).select("-_id cuil empleadoraCuit fechaInicio fechaFin situacionBaja").lean();
   const iso = (d: unknown) => (d ? new Date(d as any).toISOString().slice(0, 10) : "");
-  return rels.map((r) => ({ cuil: r.cuil, empleadoraCuit: r.empleadoraCuit, inicio: iso(r.fechaInicio), fin: iso(r.fechaFin) }));
+  return rels.map((r) => ({ cuil: r.cuil, empleadoraCuit: r.empleadoraCuit, inicio: iso(r.fechaInicio), fin: iso(r.fechaFin), cerrada: !!String(r.situacionBaja || "").trim() }));
 }
 
 /**

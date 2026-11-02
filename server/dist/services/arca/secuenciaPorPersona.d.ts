@@ -2,7 +2,7 @@ import { type AltaPresentada, type RelacionArcaResumida } from "./altasVigentes.
 import { type ConfigAltasAutomaticas } from "./horarioAltasAutomaticas.js";
 /** El registro de 85 le manda a ARCA la fecha de fin. En blanco (tiempo indeterminado), ARCA deja la relación abierta hasta que alguien informe la baja. */
 export declare const mandaFechaFin: (registro85: string | null | undefined) => boolean;
-/** Las fechas de inicio y fin tal como van en el registro de 85: lo que ARCA mira para decir «alta activa». */
+/** Las fechas de inicio y fin tal como van en el registro de 85. */
 export declare const fechasDelRegistro: (registro85: string | null | undefined) => string;
 export interface ContratoPendiente {
     userId: string;
@@ -13,27 +13,26 @@ export interface ContratoPendiente {
     baja: string;
 }
 export interface Bloqueo {
-    tipo: "mismo_dia_arca" | "vigente_weprodu" | "vigente_arca";
+    /**
+     * `mismo_dia`: ya hay un alta de ese día (duplicado, no ocupa turno). `activa_arca`: ARCA la lista sin baja
+     * procesada. `presentada`: presentada desde WeProdu, ARCA no la lista y todavía no pasó la noche de su
+     * vencimiento (o no tiene baja).
+     */
+    tipo: "mismo_dia" | "activa_arca" | "presentada";
     /** Por qué no se presenta todavía: va a la pantalla y al error del lote. */
     motivo: string;
-    /** Hasta qué día (inclusive) dura lo que la pisa, "YYYY-MM-DD"; vacío = abierta o no se sabe. */
+    /** Hasta qué día dura lo que la traba, "YYYY-MM-DD"; vacío = sin baja conocida en ningún lado. */
     hasta: string;
-    /** Qué la destraba, corto: la columna de la próxima corrida cuando no hay fecha prevista. */
+    /** Qué la destraba, corto: la columna de la próxima corrida. */
     desbloqueo: string;
 }
 /**
- * La relación de ARCA que se superpone con el contrato. `relaciones` ya son las de esa persona con esa
- * empleadora. La que empieza el mismo día no cuenta (ver `relacionArcaDelMismoDia`).
+ * Por qué este contrato no se puede presentar todavía, o `null` si nada lo traba. `relacionesArca` son las
+ * de esa persona con esa empleadora; `presentadas`, las de WeProdu (se filtran acá).
  */
-export declare function relacionArcaQueSePisa(alta: string, baja: string, relaciones: RelacionArcaResumida[]): RelacionArcaResumida | null;
-/** La relación de ARCA de esa persona y empleadora que empieza el mismo día que el contrato. */
-export declare const relacionArcaDelMismoDia: (alta: string, relaciones: RelacionArcaResumida[]) => RelacionArcaResumida | null;
-/**
- * Por qué este contrato no se puede presentar todavía según lo que ya está vigente —en WeProdu o en
- * ARCA—, o `null` si nada lo pisa. Si lo pisan las dos fuentes, manda la que termina más tarde (abierta
- * gana), porque es la que de verdad lo destraba.
- */
-export declare function bloqueoPorVigencia(contrato: ContratoPendiente, presentadas: AltaPresentada[], relacionesArca: RelacionArcaResumida[]): Bloqueo | null;
+export declare function bloqueoPorVigencia(contrato: ContratoPendiente, presentadas: AltaPresentada[], relacionesArca: RelacionArcaResumida[], o: {
+    hoy: string;
+}): Bloqueo | null;
 /** Lo que mira el turno de cada pendiente. */
 export interface PendienteEnSecuencia {
     cuil: string;
@@ -43,12 +42,12 @@ export interface PendienteEnSecuencia {
     /** Sale en esta corrida si nada de la secuencia lo frena. */
     presentable: boolean;
     /**
-     * Es un alta real que espera (presentable, o bloqueada por algo vigente): ocupa su lugar en la fila.
-     * Un contrato al que le faltan datos NO ocupa turno (no traba a los demás por un dato sin cargar), ni
-     * uno que ARCA ya tiene del mismo día (es un duplicado).
+     * Es un alta real que espera (presentable, o trabada por algo activo): ocupa su lugar en la fila. Un
+     * contrato al que le faltan datos NO ocupa turno (no traba a los demás por un dato sin cargar), ni uno
+     * que ya tiene su alta del mismo día (es un duplicado).
      */
     ocupaTurno: boolean;
-    /** Su registro le manda a ARCA la fecha de fin (`mandaFechaFin`). */
+    /** Su registro le manda a ARCA la fecha de fin (`mandaFechaFin`): ARCA la cierra sola al vencer. */
     mandaFin: boolean;
 }
 export interface EsperaTurno {
@@ -56,14 +55,10 @@ export interface EsperaTurno {
     antes: number;
     motivo: string;
     desbloqueo: string;
-    /** Desde qué día puede salir, si se sabe: el siguiente a la baja de la anterior (que ARCA cierra sola). Vacío si no. */
+    /** No antes de este día: el siguiente a la baja de la anterior, si ARCA la cierra sola. Vacío = espera una baja que alguien tiene que informar. */
     desdeDia: string;
 }
-/**
- * Qué pendientes esperan su turno: por persona y empleadora, en orden de fecha de alta, sale la primera
- * que ocupa turno; cada siguiente sale en la misma corrida sólo si la anterior también sale, termina
- * antes y le manda a ARCA la fecha de fin (jornadas encadenadas). Las demás esperan.
- */
+/** Por persona y empleadora, en orden de fecha de alta, sale la primera que ocupa turno; las demás esperan, cada una detrás de la anterior. */
 export declare function esperanSuTurno<T extends PendienteEnSecuencia>(cs: T[]): Map<number, EsperaTurno>;
 /**
  * La próxima corrida que presentaría un alta que no puede salir antes de `desdeDia`: la más tardía entre
@@ -74,16 +69,28 @@ export declare function momentoDesde(fechaAlta: string, desdeDia: string, cfg: C
     ultimaCola?: string;
     esperaAManana?: boolean;
 }): Date | null;
-/** La corrida que espera la baja de algo vigente: la primera del día siguiente a esa baja. */
+/**
+ * La fecha prevista de un alta trabada por algo ACTIVO con baja conocida: la primera corrida del día
+ * siguiente a esa baja y nunca antes de mañana, porque que ARCA la procese lo trae recién la próxima
+ * sincronización (una por día). Si mañana todavía no figura, se vuelve a calcular: no se presenta a ciegas.
+ */
 export declare const momentoTrasBaja: (fechaAlta: string, baja: string, cfg: ConfigAltasAutomaticas, ahora: Date, hoy: string, o?: {
     ultimaCola?: string;
 }) => Date | null;
 /**
- * EL RECHAZO POR «ALTA ACTIVA» DEJA DE SER UN LOOP (pedido del 01/11/2026). Si ARCA lo rechazó así pero
- * las Relaciones Laborales sincronizadas no muestran nada que lo pise, los datos locales están atrasados:
- * reintentar da lo mismo. Se destraba con una sincronización de Relaciones Laborales POSTERIOR al rechazo
- * (que trae la relación que lo pisa, o confirma que ya no está) o si cambiaron las fechas que se le
- * mandaron a ARCA. Sin el registro del rechazo (rechazos de antes de esta regla), sólo la sincronización.
+ * La fecha prevista de un alta que espera su turno: no antes del día siguiente a la corrida que presenta la
+ * anterior (la baja de esa llega con la sincronización de al otro día), ni antes del día siguiente a su
+ * baja. `null` si la anterior no tiene fecha o su baja la tiene que informar alguien.
+ */
+export declare function momentoDetrasDe(fechaAlta: string, espera: EsperaTurno, anterior: Date | null, cfg: ConfigAltasAutomaticas, ahora: Date, hoy: string, o?: {
+    ultimaCola?: string;
+}): Date | null;
+/**
+ * EL RECHAZO POR «ALTA ACTIVA» DEJA DE SER UN LOOP (pedido del 01/11/2026). Si ARCA lo rechazó así pero lo
+ * sincronizado no muestra nada activo, los datos locales están atrasados: reintentar da lo mismo. Se
+ * destraba con una sincronización de Relaciones Laborales POSTERIOR al rechazo (que trae lo que lo traba,
+ * o confirma que ya no está) o si cambiaron las fechas que se le mandaron a ARCA. Sin el registro del
+ * rechazo (rechazos de antes de esta regla), sólo la sincronización.
  */
 export declare function rechazoAltaActivaDestrabado(o: {
     rechazadaEl: string;
@@ -91,12 +98,12 @@ export declare function rechazoAltaActivaDestrabado(o: {
     registroActual?: string | null;
     ultimaSyncOk?: string;
 }): boolean;
-export declare const TEXTO_RECHAZO_ALTA_ACTIVA = "ARCA la rechaz\u00F3 por un alta activa, pero las Relaciones Laborales sincronizadas no muestran ninguna que la pise: los datos est\u00E1n atrasados. Se vuelve a presentar despu\u00E9s de la pr\u00F3xima sincronizaci\u00F3n de Relaciones Laborales (o si cambian sus fechas).";
+export declare const TEXTO_RECHAZO_ALTA_ACTIVA = "ARCA la rechaz\u00F3 por un alta activa, pero las Relaciones Laborales sincronizadas no muestran ninguna: los datos est\u00E1n atrasados. Se vuelve a presentar despu\u00E9s de la pr\u00F3xima sincronizaci\u00F3n de Relaciones Laborales (o si cambian sus fechas).";
 export declare const DESBLOQUEO_RECHAZO_ALTA_ACTIVA = "Despu\u00E9s de la pr\u00F3xima sincronizaci\u00F3n de Relaciones Laborales (o si cambian sus fechas).";
 /**
  * Las vueltas de una corrida (un lote no puede repetir CUIL, ver `validarLoteAltas`): la k-ésima alta de
- * cada persona, por fecha de alta, va en la vuelta k. Así las jornadas encadenadas salen en orden aunque
- * una rechazada haya quedado al final de la lista. Dentro de cada vuelta se respeta el orden recibido.
+ * cada persona, por fecha de alta, va en la vuelta k. Con el turno por persona y empleadora casi siempre es
+ * una sola; quedan más con dos empleadoras distintas, que son corridas distintas igual.
  */
 export declare function vueltasPorPersona<T extends {
     cuil: string;

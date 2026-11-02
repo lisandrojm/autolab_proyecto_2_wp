@@ -21,6 +21,8 @@ export interface AltaPresentada {
     baja: string;
     /** La baja la puso ARCA (Relaciones Laborales sincronizadas), no el contrato de WeProdu. */
     bajaSegunArca?: boolean;
+    /** Cuándo se presentó (ISO): si fue después de la última sincronización, ARCA todavía la tiene activa (ver `secuenciaPorPersona.ts`). */
+    presentadaEl?: string;
 }
 /**
  * Las altas ya presentadas de estas personas, en los proyectos del tenant. Con `tenantId`, además se
@@ -34,11 +36,16 @@ export interface RelacionArcaResumida {
     inicio: string;
     /** "YYYY-MM-DD"; vacío = relación abierta en ARCA. */
     fin: string;
+    /**
+     * ARCA ya procesó la baja («SITUACION De BAJA» cargada). Una relación con fecha de fin pero SIN esto
+     * sigue ACTIVA para ARCA: rechaza otra alta de la persona con esa empleadora (ver `secuenciaPorPersona.ts`).
+     */
+    cerrada?: boolean;
 }
 /**
  * Las Relaciones Laborales de ARCA de esas personas (con todas las empleadoras), resumidas. Con `desde`
- * ("YYYY-MM-DD"), sólo las abiertas o que terminan desde ese día: las que terminaron antes no pisan nada y
- * una persona con historia desde 2010 trae decenas de filas (ver memoria «Latencia = bytes»).
+ * ("YYYY-MM-DD"), sólo las que pueden importar: las activas (sin baja procesada), las abiertas y las que
+ * terminan desde ese día. Una persona con historia desde 2010 trae decenas de filas (memoria «Latencia = bytes»).
  */
 export declare function relacionesArcaDe(tenantId: Types.ObjectId | string, cuils: Iterable<string>, desde?: string): Promise<RelacionArcaResumida[]>;
 /**

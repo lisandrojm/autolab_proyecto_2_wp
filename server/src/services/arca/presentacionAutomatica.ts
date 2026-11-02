@@ -19,7 +19,19 @@ import { fechaISO, hoyArgentina } from "../../utils/contratoVigencia.js";
 import { resolveAfip, resolveAfip85, problemasDeSucursalParaTxt, type AfipCatalogs } from "../../compartido/arca/afipCompleteness.js";
 import { buildAltaRecord85 } from "../../compartido/arca/afipTxt85.js";
 import { TEXTO_PROBLEMA_SUCURSAL } from "../../compartido/sucursalesDeEmpresa.js";
-import { altaQueSePisa, altasPresentadasDe, textoAltaQueSePisa } from "./altasVigentes.js";
+import { altasPresentadasDe, relacionesArcaDe, ultimaSyncOkPorCuit } from "./altasVigentes.js";
+import {
+  DESBLOQUEO_RECHAZO_ALTA_ACTIVA,
+  TEXTO_RECHAZO_ALTA_ACTIVA,
+  bloqueoPorVigencia,
+  esperanSuTurno,
+  mandaFechaFin,
+  momentoDetrasDe,
+  momentoTrasBaja,
+  rechazoAltaActivaDestrabado,
+  vueltasPorPersona,
+  type Bloqueo,
+} from "./secuenciaPorPersona.js";
 import { arrancarCorridaAltas, corridaAltasDe } from "./corridaAltas.js";
 import { quienTiene } from "./candadoArca.js";
 import { esRechazoDefinitivo } from "./rechazoDefinitivo.js";
@@ -105,8 +117,13 @@ export interface CandidatoAlta {
   fechaAlta: string;
   fechaBaja: string;
   empresa: { _id: string; razonSocial: string } | null;
-  /** La próxima corrida automática que lo presenta, ISO. */
+  /** La próxima corrida automática que lo presenta, ISO. Vacío si espera algo sin fecha (ver `desbloqueo`). */
   momento: string;
+  /**
+   * Si espera algo —un alta vigente en WeProdu o en ARCA, su turno detrás de otra alta de la misma persona,
+   * la sincronización después de un rechazo por alta activa—: qué la destraba. Vacío si no espera nada.
+   */
+  desbloqueo: string;
   /** Se puede presentar tal como está. */
   presentable: boolean;
   /** La baja ya pasó. Informativo: igual entra en la automática. */
@@ -249,8 +266,18 @@ export async function candidatosDeAlta(
   );
   const cat = await catalogosArca();
   const empresaPorId = new Map(((cat.empresas || []) as any[]).map((e) => [String(e._id), e]));
+  const digitos = (v: unknown) => String(v ?? "").replace(/\D/g, "");
+  /*
+    LO QUE ARCA TIENE VIGENTE (pedido del 01/11/2026): las Relaciones Laborales sincronizadas de estas
+    personas que siguen abiertas o terminan desde la primera alta pendiente, y cuándo se sincronizó cada
+    empleadora por última vez. Ver `secuenciaPorPersona.ts`.
+  */
+  const primeraAlta = elegidos.map((e) => fechaISO(e.c.fecha_alta_contrato)).filter(Boolean).sort()[0];
+  const [relacionesArca, syncOk] = await Promise.all([relacionesArcaDe(tenantObjectId, usuarios.map((u) => digitos(u.metadata?.cuit)), primeraAlta), ultimaSyncOkPorCuit(tenantObjectId)]);
 
   const out: CandidatoAlta[] = [];
+  /** Lo que el turno necesita de cada candidato y no viaja a la pantalla, en el mismo orden que `out`. */
+  const aparte: Array<{ ocupaTurno: boolean; mandaFin: boolean; bloqueo: Bloqueo | null; sinFecha: boolean; esperaAManana: boolean }> = [];
   for (const { up, i, c } of elegidos) {
     const u = userPorId.get(String(up.userId));
     if (!u) continue; // de otro tenant o borrado
@@ -303,6 +330,9 @@ export async function candidatosDeAlta(
 
     let motivo = "";
     let registro: string | null = null;
+    let desbloqueo = "";
+    let bloqueo: Bloqueo | null = null;
+    let trabadoPorRechazo = false;
     // Terminado, rechazado por el padrón o rechazado varias veces: todo informativo, todos siguen en la cola.
     const terminado = yaTermino(fechaBaja, hoy);
     const fallida = c.altaArcaPresentada?.resultado === "fallida";
@@ -330,10 +360,30 @@ export async function candidatosDeAlta(
         if (!registro && !motivo) motivo = "No se pudo armar el registro de Altas Masivas.";
       }
       if (!motivo) {
-        const pisa = altaQueSePisa({ userId: String(up.userId), userProjectId: String(up._id), contractIndex: i, empresaId, alta: fechaAlta, baja: fechaBaja }, presentadas);
-        if (pisa) motivo = `${textoAltaQueSePisa(pisa).replace(/^ya/, "Ya")}.`;
+        // Lo activo en ARCA o recién presentado desde WeProdu con esta misma empleadora, y el alta que ya existe del mismo día.
+        const cuitEmpresa = digitos(empresa.cuit);
+        const rels = relacionesArca.filter((r) => r.cuil === digitos(u.metadata?.cuit) && r.empleadoraCuit === cuitEmpresa);
+        bloqueo = bloqueoPorVigencia({ userId: String(up.userId), userProjectId: String(up._id), contractIndex: i, empresaId, alta: fechaAlta, baja: fechaBaja }, presentadas, rels, { hoy });
+        if (bloqueo) {
+          motivo = bloqueo.motivo;
+          desbloqueo = bloqueo.desbloqueo;
+        } else if (rechazoDefinitivo && !rechazoAltaActivaDestrabado({ rechazadaEl, registroAlRechazo: c.altaArcaPresentada?.registro, registroActual: registro, ultimaSyncOk: syncOk.get(cuitEmpresa) })) {
+          // ARCA dijo «alta activa» y lo sincronizado no muestra nada: no se reintenta a ciegas.
+          motivo = TEXTO_RECHAZO_ALTA_ACTIVA;
+          desbloqueo = DESBLOQUEO_RECHAZO_ALTA_ACTIVA;
+          trabadoPorRechazo = true;
+        }
       }
     }
+    const espera = esperaAManana({ rechazadaEl, rechazoDefinitivo }, hoy);
+    aparte.push({
+      // Un alta real que espera ocupa su lugar en la fila; una a la que le faltan datos o un duplicado del mismo día, no.
+      ocupaTurno: (!motivo && !!registro) || trabadoPorRechazo || (!!bloqueo && bloqueo.tipo !== "mismo_dia"),
+      mandaFin: mandaFechaFin(registro),
+      bloqueo,
+      sinFecha: trabadoPorRechazo || (!!bloqueo && !bloqueo.hasta),
+      esperaAManana: espera,
+    });
 
     out.push({
       userProjectId: String(up._id),
@@ -348,7 +398,9 @@ export async function candidatosDeAlta(
       fechaAlta,
       fechaBaja,
       empresa: empresa ? { _id: String(empresa._id), razonSocial: String(empresa.razonSocial || "") } : null,
-      momento: proximaCorridaPara(fechaAlta, cfg, ahora, hoy, { ultimaCola: opts.ultimaCola, esperaAManana: esperaAManana({ rechazadaEl, rechazoDefinitivo }, hoy) })?.toISOString() || "",
+      // Se calcula abajo, cuando ya se sabe quién espera su turno.
+      momento: "",
+      desbloqueo,
       presentable: !motivo && !!registro,
       terminado,
       rechazoDefinitivo,
@@ -360,6 +412,42 @@ export async function candidatosDeAlta(
       registro: motivo ? null : registro,
     });
   }
+  /*
+    EL TURNO POR PERSONA Y EMPLEADORA (pedido del 01/11/2026): de las altas de una misma persona con la
+    misma empleadora sale una por corrida, la de fecha de alta más temprana; las siguientes esperan a que
+    ARCA procese la baja de la anterior (ver `esperanSuTurno`). Con `soloContrato` se ve uno solo: el turno
+    no aplica (es un «Forzar» puntual, y lo activo igual se mira arriba).
+  */
+  const turnos = esperanSuTurno(out.map((c, n) => ({ cuil: c.cuil, empresaId: c.empresa?._id || "", fechaAlta: c.fechaAlta, fechaBaja: c.fechaBaja, presentable: c.presentable, ocupaTurno: aparte[n].ocupaTurno, mandaFin: aparte[n].mandaFin })));
+  for (const [n, t] of turnos) {
+    out[n].motivo = t.motivo;
+    out[n].desbloqueo = t.desbloqueo;
+    out[n].presentable = false;
+    out[n].registro = null;
+  }
+  /*
+    LA FECHA PREVISTA en vez de reintentos a ciegas: lo que espera la baja de algo activo, la primera corrida
+    del día siguiente a esa baja y no antes de mañana (la trae la sincronización); lo que espera su turno, el
+    día siguiente a la corrida de la anterior, y no antes del siguiente a su baja. Sin baja conocida en
+    ningún lado, sin fecha: lo dice `desbloqueo`. Si llegado el día ARCA todavía no la procesó, se recalcula.
+  */
+  const momentos = new Map<number, Date | null>();
+  const momentoDe = (n: number): Date | null => {
+    if (momentos.has(n)) return momentos.get(n)!;
+    momentos.set(n, null); // corta un ciclo que no debería existir
+    const c = out[n];
+    const a = aparte[n];
+    const o = { ultimaCola: opts.ultimaCola, esperaAManana: a.esperaAManana };
+    let m: Date | null;
+    const t = turnos.get(n);
+    if (t) m = momentoDetrasDe(c.fechaAlta, t, momentoDe(t.antes), cfg, ahora, hoy, o);
+    else if (a.sinFecha) m = null;
+    else if (a.bloqueo?.hasta) m = momentoTrasBaja(c.fechaAlta, a.bloqueo.hasta, cfg, ahora, hoy, o);
+    else m = proximaCorridaPara(c.fechaAlta, cfg, ahora, hoy, o);
+    momentos.set(n, m);
+    return m;
+  };
+  out.forEach((c, n) => (c.momento = momentoDe(n)?.toISOString() || ""));
   out.sort((a, b) => a.fechaAlta.localeCompare(b.fechaAlta) || a.nombre.localeCompare(b.nombre, "es"));
   if (Date.now() - t0 > 2000) console.log(`[altas-automaticas] candidatos: ${out.length} en ${Date.now() - t0} ms (contratos ${msFilas} ms)`);
   return out;
@@ -428,16 +516,10 @@ export async function presentarCandidatos(o: {
       la misma empleadora) lo rechaza `validarLoteAltas` entero («El lote repite personas»), y así se caía
       la corrida automática completa de esa empleadora. Se parte en VUELTAS: la primera lleva un contrato
       por persona, la segunda el siguiente de quienes tenían dos, y así; cada vuelta es una corrida.
+      Desde el 01/11/2026 sale una por persona y empleadora por corrida (`esperanSuTurno`): ARCA rechazaba la
+      segunda vuelta por «alta activa». Las vueltas quedan por las dudas, EN ORDEN de fecha de alta.
     */
-    const vueltas: CandidatoAlta[][] = [];
-    for (const c of items) {
-      let v = vueltas.find((x) => !x.some((y) => y.cuil === c.cuil));
-      if (!v) {
-        v = [];
-        vueltas.push(v);
-      }
-      v.push(c);
-    }
+    const vueltas = vueltasPorPersona(items);
     for (const [n, lote] of vueltas.entries()) {
       if (o.debeCortar?.()) {
         avisar({ arranco: false, error: "Se cortó para dejarle el paso a la corrida del día." });

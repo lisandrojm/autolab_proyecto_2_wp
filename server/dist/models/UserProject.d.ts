@@ -244,6 +244,11 @@ interface IContract {
         intentos?: number;
         /** Cuándo fue el primero de esos rechazos. */
         primerIntentoEl?: Date;
+        /**
+         * El registro que ARCA rechazó (sólo en `fallida`). Un rechazo por alta activa no se reintenta hasta
+         * que cambien sus fechas o llegue una sincronización de Relaciones Laborales (ver `secuenciaPorPersona.ts`).
+         */
+        registro?: string;
     };
     /**
      * Cuántas veces se mandó el alta a ARCA (pedido del 20/10/2026): automática o forzada, aceptada,

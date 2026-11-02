@@ -19,8 +19,13 @@ export interface CandidatoAlta {
         _id: string;
         razonSocial: string;
     } | null;
-    /** La próxima corrida automática que lo presenta, ISO. */
+    /** La próxima corrida automática que lo presenta, ISO. Vacío si espera algo sin fecha (ver `desbloqueo`). */
     momento: string;
+    /**
+     * Si espera algo —un alta vigente en WeProdu o en ARCA, su turno detrás de otra alta de la misma persona,
+     * la sincronización después de un rechazo por alta activa—: qué la destraba. Vacío si no espera nada.
+     */
+    desbloqueo: string;
     /** Se puede presentar tal como está. */
     presentable: boolean;
     /** La baja ya pasó. Informativo: igual entra en la automática. */

@@ -82,6 +82,7 @@ const contractSchema = new Schema({
             porConsulta: { type: Boolean },
             intentos: { type: Number },
             primerIntentoEl: { type: Date },
+            registro: { type: String },
         }, { _id: false }),
         default: undefined,
     },

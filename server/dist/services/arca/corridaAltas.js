@@ -321,7 +321,8 @@ async function correrPorTandas(o) {
             const conteo = res === "fallida" && corrida.automatica ? { intentos: (previo?.intentos || 0) + 1, primerIntentoEl: previo?.primerIntentoEl || new Date() } : res === "fallida" ? previo : undefined;
             // Un envío a ARCA es un resultado de una tanda presentada; el de una consulta de una incierta de
             // otra corrida (sin tanda) no se volvió a mandar.
-            await marcar(x.item, { resultado: res, tanda: x.tanda, motivo: x.motivo, cat: x.cat, porConsulta: x.porConsulta || undefined, ...(conteo || {}) }, x.tanda !== undefined);
+            // El registro rechazado queda guardado: el rechazo por alta activa se destraba si cambian sus fechas (ver `secuenciaPorPersona.ts`).
+            await marcar(x.item, { resultado: res, tanda: x.tanda, motivo: x.motivo, cat: x.cat, porConsulta: x.porConsulta || undefined, ...(conteo || {}), ...(res === "fallida" ? { registro: x.item.registro } : {}) }, x.tanda !== undefined);
             if (res === "presentada")
                 await avanzarPresentada(x.item.userProjectId, x.item.contractIndex);
         },
