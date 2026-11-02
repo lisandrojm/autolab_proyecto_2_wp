@@ -37,7 +37,8 @@ import { MOBILE_ACTIVITY_LOGS as PERMISO_NOVEDADES_MOBILE } from '../utils/permi
 import { arcaRelacionesAPI, EmpresaConCuit, RelacionResumida } from '../api/arcaRelaciones';
 import { CeldaContratosArca } from '../components/arca/CeldaContratosArca';
 import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
-import { EditarContratoEnModalContext, type ContratoAEditar } from '../components/contratos/editarContratoEnModal';
+import { EditarContratoEnModalContext, VerContratoEnModalContext, esClicDeLaFila, type ArcaDelContrato, type ContratoAEditar } from '../components/contratos/editarContratoEnModal';
+import { ContratoDetalleModal } from '../components/contratos/ContratoDetalleModal';
 import { ProjectTeamPage } from './ProjectTeamPage';
 import { invalidateRefCache } from '../utils/refCache';
 
@@ -428,6 +429,15 @@ export const ContractsPage: React.FC = () => {
   const handleEditContract = (record: ContractOverviewRow) =>
     editarContratoEnModal({ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex }, () => fetchContracts(currentPage));
 
+  /*
+    EL RESUMEN AL TOCAR LA FILA (02/11/2026, pedido del usuario), como en Solicitudes. Lo usan esta
+    tabla y las de Gestión (por contexto). Editar y eliminar desde el resumen refrescan la tabla de
+    donde vino (`alCambiar`).
+  */
+  const [viendoContrato, setViendoContrato] = useState<{ record: ContractOverviewRow; alCambiar?: () => void; arca?: ArcaDelContrato } | null>(null);
+  const verContratoEnModal = useCallback((record: ContractOverviewRow, alCambiar?: () => void, arca?: ArcaDelContrato) => setViendoContrato({ record, alCambiar, arca }), []);
+  const verContrato = (record: ContractOverviewRow) => verContratoEnModal(record, () => fetchContracts(currentPage));
+
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
   const handleDownloadContractRow = (record: ContractOverviewRow, empresaId?: string) => downloadContractRow(record, contratoFrames, empresaId);
@@ -438,15 +448,18 @@ export const ContractsPage: React.FC = () => {
   };
 
   // Eliminar SOLO ese contrato (por índice) del proyecto.
-  const handleDeleteContract = async (record: ContractOverviewRow) => {
+  const handleDeleteContract = async (record: ContractOverviewRow, alBorrar: () => void = () => fetchContracts()) => {
     const res = await sweetAlert.confirm('¿Eliminar contrato?', `Se eliminará este contrato de "${record.projectName}". Esta acción no se puede deshacer.`, 'Sí, eliminar');
-    if (!res.isConfirmed) return;
+    if (!res.isConfirmed) return false;
     try {
       await projectsAPI.deleteMemberContract(record.projectId, record.userId, record.contractIndex);
+      invalidateRefCache('contracts-overview:');
       sweetAlert.success('Contrato eliminado', 'El contrato fue eliminado.');
-      fetchContracts();
+      alBorrar();
+      return true;
     } catch {
       sweetAlert.error('Error', 'No se pudo eliminar el contrato.');
+      return false;
     }
   };
 
@@ -491,6 +504,7 @@ export const ContractsPage: React.FC = () => {
 
   return (
     <EditarContratoEnModalContext.Provider value={editarContratoEnModal}>
+    <VerContratoEnModalContext.Provider value={verContratoEnModal}>
     {editandoContrato && (
       <ProjectTeamPage
         soloAprobacion={{
@@ -790,7 +804,7 @@ export const ContractsPage: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {rows.map((record) => (
-                    <tr key={record._id} onClick={() => setManagedUser({ id: record.userId, name: record.userName })} title="Gestionar contratos de la persona" className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group cursor-pointer">
+                    <tr key={record._id} onClick={(e) => esClicDeLaFila(e) && verContrato(record)} title="Ver el resumen del contrato" className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group cursor-pointer">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="flex items-center justify-center shrink-0">
@@ -918,7 +932,7 @@ export const ContractsPage: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {rows.map((record) => (
-                <Card key={record._id} onClick={() => setManagedUser({ id: record.userId, name: record.userName })} className="p-0 overflow-hidden group hover:border-primary-500 transition-all border-gray-200 dark:border-gray-700 cursor-pointer">
+                <Card key={record._id} onClick={() => verContrato(record)} className="p-0 overflow-hidden group hover:border-primary-500 transition-all border-gray-200 dark:border-gray-700 cursor-pointer">
                   <div className="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700/50">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-3">
@@ -1048,6 +1062,30 @@ export const ContractsPage: React.FC = () => {
         </>
       )}
 
+      {/* Montado sólo abierto: trae sus catálogos al abrirse, no con cada carga de la página. */}
+      {viendoContrato && (
+      <ContratoDetalleModal
+        isOpen
+        onClose={() => setViendoContrato(null)}
+        record={viendoContrato?.record || null}
+        arca={viendoContrato?.arca}
+        contratoFrames={contratoFrames}
+        allEstados={allEstados}
+        onEditar={(r) => {
+          const alCambiar = viendoContrato?.alCambiar;
+          setViendoContrato(null);
+          editarContratoEnModal({ projectId: r.projectId, userId: r.userId, contractIndex: r.contractIndex }, alCambiar);
+        }}
+        onEliminar={async (r) => {
+          if (await handleDeleteContract(r, viendoContrato?.alCambiar || (() => fetchContracts()))) setViendoContrato(null);
+        }}
+        onVerTodos={(r) => {
+          setViendoContrato(null);
+          setManagedUser({ id: r.userId, name: r.userName });
+        }}
+      />
+      )}
+
       <MemberContractsManagerModal isOpen={!!managedUser} onClose={() => setManagedUser(null)} userId={managedUser?.id || null} userName={managedUser?.name} contratoFrames={contratoFrames} releases={releases} />
 
       {mgmtTabsInfoOpen && (
@@ -1124,6 +1162,7 @@ export const ContractsPage: React.FC = () => {
         </Modal>
       )}
     </PageLayout>
+    </VerContratoEnModalContext.Provider>
     </EditarContratoEnModalContext.Provider>
   );
 };

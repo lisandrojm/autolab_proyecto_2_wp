@@ -51,6 +51,7 @@ import { LinkSiPuede } from '../LinkSiPuede';
 import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 import { seSuperpone, ROL_QUE_SOLICITA } from '../solicitudes/SolicitudesTable';
 import { useAnchoAcciones } from '../ui/useAnchoAcciones';
+import { esClicDeLaFila, useVerContratoEnModal } from './editarContratoEnModal';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 const CLAVE_CACHE_OBRAS_SOCIALES = claveCacheCatalogo('/obras-sociales');
@@ -835,6 +836,8 @@ export const ContractBulkAfipTab: React.FC<{
   /** Informa al padre la cantidad de contratos de cada trámite, para mostrarla en sus propias pestañas. */
   onCounts?: (counts: { alta: number; cuit: number; firma: number; sinCuit: number }) => void;
 }> = ({ allEstados, contratoFrames, releases, initialProjectId = '', tipo: filterTipo, onCounts }) => {
+  // Tocar la fila abre el resumen del contrato (en Contratos; fuera de ahí no hay proveedor y no hace nada).
+  const verContrato = useVerContratoEnModal();
   const [rows, setRows] = useState<ContractOverviewRow[]>([]);
   const [loading, setLoading] = useState(true);
   /** Motivo por el que falló la carga (vacío = sin error). Ver `load()`. */
@@ -1701,8 +1704,9 @@ export const ContractBulkAfipTab: React.FC<{
     La empresa es la de la pestaña o, desde «Todas», la Empresa Contrato de la fila: el alta va a nombre
     de su empleadora igual. Sin empresa asignada no hay a nombre de quién presentarla.
   */
+  const empresaParaPresentar = (row: ImpositivoRow) => empresaDeLaPestana || companies.find((c) => c._id === String(row.empresaContratoId || ''));
   const BotonPresentarFila = ({ row, result }: { row: ImpositivoRow; result: AfipRowResult }) => {
-    const empresa = empresaDeLaPestana || companies.find((c) => c._id === String(row.empresaContratoId || ''));
+    const empresa = empresaParaPresentar(row);
     return (
       <button
         type="button"
@@ -1730,6 +1734,22 @@ export const ContractBulkAfipTab: React.FC<{
     vuelve es un pegado de `CUIL,RNOS` — no hay corrida en curso con la que competir.
   */
   const bloqueoPorValidacion = undefined;
+
+  /*
+    El resumen del contrato, desde esta pestaña: en Alta temprana lleva además el estado de los datos
+    ARCA y, si está completo, «Forzar Alta A.R.C.A» (lo mismo que la columna Acciones de la fila).
+  */
+  const abrirResumen = (row: ImpositivoRow, result: AfipRowResult) => {
+    if (!verContrato) return;
+    if (filterTipo !== 'alta_temprana_afip') return verContrato(row, () => load(true));
+    const empresa = empresaParaPresentar(row);
+    verContrato(row, () => load(true), {
+      result,
+      onVerDatos: () => setDetalleRef({ _id: row._id, contractIndex: row.contractIndex }),
+      onPresentar: result.completo ? () => presentarAltasMasivas([{ row, result }] as typeof fuenteTxt, empresa) : undefined,
+      presentarDeshabilitado: empresa ? undefined : 'Elegí la Empresa Contrato de este contrato para poder presentarlo',
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -1959,7 +1979,7 @@ export const ContractBulkAfipTab: React.FC<{
           {pag.visibles.map(({ row: r, result }) => {
             const cuil = cuitEsValido(r.cuit) ? fmtCuit(r.cuit) : '';
             return (
-              <div key={`${r._id}-${r.contractIndex}`} className={`bg-white dark:bg-gray-800 rounded-xl border p-4 flex flex-col gap-3 ${selected.has(rowKey(r)) ? 'border-emerald-400 dark:border-emerald-700' : 'border-gray-200 dark:border-gray-700'}`}>
+              <div key={`${r._id}-${r.contractIndex}`} onClick={(e) => esClicDeLaFila(e) && abrirResumen(r, result)} className={`bg-white dark:bg-gray-800 rounded-xl border p-4 flex flex-col gap-3 ${verContrato ? 'cursor-pointer' : ''} ${selected.has(rowKey(r)) ? 'border-emerald-400 dark:border-emerald-700' : 'border-gray-200 dark:border-gray-700'}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
                     <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={tituloCheck(r)} className={`rounded border-gray-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ${omitidaEnValidacion(r) ? 'text-amber-500 focus:ring-amber-500' : 'text-emerald-600 focus:ring-emerald-500'}`} />
@@ -2206,7 +2226,7 @@ export const ContractBulkAfipTab: React.FC<{
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {pag.visibles.map(({ row: r, result }) => (
-                <tr key={`${r._id}-${r.contractIndex}`} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}>
+                <tr key={`${r._id}-${r.contractIndex}`} onClick={(e) => esClicDeLaFila(e) && abrirResumen(r, result)} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${verContrato ? 'cursor-pointer' : ''} ${selected.has(rowKey(r)) ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}>
                   <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                     <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={tituloCheck(r)} className={`rounded border-gray-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${omitidaEnValidacion(r) ? 'text-amber-500 focus:ring-amber-500' : 'text-emerald-600 focus:ring-emerald-500'}`} />
                   </td>
@@ -3375,6 +3395,8 @@ export const ContractBulkFirmaTab: React.FC<{
   /** Cuántos se acaban de enviar a firmar: el contador de la pestaña lo calcula otra pestaña, desmontada ahora. */
   onEnviados?: (cantidad: number) => void;
 }> = ({ allEstados, contratoFrames, releases, onEnviados }) => {
+  // Tocar la fila abre el resumen del contrato (en Contratos; fuera de ahí no hay proveedor y no hace nada).
+  const verContrato = useVerContratoEnModal();
   const [rows, setRows] = useState<ContractOverviewRow[]>([]);
   const [config, setConfig] = useState<FirmaDigitalConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -3887,7 +3909,7 @@ export const ContractBulkFirmaTab: React.FC<{
                 const releasesFila = releasesDeLaFila(template, releasesQueFirman, r, tiposContrato, activeReleases);
                 const enviable = calcularEnviable(r, contratoFrames, releasesQueFirman, tipo, tiposContrato, activeReleases);
                 return (
-                  <tr key={rowKey(r)} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${selected.has(rowKey(r)) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                  <tr key={rowKey(r)} onClick={(e) => verContrato && esClicDeLaFila(e) && verContrato(r, () => load(true))} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${verContrato ? 'cursor-pointer' : ''} ${selected.has(rowKey(r)) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
                     <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
                       <input type="checkbox" checked={selected.has(rowKey(r))} disabled={r.firmaEnviadaAt ? true : !pendientePorFila.get(rowKey(r))?.algoAplica} onChange={() => toggleSel(rowKey(r))} title={r.firmaEnviadaAt ? 'Ya se envió a firmar' : enviable ? 'Incluir en el envío a firmar' : pendientePorFila.get(rowKey(r))?.motivo ? `No se puede generar solo: ${pendientePorFila.get(rowKey(r))!.motivo}` : 'Seleccionar: el contrato y/o el release que falten se generan con «Generar contratos» / «Generar releases»'} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                     </td>
@@ -3984,6 +4006,8 @@ export const ContractBulkContratadosTab: React.FC<{
   contratoFrames: ContratoFrameItem[];
   onCount?: (cantidad: number) => void;
 }> = ({ allEstados, contratoFrames, onCount }) => {
+  // Tocar la fila abre el resumen del contrato (en Contratos; fuera de ahí no hay proveedor y no hace nada).
+  const verContrato = useVerContratoEnModal();
   const [rows, setRows] = useState<ContractOverviewRow[]>([]);
   const [estado, setEstado] = useState<string | null>(null);
   // El server no manda `estadoContratadoNombre`: es anterior a este paso (falta el deploy), no falta configuración.
@@ -4127,7 +4151,7 @@ export const ContractBulkContratadosTab: React.FC<{
               {pag.visibles.map((r) => {
                 const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
                 return (
-                  <tr key={rowKey(r)} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                  <tr key={rowKey(r)} onClick={(e) => verContrato && esClicDeLaFila(e) && verContrato(r, () => load(true))} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${verContrato ? 'cursor-pointer' : ''}`}>
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato sin fecha de carga">—</span>} />
                     </td>
