@@ -351,6 +351,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   // Si el wizard se abrió para APROBAR una solicitud, guardamos su id: al guardar, el backend marca la
   // solicitud como aprobada. null = alta/edición normal.
   const [approvingSolicitudId, setApprovingSolicitudId] = useState<string | null>(null);
+  /** El comentario de quien pidió el alta (de la solicitud, no de la persona real): va arriba en «Editar y Aprobar». */
+  const [comentarioSolicitud, setComentarioSolicitud] = useState('');
   /**
    * El wizard se abrió para RENOVAR un contrato vencido (botón «Renovar» de Contratos).
    *
@@ -2086,6 +2088,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       quien va a firmar y no el de un usuario recién creado que nunca tuvo ninguno.
     */
     let solicitud: User | null = null;
+    // El comentario es de la SOLICITUD: se guarda antes de cambiar a la persona real, que no lo tiene.
+    setComentarioSolicitud(approveSolicitudId ? String((user.metadata as any)?.comentarios || '').trim() : '');
     if (approveSolicitudId) {
       solicitud = user;
       const idPersonaReal = String((user.metadata as any)?.solicitudUserId || '');
@@ -4467,11 +4471,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               EL COMENTARIO DE QUIEN PIDIÓ EL ALTA, ARRIBA DE TODO (01/11/2026, pedido del usuario): el mismo
               aviso amarillo que el detalle de la solicitud. Es contexto para decidir antes de completar nada.
             */}
-            {approvingSolicitudId && (selectedUserForWizard as any)?.metadata?.comentarios && (
+            {approvingSolicitudId && comentarioSolicitud && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300">
                 <p className="flex items-start gap-2">
                   <FontAwesomeIcon icon={faCommentDots} className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <span className="whitespace-pre-wrap">{(selectedUserForWizard as any).metadata.comentarios}</span>
+                  <span className="whitespace-pre-wrap">{comentarioSolicitud}</span>
                 </p>
               </div>
             )}
