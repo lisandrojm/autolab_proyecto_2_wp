@@ -4416,9 +4416,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           // Abierto desde Solicitudes no hay pantalla atrás: cerrarlo es cerrar el modo entero.
           soloAprobacion?.onCerrar();
         }}
-        title={renovando ? 'Renovar contrato' : esEdicionMiembro ? 'Configurar Miembro' : 'Agregar Miembro'}
-        // Desde Solicitudes, la tabla se sigue viendo atrás (01/11/2026): con el velo oscuro y desenfocado parecía otra pantalla.
-        fondoSuave={!!soloAprobacion}
+        // Aprobando una solicitud (desde Solicitudes o desde la pestaña del equipo) es «Editar y Aprobar», como el botón que lo abre (01/11/2026).
+        title={renovando ? 'Renovar contrato' : approvingSolicitudId ? 'Editar y Aprobar' : esEdicionMiembro ? 'Configurar Miembro' : 'Agregar Miembro'}
         subtitle={
           selectedUserForWizard ? (
             <div className="flex flex-col gap-0.5">
@@ -5755,7 +5754,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     return (
       <>
         {!selectedUserForWizard && (
-          <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/20">
+          <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/40">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           </div>
         )}
