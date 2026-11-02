@@ -234,6 +234,11 @@ export const LoginPage: React.FC = () => {
     } catch (err: any) {
       console.error("[login:error]", err);
       setLastErrorObj(err);
+      // Email o contraseña mal: el mensaje de siempre, sin el «[401]» técnico adelante.
+      if (err?.response?.status === 401) {
+        setError("Credenciales inválidas. Revisá el email y la contraseña.");
+        return;
+      }
       const msg = extractApiError(err);
       setError(msg || t("auth.invalidCredentials"));
     } finally {

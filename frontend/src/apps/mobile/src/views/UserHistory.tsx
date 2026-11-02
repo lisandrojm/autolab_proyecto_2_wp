@@ -356,6 +356,36 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     busca, los equipos con coincidencias se muestran abiertos y sólo con las que coinciden.
   */
   const [busqueda, setBusqueda] = useState("");
+  /*
+    FILTROS DEL HISTORIAL (02/11/2026), en el mismo modal que «Por vencer»: estado, renovación, tipo de
+    contrato y cuándo se pidió. Se combinan con el buscador.
+  */
+  const [hEstados, setHEstados] = useState<string[]>([]);
+  const [hRenovacion, setHRenovacion] = useState<"todas" | "si" | "no">("todas");
+  const [hTipos, setHTipos] = useState<string[]>([]);
+  const [hDias, setHDias] = useState<number>(0);
+  const [hFiltrosAbiertos, setHFiltrosAbiertos] = useState(false);
+  const estadoDeSolicitud = (u: User) => {
+    const m: any = u.metadata || {};
+    return String(m.solicitudStatus || (m.isSolicitud ? "pendiente" : "aprobada"));
+  };
+  const tipoDeSolicitud = (u: User) => String((u.metadata as any)?.nombre_contrato || "").trim() || "Sin tipo";
+  const pasaFiltros = (u: User) => {
+    const m: any = u.metadata || {};
+    if (hEstados.length && !hEstados.includes(estadoDeSolicitud(u))) return false;
+    if (hRenovacion !== "todas" && !!m.esRenovacion !== (hRenovacion === "si")) return false;
+    if (hTipos.length && !hTipos.includes(tipoDeSolicitud(u))) return false;
+    if (hDias && (!u.createdAt || Date.now() - new Date(u.createdAt).getTime() > hDias * 86_400_000)) return false;
+    return true;
+  };
+  const alternar = (lista: string[], v: string) => (lista.includes(v) ? lista.filter((x) => x !== v) : [...lista, v]);
+  const hCantidadFiltros = hEstados.length + hTipos.length + (hRenovacion !== "todas" ? 1 : 0) + (hDias ? 1 : 0);
+  const limpiarFiltrosHistorial = () => {
+    setHEstados([]);
+    setHRenovacion("todas");
+    setHTipos([]);
+    setHDias(0);
+  };
   const normalizar = (t: unknown) => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const terminos = normalizar(busqueda).split(/\s+/).filter(Boolean);
   const coincide = (u: User) => {
@@ -371,7 +401,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     const out: Entrada[] = [];
     const lotes = new Map<string, Extract<Entrada, { tipo: "lote" }>>();
     for (const u of users) {
-      if (!coincide(u)) continue;
+      if (!coincide(u) || !pasaFiltros(u)) continue;
       const m: any = u.metadata || {};
       const loteId = m.loteId ? String(m.loteId) : "";
       if (!loteId) {
@@ -388,7 +418,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users, busqueda]);
+  }, [users, busqueda, hEstados, hRenovacion, hTipos, hDias]);
   const resumenEstados = (lista: User[]) => {
     const cuenta = new Map<string, number>();
     for (const u of lista) {
@@ -620,7 +650,8 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
           </div>
         ) : users.length > 0 ? (
           <div className="space-y-3">
-            <div className="relative">
+            <div className="flex items-center gap-2">
+            <div className="relative flex-1">
               <FontAwesomeIcon icon={faMagnifyingGlass} className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <input
                 type="search"
@@ -635,11 +666,28 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
                 </button>
               )}
             </div>
-            {terminos.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setHFiltrosAbiertos(true)}
+                className={`inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-bold transition-colors ${hCantidadFiltros ? "border-blue-600 bg-blue-600 text-white" : "border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300"}`}
+              >
+                <FontAwesomeIcon icon={faFilter} className="h-3 w-3" />
+                Filtrar{hCantidadFiltros ? ` (${hCantidadFiltros})` : ""}
+              </button>
+            </div>
+            {hCantidadFiltros > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {hEstados.map((e) => badgeFiltro(ESTADOS_SOLICITUD[e]?.label || e, () => setHEstados((l) => alternar(l, e))))}
+                {hRenovacion !== "todas" && badgeFiltro(hRenovacion === "si" ? "Renovaciones" : "Sin renovaciones", () => setHRenovacion("todas"))}
+                {hTipos.map((t) => badgeFiltro(t, () => setHTipos((l) => alternar(l, t))))}
+                {hDias > 0 && badgeFiltro(`Pedidas en ${hDias} días`, () => setHDias(0))}
+              </div>
+            )}
+            {(terminos.length > 0 || hCantidadFiltros > 0) && (
               <p className="px-1 text-xs text-slate-500 dark:text-slate-400">
                 {(() => {
                   const n = entradasHistorial.reduce((a, e) => a + (e.tipo === "sola" ? 1 : e.users.length), 0);
-                  return n === 0 ? "Ninguna solicitud coincide con la búsqueda." : `${n} ${n === 1 ? "solicitud coincide" : "solicitudes coinciden"} de ${users.length}.`;
+                  return n === 0 ? "Ninguna solicitud coincide." : `${n} ${n === 1 ? "solicitud coincide" : "solicitudes coinciden"} de ${users.length}.`;
                 })()}
               </p>
             )}
@@ -660,7 +708,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
                     </div>
                     <span className="shrink-0 text-xs font-bold text-blue-600 dark:text-blue-400">{lotesAbiertos.has(e.loteId) ? "Ocultar" : "Ver"}</span>
                   </button>
-                  {(lotesAbiertos.has(e.loteId) || terminos.length > 0) && <div className="space-y-3 px-2 pb-2">{e.users.map((u) => <div key={u._id}>{tarjeta(u)}</div>)}</div>}
+                  {(lotesAbiertos.has(e.loteId) || terminos.length > 0 || hCantidadFiltros > 0) && <div className="space-y-3 px-2 pb-2">{e.users.map((u) => <div key={u._id}>{tarjeta(u)}</div>)}</div>}
                 </div>
               ),
             )}
@@ -756,6 +804,99 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
           </div>
         </div>
       )}
+
+      {/* FILTRAR EL HISTORIAL: estado, renovación, tipo de contrato y cuándo se pidió. */}
+      {hFiltrosAbiertos && (() => {
+        const cuentaTipos = new Map<string, number>();
+        users.forEach((u) => cuentaTipos.set(tipoDeSolicitud(u), (cuentaTipos.get(tipoDeSolicitud(u)) || 0) + 1));
+        const cuentaEstados = new Map<string, number>();
+        users.forEach((u) => cuentaEstados.set(estadoDeSolicitud(u), (cuentaEstados.get(estadoDeSolicitud(u)) || 0) + 1));
+        const visibles = entradasHistorial.reduce((a, e) => a + (e.tipo === "sola" ? 1 : e.users.length), 0);
+        const chip = (activo: boolean) => `inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors ${activo ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200"}`;
+        const titulo = (t: string) => <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t}</p>;
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setHFiltrosAbiertos(false)}>
+            <div className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                <p className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
+                  <FontAwesomeIcon icon={faFilter} className="h-4 w-4" /> Filtrar historial
+                </p>
+                <button type="button" onClick={() => setHFiltrosAbiertos(false)} aria-label="Cerrar" className="flex h-9 w-9 items-center justify-center rounded text-slate-500">
+                  <FontAwesomeIcon icon={faXmark} className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 space-y-5 overflow-y-auto p-4">
+                <div>
+                  {titulo("Estado")}
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(ESTADOS_SOLICITUD).map(([clave, e]) => {
+                      const activo = hEstados.includes(clave);
+                      return (
+                        <button key={clave} type="button" onClick={() => setHEstados((l) => alternar(l, clave))} aria-pressed={activo} className={chip(activo)}>
+                          {e.label.charAt(0) + e.label.slice(1).toLowerCase()}
+                          <span className={activo ? "text-blue-100" : "text-slate-400"}>{cuentaEstados.get(clave) || 0}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  {titulo("Renovación")}
+                  <div className="flex flex-wrap gap-2">
+                    {([
+                      ["todas", "Todas"],
+                      ["si", "Sólo renovaciones"],
+                      ["no", "Sin renovaciones"],
+                    ] as const).map(([v, t]) => (
+                      <button key={v} type="button" onClick={() => setHRenovacion(v)} aria-pressed={hRenovacion === v} className={chip(hRenovacion === v)}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  {titulo("Pedidas en")}
+                  <div className="flex flex-wrap gap-2">
+                    {[0, 7, 30, 90].map((d) => (
+                      <button key={d} type="button" onClick={() => setHDias(d)} aria-pressed={hDias === d} className={chip(hDias === d)}>
+                        {d ? `Últimos ${d} días` : "Cualquier fecha"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  {titulo("Tipo de contrato")}
+                  <div className="flex flex-wrap gap-2">
+                    {[...cuentaTipos.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([tipo, cuenta]) => {
+                      const activo = hTipos.includes(tipo);
+                      return (
+                        <button key={tipo} type="button" onClick={() => setHTipos((l) => alternar(l, tipo))} aria-pressed={activo} className={chip(activo)}>
+                          {tipo}
+                          <span className={activo ? "text-blue-100" : "text-slate-400"}>{cuenta}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-slate-400">{hTipos.length || hEstados.length ? "Dentro de cada grupo, vale cualquiera de los marcados." : "Sin marcar, se muestran todos."}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
+                <button type="button" onClick={limpiarFiltrosHistorial} disabled={hCantidadFiltros === 0} className="text-sm font-bold text-red-600 disabled:opacity-40 dark:text-red-400">
+                  Limpiar
+                </button>
+                <button type="button" onClick={() => setHFiltrosAbiertos(false)} className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-bold text-white hover:bg-blue-700">
+                  Ver {visibles} {visibles === 1 ? "solicitud" : "solicitudes"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Floating Action Button */}
       <div className="fixed bottom-24 z-10 w-full xl:w-1/2 left-1/2 -translate-x-1/2 flex justify-end px-6 pointer-events-none">
