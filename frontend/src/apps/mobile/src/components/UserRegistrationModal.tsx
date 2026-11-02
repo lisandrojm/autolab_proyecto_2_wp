@@ -8,7 +8,7 @@ import { BloqueReemplazo } from "./contratacion/BloqueReemplazo";
 import { CampoComentarios } from "./contratacion/CampoComentarios";
 import { AyudaImportes, PROPS_IMPORTES_MOVIL } from "./contratacion/AyudaImportes";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faBriefcase, faClock, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faBriefcase, faClock, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight, faCircleInfo, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { AvisoSuperposicion, usersAPI } from "../../../../api/users";
 import { DiasDeTrabajo, semanaDelTipoDeContrato } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
@@ -1479,8 +1479,6 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   /** Los roles elegidos, resueltos a su ficha para poder mostrar el nombre. */
   const rolesElegidos = formData.roleFrameIds.map((id) => roleFrames.find((rf) => rf._id === id)).filter(Boolean) as RoleFrameItem[];
 
-  /** Agrega o saca un rol. Un rol ya elegido se destilda, como en Usuarios. */
-  const alternarRol = (id: string) => setFormData((prev) => ({ ...prev, roleFrameIds: prev.roleFrameIds.includes(id) ? prev.roleFrameIds.filter((x) => x !== id) : [...prev.roleFrameIds, id] }));
 
   /**
    * SE OFRECE EL CATÁLOGO ENTERO, con los de la persona arriba.
@@ -1498,19 +1496,27 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     se ofrece sólo para ese rol, y no la mezcla de todos.
   */
   const [rolesSumados, setRolesSumados] = useState<string[]>([]);
+  /** Los que se sacaron de las opciones con el tacho: sólo de esta solicitud, la ficha no cambia. */
+  const [rolesQuitados, setRolesQuitados] = useState<string[]>([]);
   useEffect(() => {
     setRolesSumados([]);
+    setRolesQuitados([]);
   }, [isOpen, selectedUser?._id]);
   const opcionesDeRol = useMemo(() => {
     const deLaFicha = selectedUser ? rolesDelUsuario.filter((id) => !rolesAcotadosPorArea || rolesDeLasAreasDelProyecto.has(id) || formData.roleFrameIds.includes(id)) : [];
-    const ids = [...new Set([...deLaFicha, ...rolesSumados, ...formData.roleFrameIds])];
+    const ids = [...new Set([...deLaFicha, ...rolesSumados, ...formData.roleFrameIds])].filter((id) => !rolesQuitados.includes(id) || formData.roleFrameIds.includes(id));
     return ids.map((id) => roleFrames.find((rf) => rf._id === id)).filter((rf): rf is RoleFrameItem => !!rf);
-  }, [selectedUser, rolesDelUsuario, rolesAcotadosPorArea, rolesDeLasAreasDelProyecto, formData.roleFrameIds, rolesSumados, roleFrames]);
+  }, [selectedUser, rolesDelUsuario, rolesAcotadosPorArea, rolesDeLasAreasDelProyecto, formData.roleFrameIds, rolesSumados, rolesQuitados, roleFrames]);
   const elegirRol = (id: string) => {
+    setRolesQuitados((l) => l.filter((x) => x !== id));
     if (!rolesDelUsuario.includes(id)) setRolesSumados((l) => (l.includes(id) ? l : [...l, id]));
     setFormData((prev) => (prev.roleFrameIds.length === 1 && prev.roleFrameIds[0] === id ? prev : { ...prev, roleFrameIds: [id] }));
   };
-  const quitarOpcionDeRol = (id: string) => {
+  const quitarOpcionDeRol = async (rf: RoleFrameItem) => {
+    const r: any = await sweetAlert.confirm("¿Quitar el rol?", `«${rf.name}» deja de ofrecerse en esta solicitud. La ficha de la persona no cambia.`, "Sí, quitar", "Cancelar");
+    if (!r?.isConfirmed) return;
+    const id = rf._id;
+    setRolesQuitados((l) => [...l, id]);
     setRolesSumados((l) => l.filter((x) => x !== id));
     setFormData((prev) => ({ ...prev, roleFrameIds: prev.roleFrameIds.filter((x) => x !== id) }));
   };
@@ -1524,6 +1530,13 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     const suyos = base.filter((rf) => rolesDelUsuario.includes(rf._id));
     return [...suyos, ...base.filter((rf) => !rolesDelUsuario.includes(rf._id))];
   }, [roleFrames, rolesDelUsuario, rolSearchTerm, rolesAcotadosPorArea, rolesDeLasAreasDelProyecto, formData.roleFrameIds, coordinaEnElProyecto]);
+
+  /** El catálogo para «Otro rol», sin los que ya están en la lista de opciones. */
+  const rolesParaOtro = useMemo(() => {
+    const yaEstan = new Set(opcionesDeRol.map((rf) => rf._id));
+    return rolesDisponibles.filter((rf) => !yaEstan.has(rf._id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opcionesDeRol, rolSearchTerm, roleFrames, rolesAcotadosPorArea, rolesDeLasAreasDelProyecto]);
 
   /** Los elegidos que la persona NO tenía en su ficha: se le suman al guardar. */
   const rolesNuevosParaLaFicha = useMemo(() => (selectedUser ? formData.roleFrameIds.filter((id) => !rolesDelUsuario.includes(id)) : []), [selectedUser, formData.roleFrameIds, rolesDelUsuario]);
@@ -2483,61 +2496,42 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                   <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
                 </button>
               )}
-              {/* Siempre, aunque la persona tenga un solo oficio: cambiarlo o sumarle otro es
-                  justamente lo que hace falta poder hacer al contratarla. */}
-              {(rolesElegidos.length > 0 || opcionesDeRol.length > 1) && (
-                <button type="button" onClick={() => setRolModalOpen(true)} title="Cambiar o agregar un rol" className="h-4 w-4 rounded-full bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition-colors shrink-0 ml-0.5">
-                  <FontAwesomeIcon icon={faPlus} className="h-2 w-2" />
-                </button>
-              )}
             </div>
-            {opcionesDeRol.length > 1 ? (
-              <div className="space-y-1.5">
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Elegí con cuál rol se la contrata en este proyecto.</p>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {opcionesDeRol.map((rf) => {
-                    const elegido = formData.roleFrameIds.includes(rf._id);
-                    const sumado = !rolesDelUsuario.includes(rf._id);
-                    return (
-                      <span key={rf._id} className={`inline-flex items-center rounded-full border text-[11px] font-semibold transition-colors ${elegido ? "bg-blue-600 text-white border-blue-600" : "text-slate-600 border-slate-300 hover:border-blue-400 dark:text-slate-300 dark:border-slate-600"}`}>
-                        <button type="button" onClick={() => elegirRol(rf._id)} aria-pressed={elegido} className={`inline-flex items-center gap-1.5 py-1 pl-2.5 ${sumado ? "pr-1" : "pr-2.5"}`}>
-                          <span className={`h-2.5 w-2.5 rounded-full border ${elegido ? "bg-white border-white" : "border-slate-400"}`} />
-                          <span className="truncate max-w-[12rem]">{rf.name}</span>
-                        </button>
-                        {/* Los sumados con el «+» (no son de su ficha) se pueden sacar de las opciones. */}
-                        {sumado && (
-                          <button type="button" onClick={() => quitarOpcionDeRol(rf._id)} title={`Quitar ${rf.name}`} className="mr-1 rounded-full p-0.5 hover:bg-black/10">
-                            <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
-                          </button>
-                        )}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : rolesElegidos.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-1.5">
-                {/* Del mismo tamaño que en Usuarios (text-[11px]): más grandes se comían el aire con
-                    el «+» del rótulo y con la fila de abajo. */}
-                {rolesElegidos.map((rf) => (
-                  <span key={rf._id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                    <span className="truncate max-w-[12rem]">{rf.name}</span>
-                    <button type="button" onClick={() => alternarRol(rf._id)} title={`Quitar ${rf.name}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
-                      <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
-                    </button>
-                  </span>
-                ))}
-              </div>
+            {/*
+              COMO EN EL ESCRITORIO (02/11/2026): los roles uno debajo del otro, se marca UNO; el tacho, afuera
+              de la opción, lo saca de las opciones de esta solicitud; «+ Otro rol» suma uno del catálogo.
+            */}
+            {opcionesDeRol.length === 0 ? (
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">{selectedUser ? "La persona no tiene roles en su ficha: elegí uno con «Otro rol»." : "Elegí el rol con «Otro rol»."}</p>
             ) : (
-              <button
-                type="button"
-                onClick={() => setRolModalOpen(true)}
-                className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-left flex items-center gap-2 hover:border-blue-400"
-              >
-                <FontAwesomeIcon icon={faSearch} className="text-sm text-slate-400 shrink-0" />
-                <span className="text-slate-400 truncate">Elegí uno o más roles…</span>
-              </button>
+              <div className="space-y-1.5">
+                {opcionesDeRol.map((rf) => {
+                  const elegido = formData.roleFrameIds.includes(rf._id);
+                  const nuevo = !!selectedUser && !rolesDelUsuario.includes(rf._id);
+                  return (
+                    <div key={rf._id} className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => elegirRol(rf._id)}
+                        aria-pressed={elegido}
+                        className={`flex flex-1 min-w-0 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${elegido ? "border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20 dark:bg-blue-900/20 dark:text-blue-300" : "border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200"}`}
+                      >
+                        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${elegido ? "border-blue-600 bg-blue-600" : "border-slate-400"}`}>{elegido && <span className="h-1.5 w-1.5 rounded-full bg-white" />}</span>
+                        <span className="flex-1 truncate font-semibold">{rf.name}</span>
+                        {nuevo && <span className="shrink-0 rounded-full border border-amber-300 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-600 dark:border-amber-700 dark:text-amber-400">nuevo</span>}
+                      </button>
+                      <button type="button" onClick={() => void quitarOpcionDeRol(rf)} title={`Quitar ${rf.name}`} aria-label={`Quitar ${rf.name}`} className="shrink-0 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-400 active:bg-red-50 hover:text-red-500 dark:border-slate-700">
+                        <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             )}
+            <button type="button" onClick={() => setRolModalOpen(true)} title="Buscar otro rol empresa" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400">
+              <FontAwesomeIcon icon={faPlus} className="h-3 w-3" /> Otro rol
+            </button>
+            {rolesNuevosParaLaFicha.length > 0 && <p className="text-[11px] text-amber-600 dark:text-amber-400">{rolesElegidos.filter((rf) => rolesNuevosParaLaFicha.includes(rf._id)).map((rf) => `«${rf.name}»`).join(", ")} no estaba en su ficha: se le agrega al guardar.</p>}
           </div>
 
           {/*
@@ -3308,17 +3302,15 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         <Modal
           isOpen={rolModalOpen}
           onClose={() => setRolModalOpen(false)}
-          title="Rol/es Empresa"
-          subtitle="Elegí uno · el oficio con el que la persona trabaja en este proyecto"
+          title="Otro rol empresa"
+          subtitle={selectedUser ? "El que elijas se le agrega a la ficha de la persona al guardar" : "El oficio con el que la persona trabaja en este proyecto"}
           size="lg"
           zIndex={80}
           footer={
             <div className="flex w-full justify-between items-center gap-3">
-              <button type="button" onClick={() => setFormData((prev) => ({ ...prev, roleFrameIds: [] }))} className="text-red-500 hover:text-red-600 font-bold text-sm py-2 px-4 transition-colors">
-                Limpiar
-              </button>
-              <button type="button" onClick={() => setRolModalOpen(false)} className="bg-blue-500 text-white px-8 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
-                Listo
+              <span />
+              <button type="button" onClick={() => setRolModalOpen(false)} className="px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 font-bold text-sm text-slate-600 dark:text-slate-300">
+                Cancelar
               </button>
             </div>
           }
@@ -3340,20 +3332,6 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                 </span>
               </button>
             )}
-            {rolesNuevosParaLaFicha.length > 0 && <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">Los marcados como «nuevo» se le van a agregar a la ficha de la persona, así la próxima vez ya figuran entre los suyos.</p>}
-            {rolesElegidos.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {rolesElegidos.map((rf) => (
-                  <span key={rf._id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                    {rf.name}
-                    <button type="button" onClick={() => alternarRol(rf._id)} title={`Quitar ${rf.name}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
-                      <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-
             <div className="relative group">
               <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
                 <FontAwesomeIcon icon={faSearch} className="text-sm" />
@@ -3370,29 +3348,24 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[45vh] overflow-y-auto pr-1">
-              {rolesDisponibles.length === 0 ? (
+              {rolesParaOtro.length === 0 ? (
                 <p className="col-span-full py-8 text-center text-xs text-slate-400 italic">{rolSearchTerm ? `No se encontraron especialidades que coincidan con "${rolSearchTerm}"` : "No hay roles para ofrecer."}</p>
               ) : (
-                rolesDisponibles.map((rf) => {
-                  const elegido = formData.roleFrameIds.includes(rf._id);
-                  // Los que la persona ya tiene en su ficha se distinguen de los que se le sumarían:
-                  // elegir uno de los suyos es una cosa, agregarle un oficio nuevo es otra.
-                  const esSuyo = rolesDelUsuario.includes(rf._id);
-                  return (
-                    // Elegir uno lo deja como EL rol de la solicitud (reemplaza al anterior, que queda como
-                    // opción en el campo). La ventana se cierra con «Listo».
-                    <button
-                      key={rf._id}
-                      type="button"
-                      onClick={() => elegirRol(rf._id)}
-                      className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-left transition-all ${elegido ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20" : "bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"}`}
-                    >
-                      <span className={`w-4 h-4 rounded-full flex items-center justify-center border shrink-0 ${elegido ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <FontAwesomeIcon icon={faCheck} className="text-[9px]" />}</span>
-                      <span className="flex-1 truncate text-sm text-slate-700 dark:text-slate-200">{rf.name}</span>
-                      {selectedUser && !esSuyo && <span className="shrink-0 rounded-full border border-amber-300 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-600 dark:border-amber-700 dark:text-amber-400">nuevo</span>}
-                    </button>
-                  );
-                })
+                rolesParaOtro.map((rf) => (
+                  // Como en el escritorio: tocar uno lo elige (queda marcado en la lista) y cierra.
+                  <button
+                    key={rf._id}
+                    type="button"
+                    onClick={() => {
+                      elegirRol(rf._id);
+                      setRolModalOpen(false);
+                      setRolSearchTerm("");
+                    }}
+                    className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-left text-sm text-slate-700 transition-all hover:border-blue-400 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200"
+                  >
+                    {rf.name}
+                  </button>
+                ))
               )}
             </div>
           </div>

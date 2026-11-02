@@ -1824,7 +1824,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   }, [allRoleFrames, selectedUserForWizard]);
 
   /** Lo que ofrece el desplegable: los oficios de la persona, más el que se haya agregado a mano. */
-  const rolesFrameOfrecidos = useMemo(() => (rolFrameAgregado && !userAssignedRoleFrames.some((rf) => rf._id === rolFrameAgregado._id) ? [...userAssignedRoleFrames, rolFrameAgregado] : userAssignedRoleFrames), [userAssignedRoleFrames, rolFrameAgregado]);
+  /*
+    Los que se sacaron de las opciones con el tacho (02/11/2026, la misma experiencia que el móvil). Sólo
+    de ESTE alta: la ficha de la persona no se toca. Cambiar de persona los vuelve a mostrar.
+  */
+  const [rolesQuitados, setRolesQuitados] = useState<string[]>([]);
+  useEffect(() => {
+    setRolesQuitados([]);
+  }, [selectedUserForWizard?._id]);
+  const rolesFrameOfrecidos = useMemo(() => {
+    const todos = rolFrameAgregado && !userAssignedRoleFrames.some((rf) => rf._id === rolFrameAgregado._id) ? [...userAssignedRoleFrames, rolFrameAgregado] : userAssignedRoleFrames;
+    return todos.filter((rf) => !rolesQuitados.includes(rf._id));
+  }, [userAssignedRoleFrames, rolFrameAgregado, rolesQuitados]);
 
   /** El catálogo entero para el buscador, sin los que la persona ya tiene. */
   const rolesFrameParaBuscar = useMemo(() => {
@@ -4532,20 +4543,53 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
                     Role Frame a Desempeñar <span className="text-red-500">*</span>
                   </label>
-                  <div className="flex items-center gap-2">
-                    <select className="input-field w-full" value={wizardData.rol_frame_id} onChange={(e) => setWizardData((prev) => ({ ...prev, rol_frame_id: e.target.value, categoria_sat_id: '' }))} required>
-                      <option value="">Selecciona role frame...</option>
-                      {rolesFrameOfrecidos.map((rf) => (
-                        <option key={rf._id} value={rf.data.rol.id}>
-                          {rf.name}
-                          {!userAssignedRoleFrames.some((p) => p._id === rf._id) ? ' (nuevo)' : ''}
-                        </option>
-                      ))}
-                    </select>
-                    <button type="button" onClick={() => setRolFrameBuscadorOpen(true)} title="Buscar otro rol empresa" className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800">
-                      Otro rol
-                    </button>
-                  </div>
+                  {/*
+                    LA MISMA EXPERIENCIA QUE EN EL MÓVIL (02/11/2026): los oficios de la persona uno debajo del
+                    otro, se marca UNO —con el que se la contrata acá—; el tacho, afuera de la opción, lo saca de
+                    las opciones de este alta (con confirmación); «Otro rol» suma uno del catálogo.
+                  */}
+                  {rolesFrameOfrecidos.length === 0 ? (
+                    <p className="ml-1 text-xs text-gray-400">La persona no tiene roles en su ficha: elegí uno con «Otro rol».</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {rolesFrameOfrecidos.map((rf) => {
+                        const valor = String(rf.data?.rol?.id || '');
+                        const elegido = !!valor && String(wizardData.rol_frame_id) === valor;
+                        const nuevo = !userAssignedRoleFrames.some((p) => p._id === rf._id);
+                        return (
+                          <div key={rf._id} className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => !elegido && setWizardData((prev) => ({ ...prev, rol_frame_id: valor, categoria_sat_id: '' }))}
+                              aria-pressed={elegido}
+                              className={`flex flex-1 items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${elegido ? 'border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20 dark:bg-blue-900/20 dark:text-blue-300' : 'border-gray-300 text-gray-700 hover:border-blue-400 dark:border-gray-600 dark:text-gray-200'}`}
+                            >
+                              <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${elegido ? 'border-blue-600 bg-blue-600' : 'border-gray-400'}`}>{elegido && <span className="h-1.5 w-1.5 rounded-full bg-white" />}</span>
+                              <span className="flex-1 truncate font-medium">{rf.name}</span>
+                              {nuevo && <span className="shrink-0 rounded-full border border-amber-300 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-600 dark:border-amber-700 dark:text-amber-400">nuevo</span>}
+                            </button>
+                            <button
+                              type="button"
+                              title={`Quitar ${rf.name} de las opciones`}
+                              onClick={async () => {
+                                const r: any = await sweetAlert.confirm('¿Quitar el rol?', `«${rf.name}» deja de ofrecerse en este alta. La ficha de la persona no cambia.`, 'Sí, quitar');
+                                if (!r?.isConfirmed) return;
+                                setRolesQuitados((l) => [...l, rf._id]);
+                                if (rolFrameAgregado?._id === rf._id) setRolFrameAgregado(null);
+                                if (elegido) setWizardData((prev) => ({ ...prev, rol_frame_id: '', categoria_sat_id: '' }));
+                              }}
+                              className="shrink-0 rounded-lg border border-gray-300 p-2 text-gray-400 transition-colors hover:border-red-300 hover:text-red-500 dark:border-gray-600"
+                            >
+                              <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <button type="button" onClick={() => setRolFrameBuscadorOpen(true)} title="Buscar otro rol empresa" className="ml-1 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400">
+                    <FontAwesomeIcon icon={faPlus} className="h-3 w-3" /> Otro rol
+                  </button>
                   {rolFrameAgregado && !userAssignedRoleFrames.some((rf) => rf._id === rolFrameAgregado._id) && <p className="ml-1 text-[11px] text-amber-600 dark:text-amber-400">«{rolFrameAgregado.name}» no estaba en su ficha: se le agrega al guardar.</p>}
                 </div>
 
