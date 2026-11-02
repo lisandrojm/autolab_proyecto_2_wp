@@ -193,14 +193,38 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote: loteR
     setExcluidasPorProblema(new Set());
   }, [loteRecibido]);
   const claveItem = (x: { userProjectId: string; contractIndex: number }) => `${x.userProjectId}-${x.contractIndex}`;
+  /*
+    LAS QUE TIENEN ALGO ACTIVO EN ARCA (pedido del 01/11/2026): una relación de la persona con esta
+    empleadora sin baja procesada, un alta recién presentada, o el alta de ese día ya hecha. ARCA las
+    rechaza por «alta activa» y el server también (`validarLoteAltas`): se preguntan al abrir y se sacan
+    del lote de entrada, con el motivo a la vista. No hay «volver a incluir»: el server no las deja pasar.
+  */
+  const [bloqueadas, setBloqueadas] = useState<Map<string, string>>(new Map());
+  const [cargandoBloqueadas, setCargandoBloqueadas] = useState(false);
+  useEffect(() => {
+    setBloqueadas(new Map());
+    if (!loteRecibido || loteRecibido.items.length === 0) return;
+    let vigente = true;
+    setCargandoBloqueadas(true);
+    projectsAPI
+      .altasBloqueadasPorVigencia(loteRecibido.empresa._id, loteRecibido.items.map((x) => ({ userProjectId: x.userProjectId, contractIndex: x.contractIndex })))
+      .then((bs) => vigente && setBloqueadas(new Map(bs.map((b) => [claveItem(b), b.motivo]))))
+      // Si el prechequeo falla, el server igual valida al presentar (y ofrece excluir las que tengan problemas).
+      .catch(() => {})
+      .finally(() => vigente && setCargandoBloqueadas(false));
+    return () => {
+      vigente = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loteRecibido]);
   const repetidas = useMemo(() => (loteRecibido ? posteriorasRepetidas(loteRecibido.personas) : new Set<number>()), [loteRecibido]);
   const lote = useMemo<LoteParaPresentar | null>(() => {
-    if (!loteRecibido || ((!excluirRepetidas || repetidas.size === 0) && excluidasPorProblema.size === 0)) return loteRecibido;
-    const queda = (_: unknown, i: number) => !(excluirRepetidas && repetidas.has(i)) && !excluidasPorProblema.has(claveItem(loteRecibido.items[i]));
+    if (!loteRecibido || ((!excluirRepetidas || repetidas.size === 0) && excluidasPorProblema.size === 0 && bloqueadas.size === 0)) return loteRecibido;
+    const queda = (_: unknown, i: number) => !(excluirRepetidas && repetidas.has(i)) && !excluidasPorProblema.has(claveItem(loteRecibido.items[i])) && !bloqueadas.has(claveItem(loteRecibido.items[i]));
     const items = loteRecibido.items.filter(queda);
     return { ...loteRecibido, personas: loteRecibido.personas.filter(queda), items, texto: loteRecibido.texto ? buildAltasMasivasTexto(items.map((x) => x.registro)) : undefined };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loteRecibido, excluirRepetidas, repetidas, excluidasPorProblema]);
+  }, [loteRecibido, excluirRepetidas, repetidas, excluidasPorProblema, bloqueadas]);
   // Lo que está en el portapapeles tiene que ser lo que se presenta.
   useEffect(() => {
     if (!lote?.texto || lote === loteRecibido) return;
@@ -416,7 +440,7 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote: loteR
         </button>
       )}
       {!confirmado && !corriendo && lote && (
-        <button type="button" onClick={presentar} disabled={arrancando || !!otraCorrida} className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50 ${lote.modo === 'altas_masivas' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
+        <button type="button" onClick={presentar} disabled={arrancando || !!otraCorrida || cargandoBloqueadas || lote.items.length === 0} className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50 ${lote.modo === 'altas_masivas' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
           {arrancando && <FontAwesomeIcon icon={faSpinner} spin className="h-3.5 w-3.5" />}
           {enSecoEfectivo ? `Probar en seco (${lote.personas.length})` : `Presentar en ARCA (${lote.personas.length})`}
         </button>
@@ -502,6 +526,36 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote: loteR
                 </div>
               );
             })()}
+            {cargandoBloqueadas && (
+              <p className="text-xs text-gray-500 inline-flex items-center gap-1.5">
+                <FontAwesomeIcon icon={faSpinner} spin /> Revisando si alguna persona tiene un alta activa en ARCA…
+              </p>
+            )}
+            {loteRecibido && bloqueadas.size > 0 && (
+              <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
+                <p>
+                  <strong>
+                    {bloqueadas.size === loteRecibido.items.length ? 'Ninguna se puede presentar todavía' : `Se excluyen ${bloqueadas.size} alta(s) que ARCA rechazaría`}
+                  </strong>{' '}
+                  por un alta activa de la misma persona con esta empleadora. Siguen en Trámite impositivo: «A.R.C.A Altas Automáticas» las presenta cuando ARCA procese la baja.
+                </p>
+                <details className="mt-1 text-xs">
+                  <summary className="cursor-pointer">Ver por qué</summary>
+                  <ul className="mt-1 space-y-1">
+                    {loteRecibido.items.map((x, i) => {
+                      const motivo = bloqueadas.get(claveItem(x));
+                      if (!motivo) return null;
+                      const p = loteRecibido.personas[i];
+                      return (
+                        <li key={claveItem(x)}>
+                          <strong>{p.nombre}</strong> · <span className="opacity-70">Alta:</span> {p.alta || '—'} — {motivo}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </details>
+              </div>
+            )}
             {loteRecibido && repetidas.size > 0 && (
               <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
                 <label className="flex items-start gap-2 cursor-pointer">

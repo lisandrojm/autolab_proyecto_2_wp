@@ -22,7 +22,9 @@ import { Contrato } from "../../models/Contrato.js";
 import { buscarTipoContrato } from "../../compartido/arca/afipCompleteness.js";
 import { conCascada } from "../../compartido/arca/cascadaArca.js";
 import { campoDeModalidad, retribucionPactada } from "../../compartido/arca/retribucionPactada.js";
-import { altaQueSePisa, altasPresentadasDe, textoAltaQueSePisa } from "./altasVigentes.js";
+import { altasPresentadasDe, relacionesArcaDe } from "./altasVigentes.js";
+import { bloqueoPorVigencia } from "./secuenciaPorPersona.js";
+import { fechaISO, hoyArgentina } from "../../utils/contratoVigencia.js";
 import { cotejarRegistro, cuilDeRegistro, problemasDeForma } from "./cotejoAltas.js";
 export class LoteAltasError extends Error {
     status;
@@ -39,6 +41,11 @@ export class LoteAltasError extends Error {
 }
 const digitos = (v) => String(v ?? "").replace(/\D/g, "");
 const pad = (v, largo) => digitos(v).slice(-largo).padStart(largo, "0");
+/** La fecha de alta más temprana de los contratos del lote: desde ahí importan las Relaciones Laborales de ARCA. */
+const primeraAltaDe = (items, upPorId) => items
+    .map((i) => fechaISO(upPorId.get(i.userProjectId)?.contracts?.[i.contractIndex]?.fecha_alta_contrato))
+    .filter(Boolean)
+    .sort()[0];
 export async function validarLoteAltas(o) {
     const { tenantObjectId, modo, empresaId } = o;
     if (modo !== "carga_masiva" && modo !== "altas_masivas")
@@ -78,9 +85,13 @@ export async function validarLoteAltas(o) {
         .select("firstName lastName metadata.cuit")
         .lean();
     const userPorId = new Map(usuarios.map((u) => [String(u._id), u]));
-    // Las altas que estas personas ya tienen presentadas: no se da otra que se superponga con la misma
-    // empleadora (ver `altasVigentes.ts`).
-    const presentadasPrevias = await altasPresentadasDe([...proyectosDelTenant], ups.map((u) => String(u.userId)), tenantObjectId);
+    // Lo que estas personas ya tienen activo con esta empleadora —presentado desde WeProdu o según las
+    // Relaciones Laborales de ARCA—: mientras tanto ARCA rechaza otra alta (ver `secuenciaPorPersona.ts`).
+    const [presentadasPrevias, relacionesLote] = await Promise.all([
+        altasPresentadasDe([...proyectosDelTenant], ups.map((u) => String(u.userId)), tenantObjectId),
+        relacionesArcaDe(tenantObjectId, usuarios.map((u) => digitos(u.metadata?.cuit)), primeraAltaDe(items, upPorId)),
+    ]);
+    const hoy = hoyArgentina();
     // ── Lo que hace falta para resolver lo esperado ─────────────────────────────────────────────────
     const [categorias, convenios, obrasSociales, estados, defaultsGlobales, sucursales, modalidadesC, modalidadesL, tipos, tiposContrato] = await Promise.all([
         listarCategoriasCompat(),
@@ -165,9 +176,10 @@ export async function validarLoteAltas(o) {
             falla(`${etiqueta}: ya se presentó en ARCA (${c.altaArcaPresentada.via === "altas_masivas" ? "Altas Masivas" : "Carga Masiva"}, ${new Date(c.altaArcaPresentada.fecha).toLocaleDateString("es-AR")}). No se presenta dos veces.`);
             return;
         }
-        const pisa = altaQueSePisa({ userId: String(up.userId), userProjectId: it.userProjectId, contractIndex: it.contractIndex, empresaId: String(empresaId), alta: c.fecha_alta_contrato, baja: c.fecha_baja_contrato }, presentadasPrevias);
-        if (pisa) {
-            falla(`${etiqueta}: ${textoAltaQueSePisa(pisa)}.`);
+        const rels = relacionesLote.filter((r) => r.cuil === digitos(u?.metadata?.cuit) && r.empleadoraCuit === empresaCuit);
+        const bloqueo = bloqueoPorVigencia({ userId: String(up.userId), userProjectId: it.userProjectId, contractIndex: it.contractIndex, empresaId: String(empresaId), alta: c.fecha_alta_contrato, baja: c.fecha_baja_contrato }, presentadasPrevias, rels, { hoy });
+        if (bloqueo) {
+            falla(`${etiqueta}: ${bloqueo.motivo}`);
             return;
         }
         const categoria = categorias.find((x) => Number(x?.data?.id) === Number(c.categoria_sat_id));
@@ -233,4 +245,46 @@ export async function validarLoteAltas(o) {
         // como un registro más). Ver `buildAltasMasivasTexto` en el frontend.
         texto: modo === "carga_masiva" ? unirRegistros(registros) : registros.join("\n"),
     };
+}
+/**
+ * EL PRECHEQUEO DE LA PRESENTACIÓN MASIVA (pedido del 01/11/2026): qué contratos de la selección no se
+ * pueden presentar todavía porque la persona ya tiene algo activo con esta empleadora (o el alta de ese
+ * día ya está hecha). Los mismos textos que `validarLoteAltas`, que igual rechazaría el lote: el modal los
+ * saca ANTES, con aviso, como a las personas repetidas. Sólo lee.
+ */
+export async function bloqueadasPorVigencia(tenantObjectId, empresaId, items) {
+    const validos = (Array.isArray(items) ? items : [])
+        .map((i) => ({ userProjectId: String(i?.userProjectId || ""), contractIndex: Number(i?.contractIndex) }))
+        .filter((i) => Types.ObjectId.isValid(i.userProjectId) && Number.isInteger(i.contractIndex) && i.contractIndex >= 0);
+    if (!Types.ObjectId.isValid(empresaId) || validos.length === 0)
+        return [];
+    const empresa = await Company.findById(empresaId).select("cuit").lean();
+    const empresaCuit = digitos(empresa?.cuit);
+    if (empresaCuit.length !== 11)
+        return [];
+    const ups = await UserProject.find({ _id: { $in: [...new Set(validos.map((i) => i.userProjectId))] } })
+        .select("projectId userId contracts.fecha_alta_contrato contracts.fecha_baja_contrato")
+        .lean();
+    const upPorId = new Map(ups.map((u) => [String(u._id), u]));
+    const proyectos = new Set((await Project.find({ _id: { $in: ups.map((u) => u.projectId) }, tenantId: tenantObjectId }).select("_id").lean()).map((p) => String(p._id)));
+    const usuarios = await User.find({ _id: { $in: ups.map((u) => u.userId) } }).select("metadata.cuit").lean();
+    const cuilDe = new Map(usuarios.map((u) => [String(u._id), digitos(u.metadata?.cuit)]));
+    const [presentadas, relaciones] = await Promise.all([
+        altasPresentadasDe([...proyectos], ups.map((u) => String(u.userId)), tenantObjectId),
+        relacionesArcaDe(tenantObjectId, cuilDe.values(), primeraAltaDe(validos, upPorId)),
+    ]);
+    const hoy = hoyArgentina();
+    const out = [];
+    for (const it of validos) {
+        const up = upPorId.get(it.userProjectId);
+        const c = up?.contracts?.[it.contractIndex];
+        if (!up || !c || !proyectos.has(String(up.projectId)))
+            continue;
+        const cuil = cuilDe.get(String(up.userId)) || "";
+        const rels = relaciones.filter((r) => r.cuil === cuil && r.empleadoraCuit === empresaCuit);
+        const b = bloqueoPorVigencia({ userId: String(up.userId), userProjectId: it.userProjectId, contractIndex: it.contractIndex, empresaId, alta: c.fecha_alta_contrato, baja: c.fecha_baja_contrato }, presentadas, rels, { hoy });
+        if (b)
+            out.push({ ...it, motivo: b.motivo });
+    }
+    return out;
 }

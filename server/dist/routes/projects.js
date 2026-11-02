@@ -34,7 +34,7 @@ import { partirClaveAreaTurno, sedeDe, sedePrincipalDe, pendientesDeSede, idDe a
 import { ponerSedeEnArea } from "../services/sedeDeArea.js";
 import { FRECUENCIAS_MINUTOS, MAX_INTENTOS_AUTOMATICOS, configDe, proximaDeLaCola, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { Tenant } from "../models/Tenant.js";
-import { LoteAltasError } from "../services/arca/validarLoteAltas.js";
+import { LoteAltasError, bloqueadasPorVigencia } from "../services/arca/validarLoteAltas.js";
 import { CandadoArcaOcupado, quienTiene } from "../services/arca/candadoArca.js";
 import { enCola, encolarSiCorresponde, validacionAutomaticaActiva } from "../services/arca/colaObrasSociales.js";
 import { INACTIVIDAD_COLGADA_MS, barrerTenant, contratosSinValidar, esperaReintento, esperandoReintento, fichasDePersonas, validacionAutomaticaActivaEn } from "../services/arca/barridoObrasSociales.js";
@@ -3214,6 +3214,22 @@ router.post("/contratos/altas-arca/corrida", requireTenant, authenticateToken, r
         }
         // Los demás son instrucciones de configuración (credenciales, CUIT): se devuelven tal cual.
         res.status(400).json({ error: String(error?.message || error) });
+    }
+});
+/**
+ * POST /contratos/altas-arca/bloqueadas — { empresaId, items: [{ userProjectId, contractIndex }] }
+ *
+ * El prechequeo del modal de Presentación Masiva (01/11/2026): qué contratos de la selección no se pueden
+ * presentar todavía porque la persona tiene algo activo con esa empleadora, con el motivo. Sólo lee; la
+ * corrida igual los rechaza (`validarLoteAltas`), esto es para sacarlos antes y avisar.
+ */
+router.post("/contratos/altas-arca/bloqueadas", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const bloqueadas = await bloqueadasPorVigencia(req.tenantObjectId, String(req.body?.empresaId || ""), Array.isArray(req.body?.items) ? req.body.items : []);
+        res.json({ bloqueadas });
+    }
+    catch (error) {
+        res.status(500).json({ error: String(error?.message || error) });
     }
 });
 /*

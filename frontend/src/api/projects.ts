@@ -905,6 +905,15 @@ class ProjectsAPI {
     return data;
   }
 
+  /**
+   * Qué contratos de una selección no se pueden presentar todavía porque la persona tiene algo activo con
+   * esa empleadora en ARCA (o el alta de ese día ya está hecha), con el motivo. Sólo lee.
+   */
+  async altasBloqueadasPorVigencia(empresaId: string, items: Array<{ userProjectId: string; contractIndex: number }>): Promise<Array<{ userProjectId: string; contractIndex: number; motivo: string }>> {
+    const { data } = await axios.post(`/contratos/altas-arca/bloqueadas`, { empresaId, items }, { headers: this.getHeaders() });
+    return Array.isArray(data?.bloqueadas) ? data.bloqueadas : [];
+  }
+
   /** Altas Automáticas: estado, horario configurado y las altas pendientes con su cuenta regresiva. `soloConfig` ahorra los candidatos. */
   /** «A.R.C.A Descargas Automáticas»: las que esperan su constancia, la próxima descarga y lo que corre ahora. */
   async descargasArca(): Promise<EstadoDescargasArca> {

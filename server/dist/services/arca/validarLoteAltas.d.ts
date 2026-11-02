@@ -68,3 +68,17 @@ export declare function validarLoteAltas(o: {
     forzar?: boolean;
     descartarPresentadas?: boolean;
 }): Promise<LoteAltasValidado>;
+/**
+ * EL PRECHEQUEO DE LA PRESENTACIÓN MASIVA (pedido del 01/11/2026): qué contratos de la selección no se
+ * pueden presentar todavía porque la persona ya tiene algo activo con esta empleadora (o el alta de ese
+ * día ya está hecha). Los mismos textos que `validarLoteAltas`, que igual rechazaría el lote: el modal los
+ * saca ANTES, con aviso, como a las personas repetidas. Sólo lee.
+ */
+export declare function bloqueadasPorVigencia(tenantObjectId: any, empresaId: string, items: Array<{
+    userProjectId: string;
+    contractIndex: number;
+}>): Promise<Array<{
+    userProjectId: string;
+    contractIndex: number;
+    motivo: string;
+}>>;
