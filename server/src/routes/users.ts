@@ -1758,10 +1758,15 @@ router.get("/solicitudes-pendientes/count", requireTenant, authenticateToken, re
   El nombre del estado se compara por su clave canónica (`claveEstado`) y no crudo: el mismo estado
   quedó guardado con más de un nombre («Falta pedido de AFIP» y «Pedido de AFIP» son el mismo), y
   comparar textos dejaría contratos afuera del conteo.
+
+  LAS ALTAS QUE FALTAN (01/11/2026, pedido del usuario): el número es Alta temprana de ARCA + Constancia
+  de CUIT, lo mismo que suman esas dos pestañas. Con el mismo corte: quien no tiene CUIT va a «Sin CUIT»
+  y no se cuenta. Antes buscaba los estados con `tenantId`, que los estados no tienen (son de todos los
+  tenants, como los lee Contratos): no encontraba ninguno y el número quedaba siempre en 0.
 */
 router.get("/contratos-pendientes/count", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const estados: any[] = await Info.find({ tenantId: req.tenantObjectId, type: "estado-empleado", "data.esImpositivo": true })
+    const estados: any[] = await Info.find({ type: "estado-empleado", "data.esImpositivo": true, "data.tipoImpositivo": { $in: ["alta_temprana_afip", "constancia_cuit"] } })
       .select("name")
       .lean();
     const claves = new Set(estados.map((e: any) => claveEstado(String(e?.name || ""))).filter(Boolean));
@@ -1779,11 +1784,34 @@ router.get("/contratos-pendientes/count", requireTenant, authenticateToken, requ
     // Del contrato sólo viaja el nombre del estado: es lo único que se mira para contar.
     const filas: any[] = await UserProject.aggregate([
       { $match: { projectId: { $in: projectIds } } },
-      { $project: { e: { $map: { input: { $ifNull: ["$contracts", []] }, as: "c", in: "$$c.nombre_estado_empleado" } } } },
+      // Como Contratos (`origen=sistema`): sólo los creados en WeProdu; los importados de FRAME/WP no son trabajo de acá.
+      {
+        $project: {
+          userId: 1,
+          e: {
+            $map: {
+              input: { $filter: { input: { $ifNull: ["$contracts", []] }, as: "x", cond: { $or: [{ $gt: ["$$x.solicitudId", null] }, { $eq: ["$$x.origen", "agregar_miembro"] }] } } },
+              as: "c",
+              in: "$$c.nombre_estado_empleado",
+            },
+          },
+        },
+      },
     ]);
 
+    const porPersona = new Map<string, number>();
+    for (const f of filas) {
+      const n = (f?.e || []).filter((nombre: unknown) => claves.has(claveEstado(String(nombre || "")))).length;
+      if (n > 0) porPersona.set(String(f.userId), (porPersona.get(String(f.userId)) || 0) + n);
+    }
+    // Sin CUIT (marcado, vacío o todo el mismo dígito, como `noPoseeCuit` de la pantalla): va a «Sin CUIT», no se cuenta.
+    const usuarios: any[] = porPersona.size ? await User.find({ _id: { $in: [...porPersona.keys()] } }).select("metadata.cuit metadata.sinCuit").lean() : [];
     let count = 0;
-    for (const f of filas) for (const nombre of f?.e || []) if (claves.has(claveEstado(String(nombre || "")))) count++;
+    for (const u of usuarios) {
+      const d = String(u?.metadata?.cuit || "").replace(/\D/g, "");
+      const sinCuit = u?.metadata?.sinCuit === true || d.length === 0 || /^(\d)\1*$/.test(d);
+      if (!sinCuit) count += porPersona.get(String(u._id)) || 0;
+    }
 
     res.json({ count });
   } catch (error) {

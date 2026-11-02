@@ -489,7 +489,9 @@ export const ContractsPage: React.FC = () => {
       // Solo cuando se entró desde otra pantalla (ej. Gestionar Equipo del proyecto): volver ahí.
       // Se usa la ruta del proyecto y no history(-1) para que también funcione al recargar la URL.
       onBack={initialProjectId ? () => navigate(`/projects/${initialProjectId}/team`) : undefined}
-      itemCount={totalRows}
+      // LAS ALTAS QUE FALTAN (01/11/2026, pedido del usuario): Alta temprana de ARCA + Constancia de CUIT,
+      // con los filtros que se están mirando. El menú muestra el mismo número para todo el tenant.
+      itemCount={mgmtCounts.alta + mgmtCounts.cuit}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
