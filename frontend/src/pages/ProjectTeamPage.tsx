@@ -4484,9 +4484,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               aviso amarillo que el detalle de la solicitud. Es contexto para decidir antes de completar nada.
             */}
             {comentarioSolicitud && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300">
                 <p className="flex items-start gap-2">
-                  <FontAwesomeIcon icon={faCommentDots} className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <FontAwesomeIcon icon={faCommentDots} className="mt-px h-3 w-3 shrink-0" />
                   <span className="whitespace-pre-wrap">{comentarioSolicitud}</span>
                 </p>
               </div>
