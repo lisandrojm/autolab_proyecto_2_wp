@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBolt, faClock, faTriangleExclamation, faCircleCheck, faSpinner, faSearch, faXmark, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faBolt, faClock, faEye, faTriangleExclamation, faCircleCheck, faSpinner, faSearch, faXmark, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
+import { Modal } from "../components/ui/Modal";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Link } from "react-router-dom";
 import { projectsAPI, horaTexto, horarioTexto, frecuenciaTexto, type AltaPendienteArca, type ResumenCorridaAutomatica, type EstadoPresentacionAutomatica, type CorridaAltasGuardada } from "../api/projects";
@@ -40,6 +41,11 @@ export const PresentacionesArcaPage: React.FC = () => {
   const [guardando, setGuardando] = useState(false);
   const [ayuda, setAyuda] = useState(false);
   const [corridaAbierta, setCorridaAbierta] = useState(false);
+  /** Una cifra de la tarjeta de la corrida, abierta en su modal: quiénes son y qué pasó con cada una. */
+  const [detalleCorrida, setDetalleCorrida] = useState<{ tipo: "enviadas" | "omitidos" | "errores" | "atrasadas"; titulo: string; r: ResumenCorridaAutomatica } | null>(null);
+  const [buscarDetalle, setBuscarDetalle] = useState("");
+  /** El detalle de una fila de la cola (el motivo del Estado y todo lo de su salida), abierto en su modal. */
+  const [motivoAbierto, setMotivoAbierto] = useState<AltaPendienteArca | null>(null);
   /*
     DOS PESTAÑAS: lo que falta presentar y lo que ya se presentó. El registro es el mismo que abre
     «Alta Temprana A.R.C.A» en Contratos (las corridas guardadas, de todas las empleadoras), aplanado a
@@ -268,43 +274,28 @@ export const PresentacionesArcaPage: React.FC = () => {
             Lista
           </span>
         ) : (
-          <p className="text-amber-700 dark:text-amber-400 flex items-start gap-1.5">
-            <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3 mt-0.5 shrink-0" />
-            <span>{c.motivo}</span>
-          </p>
+          // Sólo el ícono: el texto (largo, con fechas y la explicación) va en su modal (02/11/2026, pedido del usuario).
+          <button type="button" onClick={() => setMotivoAbierto(c)} title="Por qué todavía no sale" className="p-1 -m-1 rounded text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20 transition-colors">
+            <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4" />
+          </button>
         )}
       </td>
+      {/*
+        SÓLO LA FECHA DE SALIDA (02/11/2026, pedido del usuario): la cuenta regresiva (o «Sin fecha
+        prevista»). Lo que la destraba, los rechazos, los envíos y si ya terminó van en el modal del ojo
+        de Acción, con el motivo del Estado (ver `detalleDeSalida`).
+      */}
       <td className="px-4 py-3">
         {c.momento || c.desbloqueo ? (
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {c.momento ? (
               <>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Fecha de salida</p>
                 <CuentaRegresiva destino={c.momento} ahora={ahoraServidor} />
-                <p className="text-[11px] text-gray-500">
-                  {new Date(c.momento).getTime() <= ahoraServidor ? "En la corrida en curso" : `${fechaArgentina(c.momento)} a las ${horaArgentina(c.momento)}`}
-                  {!estado?.activa ? " (si está activada)" : ""}
-                  {c.desbloqueo ? " · fecha prevista" : ""}
-                </p>
               </>
             ) : (
               <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">Sin fecha prevista</p>
             )}
-            {/*
-              LO QUE LA DESTRABA (01/11/2026): un alta activa en ARCA, su turno detrás de otra de la misma
-              persona, o la sincronización después de un rechazo por alta activa. No se reintenta a ciegas.
-            */}
-            {c.desbloqueo && <p className="text-[11px] text-amber-700 dark:text-amber-400">Se destraba: {c.desbloqueo}</p>}
-            {/* Rechazada por ARCA: si está lista, se retoma al final de la próxima pasada; si espera algo, lo dice arriba. */}
-            {(c.intentos || 0) > 0 || c.rechazoDefinitivo ? (
-              <p className="text-[11px] font-semibold text-red-600 dark:text-red-400">
-                {c.rechazoDefinitivo ? `ARCA la rechazó: ${c.rechazoDefinitivo}` : `Rechazada ${veces(c.intentos || 0)}${c.primerIntentoEl ? ` (la primera el ${fechaArgentina(c.primerIntentoEl)})` : ""}.`}{" "}
-                {!c.presentable ? "" : c.rechazoDefinitivo && c.rechazadaEl && estado && diaArgentina(c.rechazadaEl) === estado.hoy ? "Vuelve a intentarse mañana." : "Se retoma al final de la próxima pasada."}
-              </p>
-            ) : (
-              estado && c.fechaAlta < estado.hoy && !c.desbloqueo && <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Atrasada: su alta fue el {fechaCorta(c.fechaAlta)}. Va en la cola.</p>
-            )}
-            {(c.envios || 0) > 0 && <p className="text-[11px] text-gray-500">Enviada a ARCA {veces(c.envios || 0)}.</p>}
-            {c.terminado && <p className="text-[11px] text-gray-500">Ya terminó (baja el {fechaCorta(c.fechaBaja)}): se declara igual.</p>}
           </div>
         ) : (
           <span className="text-xs text-gray-500">Sin fecha de alta válida</span>
@@ -321,18 +312,58 @@ export const PresentacionesArcaPage: React.FC = () => {
           <FontAwesomeIcon icon={faBolt} className="h-3 w-3" />
           Forzar presentación
         </button>
-        {c.projectId && (
-          <div className="mt-2 flex items-center justify-end gap-1">
+        <div className="mt-2 flex items-center justify-end gap-1">
+          <button type="button" onClick={() => setMotivoAbierto(c)} title="Ver el detalle: por qué está así y cuándo sale" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
+          </button>
+          {c.projectId && (
+            <>
             <button type="button" onClick={() => setEditando(c)} title="Editar este contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
               <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
             </button>
             <button type="button" onClick={() => eliminar(c)} disabled={!!borrando} title="Eliminar este contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               <FontAwesomeIcon icon={borrando === claveDe(c) ? faSpinner : faTrash} spin={borrando === claveDe(c)} className="h-4 w-4" />
             </button>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </td>
     </tr>
+  );
+
+  /** Lo que la columna «Se presenta en» decía debajo de la cuenta regresiva: ahora va en el modal de Detalle. */
+  const detalleDeSalida = (c: AltaPendienteArca) => (
+    <div className="space-y-2">
+      {c.momento ? (
+        <p className="text-gray-700 dark:text-gray-200">
+          <span className="font-semibold">Sale:</span> {new Date(c.momento).getTime() <= ahoraServidor ? "en la corrida en curso" : `el ${fechaArgentina(c.momento)} a las ${horaArgentina(c.momento)} h`}
+          {!estado?.activa ? " (si está activada)" : ""}
+          {c.desbloqueo ? " · fecha prevista" : ""}
+        </p>
+      ) : (
+        <p className="font-semibold text-gray-700 dark:text-gray-200">Sin fecha prevista</p>
+      )}
+      {/*
+        LO QUE LA DESTRABA (01/11/2026): un alta activa en ARCA, su turno detrás de otra de la misma
+        persona, o la sincronización después de un rechazo por alta activa. No se reintenta a ciegas.
+      */}
+      {c.desbloqueo && (
+        <p className="text-amber-700 dark:text-amber-400">
+          <span className="font-semibold">Se destraba:</span> {c.desbloqueo}
+        </p>
+      )}
+      {/* Rechazada por ARCA: si está lista, se retoma al final de la próxima pasada; si espera algo, lo dice arriba. */}
+      {(c.intentos || 0) > 0 || c.rechazoDefinitivo ? (
+        <p className="font-semibold text-red-600 dark:text-red-400">
+          {c.rechazoDefinitivo ? `ARCA la rechazó: ${c.rechazoDefinitivo}` : `Rechazada ${veces(c.intentos || 0)}${c.primerIntentoEl ? ` (la primera el ${fechaArgentina(c.primerIntentoEl)})` : ""}.`}{" "}
+          {!c.presentable ? "" : c.rechazoDefinitivo && c.rechazadaEl && estado && diaArgentina(c.rechazadaEl) === estado.hoy ? "Vuelve a intentarse mañana." : "Se retoma al final de la próxima pasada."}
+        </p>
+      ) : (
+        estado && c.fechaAlta < estado.hoy && !c.desbloqueo && <p className="font-semibold text-amber-700 dark:text-amber-400">Atrasada: su alta fue el {fechaCorta(c.fechaAlta)}. Va en la cola.</p>
+      )}
+      {(c.envios || 0) > 0 && <p className="text-gray-500">Enviada a ARCA {veces(c.envios || 0)}.</p>}
+      {c.terminado && <p className="text-gray-500">Ya terminó (baja el {fechaCorta(c.fechaBaja)}): se declara igual.</p>}
+    </div>
   );
 
   const eliminar = async (c: AltaPendienteArca) => {
@@ -377,30 +408,135 @@ export const PresentacionesArcaPage: React.FC = () => {
 
   const u = estado?.ultimaCorrida;
   // Lo que hizo una corrida (la del día o una pasada de la cola): por empresa, y lo que no salió con su motivo.
-  const tarjetaCorrida = (titulo: string, r: ResumenCorridaAutomatica | null, vacia: string) => (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-2">
-      <p className="text-sm font-semibold text-gray-900 dark:text-white">{titulo}</p>
-      {r?.error && <p className="text-xs text-red-600 dark:text-red-400">{r.error}</p>}
-      {r && r.empresas.length === 0 && !r.error && <p className="text-xs text-gray-500">{vacia}</p>}
-      {r?.empresas.map((e, i) => (
-        <p key={`${e.empresa}-${i}`} className={`text-xs ${e.error ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-300"}`}>
-          {e.empresa}: {e.error ? e.error : `${e.enviados} enviada(s) a ARCA${e.enSeco ? " (en seco)" : ""}`}
-        </p>
-      ))}
-      {r && r.omitidos.length > 0 && (
-        <div className="text-xs text-amber-700 dark:text-amber-400">
-          <p className="font-semibold">Sin presentar ({r.omitidos.length}):</p>
-          <ul className="list-disc ml-5">
-            {r.omitidos.map((o, i) => (
-              <li key={`${o.cuil}-${i}`}>
-                {o.nombre}: {o.motivo}
+  /*
+    LA CORRIDA COMO ENCABEZADO CON NÚMEROS (02/11/2026, pedido del usuario): antes era un renglón y
+    abajo la lista entera de las que no salieron, con su motivo, que tapaba la cola. Ahora arriba va qué
+    corrida es y cuándo, y en cifras lo que importa: cuántas se enviaron, cuántas quedaron sin presentar
+    —el botón abre el detalle con el porqué de cada una— y cuántas atrasadas siguen en la cola.
+  */
+  const Cifra = ({ valor, texto, tono, onClick, title }: { valor: number; texto: string; tono: "verde" | "ambar" | "rojo" | "gris"; onClick: () => void; title?: string }) => {
+    const clases = {
+      verde: "border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400",
+      ambar: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400",
+      rojo: "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400",
+      gris: "border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-300",
+    }[tono];
+    return (
+      <button type="button" onClick={onClick} disabled={valor === 0} title={title} className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold transition-colors hover:brightness-95 dark:hover:brightness-125 disabled:cursor-default disabled:hover:brightness-100 ${clases}`}>
+        {texto}
+        <span className="text-[10px] font-normal opacity-80">({valor})</span>
+      </button>
+    );
+  };
+
+  const tarjetaCorrida = (titulo: string, detalle: string, r: ResumenCorridaAutomatica | null, vacia: string, atrasadasEnCola?: number) => {
+    const enviadas = (r?.empresas || []).reduce((n, e) => n + (e.error ? 0 : e.enviados), 0);
+    const conError = (r?.empresas || []).filter((e) => e.error).length;
+    return (
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-3">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">{titulo}</h2>
+          {detalle && <p className="text-sm text-gray-500 dark:text-gray-400">{detalle}</p>}
+        </div>
+        {r?.error && <p className="text-xs text-red-600 dark:text-red-400">{r.error}</p>}
+        {r && (
+          <div className="flex flex-wrap gap-1.5">
+            <Cifra valor={enviadas} texto="Enviadas a ARCA" tono={enviadas > 0 ? "verde" : "gris"} title="Ver a quiénes presentó y qué contestó ARCA" onClick={() => abrirDetalle("enviadas", titulo, detalle, r)} />
+            <Cifra valor={r.omitidos.length} texto="Sin presentar" tono={r.omitidos.length > 0 ? "ambar" : "gris"} title="Ver quiénes no se presentaron y por qué" onClick={() => abrirDetalle("omitidos", titulo, detalle, r)} />
+            {conError > 0 && <Cifra valor={conError} texto="Corridas con error" tono="rojo" title="Ver qué empleadoras fallaron y por qué" onClick={() => abrirDetalle("errores", titulo, detalle, r)} />}
+            {atrasadasEnCola !== undefined && <Cifra valor={atrasadasEnCola} texto="Atrasadas en la cola" tono={atrasadasEnCola > 0 ? "ambar" : "gris"} title="Pendientes cuya fecha de alta ya pasó: siguen en la cola y salen en la próxima corrida" onClick={() => abrirDetalle("atrasadas", titulo, detalle, r)} />}
+          </div>
+        )}
+        {r && r.empresas.length === 0 && !r.error && <p className="text-xs text-gray-500">{vacia}</p>}
+        {/* Una corrida por empleadora (y otra para sus atrasadas): cuántas mandó cada una. */}
+        {r && r.empresas.length > 0 && (
+          <ul className="space-y-0.5">
+            {r.empresas.map((e, i) => (
+              <li key={`${e.empresa}-${i}`} className={`text-xs ${e.error ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-300"}`}>
+                <span className="font-semibold">{e.empresa}</span>: {e.error ? e.error : `${e.enviados} enviada(s) a ARCA${e.enSeco ? " (en seco)" : ""}`}
               </li>
             ))}
           </ul>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
+  };
+
+  const abrirDetalle = (tipo: "enviadas" | "omitidos" | "errores" | "atrasadas", titulo: string, detalle: string, r: ResumenCorridaAutomatica) => {
+    setBuscarDetalle("");
+    setDetalleCorrida({ tipo, titulo: `${titulo} · ${detalle}`, r });
+    // A quiénes mandó no está en el resumen de la corrida: sale del registro (el de «Presentadas»).
+    if (tipo === "enviadas" && corridas === null) void cargarRegistro();
+  };
+
+  /*
+    LAS FILAS DE CADA MODAL, con la misma forma: persona, empresa y qué pasó.
+
+    «Enviadas»: el resumen de la corrida sólo cuenta por empleadora; quiénes fueron sale del registro de
+    corridas, tomando las automáticas de ese momento (la corrida del día escribe una por empleadora,
+    antes de dejar el resumen). «Atrasadas»: las pendientes de hoy cuya alta ya pasó, como la tabla.
+  */
+  const filasDetalle = useMemo(() => {
+    if (!detalleCorrida) return null;
+    const { tipo, r } = detalleCorrida;
+    type FilaDetalle = { clave: string; nombre: string; cuil: string; empresa: string; que: React.ReactNode; texto: string };
+    let filas: FilaDetalle[] = [];
+    if (tipo === "omitidos") {
+      filas = r.omitidos.map((o, i) => ({ clave: `${o.cuil}-${i}`, nombre: o.nombre, cuil: o.cuil, empresa: o.empresa, que: <span className="text-amber-800 dark:text-amber-300">{o.motivo}</span>, texto: o.motivo }));
+    } else if (tipo === "errores") {
+      filas = r.empresas.filter((e) => e.error).map((e, i) => ({ clave: `${e.empresa}-${i}`, nombre: "", cuil: "", empresa: e.empresa, que: <span className="text-red-700 dark:text-red-400">{e.error}</span>, texto: e.error || "" }));
+    } else if (tipo === "atrasadas") {
+      filas = (estado?.contratos || [])
+        .filter((c) => c.fechaAlta < (estado?.hoy || ""))
+        .map((c) => {
+          const texto = c.desbloqueo || c.motivo || "";
+          return {
+            clave: `${c.userProjectId}-${c.contractIndex}`,
+            nombre: c.nombre,
+            cuil: c.cuil,
+            empresa: c.empresa?.razonSocial || "",
+            texto,
+            que: (
+              <div className="space-y-0.5">
+                <p className="text-gray-700 dark:text-gray-300">
+                  <span className="text-gray-400">Alta:</span> {fechaCorta(c.fechaAlta)} · <span className="text-gray-400">Baja:</span> {fechaCorta(c.fechaBaja)}
+                </p>
+                <p className="text-gray-500">{c.momento ? `Se presenta el ${fechaArgentina(c.momento)} a las ${horaArgentina(c.momento)} h` : "Sin fecha prevista"}</p>
+                {texto && <p className="text-amber-800 dark:text-amber-300">{texto}</p>}
+              </div>
+            ),
+          };
+        });
+    } else {
+      if (corridas === null) return null;
+      const fin = new Date(r.fecha).getTime() + 60_000;
+      const desde = fin - 3 * 60 * 60_000;
+      filas = corridas
+        .filter((k) => k.automatica && new Date(k.createdAt).getTime() >= desde && new Date(k.createdAt).getTime() <= fin)
+        .flatMap((k) =>
+          k.contratos.map((x, i) => {
+            const res = RESULTADO[x.resultado] || { texto: x.resultado, clase: RESULTADO.pendiente.clase };
+            return {
+              clave: `${k._id}-${i}`,
+              nombre: x.nombre,
+              cuil: x.cuil,
+              empresa: k.empresaRazonSocial,
+              texto: `${res.texto} ${x.motivo || ""}`,
+              que: (
+                <div className="space-y-0.5">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${res.clase}`}>{res.texto}</span>
+                  {x.motivo && <p className="text-gray-500">{x.motivo}</p>}
+                </div>
+              ),
+            };
+          }),
+        );
+    }
+    const q = buscarDetalle.trim().toLowerCase();
+    return q ? filas.filter((f) => [f.nombre, f.cuil, f.empresa, f.texto].some((x) => String(x || "").toLowerCase().includes(q))) : filas;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detalleCorrida, corridas, estado, buscarDetalle]);
+
 
   return (
     <PageLayout
@@ -598,10 +734,18 @@ export const PresentacionesArcaPage: React.FC = () => {
 
           {tab === "pendientes" && (
             <>
-          {u && tarjetaCorrida(`Última corrida del día: ${fechaCorta(u.dia)} · ${new Date(u.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} h`, u, "No había altas completas para presentar ese día.")}
+          {u &&
+            tarjetaCorrida(
+              "Última corrida del día",
+              `${fechaCorta(u.dia)} · ${new Date(u.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} h`,
+              u,
+              "No había altas completas para presentar ese día.",
+              estado.contratos.filter((c) => c.fechaAlta < estado.hoy).length,
+            )}
           {estado.config.modo === "frecuente" &&
             tarjetaCorrida(
-              `Cola de pendientes (${frecuenciaTexto(estado.config.cadaMinutos)})${estado.ultimaCorridaCola ? ` · última: ${new Date(estado.ultimaCorridaCola.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} h` : ""}${estado.proximaCola ? ` · próxima: ${horaArgentina(estado.proximaCola)} h` : ""}`,
+              "Cola de pendientes",
+              `${frecuenciaTexto(estado.config.cadaMinutos)}${estado.ultimaCorridaCola ? ` · última: ${new Date(estado.ultimaCorridaCola.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} h` : ""}${estado.proximaCola ? ` · próxima: ${horaArgentina(estado.proximaCola)} h` : ""}`,
               estado.ultimaCorridaCola || null,
               "No había pendientes para presentar.",
             )}
@@ -664,6 +808,77 @@ export const PresentacionesArcaPage: React.FC = () => {
             </>
           )}
         </div>
+      )}
+
+      {motivoAbierto && (
+        <Modal isOpen onClose={() => setMotivoAbierto(null)} size="sm" title={motivoAbierto.nombre} subtitle={`${motivoAbierto.tipoContrato || "Contrato"} · Alta: ${fechaCorta(motivoAbierto.fechaAlta)} · Baja: ${fechaCorta(motivoAbierto.fechaBaja)}`}>
+          <div className="space-y-3 text-sm">
+            {motivoAbierto.presentable ? (
+              <p className="flex items-center gap-2 font-semibold text-green-700 dark:text-green-400">
+                <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4" />
+                Lista para presentar
+              </p>
+            ) : (
+              <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+                <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>{motivoAbierto.motivo}</span>
+              </p>
+            )}
+            {detalleDeSalida(motivoAbierto)}
+          </div>
+        </Modal>
+      )}
+
+      {detalleCorrida && (
+        <Modal
+          isOpen
+          onClose={() => setDetalleCorrida(null)}
+          size="xl"
+          title={{ enviadas: "Enviadas a ARCA", omitidos: "Sin presentar", errores: "Corridas con error", atrasadas: "Atrasadas en la cola" }[detalleCorrida.tipo]}
+          subtitle={detalleCorrida.tipo === "atrasadas" ? "Pendientes cuya fecha de alta ya pasó: siguen en la cola" : detalleCorrida.titulo}
+        >
+          <div className="space-y-3">
+            {detalleCorrida.tipo !== "errores" && (
+              <div className="relative w-full sm:w-80">
+                <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-3.5 w-3.5" />
+                <input value={buscarDetalle} onChange={(e) => setBuscarDetalle(e.target.value)} placeholder="Buscar por nombre, CUIL, empresa o motivo…" className="input-field text-sm pl-9 w-full" />
+              </div>
+            )}
+            {filasDetalle === null ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner message="Cargando el registro de corridas..." />
+              </div>
+            ) : filasDetalle.length === 0 ? (
+              <p className="text-sm text-gray-500">{buscarDetalle ? `Ninguna coincide con «${buscarDetalle}».` : detalleCorrida.tipo === "enviadas" ? "No se encontró en el registro la corrida automática de ese momento." : "No hay ninguna."}</p>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                      {detalleCorrida.tipo !== "errores" && <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">Persona</th>}
+                      <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">Empresa</th>
+                      <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">{{ enviadas: "Qué contestó ARCA", omitidos: "Por qué no se presentó", errores: "Error", atrasadas: "Contrato y cuándo sale" }[detalleCorrida.tipo]}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {filasDetalle.map((f) => (
+                      <tr key={f.clave} className="align-top">
+                        {detalleCorrida.tipo !== "errores" && (
+                          <td className="px-3 py-2">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">{f.nombre}</p>
+                            {f.cuil && <p className="text-[11px] font-mono text-gray-500">{fmtCuil(f.cuil)}</p>}
+                          </td>
+                        )}
+                        <td className="px-3 py-2 text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">{f.empresa || "—"}</td>
+                        <td className="px-3 py-2 text-xs">{f.que}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </Modal>
       )}
 
       {corridaAbierta && (

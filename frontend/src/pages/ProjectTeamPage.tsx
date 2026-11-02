@@ -35,10 +35,9 @@ import { SelectorHora } from '../components/contratacion/SelectorHora';
 import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from '../utils/horario';
 import { numeroALetras } from '../utils/numeroALetras';
 import { avisoIndeterminado, erroresDeJornadas, sueldosDelContrato, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
-import { formatDiaSolicitud } from '../components/solicitudes/SolicitudesTable';
 import { CustomMultiDatePicker } from '../apps/mobile/src/components/CustomMultiDatePicker';
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
-import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
+import { estadoImpositivoDelContrato, formatDate as fechaDDMMAAAA } from '../components/team/ContractCard';
 import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
 import { copiaParaOtroProyecto } from '../utils/copiaContratoVigente';
 import { useColorDeEstado } from '../components/EstadoSelect';
@@ -1250,13 +1249,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         ? 'Rotativos'
         : [textoDeDias(wizardData.dias_semana), wizardData.dias_por_semana ? `${wizardData.dias_por_semana} por semana` : ''].filter(Boolean).join(' · '),
   };
-  /** «01 nov 2026 → 01 nov 2026», como la columna Fechas de Solicitudes: por días sueltos, del primero al último. */
-  const periodoFlechaWizard = (() => {
+  /*
+    «Alta: 05/10/2026 · Baja: 05/10/2026», como la columna «Último contrato» de las tablas (02/11/2026,
+    pedido del usuario: antes era «05 oct 2026 → 05 oct 2026»). Por días sueltos, del primero al último.
+  */
+  const periodoAltaBajaWizard = (() => {
     const fechas = porDiasSueltosWizard ? [...wizardData.fechas_trabajadas].sort() : [wizardData.fecha_alta_contrato, wizardData.fecha_baja_contrato];
     const desde = fechas[0];
     const hasta = fechas[fechas.length - 1];
     if (!desde) return null;
-    return { desde: formatDiaSolicitud(desde), hasta: hasta ? formatDiaSolicitud(hasta) : 'Indef.' };
+    return { desde: fechaDDMMAAAA(desde), hasta: hasta ? fechaDDMMAAAA(hasta) : 'Indeterminado' };
   })();
   const periodoWizard = periodoDeCalculo(wizardData.fecha_alta_contrato, wizardData.fecha_baja_contrato, indeterminadoWizard && !porDiasSueltosWizard);
   // «Cantidad de jornadas» del tipo de contrato (un plazo fijo, 30): manda sobre el calendario y no se ajusta.
@@ -5427,12 +5429,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       <span className="flex flex-col">
                         Es reemplazo
                         {/* El período a la vista al decidir si es reemplazo (al aprobar, el de la solicitud); también en «Agregar Miembro». */}
-                        <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                          {periodoFlechaWizard ? (
+                        <span className="flex flex-col text-[11px] font-normal text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                          {periodoAltaBajaWizard ? (
                             <>
-                              <span>{periodoFlechaWizard.desde}</span>
-                              <span className="mx-1 text-gray-300 dark:text-gray-600">→</span>
-                              <span>{periodoFlechaWizard.hasta}</span>
+                              <span>
+                                <span className="text-gray-400 dark:text-gray-500">Alta:</span> {periodoAltaBajaWizard.desde}
+                              </span>
+                              <span>
+                                <span className="text-gray-400 dark:text-gray-500">Baja:</span> {periodoAltaBajaWizard.hasta}
+                              </span>
                             </>
                           ) : (
                             <span className="italic">sin fechas cargadas</span>
