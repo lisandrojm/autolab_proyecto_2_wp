@@ -2125,6 +2125,17 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const contratoPorIndice = typeof contractIndex === 'number' ? ((lastProject?.contracts as any[])?.[contractIndex] ?? null) : null;
     const lastContract = contratoPorIndice || contractOverride || elQueRige;
     /*
+      EDITAR UN CONTRATO QUE VINO DE UNA SOLICITUD: su comentario también va arriba (01/11/2026, pedido
+      del usuario, editando desde Contratos). Se trae aparte, sin frenar la apertura del formulario.
+    */
+    const solicitudDelContrato = !approveSolicitudId && !renovar && contratoPorIndice ? String((contratoPorIndice as any).solicitudId || '') : '';
+    if (solicitudDelContrato) {
+      usersAPI
+        .get(solicitudDelContrato)
+        .then((s: any) => setComentarioSolicitud(String(s?.metadata?.comentarios || '').trim()))
+        .catch(() => {});
+    }
+    /*
       PRECARGA DE OTRO PROYECTO: SIN FECHAS. Si la persona no tiene contrato en ESTE proyecto, la base
       es su contrato del último proyecto donde lo tiene —rol, categoría, horario, empresa: es la misma
       persona—. Pero las fechas son de aquel contrato, y con el mismo turno el server lo rechaza por
@@ -4421,7 +4432,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           soloAprobacion?.onCerrar();
         }}
         // Aprobando una solicitud (desde Solicitudes o desde la pestaña del equipo) es «Editar y Aprobar», como el botón que lo abre (01/11/2026).
-        title={renovando ? 'Renovar contrato' : approvingSolicitudId ? 'Editar y Aprobar' : esEdicionMiembro ? 'Configurar Miembro' : 'Agregar Miembro'}
+        // Editando un contrato encima de otra pantalla (Contratos, una solicitud aprobada) es «Editar Miembro».
+        title={renovando ? 'Renovar contrato' : approvingSolicitudId ? 'Editar y Aprobar' : soloAprobacion?.editarContrato ? 'Editar Miembro' : esEdicionMiembro ? 'Configurar Miembro' : 'Agregar Miembro'}
         subtitle={
           selectedUserForWizard ? (
             <div className="flex flex-col gap-0.5">
@@ -4471,7 +4483,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               EL COMENTARIO DE QUIEN PIDIÓ EL ALTA, ARRIBA DE TODO (01/11/2026, pedido del usuario): el mismo
               aviso amarillo que el detalle de la solicitud. Es contexto para decidir antes de completar nada.
             */}
-            {approvingSolicitudId && comentarioSolicitud && (
+            {comentarioSolicitud && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300">
                 <p className="flex items-start gap-2">
                   <FontAwesomeIcon icon={faCommentDots} className="mt-0.5 h-3.5 w-3.5 shrink-0" />

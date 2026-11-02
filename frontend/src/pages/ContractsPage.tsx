@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { usersAPI, ContractOverviewRow, Contract } from '../api/users';
 import { projectsAPI } from '../api/projects';
@@ -37,6 +37,9 @@ import { MOBILE_ACTIVITY_LOGS as PERMISO_NOVEDADES_MOBILE } from '../utils/permi
 import { arcaRelacionesAPI, EmpresaConCuit, RelacionResumida } from '../api/arcaRelaciones';
 import { CeldaContratosArca } from '../components/arca/CeldaContratosArca';
 import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
+import { EditarContratoEnModalContext, type ContratoAEditar } from '../components/contratos/editarContratoEnModal';
+import { ProjectTeamPage } from './ProjectTeamPage';
+import { invalidateRefCache } from '../utils/refCache';
 
 /*
   Filtro por lo que la persona PUEDE HACER en la app, no por cómo se llama su rol.
@@ -415,10 +418,15 @@ export const ContractsPage: React.FC = () => {
     localStorage.setItem('contractsViewMode', mode);
   };
 
-  // Editar: ir al equipo del proyecto y abrir el editor precargado con ese contrato.
-  const handleEditContract = (record: ContractOverviewRow) => {
-    navigate(`/projects/${record.projectId}/team`, { state: { openWizardFor: { userId: record.userId, contractIndex: record.contractIndex } } });
-  };
+  /*
+    EDITAR SIN SALIR DE CONTRATOS (01/11/2026, pedido del usuario): el wizard del equipo se abre encima,
+    como en Solicitudes al aprobar, con «Editar Miembro» y el comentario de la solicitud si lo tiene. Lo
+    usan el lápiz de esta tabla y el de las pestañas de Gestión (`ContractActionsButtons`, por contexto).
+  */
+  const [editandoContrato, setEditandoContrato] = useState<{ contrato: ContratoAEditar; alGuardar?: () => void } | null>(null);
+  const editarContratoEnModal = useCallback((contrato: ContratoAEditar, alGuardar?: () => void) => setEditandoContrato({ contrato, alGuardar }), []);
+  const handleEditContract = (record: ContractOverviewRow) =>
+    editarContratoEnModal({ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex }, () => fetchContracts(currentPage));
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
@@ -482,6 +490,23 @@ export const ContractsPage: React.FC = () => {
   };
 
   return (
+    <EditarContratoEnModalContext.Provider value={editarContratoEnModal}>
+    {editandoContrato && (
+      <ProjectTeamPage
+        soloAprobacion={{
+          projectId: editandoContrato.contrato.projectId,
+          solicitudId: '',
+          editarContrato: { userId: editandoContrato.contrato.userId, contractIndex: editandoContrato.contrato.contractIndex },
+          onCerrar: () => setEditandoContrato(null),
+          onAprobada: () => {
+            const alGuardar = editandoContrato.alGuardar;
+            setEditandoContrato(null);
+            invalidateRefCache('contracts-overview:');
+            alGuardar?.();
+          },
+        }}
+      />
+    )}
     <PageLayout
       title="Contratos"
       subtitle="Visualiza y gestiona todos los registros de contratación de los usuarios."
@@ -1099,5 +1124,6 @@ export const ContractsPage: React.FC = () => {
         </Modal>
       )}
     </PageLayout>
+    </EditarContratoEnModalContext.Provider>
   );
 };

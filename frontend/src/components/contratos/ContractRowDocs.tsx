@@ -13,6 +13,7 @@ import { estadoImpositivoDelContrato, findTemplate, templateHasContent, Download
 import { getImageUrl, downloadFileFromUrl } from "../../utils/imageHelpers";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { AccionesConstanciaArchivada } from "./ConstanciaBulk";
+import { useEditarContratoEnModal } from "./editarContratoEnModal";
 
 /* --------- Handlers de descarga/subida compartidos (tabla Contratos + Gestión de Contratos) --------- */
 
@@ -346,10 +347,16 @@ export const ContractActionsHeader: React.FC = () => <th className="col-acciones
  */
 export const ContractActionsButtons: React.FC<{ record: ContractOverviewRow; onDeleted: () => void }> = ({ record, onDeleted }) => {
   const navigate = useNavigate();
+  const editarEnModal = useEditarContratoEnModal();
   const [borrando, setBorrando] = useState(false);
 
   const editar = (e: React.MouseEvent) => {
     e.stopPropagation();
+    // Dentro de Contratos se edita encima, sin salir (al guardar se refresca la lista, como al borrar).
+    if (editarEnModal) {
+      editarEnModal({ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex }, onDeleted);
+      return;
+    }
     navigate(`/projects/${record.projectId}/team`, { state: { openWizardFor: { userId: record.userId, contractIndex: record.contractIndex } } });
   };
 
