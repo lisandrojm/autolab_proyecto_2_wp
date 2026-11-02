@@ -255,6 +255,31 @@ export const ArcaAltasAutomaticasConfigPage: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/*
+            LA POLÍTICA DE «FORZAR ALTA» (pedido del 02/11/2026: «que no se superpongan los días»). No se
+            configura: es la regla de ARCA, la misma que aplica el servidor y que repite el aviso al forzar
+            (ver `compartido/arca/vigenciaAltaPresentada.ts`). Va escrita acá, junto al horario, porque es
+            lo que hay que saber antes de saltearlo.
+          */}
+          <div className="rounded-xl border border-amber-200 dark:border-amber-800/60 bg-white dark:bg-gray-800 p-5 space-y-3">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Forzar un alta</h2>
+            <ul className="list-disc ml-5 space-y-1.5 text-sm text-gray-600 dark:text-gray-300">
+              <li>
+                <strong>Es inmediato.</strong> «Forzar» presenta el alta YA en ARCA, sin esperar el horario de arriba, y no se deshace.
+              </li>
+              <li>
+                <strong>Una relación vigente por vez.</strong> ARCA no acepta dos altas de la misma persona con la misma empleadora mientras la anterior siga vigente, aunque los días no se pisen. Un alta presentada queda vigente hasta su baja (o hasta el día en que se presentó, si se presenta atrasada).
+              </li>
+              <li>
+                <strong>Hasta las 00:00 del día siguiente a su baja</strong> no se puede presentar ninguna otra alta de esa persona con esa empleadora. Ejemplo: un alta del 01/12 forzada el 01/11 traba a la persona hasta el 02/12 a las 00:00; sus altas del 10/11 o del 15/11 recién salen el 02/12, atrasadas.
+              </li>
+              <li>
+                <strong>Sin baja</strong> (tiempo indeterminado) la traba no se libera sola: hasta que se informe la baja.
+              </li>
+            </ul>
+            <p className="text-xs text-gray-500">Al forzar, el aviso dice la fecha exacta en que se libera la persona y cuáles de sus otras altas pendientes quedan trabadas. Para no atrasarlas, forzá primero la de fecha más temprana.</p>
+          </div>
         </div>
       )}
     </PageLayout>

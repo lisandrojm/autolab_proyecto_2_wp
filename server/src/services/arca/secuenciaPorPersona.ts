@@ -2,6 +2,7 @@ import { fechaCorta, textoAltaQueSePisa, type AltaPresentada, type RelacionArcaR
 import { diaArgentina, proximaCorridaPara, sumarDias, type ConfigAltasAutomaticas } from "./horarioAltasAutomaticas.js";
 import { LAYOUT_85 } from "../../compartido/layoutAltaArca.js";
 import { fechaISO } from "../../utils/contratoVigencia.js";
+import { venceAltaPresentada } from "../../compartido/arca/vigenciaAltaPresentada.js";
 
 /**
  * LAS ALTAS DE UNA PERSONA SALEN EN SECUENCIA, por empleadora (pedido del 01/11/2026). Puro: Mongo entra
@@ -138,7 +139,8 @@ export function bloqueoPorVigencia(contrato: ContratoPendiente, presentadas: Alt
       continue;
     }
     const diaPresentada = p.presentadaEl && Number.isFinite(Date.parse(p.presentadaEl)) ? diaArgentina(new Date(p.presentadaEl)) : "";
-    const vence = mayor(p.baja, diaPresentada);
+    // La misma regla que muestra el aviso de «Forzar alta» (ver `compartido/arca/vigenciaAltaPresentada.ts`).
+    const vence = venceAltaPresentada(p.baja, diaPresentada);
     if (vence < o.hoy) continue; // ARCA ya procesó el vencimiento
     opciones.push({
       tipo: "presentada",

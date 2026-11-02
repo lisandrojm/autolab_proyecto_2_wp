@@ -100,6 +100,8 @@ export interface SolicitudVista {
   obraSocial?: ObraSocialDeSolicitud | null;
   /** El último contrato de la persona, en cualquier proyecto. null = no tiene (alguien nuevo). */
   ultimoContrato?: { alta: string; baja: string | null; nombre: string; proyecto: string } | null;
+  /** Con qué se superpone lo pedido (contratos en cualquier proyecto u otras solicitudes), la foto del server. */
+  superposiciones?: Array<{ tipo: "horario" | "fechas"; mensaje: string }>;
 }
 
 /** Roles del solicitante que se muestran como badge en la columna «Solicitó». */
@@ -131,6 +133,7 @@ export const solicitudDesdeUser = (u: any): SolicitudVista => {
     motivoRechazo: m.solicitudMotivoRechazo ?? null,
     reenviada: m.solicitudReenviada?.el ? m.solicitudReenviada : null,
     esRenovacion: !!m.esRenovacion,
+    superposiciones: Array.isArray(m.avisosSuperposicion) ? m.avisosSuperposicion.map((a: any) => ({ tipo: a?.tipo === "horario" ? "horario" : "fechas", mensaje: String(a?.mensaje || "") })) : [],
   };
 };
 
@@ -519,11 +522,21 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                       <span><span className="text-gray-400">Alta:</span> {formatDate(s.startDate || undefined) || "—"}</span>
                       <span><span className="text-gray-400">Baja:</span> {s.dueDate ? formatDate(s.dueDate) : "Indef."}</span>
                     </div>
-                    {s.ultimoContrato && seSuperpone(s.startDate, s.dueDate, s.ultimoContrato.alta, s.ultimoContrato.baja) && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" title="Las fechas pedidas se superponen con el último contrato de la persona">
-                        <FontAwesomeIcon icon={faTriangleExclamation} /> Superpone
-                      </span>
-                    )}
+                    {(() => {
+                      /* SUPERPONE (02/11/2026): con el último contrato (fechas a la vista en la columna de al lado) O
+                         con cualquier otro que ya tenga —el aviso «Se superpone con contrato que ya tiene» del detalle—.
+                         Rojo si se pisa el horario; naranja si sólo se cruzan las fechas. */
+                      const avisos = s.superposiciones || [];
+                      const conUltimo = !!s.ultimoContrato && seSuperpone(s.startDate, s.dueDate, s.ultimoContrato.alta, s.ultimoContrato.baja);
+                      if (!conUltimo && avisos.length === 0) return null;
+                      const horario = avisos.some((a) => a.tipo === "horario");
+                      const motivos = [...(conUltimo ? ["Las fechas pedidas se superponen con el último contrato de la persona."] : []), ...avisos.map((a) => a.mensaje)];
+                      return (
+                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${horario ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"}`} title={motivos.join("\n")}>
+                          <FontAwesomeIcon icon={faTriangleExclamation} /> Superpone
+                        </span>
+                      );
+                    })()}
                   </div>
                 </td>
                 {/*

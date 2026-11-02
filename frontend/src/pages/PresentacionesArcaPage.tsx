@@ -9,6 +9,7 @@ import { projectsAPI, horaTexto, horarioTexto, frecuenciaTexto, type AltaPendien
 import { BotonOrden, useOrdenTabla } from "../components/ui/OrdenTabla";
 import { CorridaAltasArca } from "../components/contratos/CorridaAltasArca";
 import { CuentaRegresiva } from "../components/ui/CuentaRegresiva";
+import { avisoForzarAlta, libreDesdeTrasAlta } from "@compartido/arca/vigenciaAltaPresentada";
 import { sweetAlert } from "../utils/sweetAlert";
 import { ProjectTeamPage } from "./ProjectTeamPage";
 import { TablaConEncabezadoFijo, useAltoDeBarra } from "../components/ui/TablaConEncabezadoFijo";
@@ -319,11 +320,20 @@ export const PresentacionesArcaPage: React.FC = () => {
   const forzarSeleccionadas = async () => {
     if (seleccionadas.length === 0) return;
     const empresas = [...new Set(seleccionadas.map((c) => c.empresa?.razonSocial || "su empleadora"))];
-    const avisos = [seleccionadas.some((c) => c.terminado) ? "Algunas ya terminaron (la baja pasó)." : "", seleccionadas.some((c) => c.rechazoDefinitivo || (c.intentos || 0) > 0) ? "Algunas ya fueron rechazadas por ARCA: si nada cambió, van a rechazarse de nuevo." : ""].filter(Boolean).join(" ");
-    const r = await sweetAlert.confirm(
-      `Presentar ahora ${seleccionadas.length} alta${seleccionadas.length === 1 ? "" : "s"}`,
-      `Se presentan ya en ARCA, a nombre de ${empresas.join(" y ")} (${empresas.length === 1 ? "una corrida" : `${empresas.length} corridas, una por empleadora, en fila`}). ${avisos} No se deshace.`,
-      "Sí, presentar",
+    const avisos = [seleccionadas.some((c) => c.terminado) ? "Algunas ya terminaron (la baja pasó)." : "", seleccionadas.some((c) => c.rechazoDefinitivo || (c.intentos || 0) > 0) ? "Algunas ya fueron rechazadas por ARCA: si nada cambió, van a rechazarse de nuevo." : ""].filter(Boolean);
+    // Las personas a las que forzar les traba otras altas pendientes (la misma regla que el aviso de una sola).
+    const trabadas = seleccionadas
+      .map((c) => ({ c, a: avisoForzarAlta({ nombre: c.nombre, empresa: c.empresa?.razonSocial || "", hoy: estado?.hoy || "", alta: { alta: c.fechaAlta, baja: c.fechaBaja }, otras: otrasPendientes(c).filter((o) => !seleccionadas.some((s) => s.cuil === c.cuil && s.fechaAlta === o.alta)) }) }))
+      .filter((x) => x.a.trabadas.length > 0);
+    const r = await sweetAlert.confirmParrafos(
+      `Forzar ${seleccionadas.length} alta${seleccionadas.length === 1 ? "" : "s"}`,
+      [
+        `Se presentan YA en ARCA, a nombre de ${empresas.join(" y ")} (${empresas.length === 1 ? "una corrida" : `${empresas.length} corridas, una por empleadora, en fila`}): no esperan a la corrida automática y no se deshacen.`,
+        "Cada una traba a su persona con esa empleadora: hasta las 00:00 del día siguiente a su baja no se va a poder presentar ninguna otra alta suya.",
+        ...trabadas.map(({ c, a }) => `${c.nombre}: quedan trabadas ${a.trabadas.map((t) => fechaCorta(t.alta)).join(", ")} hasta el ${a.libreDesde ? fechaCorta(a.libreDesde) : "que se informe la baja"}.`),
+        ...avisos,
+      ],
+      "Sí, forzar",
       "Cancelar",
     );
     if (!r.isConfirmed) return;
@@ -343,14 +353,21 @@ export const PresentacionesArcaPage: React.FC = () => {
     }
   };
 
+  /*
+    FORZAR ES INMEDIATO Y TRABA A LA PERSONA (pedido del 02/11/2026: «que no se superpongan los días»).
+    El aviso dice hasta cuándo no se va a poder presentar otra alta de esa persona con esa empleadora, y
+    cuáles de sus otras pendientes quedan trabadas: la regla es la misma que aplica el servidor
+    (`compartido/arca/vigenciaAltaPresentada.ts`).
+  */
+  const otrasPendientes = (c: AltaPendienteArca) =>
+    (estado?.contratos || []).filter((x) => x.cuil === c.cuil && (x.empresa?._id || "") === (c.empresa?._id || "") && claveDe(x) !== claveDe(c)).map((x) => ({ alta: x.fechaAlta, baja: x.fechaBaja, tipoContrato: x.tipoContrato }));
   const forzar = async (c: AltaPendienteArca) => {
-    const antes = estado && c.fechaAlta > estado.hoy;
-    const r = await sweetAlert.confirm(
-      `Presentar ahora a ${c.nombre}`,
-      `${antes ? `Todavía no es el día de la presentación: su alta es el ${fechaCorta(c.fechaAlta)}. ` : ""}${c.terminado ? `El contrato ya terminó (baja el ${fechaCorta(c.fechaBaja)}): se declara una relación que ya pasó. ` : ""}${c.rechazoDefinitivo ? `ARCA ya la rechazó («${c.rechazoDefinitivo}»): si nada cambió en ARCA, va a rechazarla de nuevo. ` : (c.intentos || 0) > 0 ? `ARCA ya la rechazó ${veces(c.intentos || 0)}: revisá el motivo antes de insistir. ` : ""}Se presenta ya en ARCA, a nombre de ${c.empresa?.razonSocial || "su empleadora"}. No se deshace.`,
-      "Sí, presentar",
-      "Cancelar",
-    );
+    const aviso = avisoForzarAlta({ nombre: c.nombre, empresa: c.empresa?.razonSocial || "", hoy: estado?.hoy || "", alta: { alta: c.fechaAlta, baja: c.fechaBaja, tipoContrato: c.tipoContrato }, otras: otrasPendientes(c) });
+    const extra = [
+      c.terminado ? `El contrato ya terminó (baja el ${fechaCorta(c.fechaBaja)}): se declara una relación que ya pasó.` : "",
+      c.rechazoDefinitivo ? `ARCA ya la rechazó («${c.rechazoDefinitivo}»): si nada cambió en ARCA, va a rechazarla de nuevo.` : (c.intentos || 0) > 0 ? `ARCA ya la rechazó ${veces(c.intentos || 0)}: revisá el motivo antes de insistir.` : "",
+    ].filter(Boolean);
+    const r = await sweetAlert.confirmParrafos(aviso.titulo, [...aviso.parrafos, ...extra], "Sí, forzar el alta", "Cancelar");
     if (!r.isConfirmed) return;
     try {
       await projectsAPI.forzarPresentacionArca({ userProjectId: c.userProjectId, contractIndex: c.contractIndex });
@@ -437,7 +454,7 @@ export const PresentacionesArcaPage: React.FC = () => {
           type="button"
           onClick={() => forzar(c)}
           disabled={!c.presentable}
-          title={c.presentable ? `Presentar ya a ${c.nombre} en ARCA, sin esperar su día` : c.motivo}
+          title={c.presentable ? `Forzar: se presenta YA en ARCA, sin esperar su día. Traba otras altas de ${c.nombre} con ${c.empresa?.razonSocial || "esta empleadora"} hasta ${libreDesdeTrasAlta(c.fechaBaja, estado?.hoy || "") ? `el ${fechaCorta(libreDesdeTrasAlta(c.fechaBaja, estado?.hoy || ""))} a las 00:00` : "que se informe su baja"}.` : c.motivo}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
         >
           <FontAwesomeIcon icon={faBolt} className="h-3 w-3" />

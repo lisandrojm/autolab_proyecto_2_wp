@@ -79,6 +79,26 @@ export const sweetAlert = {
   },
 
   /**
+   * Confirmar con un aviso de varios párrafos (el de «Forzar alta»: qué pasa, hasta cuándo traba, qué
+   * queda trabado). Cada párrafo se escapa: los textos traen nombres de personas.
+   */
+  confirmParrafos: (title: string, parrafos: string[], confirmText = "Sí, continuar", cancelText = "Cancelar") => {
+    const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return Swal.fire({
+      title,
+      html: `<div style="text-align:left;font-size:0.95em;line-height:1.45">${parrafos.map((p) => `<p style="margin:0 0 0.6em">${esc(p)}</p>`).join("")}</div>`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d97706",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: confirmText,
+      cancelButtonText: cancelText,
+      reverseButtons: true,
+      focusCancel: true,
+    });
+  },
+
+  /**
    * Pide un texto y confirma en el mismo paso — reemplazo de `window.prompt`, que no se puede
    * estilar y queda fuera del look del resto de la app.
    * `validar` devuelve el mensaje de error a mostrar, o null si el valor está bien.

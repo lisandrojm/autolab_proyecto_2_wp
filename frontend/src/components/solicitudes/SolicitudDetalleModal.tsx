@@ -141,6 +141,9 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
       isOpen={isOpen}
       onClose={onClose}
       size="lg"
+      // Arriba de la barra (z-40) y del aviso flotante del servidor (z-50, fixed abajo a la derecha, que se
+      // dibujaba encima del modal). Lo que abre desde acá (calificar, SweetAlert) va más arriba todavía.
+      zIndex={60}
       title={
         <span className="flex items-center gap-2">
           {solicitud?.nombre || "Solicitud"}

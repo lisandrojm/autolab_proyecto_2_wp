@@ -51,6 +51,7 @@ import { LinkSiPuede } from '../LinkSiPuede';
 import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 import { seSuperpone, ROL_QUE_SOLICITA } from '../solicitudes/SolicitudesTable';
 import { useAnchoAcciones } from '../ui/useAnchoAcciones';
+import { avisoForzarAlta, libreDesdeTrasAlta } from '@compartido/arca/vigenciaAltaPresentada';
 import { esClicDeLaFila, useVerContratoEnModal } from './editarContratoEnModal';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
@@ -1704,6 +1705,31 @@ export const ContractBulkAfipTab: React.FC<{
     La empresa es la de la pestaña o, desde «Todas», la Empresa Contrato de la fila: el alta va a nombre
     de su empleadora igual. Sin empresa asignada no hay a nombre de quién presentarla.
   */
+  /*
+    FORZAR ES INMEDIATO Y TRABA A LA PERSONA (pedido del 02/11/2026: «que no se superpongan los días»).
+    Antes de abrir la corrida se avisa hasta cuándo no se va a poder presentar otra alta de esa persona
+    con esa empleadora y cuáles de sus otras altas pendientes quedan trabadas. La regla es la del servidor
+    (`compartido/arca/vigenciaAltaPresentada.ts`).
+  */
+  const hoyArgentina = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
+  const forzarFila = async (row: ImpositivoRow, result: AfipRowResult, empresa: typeof empresaDeLaPestana) => {
+    const digitos = (v: unknown) => String(v ?? '').replace(/\D/g, '');
+    const otras = impositivoRows
+      .map((x) => x.row)
+      .filter((x) => digitos(x.cuit) === digitos(row.cuit) && String(x.empresaContratoId || '') === String(row.empresaContratoId || '') && !(x._id === row._id && x.contractIndex === row.contractIndex))
+      .filter((x) => !x.altaArcaPresentada || x.altaArcaPresentada.resultado === 'fallida')
+      .map((x) => ({ alta: fechaISO(x.fecha_alta_contrato), baja: fechaISO(x.fecha_baja_contrato), tipoContrato: x.nombre_contrato }));
+    const aviso = avisoForzarAlta({ nombre: row.userName, empresa: empresa?.razonSocial || '', hoy: hoyArgentina(), alta: { alta: fechaISO(row.fecha_alta_contrato), baja: fechaISO(row.fecha_baja_contrato), tipoContrato: row.nombre_contrato }, otras });
+    const r = await sweetAlert.confirmParrafos(aviso.titulo, aviso.parrafos, 'Sí, forzar el alta', 'Cancelar');
+    if (!r.isConfirmed) return;
+    presentarAltasMasivas([{ row, result }] as typeof fuenteTxt, empresa);
+  };
+  /** El texto del botón «Forzar Alta A.R.C.A»: qué hace y hasta cuándo traba a la persona. */
+  const tituloForzar = (row: ImpositivoRow, empresa: typeof empresaDeLaPestana) => {
+    const libre = libreDesdeTrasAlta(fechaISO(row.fecha_baja_contrato), hoyArgentina());
+    const f = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+    return `Forzar: se presenta YA en ARCA a nombre de ${empresa?.razonSocial}, sin esperar su día. Traba otras altas de ${row.userName} con esta empleadora hasta ${libre ? `el ${f(libre)} a las 00:00` : 'que se informe su baja'}.`;
+  };
   const empresaParaPresentar = (row: ImpositivoRow) => empresaDeLaPestana || companies.find((c) => c._id === String(row.empresaContratoId || ''));
   const BotonPresentarFila = ({ row, result }: { row: ImpositivoRow; result: AfipRowResult }) => {
     const empresa = empresaParaPresentar(row);
@@ -1712,10 +1738,10 @@ export const ContractBulkAfipTab: React.FC<{
         type="button"
         onClick={(e) => {
           e.stopPropagation();
-          presentarAltasMasivas([{ row, result }] as typeof fuenteTxt, empresa);
+          void forzarFila(row, result, empresa);
         }}
         disabled={!empresa}
-        title={empresa ? `Presentar sólo a ${row.userName} en ARCA, a nombre de ${empresa.razonSocial}` : 'Elegí la Empresa Contrato de este contrato para poder presentarlo'}
+        title={empresa ? tituloForzar(row, empresa) : 'Elegí la Empresa Contrato de este contrato para poder presentarlo'}
         className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
       >
         <FontAwesomeIcon icon={faBolt} className="h-2.5 w-2.5" />
@@ -1746,7 +1772,7 @@ export const ContractBulkAfipTab: React.FC<{
     verContrato(row, () => load(true), {
       result,
       onVerDatos: () => setDetalleRef({ _id: row._id, contractIndex: row.contractIndex }),
-      onPresentar: result.completo ? () => presentarAltasMasivas([{ row, result }] as typeof fuenteTxt, empresa) : undefined,
+      onPresentar: result.completo ? () => void forzarFila(row, result, empresa) : undefined,
       presentarDeshabilitado: empresa ? undefined : 'Elegí la Empresa Contrato de este contrato para poder presentarlo',
     });
   };

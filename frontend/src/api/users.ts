@@ -145,6 +145,8 @@ export interface SolicitudOverviewRow {
   obraSocial?: ObraSocialDeSolicitud | null;
   /** El último contrato de la persona, en cualquier proyecto (fechas YYYY-MM-DD). null = no tiene. */
   ultimoContrato?: { alta: string; baja: string | null; nombre: string; proyecto: string } | null;
+  /** Con qué se superpone lo pedido: la foto `metadata.avisosSuperposicion` (lo mismo que muestra el detalle). */
+  superposiciones?: Array<{ tipo: "horario" | "fechas"; mensaje: string }>;
 }
 
 /**
