@@ -6,7 +6,9 @@ export type NavbarEventType =
   | "tenantsChanged"
   | "rolesChanged"
   | "usersChanged"
-  | "tasksChanged";
+  | "tasksChanged"
+  /** Cambió la bandeja de Contratación (se aprobó o rechazó una solicitud): el menú recuenta. */
+  | "pendientesChanged";
 
 export type ChangeAction = "create" | "update" | "delete";
 
@@ -59,6 +61,10 @@ export const emitUsersChanged = (action: ChangeAction = "update", resourceId?: s
 
 export const emitTasksChanged = (action: ChangeAction = "update", resourceId?: string, clientId?: string) => {
   emitNavbarEvent("tasksChanged", { action, resourceId, clientId });
+};
+
+export const emitPendientesChanged = () => {
+  emitNavbarEvent("pendientesChanged");
 };
 
 export const createNavbarEventListener = (

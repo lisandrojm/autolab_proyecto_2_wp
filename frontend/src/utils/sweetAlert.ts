@@ -40,6 +40,21 @@ export const sweetAlert = {
     });
   },
 
+  /**
+   * Éxito centrado que se cierra solo: más visible que el toast de la esquina, sin botón que apretar.
+   * Lo usa la aprobación de una solicitud (01/11/2026): el aviso y, al cerrarse, la fila que se va.
+   */
+  successBreve: (title: string, text?: string, ms = 1600) => {
+    return Swal.fire({
+      icon: "success",
+      title,
+      text,
+      timer: ms,
+      showConfirmButton: false,
+      timerProgressBar: true,
+    });
+  },
+
   error: (title: string, text?: string) => {
     return Swal.fire({
       icon: "error",

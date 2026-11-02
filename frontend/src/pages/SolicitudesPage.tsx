@@ -20,8 +20,9 @@ import { Modal } from "../components/ui/Modal";
 import { FilaConstatacion, PantallaValidarObrasSociales } from "../components/contratos/PantallaValidarObrasSociales";
 import { cuitEsValido } from "../utils/cuit";
 import { sweetAlert } from "../utils/sweetAlert";
+import { emitPendientesChanged } from "../utils/navbarEvents";
 import { getHelp, hasHelp } from "../data/help/helpContent";
-import { SolicitudVista, SolicitudesTable, resultadoEliminarSolicitud, textoEliminarSolicitud, useCatalogosDeSolicitudes } from "../components/solicitudes/SolicitudesTable";
+import { SolicitudVista, SolicitudesTable, resultadoEliminarSolicitud, textoEliminarSolicitud, useCatalogosDeSolicitudes, MS_SALIDA_FILA } from "../components/solicitudes/SolicitudesTable";
 import { SolicitudDetalleModal } from "../components/solicitudes/SolicitudDetalleModal";
 import { CalificacionesModal } from "../components/calificaciones/CalificacionesModal";
 import { calificacionesAPI } from "../api/calificaciones";
@@ -88,6 +89,8 @@ export const SolicitudesPage: React.FC = () => {
   const catalogos = useCatalogosDeSolicitudes();
   /** Qué solicitud se está aprobando: abre el wizard del proyecto encima de esta pantalla. */
   const [aprobando, setAprobando] = useState<{ projectId: string; solicitudId: string; editarContrato?: { userId: string; contractIndex: number } } | null>(null);
+  /** Las recién aprobadas que se están deslizando fuera de la tabla, rumbo a Contratos. */
+  const [saliendo, setSaliendo] = useState<Set<string>>(new Set());
   /** La solicitud que se está revisando: el detalle completo, antes de decidir. */
   const [revisando, setRevisando] = useState<SolicitudVista | null>(null);
   /** La persona de una renovación que se está calificando (desde el detalle). */
@@ -195,6 +198,7 @@ export const SolicitudesPage: React.FC = () => {
       await usersAPI.setSolicitudStatus(s._id, status, motivo);
       setRevisando(null);
       sweetAlert.success(status === "rechazada" ? "Solicitud rechazada" : "Solicitud reabierta", status === "rechazada" ? "La solicitud quedó marcada como rechazada." : "Volvió a quedar pendiente de aprobación.");
+      emitPendientesChanged();
       cargar(page);
     } catch (error: any) {
       sweetAlert.error("Error", error.response?.data?.error || "No se pudo cambiar el estado de la solicitud.");
@@ -442,6 +446,7 @@ export const SolicitudesPage: React.FC = () => {
         `Quedaron pendientes (y seleccionadas); aprobalas con «Aprobar»:\n\n${pendientes.join("\n")}`,
       );
     } else sweetAlert.success("Solicitudes aprobadas", `Se aprobaron ${aprobadas}: cada una ya tiene su contrato y se sigue en Contratos.`);
+    if (aprobadas > 0) emitPendientesChanged();
     cargar(page);
   };
 
@@ -665,6 +670,7 @@ export const SolicitudesPage: React.FC = () => {
             </Modal>
           )}
           <SolicitudesTable
+            saliendo={saliendo}
             seleccionadas={new Set(seleccion.keys())}
             onCambiarSeleccion={cambiarSeleccion}
             onSeleccionarTodas={() => void seleccionarTodas()}
@@ -720,12 +726,28 @@ export const SolicitudesPage: React.FC = () => {
                   cargar(page);
                 },
                 onAprobada: () => {
-                  // La fila pasa a «aprobada» en el acto y después se recarga del server (el estado ya está guardado).
                   const id = aprobando.solicitudId;
-                  // Aprobada ya no es de esta pantalla: sale de la lista en el acto (sigue en Contratos).
-                  setRows((prev) => prev.filter((r: any) => r._id !== id));
+                  const nombre = (rows.find((r: any) => r._id === id) as any)?.nombre || "La persona";
                   setAprobando(null);
-                  cargar(page);
+                  // El menú recuenta ya: una solicitud menos, un alta más en Contratos.
+                  emitPendientesChanged();
+                  /*
+                    APROBADA, Y SE VE QUE SE VA A CONTRATOS (01/11/2026, pedido del usuario): primero el aviso
+                    centrado; al cerrarse, la fila se desliza hacia la izquierda y recién ahí sale de la lista
+                    y se recarga. Una aprobada ya no es de esta pantalla (sigue en Contratos).
+                  */
+                  void sweetAlert.successBreve("Solicitud aprobada", `${nombre} pasa a Contratos.`).then(() => {
+                    setSaliendo((prev) => new Set(prev).add(id));
+                    window.setTimeout(() => {
+                      setRows((prev) => prev.filter((r: any) => r._id !== id));
+                      setSaliendo((prev) => {
+                        const s = new Set(prev);
+                        s.delete(id);
+                        return s;
+                      });
+                      cargar(page);
+                    }, MS_SALIDA_FILA);
+                  });
                 },
               }}
             />

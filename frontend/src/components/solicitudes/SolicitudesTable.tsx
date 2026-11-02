@@ -290,9 +290,17 @@ interface SolicitudesTableProps {
    */
   onSeleccionarTodas?: () => void;
   totalSeleccionable?: number;
+  /**
+   * Las recién aprobadas que se están yendo (01/11/2026): se deslizan hacia la izquierda y se apagan,
+   * para que se entienda que pasaron a Contratos. La pantalla las saca de la lista al terminar.
+   */
+  saliendo?: Set<string>;
 }
 
-export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, onEditarAprobada, onVerDetalle, seleccionadas, onCambiarSeleccion, renderObraSocial, onSeleccionarTodas, totalSeleccionable }) => {
+/** Lo que dura la salida de una fila aprobada (la pantalla espera esto antes de sacarla). */
+export const MS_SALIDA_FILA = 700;
+
+export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, onEditarAprobada, onVerDetalle, seleccionadas, onCambiarSeleccion, renderObraSocial, onSeleccionarTodas, totalSeleccionable, saliendo }) => {
   const { resolverRolFrame, resolverTramite, resolverTipoContrato } = catalogos;
   const conSeleccion = !!seleccionadas && !!onCambiarSeleccion;
   // La casilla del encabezado marca o desmarca las de ESTA página (la selección de otras páginas se conserva).
@@ -392,7 +400,12 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 necesita leerlos antes de decidir, no después. Los botones de la última columna
                 siguen funcionando como atajo, cortando la propagación del click.
               */
-              <tr key={s._id} onClick={onVerDetalle ? () => onVerDetalle(s) : undefined} className={`group border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${onVerDetalle ? "cursor-pointer" : ""} ${filaApagada ? "opacity-60 bg-gray-50/60 dark:bg-gray-900/30" : ""} ${seleccionadas?.has(s._id) ? "bg-blue-50/70 dark:bg-blue-900/20" : ""}`}>
+              <tr
+                key={s._id}
+                onClick={onVerDetalle && !saliendo?.has(s._id) ? () => onVerDetalle(s) : undefined}
+                style={saliendo?.has(s._id) ? { transform: "translateX(-110%)", opacity: 0, transition: `transform ${MS_SALIDA_FILA}ms ease-in, opacity ${MS_SALIDA_FILA}ms ease-in`, pointerEvents: "none" } : undefined}
+                className={`group border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${onVerDetalle ? "cursor-pointer" : ""} ${filaApagada ? "opacity-60 bg-gray-50/60 dark:bg-gray-900/30" : ""} ${seleccionadas?.has(s._id) ? "bg-blue-50/70 dark:bg-blue-900/20" : ""} ${saliendo?.has(s._id) ? "bg-green-50 dark:bg-green-900/20" : ""}`}
+              >
                 {conSeleccion && (
                   <td className={`sticky left-0 z-[5] w-10 min-w-[2.5rem] pl-4 py-3 ${fondoFijo}`} onClick={(e) => e.stopPropagation()}>
                     <input type="checkbox" checked={!!seleccionadas?.has(s._id)} onChange={() => alternar(s._id)} aria-label={`Seleccionar a ${s.nombre}`} className="h-4 w-4 rounded cursor-pointer" />

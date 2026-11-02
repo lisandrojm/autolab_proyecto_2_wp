@@ -2928,7 +2928,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
       const wasApproving = !!approvingSolicitudId;
       const nombre = selectedUserForWizard.metadata?.fullName || selectedUserForWizard.firstName || 'El usuario';
-      sweetAlert.success(renovando ? 'Contrato renovado' : wasApproving ? 'Solicitud Aprobada' : isExistingMember ? 'Miembro Actualizado' : 'Miembro Agregado', renovando ? `${nombre} tiene un contrato nuevo; el vencido quedó en su historial. Ya está en Contratos › Trámite impositivo para gestionarlo.` : `${nombre} ha sido ${wasApproving ? 'aprobado e incorporado al equipo' : isExistingMember ? 'actualizado' : 'incorporado al equipo'}.`);
+      // Aprobada desde Solicitudes, el aviso lo da esa pantalla (centrado, y después la fila se va a Contratos).
+      if (!(soloAprobacion && wasApproving)) sweetAlert.success(renovando ? 'Contrato renovado' : wasApproving ? 'Solicitud Aprobada' : isExistingMember ? 'Miembro Actualizado' : 'Miembro Agregado', renovando ? `${nombre} tiene un contrato nuevo; el vencido quedó en su historial. Ya está en Contratos › Trámite impositivo para gestionarlo.` : `${nombre} ha sido ${wasApproving ? 'aprobado e incorporado al equipo' : isExistingMember ? 'actualizado' : 'incorporado al equipo'}.`);
 
       /*
         MODO «SÓLO APROBACIÓN» (abierto desde Solicitudes): el alta ya está guardada y la solicitud ya
@@ -4416,6 +4417,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           soloAprobacion?.onCerrar();
         }}
         title={renovando ? 'Renovar contrato' : esEdicionMiembro ? 'Configurar Miembro' : 'Agregar Miembro'}
+        // Desde Solicitudes, la tabla se sigue viendo atrás (01/11/2026): con el velo oscuro y desenfocado parecía otra pantalla.
+        fondoSuave={!!soloAprobacion}
         subtitle={
           selectedUserForWizard ? (
             <div className="flex flex-col gap-0.5">
@@ -5752,7 +5755,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     return (
       <>
         {!selectedUserForWizard && (
-          <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/40">
+          <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/20">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           </div>
         )}

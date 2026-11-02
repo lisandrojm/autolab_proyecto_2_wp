@@ -16,6 +16,7 @@ import { usersAPI } from '../api/users';
 import { SettingsModal } from './SettingsModal';
 import { useClientContextStore } from '../stores/clientContextStore';
 import { useEmpresaContextStore } from '../stores/empresaContextStore';
+import { createNavbarEventListener } from '../utils/navbarEvents';
 
 interface AdminCounts {
   clients: number;
@@ -311,6 +312,9 @@ export const MobileNavbar: React.FC = () => {
     llevarse puesto el resto del menú.
   */
   const [pendientes, setPendientes] = useState({ solicitudes: 0, contratos: 0 });
+  // Aprobar desde Solicitudes no cambia de ruta: la pantalla avisa con `pendientesChanged` y se recuenta.
+  const [recontar, setRecontar] = useState(0);
+  useEffect(() => createNavbarEventListener('pendientesChanged', () => setRecontar((n) => n + 1)), []);
   useEffect(() => {
     let cancelado = false;
     Promise.all([
@@ -323,7 +327,7 @@ export const MobileNavbar: React.FC = () => {
       cancelado = true;
     };
     // `location.pathname`: al volver de aprobar o rechazar algo, el número tiene que estar al día.
-  }, [hasPermission, user, location.pathname]);
+  }, [hasPermission, user, location.pathname, recontar]);
 
   useEffect(() => {
     const fetchAdminCounts = async () => {

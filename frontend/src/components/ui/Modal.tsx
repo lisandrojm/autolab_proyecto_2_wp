@@ -12,9 +12,14 @@ interface ModalProps {
   footer?: React.ReactNode;
   zIndex?: number;
   customHeader?: React.ReactNode;
+  /**
+   * Fondo apenas oscurecido y SIN desenfoque: la pantalla de atrás se sigue leyendo. Para los modales
+   * que se abren encima de otra pantalla y conviene no perderla de vista (aprobar desde Solicitudes).
+   */
+  fondoSuave?: boolean;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, children, size = "md", footer, zIndex = 50, customHeader }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, children, size = "md", footer, zIndex = 50, customHeader, fondoSuave }) => {
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
 
@@ -64,7 +69,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
     <div className="fixed inset-0 overflow-y-auto" style={{ zIndex }}>
       <div className={`flex min-h-screen items-center justify-center ${size === "full" ? "p-4" : isFullscreen ? "p-2" : "p-4"}`}>
         {/* Backdrop */}
-        <div className="fixed inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm transition duration-200 z-[1]" onClick={onClose} />
+        <div className={`fixed inset-0 transition duration-200 z-[1] ${fondoSuave ? "bg-black/20 dark:bg-black/30" : "bg-black/40 dark:bg-black/60 backdrop-blur-sm"}`} onClick={onClose} />
 
         {/* Panel */}
         <div className={`relative z-[2] bg-white dark:bg-gray-800 shadow-xl w-full ${getSizeClasses()} overflow-hidden flex flex-col ${size === "full" ? "rounded-xl" : "rounded-2xl"} ${!isFullscreen ? "max-h-[90vh]" : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={subtitleId} onClick={(e) => e.stopPropagation()}>
