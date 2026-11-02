@@ -223,7 +223,8 @@ interface IContract {
      * volver a intentar).
      */
     altaArcaPresentada?: {
-        via: "carga_masiva" | "altas_masivas";
+        /** `verificacion`: no se presentó desde WeProdu; se encontró ya hecha en ARCA (ver `verificacionAltas.ts`). */
+        via: "carga_masiva" | "altas_masivas" | "verificacion";
         fecha: Date;
         /**
          * `presentando`: se escribió justo ANTES de apretar «Aceptar» en ARCA y todavía no hay resultado.
@@ -256,6 +257,26 @@ interface IContract {
      * cada resultado; este no se borra nunca.
      */
     enviosArca?: number;
+    /**
+     * LA ÚLTIMA VERIFICACIÓN EN ARCA de un alta trabada por «ARCA ya tiene un alta de ese día» (pedido del
+     * 02/11/2026, ver `services/arca/verificacionAltas.ts`). `presentada`: el alta ya estaba en ARCA y el
+     * contrato quedó presentado (con `altaArcaPresentada.via = "verificacion"`). `revision_manual`: lo que
+     * se vio no alcanza para decidir solo; `motivo` dice qué mirar. El detalle crudo (la pantalla de ARCA)
+     * queda en `ArcaVerificacionAlta` (`auditoriaId`).
+     */
+    verificacionArca?: {
+        el: Date;
+        resultado: "presentada" | "revision_manual";
+        motivo: string;
+        relacion?: {
+            inicio: string;
+            fin: string;
+            baja?: string;
+        };
+        automatica?: boolean;
+        usuarioId?: Types.ObjectId;
+        auditoriaId?: Types.ObjectId;
+    };
     altaDocumentoUrl?: string;
     altaDocumentoNombre?: string;
     /**

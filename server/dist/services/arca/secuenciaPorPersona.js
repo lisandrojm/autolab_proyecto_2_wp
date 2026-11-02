@@ -2,6 +2,7 @@ import { fechaCorta, textoAltaQueSePisa } from "./altasVigentes.js";
 import { diaArgentina, proximaCorridaPara, sumarDias } from "./horarioAltasAutomaticas.js";
 import { LAYOUT_85 } from "../../compartido/layoutAltaArca.js";
 import { fechaISO } from "../../utils/contratoVigencia.js";
+import { venceAltaPresentada } from "../../compartido/arca/vigenciaAltaPresentada.js";
 /**
  * LAS ALTAS DE UNA PERSONA SALEN EN SECUENCIA, por empleadora (pedido del 01/11/2026). Puro: Mongo entra
  * por parámetro. Lo usan la presentación automática (`presentacionAutomatica.ts`) y la validación del
@@ -53,6 +54,7 @@ export function bloqueoPorVigencia(contrato, presentadas, relacionesArca, o) {
     if (mismoDiaArca) {
         return {
             tipo: "mismo_dia",
+            mismoDiaEn: "arca",
             motivo: `ARCA ya tiene registrada una relación con esta empleadora que empieza el ${fechaCorta(alta)}: revisar si esta alta ya está hecha (por ejemplo, presentada a mano o un contrato duplicado). No se presenta para no repetir el rechazo por alta activa.`,
             hasta: "",
             desbloqueo: "Revisar a mano: ARCA ya tiene un alta de ese día.",
@@ -62,6 +64,7 @@ export function bloqueoPorVigencia(contrato, presentadas, relacionesArca, o) {
     if (mismoDiaW) {
         return {
             tipo: "mismo_dia",
+            mismoDiaEn: "weprodu",
             motivo: `Ya se presentó en ARCA otro contrato de esta persona con esta empleadora que empieza el mismo día (${fechaCorta(alta)}): revisar si éste es un duplicado. No se presenta para no repetir el rechazo por alta activa.`,
             hasta: "",
             desbloqueo: "Revisar a mano: ya se presentó un alta de ese día.",
@@ -100,7 +103,8 @@ export function bloqueoPorVigencia(contrato, presentadas, relacionesArca, o) {
             continue;
         }
         const diaPresentada = p.presentadaEl && Number.isFinite(Date.parse(p.presentadaEl)) ? diaArgentina(new Date(p.presentadaEl)) : "";
-        const vence = mayor(p.baja, diaPresentada);
+        // La misma regla que muestra el aviso de «Forzar alta» (ver `compartido/arca/vigenciaAltaPresentada.ts`).
+        const vence = venceAltaPresentada(p.baja, diaPresentada);
         if (vence < o.hoy)
             continue; // ARCA ya procesó el vencimiento
         opciones.push({

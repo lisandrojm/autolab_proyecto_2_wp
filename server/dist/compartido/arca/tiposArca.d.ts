@@ -27,7 +27,8 @@ export interface SinCuitValidacion {
     fechaSeguimiento?: string;
 }
 export interface AltaArcaPresentada {
-    via: "carga_masiva" | "altas_masivas";
+    /** `verificacion`: se encontró ya hecha en ARCA, no se presentó desde WeProdu. */
+    via: "carga_masiva" | "altas_masivas" | "verificacion";
     fecha: string;
     /** `presentando`: se marcó antes del «Aceptar» de ARCA y la corrida se cortó sin resultado. */
     resultado: "presentada" | "indeterminado" | "fallida" | "presentando";

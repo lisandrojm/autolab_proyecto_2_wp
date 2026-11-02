@@ -70,7 +70,7 @@ const contractSchema = new Schema({
     obraSocialAplicadaPor: { type: Schema.Types.ObjectId, ref: "User", default: null },
     altaArcaPresentada: {
         type: new Schema({
-            via: { type: String, enum: ["carga_masiva", "altas_masivas"] },
+            via: { type: String, enum: ["carga_masiva", "altas_masivas", "verificacion"] },
             fecha: { type: Date },
             resultado: { type: String, enum: ["presentada", "indeterminado", "fallida", "presentando"] },
             codigoNovedad: { type: String },
@@ -87,6 +87,19 @@ const contractSchema = new Schema({
         default: undefined,
     },
     enviosArca: { type: Number },
+    // La última verificación en ARCA de un alta trabada por «ARCA ya tiene un alta de ese día»: ver `IContract.verificacionArca`.
+    verificacionArca: {
+        type: new Schema({
+            el: { type: Date },
+            resultado: { type: String, enum: ["presentada", "revision_manual"] },
+            motivo: { type: String },
+            relacion: { type: new Schema({ inicio: String, fin: String, baja: String }, { _id: false }), default: undefined },
+            automatica: { type: Boolean },
+            usuarioId: { type: Schema.Types.ObjectId, ref: "User" },
+            auditoriaId: { type: Schema.Types.ObjectId, ref: "ArcaVerificacionAlta" },
+        }, { _id: false }),
+        default: undefined,
+    },
     altaDocumentoUrl: { type: String },
     altaDocumentoNombre: { type: String },
     altaConstancia: { type: new Schema({ clave: String, nroTramite: String, validadaEl: Date, vaAFirma: Boolean, archivadaEn: String, enviadaComo: String, origen: { type: String, enum: ["automatica", "descarga", "subida"] }, porUsuarioId: { type: Schema.Types.ObjectId, ref: "User" } }, { _id: false }) },

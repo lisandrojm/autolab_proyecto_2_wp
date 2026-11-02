@@ -19,6 +19,11 @@ export interface Bloqueo {
      * vencimiento (o no tiene baja).
      */
     tipo: "mismo_dia" | "activa_arca" | "presentada";
+    /**
+     * En `mismo_dia`, dónde está el alta de ese día: `arca` (la sincronización la trajo; se puede verificar
+     * en ARCA, ver `verificacionAltas.ts`) o `weprodu` (otro contrato ya presentado: un duplicado a revisar).
+     */
+    mismoDiaEn?: "arca" | "weprodu";
     /** Por qué no se presenta todavía: va a la pantalla y al error del lote. */
     motivo: string;
     /** Hasta qué día dura lo que la traba, "YYYY-MM-DD"; vacío = sin baja conocida en ningún lado. */

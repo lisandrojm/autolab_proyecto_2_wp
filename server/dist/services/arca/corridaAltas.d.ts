@@ -2,6 +2,16 @@ import { ItemLoteAltas, LoteAltasValidado } from "./validarLoteAltas.js";
 import { EventoTandas } from "./tandasAltas.js";
 import type { ModoAltas } from "./cotejoAltas.js";
 /**
+ * PRESENTADA EN ARCA → GENERAR DOCUMENTOS (01/11/2026, pedido del usuario). Apenas ARCA confirma el
+ * alta, el trámite impositivo terminó: el contrato pasa al estado que alimenta la carpeta de altas
+ * (el mismo al que lo lleva la constancia, ver `registrarAltaDeContrato`), sin esperar a que se baje
+ * la constancia. La constancia se sigue bajando igual —la busca por `altaArcaPresentada`, no por el
+ * estado— y cuando llega ya no mueve nada («ya_estaba»).
+ *
+ * Sólo hacia adelante (`aplicarTransicion`), y nunca corta la corrida: si falla, queda el log.
+ */
+export declare function avanzarPresentada(userProjectId: string, contractIndex: number): Promise<void>;
+/**
  * PRESENTAR ALTAS EN ARCA DESDE EL SERVIDOR: Carga Masiva (archivo de 130) o Altas Masivas (pegado
  * de 85, de a 9 por tanda: cualquier cantidad, en tandas sucesivas — ver `tandasAltas.ts`).
  *

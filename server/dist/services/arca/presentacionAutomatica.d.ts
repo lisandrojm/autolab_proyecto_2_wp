@@ -47,6 +47,26 @@ export interface CandidatoAlta {
     motivo: string;
     /** El registro de 85, si está completo. */
     registro: string | null;
+    /**
+     * Trabada porque ARCA ya tiene un alta de ese día (la sincronización la trajo): se puede verificar en
+     * ARCA en vez de esperar a que alguien la mire (ver `verificacionAltas.ts`).
+     */
+    verificable: boolean;
+    /** Otro contrato de WeProdu de la misma persona y empleadora, ya presentado, empieza el mismo día (un duplicado). */
+    otroContratoMismoDia: boolean;
+    /** La última verificación en ARCA, si la hubo (ver `IContract.verificacionArca`). */
+    verificacion: {
+        el: string;
+        resultado: "presentada" | "revision_manual";
+        motivo: string;
+        relacion?: {
+            inicio: string;
+            fin: string;
+            baja?: string;
+        };
+        automatica: boolean;
+        auditoriaId: string;
+    } | null;
 }
 /**
  * Las altas tempranas pendientes de presentar del tenant, con su registro armado o el motivo por el

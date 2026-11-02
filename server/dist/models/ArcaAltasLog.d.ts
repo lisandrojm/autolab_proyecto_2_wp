@@ -13,7 +13,8 @@ import { Document, Model, Types } from "mongoose";
  */
 export interface IArcaAltasLog extends Document {
     tenantId: Types.ObjectId;
-    tipo: "carga_masiva" | "altas_masivas";
+    /** `verificacion`: no presentó nada; registra las altas que la verificación encontró ya hechas en ARCA (`verificacionAltas.ts`). */
+    tipo: "carga_masiva" | "altas_masivas" | "verificacion";
     usuarioId?: Types.ObjectId;
     /** La lanzó la presentación automática de las 14 h: no hay persona detrás. */
     automatica?: boolean;

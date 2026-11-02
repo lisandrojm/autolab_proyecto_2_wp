@@ -110,7 +110,7 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
         // Buscar usuarios con este email
         const users = await User.find({ email, "metadata.activo": true }).populate("roles", "name permissions").populate("tenantId", "_id name slug");
         if (users.length === 0) {
-            res.status(401).json({ error: "Invalid credentials" });
+            res.status(401).json({ error: "Credenciales inválidas" });
             return;
         }
         // Si hay múltiples tenants y no se especificó uno
@@ -131,7 +131,7 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
         if (tenantSlug) {
             user = users.find((u) => u.tenantId.slug === tenantSlug);
             if (!user) {
-                res.status(401).json({ error: "Invalid credentials" });
+                res.status(401).json({ error: "Credenciales inválidas" });
                 return;
             }
         }
@@ -140,7 +140,7 @@ router.post("/login", validate(loginWithClientSchema), async (req, res) => {
         }
         // Verificar password
         if (!(await user.comparePassword(password))) {
-            res.status(401).json({ error: "Invalid credentials" });
+            res.status(401).json({ error: "Credenciales inválidas" });
             return;
         }
         const tenantId = user.tenantId._id;

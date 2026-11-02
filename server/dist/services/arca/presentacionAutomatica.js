@@ -125,7 +125,7 @@ export async function candidatosDeAlta(tenantObjectId, opts = {}) {
     const CAMPOS = [
         "fecha_alta_contrato", "fecha_baja_contrato", "nombre_contrato", "nombre_estado_empleado", "altaArcaPresentada", "empresaContratoId", "nombre_empresa_contrato",
         "puestoDesempenado", "categoria_sat_id", "rol_frame_id", "sede_id", "tipo_contrato_id", "sucursalArcaId", "actividadArca",
-        "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "solicitudId", "origen", "enviosArca",
+        "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "solicitudId", "origen", "enviosArca", "verificacionArca",
         /*
           LOS IMPORTES Y LOS DÍAS (01/11/2026): de ellos sale la retribución pactada (`retribucionPactada.ts`).
           La fila los lee desde el 28/10, pero no viajaban: sin ellos la retribución daba «falta» y la
@@ -272,6 +272,7 @@ export async function candidatosDeAlta(tenantObjectId, opts = {}) {
         let desbloqueo = "";
         let bloqueo = null;
         let trabadoPorRechazo = false;
+        let otroContratoMismoDia = false;
         // Terminado, rechazado por el padrón o rechazado varias veces: todo informativo, todos siguen en la cola.
         const terminado = yaTermino(fechaBaja, hoy);
         const fallida = c.altaArcaPresentada?.resultado === "fallida";
@@ -310,6 +311,7 @@ export async function candidatosDeAlta(tenantObjectId, opts = {}) {
                 const cuitEmpresa = digitos(empresa.cuit);
                 const rels = relacionesArca.filter((r) => r.cuil === digitos(u.metadata?.cuit) && r.empleadoraCuit === cuitEmpresa);
                 bloqueo = bloqueoPorVigencia({ userId: String(up.userId), userProjectId: String(up._id), contractIndex: i, empresaId, alta: fechaAlta, baja: fechaBaja }, presentadas, rels, { hoy });
+                otroContratoMismoDia = presentadas.some((p) => p.userId === String(up.userId) && p.empresaId === empresaId && p.alta === fechaAlta && !(p.userProjectId === String(up._id) && p.contractIndex === i));
                 if (bloqueo) {
                     motivo = bloqueo.motivo;
                     desbloqueo = bloqueo.desbloqueo;
@@ -356,6 +358,9 @@ export async function candidatosDeAlta(tenantObjectId, opts = {}) {
             envios: Number(c.enviosArca || 0),
             motivo,
             registro: motivo ? null : registro,
+            verificable: bloqueo?.tipo === "mismo_dia" && bloqueo.mismoDiaEn === "arca",
+            otroContratoMismoDia,
+            verificacion: verificacionDe(c.verificacionArca),
         });
     }
     /*
@@ -403,6 +408,19 @@ export async function candidatosDeAlta(tenantObjectId, opts = {}) {
     if (Date.now() - t0 > 2000)
         console.log(`[altas-automaticas] candidatos: ${out.length} en ${Date.now() - t0} ms (contratos ${msFilas} ms)`);
     return out;
+}
+/** La verificación guardada en el contrato, tal como viaja a la pantalla. */
+function verificacionDe(v) {
+    if (!v?.el || (v.resultado !== "presentada" && v.resultado !== "revision_manual"))
+        return null;
+    return {
+        el: new Date(v.el).toISOString(),
+        resultado: v.resultado,
+        motivo: String(v.motivo || ""),
+        ...(v.relacion?.inicio ? { relacion: { inicio: String(v.relacion.inicio), fin: String(v.relacion.fin || ""), baja: v.relacion.baja ? String(v.relacion.baja) : undefined } } : {}),
+        automatica: !!v.automatica,
+        auditoriaId: v.auditoriaId ? String(v.auditoriaId) : "",
+    };
 }
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 /** Espera a que se cumpla la condición, mirando cada 5 s. false si se venció el plazo. */

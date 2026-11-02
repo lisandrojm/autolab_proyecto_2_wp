@@ -2042,6 +2042,9 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
                 // Sólo las aprobadas: la obra social del contrato que dejó su aprobación.
                 obraSocial: obraSocialPorSolicitud.get(String(u._id)) || null,
                 ultimoContrato: ultimoContratoDe(personaId, String(u._id), m.startDate),
+                // Lo que el detalle muestra en «Se superpone con contrato que ya tiene» (la foto que sacó el server al
+                // pedirla o editarla, ver `services/superposicion.ts`): la tabla lo marca en la columna Solicitud.
+                superposiciones: Array.isArray(m.avisosSuperposicion) ? m.avisosSuperposicion.map((a) => ({ tipo: a?.tipo === "horario" ? "horario" : "fechas", mensaje: String(a?.mensaje || "") })) : [],
             };
         });
         res.json({ rows, total, page, totalPages: Math.max(1, Math.ceil(total / limit)) });

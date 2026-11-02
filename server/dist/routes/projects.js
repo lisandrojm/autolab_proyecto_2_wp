@@ -27,6 +27,8 @@ import { arrancarCorrida, corridaColgada, corridaDe, destrabarCorridaColgada, de
 import { arrancarCorridaAltas, corridaAltasDe, detenerCorridaAltas, enSecoForzado } from "../services/arca/corridaAltas.js";
 import { valoracionesDeCategoria } from "../compartido/valoracionesDeCategoria.js";
 import { candidatosDeAlta, presentarCandidatos, forzadoAltasDe, registrarForzadoAltas } from "../services/arca/presentacionAutomatica.js";
+import { claveDe as claveVerificacion, itemDe, verificacionEnCursoDe, verificarAltasEnArca } from "../services/arca/verificacionAltas.js";
+import { ArcaVerificacionAlta } from "../models/ArcaVerificacionAlta.js";
 import { MAX_POR_EMPLEADORA, forzarDescargaConstancias, forzadoDe, proximaDescarga } from "../services/arca/descargaConstanciasAutomatica.js";
 import { pendientesDeConstanciaTodas } from "../services/arca/constanciasAltas.js";
 import { claveAreaTurnoDelMiembro } from "../utils/areaTurno.js";
@@ -3259,6 +3261,8 @@ router.get("/contratos/altas-arca/automatica", requireTenant, authenticateToken,
             maxIntentos: MAX_INTENTOS_AUTOMATICOS,
             // El forzado en masa («Forzar presentación de N»), si lo hubo: cómo va o cómo terminó cada corrida.
             forzado: forzadoAltasDe(String(req.tenantObjectId)) || null,
+            // «Reverificar en ARCA» en curso (o la última): qué filas esperan resultado.
+            verificacion: verificacionEnCursoDe(String(req.tenantObjectId)),
             // El registro no viaja: la pantalla no lo necesita y el servidor lo vuelve a armar al presentar.
             contratos: candidatos.map(({ registro: _registro, ...c }) => c),
         });
@@ -3306,6 +3310,69 @@ router.put("/contratos/altas-arca/automatica", requireTenant, authenticateToken,
         console.error("Put presentacion automatica error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
+});
+/**
+ * POST /contratos/altas-arca/automatica/verificar { items: [{ userProjectId, contractIndex }] } —
+ * «Reverificar en ARCA» (pedido del 02/11/2026): consulta ARCA por las altas trabadas porque ARCA ya
+ * tiene un alta de ese día y aplica lo que se decida (ver `verificacionAltas.ts`). SOLO LEE en ARCA.
+ * En segundo plano: vuelve enseguida y la pantalla sigue `verificacion` del GET /automatica.
+ */
+router.post("/contratos/altas-arca/automatica/verificar", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const tenantId = String(req.tenantObjectId);
+        const pedidas = (Array.isArray(req.body?.items) ? req.body.items : [])
+            .map((i) => ({ userProjectId: String(i?.userProjectId || ""), contractIndex: Number(i?.contractIndex) }))
+            .filter((i) => Types.ObjectId.isValid(i.userProjectId) && Number.isInteger(i.contractIndex) && i.contractIndex >= 0);
+        if (pedidas.length === 0) {
+            res.status(400).json({ error: "No hay altas para verificar." });
+            return;
+        }
+        const previa = verificacionEnCursoDe(tenantId);
+        if (previa && !previa.terminada) {
+            res.status(409).json({ error: "Ya hay una verificación en curso: esperá a que termine." });
+            return;
+        }
+        const todos = await candidatosDeAlta(req.tenantObjectId);
+        const claves = new Set(pedidas.map(claveVerificacion));
+        const elegidos = todos.filter((c) => claves.has(claveVerificacion(c)) && (c.verificable || c.otroContratoMismoDia));
+        if (elegidos.length === 0) {
+            res.status(400).json({ error: "Ninguna de las pedidas está trabada por un alta del mismo día en ARCA." });
+            return;
+        }
+        void verificarAltasEnArca({ tenantId, tenantObjectId: req.tenantObjectId, items: elegidos.map(itemDe), automatica: false, usuarioId: req.user?.userId }).catch((e) => console.error("[verificacion-altas] reverificar:", e?.message || e));
+        res.json({ arrancada: true, total: elegidos.length });
+    }
+    catch (error) {
+        console.error("Verificar altas error:", error);
+        res.status(500).json({ error: String(error?.message || "Internal server error") });
+    }
+});
+/** GET /contratos/altas-arca/verificaciones/:id — una verificación auditada (lo que se vio en ARCA y qué se hizo), sin la pantalla. */
+router.get("/contratos/altas-arca/verificaciones/:id", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    if (!Types.ObjectId.isValid(req.params.id)) {
+        res.status(400).json({ error: "Id inválido." });
+        return;
+    }
+    const v = await ArcaVerificacionAlta.findOne({ _id: req.params.id, tenantId: req.tenantObjectId }).select("-html").populate("usuarioId", "firstName lastName").lean();
+    if (!v) {
+        res.status(404).json({ error: "No se encontró esa verificación." });
+        return;
+    }
+    const conPantalla = await ArcaVerificacionAlta.exists({ _id: v._id, html: { $exists: true, $ne: "" } });
+    res.json({ ...v, usuario: v.usuarioId ? `${v.usuarioId.firstName || ""} ${v.usuarioId.lastName || ""}`.trim() : "", usuarioId: undefined, conPantalla: !!conPantalla });
+});
+/** GET /contratos/altas-arca/verificaciones/:id/html — la pantalla de Consultas de ARCA tal como quedó (anonimizada). */
+router.get("/contratos/altas-arca/verificaciones/:id/html", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    if (!Types.ObjectId.isValid(req.params.id)) {
+        res.status(400).json({ error: "Id inválido." });
+        return;
+    }
+    const v = await ArcaVerificacionAlta.findOne({ _id: req.params.id, tenantId: req.tenantObjectId }).select("html").lean();
+    if (!v?.html) {
+        res.status(404).json({ error: "Esa verificación no guardó la pantalla de ARCA." });
+        return;
+    }
+    res.type("text/plain").send(v.html);
 });
 /**
  * POST /contratos/altas-arca/automatica/forzar — presenta YA, sin esperar su día: una sola alta
@@ -3464,14 +3531,15 @@ router.post("/contratos/altas-arca/corrida/detener", requireTenant, authenticate
 router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
     try {
         const empresaId = String(req.query?.empresaId || "");
-        const filtro = { tenantId: req.tenantObjectId, tipo: "altas_masivas" };
+        // Con las de la verificación en ARCA: no presentaron nada, pero son altas que quedaron presentadas (ver `verificacionAltas.ts`).
+        const filtro = { tenantId: req.tenantObjectId, tipo: { $in: ["altas_masivas", "verificacion"] } };
         if (Types.ObjectId.isValid(empresaId))
             filtro.empresaId = new Types.ObjectId(empresaId);
         const logs = await ArcaAltasLog.find(filtro)
             .sort({ createdAt: -1 })
             .limit(200)
             // De `tandas`, los subcampos y NO `tandas.html`: pesa hasta 200 KB por tanda y se baja aparte (ver más abajo).
-            .select("createdAt usuarioId automatica empresaId empresaCuit empresaRazonSocial enSeco resultado motivoCorte error contratos duracionMs tandas.n tandas.resultado tandas.error tandas.textoArca tandas.dialogos tandas.duracionMs tandas.cuils tandas.textoNuevo tandas.enRojo")
+            .select("tipo createdAt usuarioId automatica empresaId empresaCuit empresaRazonSocial enSeco resultado motivoCorte error contratos duracionMs tandas.n tandas.resultado tandas.error tandas.textoArca tandas.dialogos tandas.duracionMs tandas.cuils tandas.textoNuevo tandas.enRojo")
             .populate("usuarioId", "firstName lastName")
             .lean();
         /*
@@ -3543,7 +3611,14 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
             _id: String(l._id),
             createdAt: l.createdAt,
             // La de las 14 h no tiene persona detrás: se dice que fue la automática.
-            usuario: l.automatica ? "Automática" : l.usuarioId ? `${l.usuarioId.firstName || ""} ${l.usuarioId.lastName || ""}`.trim() : "",
+            usuario: l.tipo === "verificacion"
+                ? `Verificación en ARCA${l.automatica ? " (automática)" : l.usuarioId ? ` · ${`${l.usuarioId.firstName || ""} ${l.usuarioId.lastName || ""}`.trim()}` : ""}`
+                : l.automatica
+                    ? "Automática"
+                    : l.usuarioId
+                        ? `${l.usuarioId.firstName || ""} ${l.usuarioId.lastName || ""}`.trim()
+                        : "",
+            tipo: l.tipo,
             // Como dato aparte, para filtrar sin depender del texto: la pestaña «Presentadas» muestra por defecto sólo estas.
             automatica: !!l.automatica,
             empresaId: l.empresaId ? String(l.empresaId) : "",
