@@ -145,6 +145,15 @@ export interface CandidatoAlta {
   motivo: string;
   /** El registro de 85, si está completo. */
   registro: string | null;
+  /**
+   * Trabada porque ARCA ya tiene un alta de ese día (la sincronización la trajo): se puede verificar en
+   * ARCA en vez de esperar a que alguien la mire (ver `verificacionAltas.ts`).
+   */
+  verificable: boolean;
+  /** Otro contrato de WeProdu de la misma persona y empleadora, ya presentado, empieza el mismo día (un duplicado). */
+  otroContratoMismoDia: boolean;
+  /** La última verificación en ARCA, si la hubo (ver `IContract.verificacionArca`). */
+  verificacion: { el: string; resultado: "presentada" | "revision_manual"; motivo: string; relacion?: { inicio: string; fin: string; baja?: string }; automatica: boolean; auditoriaId: string } | null;
 }
 
 /**
@@ -187,7 +196,7 @@ export async function candidatosDeAlta(
   const CAMPOS = [
     "fecha_alta_contrato", "fecha_baja_contrato", "nombre_contrato", "nombre_estado_empleado", "altaArcaPresentada", "empresaContratoId", "nombre_empresa_contrato",
     "puestoDesempenado", "categoria_sat_id", "rol_frame_id", "sede_id", "tipo_contrato_id", "sucursalArcaId", "actividadArca",
-    "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "solicitudId", "origen", "enviosArca",
+    "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "solicitudId", "origen", "enviosArca", "verificacionArca",
     /*
       LOS IMPORTES Y LOS DÍAS (01/11/2026): de ellos sale la retribución pactada (`retribucionPactada.ts`).
       La fila los lee desde el 28/10, pero no viajaban: sin ellos la retribución daba «falta» y la
@@ -333,6 +342,7 @@ export async function candidatosDeAlta(
     let desbloqueo = "";
     let bloqueo: Bloqueo | null = null;
     let trabadoPorRechazo = false;
+    let otroContratoMismoDia = false;
     // Terminado, rechazado por el padrón o rechazado varias veces: todo informativo, todos siguen en la cola.
     const terminado = yaTermino(fechaBaja, hoy);
     const fallida = c.altaArcaPresentada?.resultado === "fallida";
@@ -364,6 +374,7 @@ export async function candidatosDeAlta(
         const cuitEmpresa = digitos(empresa.cuit);
         const rels = relacionesArca.filter((r) => r.cuil === digitos(u.metadata?.cuit) && r.empleadoraCuit === cuitEmpresa);
         bloqueo = bloqueoPorVigencia({ userId: String(up.userId), userProjectId: String(up._id), contractIndex: i, empresaId, alta: fechaAlta, baja: fechaBaja }, presentadas, rels, { hoy });
+        otroContratoMismoDia = presentadas.some((p) => p.userId === String(up.userId) && p.empresaId === empresaId && p.alta === fechaAlta && !(p.userProjectId === String(up._id) && p.contractIndex === i));
         if (bloqueo) {
           motivo = bloqueo.motivo;
           desbloqueo = bloqueo.desbloqueo;
@@ -410,6 +421,9 @@ export async function candidatosDeAlta(
       envios: Number(c.enviosArca || 0),
       motivo,
       registro: motivo ? null : registro,
+      verificable: bloqueo?.tipo === "mismo_dia" && bloqueo.mismoDiaEn === "arca",
+      otroContratoMismoDia,
+      verificacion: verificacionDe(c.verificacionArca),
     });
   }
   /*
@@ -451,6 +465,19 @@ export async function candidatosDeAlta(
   out.sort((a, b) => a.fechaAlta.localeCompare(b.fechaAlta) || a.nombre.localeCompare(b.nombre, "es"));
   if (Date.now() - t0 > 2000) console.log(`[altas-automaticas] candidatos: ${out.length} en ${Date.now() - t0} ms (contratos ${msFilas} ms)`);
   return out;
+}
+
+/** La verificación guardada en el contrato, tal como viaja a la pantalla. */
+function verificacionDe(v: any): CandidatoAlta["verificacion"] {
+  if (!v?.el || (v.resultado !== "presentada" && v.resultado !== "revision_manual")) return null;
+  return {
+    el: new Date(v.el).toISOString(),
+    resultado: v.resultado,
+    motivo: String(v.motivo || ""),
+    ...(v.relacion?.inicio ? { relacion: { inicio: String(v.relacion.inicio), fin: String(v.relacion.fin || ""), baja: v.relacion.baja ? String(v.relacion.baja) : undefined } } : {}),
+    automatica: !!v.automatica,
+    auditoriaId: v.auditoriaId ? String(v.auditoriaId) : "",
+  };
 }
 
 const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));

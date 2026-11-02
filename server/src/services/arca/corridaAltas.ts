@@ -19,7 +19,7 @@ import { aplicarTransicion, estadoDestinoPorProposito } from "../estadoTransicio
  *
  * Sólo hacia adelante (`aplicarTransicion`), y nunca corta la corrida: si falla, queda el log.
  */
-async function avanzarPresentada(userProjectId: string, contractIndex: number): Promise<void> {
+export async function avanzarPresentada(userProjectId: string, contractIndex: number): Promise<void> {
   try {
     const destino = await estadoDestinoPorProposito("alta_temprana");
     if (!destino) return;

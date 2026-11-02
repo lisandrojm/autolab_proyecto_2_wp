@@ -1,7 +1,8 @@
 import { Tenant } from "../models/Tenant.js";
 import { hoyArgentina } from "../utils/contratoVigencia.js";
-import { correrPresentacionAutomatica } from "./arca/presentacionAutomatica.js";
-import { configDe, horaTexto, leTocaALaCola, yaPasoLaHora } from "./arca/horarioAltasAutomaticas.js";
+import { candidatosDeAlta, correrPresentacionAutomatica } from "./arca/presentacionAutomatica.js";
+import { configDe, diaArgentina, horaTexto, leTocaALaCola, yaPasoLaHora } from "./arca/horarioAltasAutomaticas.js";
+import { itemDe, verificarAltasEnArca } from "./arca/verificacionAltas.js";
 
 /**
  * EL HORARIO DE LA PRESENTACIÓN AUTOMÁTICA (ver `arca/presentacionAutomatica.ts` y
@@ -59,7 +60,8 @@ async function tick() {
         console.log(`[presentacion-automatica] ${id}: ${tipo === "dia" ? `corrida del día, ${horaTexto(cfg)} del ${hoy} (anticipación ${cfg.diasAntes} día/s)` : `cola (cada ${cfg.cadaMinutos} min)`}`);
         // La cola le deja el paso a la del día: si llega su hora mientras corre, corta entre lotes.
         const debeCortar = tipo === "cola" ? () => delDiaPendiente && yaPasoLaHora(cfg) : undefined;
-        const resumen = await correrPresentacionAutomatica(id, t._id, cfg, tipo, { debeCortar });
+        const resumen: any = await correrPresentacionAutomatica(id, t._id, cfg, tipo, { debeCortar });
+        if (tipo === "dia") resumen.verificaciones = await verificarTrabadas(id, t._id, hoy);
         await Tenant.updateOne({ _id: t._id }, { $set: { [`${BASE}.${campoResumen}`]: resumen } });
         console.log(`[presentacion-automatica] ${id} (${tipo}): ${resumen.empresas.map((e) => `${e.empresa} ${e.error ? `error: ${e.error}` : `${e.enviados} enviada(s)`}`).join(" · ") || "nada para presentar"}; ${resumen.omitidos.length} sin presentar`);
       } catch (e: any) {
@@ -69,6 +71,27 @@ async function tick() {
         enCurso.delete(id);
       }
     })();
+  }
+}
+
+/** Tope de verificaciones por corrida del día: las que sobran se miran mañana (como la descarga de constancias). */
+const MAX_VERIFICACIONES = 40;
+
+/**
+ * DESPUÉS DE LA CORRIDA DEL DÍA, se verifican en ARCA las altas trabadas por «ARCA ya tiene un alta de ese
+ * día» (ver `arca/verificacionAltas.ts`): una vez por día cada una, así una que quedó en revisión manual no
+ * consulta ARCA en cada pasada. Un error acá no toca el resumen de lo presentado.
+ */
+async function verificarTrabadas(tenantId: string, tenantObjectId: any, hoy: string) {
+  try {
+    const candidatos = await candidatosDeAlta(tenantObjectId);
+    const items = candidatos.filter((c) => c.verificable && !(c.verificacion && diaArgentina(new Date(c.verificacion.el)) === hoy)).slice(0, MAX_VERIFICACIONES);
+    if (items.length === 0) return [];
+    const r = await verificarAltasEnArca({ tenantId, tenantObjectId, items: items.map(itemDe), automatica: true });
+    return r.map((x) => ({ nombre: x.item.nombre, cuil: x.item.cuil, empresa: x.item.empresaRazonSocial, alta: x.item.alta, resultado: x.decision.accion, accion: x.accion, motivo: x.decision.motivo }));
+  } catch (e: any) {
+    console.error(`[presentacion-automatica] ${tenantId}: la verificación de altas trabadas falló:`, e?.message || e);
+    return [{ nombre: "", cuil: "", empresa: "", alta: "", resultado: "error", accion: "error", motivo: String(e?.message || e) }];
   }
 }
 

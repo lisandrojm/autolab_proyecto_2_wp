@@ -7,7 +7,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
-import { BOTONES, POR_RELEVAR, PREFIJO, TOPE_PEGADO, altaEnConsulta, boton, elegirEnResultadoDeConsulta, esperarResultadoDelPegado, fechaEnTexto, motivoDelRechazo, pantallaAltas, registroRechazadoDelPegado, textoNuevoDesde, topeDelPegado } from "./altas-arca.mjs";
+import { BOTONES, POR_RELEVAR, PREFIJO, TOPE_PEGADO, altaEnConsulta, isoDeFechaArca, relacionesDeConsulta, boton, elegirEnResultadoDeConsulta, esperarResultadoDelPegado, fechaEnTexto, motivoDelRechazo, pantallaAltas, registroRechazadoDelPegado, textoNuevoDesde, topeDelPegado } from "./altas-arca.mjs";
 
 // Con fin de línea normalizado: en un checkout de Windows (autocrlf) el archivo llega con CRLF, y los
 // tests que recortan la fuente por un marcador con salto de línea no lo encontraban.
@@ -401,4 +401,28 @@ test("el Server.Transfer que pasa por «otra» un instante no confunde la espera
 test("textoNuevoDesde: sólo los renglones nuevos, sin los que ya estaban", () => {
   assert.equal(textoNuevoDesde("a\nb", "a\nb\nc\n  c  \nd"), "c\nd");
   assert.equal(textoNuevoDesde("a", "a"), "");
+});
+
+test("isoDeFechaArca: dd/mm/aaaa (y variantes) → aaaa-mm-dd; lo demás vacío", () => {
+  assert.equal(isoDeFechaArca("09/10/2026"), "2026-10-09");
+  assert.equal(isoDeFechaArca("9.10.2026"), "2026-10-09");
+  assert.equal(isoDeFechaArca("2026-10-09"), "");
+  assert.equal(isoDeFechaArca(""), "");
+});
+
+test("relacionesDeConsulta: lee inicio y fin de cada tarjeta, y descarta la casilla «general» sin fecha de inicio", () => {
+  const casillas = [
+    { id: "chkTodos", fila: "" },
+    { id: "chk1", fila: "Sucursal 1 Convenio 634/11 Categoría Operador Fecha de Inicio: 09/10/2026 Fecha de C.A.T.: 08/10/2026 Fecha de Fin: 09/10/2026" },
+    { id: "chk2", fila: "Sucursal 1 Fecha de Inicio: 30/10/2026" },
+  ];
+  const r = relacionesDeConsulta(casillas);
+  assert.equal(r.length, 2);
+  assert.deepEqual([r[0].inicio, r[0].fin], ["2026-10-09", "2026-10-09"]);
+  assert.deepEqual([r[1].inicio, r[1].fin], ["2026-10-30", ""]);
+});
+
+test("relacionesDeConsulta: el fin de OTRA fecha de la tarjeta (C.A.T.) no se toma como fin", () => {
+  const r = relacionesDeConsulta([{ id: "a", fila: "Fecha de Inicio: 17/10/2026 Fecha de C.A.T.: 16/10/2026" }]);
+  assert.equal(r[0].fin, "");
 });

@@ -402,7 +402,7 @@ export const ContractActionsCell: React.FC<{ record: ContractOverviewRow; onDele
  * que más importa ver, porque es la que alguien podría volver a presentar sin mirar ARCA.
  */
 const InsigniaAltaPresentada: React.FC<{ a: AltaArcaPresentada }> = ({ a }) => {
-  const via = a.via === "altas_masivas" ? "Altas Masivas" : "Carga Masiva";
+  const via = a.via === "verificacion" ? "verificación en ARCA (ya estaba hecha)" : a.via === "altas_masivas" ? "Altas Masivas" : "Carga Masiva";
   const fecha = a.fecha ? new Date(a.fecha).toLocaleDateString("es-AR") : "";
   const estilo =
     a.resultado === "presentada"

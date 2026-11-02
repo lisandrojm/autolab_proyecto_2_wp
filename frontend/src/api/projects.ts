@@ -957,6 +957,22 @@ class ProjectsAPI {
     return data;
   }
 
+  /** «Reverificar en ARCA»: consulta ARCA por altas trabadas por un alta del mismo día (solo lectura en ARCA). Se sigue en `verificacion` del estado. */
+  async verificarAltasArca(items: Array<{ userProjectId: string; contractIndex: number }>): Promise<{ arrancada: boolean; total: number }> {
+    const { data } = await axios.post(`/contratos/altas-arca/automatica/verificar`, { items }, { headers: this.getHeaders() });
+    return data;
+  }
+  /** Una verificación auditada: lo que mostró ARCA y qué se hizo. */
+  async verificacionAltaArca(id: string): Promise<VerificacionAuditada> {
+    const { data } = await axios.get(`/contratos/altas-arca/verificaciones/${id}`, { headers: this.getHeaders() });
+    return data;
+  }
+  /** La pantalla de Consultas de ARCA de esa verificación (HTML anonimizado). */
+  async htmlVerificacionAltaArca(id: string): Promise<string> {
+    const { data } = await axios.get(`/contratos/altas-arca/verificaciones/${id}/html`, { headers: this.getHeaders(), responseType: "text" });
+    return String(data);
+  }
+
   /** Estado de la corrida de altas, con TODOS sus eventos. Se consulta por polling. */
   async estadoAltasArca(): Promise<EstadoCorridaAltas> {
     const { data } = await axios.get(`/contratos/altas-arca/corrida`, { headers: this.getHeaders() });
@@ -1197,6 +1213,38 @@ export interface AltaPendienteArca {
   /** Cuántas veces se mandó a ARCA (automática o forzada, con cualquier resultado). Un server anterior no lo manda. */
   envios?: number;
   motivo: string;
+  /** Trabada porque ARCA ya tiene un alta de ese día: se puede verificar en ARCA («Reverificar en ARCA»). */
+  verificable?: boolean;
+  /** Otro contrato de WeProdu ya presentado empieza el mismo día (duplicado). */
+  otroContratoMismoDia?: boolean;
+  /** La última verificación en ARCA, si la hubo. */
+  verificacion?: VerificacionDeAlta | null;
+}
+
+export interface VerificacionDeAlta {
+  el: string;
+  resultado: "presentada" | "revision_manual";
+  motivo: string;
+  relacion?: { inicio: string; fin: string; baja?: string };
+  automatica: boolean;
+  auditoriaId: string;
+}
+
+export interface VerificacionAuditada {
+  _id: string;
+  createdAt: string;
+  cuil: string;
+  nombre: string;
+  empresaRazonSocial?: string;
+  alta: string;
+  baja: string;
+  automatica: boolean;
+  usuario: string;
+  consulta: null | { ok: boolean; error?: string; encontrada?: boolean | null; relaciones?: Array<{ inicio: string; fin: string; baja?: string; texto?: string }> };
+  decision: "presentada" | "revision_manual";
+  motivo: string;
+  accion: string;
+  conPantalla: boolean;
 }
 
 /** El horario de las Altas Automáticas (ver `horarioAltasAutomaticas.ts` en el server). */
@@ -1273,6 +1321,8 @@ export interface ResumenCorridaAutomatica {
   tipo?: "dia" | "cola";
   empresas: Array<{ empresa: string; enviados: number; enSeco?: boolean; error?: string }>;
   omitidos: Array<{ nombre: string; cuil: string; empresa: string; motivo: string }>;
+  /** Las altas trabadas por un alta del mismo día que se verificaron en ARCA después de la corrida del día. */
+  verificaciones?: Array<{ nombre: string; cuil: string; empresa: string; alta: string; resultado: "presentada" | "revision_manual" | "error"; accion: string; motivo: string }>;
   error?: string;
 }
 
@@ -1287,6 +1337,8 @@ export interface EstadoPresentacionAutomatica {
   /** Cuántas veces insiste la automática con una rechazada antes de dejarla marcada (3). */
   maxIntentos?: number;
   /** El último «Forzar presentación de N»: una corrida por empleadora (y por vuelta), con cómo terminó cada una. */
+  /** «Reverificar en ARCA» en curso o la última: qué filas esperan resultado. */
+  verificacion?: null | { arrancadaEl: string; claves: string[]; terminada: boolean; resultados: Array<{ clave: string; nombre: string; resultado: string; motivo: string }>; error?: string };
   forzado?: null | { arrancadoEl: string; total: number; empresas: string[]; resultados: Array<{ empresa: string; enviados: number; enSeco?: boolean; error?: string }>; omitidas: Array<{ nombre: string; motivo: string }>; terminado: boolean };
   ultimaCorrida: null | ResumenCorridaAutomatica;
   /** Modo frecuente: la última pasada de la cola y cuándo es la próxima (ISO). */

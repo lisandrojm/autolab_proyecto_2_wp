@@ -61,6 +61,11 @@ export interface Bloqueo {
    * vencimiento (o no tiene baja).
    */
   tipo: "mismo_dia" | "activa_arca" | "presentada";
+  /**
+   * En `mismo_dia`, dónde está el alta de ese día: `arca` (la sincronización la trajo; se puede verificar
+   * en ARCA, ver `verificacionAltas.ts`) o `weprodu` (otro contrato ya presentado: un duplicado a revisar).
+   */
+  mismoDiaEn?: "arca" | "weprodu";
   /** Por qué no se presenta todavía: va a la pantalla y al error del lote. */
   motivo: string;
   /** Hasta qué día dura lo que la traba, "YYYY-MM-DD"; vacío = sin baja conocida en ningún lado. */
@@ -83,6 +88,7 @@ export function bloqueoPorVigencia(contrato: ContratoPendiente, presentadas: Alt
   if (mismoDiaArca) {
     return {
       tipo: "mismo_dia",
+      mismoDiaEn: "arca",
       motivo: `ARCA ya tiene registrada una relación con esta empleadora que empieza el ${fechaCorta(alta)}: revisar si esta alta ya está hecha (por ejemplo, presentada a mano o un contrato duplicado). No se presenta para no repetir el rechazo por alta activa.`,
       hasta: "",
       desbloqueo: "Revisar a mano: ARCA ya tiene un alta de ese día.",
@@ -92,6 +98,7 @@ export function bloqueoPorVigencia(contrato: ContratoPendiente, presentadas: Alt
   if (mismoDiaW) {
     return {
       tipo: "mismo_dia",
+      mismoDiaEn: "weprodu",
       motivo: `Ya se presentó en ARCA otro contrato de esta persona con esta empleadora que empieza el mismo día (${fechaCorta(alta)}): revisar si éste es un duplicado. No se presenta para no repetir el rechazo por alta activa.`,
       hasta: "",
       desbloqueo: "Revisar a mano: ya se presentó un alta de ese día.",

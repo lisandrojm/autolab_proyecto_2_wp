@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBolt, faClock, faEye, faTriangleExclamation, faCircleCheck, faSpinner, faSearch, faXmark, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faBolt, faClock, faEye, faMagnifyingGlass, faTriangleExclamation, faCircleCheck, faSpinner, faSearch, faXmark, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { Modal } from "../components/ui/Modal";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Link } from "react-router-dom";
-import { projectsAPI, horaTexto, horarioTexto, frecuenciaTexto, type AltaPendienteArca, type ResumenCorridaAutomatica, type EstadoPresentacionAutomatica, type CorridaAltasGuardada } from "../api/projects";
+import { projectsAPI, horaTexto, horarioTexto, frecuenciaTexto, type AltaPendienteArca, type VerificacionAuditada, type ResumenCorridaAutomatica, type EstadoPresentacionAutomatica, type CorridaAltasGuardada } from "../api/projects";
 import { BotonOrden, useOrdenTabla } from "../components/ui/OrdenTabla";
 import { CorridaAltasArca } from "../components/contratos/CorridaAltasArca";
 import { CuentaRegresiva } from "../components/ui/CuentaRegresiva";
@@ -33,6 +33,113 @@ const veces = (n: number) => `${n} ${n === 1 ? "vez" : "veces"}`;
 
 // La cuenta regresiva vive en `components/ui/CuentaRegresiva.tsx`: la comparte con «A.R.C.A Descargas Automáticas».
 
+/** Fecha y hora argentinas de un instante ISO: «02/11/2026 14:05». */
+const fechaHoraArgentina = (iso: string) => `${fechaArgentina(iso)} ${horaArgentina(iso)}`;
+
+/**
+ * LA ÚLTIMA VERIFICACIÓN EN ARCA, en la columna Estado (pedido del 02/11/2026): en curso, en revisión
+ * manual (con cuándo se miró) o todavía sin mirar. Una que dio «presentada» ya no está en la cola.
+ */
+const EstadoVerificacion: React.FC<{ c: AltaPendienteArca; enCurso: boolean }> = ({ c, enCurso }) => {
+  if (enCurso)
+    return (
+      <p className="flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 whitespace-nowrap">
+        <FontAwesomeIcon icon={faSpinner} spin className="h-2.5 w-2.5" />
+        Verificando en ARCA…
+      </p>
+    );
+  const v = c.verificacion;
+  if (v?.resultado === "revision_manual")
+    return (
+      <div>
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 whitespace-nowrap">Requiere revisión manual</span>
+        <p className="mt-0.5 text-[10px] text-gray-500 whitespace-nowrap">Verificada {fechaHoraArgentina(v.el)}</p>
+      </div>
+    );
+  return <p className="text-[10px] text-gray-500 whitespace-nowrap">Sin verificar en ARCA</p>;
+};
+
+/**
+ * EL DETALLE DE LA VERIFICACIÓN EN ARCA, en el modal de la fila: el resultado, cuándo y quién, qué
+ * relaciones mostró ARCA (de la auditoría), la pantalla tal como quedó, y «Reverificar en ARCA».
+ */
+const VerificacionEnArca: React.FC<{ c: AltaPendienteArca; enCurso: boolean; ocupada: boolean; onReverificar: () => void }> = ({ c, enCurso, ocupada, onReverificar }) => {
+  const v = c.verificacion;
+  const [auditada, setAuditada] = useState<VerificacionAuditada | null>(null);
+  const [abriendo, setAbriendo] = useState(false);
+  useEffect(() => {
+    setAuditada(null);
+    if (!v?.auditoriaId) return;
+    let vivo = true;
+    projectsAPI
+      .verificacionAltaArca(v.auditoriaId)
+      .then((a) => vivo && setAuditada(a))
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [v?.auditoriaId]);
+  const verPantalla = async () => {
+    if (!v?.auditoriaId) return;
+    setAbriendo(true);
+    try {
+      const html = await projectsAPI.htmlVerificacionAltaArca(v.auditoriaId);
+      const url = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+      window.open(url, "_blank", "noopener");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e: any) {
+      sweetAlert.error("No se pudo abrir la pantalla", e?.response?.data?.error || e?.message || "");
+    } finally {
+      setAbriendo(false);
+    }
+  };
+  const relaciones = auditada?.consulta?.ok ? auditada.consulta.relaciones || [] : [];
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Verificación en ARCA</p>
+        {c.verificable && (
+          <button type="button" onClick={onReverificar} disabled={ocupada} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed">
+            <FontAwesomeIcon icon={enCurso ? faSpinner : faMagnifyingGlass} spin={enCurso} className="h-3 w-3" />
+            {enCurso ? "Verificando…" : "Reverificar en ARCA"}
+          </button>
+        )}
+      </div>
+      {enCurso ? (
+        <p className="text-gray-500">Consultando Relaciones Laborales en ARCA (solo lectura)…</p>
+      ) : !v ? (
+        <p className="text-gray-500">{c.verificable ? "Todavía no se verificó. Se verifica sola después de la corrida del día, o ya con «Reverificar en ARCA»." : "Es un duplicado de otro contrato de WeProdu: no se consulta ARCA."}</p>
+      ) : (
+        <>
+          <p className="text-gray-700 dark:text-gray-200">
+            <span className={`mr-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${v.resultado === "presentada" ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800" : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"}`}>
+              {v.resultado === "presentada" ? "Ya estaba en ARCA" : "Requiere revisión manual"}
+            </span>
+            {fechaHoraArgentina(v.el)} · {v.automatica ? "automática" : auditada?.usuario || "a mano"}
+          </p>
+          <p className="text-gray-600 dark:text-gray-300">{v.motivo}</p>
+          {auditada && (
+            <div className="text-xs text-gray-500 space-y-0.5">
+              {auditada.consulta?.ok === false ? (
+                <p>La consulta falló: {auditada.consulta.error}</p>
+              ) : (
+                <p>
+                  <span className="font-semibold">ARCA mostró:</span> {relaciones.length === 0 ? "ninguna relación legible" : relaciones.map((r) => `${fechaCorta(r.inicio)}–${r.fin ? fechaCorta(r.fin) : "sin fin"}`).join(" · ")}
+                </p>
+              )}
+              {auditada.conPantalla && (
+                <button type="button" onClick={() => void verPantalla()} disabled={abriendo} className="font-semibold text-blue-600 hover:underline disabled:opacity-50">
+                  {abriendo ? "Abriendo…" : "Ver la pantalla de ARCA"}
+                </button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
 export const PresentacionesArcaPage: React.FC = () => {
   // La barra de «N altas tildadas» también se pega debajo del header: el encabezado de la tabla va debajo de ella.
   const [barraRef, altoBarra] = useAltoDeBarra();
@@ -42,7 +149,7 @@ export const PresentacionesArcaPage: React.FC = () => {
   const [ayuda, setAyuda] = useState(false);
   const [corridaAbierta, setCorridaAbierta] = useState(false);
   /** Una cifra de la tarjeta de la corrida, abierta en su modal: quiénes son y qué pasó con cada una. */
-  const [detalleCorrida, setDetalleCorrida] = useState<{ tipo: "enviadas" | "omitidos" | "errores" | "atrasadas"; titulo: string; r: ResumenCorridaAutomatica } | null>(null);
+  const [detalleCorrida, setDetalleCorrida] = useState<{ tipo: "enviadas" | "omitidos" | "errores" | "atrasadas" | "verificadas"; titulo: string; r: ResumenCorridaAutomatica } | null>(null);
   const [buscarDetalle, setBuscarDetalle] = useState("");
   /** El detalle de una fila de la cola (el motivo del Estado y todo lo de su salida), abierto en su modal. */
   const [motivoAbierto, setMotivoAbierto] = useState<AltaPendienteArca | null>(null);
@@ -162,12 +269,32 @@ export const PresentacionesArcaPage: React.FC = () => {
   */
   // Mientras el forzado en masa sigue, la pantalla se refresca sola: las corridas van saliendo una por una.
   const forzadoEnCurso = !!estado?.forzado && !estado.forzado.terminado;
+  // Lo mismo mientras se verifican altas en ARCA («Reverificar en ARCA»): el resultado llega solo.
+  const verificacionEnCurso = !!estado?.verificacion && !estado.verificacion.terminada;
+  const verificandose = useMemo(() => new Set(verificacionEnCurso ? estado?.verificacion?.claves || [] : []), [verificacionEnCurso, estado]);
   useEffect(() => {
-    if (!forzadoEnCurso) return;
+    if (!forzadoEnCurso && !verificacionEnCurso) return;
     const t = setInterval(() => void cargar(), 5000);
     return () => clearInterval(t);
-  }, [forzadoEnCurso, cargar]);
+  }, [forzadoEnCurso, verificacionEnCurso, cargar]);
+
+  /*
+    «REVERIFICAR EN ARCA» (pedido del 02/11/2026): para las trabadas porque ARCA ya tiene un alta de ese
+    día. Consulta ARCA (solo lectura) y, si el alta ya está, la deja presentada; si no se puede decidir,
+    queda en revisión manual con el motivo. Ver `verificacionAltas.ts` en el servidor.
+  */
+  const reverificar = async (c: AltaPendienteArca) => {
+    try {
+      await projectsAPI.verificarAltasArca([{ userProjectId: c.userProjectId, contractIndex: c.contractIndex }]);
+      await cargar();
+    } catch (err: any) {
+      sweetAlert.error("No se pudo verificar", err?.response?.data?.error || err?.message || "");
+    }
+  };
   const claveDe = (c: AltaPendienteArca) => `${c.userProjectId}:${c.contractIndex}`;
+  // El modal de detalle muestra la fila tal como está AHORA (una verificación la cambia, o la saca de la cola).
+  const filaAbierta = motivoAbierto ? estado?.contratos.find((x) => claveDe(x) === claveDe(motivoAbierto)) || motivoAbierto : null;
+  const salioDeLaCola = !!motivoAbierto && !!estado && !estado.contratos.some((x) => claveDe(x) === claveDe(motivoAbierto));
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [forzandoMasivo, setForzandoMasivo] = useState(false);
   const alternarSeleccion = (c: AltaPendienteArca) =>
@@ -275,9 +402,13 @@ export const PresentacionesArcaPage: React.FC = () => {
           </span>
         ) : (
           // Sólo el ícono: el texto (largo, con fechas y la explicación) va en su modal (02/11/2026, pedido del usuario).
-          <button type="button" onClick={() => setMotivoAbierto(c)} title="Por qué todavía no sale" className="p-1 -m-1 rounded text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20 transition-colors">
-            <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4" />
-          </button>
+          <div className="space-y-1">
+            <button type="button" onClick={() => setMotivoAbierto(c)} title="Por qué todavía no sale" className="p-1 -m-1 rounded text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20 transition-colors">
+              <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4" />
+            </button>
+            {/* La última verificación en ARCA, de las trabadas por un alta del mismo día. */}
+            {(c.verificable || c.otroContratoMismoDia) && <EstadoVerificacion c={c} enCurso={verificandose.has(claveDe(c))} />}
+          </div>
         )}
       </td>
       {/*
@@ -313,6 +444,11 @@ export const PresentacionesArcaPage: React.FC = () => {
           Forzar presentación
         </button>
         <div className="mt-2 flex items-center justify-end gap-1">
+          {c.verificable && (
+            <button type="button" onClick={() => void reverificar(c)} disabled={verificacionEnCurso} title={verificacionEnCurso ? "Hay una verificación en curso" : "Reverificar en ARCA: mirar si esta alta ya está hecha (solo lectura)"} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+              <FontAwesomeIcon icon={verificandose.has(claveDe(c)) ? faSpinner : faMagnifyingGlass} spin={verificandose.has(claveDe(c))} className="h-4 w-4" />
+            </button>
+          )}
           <button type="button" onClick={() => setMotivoAbierto(c)} title="Ver el detalle: por qué está así y cuándo sale" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
             <FontAwesomeIcon icon={faEye} className="h-4 w-4" />
           </button>
@@ -444,6 +580,7 @@ export const PresentacionesArcaPage: React.FC = () => {
             <Cifra valor={enviadas} texto="Enviadas a ARCA" tono={enviadas > 0 ? "verde" : "gris"} title="Ver a quiénes presentó y qué contestó ARCA" onClick={() => abrirDetalle("enviadas", titulo, detalle, r)} />
             <Cifra valor={r.omitidos.length} texto="Sin presentar" tono={r.omitidos.length > 0 ? "ambar" : "gris"} title="Ver quiénes no se presentaron y por qué" onClick={() => abrirDetalle("omitidos", titulo, detalle, r)} />
             {conError > 0 && <Cifra valor={conError} texto="Corridas con error" tono="rojo" title="Ver qué empleadoras fallaron y por qué" onClick={() => abrirDetalle("errores", titulo, detalle, r)} />}
+            {(r.verificaciones?.length || 0) > 0 && <Cifra valor={r.verificaciones!.length} texto="Verificadas en ARCA" tono="gris" title="Altas trabadas por un alta del mismo día que se miraron en ARCA después de la corrida" onClick={() => abrirDetalle("verificadas", titulo, detalle, r)} />}
             {atrasadasEnCola !== undefined && <Cifra valor={atrasadasEnCola} texto="Atrasadas en la cola" tono={atrasadasEnCola > 0 ? "ambar" : "gris"} title="Pendientes cuya fecha de alta ya pasó: siguen en la cola y salen en la próxima corrida" onClick={() => abrirDetalle("atrasadas", titulo, detalle, r)} />}
           </div>
         )}
@@ -462,7 +599,7 @@ export const PresentacionesArcaPage: React.FC = () => {
     );
   };
 
-  const abrirDetalle = (tipo: "enviadas" | "omitidos" | "errores" | "atrasadas", titulo: string, detalle: string, r: ResumenCorridaAutomatica) => {
+  const abrirDetalle = (tipo: "enviadas" | "omitidos" | "errores" | "atrasadas" | "verificadas", titulo: string, detalle: string, r: ResumenCorridaAutomatica) => {
     setBuscarDetalle("");
     setDetalleCorrida({ tipo, titulo: `${titulo} · ${detalle}`, r });
     // A quiénes mandó no está en el resumen de la corrida: sale del registro (el de «Presentadas»).
@@ -485,6 +622,22 @@ export const PresentacionesArcaPage: React.FC = () => {
       filas = r.omitidos.map((o, i) => ({ clave: `${o.cuil}-${i}`, nombre: o.nombre, cuil: o.cuil, empresa: o.empresa, que: <span className="text-amber-800 dark:text-amber-300">{o.motivo}</span>, texto: o.motivo }));
     } else if (tipo === "errores") {
       filas = r.empresas.filter((e) => e.error).map((e, i) => ({ clave: `${e.empresa}-${i}`, nombre: "", cuil: "", empresa: e.empresa, que: <span className="text-red-700 dark:text-red-400">{e.error}</span>, texto: e.error || "" }));
+    } else if (tipo === "verificadas") {
+      filas = (r.verificaciones || []).map((v, i) => ({
+        clave: `${v.cuil}-${v.alta}-${i}`,
+        nombre: v.nombre,
+        cuil: v.cuil,
+        empresa: v.empresa,
+        texto: v.motivo,
+        que: (
+          <div className="space-y-0.5">
+            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${v.resultado === "presentada" ? RESULTADO.presentada.clase : v.resultado === "error" ? RESULTADO.rechazada.clase : RESULTADO.indeterminado.clase}`}>
+              {v.resultado === "presentada" ? (v.accion === "marcada_presentada" ? "Ya estaba en ARCA: presentada" : "Ya estaba en ARCA") : v.resultado === "error" ? "Error" : "Requiere revisión manual"}
+            </span>
+            <p className="text-gray-500">{v.motivo}</p>
+          </div>
+        ),
+      }));
     } else if (tipo === "atrasadas") {
       filas = (estado?.contratos || [])
         .filter((c) => c.fechaAlta < (estado?.hoy || ""))
@@ -810,10 +963,16 @@ export const PresentacionesArcaPage: React.FC = () => {
         </div>
       )}
 
-      {motivoAbierto && (
-        <Modal isOpen onClose={() => setMotivoAbierto(null)} size="sm" title={motivoAbierto.nombre} subtitle={`${motivoAbierto.tipoContrato || "Contrato"} · Alta: ${fechaCorta(motivoAbierto.fechaAlta)} · Baja: ${fechaCorta(motivoAbierto.fechaBaja)}`}>
+      {filaAbierta && (
+        <Modal isOpen onClose={() => setMotivoAbierto(null)} size="md" title={filaAbierta.nombre} subtitle={`${filaAbierta.tipoContrato || "Contrato"} · Alta: ${fechaCorta(filaAbierta.fechaAlta)} · Baja: ${fechaCorta(filaAbierta.fechaBaja)}`}>
           <div className="space-y-3 text-sm">
-            {motivoAbierto.presentable ? (
+            {salioDeLaCola && (
+              <p className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 font-semibold text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
+                <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4 shrink-0" />
+                Ya no está en la cola: quedó presentada (mirá la pestaña Presentadas).
+              </p>
+            )}
+            {filaAbierta.presentable ? (
               <p className="flex items-center gap-2 font-semibold text-green-700 dark:text-green-400">
                 <FontAwesomeIcon icon={faCircleCheck} className="h-4 w-4" />
                 Lista para presentar
@@ -821,10 +980,13 @@ export const PresentacionesArcaPage: React.FC = () => {
             ) : (
               <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
                 <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>{motivoAbierto.motivo}</span>
+                <span>{filaAbierta.motivo}</span>
               </p>
             )}
-            {detalleDeSalida(motivoAbierto)}
+            {detalleDeSalida(filaAbierta)}
+            {(filaAbierta.verificable || filaAbierta.otroContratoMismoDia) && (
+              <VerificacionEnArca c={filaAbierta} enCurso={verificandose.has(claveDe(filaAbierta))} ocupada={verificacionEnCurso} onReverificar={() => void reverificar(filaAbierta)} />
+            )}
           </div>
         </Modal>
       )}
@@ -834,7 +996,7 @@ export const PresentacionesArcaPage: React.FC = () => {
           isOpen
           onClose={() => setDetalleCorrida(null)}
           size="xl"
-          title={{ enviadas: "Enviadas a ARCA", omitidos: "Sin presentar", errores: "Corridas con error", atrasadas: "Atrasadas en la cola" }[detalleCorrida.tipo]}
+          title={{ enviadas: "Enviadas a ARCA", omitidos: "Sin presentar", errores: "Corridas con error", atrasadas: "Atrasadas en la cola", verificadas: "Verificadas en ARCA" }[detalleCorrida.tipo]}
           subtitle={detalleCorrida.tipo === "atrasadas" ? "Pendientes cuya fecha de alta ya pasó: siguen en la cola" : detalleCorrida.titulo}
         >
           <div className="space-y-3">
@@ -857,7 +1019,7 @@ export const PresentacionesArcaPage: React.FC = () => {
                     <tr>
                       {detalleCorrida.tipo !== "errores" && <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">Persona</th>}
                       <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">Empresa</th>
-                      <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">{{ enviadas: "Qué contestó ARCA", omitidos: "Por qué no se presentó", errores: "Error", atrasadas: "Contrato y cuándo sale" }[detalleCorrida.tipo]}</th>
+                      <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">{{ enviadas: "Qué contestó ARCA", omitidos: "Por qué no se presentó", errores: "Error", atrasadas: "Contrato y cuándo sale", verificadas: "Qué se vio en ARCA" }[detalleCorrida.tipo]}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">

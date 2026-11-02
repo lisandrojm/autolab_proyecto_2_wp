@@ -14,7 +14,8 @@ import mongoose, { Schema, Document, Model, Types } from "mongoose";
  */
 export interface IArcaAltasLog extends Document {
   tenantId: Types.ObjectId;
-  tipo: "carga_masiva" | "altas_masivas";
+  /** `verificacion`: no presentó nada; registra las altas que la verificación encontró ya hechas en ARCA (`verificacionAltas.ts`). */
+  tipo: "carga_masiva" | "altas_masivas" | "verificacion";
   usuarioId?: Types.ObjectId;
   /** La lanzó la presentación automática de las 14 h: no hay persona detrás. */
   automatica?: boolean;
@@ -66,7 +67,7 @@ export interface IArcaAltasLog extends Document {
 const schema = new Schema<IArcaAltasLog>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
-    tipo: { type: String, enum: ["carga_masiva", "altas_masivas"], required: true },
+    tipo: { type: String, enum: ["carga_masiva", "altas_masivas", "verificacion"], required: true },
     usuarioId: { type: Schema.Types.ObjectId, ref: "User" },
     automatica: { type: Boolean },
     empresaId: { type: Schema.Types.ObjectId, ref: "Company" },

@@ -227,7 +227,8 @@ interface IContract {
    * volver a intentar).
    */
   altaArcaPresentada?: {
-    via: "carga_masiva" | "altas_masivas";
+    /** `verificacion`: no se presentó desde WeProdu; se encontró ya hecha en ARCA (ver `verificacionAltas.ts`). */
+    via: "carga_masiva" | "altas_masivas" | "verificacion";
     fecha: Date;
     /**
      * `presentando`: se escribió justo ANTES de apretar «Aceptar» en ARCA y todavía no hay resultado.
@@ -260,6 +261,22 @@ interface IContract {
    * cada resultado; este no se borra nunca.
    */
   enviosArca?: number;
+  /**
+   * LA ÚLTIMA VERIFICACIÓN EN ARCA de un alta trabada por «ARCA ya tiene un alta de ese día» (pedido del
+   * 02/11/2026, ver `services/arca/verificacionAltas.ts`). `presentada`: el alta ya estaba en ARCA y el
+   * contrato quedó presentado (con `altaArcaPresentada.via = "verificacion"`). `revision_manual`: lo que
+   * se vio no alcanza para decidir solo; `motivo` dice qué mirar. El detalle crudo (la pantalla de ARCA)
+   * queda en `ArcaVerificacionAlta` (`auditoriaId`).
+   */
+  verificacionArca?: {
+    el: Date;
+    resultado: "presentada" | "revision_manual";
+    motivo: string;
+    relacion?: { inicio: string; fin: string; baja?: string };
+    automatica?: boolean;
+    usuarioId?: Types.ObjectId;
+    auditoriaId?: Types.ObjectId;
+  };
   // Documento de "Alta" (AFIP o Servicios, según el Estado impositivo vinculado a la Plantilla).
   altaDocumentoUrl?: string;
   altaDocumentoNombre?: string;
@@ -460,7 +477,7 @@ const contractSchema = new Schema<IContract>(
     altaArcaPresentada: {
       type: new Schema(
         {
-          via: { type: String, enum: ["carga_masiva", "altas_masivas"] },
+          via: { type: String, enum: ["carga_masiva", "altas_masivas", "verificacion"] },
           fecha: { type: Date },
           resultado: { type: String, enum: ["presentada", "indeterminado", "fallida", "presentando"] },
           codigoNovedad: { type: String },
@@ -479,6 +496,22 @@ const contractSchema = new Schema<IContract>(
       default: undefined,
     },
     enviosArca: { type: Number },
+    // La última verificación en ARCA de un alta trabada por «ARCA ya tiene un alta de ese día»: ver `IContract.verificacionArca`.
+    verificacionArca: {
+      type: new Schema(
+        {
+          el: { type: Date },
+          resultado: { type: String, enum: ["presentada", "revision_manual"] },
+          motivo: { type: String },
+          relacion: { type: new Schema({ inicio: String, fin: String, baja: String }, { _id: false }), default: undefined },
+          automatica: { type: Boolean },
+          usuarioId: { type: Schema.Types.ObjectId, ref: "User" },
+          auditoriaId: { type: Schema.Types.ObjectId, ref: "ArcaVerificacionAlta" },
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
     altaDocumentoUrl: { type: String },
     altaDocumentoNombre: { type: String },
     altaConstancia: { type: new Schema({ clave: String, nroTramite: String, validadaEl: Date, vaAFirma: Boolean, archivadaEn: String, enviadaComo: String, origen: { type: String, enum: ["automatica", "descarga", "subida"] }, porUsuarioId: { type: Schema.Types.ObjectId, ref: "User" } }, { _id: false }) },

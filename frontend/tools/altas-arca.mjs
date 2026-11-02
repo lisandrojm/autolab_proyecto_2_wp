@@ -701,6 +701,42 @@ async function buscarEnConsultas(page, cuil) {
 }
 
 /**
+ * Las casillas del resultado de Consultas, cada una con el texto de SU tarjeta, y los controles
+ * clickeables. Lo leen la descarga de la constancia y la verificación de altas. SOLO LEE.
+ */
+async function leerResultadoDeConsulta(page) {
+  return page.evaluate(() => {
+    const visible = (el) => el.offsetParent !== null;
+    const txt = (el) => (el?.innerText || el?.textContent || "").replace(/\s+/g, " ").trim();
+    const CON_FECHA = /\d{1,2}[/.-]\d{1,2}[/.-]\d{4}|\d{4}-\d{2}-\d{2}/;
+    /*
+      LA FILA DE UNA CASILLA es el contenedor más chico que la rodea, trae una fecha y no tiene otra
+      casilla adentro. No alcanza con el `tr` más cercano: la casilla puede estar en una tabla
+      chica anidada, con las fechas en la celda de al lado. Y no se sube más allá de donde aparece
+      otra casilla: eso ya es la grilla entera (es lo que le pasa a la casilla «general» de arriba,
+      que por eso queda sin fila).
+    */
+    const filaDe = (el) => {
+      let nodo = el.parentElement;
+      for (let nivel = 0; nodo && nivel < 10; nivel++, nodo = nodo.parentElement) {
+        if (nodo.querySelectorAll("input[type=checkbox]").length > 1) return "";
+        const t = txt(nodo);
+        // Entera: la «Fecha de Inicio» va en la columna derecha, que en el texto viene DESPUÉS de toda
+        // la izquierda (sucursal, convenio, categoría…). Cortada a 400 se quedaba sin la fecha.
+        if (CON_FECHA.test(t)) return t.slice(0, 4000);
+      }
+      return "";
+    };
+    return {
+      casillas: Array.from(document.querySelectorAll("input[type=checkbox]")).filter(visible).map((el) => ({ id: el.id, fila: filaDe(el) })),
+      controles: Array.from(document.querySelectorAll("input[type=image], input[type=submit], input[type=button], button, a, img"))
+        .filter(visible)
+        .map((el) => ({ id: el.id, tag: el.tagName.toLowerCase(), pista: [el.id, el.getAttribute("src"), el.getAttribute("title"), el.getAttribute("alt"), el.value, el.getAttribute("onclick"), el.getAttribute("href")].filter(Boolean).join(" ") })),
+    };
+  });
+}
+
+/**
  * Baja de ARCA la constancia del trabajador de UNA relación: Consultas → por CUIL → tildar la
  * relación que empieza en `fechaInicio` (ddmmaaaa) → impresora. SOLO LEE.
  *
@@ -720,35 +756,7 @@ export async function descargarConstanciaDeAlta({ page, cuil, fechaInicio, onPro
     // El resultado se dibuja por partes: se espera a que aparezcan las casillas antes de leer. Si no
     // aparecen (la persona no tiene relaciones con esta empleadora) se sigue, y se informa.
     await esperarEstado(async () => (await page.locator("input[type=checkbox]").count()) > 0, { ms: 8_000, que: "las relaciones del resultado", log });
-    const enPantalla = await page.evaluate(() => {
-      const visible = (el) => el.offsetParent !== null;
-      const txt = (el) => (el?.innerText || el?.textContent || "").replace(/\s+/g, " ").trim();
-      const CON_FECHA = /\d{1,2}[/.-]\d{1,2}[/.-]\d{4}|\d{4}-\d{2}-\d{2}/;
-      /*
-        LA FILA DE UNA CASILLA es el contenedor más chico que la rodea, trae una fecha y no tiene otra
-        casilla adentro. No alcanza con el `tr` más cercano: la casilla puede estar en una tabla
-        chica anidada, con las fechas en la celda de al lado. Y no se sube más allá de donde aparece
-        otra casilla: eso ya es la grilla entera (es lo que le pasa a la casilla «general» de arriba,
-        que por eso queda sin fila).
-      */
-      const filaDe = (el) => {
-        let nodo = el.parentElement;
-        for (let nivel = 0; nodo && nivel < 10; nivel++, nodo = nodo.parentElement) {
-          if (nodo.querySelectorAll("input[type=checkbox]").length > 1) return "";
-          const t = txt(nodo);
-          // Entera: la «Fecha de Inicio» va en la columna derecha, que en el texto viene DESPUÉS de toda
-          // la izquierda (sucursal, convenio, categoría…). Cortada a 400 se quedaba sin la fecha.
-          if (CON_FECHA.test(t)) return t.slice(0, 4000);
-        }
-        return "";
-      };
-      return {
-        casillas: Array.from(document.querySelectorAll("input[type=checkbox]")).filter(visible).map((el) => ({ id: el.id, fila: filaDe(el) })),
-        controles: Array.from(document.querySelectorAll("input[type=image], input[type=submit], input[type=button], button, a, img"))
-          .filter(visible)
-          .map((el) => ({ id: el.id, tag: el.tagName.toLowerCase(), pista: [el.id, el.getAttribute("src"), el.getAttribute("title"), el.getAttribute("alt"), el.value, el.getAttribute("onclick"), el.getAttribute("href")].filter(Boolean).join(" ") })),
-      };
-    });
+    const enPantalla = await leerResultadoDeConsulta(page);
     const eleccion = elegirEnResultadoDeConsulta({ ...enPantalla, fecha });
     if (!eleccion.ok) return { resultado: eleccion.motivo, detalle: eleccion.detalle, html: await htmlAnonimo(page) };
     const casilla = page.locator(`[id="${eleccion.casilla}"]`);
@@ -760,6 +768,52 @@ export async function descargarConstanciaDeAlta({ page, cuil, fechaInicio, onPro
   } finally {
     soltar();
   }
+}
+
+/** "dd/mm/aaaa" (o con . o -, días y meses de 1 o 2 dígitos) → "aaaa-mm-dd"; "" si no es una fecha. Puro. */
+export function isoDeFechaArca(texto) {
+  const m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(String(texto || "").trim());
+  return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : "";
+}
+
+/**
+ * LAS RELACIONES QUE MUESTRA EL RESULTADO DE CONSULTAS, leídas de sus tarjetas. Puro.
+ *
+ * Cada tarjeta trae «Fecha de Inicio» y, si la tiene, «Fecha de Fin» (relevado de la pantalla real,
+ * 4/10/2026, ver `elegirEnResultadoDeConsulta`). La «situación de baja» se toma si la tarjeta la nombra:
+ * su texto exacto no está relevado, así que `baja` es lo que siga al rótulo o "" si no aparece.
+ * Una tarjeta sin «Fecha de Inicio» legible no se cuenta: no se adivina de qué relación es.
+ */
+export function relacionesDeConsulta(casillas = []) {
+  const out = [];
+  for (const c of casillas) {
+    const t = String(c?.fila || "");
+    const inicio = isoDeFechaArca(/Fecha de Inicio:?\s*(\d{1,2}[/.-]\d{1,2}[/.-]\d{4})/i.exec(t)?.[1]);
+    if (!inicio) continue;
+    const fin = isoDeFechaArca(/Fecha de Fin:?\s*(\d{1,2}[/.-]\d{1,2}[/.-]\d{4})/i.exec(t)?.[1]);
+    const baja = (/Situaci[oó]n de Baja:?\s*([^\n|]{1,80}?)(?=\s{2,}|\s*(?:Fecha|Modalidad|Obra|Categor|Convenio|Puesto|$))/i.exec(t)?.[1] || "").trim();
+    out.push({ inicio, fin, baja, texto: t.slice(0, 1500) });
+  }
+  return out;
+}
+
+/**
+ * Relaciones Laborales → Consultas, por CUIL: las relaciones de la persona con la empleadora en la que
+ * se entró. SOLO LEE: es una búsqueda. Lo usa la verificación de las altas trabadas por «ARCA ya tiene
+ * un alta de ese día» (`verificacionAltas.ts` en el servidor).
+ *
+ * Devuelve `{ relaciones, encontrada, html }`. `encontrada` es la de `altaEnConsulta` (true o null,
+ * nunca false): con `relaciones` vacío y `encontrada` true, la pantalla tenía el alta y el lector de
+ * tarjetas no la entendió.
+ */
+export async function relacionesPorCuil({ page, cuil, fechaInicio = "" }) {
+  const c = soloDigitos(cuil);
+  if (c.length !== 11) throw new Error("La consulta necesita un CUIL de 11 dígitos.");
+  await buscarEnConsultas(page, c);
+  await esperarEstado(async () => (await page.locator("input[type=checkbox]").count()) > 0, { ms: 8_000, que: "las relaciones del resultado", log });
+  const { casillas } = await leerResultadoDeConsulta(page);
+  const texto = await page.evaluate(() => document.body?.innerText || "").catch(() => "");
+  return { relaciones: relacionesDeConsulta(casillas), encontrada: fechaInicio ? altaEnConsulta(texto, c, fechaInicio) : null, html: await htmlAnonimo(page) };
 }
 
 /**
