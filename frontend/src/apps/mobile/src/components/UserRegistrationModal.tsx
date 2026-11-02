@@ -1492,19 +1492,28 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
    * suyos que sumarle uno nuevo.
    */
   /*
-    LOS OFICIOS DE LA PERSONA, PARA ELEGIR UNO (02/11/2026). Con más de uno cargado en la ficha se
-    muestran todos como opciones y se marca con cuál se la contrata: tocar uno lo deja como el rol de la
-    solicitud (reemplaza al otro de los suyos). Los que se sumaron con el «+» y no son de la ficha quedan
-    aparte, con su X. Respeta el recorte por áreas del proyecto, como el selector.
+    EL ROL DE LA SOLICITUD ES UNO, ELEGIDO ENTRE LAS OPCIONES (02/11/2026). Las opciones son los oficios de
+    la ficha de la persona (con el recorte por áreas del proyecto, como el selector) más los que se sumen
+    con el «+». Con dos o más se muestran todas y se marca una: tocar otra la reemplaza. Así la categoría
+    se ofrece sólo para ese rol, y no la mezcla de todos.
   */
-  const rolesDeLaPersona = useMemo(() => {
-    if (!selectedUser || rolesDelUsuario.length < 2) return [] as RoleFrameItem[];
-    return rolesDelUsuario
-      .map((id) => roleFrames.find((rf) => rf._id === id))
-      .filter((rf): rf is RoleFrameItem => !!rf && (!rolesAcotadosPorArea || rolesDeLasAreasDelProyecto.has(rf._id) || formData.roleFrameIds.includes(rf._id)));
-  }, [selectedUser, rolesDelUsuario, roleFrames, rolesAcotadosPorArea, rolesDeLasAreasDelProyecto, formData.roleFrameIds]);
-  const elegirRolDeLaPersona = (id: string) =>
-    setFormData((prev) => ({ ...prev, roleFrameIds: prev.roleFrameIds.includes(id) && prev.roleFrameIds.length === 1 ? prev.roleFrameIds : [id, ...prev.roleFrameIds.filter((x) => !rolesDelUsuario.includes(x))] }));
+  const [rolesSumados, setRolesSumados] = useState<string[]>([]);
+  useEffect(() => {
+    setRolesSumados([]);
+  }, [isOpen, selectedUser?._id]);
+  const opcionesDeRol = useMemo(() => {
+    const deLaFicha = selectedUser ? rolesDelUsuario.filter((id) => !rolesAcotadosPorArea || rolesDeLasAreasDelProyecto.has(id) || formData.roleFrameIds.includes(id)) : [];
+    const ids = [...new Set([...deLaFicha, ...rolesSumados, ...formData.roleFrameIds])];
+    return ids.map((id) => roleFrames.find((rf) => rf._id === id)).filter((rf): rf is RoleFrameItem => !!rf);
+  }, [selectedUser, rolesDelUsuario, rolesAcotadosPorArea, rolesDeLasAreasDelProyecto, formData.roleFrameIds, rolesSumados, roleFrames]);
+  const elegirRol = (id: string) => {
+    if (!rolesDelUsuario.includes(id)) setRolesSumados((l) => (l.includes(id) ? l : [...l, id]));
+    setFormData((prev) => (prev.roleFrameIds.length === 1 && prev.roleFrameIds[0] === id ? prev : { ...prev, roleFrameIds: [id] }));
+  };
+  const quitarOpcionDeRol = (id: string) => {
+    setRolesSumados((l) => l.filter((x) => x !== id));
+    setFormData((prev) => ({ ...prev, roleFrameIds: prev.roleFrameIds.filter((x) => x !== id) }));
+  };
 
   const rolesDisponibles = useMemo(() => {
     // Sólo los roles de las áreas del proyecto (ver `rolesAcotadosPorArea`); los ya elegidos se dejan ver para poder quitarlos.
@@ -2476,40 +2485,34 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               )}
               {/* Siempre, aunque la persona tenga un solo oficio: cambiarlo o sumarle otro es
                   justamente lo que hace falta poder hacer al contratarla. */}
-              {(rolesElegidos.length > 0 || rolesDeLaPersona.length > 1) && (
+              {(rolesElegidos.length > 0 || opcionesDeRol.length > 1) && (
                 <button type="button" onClick={() => setRolModalOpen(true)} title="Cambiar o agregar un rol" className="h-4 w-4 rounded-full bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition-colors shrink-0 ml-0.5">
                   <FontAwesomeIcon icon={faPlus} className="h-2 w-2" />
                 </button>
               )}
             </div>
-            {rolesDeLaPersona.length > 1 ? (
+            {opcionesDeRol.length > 1 ? (
               <div className="space-y-1.5">
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Tiene {rolesDeLaPersona.length} roles: elegí con cuál se la contrata.</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Elegí con cuál rol se la contrata en este proyecto.</p>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  {rolesDeLaPersona.map((rf) => {
+                  {opcionesDeRol.map((rf) => {
                     const elegido = formData.roleFrameIds.includes(rf._id);
+                    const sumado = !rolesDelUsuario.includes(rf._id);
                     return (
-                      <button
-                        key={rf._id}
-                        type="button"
-                        onClick={() => elegirRolDeLaPersona(rf._id)}
-                        aria-pressed={elegido}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${elegido ? "bg-blue-600 text-white border-blue-600" : "bg-transparent text-slate-600 border-slate-300 hover:border-blue-400 dark:text-slate-300 dark:border-slate-600"}`}
-                      >
-                        <span className={`h-2.5 w-2.5 rounded-full border ${elegido ? "bg-white border-white" : "border-slate-400"}`} />
-                        <span className="truncate max-w-[12rem]">{rf.name}</span>
-                      </button>
+                      <span key={rf._id} className={`inline-flex items-center rounded-full border text-[11px] font-semibold transition-colors ${elegido ? "bg-blue-600 text-white border-blue-600" : "text-slate-600 border-slate-300 hover:border-blue-400 dark:text-slate-300 dark:border-slate-600"}`}>
+                        <button type="button" onClick={() => elegirRol(rf._id)} aria-pressed={elegido} className={`inline-flex items-center gap-1.5 py-1 pl-2.5 ${sumado ? "pr-1" : "pr-2.5"}`}>
+                          <span className={`h-2.5 w-2.5 rounded-full border ${elegido ? "bg-white border-white" : "border-slate-400"}`} />
+                          <span className="truncate max-w-[12rem]">{rf.name}</span>
+                        </button>
+                        {/* Los sumados con el «+» (no son de su ficha) se pueden sacar de las opciones. */}
+                        {sumado && (
+                          <button type="button" onClick={() => quitarOpcionDeRol(rf._id)} title={`Quitar ${rf.name}`} className="mr-1 rounded-full p-0.5 hover:bg-black/10">
+                            <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
+                          </button>
+                        )}
+                      </span>
                     );
                   })}
-                  {/* Los sumados con el «+» que no son de su ficha, con su X. */}
-                  {rolesElegidos.filter((rf) => !rolesDelUsuario.includes(rf._id)).map((rf) => (
-                    <span key={rf._id} className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                      <span className="truncate max-w-[12rem]">{rf.name}</span>
-                      <button type="button" onClick={() => alternarRol(rf._id)} title={`Quitar ${rf.name}`} className="rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 p-0.5">
-                        <FontAwesomeIcon icon={faTimes} className="h-2.5 w-2.5" />
-                      </button>
-                    </span>
-                  ))}
                 </div>
               </div>
             ) : rolesElegidos.length > 0 ? (
@@ -3306,7 +3309,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           isOpen={rolModalOpen}
           onClose={() => setRolModalOpen(false)}
           title="Rol/es Empresa"
-          subtitle={`${formData.roleFrameIds.length} seleccionado(s) · el oficio con el que la persona trabaja en una producción`}
+          subtitle="Elegí uno · el oficio con el que la persona trabaja en este proyecto"
           size="lg"
           zIndex={80}
           footer={
@@ -3376,15 +3379,15 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                   // elegir uno de los suyos es una cosa, agregarle un oficio nuevo es otra.
                   const esSuyo = rolesDelUsuario.includes(rf._id);
                   return (
-                    // La ventana NO se cierra al elegir: son varios, y cerrarla obligaría a reabrirla
-                    // por cada rol. Se cierra con «Listo».
+                    // Elegir uno lo deja como EL rol de la solicitud (reemplaza al anterior, que queda como
+                    // opción en el campo). La ventana se cierra con «Listo».
                     <button
                       key={rf._id}
                       type="button"
-                      onClick={() => alternarRol(rf._id)}
+                      onClick={() => elegirRol(rf._id)}
                       className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-left transition-all ${elegido ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20" : "bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"}`}
                     >
-                      <span className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 ${elegido ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <FontAwesomeIcon icon={faCheck} className="text-[9px]" />}</span>
+                      <span className={`w-4 h-4 rounded-full flex items-center justify-center border shrink-0 ${elegido ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 dark:border-slate-600"}`}>{elegido && <FontAwesomeIcon icon={faCheck} className="text-[9px]" />}</span>
                       <span className="flex-1 truncate text-sm text-slate-700 dark:text-slate-200">{rf.name}</span>
                       {selectedUser && !esSuyo && <span className="shrink-0 rounded-full border border-amber-300 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-600 dark:border-amber-700 dark:text-amber-400">nuevo</span>}
                     </button>
