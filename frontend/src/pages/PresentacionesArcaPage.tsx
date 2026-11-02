@@ -275,21 +275,33 @@ export const PresentacionesArcaPage: React.FC = () => {
         )}
       </td>
       <td className="px-4 py-3">
-        {c.momento ? (
+        {c.momento || c.desbloqueo ? (
           <div className="space-y-1">
-            <CuentaRegresiva destino={c.momento} ahora={ahoraServidor} />
-            <p className="text-[11px] text-gray-500">
-              {new Date(c.momento).getTime() <= ahoraServidor ? "En la corrida en curso" : `${fechaArgentina(c.momento)} a las ${horaArgentina(c.momento)}`}
-              {!estado?.activa ? " (si está activada)" : ""}
-            </p>
-            {/* Rechazada por ARCA: se retoma al final de la próxima pasada; la del padrón de hoy, mañana. */}
+            {c.momento ? (
+              <>
+                <CuentaRegresiva destino={c.momento} ahora={ahoraServidor} />
+                <p className="text-[11px] text-gray-500">
+                  {new Date(c.momento).getTime() <= ahoraServidor ? "En la corrida en curso" : `${fechaArgentina(c.momento)} a las ${horaArgentina(c.momento)}`}
+                  {!estado?.activa ? " (si está activada)" : ""}
+                  {c.desbloqueo ? " · fecha prevista" : ""}
+                </p>
+              </>
+            ) : (
+              <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">Sin fecha prevista</p>
+            )}
+            {/*
+              LO QUE LA DESTRABA (01/11/2026): un alta activa en ARCA, su turno detrás de otra de la misma
+              persona, o la sincronización después de un rechazo por alta activa. No se reintenta a ciegas.
+            */}
+            {c.desbloqueo && <p className="text-[11px] text-amber-700 dark:text-amber-400">Se destraba: {c.desbloqueo}</p>}
+            {/* Rechazada por ARCA: si está lista, se retoma al final de la próxima pasada; si espera algo, lo dice arriba. */}
             {(c.intentos || 0) > 0 || c.rechazoDefinitivo ? (
               <p className="text-[11px] font-semibold text-red-600 dark:text-red-400">
                 {c.rechazoDefinitivo ? `ARCA la rechazó: ${c.rechazoDefinitivo}` : `Rechazada ${veces(c.intentos || 0)}${c.primerIntentoEl ? ` (la primera el ${fechaArgentina(c.primerIntentoEl)})` : ""}.`}{" "}
-                {c.rechazoDefinitivo && c.rechazadaEl && estado && diaArgentina(c.rechazadaEl) === estado.hoy ? "Vuelve a intentarse mañana." : "Se retoma al final de la próxima pasada."}
+                {!c.presentable ? "" : c.rechazoDefinitivo && c.rechazadaEl && estado && diaArgentina(c.rechazadaEl) === estado.hoy ? "Vuelve a intentarse mañana." : "Se retoma al final de la próxima pasada."}
               </p>
             ) : (
-              estado && c.fechaAlta < estado.hoy && <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Atrasada: su alta fue el {fechaCorta(c.fechaAlta)}. Va en la cola.</p>
+              estado && c.fechaAlta < estado.hoy && !c.desbloqueo && <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">Atrasada: su alta fue el {fechaCorta(c.fechaAlta)}. Va en la cola.</p>
             )}
             {(c.envios || 0) > 0 && <p className="text-[11px] text-gray-500">Enviada a ARCA {veces(c.envios || 0)}.</p>}
             {c.terminado && <p className="text-[11px] text-gray-500">Ya terminó (baja el {fechaCorta(c.fechaBaja)}): se declara igual.</p>}
@@ -409,7 +421,9 @@ export const PresentacionesArcaPage: React.FC = () => {
               {estado?.config.modo === "frecuente" ? ` Además, ${frecuenciaTexto(estado.config.cadaMinutos)} corre la cola de pendientes.` : ""} El horario se cambia en Configuración → ARCA → Altas Automáticas.
             </p>
             <p>Entran los contratos creados en WeProdu (Solicitudes o «Agregar miembro») que están en Alta temprana de ARCA y tienen todos los datos completos. Los que no están completos no se presentan y figuran con su motivo.</p>
-            <p>Una persona no tiene dos altas a la vez con la misma empleadora: si ya tiene una presentada que no terminó, la nueva espera.</p>
+            <p>
+              Una persona no tiene dos altas activas a la vez con la misma empleadora: ARCA rechaza la nueva mientras la anterior no tenga la baja procesada (el vencimiento lo procesa al día siguiente), aunque las fechas no se pisen. Por eso sale <strong>una por persona y empleadora por corrida</strong>, la de fecha de alta más temprana; las demás esperan su turno con la fecha prevista y lo que las destraba. Lo activo se lee de las Relaciones Laborales sincronizadas desde ARCA.
+            </p>
             <p>
               <strong>Forzar presentación</strong> presenta una ya, sin esperar su día. Lo que se presentó, a mano o solo, queda en el registro de «Alta Temprana A.R.C.A» de Contratos.
             </p>

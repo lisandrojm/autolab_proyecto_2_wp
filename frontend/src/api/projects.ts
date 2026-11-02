@@ -1176,8 +1176,13 @@ export interface AltaPendienteArca {
   fechaAlta: string;
   fechaBaja: string;
   empresa: { _id: string; razonSocial: string } | null;
-  /** La próxima corrida automática que la presenta, ISO. Nada queda fuera de la automática (pedido del 19/10/2026). */
+  /**
+   * La próxima corrida automática que la presenta, ISO. Nada queda fuera de la automática (pedido del
+   * 19/10/2026). Vacío si espera algo sin fecha: lo dice `desbloqueo`.
+   */
   momento: string;
+  /** Si espera algo (un alta activa en ARCA, su turno, una sincronización): qué la destraba. Vacío si no. */
+  desbloqueo?: string;
   presentable: boolean;
   /** La baja ya pasó. Informativo: igual entra en la automática. */
   terminado?: boolean;
