@@ -125,6 +125,12 @@ export async function candidatosDeAlta(tenantObjectId, opts = {}) {
         "fecha_alta_contrato", "fecha_baja_contrato", "nombre_contrato", "nombre_estado_empleado", "altaArcaPresentada", "empresaContratoId", "nombre_empresa_contrato",
         "puestoDesempenado", "categoria_sat_id", "rol_frame_id", "sede_id", "tipo_contrato_id", "sucursalArcaId", "actividadArca",
         "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "solicitudId", "origen", "enviosArca",
+        /*
+          LOS IMPORTES Y LOS DÍAS (01/11/2026): de ellos sale la retribución pactada (`retribucionPactada.ts`).
+          La fila los lee desde el 28/10, pero no viajaban: sin ellos la retribución daba «falta» y la
+          automática no tenía NINGUNA alta presentable («Faltan datos de ARCA», sin detalle).
+        */
+        "cantidad_jornadas_laborales", "sueldo_jornada", "sueldo_bruto", "sueldo_neto", "sueldo_diario_neto", "dias_semana", "dias_por_semana", "dias_rotativos", "fechas_trabajadas",
     ];
     // La fecha de alta como "YYYY-MM-DD" aunque esté guardada ISO (los formatos viejos no son del sistema).
     const altaISO = { $cond: [{ $eq: [{ $type: "$$e.c.fecha_alta_contrato" }, "string"] }, { $substrCP: ["$$e.c.fecha_alta_contrato", 0, 10] }, ""] };
