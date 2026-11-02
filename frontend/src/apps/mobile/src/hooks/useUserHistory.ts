@@ -26,8 +26,23 @@ export const useUserHistory = () => {
         coordinador veía en su historial lo que pidieron los demás. El server filtra por
         `metadata.solicitudCreadaPor` (y para quien entra sólo con el permiso del móvil lo hace siempre).
       */
-      const response = await usersAPI.list({ limit: 50, solicitudAny: "true", creadasPorMi: "true" });
-      setUsers(response.users);
+      /*
+        TODO EL HISTORIAL (02/11/2026): antes traía sólo las 50 más nuevas y lo demás no se podía ver ni
+        buscar. Se pide de a páginas: la primera se muestra apenas llega y el resto se va sumando.
+      */
+      const POR_PAGINA = 100;
+      const params = { limit: POR_PAGINA, solicitudAny: "true", creadasPorMi: "true" } as const;
+      const primera = await usersAPI.list({ ...params, page: 1 });
+      setUsers(primera.users);
+      setLoading(false);
+      const paginas = Number(primera.pagination?.pages) || 1;
+      let todos = primera.users;
+      for (let page = 2; page <= paginas; page++) {
+        const r = await usersAPI.list({ ...params, page });
+        const vistos = new Set(todos.map((u) => u._id));
+        todos = [...todos, ...r.users.filter((u) => !vistos.has(u._id))];
+        setUsers(todos);
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || "Error al cargar el historial de usuarios");
       console.error("Error fetching user history:", err);

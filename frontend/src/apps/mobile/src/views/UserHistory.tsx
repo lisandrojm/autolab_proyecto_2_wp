@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faUsers, faUserPlus, faBriefcase, faCalendarAlt, faLayerGroup, faIdCard, faFileContract, faClock, faTrash, faSpinner, faFilter, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faUsers, faUserPlus, faBriefcase, faCalendarAlt, faLayerGroup, faIdCard, faFileContract, faClock, faTrash, faSpinner, faFilter, faXmark, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { useUserHistory } from "../hooks/useUserHistory";
 import { ViewType } from "../types";
 import { UserRegistrationModal } from "../components/UserRegistrationModal";
@@ -352,11 +352,28 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     del equipo y cerradas: veinte tarjetas iguales una debajo de otra no se leen. Se abren tocándolas.
   */
   const [lotesAbiertos, setLotesAbiertos] = useState<Set<string>>(new Set());
+  /*
+    BUSCADOR DEL HISTORIAL (02/11/2026): por nombre, email, CUIL, tipo de contrato, estado o nombre del
+    equipo, sin tildes ni mayúsculas. Busca en todo el historial (el hook lo trae entero). Mientras se
+    busca, los equipos con coincidencias se muestran abiertos y sólo con las que coinciden.
+  */
+  const [busqueda, setBusqueda] = useState("");
+  const normalizar = (t: unknown) => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const terminos = normalizar(busqueda).split(/\s+/).filter(Boolean);
+  const coincide = (u: User) => {
+    if (terminos.length === 0) return true;
+    const m: any = u.metadata || {};
+    const texto = normalizar(
+      [m.fullName, u.firstName, u.lastName, u.email, m.cuit, String(m.cuit || "").replace(/\D/g, ""), m.nombre_contrato, m.schedule, m.loteNombre, m.solicitudStatus || (m.isSolicitud ? "pendiente" : "aprobada"), m.esRenovacion ? "renovacion" : ""].join(" "),
+    );
+    return terminos.every((t) => texto.includes(t));
+  };
   type Entrada = { tipo: "sola"; user: User } | { tipo: "lote"; loteId: string; nombre: string; users: User[] };
   const entradasHistorial = useMemo<Entrada[]>(() => {
     const out: Entrada[] = [];
     const lotes = new Map<string, Extract<Entrada, { tipo: "lote" }>>();
     for (const u of users) {
+      if (!coincide(u)) continue;
       const m: any = u.metadata || {};
       const loteId = m.loteId ? String(m.loteId) : "";
       if (!loteId) {
@@ -372,7 +389,8 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
       g.users.push(u);
     }
     return out;
-  }, [users]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [users, busqueda]);
   const resumenEstados = (lista: User[]) => {
     const cuenta = new Map<string, number>();
     for (const u of lista) {
@@ -668,6 +686,29 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
           </div>
         ) : users.length > 0 ? (
           <div className="space-y-3">
+            <div className="relative">
+              <FontAwesomeIcon icon={faMagnifyingGlass} className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar por nombre, CUIL, contrato o estado…"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+              />
+              {busqueda && (
+                <button type="button" onClick={() => setBusqueda("")} aria-label="Borrar búsqueda" className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400">
+                  <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            {terminos.length > 0 && (
+              <p className="px-1 text-xs text-slate-500 dark:text-slate-400">
+                {(() => {
+                  const n = entradasHistorial.reduce((a, e) => a + (e.tipo === "sola" ? 1 : e.users.length), 0);
+                  return n === 0 ? "Ninguna solicitud coincide con la búsqueda." : `${n} ${n === 1 ? "solicitud coincide" : "solicitudes coinciden"} de ${users.length}.`;
+                })()}
+              </p>
+            )}
             {aprobadas.length > 0 && (
               <div className="flex justify-end">
                 <button
@@ -698,7 +739,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
                     </div>
                     <span className="shrink-0 text-xs font-bold text-blue-600 dark:text-blue-400">{lotesAbiertos.has(e.loteId) ? "Ocultar" : "Ver"}</span>
                   </button>
-                  {lotesAbiertos.has(e.loteId) && <div className="space-y-3 px-2 pb-2">{e.users.map((u) => <div key={u._id}>{tarjeta(u)}</div>)}</div>}
+                  {(lotesAbiertos.has(e.loteId) || terminos.length > 0) && <div className="space-y-3 px-2 pb-2">{e.users.map((u) => <div key={u._id}>{tarjeta(u)}</div>)}</div>}
                 </div>
               ),
             )}
