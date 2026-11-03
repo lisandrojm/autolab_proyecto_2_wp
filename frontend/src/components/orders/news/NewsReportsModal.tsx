@@ -3033,16 +3033,16 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                 <tfoot className="bg-gray-50 dark:bg-gray-800 font-semibold text-gray-700 dark:text-gray-300 border-t-2 border-gray-200 dark:border-gray-600">
                   <tr>
                     <td className="py-2.5 px-3">Totales ({totalEmployees})</td>
-                    <td className="py-2.5 px-3"></td> {/* S. Jornada */}
-                    <td className="py-2.5 px-3"></td> {/* S. Mano */}
-                    <td className="py-2.5 px-3"></td> {/* P. Hora */}
-                    <td className="py-2.5 px-3"></td> {/* P. Hora Extra */}
-                    <td className="py-2.5 px-3"></td> {/* Jornadas */}
-                    <td className="py-2.5 px-3"></td> {/* Proyectos */}
-                    <td className="py-2.5 px-3"></td> {/* Área | Turno */}
-                    <td className="py-2.5 px-3"></td> {/* Horario Base */}
-                    <td className="py-2.5 px-3"></td> {/* Contrato */}
-                    <td className="py-2.5 px-3"></td> {/* Tipo de Contrato */}
+                    <td className="py-2.5 px-3"></td>{/* S. Jornada */}
+                    <td className="py-2.5 px-3"></td>{/* S. Mano */}
+                    <td className="py-2.5 px-3"></td>{/* P. Hora */}
+                    <td className="py-2.5 px-3"></td>{/* P. Hora Extra */}
+                    <td className="py-2.5 px-3"></td>{/* Jornadas */}
+                    <td className="py-2.5 px-3"></td>{/* Proyectos */}
+                    <td className="py-2.5 px-3"></td>{/* Área | Turno */}
+                    <td className="py-2.5 px-3"></td>{/* Horario Base */}
+                    <td className="py-2.5 px-3"></td>{/* Contrato */}
+                    <td className="py-2.5 px-3"></td>{/* Tipo de Contrato */}
                     <td className="py-2.5 px-3 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-2 font-bold">
                         <span className="text-green-600 dark:text-green-400" title="Total Presentes">
@@ -3054,12 +3054,12 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                         </span>
                       </div>
                     </td>
-                    <td className="py-2.5 px-3 text-center"></td> {/* Horario Extra */}
+                    <td className="py-2.5 px-3 text-center"></td>{/* Horario Extra */}
                     <td className="py-2.5 px-2 text-right text-xs font-bold">{totalOvertime50}h</td>
                     <td className="py-2.5 px-2 text-right text-xs font-bold">{totalOvertime100}h</td>
                     <td className="py-2.5 px-2 text-right text-xs font-bold text-amber-600 dark:text-amber-400 border-x border-gray-100 dark:border-gray-700">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className="py-2.5 px-3 text-right font-black text-green-600 dark:text-green-400">${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td></td> {/* Expand */}
+                    <td></td>{/* Expand */}
                   </tr>
                 </tfoot>
               )}

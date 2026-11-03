@@ -41,7 +41,21 @@ export async function datosPlanillaJornaleros(tenantId: Types.ObjectId, mes: str
       "metadata.solicitudStatus": "aprobada",
       "metadata.startDate": { $gte: desde, $lte: hasta },
     },
-    { firstName: 1, lastName: 1, metadata: 1 },
+    // Sólo lo que lee la planilla: la `metadata` entera de cada solicitud son cientos de KB por mes.
+    {
+      firstName: 1,
+      lastName: 1,
+      "metadata.nombre_contrato": 1,
+      "metadata.solicitudUserId": 1,
+      "metadata.roles_frame": 1,
+      "metadata.categoriaSatId": 1,
+      "metadata.startDate": 1,
+      "metadata.fechasTrabajadas": 1,
+      "metadata.dailyRate": 1,
+      "metadata.apellido": 1,
+      "metadata.nombre": 1,
+      "metadata.numeroLegajoTango": 1,
+    },
   ).lean();
 
   /*
