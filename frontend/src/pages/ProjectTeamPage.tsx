@@ -2396,7 +2396,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       desde el móvil: es el área que coordina quien pidió el alta.
     */
     const areasDeLaSolicitud = Array.isArray((solicitud?.metadata as any)?.areaShiftAssignments) ? (solicitud!.metadata as any).areaShiftAssignments : [];
-    if (areasDeLaSolicitud.length > 0) existingAssignments = areasDeLaSolicitud;
+    /*
+      Sin sede en la asignación (solicitudes del móvil anteriores al 03/11/2026, o el área elegida antes
+      de que cargaran las del proyecto) vale la SEDE DE LA SOLICITUD: en un área con varias filas, si no,
+      abría como «falta elegir sede». Si esa sede no es una fila del área, sigue pendiente (`sedeEnArea`).
+    */
+    const sedeDeLaSolicitud = Number((solicitud?.metadata as any)?.sedeId) || null;
+    if (areasDeLaSolicitud.length > 0) existingAssignments = areasDeLaSolicitud.map((a: any) => (sedeDe(a?.sedeId) || !sedeDeLaSolicitud ? a : { ...a, sedeId: sedeDeLaSolicitud }));
 
     // Map existing assignments to the wizard format, ensuring we use string IDs
     const areaShiftAssignments = (existingAssignments || []).map((a: any) => {

@@ -986,9 +986,12 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     equipo poblado, que pesa MB). `null` mientras llega.
   */
   const [areasDelProyecto, setAreasDelProyecto] = useState<OpcionAreaTurno[] | null>(null);
+  // La sede principal según el proyecto completo: la lista liviana del móvil puede no traer `metadata.sedeIds`.
+  const [sedePrincipalCargada, setSedePrincipalCargada] = useState<number | null>(null);
   useEffect(() => {
     const id = proyectoElegido?._id;
     setAreasDelProyecto(null);
+    setSedePrincipalCargada(null);
     // Siempre, también para quien coordina (que elige sólo entre sus áreas): las áreas del proyecto acotan los roles.
     if (!id) return;
     let cancelado = false;
@@ -996,6 +999,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       .getProject(id, { team: "ids" })
       .then((p) => {
         if (cancelado) return;
+        setSedePrincipalCargada(sedePrincipalDe((p as any).metadata));
         setAreasDelProyecto(((p.areasConfig || []) as any[]).flatMap((ac) => (ac.shiftIds || []).map((s: any) => opcionAreaTurno(ac.areaId, s, ac.sedeId))));
       })
       .catch(() => !cancelado && setAreasDelProyecto([]));
@@ -1108,7 +1112,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     un área que está en varias sedes, guarda la principal del proyecto (si no, quedaría «falta elegir
     sede»). Con una sola fila no se guarda sede, como siempre.
   */
-  const sedePrincipalProyecto = sedePrincipalDe((proyectoElegido as any)?.metadata);
+  const sedePrincipalProyecto = sedePrincipalDe((proyectoElegido as any)?.metadata) ?? sedePrincipalCargada;
   const areaEnVariasSedes = (areaId: string) => [...(areasDelProyecto || []), ...(opcionesAreaTurno || [])].some((x) => x.areaId === areaId && x.sedeId);
   const sedeAGuardar = (o: { areaId: string; sedeId: number | null }): number | null => o.sedeId ?? (areaEnVariasSedes(o.areaId) ? sedePrincipalProyecto : null);
   const coincideLaSede = (a: { sedeId?: number | null }, o: OpcionAreaTurno) => {
@@ -2242,7 +2246,16 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         tipoImpositivo: formData.tipoImpositivo,
         contratoId: formData.contratoId,
         nombreContrato: contratoElegido?.name,
-        areaShiftAssignments: formData.areaShiftAssignments,
+        /*
+          LA SEDE DE LA FILA, SIEMPRE EXPLÍCITA. Si el área se eligió sola antes de que llegaran las áreas
+          del proyecto (o viene de una solicitud vieja), quedó sin sede: en un área con varias, la
+          aprobación la mostraba como «falta elegir sede». La fila sin sede es la de la principal.
+        */
+        areaShiftAssignments: formData.areaShiftAssignments.map((a) => {
+          if (sedeDe(a.sedeId)) return a;
+          const sede = sedeAGuardar({ areaId: a.areaId, sedeId: null });
+          return sede ? { ...a, sedeId: sede } : a;
+        }),
         /*
           RENOVACIÓN: la etiqueta y QUÉ contrato renueva. Al editar una renovación se conservan: si no,
           guardarla de nuevo le borraría la etiqueta.
