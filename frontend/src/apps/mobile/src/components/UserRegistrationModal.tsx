@@ -129,6 +129,8 @@ interface UserRegistrationModalProps {
   renovacion?: { plantilla: any; userProjectId: string; fechaBajaContrato: string } | null;
 }
 
+const pesosAR = (n: number) => n.toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ isOpen, onClose, onSuccess, editingUser, renovacion }) => {
   const { profile } = useProfile();
   const [submitting, setSubmitting] = useState(false);
@@ -2911,6 +2913,24 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           {/* La categoría: el campo compartido con las plantillas de equipo. Cuelga del convenio: la ventana queda cerrada hasta tenerlo. */}
           <CampoCategoria categoria={categoriaElegida || null} nivel={categoriaElegida ? nivelDeCategoria(categoriaElegida) : null} onAbrir={() => setCategoriaModalOpen(true)} deshabilitado={!convenioCct} motivoDeshabilitado="Elegí primero el convenio" aviso={avisoCascada} />
           </>
+          )}
+
+          {/*
+            EL IMPORTE NO ES EL DE LA ESCALA: se dice y se ofrece reponerla, como en «Editar y Aprobar» del
+            panel. Una solicitud guardada conserva su importe al editarla (ver `conservarJornadaExterna`
+            abajo); las que guardó la cuenta vieja con la jornada ÷ 5,5 se arreglan con este botón.
+          */}
+          {!esServicios && !importesBloqueados && diferenciaContraEscala && (
+            <div className="md:col-span-2 flex flex-wrap items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-200">
+              <span className="flex-1 min-w-[12rem]">
+                El importe por jornada (<b>{pesosAR(Number(formData.dailyRate))}</b>) no es el de la escala vigente: {categoriaElegida?.name || "la categoría"}
+                {contratoElegido?.name ? ` con «${contratoElegido.name}»` : ""} da <b>{pesosAR(diferenciaContraEscala.escala)}</b>
+                {jornadasDelTipo ? ` (bruto mensual ÷ ${jornadasDelTipo}${multiplicadorDiario !== 1 ? ` × ${multiplicadorDiario.toLocaleString("es-AR")}` : ""})` : ""}.
+              </span>
+              <button type="button" onClick={() => setFormData((p) => ({ ...p, dailyRate: String(diferenciaContraEscala.escala) }))} className="rounded-md bg-amber-600 px-3 py-1.5 font-semibold text-white hover:bg-amber-700">
+                Usar la escala
+              </button>
+            </div>
           )}
 
           {/*
