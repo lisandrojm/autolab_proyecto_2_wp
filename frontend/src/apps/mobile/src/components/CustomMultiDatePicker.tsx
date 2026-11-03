@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronLeft, faChevronRight, faTimes, faCalendar, faInfoCircle, faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isBefore, isAfter, isToday, parseISO } from "date-fns";
@@ -110,8 +111,14 @@ export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ la
         <FontAwesomeIcon icon={faCalendar} className="text-slate-400" />
       </div>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setIsOpen(false)}>
+      {/*
+        EN UN PORTAL AL <body>, por encima de todo (z 100: las ventanas del formulario llegan a 95).
+        Adentro del formulario quedaba atrapado en el contexto de apilamiento del bloque sticky de las
+        fechas (z-20): la persona pegada (z-30) y el encabezado lo tapaban, y el overlay no cubría nada.
+      */}
+      {isOpen &&
+        createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setIsOpen(false)}>
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
               <h3 className="font-bold text-lg text-slate-900 dark:text-white capitalize">{format(viewDate, "MMMM yyyy", { locale: es })}</h3>
@@ -204,8 +211,9 @@ export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ la
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </div>
   );
 };
