@@ -2933,10 +2933,17 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             />
           )}
 
+          {/*
+            AL EDITAR, LA JORNADA GUARDADA MANDA (`conservarJornadaExterna`) hasta que se toque un importe.
+            Anclado en el mensual, abrir la solicitud lo calculaba con los meses del calendario —un
+            miércoles suelto de noviembre = ¼ de mes— antes de que llegara el tipo «Jornada» (1/22): la
+            jornada quedaba ÷ 5,5 y se guardaba así en cada edición (66.686,15 → 12.124,75 → 2.204,50).
+          */}
           <ImportesDelContrato
             className="contents"
             valorJornada={formData.dailyRate}
             onValorJornada={(v) => setFormData((p) => ({ ...p, dailyRate: v }))}
+            conservarJornadaExterna={!!editingUser}
             mesesEq={mesesEq}
             indeterminado={indeterminado}
             jornadas={jornadasDelContrato}
