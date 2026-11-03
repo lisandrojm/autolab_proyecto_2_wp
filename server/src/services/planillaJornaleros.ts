@@ -44,10 +44,30 @@ export async function datosPlanillaJornaleros(tenantId: Types.ObjectId, mes: str
     { firstName: 1, lastName: 1, metadata: 1 },
   ).lean();
 
-  // El contrato de cada solicitud: lo que efectivamente se contrató.
+  /*
+    El contrato de cada solicitud: lo que efectivamente se contrató.
+    SÓLO ESOS CONTRATOS Y SÓLO ESTOS CAMPOS, filtrados en la base. Traer los `contracts` enteros eran
+    6,3 MB por mes (107 UserProjects con todo su historial): la planilla pasaba el minuto que espera
+    el panel y quedaba en «Armando la planilla…» hasta caer en «No se pudo armar la planilla».
+  */
+  const idsSolicitudes = solicitudesTodas.map((s) => s._id);
   const contratoPorSolicitud = new Map<string, any>();
-  const ups: any[] = await UserProject.find({ "contracts.solicitudId": { $in: solicitudesTodas.map((s) => s._id) } }, { contracts: 1 }).lean();
-  for (const up of ups) for (const c of up.contracts || []) if (c.solicitudId) contratoPorSolicitud.set(String(c.solicitudId), c);
+  const contratos: any[] = await UserProject.aggregate([
+    { $match: { "contracts.solicitudId": { $in: idsSolicitudes } } },
+    { $unwind: "$contracts" },
+    { $match: { "contracts.solicitudId": { $in: idsSolicitudes } } },
+    {
+      $project: {
+        _id: 0,
+        solicitudId: "$contracts.solicitudId",
+        contrato_id: "$contracts.contrato_id",
+        nombre_contrato: "$contracts.nombre_contrato",
+        sueldo_jornada: "$contracts.sueldo_jornada",
+        fechas_trabajadas: "$contracts.fechas_trabajadas",
+      },
+    },
+  ]);
+  for (const c of contratos) contratoPorSolicitud.set(String(c.solicitudId), c);
   const idsTipos = [...new Set([...contratoPorSolicitud.values()].map((c) => c.contrato_id).filter(Boolean).map(String))];
   const nombreDeTipo = new Map((await Contrato.find({ _id: { $in: idsTipos } }, { name: 1 }).lean()).map((t: any) => [String(t._id), t.name]));
   const tipoDe = (s: any) => {
