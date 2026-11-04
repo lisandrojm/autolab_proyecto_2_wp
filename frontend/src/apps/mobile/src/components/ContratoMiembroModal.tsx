@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faFileContract, faLock, faMoneyBillWave } from "@fortawesome/free-solid-svg-icons";
 import MenuDeTarjetas from "./MenuDeTarjetas";
@@ -84,11 +85,7 @@ export default function ContratoMiembroModal({ isOpen, onClose, projectId, userI
         )
       } subtitle={c?.proyecto ? `${nombre} · ${c.proyecto}` : nombre} size="md">
       {estado === "cargando" && (
-        <div className="space-y-2">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-9 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
-          ))}
-        </div>
+        <LoadingSpinner message="Cargando datos..." />
       )}
 
       {estado === "error" && <p className="rounded-xl border border-red-200 bg-red-50 p-4 text-center text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{error}</p>}

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { LoadingSpinner } from "../../../../../components/ui/LoadingSpinner";
 import { useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronRight, faClone, faEdit, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
@@ -61,7 +62,7 @@ export default function PantallaEquipo() {
   const marcas = useMemo(() => (p && hoja && typeof hoja === "object" ? marcasParaSelector(p, equipoId, hoja.asignar.puesto._id) : undefined), [p, equipoId, hoja]);
 
   if (noEsta || (p && !equipo)) return <Pantalla titulo="Equipo" atras={rutas.grupo(id)}><Vacio texto="Este equipo ya no está." accion="Volver al grupo" onAccion={() => navigate(rutas.grupo(id))} /></Pantalla>;
-  if (!p || !equipo) return <Pantalla titulo="Equipo" atras={rutas.grupo(id)} listo={false}><div className="h-40 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" /></Pantalla>;
+  if (!p || !equipo) return <Pantalla titulo="Equipo" atras={rutas.grupo(id)} listo={false}><LoadingSpinner message="Cargando datos..." /></Pantalla>;
 
   const puestos = puestosDe(p, equipo);
   const sacados = sacadosDe(p, equipo);

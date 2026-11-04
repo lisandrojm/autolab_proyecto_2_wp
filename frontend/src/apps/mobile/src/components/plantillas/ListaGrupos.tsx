@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LoadingSpinner } from "../../../../../components/ui/LoadingSpinner";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronRight, faLayerGroup, faPlus } from "@fortawesome/free-solid-svg-icons";
@@ -47,7 +48,7 @@ export default function ListaGrupos({ embebida }: { embebida?: boolean }) {
   const contenido = (
     <div className="space-y-3">
       {lista === null ? (
-        [1, 2].map((i) => <div key={i} className="h-28 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />)
+        <LoadingSpinner message="Cargando datos..." />
       ) : lista.length === 0 ? (
         // Como pantalla, la acción es el botón de abajo; dentro de la pestaña, va en el cartel.
         <Vacio texto="Todavía no hay equipos." accion={embebida ? "Nuevo equipo" : undefined} onAccion={() => navigate(rutas.nuevo())} />

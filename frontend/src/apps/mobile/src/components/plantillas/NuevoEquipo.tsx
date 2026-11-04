@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { LoadingSpinner } from "../../../../../components/ui/LoadingSpinner";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBriefcase, faBuilding, faCheck, faChevronRight, faFileContract, faLayerGroup, faPen, faPlus, faTimes, faUserPlus, faUsers } from "@fortawesome/free-solid-svg-icons";
@@ -602,12 +603,8 @@ export default function NuevoEquipo() {
                 */
                 !catalogos.rolesCargados ? (
                   <div className={`flex flex-wrap items-center ${ENTRE} ${BAJO_ROTULO}`} aria-busy="true" aria-label="Cargando los roles">
-                    {b.roles.map((r) => (
-                      <span key={r.rolId} className="inline-flex items-center gap-1.5">
-                        <span className="h-9 w-[4.5rem] animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
-                        <span className="h-9 w-28 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
-                      </span>
-                    ))}
+                    <LoadingSpinner naked size="xs" />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Cargando datos...</span>
                   </div>
                 ) : (
                   <div className={`flex flex-wrap items-center ${ENTRE} ${BAJO_ROTULO}`}>
@@ -754,7 +751,7 @@ export default function NuevoEquipo() {
                     <div key={x.n} className="flex min-h-[56px] items-center gap-3 px-3 py-1.5">
                       <span className="w-5 text-center text-sm font-bold tabular-nums text-slate-600 dark:text-slate-300">{x.n}</span>
                       <span className="min-w-0 flex-1">
-                        {catalogos.rolesCargados ? <span className="block truncate text-xs text-slate-600 dark:text-slate-300">{nombreRol(x.rolId)}</span> : <span className="block h-3 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />}
+                        {catalogos.rolesCargados ? <span className="block truncate text-xs text-slate-600 dark:text-slate-300">{nombreRol(x.rolId)}</span> : <LoadingSpinner naked size="xs" />}
                         {/*
                           LA PERSONA ASIGNADA, EN VERDE.
 

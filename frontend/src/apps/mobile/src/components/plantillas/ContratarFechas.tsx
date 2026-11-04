@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LoadingSpinner } from "../../../../../components/ui/LoadingSpinner";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { CustomDatePicker } from "../CustomDatePicker";
 import { CustomMultiDatePicker } from "../CustomMultiDatePicker";
@@ -69,7 +70,7 @@ export default function ContratarFechas() {
 
   const atras = rutas.grupo(id);
   if (noEsta) return <Pantalla titulo="Contratar" atras={atras}><Vacio texto="Este grupo ya no está." /></Pantalla>;
-  if (!p || !estado) return <Pantalla titulo="Contratar" atras={atras} listo={false}><div className="h-40 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" /></Pantalla>;
+  if (!p || !estado) return <Pantalla titulo="Contratar" atras={atras} listo={false}><LoadingSpinner message="Cargando datos..." /></Pantalla>;
 
   const cambiar = (equipoId: string, x: Partial<EstadoContratar["equipos"][string]>) => setEstado((s) => (s ? { ...s, equipos: { ...s.equipos, [equipoId]: { ...s.equipos[equipoId], ...x } } } : s));
   const incluidos = p.equipos.filter((e) => estado.equipos[e._id]?.incluido);

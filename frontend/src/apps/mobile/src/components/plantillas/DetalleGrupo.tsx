@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { LoadingSpinner } from "../../../../../components/ui/LoadingSpinner";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBriefcase, faChevronRight, faClone, faEdit, faMinus, faPen, faPlus, faTrash, faUsers } from "@fortawesome/free-solid-svg-icons";
@@ -75,7 +76,7 @@ export default function DetalleGrupo() {
   }, [p?._id]);
 
   if (noEsta) return <Pantalla titulo="Grupo de puestos" atras={rutas.lista}><Vacio texto="Este grupo ya no está." accion="Ver los grupos" onAccion={() => navigate(rutas.lista)} /></Pantalla>;
-  if (!p) return <Pantalla titulo="Grupo de puestos" atras={rutas.lista} listo={false}><div className="h-40 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" /></Pantalla>;
+  if (!p) return <Pantalla titulo="Grupo de puestos" atras={rutas.lista} listo={false}><LoadingSpinner message="Cargando datos..." /></Pantalla>;
 
   const nombreProyecto = (id: string | null) => catalogos.proyectos?.find((x) => x._id === id)?.name || "Sin proyecto";
 
@@ -291,7 +292,7 @@ export function ListaTurnos({ areas, valor, onElegir }: { areas: ReturnType<Retu
     }
     return [...m.values()];
   }, [areas]);
-  if (areas === null) return <div className="h-24 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />;
+  if (areas === null) return <LoadingSpinner message="Cargando datos..." />;
   if (!areas.length) return <p className="text-sm text-slate-700 dark:text-slate-200">El proyecto no tiene áreas y turnos cargados.</p>;
   return (
     <div className="space-y-3">

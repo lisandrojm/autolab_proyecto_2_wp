@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import Swal from 'sweetalert2';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -665,12 +666,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
           <div className="space-y-3">
             {loading ? (
-              [1, 2].map((i) => (
-                <div key={i} className="bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 animate-pulse">
-                  <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3 mb-2"></div>
-                  <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
-                </div>
-              ))
+<LoadingSpinner message="Cargando datos..." />
             ) : vacations.length > 0 ? (
               vacations.map((vacation) => (
                 <div key={vacation._id} className="bg-white border dark:border-slate-700 dark:bg-slate-900/70 rounded-xl p-4 shadow-sm cursor-pointer" onClick={() => handleVacationClick(vacation)}>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { ChipValoracionDelProyecto, useValoraciones } from "../../../../components/proyectos/ChipValoracion";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBriefcase, faBuilding, faIdCard, faClock, faLayerGroup, faChevronRight, faSearch, faUserShield, faUserTie, faUsers } from '@fortawesome/free-solid-svg-icons';
@@ -534,10 +535,8 @@ export default function Proyectos({ onNavigate }: { onNavigate?: (view: ViewType
     return (
       <div className="flex-1 pb-24">
         {encabezado}
-        <div className="px-4 pt-4 space-y-3">
-          {[0, 1].map((i) => (
-            <div key={i} className="h-28 animate-pulse rounded-2xl border border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900/70" />
-          ))}
+        <div className="px-4 pt-4">
+          <LoadingSpinner message="Cargando datos..." />
         </div>
       </div>
     );

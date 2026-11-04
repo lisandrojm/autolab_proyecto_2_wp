@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSitemap, faLayerGroup, faChevronDown, faChevronRight, faUserTie, faUserShield, faSearch, faXmark, faFileContract, faCircleInfo, faLocationDot } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
@@ -392,11 +393,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
         {error ? (
           <p className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{error}</p>
         ) : !equipos ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 animate-pulse rounded-xl border bg-white dark:border-slate-800 dark:bg-slate-900/70" />
-            ))}
-          </div>
+          <LoadingSpinner message="Cargando datos..." />
         ) : equipos.length === 0 ? (
           <div className="rounded-xl border bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-800/50">
             <FontAwesomeIcon icon={faSitemap} className="mb-3 h-10 w-10 text-slate-300" />

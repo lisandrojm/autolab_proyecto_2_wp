@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { LoadingSpinner } from "../../../../../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { SelectorHora } from "../../../../../components/contratacion/SelectorHora";
@@ -138,7 +139,7 @@ export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, o
                 </span>
               </span>
             ) : areas === null && valores.shiftId ? (
-              <span className="h-5 w-24 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" aria-label="Cargando el turno" />
+              <span aria-label="Cargando el turno"><LoadingSpinner naked size="xs" /></span>
             ) : (
               <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">Elegí el turno</span>
             )}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { LoadingSpinner } from "../../../../../components/ui/LoadingSpinner";
 import { tramiteSinConvenioNiCategoria } from "@compartido/tramiteSinEscala";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -90,7 +91,7 @@ export default function ContratarPersonas() {
   if (!p)
     return (
       <Pantalla titulo="Personas" atras={atras} listo={false} pasos={{ actual: 2, etiquetas: PASOS_CONTRATAR }}>
-        <div className="h-40 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+        <LoadingSpinner message="Cargando datos..." />
       </Pantalla>
     );
 

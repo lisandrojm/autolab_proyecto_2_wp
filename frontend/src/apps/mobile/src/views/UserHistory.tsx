@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faUsers, faUserPlus, faBriefcase, faCalendarAlt, faLayerGroup, faIdCard, faFileContract, faClock, faTrash, faSpinner, faFilter, faXmark, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { useUserHistory } from "../hooks/useUserHistory";
@@ -103,10 +104,11 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
   /** «menu» = las tarjetas; las otras, adentro de una sección (la flecha vuelve al menú). */
   const [pestana, setPestana] = useState<"menu" | "historial" | "por_vencer" | "plantillas">(pestanaInicial || "menu");
   const SECCIONES: { id: "historial" | "por_vencer" | "plantillas"; label: string; icon: typeof faClock }[] = [
-    { id: "historial", label: "Historial", icon: faClock },
+    // Orden de las tarjetas: Enviados y Renovaciones arriba (en fila), Equipos debajo.
+    { id: "historial", label: "Enviados", icon: faClock },
+    { id: "por_vencer", label: "Renovaciones", icon: faCalendarAlt },
     // Tarjeta propia del permiso «Plantillas de equipo» (`dentroDe` Contratación).
     ...(puedePlantillas ? [{ id: "plantillas" as const, label: "Equipos", icon: faLayerGroup }] : []),
-    { id: "por_vencer", label: "Vencimientos", icon: faCalendarAlt },
   ];
   const [porVencer, setPorVencer] = useState<ContratoPorVencer[] | null>(null);
   const [procesando, setProcesando] = useState<string | null>(null);
@@ -127,20 +129,30 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     «YA VENCIDOS»: la misma lista mirando hacia atrás —los que terminaron en los últimos N días sin que
     nadie decidiera—. No se guarda en el teléfono: es una consulta puntual, y abrir la pestaña y ver
     vencidos en vez de lo que viene sería una sorpresa.
-  */
-  const [vencidos, setVencidos] = useState(false);
 
-  const cargarPorVencer = (dias: number = diasAviso, soloVencidos: boolean = vencidos) => {
-    contratosPorVencerAPI
-      .listar(dias, soloVencidos)
-      .then(setPorVencer)
-      .catch(() => setPorVencer([]));
+    «TODOS» (04/11/2026): las dos a la vez —vencidos en los últimos N días y por vencer en los próximos
+    N—. El server no tiene ese modo: se piden las dos listas y se juntan. No se pisan (vencidos llega
+    hasta ayer, por vencer arranca hoy), así que no hay duplicados. Orden: del más vencido al más lejano.
+  */
+  const [sentido, setSentido] = useState<"por_vencer" | "vencidos" | "todos">("por_vencer");
+  const vencidos = sentido === "vencidos";
+  const todos = sentido === "todos";
+
+  const cargarPorVencer = (dias: number = diasAviso, s: typeof sentido = sentido) => {
+    const pedidos = s === "todos" ? [contratosPorVencerAPI.listar(dias, true), contratosPorVencerAPI.listar(dias, false)] : [contratosPorVencerAPI.listar(dias, s === "vencidos")];
+    return Promise.all(pedidos)
+      .then((listas) => listas.flat().sort((a, b) => a.diasRestantes - b.diasRestantes))
+      .catch(() => [] as ContratoPorVencer[]);
   };
   useEffect(() => {
+    let vigente = true; // cambiar el filtro rápido no tiene que dejar ganar a la respuesta vieja
     setPorVencer(null);
-    cargarPorVencer(diasAviso, vencidos);
+    cargarPorVencer(diasAviso, sentido).then((l) => vigente && setPorVencer(l));
+    return () => {
+      vigente = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [diasAviso, vencidos]);
+  }, [diasAviso, sentido]);
 
   const cambiarDias = (dias: number) => {
     setDiasAviso(dias);
@@ -156,9 +168,44 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
   const cuentaPorTipo = new Map<string, number>();
   (porVencer || []).forEach((c) => cuentaPorTipo.set(tipoDe(c), (cuentaPorTipo.get(tipoDe(c)) || 0) + 1));
   const tiposDisponibles = [...cuentaPorTipo.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  const porVencerVisibles = (porVencer || []).filter((c) => tiposElegidos.length === 0 || tiposElegidos.includes(tipoDe(c)));
-  const cantidadFiltros = tiposElegidos.length + (diasAviso === DIAS_DE_AVISO_OPCIONES[0] ? 0 : 1) + (vencidos ? 1 : 0);
-  const rangoTexto = vencidos ? `los últimos ${diasAviso} días` : `los próximos ${diasAviso} días`;
+  /*
+    BUSCADOR Y FILTROS DE VENCIMIENTOS (04/11/2026), con la misma UI que el Historial. El buscador mira
+    lo que muestra la tarjeta —persona, cliente y proyecto, área, turno, rol, contrato, horario—; CUIL no,
+    porque el server no lo manda en esta lista. Proyecto y área se ofrecen sólo si hay más de uno: con un
+    único valor, filtrar por él no cambia nada.
+  */
+  const [vBusqueda, setVBusqueda] = useState("");
+  const [proyectosElegidos, setProyectosElegidos] = useState<string[]>([]);
+  const [areasElegidas, setAreasElegidas] = useState<string[]>([]);
+  const [soloRechazadas, setSoloRechazadas] = useState(false);
+  const proyectoDe = (c: ContratoPorVencer) => (c.clienteNombre ? `${c.clienteNombre} | ${c.proyectoNombre}` : c.proyectoNombre || "Sin proyecto");
+  const areaDe = (c: ContratoPorVencer) => c.areaNombre || "Sin área";
+  const contarPor = (f: (c: ContratoPorVencer) => string) => {
+    const m = new Map<string, number>();
+    (porVencer || []).forEach((c) => m.set(f(c), (m.get(f(c)) || 0) + 1));
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  };
+  const proyectosDisponibles = contarPor(proyectoDe);
+  const areasDisponibles = contarPor(areaDe);
+  const cantidadRechazadas = (porVencer || []).filter((c) => c.renovacionRechazada).length;
+  const alternarEn = (set: React.Dispatch<React.SetStateAction<string[]>>) => (v: string) => set((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
+  const alternarProyecto = alternarEn(setProyectosElegidos);
+  const alternarArea = alternarEn(setAreasElegidas);
+  const sinTildes = (t: unknown) => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const vTerminos = sinTildes(vBusqueda).split(/\s+/).filter(Boolean);
+  const porVencerVisibles = (porVencer || []).filter((c) => {
+    if (tiposElegidos.length > 0 && !tiposElegidos.includes(tipoDe(c))) return false;
+    if (proyectosElegidos.length > 0 && !proyectosElegidos.includes(proyectoDe(c))) return false;
+    if (areasElegidas.length > 0 && !areasElegidas.includes(areaDe(c))) return false;
+    if (soloRechazadas && !c.renovacionRechazada) return false;
+    if (vTerminos.length === 0) return true;
+    const texto = sinTildes([c.nombre, c.clienteNombre, c.proyectoNombre, c.areaNombre, c.turnoNombre, c.rolFrame, c.contrato, c.horario, c.renovacionRechazada ? "rechazada" : ""].join(" "));
+    return vTerminos.every((t) => texto.includes(t));
+  });
+  const cantidadFiltros = tiposElegidos.length + proyectosElegidos.length + areasElegidas.length + (soloRechazadas ? 1 : 0) + (diasAviso === DIAS_DE_AVISO_OPCIONES[0] ? 0 : 1) + (sentido !== "por_vencer" ? 1 : 0);
+  /** Filtros que recortan lo que llegó (no los días ni «vencidos», que piden otra lista al server). */
+  const recortaLista = vTerminos.length > 0 || tiposElegidos.length + proyectosElegidos.length + areasElegidas.length > 0 || soloRechazadas;
+  const rangoTexto = todos ? `los últimos y los próximos ${diasAviso} días` : vencidos ? `los últimos ${diasAviso} días` : `los próximos ${diasAviso} días`;
 
   /*
     Un contrato no tiene `_id` propio: lo nombran su asignación, su fecha de baja y SU POSICIÓN en el
@@ -221,6 +268,8 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     }
   };
 
+  /** Un botón de opción de los modales de filtro (Historial y Vencimientos usan el mismo). */
+  const claseChip = (activo: boolean) => `inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors ${activo ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200"}`;
   /** Una etiqueta de filtro puesto, con su ✕ para sacarlo. */
   const badgeFiltro = (texto: string, quitar: () => void) => (
     <span key={texto} className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/40 bg-blue-500/15 py-1 pl-3 pr-1.5 text-xs font-semibold text-blue-600 dark:text-blue-300">
@@ -231,43 +280,65 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     </span>
   );
 
+  /*
+    Pegada debajo del encabezado y con el mismo ancho, botones y espaciado que la del Historial
+    (SectionHeader mide 73px). -mx-4/px-4: el fondo tapa de borde a borde la lista, que va en px-4.
+  */
   const barraDeFiltros = (
-    <div className="mb-3 space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] text-slate-500 dark:text-slate-400">{porVencer && tiposElegidos.length > 0 ? `${porVencerVisibles.length} de ${porVencer.length} · ${rangoTexto}` : vencidos ? `Vencidos en los últimos ${diasAviso} días` : `Vencen en los próximos ${diasAviso} días`}</p>
-        <button
-          type="button"
-          onClick={() => setFiltrosAbiertos(true)}
-          className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors ${cantidadFiltros ? "border-blue-600 bg-blue-600 text-white" : "border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300"}`}
-        >
-          <FontAwesomeIcon icon={faFilter} className="h-3 w-3" />
-          Filtrar{cantidadFiltros ? ` (${cantidadFiltros})` : ""}
-        </button>
-      </div>
-      {/* Qué filtros están puestos, con su ✕: «Filtrar (2)» avisa que hay, pero no cuáles. */}
-      {cantidadFiltros > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {vencidos && badgeFiltro("Ya vencidos", () => setVencidos(false))}
-          {diasAviso !== DIAS_DE_AVISO_OPCIONES[0] && badgeFiltro(vencidos ? `Últimos ${diasAviso} días` : `Vencen en ${diasAviso} días`, () => cambiarDias(DIAS_DE_AVISO_OPCIONES[0]))}
-          {tiposElegidos.map((t) => badgeFiltro(t, () => alternarTipo(t)))}
+    <>
+      <div className="sticky top-[73px] z-20 -mx-4 space-y-2 bg-slate-50/90 px-4 py-2 backdrop-blur-sm dark:bg-slate-900/90">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <FontAwesomeIcon icon={faMagnifyingGlass} className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              value={vBusqueda}
+              onChange={(e) => setVBusqueda(e.target.value)}
+              placeholder="Buscar por nombre, proyecto, área, rol o contrato…"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
+            />
+            {vBusqueda && (
+              <button type="button" onClick={() => setVBusqueda("")} aria-label="Borrar búsqueda" className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400">
+                <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setFiltrosAbiertos(true)}
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            <FontAwesomeIcon icon={faFilter} className="h-3 w-3" />
+            Filtrar{cantidadFiltros ? <span className="text-blue-600 dark:text-blue-400">({cantidadFiltros})</span> : null}
+          </button>
         </div>
-      )}
-    </div>
+        {/* Qué filtros están puestos, con su ✕: «Filtrar (2)» avisa que hay, pero no cuáles. */}
+        {cantidadFiltros > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {sentido !== "por_vencer" && badgeFiltro(todos ? "Por vencer y vencidos" : "Ya vencidos", () => setSentido("por_vencer"))}
+            {diasAviso !== DIAS_DE_AVISO_OPCIONES[0] && badgeFiltro(todos ? `± ${diasAviso} días` : vencidos ? `Últimos ${diasAviso} días` : `Vencen en ${diasAviso} días`, () => cambiarDias(DIAS_DE_AVISO_OPCIONES[0]))}
+            {soloRechazadas && badgeFiltro("Renovación rechazada", () => setSoloRechazadas(false))}
+            {proyectosElegidos.map((t) => badgeFiltro(t, () => alternarProyecto(t)))}
+            {areasElegidas.map((t) => badgeFiltro(t, () => alternarArea(t)))}
+            {tiposElegidos.map((t) => badgeFiltro(t, () => alternarTipo(t)))}
+          </div>
+        )}
+      </div>
+      <p className="px-1 text-xs text-slate-500 dark:text-slate-400">
+        {porVencer && recortaLista ? `${porVencerVisibles.length} de ${porVencer.length} · ${rangoTexto}` : todos ? `Vencidos y por vencer · ${diasAviso} días para cada lado` : vencidos ? `Vencidos en los últimos ${diasAviso} días` : `Vencen en los próximos ${diasAviso} días`}
+      </p>
+    </>
   );
 
   const renderPorVencer = () => {
     if (porVencer === null)
       return (
-        <div className="space-y-3">
-          {[1, 2].map((i) => (
-            <div key={i} className="h-40 animate-pulse rounded-xl border bg-white dark:border-slate-800 dark:bg-slate-900/70" />
-          ))}
-        </div>
+        <LoadingSpinner message="Cargando datos..." />
       );
     // La barra va SIEMPRE, también sin resultados: si no hay nada en 7 días, mirar 15 es lo que sigue.
     if (porVencer.length === 0)
       return (
-        <>
+        <div className="space-y-3">
           {barraDeFiltros}
           <div className="flex flex-col items-center justify-center rounded-xl border bg-slate-50 p-10 text-center dark:bg-slate-800/50">
             {/* Contrato con reloj: lo que se muestra acá son contratos a los que se les acaba el tiempo. */}
@@ -277,19 +348,19 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
                 <FontAwesomeIcon icon={faClock} className="w-3.5 h-3.5 text-amber-500" />
               </span>
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400">{vencidos ? "No hay contratos vencidos sin decidir" : "No hay contratos por vencer"}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{todos ? "No hay contratos vencidos ni por vencer" : vencidos ? "No hay contratos vencidos sin decidir" : "No hay contratos por vencer"}</p>
             <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-              {vencidos ? `Acá aparecen los contratos de tu gente que terminaron en los últimos ${diasAviso} días sin que nadie decidiera si se renuevan.` : `Acá aparecen los contratos de tu gente que terminan en los próximos ${diasAviso} días.`} Con «Filtrar» podés mirar más lejos.
+              {todos ? `Acá aparecen los contratos de tu gente que terminaron en los últimos ${diasAviso} días sin decidir y los que terminan en los próximos ${diasAviso}.` : vencidos ? `Acá aparecen los contratos de tu gente que terminaron en los últimos ${diasAviso} días sin que nadie decidiera si se renuevan.` : `Acá aparecen los contratos de tu gente que terminan en los próximos ${diasAviso} días.`} Con «Filtrar» podés mirar más lejos.
             </p>
           </div>
-        </>
+        </div>
       );
     if (porVencerVisibles.length === 0)
       return (
-        <>
+        <div className="space-y-3">
           {barraDeFiltros}
-          <p className="rounded-xl border p-6 text-center text-sm text-slate-500 dark:border-slate-700">Ninguno de esos tipos de contrato {vencidos ? "venció en" : "vence en"} {rangoTexto}.</p>
-        </>
+          <p className="rounded-xl border p-6 text-center text-sm text-slate-500 dark:border-slate-700">Ningún contrato que {todos ? "vence o venció en" : vencidos ? "venció en" : "vence en"} {rangoTexto} coincide con la búsqueda o los filtros.</p>
+        </div>
       );
     return (
       <div className="space-y-3">
@@ -606,7 +677,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
         icon={pestana === "menu" ? faUsers : (SECCIONES.find((s) => s.id === pestana)?.icon ?? faUsers)}
         titulo={pestana === "menu" ? "Solicitud de Contratación" : (SECCIONES.find((s) => s.id === pestana)?.label ?? "Solicitud de Contratación")}
         onBack={() => (pestana === "menu" ? onNavigate("home") : setPestana("menu"))}
-        info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Historial» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Vencimientos» aparecen los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer. Con «Filtrar» elegís con cuánta anticipación verlos (7, 15 o 30 días, y queda guardado) y por qué tipo de contrato."}
+        info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Enviados» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Renovaciones» aparecen los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer. Con «Filtrar» elegís con cuánta anticipación verlos (7, 15 o 30 días, y queda guardado) y por qué tipo de contrato."}
       />
 
       <div className="px-4 pt-4">
@@ -633,21 +704,9 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
             se leían como si siguieran la barra en vez de colgar de ella. Ocho píxeles de aire a cada
             lado alcanzan para que se vean como una lista debajo de un título.
           */
-          <div className="px-2">{renderPorVencer()}</div>
+          renderPorVencer()
         ) : loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse bg-white dark:bg-slate-900/70 rounded-xl p-4 shadow-sm border dark:border-slate-800">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex-1">
-                    <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded-md mb-2" />
-                    <div className="h-3 w-48 bg-slate-200 dark:bg-slate-700 rounded-md" />
-                  </div>
-                </div>
-                <div className="h-8 w-full bg-slate-100 dark:bg-slate-800 rounded-md" />
-              </div>
-            ))}
-          </div>
+          <LoadingSpinner message="Cargando datos..." />
         ) : users.length > 0 ? (
           <div className="space-y-3">
             {/*
@@ -675,10 +734,10 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
               <button
                 type="button"
                 onClick={() => setHFiltrosAbiertos(true)}
-                className={`inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-bold transition-colors ${hCantidadFiltros ? "border-blue-600 bg-blue-600 text-white" : "border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300"}`}
+                className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 <FontAwesomeIcon icon={faFilter} className="h-3 w-3" />
-                Filtrar{hCantidadFiltros ? ` (${hCantidadFiltros})` : ""}
+                Filtrar{hCantidadFiltros ? <span className="text-blue-600 dark:text-blue-400">({hCantidadFiltros})</span> : null}
               </button>
             </div>
             {hCantidadFiltros > 0 && (
@@ -735,7 +794,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
           <div className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
               <p className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
-                <FontAwesomeIcon icon={faFilter} className="h-4 w-4" /> Filtrar
+                <FontAwesomeIcon icon={faFilter} className="h-4 w-4" /> Filtrar vencimientos
               </p>
               <button type="button" onClick={() => setFiltrosAbiertos(false)} aria-label="Cerrar" className="flex h-9 w-9 items-center justify-center rounded text-slate-500">
                 <FontAwesomeIcon icon={faXmark} className="h-5 w-5" />
@@ -747,10 +806,11 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Contratos</p>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { v: false, t: "Por vencer" },
-                    { v: true, t: "Ya vencidos" },
+                    { v: "todos" as const, t: "Todos" },
+                    { v: "por_vencer" as const, t: "Por vencer" },
+                    { v: "vencidos" as const, t: "Ya vencidos" },
                   ].map((o) => (
-                    <button key={o.t} type="button" onClick={() => setVencidos(o.v)} aria-pressed={vencidos === o.v} className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors ${vencidos === o.v ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200"}`}>
+                    <button key={o.t} type="button" onClick={() => setSentido(o.v)} aria-pressed={sentido === o.v} className={claseChip(sentido === o.v)}>
                       {o.t}
                     </button>
                   ))}
@@ -759,10 +819,10 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
               </div>
 
               <div>
-                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{vencidos ? "¿Hasta cuánto atrás?" : "¿Cuánto antes querés verlos?"}</p>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{todos ? "¿Cuántos días para cada lado?" : vencidos ? "¿Hasta cuánto atrás?" : "¿Cuánto antes querés verlos?"}</p>
                 <div className="flex flex-wrap gap-2">
                   {DIAS_DE_AVISO_OPCIONES.map((d) => (
-                    <button key={d} type="button" onClick={() => cambiarDias(d)} aria-pressed={diasAviso === d} className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors ${diasAviso === d ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200"}`}>
+                    <button key={d} type="button" onClick={() => cambiarDias(d)} aria-pressed={diasAviso === d} className={claseChip(diasAviso === d)}>
                       {d} días
                     </button>
                   ))}
@@ -770,16 +830,58 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
                 <p className="mt-1.5 text-[11px] text-slate-400">Queda guardado en este teléfono. Los contratos que duran una semana o menos no aparecen, mires con la anticipación que mires.</p>
               </div>
 
+              {cantidadRechazadas > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Renovación</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { v: false, t: "Todos" },
+                      { v: true, t: "Renovación rechazada", n: cantidadRechazadas },
+                    ].map((o) => (
+                      <button key={o.t} type="button" onClick={() => setSoloRechazadas(o.v)} aria-pressed={soloRechazadas === o.v} className={claseChip(soloRechazadas === o.v)}>
+                        {o.t}
+                        {o.n !== undefined && <span className={soloRechazadas === o.v ? "text-blue-100" : "text-slate-400"}>{o.n}</span>}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-slate-400">Los que ya se pidieron renovar y la solicitud se rechazó o canceló.</p>
+                </div>
+              )}
+
+              {[
+                { titulo: "Proyecto", opciones: proyectosDisponibles, elegidos: proyectosElegidos, alternar: alternarProyecto },
+                { titulo: "Área", opciones: areasDisponibles, elegidos: areasElegidas, alternar: alternarArea },
+              ]
+                .filter((g) => g.opciones.length > 1)
+                .map((g) => (
+                  <div key={g.titulo}>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{g.titulo}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {g.opciones.map(([valor, cuenta]) => {
+                        const elegido = g.elegidos.includes(valor);
+                        return (
+                          <button key={valor} type="button" onClick={() => g.alternar(valor)} aria-pressed={elegido} className={claseChip(elegido)}>
+                            {valor}
+                            <span className={elegido ? "text-blue-100" : "text-slate-400"}>{cuenta}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+
               <div>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tipo de contrato</p>
-                {tiposDisponibles.length === 0 ? (
-                  <p className="text-[11px] text-slate-400">{vencidos ? "No hay contratos vencidos para filtrar." : "No hay contratos por vencer para filtrar."}</p>
+                {porVencer === null ? (
+                  <p className="text-[11px] text-slate-400">Cargando…</p>
+                ) : tiposDisponibles.length === 0 ? (
+                  <p className="text-[11px] text-slate-400">{todos ? "No hay contratos para filtrar." : vencidos ? "No hay contratos vencidos para filtrar." : "No hay contratos por vencer para filtrar."}</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {tiposDisponibles.map(([tipo, cuenta]) => {
                       const elegido = tiposElegidos.includes(tipo);
                       return (
-                        <button key={tipo} type="button" onClick={() => alternarTipo(tipo)} aria-pressed={elegido} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors ${elegido ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200"}`}>
+                        <button key={tipo} type="button" onClick={() => alternarTipo(tipo)} aria-pressed={elegido} className={claseChip(elegido)}>
                           {tipo}
                           <span className={elegido ? "text-blue-100" : "text-slate-400"}>{cuenta}</span>
                         </button>
@@ -796,7 +898,10 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
                 type="button"
                 onClick={() => {
                   setTiposElegidos([]);
-                  setVencidos(false);
+                  setProyectosElegidos([]);
+                  setAreasElegidas([]);
+                  setSoloRechazadas(false);
+                  setSentido("por_vencer");
                   cambiarDias(DIAS_DE_AVISO_OPCIONES[0]);
                 }}
                 disabled={cantidadFiltros === 0}
@@ -805,7 +910,8 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
                 Limpiar
               </button>
               <button type="button" onClick={() => setFiltrosAbiertos(false)} className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-bold text-white hover:bg-blue-700">
-                Ver {porVencerVisibles.length} {porVencerVisibles.length === 1 ? "contrato" : "contratos"}
+                {/* Sin número: cambiar «Contratos» o los días pide otra lista al server, y mientras llega diría 0. */}
+                Ver contratos
               </button>
             </div>
           </div>
@@ -819,7 +925,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
         const cuentaEstados = new Map<string, number>();
         users.forEach((u) => cuentaEstados.set(estadoDeSolicitud(u), (cuentaEstados.get(estadoDeSolicitud(u)) || 0) + 1));
         const visibles = entradasHistorial.reduce((a, e) => a + (e.tipo === "sola" ? 1 : e.users.length), 0);
-        const chip = (activo: boolean) => `inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors ${activo ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200"}`;
+        const chip = claseChip;
         const titulo = (t: string) => <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t}</p>;
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setHFiltrosAbiertos(false)}>
@@ -950,7 +1056,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
           setShowRegistrationModal(false);
           setEditingUser(null);
           // La renovación enviada saca al contrato de «Vencimientos»: se vuelve a pedir la lista.
-          if (renovacion) cargarPorVencer();
+          if (renovacion) cargarPorVencer().then(setPorVencer);
           setRenovacion(null);
           refetch();
         }}

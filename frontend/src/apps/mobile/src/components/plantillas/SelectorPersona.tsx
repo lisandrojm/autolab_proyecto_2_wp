@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { LoadingSpinner } from "../../../../../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { usersAPI, User } from "../../../../../api/users";
@@ -119,11 +120,7 @@ export function SelectorPersona({ abierta, onCerrar, titulo, subtitulo, projectI
       </div>
 
       {!resultado ? (
-        <div className="space-y-2 pt-1" aria-busy="true">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-[52px] animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
-          ))}
-        </div>
+        <LoadingSpinner message="Cargando datos..." />
       ) : nada ? (
         <p className="py-8 text-center text-sm text-slate-700 dark:text-slate-200">{todosLosRoles || !rol ? "Nadie coincide con la búsqueda." : `Nadie con rol ${rol} coincide.`}</p>
       ) : (

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { LoadingSpinner } from "../../../../../components/ui/LoadingSpinner";
 import { tramiteSinConvenioNiCategoria } from "@compartido/tramiteSinEscala";
 import { useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -121,7 +122,7 @@ export default function DetallePuesto() {
 
   const atras = rutas.equipo(id, equipoId);
   if (noEsta || (p && (!equipo || !puesto))) return <Pantalla titulo="Puesto" atras={atras}><Vacio texto="Este puesto ya no está." accion="Volver al equipo" onAccion={() => navigate(atras)} /></Pantalla>;
-  if (!p || !equipo || !puesto) return <Pantalla titulo="Puesto" atras={atras} listo={false}><div className="h-40 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" /></Pantalla>;
+  if (!p || !equipo || !puesto) return <Pantalla titulo="Puesto" atras={atras} listo={false}><LoadingSpinner message="Cargando datos..." /></Pantalla>;
 
   const rol = nombreRoles(catalogos.roleFrames, puesto.rolesFrame);
   const contexto = `${equipo.nombre} · ${p.nombre}`;

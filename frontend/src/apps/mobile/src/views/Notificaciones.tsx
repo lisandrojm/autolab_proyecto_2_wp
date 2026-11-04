@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell, faCheckDouble, faEnvelope, faEnvelopeOpen, faLink, faUserPlus, faCircleCheck, faCircleXmark, faBan, faRotateLeft, faUmbrellaBeach } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -90,11 +91,7 @@ export default function Notificaciones({ onNavigate }: NotificacionesProps) {
         {error && <p className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-center text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
 
         {loading && notifications.length === 0 ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 animate-pulse rounded-xl border bg-white dark:border-slate-800 dark:bg-slate-900/70" />
-            ))}
-          </div>
+          <LoadingSpinner message="Cargando datos..." />
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border bg-slate-50 p-10 text-center dark:bg-slate-800/50">
             <FontAwesomeIcon icon={faBell} className="mb-3 h-10 w-10 text-slate-300" />

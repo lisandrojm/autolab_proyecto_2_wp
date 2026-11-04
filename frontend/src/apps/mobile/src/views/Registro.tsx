@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLink, faPlus, faXmark, faSpinner, faCheck, faEnvelope, faCalendarAlt, faLayerGroup, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
@@ -150,11 +151,7 @@ export default function Registro({ onNavigate }: RegistroProps) {
         {error ? (
           <p className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{error}</p>
         ) : registrados === null ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 animate-pulse rounded-xl border bg-white dark:border-slate-800 dark:bg-slate-900/70" />
-            ))}
-          </div>
+          <LoadingSpinner message="Cargando datos..." />
         ) : registrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border bg-slate-50 p-10 text-center dark:border-slate-700 dark:bg-slate-800/50">
             <FontAwesomeIcon icon={faLink} className="mb-3 h-10 w-10 text-slate-300" />
