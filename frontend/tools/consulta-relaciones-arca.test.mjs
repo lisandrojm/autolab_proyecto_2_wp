@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { filasDelTxt, indiceDeSiguiente, paginasDelPaginador, resultadoDeConsulta, textoPeriodo } from "./consulta-relaciones-arca.mjs";
+import { filasDelTxt, indiceDeSiguiente, indiceDeVentanaSiguiente, paginasDelPaginador, paginasDelPaginadorDeTexto, resultadoDeConsulta, textoPeriodo } from "./consulta-relaciones-arca.mjs";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 
@@ -64,5 +64,17 @@ describe("el motor sólo lee", () => {
     for (const prohibido of ["Button_envio", "btnAceptar", "aceptarGrilla", "enviarNovedad", "rel_new", "btnArchivoAltas"]) {
       assert.ok(!fuente.includes(prohibido), `el motor de Consultas no debería mencionar «${prohibido}»`);
     }
+  });
+});
+
+describe("el paginador propio de ARCA («Paginas: [-1] 1 2», 04/11/2026)", () => {
+  it("los números son las páginas; «[-1]» no es una página", () => {
+    assert.deepEqual(paginasDelPaginadorDeTexto(["[-1]", "1", "2"]), [1, 2]);
+    assert.deepEqual(paginasDelPaginadorDeTexto([" 3 ", "2", "Volver"]), [2, 3]);
+  });
+  it("«[+1]» o «...» corren la ventana hacia adelante; «[-1]» no", () => {
+    assert.equal(indiceDeVentanaSiguiente(["[-1]", "1", "2", "[+1]"]), 3);
+    assert.equal(indiceDeVentanaSiguiente(["1", "2", "..."]), 2);
+    assert.equal(indiceDeVentanaSiguiente(["[-1]", "1", "2"]), -1);
   });
 });

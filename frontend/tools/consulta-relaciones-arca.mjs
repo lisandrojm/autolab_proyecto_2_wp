@@ -64,6 +64,27 @@ export function paginasDelPaginador(hrefs) {
 }
 
 /**
+ * EL PAGINADOR PROPIO DE ARCA (04/11/2026): «Paginas: [-1] 1 2». No es el de ASP.NET (sin `Page$N` en
+ * el href): son links cuyo TEXTO es el número de página; la actual va sin link, y «[-1]» / «[+1]» mueven
+ * la ventana de números. Sin esto, Relaciones Laborales leía sólo la primera página (30 filas) de los
+ * meses con más movimientos, y las altas y bajas de la segunda nunca llegaban a WeProdu.
+ * Recibe los textos de los links del paginador; devuelve los números de página. Puro.
+ */
+export function paginasDelPaginadorDeTexto(textos) {
+  const out = new Set();
+  for (const t of textos) {
+    const s = String(t || "").replace(/\s+/g, " ").trim();
+    if (/^\d{1,4}$/.test(s)) out.add(Number(s));
+  }
+  return [...out].sort((a, b) => a - b);
+}
+
+/** En el paginador de texto, el link que corre la ventana hacia adelante («[+1]», «...», «>>»), o -1. Puro. */
+export function indiceDeVentanaSiguiente(textos) {
+  return textos.findIndex((t) => /^(\[\+\d+\]|\.\.\.|…)$/.test(String(t || "").replace(/\s+/g, "").trim()));
+}
+
+/**
  * El control «Siguiente» de un paginador que no muestra números: un link con `Page$Next`, o un botón o
  * link que diga «Siguiente», «>» o «»». Devuelve su índice en `controles`, o -1. Puro.
  */
@@ -185,6 +206,33 @@ async function irAPagina(page, n) {
   return esperarEstado(async () => (await paginaActual(page)) === n, { ms: 20_000, que: `la página ${n} del resultado`, log });
 }
 
+/**
+ * Los links del paginador de texto de ARCA: los del elemento más chico que dice «Páginas:» y tiene links.
+ * A cada uno se le pone `data-weprodu-pag` con su posición, para poder hacer click después.
+ */
+async function linksDePaginadorDeTexto(page) {
+  return page
+    .evaluate(() => {
+      const conLinks = [...document.querySelectorAll("td, div, span, p, tr")].filter((el) => /P[aá]ginas\s*:/i.test(el.textContent || "") && el.querySelector("a"));
+      const cont = conLinks.sort((a, b) => (a.textContent || "").length - (b.textContent || "").length)[0];
+      if (!cont) return [];
+      return [...cont.querySelectorAll("a")].map((a, i) => {
+        a.setAttribute("data-weprodu-pag", String(i));
+        return (a.textContent || "").trim();
+      });
+    })
+    .catch(() => []);
+}
+
+/** Click en el link `i` del paginador de texto y espera a que el listado cambie. */
+async function clickEnPaginadorDeTexto(page, i, que) {
+  const link = page.locator(`[data-weprodu-pag="${i}"]`).first();
+  if (!(await link.count())) return false;
+  const antes = await firmaDelListado(page);
+  await link.click();
+  return esperarEstado(async () => (await firmaDelListado(page)) !== antes, { ms: 20_000, que, log });
+}
+
 /** Los controles clickeables de la pantalla, con lo que dicen: para encontrar un «Siguiente». */
 async function controlesDePantalla(page) {
   return page
@@ -286,6 +334,29 @@ export async function consultarMovimientosDelMes({ page, mes, onProgreso = () =>
     vistas.add(n);
     onProgreso({ tipo: "pagina", mes, numero: n });
     if (vistas.size > 500) return desconocida("El paginador no termina nunca: más de 500 páginas.");
+  }
+  // El paginador propio de ARCA, por texto («Paginas: [-1] 1 2»). Ver `paginasDelPaginadorDeTexto`.
+  if (paginador === "ninguno") {
+    for (let vueltas = 0; vueltas < 500; vueltas++) {
+      const textos = await linksDePaginadorDeTexto(page);
+      const n = paginasDelPaginadorDeTexto(textos).find((x) => !vistas.has(x));
+      if (n === undefined) {
+        // Se terminaron los números a la vista: si hay un «[+1]», corre la ventana y se vuelve a mirar.
+        const v = indiceDeVentanaSiguiente(textos);
+        if (v < 0 || !(await clickEnPaginadorDeTexto(page, v, "la ventana siguiente del paginador"))) break;
+        continue;
+      }
+      paginador = "texto";
+      if (!(await clickEnPaginadorDeTexto(page, textos.findIndex((t) => t.replace(/\s+/g, " ").trim() === String(n)), `la página ${n} del resultado`)))
+        return { ...(await desconocida(`No pude pasar a la página ${n} del resultado (paginador «Páginas:»).`)), paginasParciales: paginas };
+      const b = await bajarTxt(page, base);
+      if (!b) return { ...(await desconocida(`No pude bajar el TXT de la página ${n}.`)), paginasParciales: paginas };
+      // El mismo TXT que la anterior = el TXT es de todo el listado, no de la página: ya estaba todo.
+      if (paginas.some((p) => Buffer.compare(b, p) === 0)) break;
+      paginas.push(b);
+      vistas.add(n);
+      onProgreso({ tipo: "pagina", mes, numero: n });
+    }
   }
   // Sin números: un paginador de «Siguiente» (Page$Next o un botón que lo diga). Se avanza hasta que el listado no cambie.
   if (paginador === "ninguno") {
