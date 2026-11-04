@@ -794,7 +794,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
           <div className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
               <p className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
-                <FontAwesomeIcon icon={faFilter} className="h-4 w-4" /> Filtrar vencimientos
+                <FontAwesomeIcon icon={faFilter} className="h-4 w-4" /> Filtrar renovaciones
               </p>
               <button type="button" onClick={() => setFiltrosAbiertos(false)} aria-label="Cerrar" className="flex h-9 w-9 items-center justify-center rounded text-slate-500">
                 <FontAwesomeIcon icon={faXmark} className="h-5 w-5" />
