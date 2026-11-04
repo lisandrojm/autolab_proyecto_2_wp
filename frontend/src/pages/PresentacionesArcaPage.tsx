@@ -54,7 +54,7 @@ const EstadoVerificacion: React.FC<{ c: AltaPendienteArca; enCurso: boolean }> =
     return (
       <div>
         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 whitespace-nowrap">Requiere revisión manual</span>
-        <p className="mt-0.5 text-[10px] text-gray-500 whitespace-nowrap">Verificada {fechaHoraArgentina(v.el)}</p>
+        <p className="mt-0.5 text-[10px] text-gray-500 whitespace-nowrap">{v.origen === "sync" ? "Alta externa que no coincide" : "Verificada"} {fechaHoraArgentina(v.el)}</p>
       </div>
     );
   return <p className="text-[10px] text-gray-500 whitespace-nowrap">Sin verificar en ARCA</p>;
@@ -119,7 +119,36 @@ const VerificacionEnArca: React.FC<{ c: AltaPendienteArca; enCurso: boolean; ocu
             {fechaHoraArgentina(v.el)} · {v.automatica ? "automática" : auditada?.usuario || "a mano"}
           </p>
           <p className="text-gray-600 dark:text-gray-300">{v.motivo}</p>
-          {auditada && (
+          {/* Alta externa que no coincide (04/11/2026): lo que se esperaba y lo que tiene ARCA, lado a lado. */}
+          {v.origen === "sync" && v.esperado && (
+            <table className="w-full text-xs border border-gray-200 dark:border-gray-700 rounded">
+              <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500">
+                <tr>
+                  <th className="text-left px-2 py-1 font-semibold"></th>
+                  <th className="text-left px-2 py-1 font-semibold">Inicio</th>
+                  <th className="text-left px-2 py-1 font-semibold">Fin</th>
+                  <th className="text-left px-2 py-1 font-semibold">Modalidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-gray-200 dark:border-gray-700">
+                  <td className="px-2 py-1 font-semibold text-gray-500">Contrato</td>
+                  <td className="px-2 py-1">{fechaCorta(v.esperado.inicio)}</td>
+                  <td className="px-2 py-1">{v.esperado.fin ? fechaCorta(v.esperado.fin) : "sin fin"}</td>
+                  <td className="px-2 py-1">{v.esperado.modalidad || "—"}</td>
+                </tr>
+                {(v.encontradas || []).map((r, i) => (
+                  <tr key={i} className="border-t border-gray-200 dark:border-gray-700">
+                    <td className="px-2 py-1 font-semibold text-gray-500">ARCA</td>
+                    <td className={`px-2 py-1 ${r.inicio !== v.esperado!.inicio ? "text-red-600 dark:text-red-400 font-semibold" : ""}`}>{fechaCorta(r.inicio)}</td>
+                    <td className={`px-2 py-1 ${(r.fin || "") !== (v.esperado!.fin || "") ? "text-red-600 dark:text-red-400 font-semibold" : ""}`}>{r.fin ? fechaCorta(r.fin) : "sin fin"}</td>
+                    <td className="px-2 py-1">{r.modalidad || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {auditada && v.origen !== "sync" && (
             <div className="text-xs text-gray-500 space-y-0.5">
               {auditada.consulta?.ok === false ? (
                 <p>La consulta falló: {auditada.consulta.error}</p>

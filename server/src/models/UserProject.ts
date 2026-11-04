@@ -227,8 +227,12 @@ interface IContract {
    * volver a intentar).
    */
   altaArcaPresentada?: {
-    /** `verificacion`: no se presentó desde WeProdu; se encontró ya hecha en ARCA (ver `verificacionAltas.ts`). */
-    via: "carga_masiva" | "altas_masivas" | "verificacion";
+    /**
+     * `verificacion`: no se presentó desde WeProdu; se encontró ya hecha en ARCA consultándola (ver `verificacionAltas.ts`).
+     * `externa`: alguien la hizo a mano en ARCA y apareció idéntica en la sincronización de Relaciones
+     * Laborales; se adoptó como propia (ver `adopcionAltasExternas.ts`).
+     */
+    via: "carga_masiva" | "altas_masivas" | "verificacion" | "externa";
     fecha: Date;
     /**
      * `presentando`: se escribió justo ANTES de apretar «Aceptar» en ARCA y todavía no hay resultado.
@@ -272,7 +276,12 @@ interface IContract {
     el: Date;
     resultado: "presentada" | "revision_manual";
     motivo: string;
-    relacion?: { inicio: string; fin: string; baja?: string };
+    relacion?: { inicio: string; fin: string; baja?: string; modalidad?: string };
+    /** `consulta`: se miró ARCA en vivo. `sync`: salió de las Relaciones Laborales sincronizadas (alta externa). */
+    origen?: "consulta" | "sync";
+    /** Alta externa que no coincide: lo esperado y lo encontrado en ARCA, lado a lado. */
+    esperado?: { inicio: string; fin: string; modalidad: string };
+    encontradas?: Array<{ inicio: string; fin: string; modalidad: string }>;
     automatica?: boolean;
     usuarioId?: Types.ObjectId;
     auditoriaId?: Types.ObjectId;
@@ -477,7 +486,7 @@ const contractSchema = new Schema<IContract>(
     altaArcaPresentada: {
       type: new Schema(
         {
-          via: { type: String, enum: ["carga_masiva", "altas_masivas", "verificacion"] },
+          via: { type: String, enum: ["carga_masiva", "altas_masivas", "verificacion", "externa"] },
           fecha: { type: Date },
           resultado: { type: String, enum: ["presentada", "indeterminado", "fallida", "presentando"] },
           codigoNovedad: { type: String },
@@ -503,7 +512,10 @@ const contractSchema = new Schema<IContract>(
           el: { type: Date },
           resultado: { type: String, enum: ["presentada", "revision_manual"] },
           motivo: { type: String },
-          relacion: { type: new Schema({ inicio: String, fin: String, baja: String }, { _id: false }), default: undefined },
+          relacion: { type: new Schema({ inicio: String, fin: String, baja: String, modalidad: String }, { _id: false }), default: undefined },
+          origen: { type: String, enum: ["consulta", "sync"] },
+          esperado: { type: new Schema({ inicio: String, fin: String, modalidad: String }, { _id: false }), default: undefined },
+          encontradas: { type: [new Schema({ inicio: String, fin: String, modalidad: String }, { _id: false })], default: undefined },
           automatica: { type: Boolean },
           usuarioId: { type: Schema.Types.ObjectId, ref: "User" },
           auditoriaId: { type: Schema.Types.ObjectId, ref: "ArcaVerificacionAlta" },

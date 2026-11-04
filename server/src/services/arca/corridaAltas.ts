@@ -92,6 +92,11 @@ interface CorridaAltas {
   dialogoInesperado?: string;
   /** Lo que venía en la selección y no se presenta porque ya tenía marca (ver `validarLoteAltas`). */
   descartadas: Array<{ cuil: string; nombre: string; motivo: "presentada" | "incierta" }>;
+  /**
+   * Altas de la selección que ya estaban hechas a mano en ARCA (idénticas en las Relaciones Laborales
+   * sincronizadas): se adoptaron como presentadas y no se presentan. En seco, las que SE ADOPTARÍAN.
+   */
+  externas?: Array<{ cuil: string; nombre: string; motivo: string; enSeco: boolean }>;
   señal: { cortada: boolean };
   arrancadaEl: Date;
   /** La lanzó la presentación automática de las 14 h (ver `presentacionAutomatica.ts`), no una persona. */
@@ -144,9 +149,36 @@ export async function arrancarCorridaAltas(opts: {
   // El candado ANTES de cualquier await: dos clicks seguidos no pueden arrancar dos corridas.
   tomarCandado(tenantId, modo);
   try {
+    /*
+      ANTES DE VALIDAR, LAS ALTAS YA HECHAS A MANO EN ARCA (04/11/2026): las altas pendientes de esta
+      empleadora que están idénticas en las Relaciones Laborales sincronizadas se adoptan como presentadas
+      y salen del lote —nunca se presenta un alta que ya existe—. Toda la empleadora y no sólo la selección:
+      el prechequeo del modal (`/bloqueadas`) ya sacó del lote las que ARCA tiene ese día, avisando que se
+      adoptan. En seco no se escribe nada: sólo se informa, y sólo de la selección.
+      También con «Forzar»: forzar saltea controles, no autoriza a presentar dos veces la misma alta.
+    */
+    const secoPedido = enSecoForzado() || !!opts.enSeco;
+    const { adoptarAltasExternas } = await import("./adopcionAltasExternas.js");
+    const adopcion = await adoptarAltasExternas({
+      tenantObjectId,
+      detectadaPor: "presentacion_masiva",
+      usuarioId,
+      enSeco: secoPedido,
+      ...(secoPedido ? { soloContratos: opts.items.map((i) => ({ userProjectId: String(i?.userProjectId || ""), contractIndex: Number(i?.contractIndex) })) } : { empresaId: opts.empresaId }),
+    });
+    const externas = adopcion.filter((r) => r.decision === "adoptar" && (r.accion === "marcada_presentada" || r.accion === "en_seco"));
+    const fueraDelLote = new Set(externas.map((r) => `${r.userProjectId}:${r.contractIndex}`));
+    const items = opts.items.filter((i) => !fueraDelLote.has(`${String(i?.userProjectId || "")}:${Number(i?.contractIndex)}`));
+    if (items.length === 0) {
+      throw new LoteAltasError(
+        secoPedido
+          ? `Las ${externas.length} altas de la selección ya están hechas a mano en ARCA: en una corrida de verdad se adoptarían como alta externa, sin presentar nada.`
+          : `Las ${externas.length} altas de la selección ya estaban hechas a mano en ARCA: se adoptaron como alta externa (quedan presentadas y siguen el circuito). No queda nada por presentar.`,
+      );
+    }
     // Altas Masivas valida TODA la selección de una vez, sin tope, y saltea lo ya presentado: así
     // una corrida cortada se relanza con la misma selección y no duplica.
-    const lote = await validarLoteAltas({ tenantObjectId, modo, empresaId: opts.empresaId, items: opts.items, forzar: !!opts.forzar, descartarPresentadas: modo === "altas_masivas" });
+    const lote = await validarLoteAltas({ tenantObjectId, modo, empresaId: opts.empresaId, items, forzar: !!opts.forzar, descartarPresentadas: modo === "altas_masivas" });
     if (lote.items.length === 0 && !lote.descartadas.some((d) => d.motivo === "incierta")) {
       throw new LoteAltasError("Todos los contratos de la selección ya están presentados en ARCA: no queda nada por presentar.");
     }
@@ -169,6 +201,7 @@ export async function arrancarCorridaAltas(opts: {
       porTandas: modo === "altas_masivas",
       detenerPedido: false,
       descartadas: lote.descartadas.map((d) => ({ cuil: d.cuil, nombre: d.nombre, motivo: d.motivo })),
+      externas: externas.map((r) => ({ cuil: r.cuil, nombre: r.nombre, motivo: r.motivo, enSeco: r.accion === "en_seco" })),
       señal: { cortada: false },
       arrancadaEl: new Date(),
       automatica: !!opts.automatica,

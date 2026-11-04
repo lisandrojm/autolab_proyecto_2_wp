@@ -16,7 +16,7 @@ import { listarCategoriasCompat } from "../../utils/categoriaCompat.js";
 import { claveEstado } from "../../utils/estadoClave.js";
 import { ESTADO_TYPE } from "../../utils/estadosImpositivosSistema.js";
 import { fechaISO, hoyArgentina } from "../../utils/contratoVigencia.js";
-import { resolveAfip, resolveAfip85, problemasDeSucursalParaTxt, type AfipCatalogs } from "../../compartido/arca/afipCompleteness.js";
+import { resolveAfip, resolveAfip85, resolveAfipValues, problemasDeSucursalParaTxt, type AfipCatalogs } from "../../compartido/arca/afipCompleteness.js";
 import { buildAltaRecord85 } from "../../compartido/arca/afipTxt85.js";
 import { TEXTO_PROBLEMA_SUCURSAL } from "../../compartido/sucursalesDeEmpresa.js";
 import { altasPresentadasDe, relacionesArcaDe, ultimaSyncOkPorCuit } from "./altasVigentes.js";
@@ -152,8 +152,25 @@ export interface CandidatoAlta {
   verificable: boolean;
   /** Otro contrato de WeProdu de la misma persona y empleadora, ya presentado, empieza el mismo día (un duplicado). */
   otroContratoMismoDia: boolean;
+  /**
+   * El código de modalidad de contratación, resuelto como para el TXT (tipo de contrato → empleadora →
+   * global). Vacío si no se pudo. Lo compara la adopción de altas externas (`adopcionAltasExternas.ts`).
+   */
+  modalidadCodigo: string;
   /** La última verificación en ARCA, si la hubo (ver `IContract.verificacionArca`). */
-  verificacion: { el: string; resultado: "presentada" | "revision_manual"; motivo: string; relacion?: { inicio: string; fin: string; baja?: string }; automatica: boolean; auditoriaId: string } | null;
+  verificacion: {
+    el: string;
+    resultado: "presentada" | "revision_manual";
+    motivo: string;
+    relacion?: { inicio: string; fin: string; baja?: string; modalidad?: string };
+    /** `sync`: la miró la adopción de altas externas (lo sincronizado); `consulta`: ARCA en vivo. */
+    origen: "consulta" | "sync";
+    /** Alta externa que no coincide: lo esperado y lo encontrado, lado a lado. */
+    esperado?: { inicio: string; fin: string; modalidad: string };
+    encontradas?: Array<{ inicio: string; fin: string; modalidad: string }>;
+    automatica: boolean;
+    auditoriaId: string;
+  } | null;
 }
 
 /**
@@ -342,7 +359,16 @@ export async function candidatosDeAlta(
     let desbloqueo = "";
     let bloqueo: Bloqueo | null = null;
     let trabadoPorRechazo = false;
-    let otroContratoMismoDia = false;
+    // Antes de mirar si está completa: un duplicado y la modalidad importan aunque falten otros datos (altas externas).
+    const otroContratoMismoDia = !!empresaId && presentadas.some((p) => p.userId === String(up.userId) && p.empresaId === empresaId && p.alta === fechaAlta && !(p.userProjectId === String(up._id) && p.contractIndex === i));
+    let modalidadCodigo = "";
+    if (empresa) {
+      try {
+        modalidadCodigo = String(resolveAfipValues(row, cat).modalidadContrato || "");
+      } catch {
+        // Sin modalidad, la adopción de altas externas manda a revisión manual: no se adopta a ciegas.
+      }
+    }
     // Terminado, rechazado por el padrón o rechazado varias veces: todo informativo, todos siguen en la cola.
     const terminado = yaTermino(fechaBaja, hoy);
     const fallida = c.altaArcaPresentada?.resultado === "fallida";
@@ -374,7 +400,6 @@ export async function candidatosDeAlta(
         const cuitEmpresa = digitos(empresa.cuit);
         const rels = relacionesArca.filter((r) => r.cuil === digitos(u.metadata?.cuit) && r.empleadoraCuit === cuitEmpresa);
         bloqueo = bloqueoPorVigencia({ userId: String(up.userId), userProjectId: String(up._id), contractIndex: i, empresaId, alta: fechaAlta, baja: fechaBaja }, presentadas, rels, { hoy });
-        otroContratoMismoDia = presentadas.some((p) => p.userId === String(up.userId) && p.empresaId === empresaId && p.alta === fechaAlta && !(p.userProjectId === String(up._id) && p.contractIndex === i));
         if (bloqueo) {
           motivo = bloqueo.motivo;
           desbloqueo = bloqueo.desbloqueo;
@@ -423,6 +448,7 @@ export async function candidatosDeAlta(
       registro: motivo ? null : registro,
       verificable: bloqueo?.tipo === "mismo_dia" && bloqueo.mismoDiaEn === "arca",
       otroContratoMismoDia,
+      modalidadCodigo,
       verificacion: verificacionDe(c.verificacionArca),
     });
   }
@@ -474,7 +500,10 @@ function verificacionDe(v: any): CandidatoAlta["verificacion"] {
     el: new Date(v.el).toISOString(),
     resultado: v.resultado,
     motivo: String(v.motivo || ""),
-    ...(v.relacion?.inicio ? { relacion: { inicio: String(v.relacion.inicio), fin: String(v.relacion.fin || ""), baja: v.relacion.baja ? String(v.relacion.baja) : undefined } } : {}),
+    ...(v.relacion?.inicio ? { relacion: { inicio: String(v.relacion.inicio), fin: String(v.relacion.fin || ""), baja: v.relacion.baja ? String(v.relacion.baja) : undefined, modalidad: v.relacion.modalidad ? String(v.relacion.modalidad) : undefined } } : {}),
+    origen: v.origen === "sync" ? "sync" : "consulta",
+    ...(v.esperado ? { esperado: { inicio: String(v.esperado.inicio || ""), fin: String(v.esperado.fin || ""), modalidad: String(v.esperado.modalidad || "") } } : {}),
+    ...(Array.isArray(v.encontradas) ? { encontradas: v.encontradas.map((r: any) => ({ inicio: String(r.inicio || ""), fin: String(r.fin || ""), modalidad: String(r.modalidad || "") })) } : {}),
     automatica: !!v.automatica,
     auditoriaId: v.auditoriaId ? String(v.auditoriaId) : "",
   };

@@ -402,6 +402,22 @@ export const ContractActionsCell: React.FC<{ record: ContractOverviewRow; onDele
  * que más importa ver, porque es la que alguien podría volver a presentar sin mirar ARCA.
  */
 const InsigniaAltaPresentada: React.FC<{ a: AltaArcaPresentada }> = ({ a }) => {
+  /*
+    ALTA EXTERNA (04/11/2026): la hizo alguien a mano en ARCA y apareció idéntica en la sincronización de
+    Relaciones Laborales; la plataforma la adoptó como propia. Insignia propia, para que se distinga de
+    lo que presentó WeProdu.
+  */
+  if (a.via === "externa" && a.resultado === "presentada") {
+    const fecha = a.fecha ? new Date(a.fecha).toLocaleDateString("es-AR") : "";
+    return (
+      <span
+        title={`El alta ya estaba presentada en ARCA (hecha a mano, fuera de la plataforma). Se detectó en la sincronización de Relaciones Laborales el ${fecha} y se adoptó como propia: no se vuelve a presentar y sigue el circuito (constancia, documentos, firma).${a.cat ? ` · C.A.T. ${a.cat}` : ""}${a.motivo ? ` · ${a.motivo}` : ""}`}
+        className="self-start inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-900/20 dark:text-teal-300 dark:border-teal-800"
+      >
+        Alta externa adoptada
+      </span>
+    );
+  }
   const via = a.via === "verificacion" ? "verificación en ARCA (ya estaba hecha)" : a.via === "altas_masivas" ? "Altas Masivas" : "Carga Masiva";
   const fecha = a.fecha ? new Date(a.fecha).toLocaleDateString("es-AR") : "";
   const estilo =

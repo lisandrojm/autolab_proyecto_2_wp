@@ -67,6 +67,8 @@ export interface ResumenSync {
   error?: string;
   /** Ruta del HTML guardado cuando ARCA mostró una pantalla desconocida. */
   htmlGuardado?: string;
+  /** Altas hechas a mano en ARCA que aparecieron en esta sincronización (ver `adopcionAltasExternas.ts`). */
+  altasExternas?: { adoptadas: number; revisionManual: number; error?: string };
 }
 
 export interface EstadoSync {
@@ -216,6 +218,21 @@ export async function sincronizarRelacionesTenant(tenantId: string, o: { meses?:
     const aRecalcular = new Set([...cuilsTocados, ...abiertas]);
     resumen.cuilsRecalculados = aRecalcular.size;
     resumen.filasAntiguedad = await recalcularAntiguedad(tenantObjectId, aRecalcular, hoy);
+
+    /*
+      ALTAS HECHAS A MANO EN ARCA (04/11/2026): con lo recién sincronizado, las altas pendientes que ya
+      están idénticas en ARCA se adoptan como presentadas. Sólo base, sin ARCA. Un error acá no tumba la
+      sincronización: se anota y se reintenta antes de la próxima corrida de altas.
+    */
+    avisar("Buscando altas hechas a mano en ARCA…");
+    try {
+      const { adoptarAltasExternas } = await import("./adopcionAltasExternas.js");
+      const r = await adoptarAltasExternas({ tenantObjectId, detectadaPor: "sincronizacion" });
+      resumen.altasExternas = { adoptadas: r.filter((x) => x.accion === "marcada_presentada").length, revisionManual: r.filter((x) => x.accion === "revision_manual").length };
+    } catch (e: any) {
+      resumen.altasExternas = { adoptadas: 0, revisionManual: 0, error: String(e?.message || e) };
+      console.error(`[altas-externas] ${tenantId}: falló después de la sincronización:`, e?.message || e);
+    }
   } catch (e: any) {
     error = String(e?.message || e);
     resumen.error = error;

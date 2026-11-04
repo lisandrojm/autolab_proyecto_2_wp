@@ -30,8 +30,8 @@ export interface SinCuitValidacion {
 }
 
 export interface AltaArcaPresentada {
-  /** `verificacion`: se encontró ya hecha en ARCA, no se presentó desde WeProdu. */
-  via: "carga_masiva" | "altas_masivas" | "verificacion";
+  /** `verificacion`: se encontró ya hecha en ARCA, no se presentó desde WeProdu. `externa`: hecha a mano en ARCA y adoptada al sincronizar. */
+  via: "carga_masiva" | "altas_masivas" | "verificacion" | "externa";
   fecha: string;
   /** `presentando`: se marcó antes del «Aceptar» de ARCA y la corrida se cortó sin resultado. */
   resultado: "presentada" | "indeterminado" | "fallida" | "presentando";

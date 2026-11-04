@@ -3410,7 +3410,23 @@ router.post("/contratos/altas-arca/corrida", requireTenant, authenticateToken, r
  */
 router.post("/contratos/altas-arca/bloqueadas", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const bloqueadas = await bloqueadasPorVigencia(req.tenantObjectId, String(req.body?.empresaId || ""), Array.isArray(req.body?.items) ? req.body.items : []);
+    const bloqueadas: Array<{ userProjectId: string; contractIndex: number; motivo: string; externa?: "adoptar" | "revision_manual" }> = await bloqueadasPorVigencia(req.tenantObjectId, String(req.body?.empresaId || ""), Array.isArray(req.body?.items) ? req.body.items : []);
+    /*
+      ALTAS YA HECHAS A MANO EN ARCA (04/11/2026): de las bloqueadas, las que son esta alta idéntica se
+      adoptan como alta externa al correr (no se presentan); las parecidas van a revisión manual. Se dice
+      acá, en seco, para que el modal (y su «Probar en seco») lo informe. Ver `adopcionAltasExternas.ts`.
+    */
+    if (bloqueadas.length > 0) {
+      const { adoptarAltasExternas } = await import("../services/arca/adopcionAltasExternas.js");
+      const r = await adoptarAltasExternas({ tenantObjectId: req.tenantObjectId as Types.ObjectId, detectadaPor: "presentacion_masiva", enSeco: true, soloContratos: bloqueadas });
+      const porClave = new Map(r.map((x) => [`${x.userProjectId}:${x.contractIndex}`, x]));
+      for (const b of bloqueadas) {
+        const x = porClave.get(`${b.userProjectId}:${b.contractIndex}`);
+        if (!x) continue;
+        b.externa = x.decision;
+        b.motivo = x.decision === "adoptar" ? `Ya está hecha a mano en ARCA, idéntica a este contrato: se adopta como alta externa (queda presentada sin volver a presentarla). ${x.motivo}` : x.motivo;
+      }
+    }
     res.json({ bloqueadas });
   } catch (error: any) {
     res.status(500).json({ error: String(error?.message || error) });
@@ -3689,6 +3705,7 @@ router.get("/contratos/altas-arca/corrida", requireTenant, authenticateToken, re
     porTandas: c.porTandas,
     detenerPedido: c.detenerPedido,
     descartadas: c.descartadas,
+    externas: c.externas || [],
     arrancadaEl: c.arrancadaEl,
     eventos: c.eventos,
     enSecoForzado: enSecoPorDefecto,
@@ -3714,7 +3731,8 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
   try {
     const empresaId = String(req.query?.empresaId || "");
     // Con las de la verificación en ARCA: no presentaron nada, pero son altas que quedaron presentadas (ver `verificacionAltas.ts`).
-    const filtro: Record<string, unknown> = { tenantId: req.tenantObjectId, tipo: { $in: ["altas_masivas", "verificacion"] } };
+    // Y las altas externas: hechas a mano en ARCA y adoptadas al sincronizar (ver `adopcionAltasExternas.ts`).
+    const filtro: Record<string, unknown> = { tenantId: req.tenantObjectId, tipo: { $in: ["altas_masivas", "verificacion", "externa"] } };
     if (Types.ObjectId.isValid(empresaId)) filtro.empresaId = new Types.ObjectId(empresaId);
     const logs: any[] = await ArcaAltasLog.find(filtro)
       .sort({ createdAt: -1 })
@@ -3786,7 +3804,9 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
         createdAt: l.createdAt,
         // La de las 14 h no tiene persona detrás: se dice que fue la automática.
         usuario:
-          l.tipo === "verificacion"
+          l.tipo === "externa"
+            ? `Alta externa adoptada${l.automatica ? " (automática)" : l.usuarioId ? ` · ${`${l.usuarioId.firstName || ""} ${l.usuarioId.lastName || ""}`.trim()}` : ""}`
+            : l.tipo === "verificacion"
             ? `Verificación en ARCA${l.automatica ? " (automática)" : l.usuarioId ? ` · ${`${l.usuarioId.firstName || ""} ${l.usuarioId.lastName || ""}`.trim()}` : ""}`
             : l.automatica
               ? "Automática"

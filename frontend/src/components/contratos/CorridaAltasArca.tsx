@@ -200,15 +200,22 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote: loteR
     del lote de entrada, con el motivo a la vista. No hay «volver a incluir»: el server no las deja pasar.
   */
   const [bloqueadas, setBloqueadas] = useState<Map<string, string>>(new Map());
+  /** De las bloqueadas, las que ya están idénticas en ARCA (hechas a mano): se adoptan como alta externa al correr. */
+  const [externas, setExternas] = useState<Set<string>>(new Set());
   const [cargandoBloqueadas, setCargandoBloqueadas] = useState(false);
   useEffect(() => {
     setBloqueadas(new Map());
+    setExternas(new Set());
     if (!loteRecibido || loteRecibido.items.length === 0) return;
     let vigente = true;
     setCargandoBloqueadas(true);
     projectsAPI
       .altasBloqueadasPorVigencia(loteRecibido.empresa._id, loteRecibido.items.map((x) => ({ userProjectId: x.userProjectId, contractIndex: x.contractIndex })))
-      .then((bs) => vigente && setBloqueadas(new Map(bs.map((b) => [claveItem(b), b.motivo]))))
+      .then((bs) => {
+        if (!vigente) return;
+        setBloqueadas(new Map(bs.map((b) => [claveItem(b), b.motivo])));
+        setExternas(new Set(bs.filter((b) => b.externa === 'adoptar').map(claveItem)));
+      })
       // Si el prechequeo falla, el server igual valida al presentar (y ofrece excluir las que tengan problemas).
       .catch(() => {})
       .finally(() => vigente && setCargandoBloqueadas(false));
@@ -531,11 +538,28 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote: loteR
                 <FontAwesomeIcon icon={faSpinner} spin /> Revisando si alguna persona tiene un alta activa en ARCA…
               </p>
             )}
-            {loteRecibido && bloqueadas.size > 0 && (
+            {/* ALTAS HECHAS A MANO EN ARCA (04/11/2026): no se presentan, se adoptan. En seco sólo se informa. */}
+            {loteRecibido && externas.size > 0 && (
+              <div className="rounded-lg border border-teal-300 dark:border-teal-800 bg-teal-50 dark:bg-teal-900/20 px-3 py-2 text-sm text-teal-800 dark:text-teal-300">
+                <p>
+                  <strong>{externas.size === 1 ? '1 alta ya está hecha a mano en ARCA' : `${externas.size} altas ya están hechas a mano en ARCA`}</strong>, idéntica(s) al contrato: no se presentan. Al correr se adoptan como alta externa (quedan presentadas y siguen el circuito: constancia, documentos, firma). Con «Probar en seco» sólo se informa.
+                </p>
+                <ul className="mt-1 space-y-0.5 text-xs">
+                  {loteRecibido.items.map((x, i) =>
+                    externas.has(claveItem(x)) ? (
+                      <li key={claveItem(x)}>
+                        <strong>{loteRecibido.personas[i].nombre}</strong> · <span className="opacity-70">Alta:</span> {loteRecibido.personas[i].alta || '—'}
+                      </li>
+                    ) : null,
+                  )}
+                </ul>
+              </div>
+            )}
+            {loteRecibido && bloqueadas.size > externas.size && (
               <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
                 <p>
                   <strong>
-                    {bloqueadas.size === loteRecibido.items.length ? 'Ninguna se puede presentar todavía' : `Se excluyen ${bloqueadas.size} alta(s) que ARCA rechazaría`}
+                    {bloqueadas.size === loteRecibido.items.length && externas.size === 0 ? 'Ninguna se puede presentar todavía' : `Se excluyen ${bloqueadas.size - externas.size} alta(s) que ARCA rechazaría`}
                   </strong>{' '}
                   por un alta activa de la misma persona con esta empleadora. Siguen en Trámite impositivo: «A.R.C.A Altas Automáticas» las presenta cuando ARCA procese la baja.
                 </p>
@@ -544,7 +568,7 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote: loteR
                   <ul className="mt-1 space-y-1">
                     {loteRecibido.items.map((x, i) => {
                       const motivo = bloqueadas.get(claveItem(x));
-                      if (!motivo) return null;
+                      if (!motivo || externas.has(claveItem(x))) return null;
                       const p = loteRecibido.personas[i];
                       return (
                         <li key={claveItem(x)}>
@@ -696,6 +720,11 @@ export const CorridaAltasArca: React.FC<Props> = ({ isOpen, onClose, lote: loteR
                   {progreso.cuenta.registrada} registrada(s) · {progreso.cuenta.rechazada} rechazada(s) · {progreso.cuenta.incierta} incierta(s) · {progreso.cuenta.pendiente + progreso.cuenta.presentando} sin presentar
                   {progreso.cuenta.seco > 0 ? ` · ${progreso.cuenta.seco} en seco` : ''}
                 </p>
+                {(estado?.externas || []).length > 0 && (
+                  <p className="text-xs text-teal-700 dark:text-teal-300">
+                    {estado!.externas!.length} alta(s) ya estaban hechas a mano en ARCA y {estado!.externas!.some((e) => e.enSeco) ? 'se adoptarían' : 'se adoptaron'} como alta externa: {estado!.externas!.map((e) => e.nombre).join(', ')}.
+                  </p>
+                )}
                 {(estado?.descartadas || []).some((d) => d.motivo === 'presentada') && (
                   <p className="text-xs text-gray-500 dark:text-gray-400">{(estado?.descartadas || []).filter((d) => d.motivo === 'presentada').length} contrato(s) de la selección ya estaban presentados y se saltearon.</p>
                 )}

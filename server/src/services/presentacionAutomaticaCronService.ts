@@ -3,6 +3,7 @@ import { hoyArgentina } from "../utils/contratoVigencia.js";
 import { candidatosDeAlta, correrPresentacionAutomatica } from "./arca/presentacionAutomatica.js";
 import { configDe, diaArgentina, horaTexto, leTocaALaCola, yaPasoLaHora } from "./arca/horarioAltasAutomaticas.js";
 import { itemDe, verificarAltasEnArca } from "./arca/verificacionAltas.js";
+import { adoptarAltasExternas } from "./arca/adopcionAltasExternas.js";
 
 /**
  * EL HORARIO DE LA PRESENTACIÓN AUTOMÁTICA (ver `arca/presentacionAutomatica.ts` y
@@ -60,7 +61,10 @@ async function tick() {
         console.log(`[presentacion-automatica] ${id}: ${tipo === "dia" ? `corrida del día, ${horaTexto(cfg)} del ${hoy} (anticipación ${cfg.diasAntes} día/s)` : `cola (cada ${cfg.cadaMinutos} min)`}`);
         // La cola le deja el paso a la del día: si llega su hora mientras corre, corta entre lotes.
         const debeCortar = tipo === "cola" ? () => delDiaPendiente && yaPasoLaHora(cfg) : undefined;
+        // Antes de presentar: lo que ya está hecho a mano en ARCA se adopta y no se vuelve a presentar.
+        const altasExternas = await adoptarExternasAntesDeCorrer(t._id);
         const resumen: any = await correrPresentacionAutomatica(id, t._id, cfg, tipo, { debeCortar });
+        resumen.altasExternas = altasExternas;
         if (tipo === "dia") resumen.verificaciones = await verificarTrabadas(id, t._id, hoy);
         await Tenant.updateOne({ _id: t._id }, { $set: { [`${BASE}.${campoResumen}`]: resumen } });
         console.log(`[presentacion-automatica] ${id} (${tipo}): ${resumen.empresas.map((e) => `${e.empresa} ${e.error ? `error: ${e.error}` : `${e.enviados} enviada(s)`}`).join(" · ") || "nada para presentar"}; ${resumen.omitidos.length} sin presentar`);
@@ -71,6 +75,21 @@ async function tick() {
         enCurso.delete(id);
       }
     })();
+  }
+}
+
+/**
+ * ALTAS HECHAS A MANO EN ARCA (04/11/2026), antes de cada corrida: las que ya figuran idénticas en las
+ * Relaciones Laborales sincronizadas se adoptan (ver `arca/adopcionAltasExternas.ts`). Un error acá no
+ * frena la corrida: lo que no se adoptó sigue bloqueado por «ARCA ya tiene un alta de ese día».
+ */
+async function adoptarExternasAntesDeCorrer(tenantObjectId: any) {
+  try {
+    const r = await adoptarAltasExternas({ tenantObjectId, detectadaPor: "corrida_diaria" });
+    return r.filter((x) => x.accion === "marcada_presentada" || x.accion === "revision_manual").map((x) => ({ nombre: x.nombre, cuil: x.cuil, empresa: x.empresa, alta: x.alta, resultado: x.decision, accion: x.accion, motivo: x.motivo }));
+  } catch (e: any) {
+    console.error("[presentacion-automatica] la adopción de altas externas falló:", e?.message || e);
+    return [{ nombre: "", cuil: "", empresa: "", alta: "", resultado: "error", accion: "error", motivo: String(e?.message || e) }];
   }
 }
 
@@ -85,7 +104,11 @@ const MAX_VERIFICACIONES = 40;
 async function verificarTrabadas(tenantId: string, tenantObjectId: any, hoy: string) {
   try {
     const candidatos = await candidatosDeAlta(tenantObjectId);
-    const items = candidatos.filter((c) => c.verificable && !(c.verificacion && diaArgentina(new Date(c.verificacion.el)) === hoy)).slice(0, MAX_VERIFICACIONES);
+    // Lo que la adopción de altas externas mandó a revisión manual (fechas o modalidad distintas) no se
+    // verifica solo: la consulta en vivo no lee la modalidad y podría marcarla presentada igual.
+    const items = candidatos
+      .filter((c) => c.verificable && c.verificacion?.origen !== "sync" && !(c.verificacion && diaArgentina(new Date(c.verificacion.el)) === hoy))
+      .slice(0, MAX_VERIFICACIONES);
     if (items.length === 0) return [];
     const r = await verificarAltasEnArca({ tenantId, tenantObjectId, items: items.map(itemDe), automatica: true });
     return r.map((x) => ({ nombre: x.item.nombre, cuil: x.item.cuil, empresa: x.item.empresaRazonSocial, alta: x.item.alta, resultado: x.decision.accion, accion: x.accion, motivo: x.decision.motivo }));

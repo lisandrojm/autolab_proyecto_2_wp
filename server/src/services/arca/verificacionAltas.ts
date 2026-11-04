@@ -11,6 +11,7 @@ import { quienTiene, soltarCandado, tomarCandado } from "./candadoArca.js";
 import { avanzarPresentada } from "./corridaAltas.js";
 import { decidirVerificacion, decisionSinConsultar, type ConsultaArca, type DecisionVerificacion } from "./decisionVerificacionAlta.js";
 import type { CandidatoAlta } from "./presentacionAutomatica.js";
+import type { LadoALado } from "./decisionAltaExterna.js";
 
 /**
  * VERIFICACIÓN AUTOMÁTICA EN ARCA de las altas trabadas por «ARCA ya tiene un alta de ese día» (pedido
@@ -204,18 +205,41 @@ export async function verificarAltasEnArca(o: {
   return resultados;
 }
 
-/** Cómo se aplica cada decisión en la base (o no, en seco). */
-function aplicador(o: { tenantObjectId: Types.ObjectId; automatica: boolean; usuarioId?: string | null; enSeco?: boolean; empresaId: string; empresaRazonSocial: string; empresaCuit: string }) {
+/**
+ * Cómo se aplica cada decisión en la base (o no, en seco).
+ *
+ * Lo usan dos caminos que terminan igual —el alta ya estaba en ARCA, se marca presentada y sigue el
+ * circuito—: la VERIFICACIÓN (consulta en vivo, `via: "verificacion"`) y la ADOPCIÓN DE ALTAS EXTERNAS
+ * (Relaciones Laborales sincronizadas, `via: "externa"`, ver `adopcionAltasExternas.ts`).
+ *
+ * `noRepetirManual`: la adopción corre en cada sincronización; una revisión manual que ya dice lo mismo
+ * no se vuelve a escribir ni a auditar (`sin_cambios`).
+ */
+export function aplicador(o: {
+  tenantObjectId: Types.ObjectId;
+  automatica: boolean;
+  usuarioId?: string | null;
+  enSeco?: boolean;
+  empresaId: string;
+  empresaRazonSocial: string;
+  empresaCuit: string;
+  via?: "verificacion" | "externa";
+  detectadaPor?: string;
+  noRepetirManual?: boolean;
+}) {
+  const via = o.via || "verificacion";
+  const origen = via === "externa" ? "sync" : "consulta";
   /** El registro de la pestaña Presentadas: uno por empleadora y verificación, creado con la primera que se marca. */
   let logId: Types.ObjectId | null = null;
   const usuario = o.usuarioId && Types.ObjectId.isValid(o.usuarioId) ? new Types.ObjectId(o.usuarioId) : undefined;
 
-  return async (item: ItemVerificacion, d: DecisionVerificacion, consulta: ConsultaConPantalla | null): Promise<string> => {
+  return async (item: ItemVerificacion, d: DecisionVerificacion & { ladoALado?: LadoALado }, consulta: ConsultaConPantalla | null): Promise<string> => {
     if (o.enSeco) return "en_seco";
     const campo = `contracts.${item.contractIndex}`;
     // ¿Sigue siendo ESE contrato y sigue sin presentar? Si no, no se toca nada.
-    const up: any = await UserProject.findById(item.userProjectId).select(`contracts.fecha_alta_contrato contracts.empresaContratoId contracts.altaArcaPresentada`).lean();
+    const up: any = await UserProject.findById(item.userProjectId).select(`contracts.fecha_alta_contrato contracts.empresaContratoId contracts.altaArcaPresentada contracts.verificacionArca`).lean();
     const c = up?.contracts?.[item.contractIndex];
+    if (o.noRepetirManual && d.accion === "revision_manual" && c?.verificacionArca?.resultado === "revision_manual" && c.verificacionArca.origen === origen && c.verificacionArca.motivo === d.motivo) return "sin_cambios";
     let accion = d.accion === "presentada" ? "marcada_presentada" : "revision_manual";
     if (!c || fechaISO(c.fecha_alta_contrato) !== item.alta || String(c.empresaContratoId || "") !== item.empresaId) accion = "contrato_cambio";
     else if (c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") accion = "ya_resuelta";
@@ -239,6 +263,9 @@ function aplicador(o: { tenantObjectId: Types.ObjectId; automatica: boolean; usu
       motivo: d.motivo,
       accion,
       html: typeof html === "string" ? html : undefined,
+      origen,
+      detectadaPor: o.detectadaPor,
+      ladoALado: d.ladoALado,
     });
     if (accion === "contrato_cambio" || accion === "ya_resuelta") return accion;
 
@@ -246,7 +273,9 @@ function aplicador(o: { tenantObjectId: Types.ObjectId; automatica: boolean; usu
       el: new Date(),
       resultado: d.accion,
       motivo: d.motivo,
-      ...(d.relacion ? { relacion: { inicio: d.relacion.inicio, fin: d.relacion.fin, baja: d.relacion.baja || "" } } : {}),
+      ...(d.relacion ? { relacion: { inicio: d.relacion.inicio, fin: d.relacion.fin, baja: d.relacion.baja || "", ...(d.relacion.modalidad ? { modalidad: d.relacion.modalidad } : {}) } } : {}),
+      origen,
+      ...(d.ladoALado ? { esperado: d.ladoALado.esperado, encontradas: d.ladoALado.encontradas } : {}),
       automatica: o.automatica,
       usuarioId: usuario,
       auditoriaId: auditoria._id,
@@ -262,7 +291,7 @@ function aplicador(o: { tenantObjectId: Types.ObjectId; automatica: boolean; usu
     if (!logId) {
       const log = await ArcaAltasLog.create({
         tenantId: o.tenantObjectId,
-        tipo: "verificacion",
+        tipo: via,
         usuarioId: usuario,
         automatica: o.automatica,
         empresaId: Types.ObjectId.isValid(o.empresaId) ? new Types.ObjectId(o.empresaId) : undefined,
@@ -279,7 +308,7 @@ function aplicador(o: { tenantObjectId: Types.ObjectId; automatica: boolean; usu
       { _id: item.userProjectId, ...sinPresentar },
       {
         $set: {
-          [`${campo}.altaArcaPresentada`]: { via: "verificacion", fecha: new Date(), resultado: "presentada", porConsulta: true, motivo: d.motivo, logId },
+          [`${campo}.altaArcaPresentada`]: { via, fecha: new Date(), resultado: "presentada", ...(via === "verificacion" ? { porConsulta: true } : {}), motivo: d.motivo, logId },
           [`${campo}.verificacionArca`]: verificacionArca,
         },
       },
@@ -290,7 +319,7 @@ function aplicador(o: { tenantObjectId: Types.ObjectId; automatica: boolean; usu
     }
     await ArcaAltasLog.updateOne(
       { _id: logId },
-      { $push: { contratos: { userProjectId: new Types.ObjectId(item.userProjectId), contractIndex: item.contractIndex, cuil: item.cuil, nombre: item.nombre, resultado: "presentada", motivo: d.motivo, porConsulta: true } } },
+      { $push: { contratos: { userProjectId: new Types.ObjectId(item.userProjectId), contractIndex: item.contractIndex, cuil: item.cuil, nombre: item.nombre, resultado: "presentada", motivo: d.motivo, porConsulta: via === "verificacion" } } },
     );
     await avanzarPresentada(item.userProjectId, item.contractIndex);
     return "marcada_presentada";

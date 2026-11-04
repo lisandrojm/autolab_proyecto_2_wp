@@ -430,6 +430,17 @@ const BotonHabilitarFirma: React.FC<{
 const EstadoImpositivoCellBase: React.FC<{ record: ContractOverviewRow; contratoFrames: ContratoFrameItem[]; allEstados: InfoItem[] }> = ({ record, contratoFrames, allEstados }) => {
   const estadoImpositivo = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados);
   if (!estadoImpositivo) return <span className="text-xs text-gray-400">—</span>;
+  // Un alta hecha a mano en ARCA y adoptada al sincronizar: se dice eso en vez del «Alta ARCA» genérico.
+  if (record.altaArcaPresentada?.via === 'externa' && record.altaArcaPresentada.resultado === 'presentada') {
+    return (
+      <span
+        title="El alta se detectó ya presentada en ARCA (hecha a mano, fuera de la plataforma) y se adoptó como propia: no se vuelve a presentar y sigue el circuito."
+        className="inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold whitespace-nowrap bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-900/20 dark:text-teal-300 dark:border-teal-800"
+      >
+        Alta externa adoptada
+      </span>
+    );
+  }
   return estadoImpositivo.data?.etiquetaSecundaria?.trim() ? <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px] whitespace-nowrap" /> : <EstadoBadge name={estadoImpositivo.name} className="text-[10px] whitespace-nowrap" />;
 };
 

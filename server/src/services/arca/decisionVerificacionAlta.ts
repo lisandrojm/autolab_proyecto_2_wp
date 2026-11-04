@@ -28,6 +28,8 @@ export interface RelacionConsultada {
   /** La «situación de baja» si la tarjeta la nombra; vacío si no. */
   baja?: string;
   texto?: string;
+  /** Sólo la trae la sincronización (alta externa): la consulta en vivo no la lee. */
+  modalidad?: string;
 }
 
 export type ConsultaArca = { ok: true; relaciones: RelacionConsultada[]; /** El CUIL y la fecha están en pantalla (o null: no se pudo afirmar). */ encontrada: true | null } | { ok: false; error: string };

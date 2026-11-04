@@ -909,7 +909,7 @@ class ProjectsAPI {
    * Qué contratos de una selección no se pueden presentar todavía porque la persona tiene algo activo con
    * esa empleadora en ARCA (o el alta de ese día ya está hecha), con el motivo. Sólo lee.
    */
-  async altasBloqueadasPorVigencia(empresaId: string, items: Array<{ userProjectId: string; contractIndex: number }>): Promise<Array<{ userProjectId: string; contractIndex: number; motivo: string }>> {
+  async altasBloqueadasPorVigencia(empresaId: string, items: Array<{ userProjectId: string; contractIndex: number }>): Promise<Array<{ userProjectId: string; contractIndex: number; motivo: string; /** Hecha a mano en ARCA: idéntica (se adopta) o parecida (revisión manual). */ externa?: "adoptar" | "revision_manual" }>> {
     const { data } = await axios.post(`/contratos/altas-arca/bloqueadas`, { empresaId, items }, { headers: this.getHeaders() });
     return Array.isArray(data?.bloqueadas) ? data.bloqueadas : [];
   }
@@ -1169,6 +1169,8 @@ export interface EstadoCorridaAltas {
   detenerPedido?: boolean;
   /** Lo que venía en la selección y no se presenta: ya presentado, o sin resultado (solo se consulta). */
   descartadas?: Array<{ cuil: string; nombre: string; motivo: "presentada" | "incierta" }>;
+  /** Hechas a mano en ARCA: se adoptaron como alta externa en vez de presentarse (en seco: se adoptarían). */
+  externas?: Array<{ cuil: string; nombre: string; motivo: string; enSeco: boolean }>;
   arrancadaEl?: string;
   eventos: Array<Record<string, any> & { tipo: string }>;
   /** El servidor corre en seco salvo configuración explícita (desarrollo). */
@@ -1225,7 +1227,12 @@ export interface VerificacionDeAlta {
   el: string;
   resultado: "presentada" | "revision_manual";
   motivo: string;
-  relacion?: { inicio: string; fin: string; baja?: string };
+  relacion?: { inicio: string; fin: string; baja?: string; modalidad?: string };
+  /** `sync`: la miró la adopción de altas externas (Relaciones Laborales sincronizadas); `consulta`: ARCA en vivo. */
+  origen?: "consulta" | "sync";
+  /** Alta externa que no coincide: lo esperado y lo encontrado en ARCA, lado a lado. */
+  esperado?: { inicio: string; fin: string; modalidad: string };
+  encontradas?: Array<{ inicio: string; fin: string; modalidad: string }>;
   automatica: boolean;
   auditoriaId: string;
 }
