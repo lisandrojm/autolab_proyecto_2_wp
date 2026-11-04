@@ -123,10 +123,14 @@ export const TOLERANCIA = { x: 70, y: 40 } as const;
 const EXCLUIR_SIEMPRE = ["Empleador"];
 const FRANJA_PIE = { desde: 0.85, hasta: 1 };
 
+/** El nombre de una constancia de alta de ARCA: «_AltaArca_» (desde el 04/11/2026) o «_AltaAFIP_» (antes). */
+export const PATRON_ALTA_ARCA = "_Alta(AFIP|Arca)_";
+
 export const REGLAS_BASE: ReglaColocacion[] = [
   {
     tipo: "AltaAFIP",
-    patronNombre: "_AltaAFIP_",
+    // «AltaArca» desde el 04/11/2026; los archivos anteriores dicen «AltaAFIP» (ver `TIPO_EN_EL_NOMBRE`).
+    patronNombre: PATRON_ALTA_ARCA,
     estado: "activo",
     pagina: "primera",
     anclas: [{ tipo: "sobreRotulo", rotulo: "Firma empleado y fecha de notificaci[oó]n", ocurrencia: "ultima", excluir: EXCLUIR_SIEMPRE, offset: { dx: 0, dy: 0 } }],

@@ -194,6 +194,16 @@ export const ETIQUETA_TRAMITE: Record<"alta_temprana_afip" | "constancia_cuit", 
  * tienen que partir de los mismos valores ya normalizados o el `{{apellido}}` del ABM y el de acá
  * darían resultados distintos para la misma persona.
  */
+/**
+ * CÓMO SE ESCRIBE `{{tipo}}` EN EL NOMBRE DEL ARCHIVO, cuando no es el nombre interno del tipo.
+ *
+ * «AltaAFIP» es la clave del tipo (con ella se guarda la nomenclatura de cada tenant y se registra cada
+ * documento): no se toca. En el archivo va «AltaArca» desde el 04/11/2026 (pedido del usuario: el
+ * organismo es ARCA). Los archivos viejos siguen diciendo «AltaAFIP»; lo que reconoce el tipo por el
+ * nombre (la colocación de la firma) acepta los dos.
+ */
+export const TIPO_EN_EL_NOMBRE: Record<string, string> = { AltaAFIP: "AltaArca" };
+
 export function datosNombreArchivo(opts: { tipo: string; user: any; up: any; contract: any; docName?: string; extra?: string; periodo?: string }): Record<string, string> {
   const { tipo, user, up, contract, docName, extra, periodo } = opts;
   /*
@@ -211,7 +221,7 @@ export function datosNombreArchivo(opts: { tipo: string; user: any; up: any; con
     nombres: campo(user?.firstName),
     proyecto: campo(proyecto),
     proyectoId: campo(proyectoId),
-    tipo: campo(tipo),
+    tipo: campo(TIPO_EN_EL_NOMBRE[tipo] || tipo),
     docName: campo(docName),
     // El nombre del TIPO de contrato ("Jornada 2030 SRL", "Eventual Crew My secret"). Es distinto de
     // `docName`, que es la plantilla con la que se generó el documento: dos contratos del mismo tipo
@@ -249,7 +259,7 @@ export function buildDocFileName(opts: { tipo: "Contrato" | "Release" | "Constan
   // contrato con las fechas completas.
   const rango = `Alta_${fechaAlta || "-"}_Baja_${fechaBaja || "-"}`;
 
-  const parts = [apellido, nombres, campo(proyecto), campo(tipo), campo(docName), rango, identidad, email, campo(extra)];
+  const parts = [apellido, nombres, campo(proyecto), campo(TIPO_EN_EL_NOMBRE[tipo] || tipo), campo(docName), rango, identidad, email, campo(extra)];
   return parts.filter((p) => p !== "").join("_");
 }
 

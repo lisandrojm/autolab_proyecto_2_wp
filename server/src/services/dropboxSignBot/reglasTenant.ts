@@ -1,5 +1,12 @@
 import { Tenant } from "../../models/Tenant.js";
-import { REGLAS_BASE, validarReglas, type ReglaColocacion } from "../../compartido/reglasColocacionFirma.js";
+import { PATRON_ALTA_ARCA, REGLAS_BASE, validarReglas, type ReglaColocacion } from "../../compartido/reglasColocacionFirma.js";
+
+/**
+ * Las reglas guardadas antes del 04/11/2026 buscan «_AltaAFIP_», y desde ese día las constancias se
+ * llaman «…_AltaArca_…»: sin esto, el bot dejaba de reconocerlas. Sólo se corrige el patrón de fábrica
+ * viejo; uno que alguien escribió distinto se respeta.
+ */
+const conPatronDeAltaActual = (reglas: ReglaColocacion[]): ReglaColocacion[] => reglas.map((r) => (r.patronNombre === "_AltaAFIP_" ? { ...r, patronNombre: PATRON_ALTA_ARCA } : r));
 
 /**
  * LAS REGLAS DE COLOCACIÓN DE CADA TENANT. El catálogo de `compartido/reglasColocacionFirma.ts` es el
@@ -24,7 +31,7 @@ export async function reglasDelTenant(tenantId: string): Promise<ReglasDelTenant
   const guardadas = bot.reglasColocacion;
   if (Array.isArray(guardadas) && guardadas.length > 0) {
     const v = validarReglas(guardadas);
-    if (v.ok === true) return { reglas: v.reglas, personalizadas: true, actualizadasAt: bot.reglasColocacionAt ? new Date(bot.reglasColocacionAt) : null, cambiadasAt };
+    if (v.ok === true) return { reglas: conPatronDeAltaActual(v.reglas), personalizadas: true, actualizadasAt: bot.reglasColocacionAt ? new Date(bot.reglasColocacionAt) : null, cambiadasAt };
     console.warn(`[DROPBOX-SIGN-BOT] Las reglas de colocación guardadas del tenant ${tenantId} no pasan la validación (${v.error}): rige el catálogo.`);
   }
   return { reglas: REGLAS_BASE, personalizadas: false, actualizadasAt: null, cambiadasAt };
@@ -39,6 +46,7 @@ export async function guardarReglasDelTenant(tenantId: string, entrada: unknown 
   }
   const v = validarReglas(entrada);
   if (v.ok === false) throw Object.assign(new Error(v.error), { status: 400 });
-  await Tenant.updateOne({ _id: tenantId }, { $set: { [`${BASE}.reglasColocacion`]: v.reglas, [`${BASE}.reglasColocacionAt`]: ahora, [`${BASE}.reglasCambiadasAt`]: ahora } });
-  return { reglas: v.reglas, personalizadas: true, actualizadasAt: ahora, cambiadasAt: ahora };
+  const reglas = conPatronDeAltaActual(v.reglas);
+  await Tenant.updateOne({ _id: tenantId }, { $set: { [`${BASE}.reglasColocacion`]: reglas, [`${BASE}.reglasColocacionAt`]: ahora, [`${BASE}.reglasCambiadasAt`]: ahora } });
+  return { reglas, personalizadas: true, actualizadasAt: ahora, cambiadasAt: ahora };
 }

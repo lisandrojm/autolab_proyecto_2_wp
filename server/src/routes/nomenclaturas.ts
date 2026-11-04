@@ -31,7 +31,7 @@ const EJEMPLO: Record<string, string> = {
   nombres: "ENZO-GABRIEL",
   proyecto: "LN+",
   proyectoId: "705",
-  tipo: "AltaAFIP",
+  tipo: "AltaArca", // cómo se escribe en el archivo (ver `TIPO_EN_EL_NOMBRE`); el tipo interno sigue siendo «AltaAFIP»
   contrato: "Plazo-fijo-6x6",
   docName: "AltaAFIP",
   fechaAlta: "20261001",
