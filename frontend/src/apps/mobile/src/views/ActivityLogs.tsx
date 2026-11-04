@@ -5,12 +5,12 @@ import { activityLogTypesAPI, RequestConfig } from "../../../../api/requestConfi
 
 import { activityReportsAPI, ActivityReport } from "../../../../api/request";
 import { usersAPI } from "../../../../api/users";
-import { projectsAPI, Project } from "../../../../api/projects";
+import { projectsAPI, Project, type AreaShiftMember } from "../../../../api/projects";
 import { areasAPI, Area } from "../../../../api/areas";
 import { shiftsAPI, Shift } from "../../../../api/shifts";
 import { vacationsAPI } from "../../../../api/vacations";
 import { infoAPI } from "../../../../api/info";
-import { claveFilaArea, sedeDe, sedePrincipalDe } from "@compartido/areaTurno";
+import { claveAreaTurno, claveFilaArea, partirClaveAreaTurno, sedeDe, sedePrincipalDe } from "@compartido/areaTurno";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUsers, faPlus, faTimes, faTrash, faCalendar, faUserTie, faLayerGroup, faBriefcase, faInfoCircle, faClock, faCheck, faChevronRight, faChevronLeft, faFileText, faUserPlus, faUserSlash, faSearch, faFilter, faExclamationTriangle, faUmbrellaBeach, faPen, faLocationDot, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { useProfile } from "../hooks/useProfile";
@@ -937,6 +937,27 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
   /* El salto automático a «las que superviso» ocurre una sola vez por montaje. */
   const autoSaltoHechoRef = useRef(false);
   const [fullProjectData, setFullProjectData] = useState<Project | null>(null);
+  /*
+    QUIÉN SUMA, SEGÚN EQUIPOS (04/11/2026). El reporte decía «19 colaboradores» donde Equipos decía «16
+    suman»: cada pantalla contaba con su regla. Esta app miraba el ÚLTIMO contrato (no el que rige), tomaba
+    como activo a quien no tenía el dato, ignoraba la sede, y a una fila vacía del equipo le buscaba el área
+    en el contrato (el equipo es la verdad: fila vacía = sin área). Ahora la cuenta es la del server —la
+    misma de Equipos y la Jerarquía—: activo, con el contrato que rige vigente, y sus áreas/turnos/sedes.
+    Mientras no llega, rige la cuenta vieja.
+  */
+  const [estadoEquipo, setEstadoEquipo] = useState<Map<string, AreaShiftMember> | null>(null);
+  useEffect(() => {
+    setEstadoEquipo(null);
+    if (!selectedProjectId) return;
+    let vivo = true;
+    projectsAPI
+      .getProjectMembersStatus(selectedProjectId)
+      .then((ms) => vivo && setEstadoEquipo(new Map(ms.map((m) => [String(m._id), m]))))
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [selectedProjectId]);
   const [allVacations, setAllVacations] = useState<any[]>([]);
 
   const getUserActiveVacation = (userId: string) => {
@@ -1401,7 +1422,28 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
               }),
             );
 
+    // Las filas área × turno × sede que coordino (con la sede: «Técnica · La corte» no es «Técnica · otra sede»).
+    const misClaves = new Set((selectedProject?.coordinatorAssignments || []).filter(isMyAssignment).map((asm: any) => claveAreaTurno(asm)));
+    const rolesYo = (profile?.roleNames || []).map((r) => r.toLowerCase());
+    const soyAdmin = rolesYo.includes("admin") || rolesYo.includes("superadmin");
+    const sinCoordinadores = (selectedProject?.coordinatorAssignments || []).length === 0;
+    const acotadoAMisFilas = !sinCoordinadores && (misClaves.size > 0 || !soyAdmin);
+
     const filtered = sourceEmployees.filter((e) => {
+      // Con el estado del equipo (la cuenta de Equipos), decide eso y nada más.
+      if (estadoEquipo) {
+        const m = estadoEquipo.get(String(e.id));
+        if (!m || !m.cuenta) return false;
+        const claves = m.claves || [];
+        if (selectedAreaId) {
+          return claves.some((k) => {
+            const c = partirClaveAreaTurno(k);
+            return c.areaId === String(selectedAreaId) && (!selectedShiftId || c.shiftId === String(selectedShiftId)) && (!acotadoAMisFilas || misClaves.has(k));
+          });
+        }
+        return !acotadoAMisFilas || claves.some((k) => misClaves.has(k));
+      }
+
       if (!e.isActive) {
         return false;
       }
@@ -1628,7 +1670,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
     });
 
     return sorted;
-  }, [employees, selectedProjectId, selectedAreaId, selectedShiftId, myCoordinatedCombinations, profile, selectedProject, allShifts]);
+  }, [employees, selectedProjectId, selectedAreaId, selectedShiftId, myCoordinatedCombinations, profile, selectedProject, allShifts, estadoEquipo, isMyAssignment]);
 
   const isWorkDay = useMemo(() => {
     if (!selectedProject) return true;
