@@ -32,7 +32,7 @@ import { faUser, faUserShield, faEdit, faTrash, faKey, faPlus, faLayerGroup, faC
 import { RichTextViewer } from '../components/ui/RichTextEditor';
 import { terminosCondicionesAPI } from '../api/terminosCondiciones';
 import { getHelp, hasHelp } from '../data/help/helpContent';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { getImageUrl } from '../utils/imageHelpers';
 import { cachedFetch, invalidateRefCache } from '../utils/refCache';
 import { formatCuit } from '../utils/cuit';
@@ -41,7 +41,6 @@ import { noPoseeCuit } from '../components/contratos/ConstanciaBulk';
 import { calificacionesAPI, ResumenCalificacion } from '../api/calificaciones';
 import { CalificacionesModal, CalificacionesPanel } from '../components/calificaciones/CalificacionesModal';
 import { CalificacionPromedio } from '../components/calificaciones/Estrellas';
-import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
 const HELP_KEY = 'users' as const;
@@ -93,8 +92,6 @@ const TOPE_VALIDAR_NOMBRES = 300;
 const TANDA_NOMBRES = 20;
 
 export const UsersPage: React.FC = () => {
-  const navigate = useNavigate();
-  const puedeAbrir = usePuedeAbrir();
   const { clientId } = useParams<{ clientId: string }>();
   const { hasPermission } = useAuthStore();
 
@@ -1002,24 +999,6 @@ export const UsersPage: React.FC = () => {
             <button onClick={handleOpenLinkModal} title="Link de registro" className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
               <FontAwesomeIcon icon={faLink} className="h-3 w-3 lg:h-4 lg:w-4" />
               <span className="hidden lg:block">Link</span>
-            </button>
-          )}
-          {puedeAbrir('/roles') && (
-            <button onClick={() => navigate('/roles')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-              <FontAwesomeIcon icon={faUserShield} className="h-3 w-3 lg:h-4 lg:w-4" />
-              <span className="hidden lg:block">Roles</span>
-            </button>
-          )}
-          {puedeAbrir('/areas') && (
-            <button onClick={() => navigate('/areas')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-              <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3 lg:h-4 lg:w-4" />
-              <span className="hidden lg:block">Areas</span>
-            </button>
-          )}
-          {puedeAbrir('/shifts') && (
-            <button onClick={() => navigate('/shifts')} className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm">
-              <FontAwesomeIcon icon={faClock} className="h-3 w-3 lg:h-4 lg:w-4" />
-              <span className="hidden lg:block">Turnos</span>
             </button>
           )}
         </div>
