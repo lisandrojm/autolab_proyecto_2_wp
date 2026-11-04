@@ -42,6 +42,23 @@ export interface IArcaVerificacionAlta extends Document {
     /** Qué se hizo con el contrato: `marcada_presentada`, `revision_manual`, `ya_resuelta` (otra corrida llegó antes), `contrato_cambio`, `en_seco`. */
     accion: string;
     html?: string;
+    /** `consulta`: ARCA en vivo. `sync`: Relaciones Laborales sincronizadas (alta externa, ver `adopcionAltasExternas.ts`). */
+    origen?: "consulta" | "sync";
+    /** Qué la detectó: `sincronizacion`, `corrida_diaria`, `presentacion_masiva`, `manual`. */
+    detectadaPor?: string;
+    /** Alta externa: lo esperado y lo encontrado en ARCA. */
+    ladoALado?: {
+        esperado: {
+            inicio: string;
+            fin: string;
+            modalidad: string;
+        };
+        encontradas: Array<{
+            inicio: string;
+            fin: string;
+            modalidad: string;
+        }>;
+    };
     createdAt: Date;
 }
 export declare const ArcaVerificacionAlta: Model<IArcaVerificacionAlta>;

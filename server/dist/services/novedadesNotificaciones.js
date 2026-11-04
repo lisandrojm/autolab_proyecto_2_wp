@@ -37,6 +37,12 @@ export const NOVEDAD_SOLICITUD_REABIERTA = "solicitud_reabierta";
 */
 export const NOVEDAD_PLAN_VACACIONES_ENVIADO = "plan_vacaciones_enviado";
 export const NOVEDAD_PLAN_VACACIONES_RESUELTO = "plan_vacaciones_resuelto";
+/*
+  ALTA EXTERNA ADOPTADA (04/11/2026): un alta que alguien hizo a mano en ARCA apareció en la
+  sincronización y se tomó como presentada (ver `arca/adopcionAltasExternas.ts`). Va al coordinador del
+  proyecto. No se cuenta en ninguna tarjeta: se ve en Notificaciones.
+*/
+export const NOVEDAD_ALTA_ARCA_EXTERNA = "alta_arca_externa";
 /** Los tipos que la app cuenta por tarjeta. Agregar uno acá sin tocar la app lo deja sin contar. */
 export const TIPOS_NOVEDAD = [NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA, NOVEDAD_PLAN_VACACIONES_ENVIADO, NOVEDAD_PLAN_VACACIONES_RESUELTO];
 const idValido = (x) => !!x && Types.ObjectId.isValid(String(x));

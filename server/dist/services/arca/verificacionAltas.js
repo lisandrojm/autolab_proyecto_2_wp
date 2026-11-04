@@ -141,8 +141,19 @@ export async function verificarAltasEnArca(o) {
     }
     return resultados;
 }
-/** Cómo se aplica cada decisión en la base (o no, en seco). */
-function aplicador(o) {
+/**
+ * Cómo se aplica cada decisión en la base (o no, en seco).
+ *
+ * Lo usan dos caminos que terminan igual —el alta ya estaba en ARCA, se marca presentada y sigue el
+ * circuito—: la VERIFICACIÓN (consulta en vivo, `via: "verificacion"`) y la ADOPCIÓN DE ALTAS EXTERNAS
+ * (Relaciones Laborales sincronizadas, `via: "externa"`, ver `adopcionAltasExternas.ts`).
+ *
+ * `noRepetirManual`: la adopción corre en cada sincronización; una revisión manual que ya dice lo mismo
+ * no se vuelve a escribir ni a auditar (`sin_cambios`).
+ */
+export function aplicador(o) {
+    const via = o.via || "verificacion";
+    const origen = via === "externa" ? "sync" : "consulta";
     /** El registro de la pestaña Presentadas: uno por empleadora y verificación, creado con la primera que se marca. */
     let logId = null;
     const usuario = o.usuarioId && Types.ObjectId.isValid(o.usuarioId) ? new Types.ObjectId(o.usuarioId) : undefined;
@@ -151,8 +162,10 @@ function aplicador(o) {
             return "en_seco";
         const campo = `contracts.${item.contractIndex}`;
         // ¿Sigue siendo ESE contrato y sigue sin presentar? Si no, no se toca nada.
-        const up = await UserProject.findById(item.userProjectId).select(`contracts.fecha_alta_contrato contracts.empresaContratoId contracts.altaArcaPresentada`).lean();
+        const up = await UserProject.findById(item.userProjectId).select(`contracts.fecha_alta_contrato contracts.empresaContratoId contracts.altaArcaPresentada contracts.verificacionArca`).lean();
         const c = up?.contracts?.[item.contractIndex];
+        if (o.noRepetirManual && d.accion === "revision_manual" && c?.verificacionArca?.resultado === "revision_manual" && c.verificacionArca.origen === origen && c.verificacionArca.motivo === d.motivo)
+            return "sin_cambios";
         let accion = d.accion === "presentada" ? "marcada_presentada" : "revision_manual";
         if (!c || fechaISO(c.fecha_alta_contrato) !== item.alta || String(c.empresaContratoId || "") !== item.empresaId)
             accion = "contrato_cambio";
@@ -177,6 +190,9 @@ function aplicador(o) {
             motivo: d.motivo,
             accion,
             html: typeof html === "string" ? html : undefined,
+            origen,
+            detectadaPor: o.detectadaPor,
+            ladoALado: d.ladoALado,
         });
         if (accion === "contrato_cambio" || accion === "ya_resuelta")
             return accion;
@@ -184,7 +200,9 @@ function aplicador(o) {
             el: new Date(),
             resultado: d.accion,
             motivo: d.motivo,
-            ...(d.relacion ? { relacion: { inicio: d.relacion.inicio, fin: d.relacion.fin, baja: d.relacion.baja || "" } } : {}),
+            ...(d.relacion ? { relacion: { inicio: d.relacion.inicio, fin: d.relacion.fin, baja: d.relacion.baja || "", ...(d.relacion.modalidad ? { modalidad: d.relacion.modalidad } : {}) } } : {}),
+            origen,
+            ...(d.ladoALado ? { esperado: d.ladoALado.esperado, encontradas: d.ladoALado.encontradas } : {}),
             automatica: o.automatica,
             usuarioId: usuario,
             auditoriaId: auditoria._id,
@@ -198,7 +216,7 @@ function aplicador(o) {
         if (!logId) {
             const log = await ArcaAltasLog.create({
                 tenantId: o.tenantObjectId,
-                tipo: "verificacion",
+                tipo: via,
                 usuarioId: usuario,
                 automatica: o.automatica,
                 empresaId: Types.ObjectId.isValid(o.empresaId) ? new Types.ObjectId(o.empresaId) : undefined,
@@ -213,7 +231,7 @@ function aplicador(o) {
         }
         const r = await UserProject.updateOne({ _id: item.userProjectId, ...sinPresentar }, {
             $set: {
-                [`${campo}.altaArcaPresentada`]: { via: "verificacion", fecha: new Date(), resultado: "presentada", porConsulta: true, motivo: d.motivo, logId },
+                [`${campo}.altaArcaPresentada`]: { via, fecha: new Date(), resultado: "presentada", ...(via === "verificacion" ? { porConsulta: true } : {}), motivo: d.motivo, logId },
                 [`${campo}.verificacionArca`]: verificacionArca,
             },
         });
@@ -221,7 +239,7 @@ function aplicador(o) {
             await ArcaVerificacionAlta.updateOne({ _id: auditoria._id }, { $set: { accion: "ya_resuelta" } });
             return "ya_resuelta";
         }
-        await ArcaAltasLog.updateOne({ _id: logId }, { $push: { contratos: { userProjectId: new Types.ObjectId(item.userProjectId), contractIndex: item.contractIndex, cuil: item.cuil, nombre: item.nombre, resultado: "presentada", motivo: d.motivo, porConsulta: true } } });
+        await ArcaAltasLog.updateOne({ _id: logId }, { $push: { contratos: { userProjectId: new Types.ObjectId(item.userProjectId), contractIndex: item.contractIndex, cuil: item.cuil, nombre: item.nombre, resultado: "presentada", motivo: d.motivo, porConsulta: via === "verificacion" } } });
         await avanzarPresentada(item.userProjectId, item.contractIndex);
         return "marcada_presentada";
     };

@@ -17,6 +17,9 @@ const schema = new Schema({
     motivo: String,
     accion: String,
     html: String,
+    origen: { type: String, enum: ["consulta", "sync"] },
+    detectadaPor: String,
+    ladoALado: { type: Schema.Types.Mixed, default: undefined },
 }, { timestamps: { createdAt: true, updatedAt: false }, collection: "arca_verificaciones_altas" });
 schema.index({ tenantId: 1, userProjectId: 1, contractIndex: 1, createdAt: -1 });
 export const ArcaVerificacionAlta = mongoose.models.ArcaVerificacionAlta || mongoose.model("ArcaVerificacionAlta", schema);

@@ -153,6 +153,8 @@ const userSchema = new Schema({
         renovacionDe: {
             userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" },
             fechaBajaContrato: { type: String },
+            /** Posición del contrato en `UserProject.contracts`: la otra mitad de su identidad (ver `RenovacionContrato`). */
+            indiceContrato: { type: Number },
         },
         // Ver el comentario de la interfaz.
         avisosSuperposicion: {

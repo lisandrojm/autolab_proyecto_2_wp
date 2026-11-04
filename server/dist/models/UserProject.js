@@ -70,7 +70,7 @@ const contractSchema = new Schema({
     obraSocialAplicadaPor: { type: Schema.Types.ObjectId, ref: "User", default: null },
     altaArcaPresentada: {
         type: new Schema({
-            via: { type: String, enum: ["carga_masiva", "altas_masivas", "verificacion"] },
+            via: { type: String, enum: ["carga_masiva", "altas_masivas", "verificacion", "externa"] },
             fecha: { type: Date },
             resultado: { type: String, enum: ["presentada", "indeterminado", "fallida", "presentando"] },
             codigoNovedad: { type: String },
@@ -93,7 +93,10 @@ const contractSchema = new Schema({
             el: { type: Date },
             resultado: { type: String, enum: ["presentada", "revision_manual"] },
             motivo: { type: String },
-            relacion: { type: new Schema({ inicio: String, fin: String, baja: String }, { _id: false }), default: undefined },
+            relacion: { type: new Schema({ inicio: String, fin: String, baja: String, modalidad: String }, { _id: false }), default: undefined },
+            origen: { type: String, enum: ["consulta", "sync"] },
+            esperado: { type: new Schema({ inicio: String, fin: String, modalidad: String }, { _id: false }), default: undefined },
+            encontradas: { type: [new Schema({ inicio: String, fin: String, modalidad: String }, { _id: false })], default: undefined },
             automatica: { type: Boolean },
             usuarioId: { type: Schema.Types.ObjectId, ref: "User" },
             auditoriaId: { type: Schema.Types.ObjectId, ref: "ArcaVerificacionAlta" },

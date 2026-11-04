@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
 import UserProject from "../models/UserProject.js";
+import { fechaISO } from "../utils/contratoVigencia.js";
 import { RenovacionContrato } from "../models/RenovacionContrato.js";
 import { olvidarContratosPorVencer } from "./contratosPorVencer.js";
 import { NOVEDAD_SOLICITUD, nombreDePersona, notificar, responsablesDeProyectos } from "./novedadesNotificaciones.js";
@@ -69,10 +70,22 @@ export async function efectosDeSolicitudNueva(tenantId, creadorId, user) {
     const renovacionDe = user.metadata?.esRenovacion ? user.metadata?.renovacionDe : null;
     if (renovacionDe?.userProjectId && renovacionDe?.fechaBajaContrato) {
         try {
-            const up = await UserProject.findById(renovacionDe.userProjectId).select("userId projectId").lean();
+            const up = await UserProject.findById(renovacionDe.userProjectId).select("userId projectId contracts.fecha_baja_contrato").lean();
             if (up) {
                 const quien = await User.findById(creadorId).select("firstName lastName").lean();
-                await RenovacionContrato.updateOne({ tenantId, userProjectId: up._id, fechaBajaContrato: String(renovacionDe.fechaBajaContrato) }, {
+                /*
+                  QUÉ CONTRATO (04/11/2026). La decisión se guardaba sin `indiceContrato`, o sea en 0, y la lista
+                  la busca por la posición real: renovar un contrato que no era el primero de la asignación no lo
+                  sacaba de «Renovaciones». La app nueva manda la posición; la vieja no, y entonces se busca el
+                  único contrato de la asignación que termina ese día.
+                */
+                const fecha = String(renovacionDe.fechaBajaContrato);
+                let indiceContrato = Number(renovacionDe.indiceContrato);
+                if (!Number.isInteger(indiceContrato) || indiceContrato < 0) {
+                    const conEsaBaja = (up.contracts || []).flatMap((c, i) => (fechaISO(c.fecha_baja_contrato) === fecha ? [i] : []));
+                    indiceContrato = conEsaBaja.length === 1 ? conEsaBaja[0] : 0;
+                }
+                await RenovacionContrato.updateOne({ tenantId, userProjectId: up._id, fechaBajaContrato: fecha, indiceContrato }, {
                     $set: {
                         userId: up.userId,
                         projectId: up.projectId,

@@ -223,8 +223,12 @@ interface IContract {
      * volver a intentar).
      */
     altaArcaPresentada?: {
-        /** `verificacion`: no se presentó desde WeProdu; se encontró ya hecha en ARCA (ver `verificacionAltas.ts`). */
-        via: "carga_masiva" | "altas_masivas" | "verificacion";
+        /**
+         * `verificacion`: no se presentó desde WeProdu; se encontró ya hecha en ARCA consultándola (ver `verificacionAltas.ts`).
+         * `externa`: alguien la hizo a mano en ARCA y apareció idéntica en la sincronización de Relaciones
+         * Laborales; se adoptó como propia (ver `adopcionAltasExternas.ts`).
+         */
+        via: "carga_masiva" | "altas_masivas" | "verificacion" | "externa";
         fecha: Date;
         /**
          * `presentando`: se escribió justo ANTES de apretar «Aceptar» en ARCA y todavía no hay resultado.
@@ -272,7 +276,21 @@ interface IContract {
             inicio: string;
             fin: string;
             baja?: string;
+            modalidad?: string;
         };
+        /** `consulta`: se miró ARCA en vivo. `sync`: salió de las Relaciones Laborales sincronizadas (alta externa). */
+        origen?: "consulta" | "sync";
+        /** Alta externa que no coincide: lo esperado y lo encontrado en ARCA, lado a lado. */
+        esperado?: {
+            inicio: string;
+            fin: string;
+            modalidad: string;
+        };
+        encontradas?: Array<{
+            inicio: string;
+            fin: string;
+            modalidad: string;
+        }>;
         automatica?: boolean;
         usuarioId?: Types.ObjectId;
         auditoriaId?: Types.ObjectId;

@@ -50,6 +50,12 @@ export interface ResumenSync {
     error?: string;
     /** Ruta del HTML guardado cuando ARCA mostró una pantalla desconocida. */
     htmlGuardado?: string;
+    /** Altas hechas a mano en ARCA que aparecieron en esta sincronización (ver `adopcionAltasExternas.ts`). */
+    altasExternas?: {
+        adoptadas: number;
+        revisionManual: number;
+        error?: string;
+    };
 }
 export interface EstadoSync {
     desde: Date;

@@ -63,6 +63,7 @@ export interface DatosSolicitud {
     renovacionDe?: {
         userProjectId: string;
         fechaBajaContrato: string;
+        indiceContrato?: number;
     };
 }
 export interface OpcionesPayload {
@@ -121,6 +122,7 @@ export declare function armarPayloadDeSolicitud(d: DatosSolicitud, opciones?: Op
         renovacionDe: {
             userProjectId: string;
             fechaBajaContrato: string;
+            indiceContrato?: number;
         };
         isSolicitud: true;
     };

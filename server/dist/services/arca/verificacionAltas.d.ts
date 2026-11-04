@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { type ConsultaArca, type DecisionVerificacion } from "./decisionVerificacionAlta.js";
 import type { CandidatoAlta } from "./presentacionAutomatica.js";
+import type { LadoALado } from "./decisionAltaExterna.js";
 /**
  * VERIFICACIÓN AUTOMÁTICA EN ARCA de las altas trabadas por «ARCA ya tiene un alta de ese día» (pedido
  * del 02/11/2026). Antes quedaban «Sin fecha prevista» para siempre, hasta que alguien entrara a ARCA a
@@ -87,3 +88,27 @@ export declare function verificarAltasEnArca(o: {
     usuarioId?: string | null;
     enSeco?: boolean;
 }): Promise<ResultadoVerificacion[]>;
+/**
+ * Cómo se aplica cada decisión en la base (o no, en seco).
+ *
+ * Lo usan dos caminos que terminan igual —el alta ya estaba en ARCA, se marca presentada y sigue el
+ * circuito—: la VERIFICACIÓN (consulta en vivo, `via: "verificacion"`) y la ADOPCIÓN DE ALTAS EXTERNAS
+ * (Relaciones Laborales sincronizadas, `via: "externa"`, ver `adopcionAltasExternas.ts`).
+ *
+ * `noRepetirManual`: la adopción corre en cada sincronización; una revisión manual que ya dice lo mismo
+ * no se vuelve a escribir ni a auditar (`sin_cambios`).
+ */
+export declare function aplicador(o: {
+    tenantObjectId: Types.ObjectId;
+    automatica: boolean;
+    usuarioId?: string | null;
+    enSeco?: boolean;
+    empresaId: string;
+    empresaRazonSocial: string;
+    empresaCuit: string;
+    via?: "verificacion" | "externa";
+    detectadaPor?: string;
+    noRepetirManual?: boolean;
+}): (item: ItemVerificacion, d: DecisionVerificacion & {
+    ladoALado?: LadoALado;
+}, consulta: ConsultaConPantalla | null) => Promise<string>;

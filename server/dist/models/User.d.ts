@@ -281,6 +281,7 @@ export interface IUserMetadata {
     renovacionDe?: {
         userProjectId?: Types.ObjectId;
         fechaBajaContrato?: string;
+        indiceContrato?: number;
     };
     /**
      * Con qué se superponía el alta cuando se pidió (contratos en cualquier proyecto y otras solicitudes

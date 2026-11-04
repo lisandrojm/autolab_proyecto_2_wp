@@ -54,6 +54,11 @@ export interface CandidatoAlta {
     verificable: boolean;
     /** Otro contrato de WeProdu de la misma persona y empleadora, ya presentado, empieza el mismo día (un duplicado). */
     otroContratoMismoDia: boolean;
+    /**
+     * El código de modalidad de contratación, resuelto como para el TXT (tipo de contrato → empleadora →
+     * global). Vacío si no se pudo. Lo compara la adopción de altas externas (`adopcionAltasExternas.ts`).
+     */
+    modalidadCodigo: string;
     /** La última verificación en ARCA, si la hubo (ver `IContract.verificacionArca`). */
     verificacion: {
         el: string;
@@ -63,7 +68,21 @@ export interface CandidatoAlta {
             inicio: string;
             fin: string;
             baja?: string;
+            modalidad?: string;
         };
+        /** `sync`: la miró la adopción de altas externas (lo sincronizado); `consulta`: ARCA en vivo. */
+        origen: "consulta" | "sync";
+        /** Alta externa que no coincide: lo esperado y lo encontrado, lado a lado. */
+        esperado?: {
+            inicio: string;
+            fin: string;
+            modalidad: string;
+        };
+        encontradas?: Array<{
+            inicio: string;
+            fin: string;
+            modalidad: string;
+        }>;
         automatica: boolean;
         auditoriaId: string;
     } | null;

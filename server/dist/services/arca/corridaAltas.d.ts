@@ -119,6 +119,16 @@ interface CorridaAltas {
         nombre: string;
         motivo: "presentada" | "incierta";
     }>;
+    /**
+     * Altas de la selección que ya estaban hechas a mano en ARCA (idénticas en las Relaciones Laborales
+     * sincronizadas): se adoptaron como presentadas y no se presentan. En seco, las que SE ADOPTARÍAN.
+     */
+    externas?: Array<{
+        cuil: string;
+        nombre: string;
+        motivo: string;
+        enSeco: boolean;
+    }>;
     señal: {
         cortada: boolean;
     };
