@@ -2680,7 +2680,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
                 cargó a tiempo. Se permite, y se avisa abajo: el alta temprana ante ARCA de un día que ya
                 pasó se declara tarde y ARCA puede rechazarla.
               */}
-              <CustomMultiDatePicker label="Días que trabaja" value={formData.fechasTrabajadas} onChange={(d: string | string[]) => elegirDiasSueltos(Array.isArray(d) ? d : d ? [d] : [])} />
+              <CustomMultiDatePicker periodo label="Días que trabaja" value={formData.fechasTrabajadas} onChange={(d: string | string[]) => elegirDiasSueltos(Array.isArray(d) ? d : d ? [d] : [])} />
               {formData.fechasTrabajadas.some((f) => f < fechaDeHoy()) && (
                 <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">Hay días anteriores a hoy. Si el contrato va con alta temprana ante ARCA, se declara tarde y ARCA puede rechazarla.</p>
               )}

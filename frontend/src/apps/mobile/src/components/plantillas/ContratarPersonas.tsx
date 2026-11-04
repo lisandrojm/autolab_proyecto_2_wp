@@ -438,7 +438,7 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
                 <Rotulo icono={faUsers}>Fechas{marca(fechasDistintas)}</Rotulo>
                 {sueltos ? (
                   <div className="space-y-1">
-                    <CustomMultiDatePicker label="Días que trabaja" value={fechas} onChange={(v: string | string[]) => cambiar({ fechas: [...new Set(Array.isArray(v) ? v : v ? [v] : [])].sort() })} />
+                    <CustomMultiDatePicker periodo label="Días que trabaja" value={fechas} onChange={(v: string | string[]) => cambiar({ fechas: [...new Set(Array.isArray(v) ? v : v ? [v] : [])].sort() })} />
                     <p className="text-[11px] text-slate-400">
                       {fechas.length > 0 ? (
                         <>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronLeft, faChevronRight, faTimes, faCalendar, faInfoCircle, faCheckCircle } from "@fortawesome/free-solid-svg-icons";
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isBefore, isAfter, isToday, parseISO } from "date-fns";
+import { format, addDays, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isBefore, isAfter, isToday, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { sweetAlert } from "../utils/sweetAlert";
 
@@ -15,9 +15,40 @@ interface CustomMultiDatePickerProps {
   validateDate?: (date: Date) => { valid: boolean; message?: string };
   disabled?: boolean;
   remainingDays?: number;
+  /**
+   * PERÍODO EN VEZ DE DÍAS SUELTOS (04/11/2026, contratación). Los días se siguen guardando de a uno,
+   * pero siempre corridos: elegir el lunes y el viernes elige de lunes a viernes. Un contrato es un
+   * período; días que no son correlativos van en contratos separados (lo dice un aviso, una sola vez).
+   */
+  periodo?: boolean;
 }
 
-export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ label, value, onChange, minDate, maxDate, validateDate, disabled, remainingDays }) => {
+/** El aviso de «días no correlativos = contratos separados» sale una sola vez por teléfono. */
+const AVISO_PERIODO = "weprodu:aviso-periodo-contrato";
+
+/**
+ * Qué queda elegido al tocar `dia` en modo período. Puro.
+ *   · nada elegido → ese día;
+ *   · un extremo del período → se saca (el período se achica de ese lado);
+ *   · afuera del período → el período se estira hasta ese día (lunes + viernes = lunes a viernes);
+ *   · adentro, sin ser extremo → el período termina ahí.
+ * `relleno`: se completaron días entre medio (para avisar la primera vez).
+ */
+export function tocarDiaEnPeriodo(elegidos: string[], dia: string): { dias: string[]; relleno: boolean } {
+  const orden = [...new Set(elegidos)].sort();
+  if (orden.length === 0) return { dias: [dia], relleno: false };
+  const desde = orden[0];
+  const hasta = orden[orden.length - 1];
+  const rango = (a: string, b: string) => eachDayOfInterval({ start: parseISO(a), end: parseISO(b) }).map((d) => format(d, "yyyy-MM-dd"));
+  if (dia === desde && dia === hasta) return { dias: [], relleno: false };
+  if (dia === desde) return { dias: rango(format(addDays(parseISO(desde), 1), "yyyy-MM-dd"), hasta), relleno: false };
+  if (dia === hasta) return { dias: rango(desde, format(addDays(parseISO(hasta), -1), "yyyy-MM-dd")), relleno: false };
+  if (dia < desde) return { dias: rango(dia, hasta), relleno: rango(dia, desde).length > 2 };
+  if (dia > hasta) return { dias: rango(desde, dia), relleno: rango(hasta, dia).length > 2 };
+  return { dias: rango(desde, dia), relleno: false };
+}
+
+export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ label, value, onChange, minDate, maxDate, validateDate, disabled, remainingDays, periodo }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [viewDate, setViewDate] = useState(new Date());
   const [tempSelection, setTempSelection] = useState<string[]>([]);
@@ -52,6 +83,22 @@ export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ la
       semana sus días ya son pasado: si el control también bloqueara quitarlos, quedarían clavados
       ahí sin más salida que vaciar todo con «Limpiar».
     */
+    if (periodo) {
+      const r = tocarDiaEnPeriodo(tempSelection, formattedDay);
+      // Lo que se agrega respeta los mismos límites que un día suelto.
+      const fuera = r.dias.filter((d) => !tempSelection.includes(d)).some((d) => (minDate && d < minDate) || (maxDate && d > maxDate) || (validateDate && !validateDate(parseISO(d)).valid));
+      if (fuera) {
+        sweetAlert.warning("Fecha no válida", "El período incluye días que no se pueden elegir.");
+        return;
+      }
+      setTempSelection(r.dias);
+      if (r.relleno && localStorage.getItem(AVISO_PERIODO) !== "1") {
+        localStorage.setItem(AVISO_PERIODO, "1");
+        sweetAlert.alert("Los días van corridos", "Un contrato es un período: si elegís dos días, quedan elegidos todos los del medio. Para trabajar días que no son correlativos, hacé un contrato por cada tramo.", "info");
+      }
+      return;
+    }
+
     if (tempSelection.includes(formattedDay)) {
       setTempSelection(tempSelection.filter((d) => d !== formattedDay));
       return;
@@ -96,8 +143,12 @@ export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ la
 
 
   const formatSelectionLabel = () => {
-    if (selectedDates.length === 0) return "Seleccionar fechas...";
+    if (selectedDates.length === 0) return periodo ? "Seleccionar período..." : "Seleccionar fechas...";
     if (selectedDates.length === 1) return format(parseISO(selectedDates[0]), "dd/MM/yyyy");
+    if (periodo) {
+      const o = [...selectedDates].sort();
+      return `${format(parseISO(o[0]), "dd/MM/yyyy")} al ${format(parseISO(o[o.length - 1]), "dd/MM/yyyy")} · ${o.length} días`;
+    }
     return `${selectedDates.length} días seleccionados`;
   };
 
