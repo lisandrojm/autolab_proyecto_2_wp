@@ -44,7 +44,7 @@ export interface ContratoPorVencer {
 }
 
 /** Los días de anticipación que se pueden elegir en el filtro. El primero es el de siempre. */
-export const DIAS_DE_AVISO_OPCIONES = [7, 15, 30];
+export const DIAS_DE_AVISO_OPCIONES = [7, 15, 30, 45, 60];
 
 export const contratosPorVencerAPI = {
   /**

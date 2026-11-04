@@ -3,6 +3,7 @@ import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faUsers, faUserPlus, faBriefcase, faCalendarAlt, faLayerGroup, faIdCard, faFileContract, faClock, faTrash, faSpinner, faFilter, faXmark, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { useUserHistory } from "../hooks/useUserHistory";
+import { useCargaProgresiva } from "../hooks/useCargaProgresiva";
 import { ViewType } from "../types";
 import { UserRegistrationModal } from "../components/UserRegistrationModal";
 /*
@@ -202,6 +203,11 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     const texto = sinTildes([c.nombre, c.clienteNombre, c.proyectoNombre, c.areaNombre, c.turnoNombre, c.rolFrame, c.contrato, c.horario, c.renovacionRechazada ? "rechazada" : ""].join(" "));
     return vTerminos.every((t) => texto.includes(t));
   });
+  // Scroll infinito: 20 tarjetas y 20 más al llegar al final. Buscar o filtrar vuelve a las primeras.
+  const { visibles: porVencerEnPantalla, hayMas: hayMasPorVencer, centinela: centinelaPorVencer } = useCargaProgresiva(
+    porVencerVisibles,
+    [vBusqueda, tiposElegidos, proyectosElegidos, areasElegidas, soloRechazadas, diasAviso, sentido].join("|"),
+  );
   const cantidadFiltros = tiposElegidos.length + proyectosElegidos.length + areasElegidas.length + (soloRechazadas ? 1 : 0) + (diasAviso === DIAS_DE_AVISO_OPCIONES[0] ? 0 : 1) + (sentido !== "por_vencer" ? 1 : 0);
   /** Filtros que recortan lo que llegó (no los días ni «vencidos», que piden otra lista al server). */
   const recortaLista = vTerminos.length > 0 || tiposElegidos.length + proyectosElegidos.length + areasElegidas.length > 0 || soloRechazadas;
@@ -365,7 +371,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
     return (
       <div className="space-y-3">
         {barraDeFiltros}
-        {porVencerVisibles.map((c, posicion) => {
+        {porVencerEnPantalla.map((c, posicion) => {
           const clave = claveDe(c);
           const urgente = c.diasRestantes <= 2;
           return (
@@ -412,6 +418,11 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
             </div>
           );
         })}
+        {hayMasPorVencer && (
+          <div ref={centinelaPorVencer} className="py-4">
+            <LoadingSpinner naked size="sm" className="mx-auto text-slate-400" />
+          </div>
+        )}
       </div>
     );
   };
@@ -677,7 +688,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
         icon={pestana === "menu" ? faUsers : (SECCIONES.find((s) => s.id === pestana)?.icon ?? faUsers)}
         titulo={pestana === "menu" ? "Solicitud de Contratación" : (SECCIONES.find((s) => s.id === pestana)?.label ?? "Solicitud de Contratación")}
         onBack={() => (pestana === "menu" ? onNavigate("home") : setPestana("menu"))}
-        info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Enviados» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Renovaciones» aparecen los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer. Con «Filtrar» elegís con cuánta anticipación verlos (7, 15 o 30 días, y queda guardado) y por qué tipo de contrato."}
+        info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Enviados» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Renovaciones» aparecen los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer. Con «Filtrar» elegís con cuánta anticipación verlos (7, 15, 30, 45 o 60 días, y queda guardado) y por qué tipo de contrato."}
       />
 
       <div className="px-4 pt-4">
