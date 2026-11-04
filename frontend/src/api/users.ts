@@ -285,7 +285,7 @@ export interface User {
     solicitudUserId?: string;
     /** La solicitud RENUEVA un contrato por vencer: se muestra con la etiqueta «Renovación». */
     esRenovacion?: boolean;
-    renovacionDe?: { userProjectId?: string; fechaBajaContrato?: string };
+    renovacionDe?: { userProjectId?: string; fechaBajaContrato?: string; indiceContrato?: number };
     /** Con qué se superponía el alta cuando se pidió. La pone el server. */
     avisosSuperposicion?: AvisoSuperposicion[];
     roles_frame?: (string | { _id: string; name: string })[];

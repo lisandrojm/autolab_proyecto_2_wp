@@ -113,7 +113,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
   const [porVencer, setPorVencer] = useState<ContratoPorVencer[] | null>(null);
   const [procesando, setProcesando] = useState<string | null>(null);
   /** El contrato que se está renovando: abre el formulario de solicitud ya completo. */
-  const [renovacion, setRenovacion] = useState<{ plantilla: any; userProjectId: string; fechaBajaContrato: string } | null>(null);
+  const [renovacion, setRenovacion] = useState<{ plantilla: any; userProjectId: string; fechaBajaContrato: string; indiceContrato: number } | null>(null);
 
   /*
     EL FILTRO: con cuánta anticipación, y qué tipos de contrato.
@@ -253,7 +253,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
       await contratosPorVencerAPI.calificar(c, calificacion);
       setCalificando(null);
       setEditingUser(null);
-      setRenovacion({ plantilla: c.plantilla, userProjectId: c.userProjectId, fechaBajaContrato: c.fechaBaja });
+      setRenovacion({ plantilla: c.plantilla, userProjectId: c.userProjectId, fechaBajaContrato: c.fechaBaja, indiceContrato: c.indice });
       setShowRegistrationModal(true);
       return;
     }

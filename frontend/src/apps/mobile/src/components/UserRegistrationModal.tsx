@@ -126,7 +126,7 @@ interface UserRegistrationModalProps {
    * ALTA —no de edición— ya completo con los datos del contrato, y la solicitud sale con la etiqueta
    * «Renovación» y el contrato que renueva, que es lo que lo saca de la lista (ver `routes/users.ts`).
    */
-  renovacion?: { plantilla: any; userProjectId: string; fechaBajaContrato: string } | null;
+  renovacion?: { plantilla: any; userProjectId: string; fechaBajaContrato: string; indiceContrato?: number } | null;
 }
 
 const pesosAR = (n: number) => n.toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -2263,7 +2263,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           guardarla de nuevo le borraría la etiqueta.
         */
         esRenovacion: renovacion ? true : (editingUser?.metadata as any)?.esRenovacion || undefined,
-        renovacionDe: renovacion ? { userProjectId: renovacion.userProjectId, fechaBajaContrato: renovacion.fechaBajaContrato } : (editingUser?.metadata as any)?.renovacionDe || undefined,
+        renovacionDe: renovacion ? { userProjectId: renovacion.userProjectId, fechaBajaContrato: renovacion.fechaBajaContrato, indiceContrato: renovacion.indiceContrato } : (editingUser?.metadata as any)?.renovacionDe || undefined,
       });
 
       if (editingUser) {

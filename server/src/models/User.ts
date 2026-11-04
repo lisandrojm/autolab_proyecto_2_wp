@@ -284,7 +284,7 @@ export interface IUserMetadata {
   /** La solicitud RENUEVA un contrato por vencer (etiqueta «Renovación»). Ver `models/RenovacionContrato.ts`. */
   esRenovacion?: boolean;
   /** Qué contrato renueva: (UserProject, fecha de baja), que es como se identifica un contrato. */
-  renovacionDe?: { userProjectId?: Types.ObjectId; fechaBajaContrato?: string };
+  renovacionDe?: { userProjectId?: Types.ObjectId; fechaBajaContrato?: string; indiceContrato?: number };
   /**
    * Con qué se superponía el alta cuando se pidió (contratos en cualquier proyecto y otras solicitudes
    * pendientes de la misma persona): la foto que ve quien aprueba. La pone el server al crear y al
@@ -484,6 +484,8 @@ const userSchema = new Schema<IUser>(
       renovacionDe: {
         userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" },
         fechaBajaContrato: { type: String },
+        /** Posición del contrato en `UserProject.contracts`: la otra mitad de su identidad (ver `RenovacionContrato`). */
+        indiceContrato: { type: Number },
       },
       // Ver el comentario de la interfaz.
       avisosSuperposicion: {

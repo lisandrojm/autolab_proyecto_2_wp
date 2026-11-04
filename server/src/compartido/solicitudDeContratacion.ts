@@ -57,7 +57,7 @@ export interface DatosSolicitud {
   /** `sedeId` opcional: la sede de esa fila del proyecto (ver `areaTurno.ts`). */
   areaShiftAssignments: { areaId: string; shiftIds: string[]; sedeId?: number }[];
   esRenovacion?: boolean;
-  renovacionDe?: { userProjectId: string; fechaBajaContrato: string };
+  renovacionDe?: { userProjectId: string; fechaBajaContrato: string; indiceContrato?: number };
 }
 
 export interface OpcionesPayload {

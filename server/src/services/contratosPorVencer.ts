@@ -28,7 +28,8 @@ export const DIAS_DE_AVISO_MAX = 60;
      llenaría la lista de cosas que nadie piensa renovar. Esta regla NO sigue a la ventana: mirar 15
      días adelante es querer ver más lejos, no empezar a ver contratos cortos que nadie renueva.
    - No fue renovado ya: si la misma asignación tiene otro contrato que arranca después de esta baja,
-     la continuidad ya está resuelta.
+     la continuidad ya está resuelta. Tampoco si hay una solicitud pendiente de la persona en el mismo
+     proyecto que arranca desde la baja: es la renovación, aunque no haya salido del botón «Renovar».
    - Nadie lo resolvió (`RenovacionContrato`). Una renovación pedida y después RECHAZADA o CANCELADA no
      cuenta como resuelta: el contrato vuelve, marcado, porque sigue sin renovarse.
 
@@ -227,13 +228,22 @@ async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: 
 
   // 3. Lo ya resuelto y los nombres, todo junto: son consultas independientes.
   const combos = candidatos.map((x) => combosDelMiembro(filaDelEquipo.get(`${x.pid}:${x.up.userId}`), x.c)[0]);
-  const [decisiones, personas, proyectos, areas, turnos, roles] = await Promise.all([
+  const idsPersonas = [...new Set(candidatos.map((x) => String(x.up.userId)))];
+  const [decisiones, personas, proyectos, areas, turnos, roles, solicitudesPendientes] = await Promise.all([
     RenovacionContrato.find({ tenantId: tenant, userProjectId: { $in: candidatos.map((x) => x.up._id) } }).lean() as Promise<any[]>,
     User.find({ _id: { $in: candidatos.map((x) => x.up.userId) } }).select("firstName lastName metadata.fullName metadata.roles_frame").lean(),
     Project.find({ _id: { $in: candidatos.map((x) => x.up.projectId) } }).select("name clientId").populate("clientId", "name").lean(),
     Area.find({ _id: { $in: combos.filter(Boolean).map((a) => a!.areaId) } }).select("name").lean(),
     Shift.find({ _id: { $in: combos.filter(Boolean).map((a) => a!.shiftIds[0]) } }).select("name").lean(),
     RoleFrame.find({ "data.rol.id": { $in: candidatos.map((x) => Number(x.c.rol_frame_id)).filter((n) => Number.isFinite(n) && n > 0) } }).select("name data.rol.id").lean(),
+    // Solicitudes pendientes de estas personas, también las que no salieron del botón «Renovar».
+    User.find({
+      "metadata.isSolicitud": true,
+      "metadata.solicitudStatus": "pendiente",
+      "metadata.solicitudUserId": { $in: [...idsPersonas, ...idsPersonas.map((id) => new Types.ObjectId(id))] },
+    })
+      .select("metadata.solicitudUserId metadata.projectIds metadata.startDate")
+      .lean() as Promise<any[]>,
   ]);
 
   // Una renovación rechazada, cancelada o borrada no resuelve nada.
@@ -244,6 +254,22 @@ async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: 
   const solicitudes: any[] = solicitudIds.length > 0 ? await User.find({ _id: { $in: solicitudIds } }).select("metadata.solicitudStatus").lean() : [];
   const estadoDe = new Map(solicitudes.map((u) => [String(u._id), u.metadata?.solicitudStatus]));
 
+  /*
+    YA PEDIDA POR OTRO LADO (04/11/2026). Quien renueva con el + en vez de con «Renovar» manda una
+    solicitud común: no anota decisión y el contrato seguía en la lista como si nadie lo hubiera
+    renovado. Una solicitud pendiente de la misma persona, en el mismo proyecto, que arranca el día de
+    la baja o después, ES la renovación. Aprobada ya es un contrato posterior: lo cubre la regla de arriba.
+  */
+  const pedidaDespuesDe = new Map<string, string[]>();
+  for (const sol of solicitudesPendientes) {
+    const inicio = fechaISO(sol.metadata?.startDate);
+    if (!inicio) continue;
+    for (const pid of sol.metadata?.projectIds || []) {
+      const k = `${sol.metadata.solicitudUserId}:${idDe(pid)}`;
+      pedidaDespuesDe.set(k, [...(pedidaDespuesDe.get(k) || []), inicio]);
+    }
+  }
+
   const personaDe = new Map((personas as any[]).map((u) => [String(u._id), u]));
   const proyectoDe = new Map((proyectos as any[]).map((p) => [String(p._id), p]));
   const areaDe = new Map((areas as any[]).map((a) => [String(a._id), a.name]));
@@ -253,10 +279,18 @@ async function calcular(tenantId: Types.ObjectId | string, userId: string, hoy: 
   const resultado: ContratoPorVencer[] = [];
   candidatos.forEach((x, i) => {
     const { up, c, alta, baja, pid, indice } = x;
-    const d = decisionDe.get(`${up._id}::${baja}::${indice}`);
+    /*
+      Las renovaciones pedidas antes del 04/11/2026 se guardaron con posición 0 aunque el contrato fuera
+      otro (ver `efectosDeSolicitudNueva`). Si el contrato 0 de la asignación no termina ese día, esa
+      decisión no puede ser suya: es de este.
+    */
+    const d =
+      decisionDe.get(`${up._id}::${baja}::${indice}`) ??
+      (indice !== 0 && fechaISO(up.contracts?.[0]?.fecha_baja_contrato) !== baja ? decisionDe.get(`${up._id}::${baja}::0`) : undefined);
     if (d?.decision === "dejar_vencer") return;
     const estado = d ? estadoDe.get(String(d.solicitudId)) : undefined;
     if (d && (estado === "pendiente" || estado === "aprobada")) return;
+    if ((pedidaDespuesDe.get(`${up.userId}:${pid}`) || []).some((inicio) => inicio >= baja)) return;
 
     const persona: any = personaDe.get(String(up.userId)) || {};
     const proyecto: any = proyectoDe.get(pid) || {};
