@@ -650,6 +650,12 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
           </div>
         ) : users.length > 0 ? (
           <div className="space-y-3">
+            {/*
+              Buscar y Filtrar quedan pegados debajo del encabezado (SectionHeader, sticky top-0, 73px de
+              alto: py-4 + botón de 40 + borde) para no tener que volver arriba a cambiar la búsqueda.
+              Los chips de filtros activos van en el mismo bloque: dicen qué está filtrando la lista.
+            */}
+            <div className="sticky top-[73px] z-20 -mx-4 space-y-2 bg-slate-50/90 px-4 py-2 backdrop-blur-sm dark:bg-slate-900/90">
             <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <FontAwesomeIcon icon={faMagnifyingGlass} className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
@@ -683,6 +689,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
                 {hDias > 0 && badgeFiltro(`Pedidas en ${hDias} días`, () => setHDias(0))}
               </div>
             )}
+            </div>
             {(terminos.length > 0 || hCantidadFiltros > 0) && (
               <p className="px-1 text-xs text-slate-500 dark:text-slate-400">
                 {(() => {
