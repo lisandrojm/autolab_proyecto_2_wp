@@ -57,6 +57,8 @@ const EstadoVerificacion: React.FC<{ c: AltaPendienteArca; enCurso: boolean }> =
         <p className="mt-0.5 text-[10px] text-gray-500 whitespace-nowrap">{v.origen === "sync" ? "Alta externa que no coincide" : "Verificada"} {fechaHoraArgentina(v.el)}</p>
       </div>
     );
+  if (v?.resultado === "sin_alta") return <p className="text-[10px] text-gray-500 whitespace-nowrap">Mirada en ARCA {fechaHoraArgentina(v.el)}: todavía no está</p>;
+  if (c.verificableActiva) return null;
   return <p className="text-[10px] text-gray-500 whitespace-nowrap">Sin verificar en ARCA</p>;
 };
 
@@ -99,22 +101,22 @@ const VerificacionEnArca: React.FC<{ c: AltaPendienteArca; enCurso: boolean; ocu
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Verificación en ARCA</p>
-        {c.verificable && (
+        {(c.verificable || c.verificableActiva) && (
           <button type="button" onClick={onReverificar} disabled={ocupada} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed">
             <FontAwesomeIcon icon={enCurso ? faSpinner : faMagnifyingGlass} spin={enCurso} className="h-3 w-3" />
-            {enCurso ? "Verificando…" : "Reverificar en ARCA"}
+            {enCurso ? "Verificando…" : c.verificableActiva && !v ? "Verificar en ARCA" : "Reverificar en ARCA"}
           </button>
         )}
       </div>
       {enCurso ? (
         <p className="text-gray-500">Consultando Relaciones Laborales en ARCA (solo lectura)…</p>
       ) : !v ? (
-        <p className="text-gray-500">{c.verificable ? "Todavía no se verificó. Se verifica sola después de la corrida del día, o ya con «Reverificar en ARCA»." : "Es un duplicado de otro contrato de WeProdu: no se consulta ARCA."}</p>
+        <p className="text-gray-500">{c.verificableActiva ? "¿El alta ya se hizo a mano en ARCA? «Verificar en ARCA» la busca por CUIL (solo lectura): si está, queda presentada y sigue el circuito; si no, sigue esperando la baja." : c.verificable ? "Todavía no se verificó. Se verifica sola después de la corrida del día, o ya con «Reverificar en ARCA»." : "Es un duplicado de otro contrato de WeProdu: no se consulta ARCA."}</p>
       ) : (
         <>
           <p className="text-gray-700 dark:text-gray-200">
-            <span className={`mr-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${v.resultado === "presentada" ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800" : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"}`}>
-              {v.resultado === "presentada" ? "Ya estaba en ARCA" : "Requiere revisión manual"}
+            <span className={`mr-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${v.resultado === "presentada" ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800" : v.resultado === "sin_alta" ? "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700" : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"}`}>
+              {v.resultado === "presentada" ? "Ya estaba en ARCA" : v.resultado === "sin_alta" ? "Todavía no está en ARCA" : "Requiere revisión manual"}
             </span>
             {fechaHoraArgentina(v.el)} · {v.automatica ? "automática" : auditada?.usuario || "a mano"}
           </p>
@@ -453,7 +455,7 @@ export const PresentacionesArcaPage: React.FC = () => {
               <FontAwesomeIcon icon={faTriangleExclamation} className="h-4 w-4" />
             </button>
             {/* La última verificación en ARCA, de las trabadas por un alta del mismo día. */}
-            {(c.verificable || c.otroContratoMismoDia) && <EstadoVerificacion c={c} enCurso={verificandose.has(claveDe(c))} />}
+            {(c.verificable || c.otroContratoMismoDia || c.verificableActiva) && <EstadoVerificacion c={c} enCurso={verificandose.has(claveDe(c))} />}
           </div>
         )}
       </td>
@@ -490,8 +492,8 @@ export const PresentacionesArcaPage: React.FC = () => {
           Forzar presentación
         </button>
         <div className="mt-2 flex items-center justify-end gap-1">
-          {c.verificable && (
-            <button type="button" onClick={() => void reverificar(c)} disabled={verificacionEnCurso} title={verificacionEnCurso ? "Hay una verificación en curso" : "Reverificar en ARCA: mirar si esta alta ya está hecha (solo lectura)"} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          {(c.verificable || c.verificableActiva) && (
+            <button type="button" onClick={() => void reverificar(c)} disabled={verificacionEnCurso} title={verificacionEnCurso ? "Hay una verificación en curso" : c.verificableActiva ? "Verificar en ARCA: ¿el alta ya se hizo a mano? Si está, queda presentada y sigue el circuito (solo lectura en ARCA)" : "Reverificar en ARCA: mirar si esta alta ya está hecha (solo lectura)"} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
               <FontAwesomeIcon icon={verificandose.has(claveDe(c)) ? faSpinner : faMagnifyingGlass} spin={verificandose.has(claveDe(c))} className="h-4 w-4" />
             </button>
           )}
@@ -1030,7 +1032,7 @@ export const PresentacionesArcaPage: React.FC = () => {
               </p>
             )}
             {detalleDeSalida(filaAbierta)}
-            {(filaAbierta.verificable || filaAbierta.otroContratoMismoDia) && (
+            {(filaAbierta.verificable || filaAbierta.otroContratoMismoDia || filaAbierta.verificableActiva) && (
               <VerificacionEnArca c={filaAbierta} enCurso={verificandose.has(claveDe(filaAbierta))} ocupada={verificacionEnCurso} onReverificar={() => void reverificar(filaAbierta)} />
             )}
           </div>

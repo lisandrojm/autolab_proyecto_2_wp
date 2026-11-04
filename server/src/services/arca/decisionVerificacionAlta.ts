@@ -41,11 +41,20 @@ export interface AltaAVerificar {
   baja: string;
   /** Otro contrato de WeProdu de la misma persona y empleadora, ya presentado, empieza el mismo día. */
   otroContratoMismoDia: boolean;
+  /**
+   * Por qué está trabada. `mismo_dia` (por defecto): la sincronización trajo un alta de ese día. `activa`:
+   * espera la baja de una relación activa y alguien pidió «Verificar en ARCA» por si el alta ya se hizo a
+   * mano (pedido del 04/11/2026). En `activa`, no encontrarla es lo esperable: sigue esperando, no va a
+   * revisión manual.
+   */
+  traba?: "mismo_dia" | "activa";
 }
 
 export type DecisionVerificacion =
   | { accion: "presentada"; motivo: string; relacion: RelacionConsultada }
-  | { accion: "revision_manual"; motivo: string; relacion?: RelacionConsultada };
+  | { accion: "revision_manual"; motivo: string; relacion?: RelacionConsultada }
+  /** Sólo con `traba: "activa"`: ARCA todavía no tiene esta alta; sigue esperando la baja de la activa. */
+  | { accion: "sin_alta"; motivo: string };
 
 const manual = (motivo: string, relacion?: RelacionConsultada): DecisionVerificacion => ({ accion: "revision_manual", motivo, ...(relacion ? { relacion } : {}) });
 
@@ -58,9 +67,11 @@ export function decisionSinConsultar(a: AltaAVerificar): DecisionVerificacion | 
 export function decidirVerificacion(a: AltaAVerificar, consulta: ConsultaArca): DecisionVerificacion {
   const previa = decisionSinConsultar(a);
   if (previa) return previa;
-  if (consulta.ok === false) return manual(`La consulta a ARCA falló: ${consulta.error}`);
+  if (consulta.ok === false) return a.traba === "activa" ? { accion: "sin_alta", motivo: `No se pudo consultar ARCA (${consulta.error}): sigue esperando.` } : manual(`La consulta a ARCA falló: ${consulta.error}`);
 
   const delDia = consulta.relaciones.filter((r) => r.inicio === a.alta);
+  if (delDia.length === 0 && a.traba === "activa")
+    return { accion: "sin_alta", motivo: `ARCA todavía no tiene un alta que empiece el ${fechaCorta(a.alta)}: no se hizo a mano. Sigue esperando la baja de la relación activa.` };
   if (delDia.length === 0) {
     return manual(
       consulta.encontrada === true

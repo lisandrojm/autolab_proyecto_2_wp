@@ -274,7 +274,8 @@ interface IContract {
    */
   verificacionArca?: {
     el: Date;
-    resultado: "presentada" | "revision_manual";
+    /** `sin_alta`: se pidió «Verificar en ARCA» de un alta que espera una baja, y ARCA todavía no la tiene. */
+    resultado: "presentada" | "revision_manual" | "sin_alta";
     motivo: string;
     relacion?: { inicio: string; fin: string; baja?: string; modalidad?: string };
     /** `consulta`: se miró ARCA en vivo. `sync`: salió de las Relaciones Laborales sincronizadas (alta externa). */
@@ -510,7 +511,7 @@ const contractSchema = new Schema<IContract>(
       type: new Schema(
         {
           el: { type: Date },
-          resultado: { type: String, enum: ["presentada", "revision_manual"] },
+          resultado: { type: String, enum: ["presentada", "revision_manual", "sin_alta"] },
           motivo: { type: String },
           relacion: { type: new Schema({ inicio: String, fin: String, baja: String, modalidad: String }, { _id: false }), default: undefined },
           origen: { type: String, enum: ["consulta", "sync"] },

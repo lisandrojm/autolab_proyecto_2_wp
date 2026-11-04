@@ -1217,6 +1217,8 @@ export interface AltaPendienteArca {
   motivo: string;
   /** Trabada porque ARCA ya tiene un alta de ese día: se puede verificar en ARCA («Reverificar en ARCA»). */
   verificable?: boolean;
+  /** Espera la baja de una relación activa en ARCA: se puede «Verificar en ARCA» por si el alta ya se hizo a mano. */
+  verificableActiva?: boolean;
   /** Otro contrato de WeProdu ya presentado empieza el mismo día (duplicado). */
   otroContratoMismoDia?: boolean;
   /** La última verificación en ARCA, si la hubo. */
@@ -1225,7 +1227,8 @@ export interface AltaPendienteArca {
 
 export interface VerificacionDeAlta {
   el: string;
-  resultado: "presentada" | "revision_manual";
+  /** `sin_alta`: se miró ARCA y el alta todavía no está (sigue esperando la baja de la activa). */
+  resultado: "presentada" | "revision_manual" | "sin_alta";
   motivo: string;
   relacion?: { inicio: string; fin: string; baja?: string; modalidad?: string };
   /** `sync`: la miró la adopción de altas externas (Relaciones Laborales sincronizadas); `consulta`: ARCA en vivo. */

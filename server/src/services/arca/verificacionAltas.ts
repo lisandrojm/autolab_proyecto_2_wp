@@ -46,6 +46,8 @@ export interface ItemVerificacion {
   alta: string;
   baja: string;
   otroContratoMismoDia: boolean;
+  /** Ver `AltaAVerificar.traba`. */
+  traba?: "mismo_dia" | "activa";
 }
 
 export interface ResultadoVerificacion {
@@ -67,6 +69,7 @@ export const itemDe = (c: CandidatoAlta): ItemVerificacion => ({
   alta: c.fechaAlta,
   baja: c.fechaBaja,
   otroContratoMismoDia: c.otroContratoMismoDia,
+  traba: c.verificable || c.otroContratoMismoDia ? "mismo_dia" : "activa",
 });
 
 /** Lo que el motor devuelve, más la pantalla para la auditoría. */
@@ -240,7 +243,7 @@ export function aplicador(o: {
     const up: any = await UserProject.findById(item.userProjectId).select(`contracts.fecha_alta_contrato contracts.empresaContratoId contracts.altaArcaPresentada contracts.verificacionArca`).lean();
     const c = up?.contracts?.[item.contractIndex];
     if (o.noRepetirManual && d.accion === "revision_manual" && c?.verificacionArca?.resultado === "revision_manual" && c.verificacionArca.origen === origen && c.verificacionArca.motivo === d.motivo) return "sin_cambios";
-    let accion = d.accion === "presentada" ? "marcada_presentada" : "revision_manual";
+    let accion = d.accion === "presentada" ? "marcada_presentada" : d.accion === "sin_alta" ? "sigue_trabada" : "revision_manual";
     if (!c || fechaISO(c.fecha_alta_contrato) !== item.alta || String(c.empresaContratoId || "") !== item.empresaId) accion = "contrato_cambio";
     else if (c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") accion = "ya_resuelta";
 
@@ -273,7 +276,7 @@ export function aplicador(o: {
       el: new Date(),
       resultado: d.accion,
       motivo: d.motivo,
-      ...(d.relacion ? { relacion: { inicio: d.relacion.inicio, fin: d.relacion.fin, baja: d.relacion.baja || "", ...(d.relacion.modalidad ? { modalidad: d.relacion.modalidad } : {}) } } : {}),
+      ...("relacion" in d && d.relacion ? { relacion: { inicio: d.relacion.inicio, fin: d.relacion.fin, baja: d.relacion.baja || "", ...(d.relacion.modalidad ? { modalidad: d.relacion.modalidad } : {}) } } : {}),
       origen,
       ...(d.ladoALado ? { esperado: d.ladoALado.esperado, encontradas: d.ladoALado.encontradas } : {}),
       automatica: o.automatica,
@@ -282,6 +285,12 @@ export function aplicador(o: {
     };
     // Sólo si sigue sin presentar (o rechazada): una segunda verificación, o una corrida que llegó antes, no la pisa.
     const sinPresentar = { $or: [{ [`${campo}.altaArcaPresentada`]: null }, { [`${campo}.altaArcaPresentada.resultado`]: "fallida" }] };
+
+    // Todavía no está en ARCA: no se toca la marca de presentación; queda anotado cuándo se miró.
+    if (d.accion === "sin_alta") {
+      const r = await UserProject.updateOne({ _id: item.userProjectId, ...sinPresentar }, { $set: { [`${campo}.verificacionArca`]: verificacionArca } });
+      return r.modifiedCount > 0 ? "sigue_trabada" : "ya_resuelta";
+    }
 
     if (d.accion === "revision_manual") {
       const r = await UserProject.updateOne({ _id: item.userProjectId, ...sinPresentar }, { $set: { [`${campo}.verificacionArca`]: verificacionArca } });

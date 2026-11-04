@@ -28,7 +28,7 @@ export interface IArcaVerificacionAlta extends Document {
   /** Lo que devolvió la consulta: `ok` con las relaciones leídas, o el error. */
   consulta: { ok: boolean; error?: string; encontrada?: boolean | null; relaciones?: Array<{ inicio: string; fin: string; baja?: string; texto?: string }> } | null;
   /** Qué se decidió (`decidirVerificacion`). */
-  decision: "presentada" | "revision_manual";
+  decision: "presentada" | "revision_manual" | "sin_alta";
   motivo: string;
   /** Qué se hizo con el contrato: `marcada_presentada`, `revision_manual`, `ya_resuelta` (otra corrida llegó antes), `contrato_cambio`, `en_seco`. */
   accion: string;
@@ -57,7 +57,7 @@ const schema = new Schema<IArcaVerificacionAlta>(
     usuarioId: { type: Schema.Types.ObjectId, ref: "User" },
     enSeco: { type: Boolean, default: false },
     consulta: { type: Schema.Types.Mixed, default: null },
-    decision: { type: String, enum: ["presentada", "revision_manual"], required: true },
+    decision: { type: String, enum: ["presentada", "revision_manual", "sin_alta"], required: true },
     motivo: String,
     accion: String,
     html: String,

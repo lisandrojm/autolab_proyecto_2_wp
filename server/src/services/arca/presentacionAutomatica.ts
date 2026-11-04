@@ -150,6 +150,12 @@ export interface CandidatoAlta {
    * ARCA en vez de esperar a que alguien la mire (ver `verificacionAltas.ts`).
    */
   verificable: boolean;
+  /**
+   * Espera la baja de una relación activa en ARCA (o ARCA ya la rechazó por «alta activa»). Se puede
+   * «Verificar en ARCA» por si alguien ya la hizo a mano (pedido del 04/11/2026): si está, queda
+   * presentada; si no, sigue esperando.
+   */
+  verificableActiva: boolean;
   /** Otro contrato de WeProdu de la misma persona y empleadora, ya presentado, empieza el mismo día (un duplicado). */
   otroContratoMismoDia: boolean;
   /**
@@ -160,7 +166,7 @@ export interface CandidatoAlta {
   /** La última verificación en ARCA, si la hubo (ver `IContract.verificacionArca`). */
   verificacion: {
     el: string;
-    resultado: "presentada" | "revision_manual";
+    resultado: "presentada" | "revision_manual" | "sin_alta";
     motivo: string;
     relacion?: { inicio: string; fin: string; baja?: string; modalidad?: string };
     /** `sync`: la miró la adopción de altas externas (lo sincronizado); `consulta`: ARCA en vivo. */
@@ -447,6 +453,7 @@ export async function candidatosDeAlta(
       motivo,
       registro: motivo ? null : registro,
       verificable: bloqueo?.tipo === "mismo_dia" && bloqueo.mismoDiaEn === "arca",
+      verificableActiva: bloqueo?.tipo === "activa_arca" || trabadoPorRechazo,
       otroContratoMismoDia,
       modalidadCodigo,
       verificacion: verificacionDe(c.verificacionArca),
@@ -495,7 +502,7 @@ export async function candidatosDeAlta(
 
 /** La verificación guardada en el contrato, tal como viaja a la pantalla. */
 function verificacionDe(v: any): CandidatoAlta["verificacion"] {
-  if (!v?.el || (v.resultado !== "presentada" && v.resultado !== "revision_manual")) return null;
+  if (!v?.el || (v.resultado !== "presentada" && v.resultado !== "revision_manual" && v.resultado !== "sin_alta")) return null;
   return {
     el: new Date(v.el).toISOString(),
     resultado: v.resultado,

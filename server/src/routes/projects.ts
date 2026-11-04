@@ -3528,9 +3528,10 @@ router.post("/contratos/altas-arca/automatica/verificar", requireTenant, authent
     }
     const todos = await candidatosDeAlta(req.tenantObjectId as Types.ObjectId);
     const claves = new Set(pedidas.map(claveVerificacion));
-    const elegidos = todos.filter((c) => claves.has(claveVerificacion(c)) && (c.verificable || c.otroContratoMismoDia));
+    // También las que esperan la baja de una relación activa: por si el alta ya se hizo a mano en ARCA (04/11/2026).
+    const elegidos = todos.filter((c) => claves.has(claveVerificacion(c)) && (c.verificable || c.otroContratoMismoDia || c.verificableActiva));
     if (elegidos.length === 0) {
-      res.status(400).json({ error: "Ninguna de las pedidas está trabada por un alta del mismo día en ARCA." });
+      res.status(400).json({ error: "Ninguna de las pedidas está trabada por algo que se pueda verificar en ARCA." });
       return;
     }
     void verificarAltasEnArca({ tenantId, tenantObjectId: req.tenantObjectId as Types.ObjectId, items: elegidos.map(itemDe), automatica: false, usuarioId: req.user?.userId }).catch((e) => console.error("[verificacion-altas] reverificar:", e?.message || e));
