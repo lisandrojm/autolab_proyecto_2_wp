@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ContratoEnFechas, usersAPI } from "../api/users";
 
 /*
-  ¿LA PERSONA YA TIENE UN CONTRATO EN LAS FECHAS QUE SE ESTÁN CARGANDO? (05/11/2026)
+  ¿LA PERSONA YA TIENE UN CONTRATO DE ARCA EN LAS FECHAS QUE SE ESTÁN CARGANDO? (05/11/2026)
 
   Si tiene, sólo se la contrata por Servicios: por eso los formularios de alta piden las fechas antes
   que el tipo de contrato. Lo usan la solicitud y el wizard de Agregar miembro / Editar y Aprobar. La

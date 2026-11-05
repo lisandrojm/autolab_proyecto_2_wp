@@ -2174,7 +2174,13 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       superposición con… su propio contrato del otro proyecto. Quedan vacías, como al renovar.
     */
     const precargaDeOtroProyecto = !currentProjectMeta && !contractOverride && typeof contractIndex !== 'number' && !!lastContract;
-    const sinFechasPrecargadas = renovar || precargaDeOtroProyecto;
+    /*
+      AGREGAR A ALGUIEN NUEVO EN EL EQUIPO: SIN FECHAS Y SIN TIPO DE CONTRATO (05/11/2026). Lo que se puede
+      elegir depende de las fechas, así que el tipo de su contrato anterior no se precarga. Aprobar trae el
+      de la solicitud; renovar y editar, el del contrato.
+    */
+    const agregaNuevo = !approveSolicitudId && !renovar && !contractOverride && typeof contractIndex !== 'number' && !teamMembers.some((m) => m._id === userId);
+    const sinFechasPrecargadas = renovar || precargaDeOtroProyecto || agregaNuevo;
     textoCustomDeRenovacion.current = renovar && (lastContract as any)?.contenidoCustomContrato ? { nombreContrato: String(lastContract?.nombre_contrato || ''), texto: String((lastContract as any).contenidoCustomContrato) } : null;
 
     /*
@@ -2625,11 +2631,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     setWizardData({
       rol_frame_id: initialRolFrameId,
       categoria_sat_id: initialCatId,
-      contrato_id: initialContratoId,
-      contrato_frame_id: initialContratoFrameId,
-      nombre_contrato: initialNombreContrato,
-      tipo_contrato_id: initialTipoContratoId,
-      estado_id: initialEstadoId,
+      contrato_id: agregaNuevo ? '' : initialContratoId,
+      contrato_frame_id: agregaNuevo ? '' : initialContratoFrameId,
+      nombre_contrato: agregaNuevo ? '' : initialNombreContrato,
+      tipo_contrato_id: agregaNuevo ? '' : initialTipoContratoId,
+      estado_id: agregaNuevo ? '' : initialEstadoId,
       empresaContratoId: lastContract?.empresaContratoId ? String(lastContract.empresaContratoId) : '',
       empresaReleaseId: lastContract?.empresaReleaseId ? String(lastContract.empresaReleaseId) : '',
       // Editando un contrato, su horario o vacío (se pide al guardar): inventarle 09:00–18:00 lo cambiaba sin avisar.
@@ -4555,15 +4561,6 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     Empleado <span className="text-red-500">*</span>
                   </label>
                   <input type="text" className="input-field w-full bg-gray-50 dark:bg-transparent" value={`${selectedUserForWizard?.firstName} ${selectedUserForWizard?.lastName}`} readOnly />
-                  {!wizardEditaContrato && (
-                    <ContratoDeLaPersona
-                      userId={selectedUserForWizard?._id}
-                      contratoFrames={contratoFrames}
-                      estados={allEstados}
-                      className="pt-2"
-                      rotulo={<label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Contrato</label>}
-                    />
-                  )}
                 </div>
 
                 {/*
@@ -4716,6 +4713,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   </p>
                 </div>
                 {/* Puesto | Sede, debajo las fechas y debajo Tipo de contrato | Estado, en la misma fila (27/10/2026). */}
+                {/* El contrato de la persona, justo arriba de las fechas: es contra lo que se eligen. */}
+                {!wizardEditaContrato && (
+                  <ContratoDeLaPersona
+                    userId={selectedUserForWizard?._id}
+                    contratoFrames={contratoFrames}
+                    estados={allEstados}
+                    className="md:col-span-2"
+                    rotulo={<label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Contrato</label>}
+                  />
+                )}
                 {/*
                   Alta y baja del contrato, juntas: son los dos extremos del mismo período. VAN ANTES DEL TIPO DE
                   CONTRATO (05/11/2026): con un contrato en esas fechas, sólo se ofrecen los de Servicios.
