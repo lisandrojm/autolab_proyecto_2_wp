@@ -128,7 +128,8 @@ export const SolicitudesPage: React.FC = () => {
   const [refrescando, setRefrescando] = useState(false);
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
 
-  const [busqueda, setBusqueda] = useState("");
+  // `?buscar=`: llega desde el padrón de Contratados, con la solicitud que se tocó.
+  const [busqueda, setBusqueda] = useState(() => new URLSearchParams(window.location.search).get("buscar") || "");
   const [filtroCliente, setFiltroCliente] = useState("");
   const [filtroProyecto, setFiltroProyecto] = useState("");
   const [orden, setOrden] = useState<OrdenSolicitudes>("desde");

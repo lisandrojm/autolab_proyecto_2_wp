@@ -6,6 +6,26 @@ import type { AntiguedadArcaResumen } from "@compartido/antiguedadTexto";
 export type { AntiguedadArcaResumen } from "@compartido/antiguedadTexto";
 export type { SinCuitDocumento, SinCuitValidacion, AltaArcaPresentada, ContractOverviewRow } from "@compartido/arca/tiposArca";
 
+/** Una solicitud sin aprobar, tal como la lista el padrón de Contratados (`GET /users/solicitudes-pendientes`). */
+export interface SolicitudPendienteDeContrato {
+  _id: string;
+  nombre: string;
+  email: string;
+  cuit: string;
+  sinCuit: boolean;
+  clientId: string;
+  clientName: string;
+  projectId: string;
+  /** Todos sus proyectos, separados por coma: una solicitud puede pedir varios. */
+  projectName: string;
+  nombreContrato: string;
+  desde: string;
+  hasta: string;
+  creadaEl: string;
+  esRenovacion: boolean;
+  comentarios: string;
+}
+
 /* ---------- Tipos base ---------- */
 type ObjectIdString = string & { readonly __objectIdBrand: unique symbol };
 
@@ -588,6 +608,8 @@ class UsersAPI {
       estados?: string[];
       /** Con `estados`: todos los contratos en esos estados, sin la ventana de 90 días de las bandejas (Contratados). */
       sinVentana?: boolean;
+      /** Cada contrato, en cualquier estado, no sólo el que rige. Lo usa Contratados (el padrón). */
+      todosLosContratos?: boolean;
       /** Varios tipos de contrato a la vez (por nombre). Lo usa Renovaciones. */
       tiposContrato?: string[];
       /** `sistema`: sólo los contratos creados en WeProdu (Solicitudes o «Agregar miembro»). */
@@ -616,6 +638,7 @@ class UsersAPI {
     if (params.reemplazo) searchParams.append("reemplazo", params.reemplazo);
     if (params.estados?.length) searchParams.append("estados", params.estados.join(","));
     if (params.sinVentana) searchParams.append("sinVentana", "true");
+    if (params.todosLosContratos) searchParams.append("todosLosContratos", "true");
     if (params.origen) searchParams.append("origen", params.origen);
     if (params.renovables) searchParams.append("renovables", "true");
     for (const t of params.tiposContrato || []) searchParams.append("tiposContrato", t);
@@ -631,6 +654,15 @@ class UsersAPI {
       page: Number(data?.page ?? 1),
       totalPages: Number(data?.totalPages ?? 1),
     };
+  }
+
+  /** Las solicitudes que todavía no son un contrato, para el padrón de Contratados. */
+  async listSolicitudesPendientes(params: { clientId?: string; projectId?: string } = {}): Promise<SolicitudPendienteDeContrato[]> {
+    const sp = new URLSearchParams();
+    if (params.clientId) sp.append("clientId", params.clientId);
+    if (params.projectId) sp.append("projectId", params.projectId);
+    const { data } = await axios.get(`/users/solicitudes-pendientes?${sp.toString()}`, { headers: this.getHeaders() });
+    return Array.isArray(data?.solicitudes) ? data.solicitudes : [];
   }
 
   async get(id: string): Promise<User> {

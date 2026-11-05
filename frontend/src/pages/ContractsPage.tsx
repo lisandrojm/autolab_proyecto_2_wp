@@ -91,7 +91,7 @@ const SUB_TAB_INFO: Record<'alta_afip' | 'constancia_cuit' | 'sin_cuit' | 'firma
   },
   contratados: {
     title: 'Contratados',
-    text: 'Vive en la base de datos. Son todas las personas contratadas desde Solicitudes o desde la plataforma cuyo contrato terminó el circuito: llegó al estado final porque se firmó, o pasó directo porque su tipo de contrato no manda nada a firmar ni genera alta de ARCA. Ordenados por fecha de creación del contrato, lo último arriba.',
+    text: 'Vive en la base de datos. Es el padrón: todos los contratos creados desde Solicitudes o desde la plataforma, en cualquier estado, uno por renglón, más las solicitudes pendientes, que todavía no tienen contrato y aparecen desde que se envían. Con el filtro de Estado se ve una parte. Ordenados por fecha de creación, lo último arriba.',
   },
 };
 
@@ -130,7 +130,7 @@ const PASOS_GESTION: { numero: number; label: string; carpeta?: string; descripc
   { numero: 3, label: 'Para Firmar', carpeta: 'Outbox', descripcion: 'Documentos listos para importar en Dropbox Sign y enviarlos a firmar.', tabs: ['para_firmar'], total: ({ dropboxCounts }) => dropboxCounts.para_firmar },
   { numero: 4, label: 'Enviado a la firma', carpeta: 'Pendbox', descripcion: 'La solicitud ya se envió desde Dropbox Sign y se espera la firma.', tabs: ['enviado_firma'], total: ({ dropboxCounts }) => dropboxCounts.enviado_firma },
   { numero: 5, label: 'Firmados', carpeta: 'Requested signatures', descripcion: 'Contratos que ya volvieron firmados.', tabs: ['firmados'], total: ({ dropboxCounts }) => dropboxCounts.firmados },
-  { numero: 6, label: 'Contratados', descripcion: 'Contratos que terminaron el circuito: firmados, o directos si su tipo no pide firma ni alta de ARCA.', tabs: ['contratados'], total: ({ contratados }) => contratados },
+  { numero: 6, label: 'Contratados', descripcion: 'Todos los contratos en cualquier estado, y las solicitudes pendientes desde que se envían.', tabs: ['contratados'], total: ({ contratados }) => contratados },
 ];
 
 /** Clases de un botón de pestaña (mismo estilo que el resto de los tabs de la app). */

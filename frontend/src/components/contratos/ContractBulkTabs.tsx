@@ -5,7 +5,7 @@ import { faCommentDots, faStethoscope, faFileInvoiceDollar, faFileSignature, faC
 import { BotonOrden, useOrdenTabla, type Orden } from '../ui/OrdenTabla';
 import { MenuOrdenar, type OpcionOrden } from '../ui/MenuOrdenar';
 import { fechaISO } from '../../utils/contratoVigencia';
-import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion } from '../../api/users';
+import { usersAPI, ContractOverviewRow, Contract, SinCuitValidacion, SolicitudPendienteDeContrato } from '../../api/users';
 import { MOBILE_ACTIVITY_LOGS as PERMISO_NOVEDADES_MOBILE } from '../../utils/permisosMobile';
 import { projectsAPI } from '../../api/projects';
 import { CLAVE_CACHE_EMPRESAS, companiesAPI, Company } from '../../api/companies';
@@ -4020,23 +4020,51 @@ export const ContractBulkFirmaTab: React.FC<{
 
 export default ContractBulkAfipTab;
 
-/** Clave de los contratados (paso 6): el estado y el ámbito, como `claveCacheEnvio`. */
-const claveCacheContratados = (estado: string, clientId = '', projectId = '') => `${CONTRACTS_OVERVIEW_CACHE}contratados:${estado}:${ambito(clientId, projectId)}`;
+/** Clave de los contratados (paso 6): el ámbito, como `claveCacheEnvio`. */
+const claveCacheContratados = (clientId = '', projectId = '') => `${CONTRACTS_OVERVIEW_CACHE}contratados:${ambito(clientId, projectId)}`;
 
 /** Cuántos contratados hay, para el número del paso 6 sin haber entrado a la pestaña. */
 export const contarContratados = async (): Promise<number | null> => {
-  const cfg = await cachedFetch(`${CONTRACTS_OVERVIEW_CACHE}firma-config`, () => firmaDigitalAPI.config());
-  const estado = cfg?.estadoContratadoNombre || '';
-  if (!estado) return null;
-  const res = await cachedFetch(`${claveCacheContratados(estado)}:total`, () => usersAPI.listContractsOverview({ limit: 1, origen: 'sistema', estados: [estado], sinVentana: true }));
-  return res.total;
+  const [res, pendientes] = await Promise.all([
+    cachedFetch(`${claveCacheContratados()}:total`, () => usersAPI.listContractsOverview({ limit: 1, origen: 'sistema', todosLosContratos: true })),
+    cachedFetch(`${claveCacheContratados()}:pendientes`, () => usersAPI.listSolicitudesPendientes()),
+  ]);
+  return res.total + pendientes.length;
 };
 
+/** Una fila del padrón: un contrato, o una solicitud que todavía no lo es (`solicitudPendienteId`). */
+type FilaPadron = ContractOverviewRow & { solicitudPendienteId?: string };
+
+const ESTADO_SOLICITUD_PENDIENTE = 'Solicitud pendiente';
+
+/** La solicitud con la forma de una fila: lo que el padrón muestra, filtra y ordena. No tiene contrato atrás. */
+const filaDeSolicitud = (s: SolicitudPendienteDeContrato): FilaPadron =>
+  ({
+    _id: `solicitud-${s._id}`,
+    solicitudPendienteId: s._id,
+    contractIndex: -1,
+    userName: s.nombre,
+    userEmail: s.email,
+    cuit: s.cuit,
+    sinCuit: s.sinCuit,
+    clientId: s.clientId,
+    clientName: s.clientName,
+    projectId: s.projectId,
+    projectName: s.projectName,
+    nombre_contrato: s.nombreContrato,
+    nombre_estado_empleado: ESTADO_SOLICITUD_PENDIENTE,
+    fecha_alta_contrato: s.desde,
+    fecha_baja_contrato: s.hasta,
+    fecha_carga: s.creadaEl,
+    esRenovacion: s.esRenovacion,
+    solicitudComentarios: s.comentarios,
+  }) as unknown as FilaPadron;
+
 /**
- * Paso 6 «Contratados» (28/10/2026): todos los contratos de WeProdu (Solicitudes o «Agregar miembro»)
- * que llegaron al final del circuito. Es el estado al que llegan los firmados y, directo al crearse,
- * los de tipos que no mandan nada a firmar ni generan alta de ARCA (`services/contratadoDirecto.ts`).
- * Sin la ventana de 90 días de las bandejas: es el padrón, no trabajo pendiente. Lo último creado arriba.
+ * Paso 6 «Contratados»: EL PADRÓN. Desde el 05/11/2026 (pedido del usuario) lista todos los contratos de
+ * WeProdu (Solicitudes o «Agregar miembro») en CUALQUIER estado, una fila por contrato, y las solicitudes
+ * pendientes, que todavía no tienen contrato: se ven desde que se envían. Antes eran sólo los que habían
+ * llegado al estado final. Sin la ventana de 90 días de las bandejas. Lo último creado arriba.
  */
 export const ContractBulkContratadosTab: React.FC<{
   allEstados: InfoItem[];
@@ -4045,30 +4073,28 @@ export const ContractBulkContratadosTab: React.FC<{
 }> = ({ allEstados, contratoFrames, onCount }) => {
   // Tocar la fila abre el resumen del contrato (en Contratos; fuera de ahí no hay proveedor y no hace nada).
   const verContrato = useVerContratoEnModal();
-  const [rows, setRows] = useState<ContractOverviewRow[]>([]);
-  const [estado, setEstado] = useState<string | null>(null);
-  // El server no manda `estadoContratadoNombre`: es anterior a este paso (falta el deploy), no falta configuración.
-  const [serverViejo, setServerViejo] = useState(false);
+  const navigate = useNavigate();
+  const [rows, setRows] = useState<FilaPadron[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterClientId, setFilterClientId] = useState('');
   const [filterProjectId, setFilterProjectId] = useState('');
   const [filterTipoContrato, setFilterTipoContrato] = useState('');
   const [filterVigencia, setFilterVigencia] = useState('');
+  const [filterEstado, setFilterEstado] = useState('');
 
   const load = useCallback((force = false) => {
     if (force) invalidateRefCache(CONTRACTS_OVERVIEW_CACHE);
     setLoading(true);
-    return cachedFetch(`${CONTRACTS_OVERVIEW_CACHE}firma-config`, () => firmaDigitalAPI.config())
-      .then(async (cfg) => {
-        const nombre = cfg?.estadoContratadoNombre || '';
-        setServerViejo(!!cfg && !('estadoContratadoNombre' in cfg));
-        setEstado(nombre);
-        const res = nombre
-          ? await cachedFetch(claveCacheContratados(nombre, filterClientId, filterProjectId), () => usersAPI.listContractsOverview({ limit: 10000, origen: 'sistema', estados: [nombre], sinVentana: true, clientId: filterClientId || undefined, projectId: filterProjectId || undefined }))
-          : { rows: [] as ContractOverviewRow[] };
-        setRows(res.rows);
-        if (!filterClientId && !filterProjectId) onCount?.(res.rows.length);
+    const ambitoPedido = { clientId: filterClientId || undefined, projectId: filterProjectId || undefined };
+    return Promise.all([
+      cachedFetch(claveCacheContratados(filterClientId, filterProjectId), () => usersAPI.listContractsOverview({ limit: 10000, origen: 'sistema', todosLosContratos: true, ...ambitoPedido })),
+      cachedFetch(`${claveCacheContratados(filterClientId, filterProjectId)}:pendientes`, () => usersAPI.listSolicitudesPendientes(ambitoPedido)),
+    ])
+      .then(([res, pendientes]) => {
+        const filas: FilaPadron[] = [...res.rows, ...pendientes.map(filaDeSolicitud)];
+        setRows(filas);
+        if (!filterClientId && !filterProjectId) onCount?.(filas.length);
       })
       .catch(() => {
         /* noop */
@@ -4084,11 +4110,13 @@ export const ContractBulkContratadosTab: React.FC<{
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
-      if (!pasaFiltrosDeContrato(r, { usuarios: '', vigencia: filterVigencia, novedades: '', tipoContrato: filterTipoContrato, estadoContrato: '', reemplazo: '' })) return false;
+      // Una solicitud todavía no es un contrato: ni vigente ni no vigente.
+      if (filterVigencia && r.solicitudPendienteId) return false;
+      if (!pasaFiltrosDeContrato(r, { usuarios: '', vigencia: filterVigencia, novedades: '', tipoContrato: filterTipoContrato, estadoContrato: filterEstado, reemplazo: '' })) return false;
       if (q && ![r.userName, r.userEmail, r.clientName, r.projectName, r.nombre_contrato, r.cuit].some((v) => String(v || '').toLowerCase().includes(q))) return false;
       return true;
     });
-  }, [rows, search, filterVigencia, filterTipoContrato]);
+  }, [rows, search, filterVigencia, filterTipoContrato, filterEstado]);
 
   const clientOptions = useMemo(() => {
     const m = new Map<string, string>();
@@ -4101,6 +4129,7 @@ export const ContractBulkContratadosTab: React.FC<{
     return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
   }, [rows, filterClientId]);
   const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(rows), [rows]);
+  const estadoOptions = useMemo(() => opcionesDeEstadoContrato(rows).sort((a, b) => a.label.localeCompare(b.label, 'es')), [rows]);
 
   const { ordenados, orden, setOrden, alternar } = useOrdenTabla(
     filtered,
@@ -4135,6 +4164,7 @@ export const ContractBulkContratadosTab: React.FC<{
               { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },
               { label: 'Proyecto', value: filterProjectId, onChange: setFilterProjectId, placeholder: 'Todos los proyectos', options: projectOptions },
               { label: 'Tipo de contrato', value: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
+              { label: 'Estado', value: filterEstado, onChange: setFilterEstado, placeholder: 'Todos los estados', options: estadoOptions },
             ]}
           />
         </div>
@@ -4145,14 +4175,10 @@ export const ContractBulkContratadosTab: React.FC<{
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <LoadingSpinner message="Cargando contratados..." />
+          <LoadingSpinner message="Cargando contratos..." />
         </div>
-      ) : serverViejo ? (
-        <EmptyState icon={faTriangleExclamation} title="El servidor todavía no tiene esta versión" description="Contratados necesita el servidor actualizado (git pull + forever restart 5). Hasta entonces no puede saber cuál es el estado final." />
-      ) : !estado ? (
-        <EmptyState icon={faTriangleExclamation} title="No se sabe cuál es el estado final" description='Ningún estado tiene configurada la carpeta de firmados («Requested signatures») en Documentos → Configurar transición automática. Ese estado es el de los contratados (se puede fijar con el script estados:configurar-contratados).' />
       ) : filtered.length === 0 ? (
-        <EmptyState icon={faUser} title="Sin contratados" description={rows.length === 0 ? `Todavía no hay contratos en «${estado}».` : 'No hay resultados con los filtros aplicados.'} />
+        <EmptyState icon={faUser} title="Sin contratos" description={rows.length === 0 ? 'Todavía no hay contratos ni solicitudes pendientes.' : 'No hay resultados con los filtros aplicados.'} />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-clip">
           <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1200px]">
@@ -4187,8 +4213,15 @@ export const ContractBulkContratadosTab: React.FC<{
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {pag.visibles.map((r) => {
                 const vigente = isContractVigente(r.fecha_alta_contrato, r.fecha_baja_contrato);
+                const pendiente = !!r.solicitudPendienteId;
+                // La solicitud todavía no tiene contrato que abrir: lleva a Solicitudes, ya buscada.
+                const alTocar = (e: React.MouseEvent<HTMLElement>) => {
+                  if (!esClicDeLaFila(e)) return;
+                  if (pendiente) navigate(`/admin/solicitudes?buscar=${encodeURIComponent(r.userName)}`);
+                  else verContrato?.(r, () => load(true));
+                };
                 return (
-                  <tr key={rowKey(r)} onClick={(e) => verContrato && esClicDeLaFila(e) && verContrato(r, () => load(true))} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${verContrato ? 'cursor-pointer' : ''}`}>
+                  <tr key={rowKey(r)} onClick={alTocar} title={pendiente ? 'Solicitud sin aprobar: todavía no tiene contrato. Tocá para abrirla en Solicitudes.' : undefined} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${verContrato || pendiente ? 'cursor-pointer' : ''}`}>
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato sin fecha de carga">—</span>} />
                     </td>
@@ -4197,7 +4230,7 @@ export const ContractBulkContratadosTab: React.FC<{
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
+                        {!pendiente && <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>}
                         <div className="flex flex-col gap-0.5 text-xs">
                           <span>
                             <span className="text-gray-400">Alta:</span> {formatDate(r.fecha_alta_contrato)}
@@ -4210,17 +4243,15 @@ export const ContractBulkContratadosTab: React.FC<{
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       <div className="flex flex-col items-start gap-1">
-                        <EstadoBadge name={r.nombre_estado_empleado || ''} />
+                        {pendiente ? <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">{ESTADO_SOLICITUD_PENDIENTE}</span> : <EstadoBadge name={r.nombre_estado_empleado || ''} />}
                         <span>{r.nombre_contrato || '—'}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
-                    <td className="px-4 py-3">
-                      <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
-                    </td>
-                    <ContractActionsCell record={r} onDeleted={() => load(true)} />
+                    <td className="px-4 py-3">{pendiente ? <span className="text-xs text-gray-400">—</span> : <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />}</td>
+                    {pendiente ? <td className="px-4 py-3" /> : <ContractActionsCell record={r} onDeleted={() => load(true)} />}
                   </tr>
                 );
               })}

@@ -1064,6 +1064,63 @@ const CAMPOS_FILA_CONTRATO = [
 const PROYECCION_FILA_CONTRATO = Object.fromEntries(CAMPOS_FILA_CONTRATO.map((k) => [`c.${k}`, 1]));
 
 /*
+ * GET /users/solicitudes-pendientes - Las solicitudes que todavía no son un contrato, para el padrón de
+ * Contratados (05/11/2026: «una vez hecha la solicitud ya deben aparecer»). El contrato recién se crea
+ * al aprobarla, así que hasta entonces la fila sale de la solicitud. Con el permiso de Contratos, y no
+ * con el de `solicitudes-overview`: quien mira Contratos no siempre puede entrar a Solicitudes.
+ *
+ * Una fila por solicitud, con sus proyectos juntos (como `solicitudes-overview`). El CUIT es el de la
+ * PERSONA (`solicitudUserId`): una solicitud de la app no lo trae.
+ */
+router.get("/solicitudes-pendientes", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const clientId = req.query.clientId ? String(req.query.clientId) : "";
+    const projectId = req.query.projectId ? String(req.query.projectId) : "";
+    // Sin estado también es pendiente: las solicitudes viejas no lo traen.
+    const and: any[] = [{ tenantId: req.tenantObjectId }, { "metadata.isSolicitud": true }, { "metadata.solicitudStatus": { $in: ["pendiente", null] } }];
+    if (projectId) and.push({ "metadata.projectIds": Types.ObjectId.isValid(projectId) ? new Types.ObjectId(projectId) : projectId });
+    else if (clientId) and.push({ "metadata.projectIds": { $in: await Project.find({ tenantId: req.tenantObjectId, clientId }).distinct("_id") } });
+
+    const docs: any[] = await User.find({ $and: and })
+      .select("firstName lastName email createdAt metadata.fullName metadata.cuit metadata.solicitudUserId metadata.projectIds metadata.startDate metadata.dueDate metadata.nombre_contrato metadata.esRenovacion metadata.comentarios")
+      .populate({ path: "metadata.projectIds", select: "name clientId", model: Project, populate: { path: "clientId", select: "name", model: Client } })
+      .sort({ createdAt: -1 })
+      .lean();
+    const idsPersonas = [...new Set(docs.map((s) => String(s.metadata?.solicitudUserId || "")).filter((id) => Types.ObjectId.isValid(id)))];
+    const personas: any[] = idsPersonas.length > 0 ? await User.find({ _id: { $in: idsPersonas } }).select("metadata.cuit metadata.sinCuit").lean() : [];
+    const personaDe = new Map(personas.map((p) => [String(p._id), p]));
+
+    res.json({
+      solicitudes: docs.map((s) => {
+        const proyectos = ((s.metadata?.projectIds || []) as any[]).filter((p) => p && typeof p === "object");
+        const persona = personaDe.get(String(s.metadata?.solicitudUserId || ""));
+        const cliente = proyectos[0]?.clientId;
+        return {
+          _id: String(s._id),
+          nombre: s.metadata?.fullName || `${s.firstName || ""} ${s.lastName || ""}`.trim() || s.email || "",
+          email: s.email || "",
+          cuit: persona?.metadata?.cuit || s.metadata?.cuit || "",
+          sinCuit: persona?.metadata?.sinCuit === true,
+          clientId: cliente?._id ? String(cliente._id) : "",
+          clientName: cliente?.name || "",
+          projectId: proyectos[0]?._id ? String(proyectos[0]._id) : "",
+          projectName: proyectos.map((p) => p.name).filter(Boolean).join(", "),
+          nombreContrato: s.metadata?.nombre_contrato || "",
+          desde: s.metadata?.startDate || "",
+          hasta: s.metadata?.dueDate || "",
+          creadaEl: s.createdAt,
+          esRenovacion: !!s.metadata?.esRenovacion,
+          comentarios: s.metadata?.comentarios || "",
+        };
+      }),
+    });
+  } catch (error) {
+    console.error("Solicitudes pendientes error:", error);
+    res.status(500).json({ error: "No se pudieron leer las solicitudes pendientes." });
+  }
+});
+
+/*
  * GET /users/contracts-overview - Listado global de contratos (Contratos, la página que no está
  * atada a un proyecto). A diferencia de GET /users (que pagina por usuario), acá cada fila es un
  * (usuario × proyecto) con su contrato ACTIVO (mismo criterio que Gestionar Equipo:
@@ -1143,6 +1200,11 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
       o desde «Agregar miembro» (`origen`)—. Lo usa Contratos: los importados de FRAME/WP confundían.
     */
     const soloDelSistema = req.query.origen === "sistema";
+    /**
+     * `todosLosContratos=true` (Contratados, 05/11/2026): CADA contrato, en cualquier estado, no sólo el
+     * que rige. Es el padrón: una fila por contrato desde que se aprueba la solicitud.
+     */
+    const todosLosContratos = req.query.todosLosContratos === "true";
     /** `renovables=true` (Renovaciones): sólo los vencidos que de verdad están sin renovar. */
     const soloRenovables = req.query.renovables === "true";
     const camposContrato: any = { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga" };
@@ -1181,7 +1243,15 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
       nombresCrudosBandeja = nombres.map((n) => String(n ?? "")).filter((n) => estadosPedidos.includes(estadoCanonico(n)));
     }
     const membershipsRaw: any[] = await UserProject.aggregate([
-      { $match: { projectId: { $in: projectIds }, ...(nombresCrudosBandeja ? { "contracts.nombre_estado_empleado": { $in: nombresCrudosBandeja } } : {}) } },
+      {
+        $match: {
+          projectId: { $in: projectIds },
+          ...(nombresCrudosBandeja ? { "contracts.nombre_estado_empleado": { $in: nombresCrudosBandeja } } : {}),
+          // El padrón sin estados barrería todos los vínculos: los que sólo tienen contratos importados no viajan.
+          // Con $elemMatch: sobre un array, «solicitudId: {$ne: null}» exigiría que NINGÚN contrato sea nulo.
+          ...(todosLosContratos && soloDelSistema ? { $or: [{ contracts: { $elemMatch: { solicitudId: { $exists: true, $ne: null } } } }, { "contracts.origen": "agregar_miembro" }] } : {}),
+        },
+      },
       {
         $project: {
           p: "$projectId",
@@ -1327,8 +1397,9 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         if (permisoExcluido && permisos.has(permisoExcluido)) continue;
       }
 
-      const candidatosDeLaAsignacion: any[] =
-        estadosFiltro.length > 0
+      const candidatosDeLaAsignacion: any[] = todosLosContratos
+        ? contratos
+        : estadosFiltro.length > 0
           ? contratos.filter((c) => enBandeja(c) && (c === contratoActivo || sinVentana || fechaISO(c.fecha_alta_contrato) >= desdeBandeja))
           : [contratoActivo];
 
