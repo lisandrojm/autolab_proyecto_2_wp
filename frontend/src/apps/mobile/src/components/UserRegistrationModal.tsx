@@ -2500,7 +2500,18 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           {nombreLegado && <p className="text-[11px] text-amber-600 dark:text-amber-400">Esta solicitud se cargó con el nombre escrito a mano. Si la persona ya se registró, elegila de la lista.</p>}
           {sinPersona && <p className="text-[11px] text-slate-400">Elegí a una persona registrada para completar el resto: lo que sigue habla de ella.</p>}
           {/* Dentro del bloque pegado: se sigue viendo al elegir las fechas y el tipo de contrato. */}
-          <ContratoDeLaPersona userId={selectedUser?._id} />
+          <ContratoDeLaPersona
+            userId={selectedUser?._id}
+            contratoFrames={contratoFrames}
+            estados={todosLosEstados}
+            className="pt-2"
+            rotulo={
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                <FontAwesomeIcon icon={faFileContract} className="text-blue-500 text-[10px]" />
+                Contrato
+              </label>
+            }
+          />
         </div>
 
         {/* Ver `sinPersona`: el navegador propaga el `disabled` a todos los controles de adentro. */}

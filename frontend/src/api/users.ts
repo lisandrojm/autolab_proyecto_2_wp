@@ -54,6 +54,10 @@ export interface ContratoQueRige {
   alta: string;
   baja: string | null;
   nombre: string;
+  /** Con el nombre, dice de qué plantilla viene y por eso su trámite (`estadoImpositivoDelContrato`). */
+  tipoContratoId: number | string | null;
+  /** El número de centro de costo del proyecto; vacío si no tiene. */
+  centroCosto: string;
   proyecto: string;
   vigente: boolean;
 }

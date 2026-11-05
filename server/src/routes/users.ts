@@ -2748,10 +2748,12 @@ router.get("/:id/contrato-que-rige", requireTenant, authenticateToken, requireAn
       res.status(404).json({ error: "Persona no encontrada." });
       return;
     }
-    const vinculos: any[] = await UserProject.find({ userId: id }).select("nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_contrato").lean();
-    const contratos = vinculos.flatMap((v) => (v.contracts || []).map((c: any) => ({ ...c, proyecto: String(v.nombre_proyecto || "") })));
+    const vinculos: any[] = await UserProject.find({ userId: id }).select("projectId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_contrato contracts.tipo_contrato_id").lean();
+    const contratos = vinculos.flatMap((v) => (v.contracts || []).map((c: any) => ({ ...c, proyecto: String(v.nombre_proyecto || ""), proyectoId: v.projectId })));
     const c = getContratoActivo(contratos);
-    res.json({ contrato: c ? { alta: fechaISO(c.fecha_alta_contrato), baja: fechaISO(c.fecha_baja_contrato) || null, nombre: String(c.nombre_contrato || ""), proyecto: c.proyecto, vigente: esContratoVigente(c) } : null });
+    const proyecto: any = c?.proyectoId ? await Project.findById(c.proyectoId).select("metadata.centroCostoId metadata.centroCostoEmpresaTangoId").lean() : null;
+    if (proyecto) await resolverCentroCostoDeProyectos([proyecto]);
+    res.json({ contrato: c ? { alta: fechaISO(c.fecha_alta_contrato), baja: fechaISO(c.fecha_baja_contrato) || null, nombre: String(c.nombre_contrato || ""), tipoContratoId: c.tipo_contrato_id ?? null, centroCosto: proyecto ? etiquetaCentroCostoDe(proyecto) : "", proyecto: c.proyecto, vigente: esContratoVigente(c) } : null });
   } catch (error) {
     console.error("Contrato que rige error:", error);
     res.status(500).json({ error: "No se pudo leer el contrato de la persona." });

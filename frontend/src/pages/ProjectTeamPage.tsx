@@ -4555,7 +4555,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     Empleado <span className="text-red-500">*</span>
                   </label>
                   <input type="text" className="input-field w-full bg-gray-50 dark:bg-transparent" value={`${selectedUserForWizard?.firstName} ${selectedUserForWizard?.lastName}`} readOnly />
-                  {!wizardEditaContrato && <ContratoDeLaPersona userId={selectedUserForWizard?._id} className="ml-1" />}
+                  {!wizardEditaContrato && (
+                    <ContratoDeLaPersona
+                      userId={selectedUserForWizard?._id}
+                      contratoFrames={contratoFrames}
+                      estados={allEstados}
+                      className="pt-2"
+                      rotulo={<label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Contrato</label>}
+                    />
+                  )}
                 </div>
 
                 {/*
