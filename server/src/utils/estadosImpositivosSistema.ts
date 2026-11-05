@@ -12,6 +12,12 @@
  * SE CREAN SIN TIPOS DE CONTRATO ASOCIADOS, a propósito. Qué tipo de contrato lleva cuál lo decide
  * cada productora en el ABM; el sistema garantiza que los dos estados estén, no a qué se aplican.
  *
+ * SE RECONOCEN POR SU TRÁMITE, NO POR EL NOMBRE (05/11/2026). Se buscaban sólo por nombre: alguien
+ * renombró «Pedido de AFIP» a «AFIP» y, como esto corre cada vez que se lista, al instante se creó otro
+ * «Pedido de AFIP» al lado. Ahora un estado de sistema con ese `tipoImpositivo` ya cuenta, se llame como
+ * se llame, y el nombre de los de sistema no se puede cambiar (`parseEstadoBody` en `routes/info.ts`).
+ * Para unir los que quedaron dobles: `npm run estados:reparar-impositivos`.
+ *
  * ADOPTA, NO DUPLICA. Si ya hay un estado con la misma clave canónica —«Falta pedido de AFIP» es el
  * mismo que «Pedido de AFIP»— se lo marca como de sistema y se le completa SOLO lo que le falte.
  * Nunca se pisa un valor ya configurado: el color, la etiqueta o los tipos que cargó alguien quedan
@@ -63,7 +69,7 @@ export async function ensureEstadosImpositivosSistema(): Promise<{ creados: stri
   for (const e of existentes as any[]) porClave.set(claveEstado(e.name), e);
 
   for (const semilla of ESTADOS_IMPOSITIVOS_SISTEMA) {
-    const yaEsta = porClave.get(claveEstado(semilla.name));
+    const yaEsta = (existentes as any[]).find((e) => e.data?.esSistema === true && e.data?.tipoImpositivo === semilla.tipoImpositivo) ?? porClave.get(claveEstado(semilla.name));
 
     if (yaEsta) {
       /*

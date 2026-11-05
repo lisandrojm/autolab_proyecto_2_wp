@@ -10,6 +10,7 @@ import { ContratoFrame } from "../models/ContratoFrame.js";
 import { Contrato } from "../models/Contrato.js";
 import { esEstadoDeFirma, tipoEnviaAFirmar } from "../compartido/estadosFirma.js";
 import { ESTADO_TYPE, esEstadoDeSistema, ensureEstadosImpositivosSistema } from "../utils/estadosImpositivosSistema.js";
+import { claveEstado } from "../utils/estadoClave.js";
 
 const router = Router();
 
@@ -157,6 +158,14 @@ function parseEstadoBody(body: any, estadoActual?: any): { error?: string; name?
     Sistema`). En vez de ese ida y vuelta, acá no se puede apagar.
   */
   const esDeSistema = estadoActual?.data?.esSistema === true;
+  /*
+    EL NOMBRE DE UN ESTADO DE SISTEMA NO SE CAMBIA (05/11/2026). Es la clave con la que matchean los
+    contratos ya guardados y las bandejas: renombrarlo no renombra los contratos, que quedan apuntando a
+    un estado que ya no existe. Lo que se muestra se cambia con el badge secundario.
+  */
+  if (esDeSistema && claveEstado(name) !== claveEstado(String(estadoActual?.name || ""))) {
+    return { error: "El nombre de un estado de sistema no se puede cambiar: los contratos guardados lo usan. Para cambiar lo que se muestra, editá el texto del badge secundario." };
+  }
   const esImpositivo = esDeSistema || body?.esImpositivo === true || body?.esImpositivo === "true";
 
   /*

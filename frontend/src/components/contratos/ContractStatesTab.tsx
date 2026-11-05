@@ -621,7 +621,9 @@ export const ContractStatesTab: React.FC = () => {
         <div className="space-y-5">
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Nombre *</label>
-            <input className="input-field w-full" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ej: Firma pendiente" />
+            {/* El nombre de un estado de sistema es la clave de los contratos guardados: renombrarlo los deja sin estado. */}
+            <input className="input-field w-full disabled:opacity-60 disabled:cursor-not-allowed" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ej: Firma pendiente" disabled={!!editando?.data?.esSistema} />
+            {editando?.data?.esSistema && <p className="text-xs text-gray-500 dark:text-gray-400 ml-1">Es un estado de sistema: el nombre no se cambia. Lo que se muestra se edita en el texto del badge secundario.</p>}
           </div>
 
           <div className="space-y-2">
