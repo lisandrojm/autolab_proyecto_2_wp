@@ -366,17 +366,18 @@ export const DependencyFlowEditor: React.FC = () => {
   };
 
   // Construcción inicial: agrupar por ordenDependencia (renumerado contiguo); sin número → pool.
-  // Regla: los estados impositivos van SIEMPRE al Paso 1 (grupo 1), aunque su valor guardado sea
-  // otro o no tengan — "van por defecto al paso uno; en ese paso no importa el orden (uno u otro)".
+  // Regla: «Solicitud de contratación» es SIEMPRE el Paso 1 y los impositivos SIEMPRE el 2, aunque su
+  // valor guardado sea otro o no tengan. Entre los impositivos no importa el orden (uno u otro).
   useEffect(() => {
     if (loadingEstados) return;
     setEventoOverrides({});
     const groups = new Map<number, InfoItem[]>();
     const unassigned: InfoItem[] = [];
     for (const e of estados) {
-      if (e.data?.esImpositivo) {
-        if (!groups.has(1)) groups.set(1, []);
-        groups.get(1)!.push(e);
+      if (e.data?.esSolicitud || e.data?.esImpositivo) {
+        const fijo = e.data?.esSolicitud ? 1 : 2;
+        if (!groups.has(fijo)) groups.set(fijo, []);
+        groups.get(fijo)!.push(e);
         continue;
       }
       const n = e.data?.ordenDependencia;
@@ -474,6 +475,9 @@ export const DependencyFlowEditor: React.FC = () => {
       return arrayMove(prev, i, j);
     });
   };
+
+  /** Los pasos de Solicitud y de los impositivos no se mueven ni se borran: el circuito arranca así. */
+  const esPasoFijo = (pid: string | undefined) => !!pid && (items[pid] || []).some((id) => estadoById.get(id)?.data?.esSolicitud || estadoById.get(id)?.data?.esImpositivo);
 
   /** Sacar un estado del flujo también borra su transición automática: sin `ordenDependencia` no se
    *  puede calcular "hacia adelante", así que quedaría una carpeta vigilada huérfana y bloqueada para
@@ -592,13 +596,13 @@ export const DependencyFlowEditor: React.FC = () => {
                   {(items[pid] || []).length > 1 && <span className="normal-case tracking-normal text-[10px] text-gray-500 dark:text-gray-400">({items[pid].length} alternativas)</span>}
                 </span>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => movePaso(i, -1)} disabled={i === 0} title="Subir paso" className="p-1.5 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 disabled:opacity-30 disabled:cursor-not-allowed">
+                  <button onClick={() => movePaso(i, -1)} disabled={i === 0 || esPasoFijo(pid) || esPasoFijo(pasos[i - 1])} title="Subir paso" className="p-1.5 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 disabled:opacity-30 disabled:cursor-not-allowed">
                     <FontAwesomeIcon icon={faArrowUp} className="h-3.5 w-3.5" />
                   </button>
-                  <button onClick={() => movePaso(i, 1)} disabled={i === pasos.length - 1} title="Bajar paso" className="p-1.5 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 disabled:opacity-30 disabled:cursor-not-allowed">
+                  <button onClick={() => movePaso(i, 1)} disabled={i === pasos.length - 1 || esPasoFijo(pid)} title="Bajar paso" className="p-1.5 rounded text-gray-500 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 disabled:opacity-30 disabled:cursor-not-allowed">
                     <FontAwesomeIcon icon={faArrowDown} className="h-3.5 w-3.5" />
                   </button>
-                  <button onClick={() => removePaso(pid)} title="Eliminar paso (sus estados vuelven a Sin asignar)" className="p-1.5 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
+                  <button onClick={() => removePaso(pid)} disabled={esPasoFijo(pid)} title="Eliminar paso (sus estados vuelven a Sin asignar)" className="p-1.5 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30">
                     <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -611,13 +615,13 @@ export const DependencyFlowEditor: React.FC = () => {
                     (items[pid] || []).map((id) => {
                       const est = estadoById.get(id);
                       if (!est) return null;
-                      // Los impositivos van fijos al Paso 1: no se sacan del flujo (sin botón "x"), pero
+                      // Solicitud e impositivos van fijos a su paso: no se sacan del flujo (sin botón "x"), pero
                       // sí pueden tener transición automática (p. ej. detectados por carpeta de Dropbox).
                       return (
                         <SortableChip
                           key={id}
                           estado={est}
-                          onRemove={est.data?.esImpositivo ? undefined : () => sacarDelFlujo(id)}
+                          onRemove={est.data?.esImpositivo || est.data?.esSolicitud ? undefined : () => sacarDelFlujo(id)}
                           mostrarTransicion
                           transicion={transicionDe(est)}
                           puedeConfigurarTransicion={typeof est.data?.ordenDependencia === "number"}

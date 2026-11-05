@@ -4035,10 +4035,8 @@ export const contarContratados = async (): Promise<number | null> => {
 /** Una fila del padrón: un contrato, o una solicitud que todavía no lo es (`solicitudPendienteId`). */
 type FilaPadron = ContractOverviewRow & { solicitudPendienteId?: string };
 
-const ESTADO_SOLICITUD_PENDIENTE = 'Solicitud pendiente';
-
 /** La solicitud con la forma de una fila: lo que el padrón muestra, filtra y ordena. No tiene contrato atrás. */
-const filaDeSolicitud = (s: SolicitudPendienteDeContrato): FilaPadron =>
+const filaDeSolicitud = (s: SolicitudPendienteDeContrato, estado: string): FilaPadron =>
   ({
     _id: `solicitud-${s._id}`,
     solicitudPendienteId: s._id,
@@ -4052,7 +4050,8 @@ const filaDeSolicitud = (s: SolicitudPendienteDeContrato): FilaPadron =>
     projectId: s.projectId,
     projectName: s.projectName,
     nombre_contrato: s.nombreContrato,
-    nombre_estado_empleado: ESTADO_SOLICITUD_PENDIENTE,
+    // El estado del Paso 1, como cualquier otro: su nombre sale del ABM.
+    nombre_estado_empleado: estado,
     fecha_alta_contrato: s.desde,
     fecha_baja_contrato: s.hasta,
     fecha_carga: s.creadaEl,
@@ -4092,7 +4091,8 @@ export const ContractBulkContratadosTab: React.FC<{
       cachedFetch(`${claveCacheContratados(filterClientId, filterProjectId)}:pendientes`, () => usersAPI.listSolicitudesPendientes(ambitoPedido)),
     ])
       .then(([res, pendientes]) => {
-        const filas: FilaPadron[] = [...res.rows, ...pendientes.map(filaDeSolicitud)];
+        const estadoSolicitud = allEstados.find((e) => e.data?.esSolicitud)?.name || 'Solicitud de contratación';
+        const filas: FilaPadron[] = [...res.rows, ...pendientes.map((s) => filaDeSolicitud(s, estadoSolicitud))];
         setRows(filas);
         if (!filterClientId && !filterProjectId) onCount?.(filas.length);
       })
@@ -4101,7 +4101,7 @@ export const ContractBulkContratadosTab: React.FC<{
       })
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterClientId, filterProjectId]);
+  }, [filterClientId, filterProjectId, allEstados]);
 
   useEffect(() => {
     load();
@@ -4243,7 +4243,7 @@ export const ContractBulkContratadosTab: React.FC<{
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       <div className="flex flex-col items-start gap-1">
-                        {pendiente ? <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">{ESTADO_SOLICITUD_PENDIENTE}</span> : <EstadoBadge name={r.nombre_estado_empleado || ''} />}
+                        <EstadoBadge name={r.nombre_estado_empleado || ''} />
                         <span>{r.nombre_contrato || '—'}</span>
                       </div>
                     </td>

@@ -319,7 +319,7 @@ export function getDummyDocVariables(): Record<string, string> {
     diasPorSemana: "5",
     diasQueTrabaja: "Lu a Vi",
     fechasTrabajadas: "16/03/2026, 17/03/2026",
-    tramite: "Pedido de AFIP",
+    tramite: "AFIP",
     // Cargos y Niveles salieron de la aplicación: en un contrato real resuelven vacío (ver `buildEmployeeDocData`).
     nombreNivel: "",
     nivel: "",

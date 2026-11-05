@@ -1675,7 +1675,7 @@ export const ContractTypesTab = forwardRef<ContractTypesTabHandle>((_props, ref)
               const misPlantillaIds = editando ? plantillaIdsDe(editando._id) : [];
               const estadosImpositivos = estados.filter((e) => e.data?.esImpositivo);
               const estadosRegulares = estados.filter((e) => !e.data?.esImpositivo && (e.data?.contratoFrameIds || []).length > 0);
-              const estadosGlobales = estados.filter((e) => (e.data?.contratoFrameIds || []).length === 0);
+              const estadosGlobales = estados.filter((e) => !e.data?.esSolicitud && (e.data?.contratoFrameIds || []).length === 0);
               /** Los estados de firma no se pueden elegir en un tipo que no manda nada a firmar. */
               const bloqueadoPorFirma = (e: InfoItem) => !enviaAFirmar && esEstadoDeFirma(e);
               const regularesElegibles = estadosRegulares.filter((e) => !bloqueadoPorFirma(e));

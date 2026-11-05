@@ -9,8 +9,9 @@ import mongoose from "mongoose";
 import { ContratoFrame } from "../models/ContratoFrame.js";
 import { Contrato } from "../models/Contrato.js";
 import { esEstadoDeFirma, tipoEnviaAFirmar } from "../compartido/estadosFirma.js";
-import { ESTADO_TYPE, esEstadoDeSistema, ensureEstadosImpositivosSistema } from "../utils/estadosImpositivosSistema.js";
+import { ESTADO_TYPE, PASO_IMPOSITIVOS, esEstadoDeSistema, ensureEstadosImpositivosSistema } from "../utils/estadosImpositivosSistema.js";
 import { claveEstado } from "../utils/estadoClave.js";
+import UserProject from "../models/UserProject.js";
 
 const router = Router();
 
@@ -30,6 +31,8 @@ const ORDEN_SEMILLA: Record<string, number> = {
   "pedido de afip": 0,
   "falta pedido de afip": 0,
   "pedido servicios": 1,
+  afip: 0,
+  servicios: 1,
   "envio de documentacion": 2,
   "firma pendiente": 3,
   disponible: 4,
@@ -158,15 +161,8 @@ function parseEstadoBody(body: any, estadoActual?: any): { error?: string; name?
     Sistema`). En vez de ese ida y vuelta, acá no se puede apagar.
   */
   const esDeSistema = estadoActual?.data?.esSistema === true;
-  /*
-    EL NOMBRE DE UN ESTADO DE SISTEMA NO SE CAMBIA (05/11/2026). Es la clave con la que matchean los
-    contratos ya guardados y las bandejas: renombrarlo no renombra los contratos, que quedan apuntando a
-    un estado que ya no existe. Lo que se muestra se cambia con el badge secundario.
-  */
-  if (esDeSistema && claveEstado(name) !== claveEstado(String(estadoActual?.name || ""))) {
-    return { error: "El nombre de un estado de sistema no se puede cambiar: los contratos guardados lo usan. Para cambiar lo que se muestra, editá el texto del badge secundario." };
-  }
-  const esImpositivo = esDeSistema || body?.esImpositivo === true || body?.esImpositivo === "true";
+  // «Solicitud de contratación» también es de sistema, pero no es un trámite impositivo.
+  const esImpositivo = (esDeSistema && estadoActual?.data?.esSolicitud !== true) || body?.esImpositivo === true || body?.esImpositivo === "true";
 
   /*
     Un estado impositivo sin tipos aplicaría a TODOS y chocaría con cualquier otro impositivo, así
@@ -212,7 +208,7 @@ function parseEstadoBody(body: any, estadoActual?: any): { error?: string; name?
   // Los estados impositivos van por defecto al Paso 1 del flujo de dependencias. Solo se toca
   // `ordenDependencia` cuando es impositivo; en los no impositivos NO se incluye la clave, para que
   // el update (spread `{ ...estado.data, ...parsed.data }`) preserve el paso que tengan en el flujo.
-  if (esImpositivo) data.ordenDependencia = 1;
+  if (esImpositivo) data.ordenDependencia = PASO_IMPOSITIVOS;
 
   // Vinculado a firma (Dropbox Sign): igual que `transicionAutomatica`, sólo se toca si vino la clave,
   // para que los que reenvían el estado sin conocerla (orden de dependencias) no la borren. Un
@@ -494,10 +490,28 @@ router.patch("/estados/:id", requireTenant, authenticateToken, async (req: Authe
     }
     if (borrarTransicion) delete nuevaData.transicionAutomatica;
 
+    const nombreAnterior = estado.name;
     estado.name = parsed.name!;
     estado.data = nuevaData;
     estado.markModified("data");
     await estado.save();
+
+    /*
+      RENOMBRAR UN ESTADO RENOMBRA SUS CONTRATOS (05/11/2026). Cada contrato guarda el nombre
+      (`nombre_estado_empleado`) y las bandejas lo buscan por ahí: sin esto, los contratos quedaban con
+      el nombre viejo, apuntando a un estado que ya no existe. Se pasan todas las formas guardadas del
+      mismo estado (`claveEstado`: «Falta pedido de AFIP» y «Pedido de AFIP» son uno).
+    */
+    const avisos: string[] = [];
+    if (nombreAnterior !== parsed.name) {
+      try {
+        const crudos = ((await UserProject.distinct("contracts.nombre_estado_empleado")) as unknown[]).map((n) => String(n ?? "")).filter((n) => n && n !== parsed.name && claveEstado(n) === claveEstado(nombreAnterior));
+        if (crudos.length > 0) await UserProject.updateMany({ "contracts.nombre_estado_empleado": { $in: crudos } }, { $set: { "contracts.$[c].nombre_estado_empleado": parsed.name } }, { arrayFilters: [{ "c.nombre_estado_empleado": { $in: crudos } }] });
+      } catch (e) {
+        console.error("Renombrar estado en contratos error:", e);
+        avisos.push("El estado se renombró, pero no se pudo actualizar el nombre en los contratos guardados. Volvé a guardarlo para reintentar.");
+      }
+    }
 
     /*
       SE GUARDA PRIMERO Y SE VERIFICA DESPUÉS, a propósito.
@@ -510,7 +524,6 @@ router.patch("/estados/:id", requireTenant, authenticateToken, async (req: Authe
       Si Dropbox no responde, no se avisa nada: un aviso disparado por un problema de red diría algo
       falso sobre la configuración.
     */
-    const avisos: string[] = [];
     try {
       const cfg = getTenantDropboxConfig(await Tenant.findById(req.tenantObjectId).lean());
       if (cfg) {

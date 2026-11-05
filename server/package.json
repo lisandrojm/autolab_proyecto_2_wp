@@ -197,7 +197,6 @@
     "equipo:diagnosticar": "dotenv -e .env.production -- tsx src/scripts/equipoDiagnosticar.ts",
     "estados:configurar-contratados": "dotenv -e .env.production -- tsx src/scripts/configurarContratados.ts",
     "estados:diagnosticar-firma": "dotenv -e .env.production -- tsx src/scripts/diagnosticarEstadosFirma.ts",
-    "estados:reparar-impositivos": "dotenv -e .env.production -- tsx src/scripts/repararEstadosImpositivos.ts",
     "solicitud:diagnosticar-importe": "dotenv -e .env.production -- tsx src/scripts/diagnosticarImporteSolicitud.ts",
     "plantillas:parametrizar:dry": "dotenv -e .env.production -v DRY_RUN=true -- tsx src/scripts/parametrizarPlantillas.ts",
     "plantillas:parametrizar": "dotenv -e .env.production -- tsx src/scripts/parametrizarPlantillas.ts",

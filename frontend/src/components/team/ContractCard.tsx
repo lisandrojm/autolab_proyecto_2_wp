@@ -208,8 +208,7 @@ const categoriaAltaDocumentoDe = (estadoImpositivo: { name: string; data?: { tip
   if (tipo === "constancia_cuit") return "servicios";
   // Respaldo para estados impositivos previos a `tipoImpositivo`: por clave canónica del nombre.
   const clave = claveEstado(estadoImpositivo.name);
-  if (clave === "pedido de afip") return "afip";
-  if (clave === "pedido servicios") return "servicios";
+  if (clave === "afip") return "afip";
   return "servicios"; // impositivo sin trámite ni nombre reconocido: igual se ofrece la subida.
 };
 

@@ -5,6 +5,7 @@ import UserProject from "../models/UserProject.js";
 import { fechaISO } from "../utils/contratoVigencia.js";
 import { RenovacionContrato } from "../models/RenovacionContrato.js";
 import { olvidarContratosPorVencer } from "./contratosPorVencer.js";
+import { guardarSolicitudEnDropbox } from "./espejoDropboxSolicitudes.js";
 import { NOVEDAD_SOLICITUD, nombreDePersona, notificar, responsablesDeProyectos } from "./novedadesNotificaciones.js";
 import { pedidoDesdeSolicitud, superposicionesDeAlta } from "./superposicion.js";
 
@@ -66,6 +67,11 @@ export async function rolesPorDefecto(tenantId: Types.ObjectId, session?: Client
  * falta: la solicitud ya existe, y eso es lo que no se puede perder.
  */
 export async function efectosDeSolicitudNueva(tenantId: Types.ObjectId, creadorId: string, user: any): Promise<void> {
+  // El registro en Dropbox: en segundo plano, una falla ahí no toca la solicitud.
+  void (User.findById(creadorId).select("firstName lastName").lean() as Promise<any>)
+    .catch(() => null)
+    .then((c) => guardarSolicitudEnDropbox({ tenantId: String(tenantId), solicitud: user, creador: { id: String(creadorId), nombre: `${c?.firstName || ""} ${c?.lastName || ""}`.trim() } }));
+
   /*
     RENOVACIÓN DE UN CONTRATO POR VENCER: se anota la decisión, y con eso el contrato sale de «Por
     vencer» (ver `services/contratosPorVencer.ts`). Va DESPUÉS de guardar la solicitud: anotada antes,
