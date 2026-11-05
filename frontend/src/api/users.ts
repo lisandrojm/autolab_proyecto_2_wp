@@ -49,6 +49,15 @@ export interface ContratoEnFechas {
   mensaje: string;
 }
 
+/** El contrato de la persona en cualquier proyecto: el vigente (primero el indeterminado) o el último. */
+export interface ContratoQueRige {
+  alta: string;
+  baja: string | null;
+  nombre: string;
+  proyecto: string;
+  vigente: boolean;
+}
+
 /** Un aviso de superposición: `horario` es el grave (misma hora, algún día en común), `fechas` el leve. */
 export interface AvisoSuperposicion {
   tipo: "horario" | "fechas";
@@ -847,6 +856,11 @@ class UsersAPI {
    * proyecto (también el mismo) y otras solicitudes pendientes. Son avisos, no frenan nada.
    * `excluirSolicitudId`: al editar, la solicitud no se cuenta a sí misma.
    */
+  async contratoQueRige(userId: string): Promise<ContratoQueRige | null> {
+    const { data } = await axios.get(`/users/${userId}/contrato-que-rige`, { headers: this.getHeaders() });
+    return data?.contrato || null;
+  }
+
   async contratoEnFechas(userId: string, periodo: { desde: string; hasta: string; fechas?: string[] }): Promise<ContratoEnFechas | null> {
     const { data } = await axios.post(`/users/contrato-en-fechas`, { userId, ...periodo }, { headers: this.getHeaders() });
     return data?.contrato || null;

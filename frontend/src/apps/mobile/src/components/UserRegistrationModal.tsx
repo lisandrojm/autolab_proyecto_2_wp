@@ -11,6 +11,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faBriefcase, faClock, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight, faCircleInfo, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { AvisoSuperposicion, usersAPI } from "../../../../api/users";
 import { useContratoEnFechas } from "../../../../hooks/useContratoEnFechas";
+import { ContratoDeLaPersona } from "../../../../components/contratos/ContratoDeLaPersona";
 import { DiasDeTrabajo, semanaDelTipoDeContrato } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
 import { avisoIndeterminado, erroresDeJornadas, hayAjuste, jornadasCalculadasDelPedido, jornadasDelCalendario, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from "../../../../utils/jornadas";
@@ -2498,6 +2499,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           {/* Ver `nombreLegado`: sólo solicitudes viejas, cargadas con el nombre a mano. */}
           {nombreLegado && <p className="text-[11px] text-amber-600 dark:text-amber-400">Esta solicitud se cargó con el nombre escrito a mano. Si la persona ya se registró, elegila de la lista.</p>}
           {sinPersona && <p className="text-[11px] text-slate-400">Elegí a una persona registrada para completar el resto: lo que sigue habla de ella.</p>}
+          {/* Dentro del bloque pegado: se sigue viendo al elegir las fechas y el tipo de contrato. */}
+          <ContratoDeLaPersona userId={selectedUser?._id} />
         </div>
 
         {/* Ver `sinPersona`: el navegador propaga el `disabled` a todos los controles de adentro. */}

@@ -76,6 +76,7 @@ import { cachedFetch } from '../utils/refCache';
 import { BotonOrden, useOrden } from '../components/ui/OrdenTabla';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { useContratoEnFechas } from '../hooks/useContratoEnFechas';
+import { ContratoDeLaPersona } from '../components/contratos/ContratoDeLaPersona';
 import { LinkSiPuede } from '../components/LinkSiPuede';
 import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
@@ -4554,6 +4555,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     Empleado <span className="text-red-500">*</span>
                   </label>
                   <input type="text" className="input-field w-full bg-gray-50 dark:bg-transparent" value={`${selectedUserForWizard?.firstName} ${selectedUserForWizard?.lastName}`} readOnly />
+                  {!wizardEditaContrato && <ContratoDeLaPersona userId={selectedUserForWizard?._id} className="ml-1" />}
                 </div>
 
                 {/*

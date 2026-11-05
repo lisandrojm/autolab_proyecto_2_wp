@@ -2736,6 +2736,28 @@ router.get("/:id/contracts", requireTenant, authenticateToken, requirePermission
   }
 });
 
+/*
+  GET /users/:id/contrato-que-rige - El contrato de la persona en cualquier proyecto, para verlo al
+  contratarla: entre los vigentes manda el de tiempo indeterminado; sin vigentes, el más reciente
+  (`getContratoActivo`). `contrato: null` = nunca tuvo uno.
+*/
+router.get("/:id/contrato-que-rige", requireTenant, authenticateToken, requireAnyPermission("admin_users:view", MOBILE_USERS), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { id } = req.params;
+    if (!Types.ObjectId.isValid(id) || !(await User.exists({ _id: id, tenantId: req.tenantObjectId }))) {
+      res.status(404).json({ error: "Persona no encontrada." });
+      return;
+    }
+    const vinculos: any[] = await UserProject.find({ userId: id }).select("nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_contrato").lean();
+    const contratos = vinculos.flatMap((v) => (v.contracts || []).map((c: any) => ({ ...c, proyecto: String(v.nombre_proyecto || "") })));
+    const c = getContratoActivo(contratos);
+    res.json({ contrato: c ? { alta: fechaISO(c.fecha_alta_contrato), baja: fechaISO(c.fecha_baja_contrato) || null, nombre: String(c.nombre_contrato || ""), proyecto: c.proyecto, vigente: esContratoVigente(c) } : null });
+  } catch (error) {
+    console.error("Contrato que rige error:", error);
+    res.status(500).json({ error: "No se pudo leer el contrato de la persona." });
+  }
+});
+
 router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const user = await User.findOne({
