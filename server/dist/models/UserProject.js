@@ -91,7 +91,7 @@ const contractSchema = new Schema({
     verificacionArca: {
         type: new Schema({
             el: { type: Date },
-            resultado: { type: String, enum: ["presentada", "revision_manual"] },
+            resultado: { type: String, enum: ["presentada", "revision_manual", "sin_alta"] },
             motivo: { type: String },
             relacion: { type: new Schema({ inicio: String, fin: String, baja: String, modalidad: String }, { _id: false }), default: undefined },
             origen: { type: String, enum: ["consulta", "sync"] },

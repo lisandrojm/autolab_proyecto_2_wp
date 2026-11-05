@@ -37,7 +37,7 @@ export interface IArcaVerificacionAlta extends Document {
         }>;
     } | null;
     /** Qué se decidió (`decidirVerificacion`). */
-    decision: "presentada" | "revision_manual";
+    decision: "presentada" | "revision_manual" | "sin_alta";
     motivo: string;
     /** Qué se hizo con el contrato: `marcada_presentada`, `revision_manual`, `ya_resuelta` (otra corrida llegó antes), `contrato_cambio`, `en_seco`. */
     accion: string;

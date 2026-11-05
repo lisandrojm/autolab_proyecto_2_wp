@@ -58,3 +58,22 @@ describe("decidirVerificacion", () => {
         assert.equal(decisionSinConsultar(jornada), null);
     });
 });
+describe("decidirVerificacion · alta que espera la baja de una relación activa (04/11/2026)", () => {
+    const activa = { alta: "2026-11-01", baja: "2026-11-30", otroContratoMismoDia: false, traba: "activa" };
+    it("el alta ya está hecha a mano en ARCA → presentada", () => {
+        const d = decidirVerificacion(activa, consulta([{ inicio: "2026-10-27", fin: "2026-10-27" }, { inicio: "2026-11-01", fin: "2026-11-30" }]));
+        assert.equal(d.accion, "presentada");
+    });
+    it("ARCA todavía no la tiene → sin_alta (sigue esperando, no va a revisión manual)", () => {
+        const d = decidirVerificacion(activa, consulta([{ inicio: "2026-10-27", fin: "2026-10-27" }], null));
+        assert.equal(d.accion, "sin_alta");
+    });
+    it("la consulta falla → sin_alta, no revisión manual", () => {
+        const d = decidirVerificacion(activa, { ok: false, error: "timeout" });
+        assert.equal(d.accion, "sin_alta");
+    });
+    it("está pero con otro fin → revisión manual", () => {
+        const d = decidirVerificacion(activa, consulta([{ inicio: "2026-11-01", fin: "2026-12-31" }]));
+        assert.equal(d.accion, "revision_manual");
+    });
+});

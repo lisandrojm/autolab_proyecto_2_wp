@@ -767,3 +767,10 @@ describe("la variable {{periodo}}", () => {
         assert.ok(!nombre.includes("__"), nombre);
     });
 });
+describe("{{tipo}} de las altas de ARCA (04/11/2026)", () => {
+    it("se escribe «AltaArca», aunque el tipo interno siga siendo «AltaAFIP»", async () => {
+        const { datosNombreArchivo } = await import("./employeeDocData.js");
+        assert.equal(datosNombreArchivo({ tipo: "AltaAFIP", user: {}, up: {}, contract: {} }).tipo, "AltaArca");
+        assert.equal(datosNombreArchivo({ tipo: "Contrato", user: {}, up: {}, contract: {} }).tipo, "Contrato");
+    });
+});

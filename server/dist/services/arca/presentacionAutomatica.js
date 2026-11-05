@@ -368,6 +368,7 @@ export async function candidatosDeAlta(tenantObjectId, opts = {}) {
             motivo,
             registro: motivo ? null : registro,
             verificable: bloqueo?.tipo === "mismo_dia" && bloqueo.mismoDiaEn === "arca",
+            verificableActiva: bloqueo?.tipo === "activa_arca" || trabadoPorRechazo,
             otroContratoMismoDia,
             modalidadCodigo,
             verificacion: verificacionDe(c.verificacionArca),
@@ -421,7 +422,7 @@ export async function candidatosDeAlta(tenantObjectId, opts = {}) {
 }
 /** La verificación guardada en el contrato, tal como viaja a la pantalla. */
 function verificacionDe(v) {
-    if (!v?.el || (v.resultado !== "presentada" && v.resultado !== "revision_manual"))
+    if (!v?.el || (v.resultado !== "presentada" && v.resultado !== "revision_manual" && v.resultado !== "sin_alta"))
         return null;
     return {
         el: new Date(v.el).toISOString(),

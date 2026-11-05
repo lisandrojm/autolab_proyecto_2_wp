@@ -132,6 +132,8 @@ export declare const TOLERANCIA: {
     readonly x: 70;
     readonly y: 40;
 };
+/** El nombre de una constancia de alta de ARCA: «_AltaArca_» (desde el 04/11/2026) o «_AltaAFIP_» (antes). */
+export declare const PATRON_ALTA_ARCA = "_Alta(AFIP|Arca)_";
 export declare const REGLAS_BASE: ReglaColocacion[];
 export declare const sinTildes: (s: string) => string;
 /** Compila una expresión regular guardada como texto; `null` si no compila. */

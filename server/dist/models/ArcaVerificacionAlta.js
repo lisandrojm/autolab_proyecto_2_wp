@@ -13,7 +13,7 @@ const schema = new Schema({
     usuarioId: { type: Schema.Types.ObjectId, ref: "User" },
     enSeco: { type: Boolean, default: false },
     consulta: { type: Schema.Types.Mixed, default: null },
-    decision: { type: String, enum: ["presentada", "revision_manual"], required: true },
+    decision: { type: String, enum: ["presentada", "revision_manual", "sin_alta"], required: true },
     motivo: String,
     accion: String,
     html: String,

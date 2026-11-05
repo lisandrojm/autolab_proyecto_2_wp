@@ -52,6 +52,12 @@ export interface CandidatoAlta {
      * ARCA en vez de esperar a que alguien la mire (ver `verificacionAltas.ts`).
      */
     verificable: boolean;
+    /**
+     * Espera la baja de una relación activa en ARCA (o ARCA ya la rechazó por «alta activa»). Se puede
+     * «Verificar en ARCA» por si alguien ya la hizo a mano (pedido del 04/11/2026): si está, queda
+     * presentada; si no, sigue esperando.
+     */
+    verificableActiva: boolean;
     /** Otro contrato de WeProdu de la misma persona y empleadora, ya presentado, empieza el mismo día (un duplicado). */
     otroContratoMismoDia: boolean;
     /**
@@ -62,7 +68,7 @@ export interface CandidatoAlta {
     /** La última verificación en ARCA, si la hubo (ver `IContract.verificacionArca`). */
     verificacion: {
         el: string;
-        resultado: "presentada" | "revision_manual";
+        resultado: "presentada" | "revision_manual" | "sin_alta";
         motivo: string;
         relacion?: {
             inicio: string;

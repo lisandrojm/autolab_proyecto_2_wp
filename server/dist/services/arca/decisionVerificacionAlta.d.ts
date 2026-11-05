@@ -43,6 +43,13 @@ export interface AltaAVerificar {
     baja: string;
     /** Otro contrato de WeProdu de la misma persona y empleadora, ya presentado, empieza el mismo día. */
     otroContratoMismoDia: boolean;
+    /**
+     * Por qué está trabada. `mismo_dia` (por defecto): la sincronización trajo un alta de ese día. `activa`:
+     * espera la baja de una relación activa y alguien pidió «Verificar en ARCA» por si el alta ya se hizo a
+     * mano (pedido del 04/11/2026). En `activa`, no encontrarla es lo esperable: sigue esperando, no va a
+     * revisión manual.
+     */
+    traba?: "mismo_dia" | "activa";
 }
 export type DecisionVerificacion = {
     accion: "presentada";
@@ -52,6 +59,11 @@ export type DecisionVerificacion = {
     accion: "revision_manual";
     motivo: string;
     relacion?: RelacionConsultada;
+}
+/** Sólo con `traba: "activa"`: ARCA todavía no tiene esta alta; sigue esperando la baja de la activa. */
+ | {
+    accion: "sin_alta";
+    motivo: string;
 };
 /** Si otro contrato de WeProdu ya es esa alta, no hace falta consultar ARCA: es un duplicado para revisar. */
 export declare function decisionSinConsultar(a: AltaAVerificar): DecisionVerificacion | null;

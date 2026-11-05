@@ -270,7 +270,8 @@ interface IContract {
      */
     verificacionArca?: {
         el: Date;
-        resultado: "presentada" | "revision_manual";
+        /** `sin_alta`: se pidió «Verificar en ARCA» de un alta que espera una baja, y ARCA todavía no la tiene. */
+        resultado: "presentada" | "revision_manual" | "sin_alta";
         motivo: string;
         relacion?: {
             inicio: string;

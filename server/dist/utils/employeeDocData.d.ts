@@ -111,6 +111,15 @@ export declare const ETIQUETA_TRAMITE: Record<"alta_temprana_afip" | "constancia
  * tienen que partir de los mismos valores ya normalizados o el `{{apellido}}` del ABM y el de acá
  * darían resultados distintos para la misma persona.
  */
+/**
+ * CÓMO SE ESCRIBE `{{tipo}}` EN EL NOMBRE DEL ARCHIVO, cuando no es el nombre interno del tipo.
+ *
+ * «AltaAFIP» es la clave del tipo (con ella se guarda la nomenclatura de cada tenant y se registra cada
+ * documento): no se toca. En el archivo va «AltaArca» desde el 04/11/2026 (pedido del usuario: el
+ * organismo es ARCA). Los archivos viejos siguen diciendo «AltaAFIP»; lo que reconoce el tipo por el
+ * nombre (la colocación de la firma) acepta los dos.
+ */
+export declare const TIPO_EN_EL_NOMBRE: Record<string, string>;
 export declare function datosNombreArchivo(opts: {
     tipo: string;
     user: any;

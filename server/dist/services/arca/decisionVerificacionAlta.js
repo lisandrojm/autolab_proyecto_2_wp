@@ -11,8 +11,10 @@ export function decidirVerificacion(a, consulta) {
     if (previa)
         return previa;
     if (consulta.ok === false)
-        return manual(`La consulta a ARCA falló: ${consulta.error}`);
+        return a.traba === "activa" ? { accion: "sin_alta", motivo: `No se pudo consultar ARCA (${consulta.error}): sigue esperando.` } : manual(`La consulta a ARCA falló: ${consulta.error}`);
     const delDia = consulta.relaciones.filter((r) => r.inicio === a.alta);
+    if (delDia.length === 0 && a.traba === "activa")
+        return { accion: "sin_alta", motivo: `ARCA todavía no tiene un alta que empiece el ${fechaCorta(a.alta)}: no se hizo a mano. Sigue esperando la baja de la relación activa.` };
     if (delDia.length === 0) {
         return manual(consulta.encontrada === true
             ? `ARCA muestra el CUIL y el ${fechaCorta(a.alta)} en la consulta, pero no se pudo leer la relación: revisar a mano.`

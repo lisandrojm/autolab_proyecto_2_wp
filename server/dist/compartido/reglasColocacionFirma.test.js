@@ -352,3 +352,10 @@ describe("10. firma en una página del medio", () => {
         assert.ok(!r.avisos.some((a) => /revisión|sólo coloca/.test(a)));
     });
 });
+describe("la constancia de alta: «AltaArca» desde el 04/11/2026, «AltaAFIP» antes", () => {
+    it("la regla reconoce los dos nombres", async () => {
+        const { reglaDe } = await import("./reglasColocacionFirma.js");
+        assert.equal(reglaDe("426_LN+_AGUIRRE_AltaArca_Plazo-fijo-6x6_D-20261101_H-20261130_20428398581_x-ARROBA-gmail.com_Empresa-30717068374.pdf")?.tipo, "AltaAFIP");
+        assert.equal(reglaDe("426_LN+_AQUINO_AltaAFIP_Plazo-fijo-6x6_D-20261001_H-20261031_20442166987_x-ARROBA-gmail.com_Empresa-30717068374.pdf")?.tipo, "AltaAFIP");
+    });
+});

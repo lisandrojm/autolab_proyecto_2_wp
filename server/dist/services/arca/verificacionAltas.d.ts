@@ -34,6 +34,8 @@ export interface ItemVerificacion {
     alta: string;
     baja: string;
     otroContratoMismoDia: boolean;
+    /** Ver `AltaAVerificar.traba`. */
+    traba?: "mismo_dia" | "activa";
 }
 export interface ResultadoVerificacion {
     item: ItemVerificacion;
