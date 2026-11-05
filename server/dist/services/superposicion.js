@@ -6,7 +6,7 @@ import { Shift } from "../models/Shift.js";
 // El `populate("clientId")` necesita el modelo registrado; no se depende de que otro archivo lo haya cargado.
 import "../models/Client.js";
 import { fechaISO, hoyArgentina } from "../utils/contratoVigencia.js";
-import { superposiciones } from "../utils/superposicionContratos.js";
+import { contratoEnLasFechas, mensajeSoloServicios, superposiciones } from "../utils/superposicionContratos.js";
 /*
   SUPERPOSICIÓN DE UN ALTA CON LO QUE LA PERSONA YA TIENE: la parte que toca la base.
 
@@ -104,6 +104,19 @@ export async function compromisosDePersona(tenantId, userId, excluirSolicitudId)
         compromisos.push({ origen: "solicitud", proyectoNombre: nombreDe.get(String(p.metadata?.projectIds?.[0])) || "", ...pedido });
     }
     return compromisos;
+}
+/** El contrato que la persona ya tiene en esas fechas, si tiene (ver `contratoEnLasFechas`). */
+export async function contratoDePersonaEnFechas(tenantId, userId, pedido) {
+    if (!userId)
+        return null;
+    return contratoEnLasFechas(pedido, await compromisosDePersona(tenantId, userId));
+}
+/** Por qué este alta ante ARCA no se puede hacer, o `null`. Sólo frena el trámite de ARCA, no el de Servicios. */
+export async function rechazoAltaArcaConContrato(tenantId, userId, tramite, pedido) {
+    if (tramite !== "alta_temprana_afip")
+        return null;
+    const contrato = await contratoDePersonaEnFechas(tenantId, userId, pedido);
+    return contrato ? mensajeSoloServicios(contrato) : null;
 }
 /** Los avisos de superposición de un alta para una persona. `[]` si no es una persona registrada. */
 export async function superposicionesDeAlta(tenantId, userId, pedido, excluirSolicitudId) {

@@ -61,6 +61,18 @@ export interface Superposicion {
     mensaje: string;
 }
 /**
+ * ¿TIENE UN CONTRATO EN ESAS FECHAS? (pedido del 05/11/2026). El primer contrato que cubre al menos un día
+ * de lo pedido, o `null`. Cualquier contrato, en cualquier proyecto y con cualquier empleadora: quien ya
+ * tiene uno en esas fechas no se contrata por ARCA, sólo por Servicios.
+ *
+ * A diferencia de `superposiciones`, ésta FRENA y no mira días de la semana ni horarios: alcanza con que
+ * el período se cruce. Un contrato por días sueltos sólo cubre esos días. Las solicitudes no cuentan:
+ * todavía no son un contrato.
+ */
+export declare function contratoEnLasFechas<T extends CompromisoExistente>(pedido: Pick<PedidoDeAlta, "desde" | "hasta" | "fechas">, existentes: T[]): T | null;
+/** El mensaje de la regla, igual en el formulario y en el rechazo del server. */
+export declare function mensajeSoloServicios(c: Pick<CompromisoExistente, "proyectoNombre" | "desde" | "hasta">): string;
+/**
  * ¿Se pisan dos horarios de un mismo día? Un turno que cruza la medianoche (18:00 a 00:00, 22:00 a 06:00)
  * termina al día siguiente: se lo compara también corrido un día para cada lado. Tocarse en el borde
  * (uno termina 12:00 y el otro empieza 12:00) no es pisarse.

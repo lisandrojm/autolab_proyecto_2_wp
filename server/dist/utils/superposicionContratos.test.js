@@ -4,7 +4,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { horariosSePisan, superposiciones, choquesDelEquipo } from "./superposicionContratos.js";
+import { contratoEnLasFechas, mensajeSoloServicios, horariosSePisan, superposiciones, choquesDelEquipo } from "./superposicionContratos.js";
 const HOY = "2026-09-24";
 const LU_VI = [1, 2, 3, 4, 5];
 const pedido = { desde: "2026-10-01", hasta: "2026-10-31", dias: LU_VI, inTime: "10:00", outTime: "18:00", shiftIds: ["sOficina"] };
@@ -112,4 +112,35 @@ test("otro puesto de la misma contratación: se avisa como «lote»", () => {
     const [s] = superposiciones(pedido, [contrato({ origen: "lote", proyectoNombre: "puesto 2", desde: "2026-10-01", hasta: "2026-10-31" })], HOY);
     assert.equal(s.tipo, "horario");
     assert.match(s.mensaje, /^Ocupa otro puesto de esta contratación \(puesto 2\)/);
+});
+const conFechas = (desde, hasta, fechas) => ({ origen: "contrato", proyectoNombre: "La Nación | LN+", desde, hasta, fechas });
+test("contrato en las fechas: un día en común alcanza", () => {
+    const c = conFechas("2026-11-01", "2026-11-30");
+    assert.equal(contratoEnLasFechas({ desde: "2026-11-30", hasta: "2026-12-15" }, [c]), c);
+    assert.equal(contratoEnLasFechas({ desde: "2026-12-01", hasta: "2026-12-15" }, [c]), null);
+    assert.equal(contratoEnLasFechas({ desde: "2026-10-01", hasta: "2026-10-31" }, [c]), null);
+});
+test("contrato en las fechas: uno sin baja de hace años sigue contando", () => {
+    const c = conFechas("2023-06-01", "");
+    assert.equal(contratoEnLasFechas({ desde: "2026-11-08", hasta: "2026-11-08" }, [c]), c);
+});
+test("contrato en las fechas: lo pedido sin fin alcanza a un contrato futuro", () => {
+    const c = conFechas("2027-03-01", "2027-03-31");
+    assert.equal(contratoEnLasFechas({ desde: "2026-11-08", hasta: "" }, [c]), c);
+    assert.equal(contratoEnLasFechas({ desde: "2026-11-08", hasta: "2026-11-08" }, [c]), null);
+});
+test("contrato en las fechas: con días sueltos sólo cuentan esos días, de cualquiera de los dos lados", () => {
+    const sueltos = conFechas("2026-11-02", "2026-11-20", ["2026-11-02", "2026-11-20"]);
+    assert.equal(contratoEnLasFechas({ desde: "2026-11-10", hasta: "2026-11-12" }, [sueltos]), null);
+    assert.equal(contratoEnLasFechas({ desde: "2026-11-10", hasta: "2026-11-20" }, [sueltos]), sueltos);
+    assert.equal(contratoEnLasFechas({ desde: "2026-11-03", hasta: "2026-11-05", fechas: ["2026-11-03", "2026-11-05"] }, [conFechas("2026-11-04", "2026-11-04")]), null);
+    assert.equal(contratoEnLasFechas({ desde: "2026-11-03", hasta: "2026-11-05", fechas: ["2026-11-03", "2026-11-05"] }, [conFechas("2026-11-05", "2026-11-30")])?.desde, "2026-11-05");
+});
+test("contrato en las fechas: una solicitud pendiente no cuenta y sin fecha no hay nada que revisar", () => {
+    const solicitud = { ...conFechas("2026-11-01", "2026-11-30"), origen: "solicitud" };
+    assert.equal(contratoEnLasFechas({ desde: "2026-11-10", hasta: "2026-11-10" }, [solicitud]), null);
+    assert.equal(contratoEnLasFechas({ desde: "", hasta: "" }, [conFechas("2026-11-01", "")]), null);
+});
+test("el mensaje dice dónde está el contrato y que sólo queda Servicios", () => {
+    assert.match(mensajeSoloServicios(conFechas("2023-06-01", "")), /La Nación \| LN\+, desde el 01\/06\/2023, sin fecha de baja\): sólo se puede contratar con un tipo de contrato de Servicios/);
 });

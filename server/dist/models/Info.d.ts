@@ -23,7 +23,7 @@ export interface IInfo extends Document {
          * Los dos trámites impositivos existen siempre; el ABM los edita, pero no los da de baja.
          */
         esSistema?: boolean;
-        /** «Solicitud de contratación», el Paso 1: de sistema, pero no impositivo y sin contratos adentro. */
+        /** «Solicitud pendiente», el Paso 1: de sistema, pero no impositivo y sin contratos adentro. */
         esSolicitud?: boolean;
         /** El estado admite también personas SIN CUIT/CUIL argentino (badge "Sin CUIT" en vez del trámite). */
         aceptaSinCuit?: boolean;

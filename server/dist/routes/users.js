@@ -19,7 +19,8 @@ import { borrarContratoDeSolicitud, buscarContratoDeSolicitud, datosDeSolicitud 
 import { Notification } from "../models/Notification.js";
 import { olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 import { quitarDelConteo, sumarAlConteo } from "../services/conteoUsuariosTenant.js";
-import { pedidoDesdeSolicitud, superposicionesDeAlta } from "../services/superposicion.js";
+import { contratoDePersonaEnFechas, pedidoDesdeSolicitud, rechazoAltaArcaConContrato, superposicionesDeAlta } from "../services/superposicion.js";
+import { mensajeSoloServicios } from "../utils/superposicionContratos.js";
 import { efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "../services/solicitudes.js";
 import { Area } from "../models/Area.js";
 import { Client } from "../models/Client.js";
@@ -2264,6 +2265,22 @@ router.post("/superposiciones", requireTenant, authenticateToken, requireAnyPerm
         res.status(500).json({ error: "No se pudo revisar si se superpone con otros contratos." });
     }
 });
+/*
+  ¿LA PERSONA YA TIENE UN CONTRATO EN ESAS FECHAS? Si tiene, sólo se la contrata por Servicios: los
+  formularios de alta lo preguntan al cargar las fechas, antes de ofrecer los tipos de contrato. `hasta`
+  vacío es sin fin. Regla en `contratoEnLasFechas`; el guardado la vuelve a revisar.
+*/
+router.post("/contrato-en-fechas", requireTenant, authenticateToken, requireAnyPermission("admin_users:view", MOBILE_USERS), async (req, res) => {
+    try {
+        const { userId, desde, hasta, fechas } = req.body || {};
+        const contrato = await contratoDePersonaEnFechas(req.tenantObjectId, userId ? String(userId) : undefined, { desde: String(desde || ""), hasta: String(hasta || ""), fechas: Array.isArray(fechas) ? fechas.map(String) : undefined });
+        res.json({ contrato: contrato ? { proyectoNombre: contrato.proyectoNombre, desde: contrato.desde, hasta: contrato.hasta, mensaje: mensajeSoloServicios(contrato) } : null });
+    }
+    catch (error) {
+        console.error("Contrato en fechas error:", error);
+        res.status(500).json({ error: "No se pudo revisar si tiene un contrato en esas fechas." });
+    }
+});
 router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, async (req, res) => {
     try {
         const data = createUserSchema.parse(req.body);
@@ -2273,7 +2290,10 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
           `services/solicitudes.ts`, compartido con el alta masiva de plantillas de equipo.
         */
         if (data.metadata?.isSolicitud === true) {
-            const rechazo = await prepararSolicitudNueva(req.tenantObjectId, req.user.userId, data.metadata);
+            const m = data.metadata;
+            // Sólo el alta individual: las masivas (plantillas, reemplazos) tienen su propia revisión por lote.
+            const pedido = pedidoDesdeSolicitud(m);
+            const rechazo = (await rechazoAltaArcaConContrato(req.tenantObjectId, m.solicitudUserId ? String(m.solicitudUserId) : undefined, m.tipoImpositivo, pedido)) || (await prepararSolicitudNueva(req.tenantObjectId, req.user.userId, m));
             if (rechazo) {
                 res.status(400).json({ error: rechazo });
                 return;
@@ -2612,6 +2632,28 @@ router.get("/:id/contracts", requireTenant, authenticateToken, requirePermission
     catch (error) {
         console.error("Get user contracts error:", error);
         res.status(500).json({ error: "Internal server error" });
+    }
+});
+/*
+  GET /users/:id/contrato-que-rige - El contrato de la persona en cualquier proyecto, para verlo al
+  contratarla: entre los vigentes manda el de tiempo indeterminado; sin vigentes, el más reciente
+  (`getContratoActivo`). `contrato: null` = nunca tuvo uno.
+*/
+router.get("/:id/contrato-que-rige", requireTenant, authenticateToken, requireAnyPermission("admin_users:view", MOBILE_USERS), async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!Types.ObjectId.isValid(id) || !(await User.exists({ _id: id, tenantId: req.tenantObjectId }))) {
+            res.status(404).json({ error: "Persona no encontrada." });
+            return;
+        }
+        const vinculos = await UserProject.find({ userId: id }).select("nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_contrato").lean();
+        const contratos = vinculos.flatMap((v) => (v.contracts || []).map((c) => ({ ...c, proyecto: String(v.nombre_proyecto || "") })));
+        const c = getContratoActivo(contratos);
+        res.json({ contrato: c ? { alta: fechaISO(c.fecha_alta_contrato), baja: fechaISO(c.fecha_baja_contrato) || null, nombre: String(c.nombre_contrato || ""), proyecto: c.proyecto, vigente: esContratoVigente(c) } : null });
+    }
+    catch (error) {
+        console.error("Contrato que rige error:", error);
+        res.status(500).json({ error: "No se pudo leer el contrato de la persona." });
     }
 });
 router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {

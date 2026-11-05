@@ -19,7 +19,7 @@ export const normalizarEstado = (s) => (s || "")
  * Sin esto, un contrato con «Falta pedido de AFIP» no encontraría al estado «Pedido de ARCA» del
  * ABM y se lo trataría como un estado distinto.
  */
-const ESTADO_ALIAS = { "falta pedido de afip": "afip", "pedido de afip": "afip", "pedido servicios": "servicios", "pedido de servicios": "servicios" };
+const ESTADO_ALIAS = { "falta pedido de afip": "afip", "pedido de afip": "afip", "pedido servicios": "servicios", "pedido de servicios": "servicios", "solicitud de contratacion": "solicitud pendiente" };
 export const claveEstado = (name) => {
     const n = normalizarEstado(name);
     return ESTADO_ALIAS[n] || n;

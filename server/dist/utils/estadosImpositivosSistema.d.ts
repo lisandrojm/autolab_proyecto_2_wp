@@ -28,7 +28,7 @@
  * nombre viejo cae en el mismo estado.
  */
 export declare const ESTADO_TYPE = "estado-empleado";
-/** El paso de los estados impositivos: el 1 es «Solicitud de contratación». El ABM y el editor lo fijan. */
+/** El paso de los estados impositivos: el 1 es «Solicitud pendiente». El ABM y el editor lo fijan. */
 export declare const PASO_IMPOSITIVOS = 2;
 /** Dónde se guarda el `.json` de cada solicitud, si nadie configuró otra carpeta (`espejoDropboxSolicitudes.ts`). */
 export declare const CARPETA_SOLICITUDES = "/WEPRODU/Solicitudes";
@@ -42,7 +42,7 @@ export interface EstadoImpositivoSistema {
     orden: number;
 }
 export declare const ESTADOS_IMPOSITIVOS_SISTEMA: EstadoImpositivoSistema[];
-export declare const NOMBRE_ESTADO_SOLICITUD = "Solicitud de contrataci\u00F3n";
+export declare const NOMBRE_ESTADO_SOLICITUD = "Solicitud pendiente";
 /** ¿Este estado (su `data`) es uno de los dos de sistema? */
 export declare const esEstadoDeSistema: (data: any) => boolean;
 /**

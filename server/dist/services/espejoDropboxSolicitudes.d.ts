@@ -3,7 +3,7 @@
  *
  * Una solicitud es un `User` con `metadata.isSolicitud`: vive en la base y no dejaba ningún archivo,
  * así que no había dónde ir a verla. Ahora cada una deja un `.json` en la carpeta del estado «Solicitud
- * de contratación» (propósito `solicitudes`; por defecto `/WEPRODU/Solicitudes`), como
+ * pendiente» (propósito `solicitudes`; por defecto `/WEPRODU/Solicitudes`), como
  * `espejoDropboxRegistros.ts`. Es LA FOTO DE LO PEDIDO al enviarla: si después se aprueba o se rechaza,
  * el estado vigente sigue siendo el de la base.
  *
@@ -20,7 +20,7 @@ export declare function nombreArchivoSolicitud(o: {
 export declare function contenidoDeSolicitud(s: any, creador?: {
     id: string;
     nombre: string;
-} | null): Record<string, unknown>;
+} | null, estado?: string): Record<string, unknown>;
 /** Sube el registro en segundo plano. No devuelve nada que haya que esperar y no tira nunca. */
 export declare function guardarSolicitudEnDropbox(o: {
     tenantId: string;
