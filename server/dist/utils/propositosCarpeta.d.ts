@@ -16,7 +16,7 @@
  * desplegable del modal y los tests. Un array escrito a mano en el componente sería una segunda
  * verdad sobre lo mismo, que es exactamente cómo se generó el problema anterior con las etiquetas.
  *
- * LOS SEIS NO SON OBLIGATORIOS. Un tenant puede legítimamente no usar alguno: en el tenant demo,
+ * NINGUNO ES OBLIGATORIO. Un tenant puede legítimamente no usar alguno: en el tenant demo,
  * «Alta temprana de Arca» y «Sin cuit» están vacías. Faltar un propósito produce un 400 recién
  * cuando alguien usa esa función concreta (`routes/afip.ts`, `routes/firmaDigital.ts`), no al
  * guardar la configuración. Por eso la completitud es una ADVERTENCIA, nunca un bloqueo.
@@ -40,6 +40,11 @@ export interface DefinicionProposito {
  * que va a ver quien abra el desplegable.
  */
 export declare const PROPOSITOS: readonly [{
+    readonly valor: "solicitudes";
+    readonly etiqueta: "Solicitudes de contratación";
+    readonly descripcion: "Cada solicitud deja acá un .json con lo pedido al enviarla. No mueve ningún contrato.";
+    readonly patrones: [RegExp];
+}, {
     readonly valor: "alta_temprana";
     readonly etiqueta: "Alta temprana de ARCA";
     readonly descripcion: "Llega el acuse del alta temprana. El contrato avanza a Envío de documentación.";

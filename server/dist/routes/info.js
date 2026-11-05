@@ -9,7 +9,9 @@ import mongoose from "mongoose";
 import { ContratoFrame } from "../models/ContratoFrame.js";
 import { Contrato } from "../models/Contrato.js";
 import { esEstadoDeFirma, tipoEnviaAFirmar } from "../compartido/estadosFirma.js";
-import { ESTADO_TYPE, esEstadoDeSistema, ensureEstadosImpositivosSistema } from "../utils/estadosImpositivosSistema.js";
+import { ESTADO_TYPE, PASO_IMPOSITIVOS, esEstadoDeSistema, ensureEstadosImpositivosSistema } from "../utils/estadosImpositivosSistema.js";
+import { claveEstado } from "../utils/estadoClave.js";
+import UserProject from "../models/UserProject.js";
 const router = Router();
 const normalizarNombre = (s) => (s || "")
     .toLowerCase()
@@ -25,6 +27,8 @@ const ORDEN_SEMILLA = {
     "pedido de afip": 0,
     "falta pedido de afip": 0,
     "pedido servicios": 1,
+    afip: 0,
+    servicios: 1,
     "envio de documentacion": 2,
     "firma pendiente": 3,
     disponible: 4,
@@ -140,7 +144,8 @@ function parseEstadoBody(body, estadoActual) {
       Sistema`). En vez de ese ida y vuelta, acá no se puede apagar.
     */
     const esDeSistema = estadoActual?.data?.esSistema === true;
-    const esImpositivo = esDeSistema || body?.esImpositivo === true || body?.esImpositivo === "true";
+    // «Solicitud de contratación» también es de sistema, pero no es un trámite impositivo.
+    const esImpositivo = (esDeSistema && estadoActual?.data?.esSolicitud !== true) || body?.esImpositivo === true || body?.esImpositivo === "true";
     /*
       Un estado impositivo sin tipos aplicaría a TODOS y chocaría con cualquier otro impositivo, así
       que se le exige elegir a cuáles corresponde.
@@ -184,7 +189,7 @@ function parseEstadoBody(body, estadoActual) {
     // `ordenDependencia` cuando es impositivo; en los no impositivos NO se incluye la clave, para que
     // el update (spread `{ ...estado.data, ...parsed.data }`) preserve el paso que tengan en el flujo.
     if (esImpositivo)
-        data.ordenDependencia = 1;
+        data.ordenDependencia = PASO_IMPOSITIVOS;
     // Vinculado a firma (Dropbox Sign): igual que `transicionAutomatica`, sólo se toca si vino la clave,
     // para que los que reenvían el estado sin conocerla (orden de dependencias) no la borren. Un
     // impositivo nunca es de firma.
@@ -448,10 +453,29 @@ router.patch("/estados/:id", requireTenant, authenticateToken, async (req, res) 
         }
         if (borrarTransicion)
             delete nuevaData.transicionAutomatica;
+        const nombreAnterior = estado.name;
         estado.name = parsed.name;
         estado.data = nuevaData;
         estado.markModified("data");
         await estado.save();
+        /*
+          RENOMBRAR UN ESTADO RENOMBRA SUS CONTRATOS (05/11/2026). Cada contrato guarda el nombre
+          (`nombre_estado_empleado`) y las bandejas lo buscan por ahí: sin esto, los contratos quedaban con
+          el nombre viejo, apuntando a un estado que ya no existe. Se pasan todas las formas guardadas del
+          mismo estado (`claveEstado`: «Falta pedido de AFIP» y «Pedido de AFIP» son uno).
+        */
+        const avisos = [];
+        if (nombreAnterior !== parsed.name) {
+            try {
+                const crudos = (await UserProject.distinct("contracts.nombre_estado_empleado")).map((n) => String(n ?? "")).filter((n) => n && n !== parsed.name && claveEstado(n) === claveEstado(nombreAnterior));
+                if (crudos.length > 0)
+                    await UserProject.updateMany({ "contracts.nombre_estado_empleado": { $in: crudos } }, { $set: { "contracts.$[c].nombre_estado_empleado": parsed.name } }, { arrayFilters: [{ "c.nombre_estado_empleado": { $in: crudos } }] });
+            }
+            catch (e) {
+                console.error("Renombrar estado en contratos error:", e);
+                avisos.push("El estado se renombró, pero no se pudo actualizar el nombre en los contratos guardados. Volvé a guardarlo para reintentar.");
+            }
+        }
         /*
           SE GUARDA PRIMERO Y SE VERIFICA DESPUÉS, a propósito.
     
@@ -463,7 +487,6 @@ router.patch("/estados/:id", requireTenant, authenticateToken, async (req, res) 
           Si Dropbox no responde, no se avisa nada: un aviso disparado por un problema de red diría algo
           falso sobre la configuración.
         */
-        const avisos = [];
         try {
             const cfg = getTenantDropboxConfig(await Tenant.findById(req.tenantObjectId).lean());
             if (cfg) {

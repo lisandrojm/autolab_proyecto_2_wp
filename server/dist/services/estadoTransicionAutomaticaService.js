@@ -3,7 +3,8 @@ import { destinoSiNoSeFirma, copiarConstanciaAContratados } from "./contratadoDi
 const ESTADO_TYPE = "estado-empleado";
 /** Estados (catálogo global) configurados con este evento. Ya validado al guardar: todos tienen `ordenDependencia`. */
 export async function cargarEstadosPorEvento(evento) {
-    return Info.find({ type: ESTADO_TYPE, "data.transicionAutomatica.evento": evento });
+    // Sin «Solicitud de contratación»: su carpeta guarda registros, no mueve contratos (ninguno está en ese estado).
+    return Info.find({ type: ESTADO_TYPE, "data.transicionAutomatica.evento": evento, "data.esSolicitud": { $ne: true } });
 }
 /** Paso del flujo de dependencias de un Estado por su `estado_id` numérico. Sin estado = "paso 0" (antes del flujo). */
 async function ordenDependenciaDelEstado(estadoId) {

@@ -356,6 +356,8 @@ export interface InfoItem {
         tipoImpositivo?: "alta_temprana_afip" | "constancia_cuit";
         /** Estado creado por el sistema: se puede editar, pero no eliminar. */
         esSistema?: boolean;
+        /** «Solicitud de contratación», el Paso 1: de sistema, pero no impositivo y sin contratos adentro. */
+        esSolicitud?: boolean;
         /** El estado admite personas SIN CUIT/CUIL argentino (badge "Sin CUIT" en vez del trámite). */
         aceptaSinCuit?: boolean;
         /** Estados: depende de una firma del colaborador (Dropbox Sign). Ver `compartido/estadosFirma.ts`. */

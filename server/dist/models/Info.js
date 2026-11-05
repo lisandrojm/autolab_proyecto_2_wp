@@ -14,6 +14,7 @@ const infoSchema = new Schema({
         colorEtiquetaSecundaria: { type: String },
         tipoImpositivo: { type: String },
         esSistema: { type: Boolean },
+        esSolicitud: { type: Boolean },
         aceptaSinCuit: { type: Boolean },
         vinculadoAFirma: { type: Boolean },
         orden: { type: Number },
