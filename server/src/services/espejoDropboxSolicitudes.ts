@@ -1,14 +1,14 @@
 import { Tenant } from "../models/Tenant.js";
 import { Info } from "../models/Info.js";
 import { getTenantDropboxConfig, listFolder, uploadFile } from "./dropboxService.js";
-import { CARPETA_SOLICITUDES, ESTADO_TYPE } from "../utils/estadosImpositivosSistema.js";
+import { CARPETA_SOLICITUDES, ESTADO_TYPE, NOMBRE_ESTADO_SOLICITUD } from "../utils/estadosImpositivosSistema.js";
 
 /**
  * EL REGISTRO DE CADA SOLICITUD DE CONTRATACIÓN EN DROPBOX (05/11/2026).
  *
  * Una solicitud es un `User` con `metadata.isSolicitud`: vive en la base y no dejaba ningún archivo,
  * así que no había dónde ir a verla. Ahora cada una deja un `.json` en la carpeta del estado «Solicitud
- * de contratación» (propósito `solicitudes`; por defecto `/WEPRODU/Solicitudes`), como
+ * pendiente» (propósito `solicitudes`; por defecto `/WEPRODU/Solicitudes`), como
  * `espejoDropboxRegistros.ts`. Es LA FOTO DE LO PEDIDO al enviarla: si después se aprueba o se rechaza,
  * el estado vigente sigue siendo el de la base.
  *
@@ -24,10 +24,11 @@ export function nombreArchivoSolicitud(o: { creadaEl: Date | string; nombre: str
 }
 
 /** Lo que se guarda de la solicitud: lo pedido, sin credenciales. */
-export function contenidoDeSolicitud(s: any, creador?: { id: string; nombre: string } | null): Record<string, unknown> {
+export function contenidoDeSolicitud(s: any, creador?: { id: string; nombre: string } | null, estado: string = NOMBRE_ESTADO_SOLICITUD): Record<string, unknown> {
   const m = s?.metadata || {};
   return {
     solicitudId: String(s?._id || ""),
+    estado,
     creadaEl: s?.createdAt || null,
     creadaPor: creador || null,
     persona: { nombre: m.fullName || `${s?.firstName || ""} ${s?.lastName || ""}`.trim(), personaId: m.solicitudUserId ? String(m.solicitudUserId) : null },
@@ -43,10 +44,11 @@ export function contenidoDeSolicitud(s: any, creador?: { id: string; nombre: str
   };
 }
 
-const carpetaDeSolicitudes = async (): Promise<string> => {
-  const estado: any = await Info.findOne({ type: ESTADO_TYPE, "data.esSolicitud": true }).select("data.transicionAutomatica").lean();
+/** El estado del Paso 1 como está en el ABM: su nombre va en el registro y de su configuración sale la carpeta. */
+const estadoDeSolicitudes = async (): Promise<{ nombre: string; carpeta: string }> => {
+  const estado: any = await Info.findOne({ type: ESTADO_TYPE, "data.esSolicitud": true }).select("name data.transicionAutomatica").lean();
   const c = (estado?.data?.transicionAutomatica?.carpetas || []).find((x: any) => ([] as string[]).concat(x.proposito || []).includes("solicitudes"));
-  return String(c?.dropboxCarpeta || CARPETA_SOLICITUDES).replace(/\/+$/, "");
+  return { nombre: estado?.name || NOMBRE_ESTADO_SOLICITUD, carpeta: String(c?.dropboxCarpeta || CARPETA_SOLICITUDES).replace(/\/+$/, "") };
 };
 
 /** Sube el registro en segundo plano. No devuelve nada que haya que esperar y no tira nunca. */
@@ -56,7 +58,7 @@ export function guardarSolicitudEnDropbox(o: { tenantId: string; solicitud: any;
       const tenant: any = await (Tenant as any).findById(o.tenantId).select("integrations.dropbox").lean();
       const cfg = getTenantDropboxConfig(tenant);
       if (!cfg) return; // sin Dropbox conectado no hay dónde guardar: no es un error de la solicitud
-      const carpeta = await carpetaDeSolicitudes();
+      const { nombre: estado, carpeta } = await estadoDeSolicitudes();
       /*
         Se verifica el PRIMER tramo antes de subir (ver `espejoDropboxRegistros.ts`): con un token de app,
         subir a una ruta inexistente no falla y los archivos quedan donde nadie los mira. Si lo que falta
@@ -65,7 +67,7 @@ export function guardarSolicitudEnDropbox(o: { tenantId: string; solicitud: any;
       await listFolder(o.tenantId, cfg, "/" + carpeta.split("/").filter(Boolean)[0]);
       const m = o.solicitud?.metadata || {};
       const nombre = nombreArchivoSolicitud({ creadaEl: o.solicitud?.createdAt || new Date(), nombre: m.fullName || `${o.solicitud?.lastName || ""} ${o.solicitud?.firstName || ""}`, id: String(o.solicitud?._id) });
-      await uploadFile(o.tenantId, cfg, `${carpeta}/${nombre}`, Buffer.from(JSON.stringify(contenidoDeSolicitud(o.solicitud, o.creador), null, 2), "utf8"), true);
+      await uploadFile(o.tenantId, cfg, `${carpeta}/${nombre}`, Buffer.from(JSON.stringify(contenidoDeSolicitud(o.solicitud, o.creador, estado), null, 2), "utf8"), true);
     } catch (e: any) {
       console.warn(`[SOLICITUDES→DROPBOX] No se pudo guardar la solicitud ${o.solicitud?._id || "?"}:`, e?.response?.data?.error_summary || e?.message || e);
     }

@@ -112,6 +112,7 @@ function sumarAlFiltro(filter: any, condicion: Record<string, unknown>): void {
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 import { NOVEDAD_SOLICITUD_APROBADA, nombreDePersona, notificar } from "../services/novedadesNotificaciones.js";
 import { esContratoVigente, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
+import { rechazoAltaArcaConContrato } from "../services/superposicion.js";
 import { filaDelEquipoTrasGuardar, firmaDeAreas, rolDelEquipoTrasGuardar, tieneRol } from "../compartido/configDelEquipo.js";
 import { cambiosDeAreas, fotoDeAreas, registrarCambiosDelEquipo, type CambioDelEquipo } from "../services/historialEquipo.js";
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
@@ -2215,6 +2216,22 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
 
     const faltanDias = faltaDefinirDias(Number(contract.dias_por_semana) || 0, !!contract.dias_rotativos, Array.isArray(contract.dias_semana) ? contract.dias_semana.map(Number) : []);
     if (faltanDias) return res.status(422).json({ error: `Faltan los días que trabaja: ${faltanDias}.` });
+
+    /*
+      ── CON UN CONTRATO EN ESAS FECHAS, SÓLO SERVICIOS (05/11/2026) ──
+
+      El wizard ya no ofrece los tipos de ARCA en ese caso; esto es lo que lo hace cumplir. Sólo en un
+      contrato NUEVO (agregar, aprobar, renovar): editar uno que ya existe no se frena con él mismo, y
+      «Agregar con contrato vigente» (`origenContrato`) es una copia del que ya tiene, no un alta.
+    */
+    if (esContratoNuevo && !contract.origenContrato) {
+      const rechazoArca = await rechazoAltaArcaConContrato(project.tenantId, String(userId), (estado as any)?.data?.tipoImpositivo, {
+        desde: String(contract.fecha_alta_contrato || "").slice(0, 10),
+        hasta: String(contract.fecha_baja_contrato || "").slice(0, 10),
+        fechas: fechasSueltas.length > 0 ? fechasSueltas : undefined,
+      });
+      if (rechazoArca) return res.status(422).json({ error: rechazoArca });
+    }
 
     // --- Validation: Check for overlapping shifts in OTHER projects only ---
     // Sanitize optional reference IDs (empty string -> null) to avoid BSON casting errors

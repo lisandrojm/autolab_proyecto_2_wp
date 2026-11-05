@@ -41,6 +41,14 @@ export interface PedidoParaSuperposicion {
   shiftIds?: string[];
 }
 
+/** El contrato que la persona ya tiene en las fechas pedidas: con uno, sólo se la contrata por Servicios. */
+export interface ContratoEnFechas {
+  proyectoNombre: string;
+  desde: string;
+  hasta: string;
+  mensaje: string;
+}
+
 /** Un aviso de superposición: `horario` es el grave (misma hora, algún día en común), `fechas` el leve. */
 export interface AvisoSuperposicion {
   tipo: "horario" | "fechas";
@@ -839,6 +847,11 @@ class UsersAPI {
    * proyecto (también el mismo) y otras solicitudes pendientes. Son avisos, no frenan nada.
    * `excluirSolicitudId`: al editar, la solicitud no se cuenta a sí misma.
    */
+  async contratoEnFechas(userId: string, periodo: { desde: string; hasta: string; fechas?: string[] }): Promise<ContratoEnFechas | null> {
+    const { data } = await axios.post(`/users/contrato-en-fechas`, { userId, ...periodo }, { headers: this.getHeaders() });
+    return data?.contrato || null;
+  }
+
   async superposiciones(userId: string, pedido: PedidoParaSuperposicion, excluirSolicitudId?: string): Promise<AvisoSuperposicion[]> {
     const { data } = await axios.post(`/users/superposiciones`, { userId, pedido, excluirSolicitudId }, { headers: this.getHeaders() });
     return Array.isArray(data?.superposiciones) ? data.superposiciones : [];

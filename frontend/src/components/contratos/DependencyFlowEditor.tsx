@@ -366,7 +366,7 @@ export const DependencyFlowEditor: React.FC = () => {
   };
 
   // Construcción inicial: agrupar por ordenDependencia (renumerado contiguo); sin número → pool.
-  // Regla: «Solicitud de contratación» es SIEMPRE el Paso 1 y los impositivos SIEMPRE el 2, aunque su
+  // Regla: «Solicitud pendiente» es SIEMPRE el Paso 1 y los impositivos SIEMPRE el 2, aunque su
   // valor guardado sea otro o no tengan. Entre los impositivos no importa el orden (uno u otro).
   useEffect(() => {
     if (loadingEstados) return;

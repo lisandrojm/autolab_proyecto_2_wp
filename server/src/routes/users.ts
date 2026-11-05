@@ -19,7 +19,8 @@ import { borrarContratoDeSolicitud, buscarContratoDeSolicitud, datosDeSolicitud 
 import { Notification } from "../models/Notification.js";
 import { olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 import { quitarDelConteo, sumarAlConteo } from "../services/conteoUsuariosTenant.js";
-import { pedidoDesdeSolicitud, superposicionesDeAlta } from "../services/superposicion.js";
+import { contratoDePersonaEnFechas, pedidoDesdeSolicitud, rechazoAltaArcaConContrato, superposicionesDeAlta } from "../services/superposicion.js";
+import { mensajeSoloServicios } from "../utils/superposicionContratos.js";
 import { efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "../services/solicitudes.js";
 import { Area } from "../models/Area.js";
 import { Shift } from "../models/Shift.js";
@@ -2338,6 +2339,22 @@ router.post("/superposiciones", requireTenant, authenticateToken, requireAnyPerm
   }
 });
 
+/*
+  ¿LA PERSONA YA TIENE UN CONTRATO EN ESAS FECHAS? Si tiene, sólo se la contrata por Servicios: los
+  formularios de alta lo preguntan al cargar las fechas, antes de ofrecer los tipos de contrato. `hasta`
+  vacío es sin fin. Regla en `contratoEnLasFechas`; el guardado la vuelve a revisar.
+*/
+router.post("/contrato-en-fechas", requireTenant, authenticateToken, requireAnyPermission("admin_users:view", MOBILE_USERS), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { userId, desde, hasta, fechas } = req.body || {};
+    const contrato = await contratoDePersonaEnFechas(req.tenantObjectId!, userId ? String(userId) : undefined, { desde: String(desde || ""), hasta: String(hasta || ""), fechas: Array.isArray(fechas) ? fechas.map(String) : undefined });
+    res.json({ contrato: contrato ? { proyectoNombre: contrato.proyectoNombre, desde: contrato.desde, hasta: contrato.hasta, mensaje: mensajeSoloServicios(contrato) } : null });
+  } catch (error) {
+    console.error("Contrato en fechas error:", error);
+    res.status(500).json({ error: "No se pudo revisar si tiene un contrato en esas fechas." });
+  }
+});
+
 router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const data = createUserSchema.parse(req.body);
@@ -2348,7 +2365,10 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
       `services/solicitudes.ts`, compartido con el alta masiva de plantillas de equipo.
     */
     if ((data as any).metadata?.isSolicitud === true) {
-      const rechazo = await prepararSolicitudNueva(req.tenantObjectId!, req.user!.userId, (data as any).metadata);
+      const m = (data as any).metadata;
+      // Sólo el alta individual: las masivas (plantillas, reemplazos) tienen su propia revisión por lote.
+      const pedido = pedidoDesdeSolicitud(m);
+      const rechazo = (await rechazoAltaArcaConContrato(req.tenantObjectId!, m.solicitudUserId ? String(m.solicitudUserId) : undefined, m.tipoImpositivo, pedido)) || (await prepararSolicitudNueva(req.tenantObjectId!, req.user!.userId, m));
       if (rechazo) {
         res.status(400).json({ error: rechazo });
         return;

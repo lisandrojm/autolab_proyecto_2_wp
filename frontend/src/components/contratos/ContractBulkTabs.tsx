@@ -4091,7 +4091,7 @@ export const ContractBulkContratadosTab: React.FC<{
       cachedFetch(`${claveCacheContratados(filterClientId, filterProjectId)}:pendientes`, () => usersAPI.listSolicitudesPendientes(ambitoPedido)),
     ])
       .then(([res, pendientes]) => {
-        const estadoSolicitud = allEstados.find((e) => e.data?.esSolicitud)?.name || 'Solicitud de contratación';
+        const estadoSolicitud = allEstados.find((e) => e.data?.esSolicitud)?.name || 'Solicitud pendiente';
         const filas: FilaPadron[] = [...res.rows, ...pendientes.map((s) => filaDeSolicitud(s, estadoSolicitud))];
         setRows(filas);
         if (!filterClientId && !filterProjectId) onCount?.(filas.length);
@@ -4146,7 +4146,16 @@ export const ContractBulkContratadosTab: React.FC<{
     { columna: 'fechaCarga', direccion: 'desc' },
   );
   const ordenProps = { orden, onAlternar: alternar };
-  const pag = usePaginado(ordenados);
+  /*
+    LAS SOLICITUDES SIN APROBAR, ARRIBA DE TODO con «lo último creado arriba» (05/11/2026: «no veo las
+    solicitudes»). Mezcladas por fecha quedaban debajo de cada contrato creado después, fuera de la vista.
+    Con cualquier otro orden elegido manda ese orden.
+  */
+  const filasEnOrden = useMemo(() => {
+    if (orden?.columna !== 'fechaCarga' || orden.direccion !== 'desc') return ordenados;
+    return [...ordenados.filter((r) => r.solicitudPendienteId), ...ordenados.filter((r) => !r.solicitudPendienteId)];
+  }, [ordenados, orden]);
+  const pag = usePaginado(filasEnOrden);
   const rowKey = (r: ContractOverviewRow) => `${r._id}-${r.contractIndex}`;
   const th = 'px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900';
 

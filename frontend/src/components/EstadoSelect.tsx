@@ -30,7 +30,7 @@ const normalize = (s: string): string =>
 /* Las ETIQUETAS no van acá: viven en TEXTO_VIEJO, que es el único lugar donde se traduce un nombre. */
 const ESTADO_STYLES: Record<string, { label?: string; cls: string }> = {
   disponible: { cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
-  "solicitud de contratacion": { cls: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300" },
+  "solicitud pendiente": { cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
   "envio de documentacion": { cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
   "falta pedido de afip": { cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" },
   "pedido de afip": { cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" },
@@ -59,6 +59,7 @@ const TEXTO_VIEJO: Record<string, string> = {
   "falta pedido de afip": "AFIP",
   "pedido servicios": "SERVICIOS",
   "pedido de servicios": "SERVICIOS",
+  "solicitud de contratacion": "Solicitud pendiente",
   // Etiqueta secundaria del estado impositivo. Su par es «Alta Servicios», que no cambia.
   "alta afip": "Alta ARCA",
   "alta de afip": "Alta ARCA",
@@ -75,7 +76,7 @@ const labelFor = (name: string) => TEXTO_VIEJO[normalize(name)] || styleFor(name
  */
 const ESTADO_COLOR_HEX: Record<string, string> = {
   disponible: "#15803d",
-  "solicitud de contratacion": "#6d28d9",
+  "solicitud pendiente": "#b45309",
   "envio de documentacion": "#1d4ed8",
   "falta pedido de afip": "#b91c1c",
   "pedido de afip": "#b91c1c",

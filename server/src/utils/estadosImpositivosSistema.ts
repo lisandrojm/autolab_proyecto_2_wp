@@ -34,7 +34,7 @@ import { claveEstado } from "./estadoClave.js";
 
 export const ESTADO_TYPE = "estado-empleado";
 
-/** El paso de los estados impositivos: el 1 es «Solicitud de contratación». El ABM y el editor lo fijan. */
+/** El paso de los estados impositivos: el 1 es «Solicitud pendiente». El ABM y el editor lo fijan. */
 export const PASO_IMPOSITIVOS = 2;
 
 /** Dónde se guarda el `.json` de cada solicitud, si nadie configuró otra carpeta (`espejoDropboxSolicitudes.ts`). */
@@ -58,11 +58,14 @@ export const ESTADOS_IMPOSITIVOS_SISTEMA: EstadoImpositivoSistema[] = [
   { name: "SERVICIOS", tipoImpositivo: "constancia_cuit", etiquetaSecundaria: "Alta Servicios", color: "#c2410c", orden: 1 },
 ];
 
-export const NOMBRE_ESTADO_SOLICITUD = "Solicitud de contratación";
+export const NOMBRE_ESTADO_SOLICITUD = "Solicitud pendiente";
+/** El ámbar del tag «SOLICITUD PENDIENTE» de la tabla de Solicitudes: es lo mismo y se ve igual. */
+const COLOR_ESTADO_SOLICITUD = "#b45309";
 const SEMILLA_SOLICITUD = "estado-solicitud-de-contratacion";
+const SEMILLA_NOMBRE_SOLICITUD = "estado-solicitud-pendiente";
 
 /**
- * EL PRIMER PASO DEL CIRCUITO: «SOLICITUD DE CONTRATACIÓN» (05/11/2026, pedido del usuario: tiene que
+ * EL PRIMER PASO DEL CIRCUITO: «SOLICITUD PENDIENTE» (05/11/2026, pedido del usuario: tiene que
  * ser un estado como los demás). Es de sistema y va en el Paso 1, con su carpeta de Dropbox, donde cada
  * solicitud deja su `.json` (`espejoDropboxSolicitudes.ts`).
  *
@@ -91,7 +94,7 @@ async function ensureEstadoSolicitud(): Promise<boolean> {
         nombre: NOMBRE_ESTADO_SOLICITUD,
         esSistema: true,
         esSolicitud: true,
-        color: "#6d28d9",
+        color: COLOR_ESTADO_SOLICITUD,
         contratoFrameIds: [],
         orden: -1,
         ordenDependencia: 1,
@@ -101,6 +104,25 @@ async function ensureEstadoSolicitud(): Promise<boolean> {
     return true;
   } catch (error) {
     await SemillaAplicada.deleteOne({ clave: SEMILLA_SOLICITUD });
+    throw error;
+  }
+}
+
+/**
+ * Nació como «Solicitud de contratación» y la tabla de Solicitudes decía «SOLICITUD PENDIENTE»: dos
+ * nombres para lo mismo. Quedó el del tag (05/11/2026). UNA SOLA VEZ, con candado, porque el nombre es
+ * editable: si alguien después lo cambia, esto no se lo pisa. El color, sólo si seguía el violeta original.
+ * Ningún contrato guarda este nombre (ninguno está en este estado), así que no hay nada que propagar.
+ */
+async function renombrarEstadoSolicitud(): Promise<void> {
+  const marca = await SemillaAplicada.updateOne({ clave: SEMILLA_NOMBRE_SOLICITUD }, { $setOnInsert: { clave: SEMILLA_NOMBRE_SOLICITUD, aplicadaEl: new Date() } }, { upsert: true });
+  if (marca.upsertedCount === 0) return;
+  try {
+    const delEstado = { type: ESTADO_TYPE, "data.esSolicitud": true };
+    await Info.updateOne({ ...delEstado, name: "Solicitud de contratación" }, { $set: { name: NOMBRE_ESTADO_SOLICITUD, "data.nombre": NOMBRE_ESTADO_SOLICITUD } });
+    await Info.updateOne({ ...delEstado, "data.color": "#6d28d9" }, { $set: { "data.color": COLOR_ESTADO_SOLICITUD } });
+  } catch (error) {
+    await SemillaAplicada.deleteOne({ clave: SEMILLA_NOMBRE_SOLICITUD });
     throw error;
   }
 }
@@ -118,6 +140,7 @@ export async function ensureEstadosImpositivosSistema(): Promise<{ creados: stri
   const adoptados: string[] = [];
   // Antes que los impositivos: corre los pasos, y un impositivo recién creado ya nace en el suyo.
   if (await ensureEstadoSolicitud()) creados.push(NOMBRE_ESTADO_SOLICITUD);
+  await renombrarEstadoSolicitud();
 
   const existentes = await Info.find({ type: ESTADO_TYPE }).lean();
   const porClave = new Map<string, any>();

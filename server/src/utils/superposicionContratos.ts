@@ -84,6 +84,38 @@ const minutos = (h?: string): number | null => {
 };
 
 /**
+ * ¿TIENE UN CONTRATO EN ESAS FECHAS? (pedido del 05/11/2026). El primer contrato que cubre al menos un día
+ * de lo pedido, o `null`. Cualquier contrato, en cualquier proyecto y con cualquier empleadora: quien ya
+ * tiene uno en esas fechas no se contrata por ARCA, sólo por Servicios.
+ *
+ * A diferencia de `superposiciones`, ésta FRENA y no mira días de la semana ni horarios: alcanza con que
+ * el período se cruce. Un contrato por días sueltos sólo cubre esos días. Las solicitudes no cuentan:
+ * todavía no son un contrato.
+ */
+export function contratoEnLasFechas<T extends CompromisoExistente>(pedido: Pick<PedidoDeAlta, "desde" | "hasta" | "fechas">, existentes: T[]): T | null {
+  /*
+    No usa `rango`: ése corta los períodos sin fin a un año, y un contrato sin baja desde 2023 sigue
+    vigente en 2026. Acá sin `hasta` es para siempre.
+  */
+  type Periodo = { desde: string; hasta: string; fechas?: string[] };
+  const cubre = (x: Periodo, t: number) => (x.fechas?.length ? x.fechas.some((f) => utc(f) === t) : t >= (utc(x.desde) ?? Infinity) && t <= (utc(x.hasta) ?? Infinity));
+  const dias = (x: Periodo) => (x.fechas || []).map(utc).filter((t): t is number => t !== null);
+  const seCruzan = (e: Periodo): boolean => {
+    if (pedido.fechas?.length) return dias(pedido).some((t) => cubre(e, t));
+    if (e.fechas?.length) return dias(e).some((t) => cubre(pedido, t));
+    const inicio = Math.max(utc(pedido.desde) ?? Infinity, utc(e.desde) ?? Infinity);
+    return Number.isFinite(inicio) && cubre(pedido, inicio) && cubre(e, inicio);
+  };
+  return existentes.find((e) => e.origen === "contrato" && seCruzan(e)) || null;
+}
+
+/** El mensaje de la regla, igual en el formulario y en el rechazo del server. */
+export function mensajeSoloServicios(c: Pick<CompromisoExistente, "proyectoNombre" | "desde" | "hasta">): string {
+  const periodo = c.hasta ? `del ${corta(c.desde)} al ${corta(c.hasta)}` : `desde el ${corta(c.desde)}, sin fecha de baja`;
+  return `Tiene un contrato en esas fechas (${c.proyectoNombre || "otro proyecto"}, ${periodo}): sólo se puede contratar con un tipo de contrato de Servicios.`;
+}
+
+/**
  * ¿Se pisan dos horarios de un mismo día? Un turno que cruza la medianoche (18:00 a 00:00, 22:00 a 06:00)
  * termina al día siguiente: se lo compara también corrido un día para cada lado. Tocarse en el borde
  * (uno termina 12:00 y el otro empieza 12:00) no es pisarse.

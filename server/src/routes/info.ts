@@ -161,7 +161,7 @@ function parseEstadoBody(body: any, estadoActual?: any): { error?: string; name?
     Sistema`). En vez de ese ida y vuelta, acá no se puede apagar.
   */
   const esDeSistema = estadoActual?.data?.esSistema === true;
-  // «Solicitud de contratación» también es de sistema, pero no es un trámite impositivo.
+  // «Solicitud pendiente» también es de sistema, pero no es un trámite impositivo.
   const esImpositivo = (esDeSistema && estadoActual?.data?.esSolicitud !== true) || body?.esImpositivo === true || body?.esImpositivo === "true";
 
   /*

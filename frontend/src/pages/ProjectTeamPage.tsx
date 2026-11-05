@@ -75,6 +75,7 @@ import { sedeElegida, sedesDelContrato } from '../utils/sedesProyecto';
 import { cachedFetch } from '../utils/refCache';
 import { BotonOrden, useOrden } from '../components/ui/OrdenTabla';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
+import { useContratoEnFechas } from '../hooks/useContratoEnFechas';
 import { LinkSiPuede } from '../components/LinkSiPuede';
 import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 
@@ -1662,6 +1663,23 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     (`reglaDeValoracion`), con el mismo criterio de «edición» que el guardado (`isUpdate`/índice).
   */
   const wizardEditaContrato = !approvingSolicitudId && !renovando && (editingContractIndex != null || (!!selectedUserForWizard && teamMembers.some((m) => m._id === selectedUserForWizard._id)));
+  /*
+    CON UN CONTRATO EN ESAS FECHAS, SÓLO SERVICIOS (05/11/2026). Sólo en un contrato nuevo: editar uno no
+    se frena con él mismo. Sin baja cargada todavía se mira el día del alta; sin fin, sólo si el tipo lo es.
+  */
+  const fechasDelWizard = porDiasSueltosWizard && wizardData.fechas_trabajadas.length > 0 ? [...wizardData.fechas_trabajadas].sort() : undefined;
+  const contratoEnFechas = useContratoEnFechas({
+    activo: !!selectedUserForWizard && !wizardEditaContrato,
+    userId: selectedUserForWizard?._id,
+    desde: fechasDelWizard?.[0] || wizardData.fecha_alta_contrato,
+    hasta: fechasDelWizard ? fechasDelWizard[fechasDelWizard.length - 1] : indeterminadoWizard ? '' : wizardData.fecha_baja_contrato || wizardData.fecha_alta_contrato,
+    fechas: fechasDelWizard,
+  });
+  const tiposParaElegir = useMemo(() => {
+    const activos = tiposDeContratoActivos(contratos, wizardData.contrato_id);
+    return contratoEnFechas ? activos.filter((c) => tramitePorContrato.get(c._id) === 'constancia_cuit') : activos;
+  }, [contratos, wizardData.contrato_id, contratoEnFechas, tramitePorContrato]);
+  const contratoArcaNoPermitido = !!contratoEnFechas && tramitePorContrato.get(wizardData.contrato_id) === 'alta_temprana_afip';
   const valoracionProyectoId = wizardEditaContrato ? reglaContratoEditado || idValoracionDe(project?.valoracionId) : valoracionParaRol(project, wizardData.rol_frame_id, wizardData.contrato_id);
   /*
     LAS VALORACIONES QUE NO PIDEN MOTIVO: la del proyecto, la de la excepción para este rol + tipo de
@@ -2815,6 +2833,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const faltan = faltantesPaso1();
     if (faltan.length > 0) {
       sweetAlert.error('Faltan campos obligatorios', `Completá: ${faltan.join(', ')}.`);
+      setWizardStep(1);
+      return;
+    }
+    if (contratoArcaNoPermitido) {
+      sweetAlert.error('Tipo de contrato', contratoEnFechas!.mensaje);
       setWizardStep(1);
       return;
     }
@@ -4682,7 +4705,54 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     {sedeFijadaPorArea ? `La fija el área elegida (${nombreDeSedeId(sedeFijadaPorArea)}). Para cambiarla, elegí el área en otra sede.` : 'Las sedes del proyecto. Viene elegida la principal.'}
                   </p>
                 </div>
-                {/* Puesto | Sede, y debajo Tipo de contrato | Estado, en la misma fila (27/10/2026). */}
+                {/* Puesto | Sede, debajo las fechas y debajo Tipo de contrato | Estado, en la misma fila (27/10/2026). */}
+                {/*
+                  Alta y baja del contrato, juntas: son los dos extremos del mismo período. VAN ANTES DEL TIPO DE
+                  CONTRATO (05/11/2026): con un contrato en esas fechas, sólo se ofrecen los de Servicios.
+
+                  Cada par va en su PROPIA fila de dos columnas y no suelto en el grid de arriba:
+                  «Fecha baja» desaparece cuando el tipo de contrato es de tiempo indeterminado, y
+                  con los campos sueltos ese hueco corría a todos los de abajo — las horas quedaban
+                  apareadas con una fecha según qué contrato estuviera elegido.
+                */}
+                {porDiasSueltosWizard ? (
+                  /*
+                    DÍAS SUELTOS (ver `modoFechas` en el ABM del tipo de contrato): el mismo calendario
+                    que la solicitud de la app. Cada día marcado es una jornada; alta y baja son el
+                    primero y el último.
+                  */
+                  <div className="md:col-span-2 space-y-1.5">
+                    <CustomMultiDatePicker label="Días que trabaja" value={wizardData.fechas_trabajadas} onChange={(d: string | string[]) => elegirDiasSueltosWizard(Array.isArray(d) ? d : d ? [d] : [])} />
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
+                      {wizardData.fechas_trabajadas.length > 0 ? (
+                        <>
+                          <span className="font-semibold text-gray-700 dark:text-gray-200">
+                            {wizardData.fechas_trabajadas.length} {wizardData.fechas_trabajadas.length === 1 ? 'jornada' : 'jornadas'}
+                          </span>
+                          , entre el {new Date(`${wizardData.fechas_trabajadas[0]}T00:00:00`).toLocaleDateString('es-AR')} y el {new Date(`${wizardData.fechas_trabajadas[wizardData.fechas_trabajadas.length - 1]}T00:00:00`).toLocaleDateString('es-AR')}.
+                        </>
+                      ) : (
+                        <>«{contratoDelWizard?.name}» se contrata por día: marcá los días en el calendario. Cada uno es una jornada.</>
+                      )}
+                    </p>
+                  </div>
+                ) : (
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha alta contrato</label>
+                    <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_alta_contrato: e.target.value }))} />
+                  </div>
+                  {!(contratos.find((c) => c._id === wizardData.contrato_id)?.data.esTiempoIndeterminado ?? false) && (
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
+                        Fecha baja contrato <span className="text-red-500">*</span>
+                      </label>
+                      <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
+                    </div>
+                  )}
+                </div>
+                )}
+
 
                 <div className="space-y-1.5">
                   {/*
@@ -4740,11 +4810,17 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     mismo badge de Contratos, para que se lea como lo mismo. Ver
                     `components/contratos/TipoContratoSelect.tsx`.
                   */}
-                  <CampoTipoContrato contratos={contratosFiltradosPorTramite} contratoId={wizardData.contrato_id} estados={allEstados} tramitePorContrato={tramitePorContrato} onAbrir={() => setTipoContratoOpen(true)} />
+                  <CampoTipoContrato contratos={contratosFiltradosPorTramite} contratoId={wizardData.contrato_id} estados={allEstados} tramitePorContrato={tramitePorContrato} onAbrir={() => {
+                    if (!wizardEditaContrato && !wizardData.fecha_alta_contrato && wizardData.fechas_trabajadas.length === 0) {
+                      sweetAlert.warning('Primero la fecha', 'Cargá la fecha de alta: de eso depende qué tipos de contrato se pueden usar.');
+                      return;
+                    }
+                    setTipoContratoOpen(true);
+                  }} />
                   <ModalTipoContrato
                     abierto={tipoContratoOpen}
                     onCerrar={() => setTipoContratoOpen(false)}
-                    contratos={tiposDeContratoActivos(contratos, wizardData.contrato_id)}
+                    contratos={tiposParaElegir}
                     contratoId={wizardData.contrato_id}
                     estados={allEstados}
                     tramitePorContrato={tramitePorContrato}
@@ -4777,6 +4853,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     }}
                   />
 
+                  {contratoEnFechas && <p className={`ml-1 text-[11px] font-medium ${contratoArcaNoPermitido ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>{contratoEnFechas.mensaje}</p>}
                   {filtroTramite && contratosFiltradosPorTramite.length === 0 && <p className="text-[11px] text-amber-600 dark:text-amber-400 ml-1">Ningún tipo de contrato está configurado para este trámite. Vinculalo desde el ABM de Estados, o mirá todos.</p>}
                   {contratoDelWizard && (limiteHorasWizard != null || limiteDiasWizard != null) && (
                     <p className="ml-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-600 dark:text-gray-400">
@@ -4900,52 +4977,6 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       {rechazoFormaPago}
                     </p>
                   </div>
-                )}
-
-                {/*
-                  Alta y baja del contrato, juntas: son los dos extremos del mismo período.
-
-                  Cada par va en su PROPIA fila de dos columnas y no suelto en el grid de arriba:
-                  «Fecha baja» desaparece cuando el tipo de contrato es de tiempo indeterminado, y
-                  con los campos sueltos ese hueco corría a todos los de abajo — las horas quedaban
-                  apareadas con una fecha según qué contrato estuviera elegido.
-                */}
-                {porDiasSueltosWizard ? (
-                  /*
-                    DÍAS SUELTOS (ver `modoFechas` en el ABM del tipo de contrato): el mismo calendario
-                    que la solicitud de la app. Cada día marcado es una jornada; alta y baja son el
-                    primero y el último.
-                  */
-                  <div className="md:col-span-2 space-y-1.5">
-                    <CustomMultiDatePicker label="Días que trabaja" value={wizardData.fechas_trabajadas} onChange={(d: string | string[]) => elegirDiasSueltosWizard(Array.isArray(d) ? d : d ? [d] : [])} />
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                      {wizardData.fechas_trabajadas.length > 0 ? (
-                        <>
-                          <span className="font-semibold text-gray-700 dark:text-gray-200">
-                            {wizardData.fechas_trabajadas.length} {wizardData.fechas_trabajadas.length === 1 ? 'jornada' : 'jornadas'}
-                          </span>
-                          , entre el {new Date(`${wizardData.fechas_trabajadas[0]}T00:00:00`).toLocaleDateString('es-AR')} y el {new Date(`${wizardData.fechas_trabajadas[wizardData.fechas_trabajadas.length - 1]}T00:00:00`).toLocaleDateString('es-AR')}.
-                        </>
-                      ) : (
-                        <>«{contratoDelWizard?.name}» se contrata por día: marcá los días en el calendario. Cada uno es una jornada.</>
-                      )}
-                    </p>
-                  </div>
-                ) : (
-                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Fecha alta contrato</label>
-                    <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_alta_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_alta_contrato: e.target.value }))} />
-                  </div>
-                  {!(contratos.find((c) => c._id === wizardData.contrato_id)?.data.esTiempoIndeterminado ?? false) && (
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">
-                        Fecha baja contrato <span className="text-red-500">*</span>
-                      </label>
-                      <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
-                    </div>
-                  )}
-                </div>
                 )}
 
                 {/* --- CONFIGURACIÓN POR ÁREA (visual toggle) --- */}

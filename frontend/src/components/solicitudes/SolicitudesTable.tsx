@@ -189,7 +189,9 @@ export const useCatalogosDeSolicitudes = () => {
     /** El tipo de contrato pedido, con el nombre que tiene HOY en el ABM; si ya no está, el que tenía al pedirlo. */
     const resolverTipoContrato = (s: SolicitudVista): string => (s.contratoId ? tiposContrato.find((t) => t._id === s.contratoId)?.name : "") || s.nombreContrato || "";
 
-    return { roleFrames, categoriasSat, estados, resolverRolFrame, resolverTramite, resolverTipoContrato };
+    // El estado del Paso 1: el tag de una solicitud sin decidir ES este estado, con su nombre y su color del ABM.
+    const estadoPendiente = estados.find((e) => e.data?.esSolicitud)?.name || "Solicitud pendiente";
+    return { roleFrames, categoriasSat, estados, estadoPendiente, resolverRolFrame, resolverTramite, resolverTipoContrato };
   }, [roleFrames, categoriasSat, estados, tiposContrato]);
 };
 
@@ -304,7 +306,7 @@ interface SolicitudesTableProps {
 export const MS_SALIDA_FILA = 700;
 
 export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes, catalogos, mostrarProyectos = false, onAprobar, onRechazar, onReabrir, onEliminar, onEditarAprobada, onVerDetalle, seleccionadas, onCambiarSeleccion, renderObraSocial, onSeleccionarTodas, totalSeleccionable, saliendo }) => {
-  const { resolverRolFrame, resolverTramite, resolverTipoContrato } = catalogos;
+  const { estadoPendiente, resolverRolFrame, resolverTramite, resolverTipoContrato } = catalogos;
   const conSeleccion = !!seleccionadas && !!onCambiarSeleccion;
   // La casilla del encabezado marca o desmarca las de ESTA página (la selección de otras páginas se conserva).
   const enPagina = solicitudes.filter((s) => seleccionadas?.has(s._id)).length;
@@ -508,16 +510,21 @@ export const SolicitudesTable: React.FC<SolicitudesTableProps> = ({ solicitudes,
                 {/* EL PERÍODO PEDIDO, con el mismo formato que «Último contrato» (Alta / Baja, DD/MM/AAAA) para
                     compararlos de un vistazo y ocupar menos ancho (01/11/2026). Sin fin: «Indef.». ARRIBA, un tag del
                     mismo tamaño que VIGENTE / NO VIGENTE de la columna de al lado, así las fechas quedan a la misma
-                    altura. EL TAG DICE EL ESTADO (01/11/2026, sin columna «Estado»): «SOLICITUD PENDIENTE», «SOLICITUD
-                    APROBADA»…, con el color y el ícono de cada estado (ESTADO_SOLICITUD). Si se pisa con el último
+                    altura. EL TAG DICE EL ESTADO (01/11/2026, sin columna «Estado»). PENDIENTE ES EL ESTADO DEL PASO 1
+                    (05/11/2026): sale del ABM, con su nombre y su color. «SOLICITUD APROBADA» y las demás son el
+                    desenlace de la solicitud, no un estado del circuito (ESTADO_SOLICITUD). Si se pisa con el último
                     contrato de la persona, debajo de las fechas un «SUPERPONE» en naranja, que no se confunde con el
                     amarillo de pendiente. */}
                 <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                   <div className="flex flex-col gap-1">
-                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${ESTADO_SOLICITUD[s.estado].clase}`}>
-                      <FontAwesomeIcon icon={ESTADO_SOLICITUD[s.estado].icono} className="text-[8px]" />
-                      Solicitud {ESTADO_SOLICITUD[s.estado].texto}
-                    </span>
+                    {s.estado === "pendiente" ? (
+                      <EstadoBadge name={estadoPendiente} className="w-fit" />
+                    ) : (
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${ESTADO_SOLICITUD[s.estado].clase}`}>
+                        <FontAwesomeIcon icon={ESTADO_SOLICITUD[s.estado].icono} className="text-[8px]" />
+                        Solicitud {ESTADO_SOLICITUD[s.estado].texto}
+                      </span>
+                    )}
                     <div className="flex flex-col gap-0.5 text-xs">
                       <span><span className="text-gray-400">Alta:</span> {formatDate(s.startDate || undefined) || "—"}</span>
                       <span><span className="text-gray-400">Baja:</span> {s.dueDate ? formatDate(s.dueDate) : "Indef."}</span>

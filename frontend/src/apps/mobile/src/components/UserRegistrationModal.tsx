@@ -10,6 +10,7 @@ import { AyudaImportes, PROPS_IMPORTES_MOVIL } from "./contratacion/AyudaImporte
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faBriefcase, faClock, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight, faCircleInfo, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { AvisoSuperposicion, usersAPI } from "../../../../api/users";
+import { useContratoEnFechas } from "../../../../hooks/useContratoEnFechas";
 import { DiasDeTrabajo, semanaDelTipoDeContrato } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
 import { avisoIndeterminado, erroresDeJornadas, hayAjuste, jornadasCalculadasDelPedido, jornadasDelCalendario, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from "../../../../utils/jornadas";
@@ -1892,6 +1893,21 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   }, [isOpen, claveSuperposicion, porDiasSueltos, editingUser?._id]);
 
   /*
+    CON UN CONTRATO EN ESAS FECHAS, SÓLO SERVICIOS (05/11/2026): la ventana no ofrece los de ARCA y, si ya
+    hay uno elegido, no se manda. Sin «Hasta» cargado se mira el día de inicio; sin fin, sólo si el tipo lo es.
+  */
+  const diasMarcados = porDiasSueltos && formData.fechasTrabajadas.length > 0 ? [...formData.fechasTrabajadas].sort() : undefined;
+  const contratoEnFechas = useContratoEnFechas({
+    activo: isOpen,
+    userId: selectedUser?._id,
+    desde: diasMarcados?.[0] || formData.startDate,
+    hasta: diasMarcados ? diasMarcados[diasMarcados.length - 1] : indeterminado ? "" : formData.dueDate || formData.startDate,
+    fechas: diasMarcados,
+  });
+  const contratosElegibles = contratoEnFechas ? contratos.filter((c) => tramitePorContrato.get(c._id) === "constancia_cuit") : contratos;
+  const contratoArcaNoPermitido = !!contratoEnFechas && formData.tipoImpositivo === "alta_temprana_afip";
+
+  /*
     Cambiar a tiempo indeterminado BORRA la fecha de baja que hubiera quedado cargada.
 
     Esconder el campo sin limpiarlo dejaría la fecha vieja viajando en la solicitud: no se ve, no se
@@ -2137,6 +2153,10 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     */
     if (!formData.contratoId && contratos.length > 0) {
       sweetAlert.warning("Falta el tipo de contrato", "Elegí qué tipo de contrato se le va a hacer a esta persona.");
+      return;
+    }
+    if (contratoArcaNoPermitido) {
+      sweetAlert.warning("Tipo de contrato", contratoEnFechas!.mensaje);
       return;
     }
     if (horarioExcedido) {
@@ -2620,41 +2640,6 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         )}
 
         {/*
-          EL TIPO DE CONTRATO, y el trámite DEDUCIDO de él. Va ANTES de convenio, categoría e importe
-          porque decide si hacen falta: con un tipo de Servicios (constancia de CUIT) no hay convenio
-          ni categoría, y el importe se carga a mano. Elegirlo después obligaba a completar dos campos
-          que el tipo de contrato podía terminar escondiendo.
-
-          Antes acá se elegía «Tipo de alta» —ARCA o Servicios— y el tipo de contrato se cargaba
-          después, al aprobar. Era pedir el dato de arriba y dejar el de abajo para otro momento: el
-          trámite no es una opción independiente, lo declara el tipo de contrato a través de sus
-          plantillas. Elegir «Pedido de ARCA» y después un tipo que resulta ser de Servicios daba una
-          solicitud que se contradecía a sí misma.
-
-          Ahora se elige lo concreto —«Jornada», «Plazo fijo 5x7»— y el trámite se muestra al lado,
-          de sólo lectura, con el mismo badge del ABM que usa el escritorio. Quien pide el alta sabe
-          qué contrato va a firmar esa persona; el trámite es una consecuencia.
-        */}
-        <div className="space-y-2">
-          <CampoTipoContrato contratos={contratos} contratoId={formData.contratoId} tramitePorContrato={tramitePorContrato} estados={impositivos} onAbrir={() => setContratoModalOpen(true)} />
-          {contratoElegido && (limiteHoras != null || limiteDias != null) && (
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
-              {limiteHoras != null && (
-                <span>
-                  <strong className="text-slate-900 dark:text-white">{limiteHoras}</strong> h por jornada
-                </span>
-              )}
-              {limiteDias != null && (
-                <span>
-                  <strong className="text-slate-900 dark:text-white">{limiteDias}</strong> días por semana
-                </span>
-              )}
-              <span className="text-[11px] text-slate-400">Limitan el horario y los días de abajo.</span>
-            </p>
-          )}
-        </div>
-
-        {/*
           DESDE / HASTA, SIEMPRE A LA VISTA. Todo lo de abajo —días, jornadas, importes— depende de estas
           fechas: queda pegado debajo del título al bajar, para no perder de vista de qué período se habla.
           Los márgenes negativos compensan el padding del cuerpo del Modal, así el fondo tapa de lado a lado.
@@ -2727,6 +2712,49 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
           )}
           {/* Se dice apenas pasa, no al enviar: con el fin antes del inicio no hay jornadas que calcular. */}
           {erroresJornadas.fechas && <p className="text-[11px] font-medium text-red-600 dark:text-red-400">{erroresJornadas.fechas}</p>}
+        </div>
+
+        {/*
+          EL TIPO DE CONTRATO, y el trámite DEDUCIDO de él. Va DESPUÉS de las fechas (05/11/2026): con un
+          contrato en esas fechas sólo se ofrecen los de Servicios. Va ANTES de convenio, categoría e importe
+          porque decide si hacen falta: con un tipo de Servicios (constancia de CUIT) no hay convenio
+          ni categoría, y el importe se carga a mano. Elegirlo después obligaba a completar dos campos
+          que el tipo de contrato podía terminar escondiendo.
+
+          Antes acá se elegía «Tipo de alta» —ARCA o Servicios— y el tipo de contrato se cargaba
+          después, al aprobar. Era pedir el dato de arriba y dejar el de abajo para otro momento: el
+          trámite no es una opción independiente, lo declara el tipo de contrato a través de sus
+          plantillas. Elegir «Pedido de ARCA» y después un tipo que resulta ser de Servicios daba una
+          solicitud que se contradecía a sí misma.
+
+          Ahora se elige lo concreto —«Jornada», «Plazo fijo 5x7»— y el trámite se muestra al lado,
+          de sólo lectura, con el mismo badge del ABM que usa el escritorio. Quien pide el alta sabe
+          qué contrato va a firmar esa persona; el trámite es una consecuencia.
+        */}
+        <div className="space-y-2">
+          <CampoTipoContrato contratos={contratos} contratoId={formData.contratoId} tramitePorContrato={tramitePorContrato} estados={impositivos} onAbrir={() => {
+            if (!formData.startDate && formData.fechasTrabajadas.length === 0) {
+              sweetAlert.warning("Primero la fecha", "Cargá la fecha de inicio: de eso depende qué tipos de contrato se pueden usar.");
+              return;
+            }
+            setContratoModalOpen(true);
+          }} />
+          {contratoEnFechas && <p className={`text-[11px] font-medium ${contratoArcaNoPermitido ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>{contratoEnFechas.mensaje}</p>}
+          {contratoElegido && (limiteHoras != null || limiteDias != null) && (
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
+              {limiteHoras != null && (
+                <span>
+                  <strong className="text-slate-900 dark:text-white">{limiteHoras}</strong> h por jornada
+                </span>
+              )}
+              {limiteDias != null && (
+                <span>
+                  <strong className="text-slate-900 dark:text-white">{limiteDias}</strong> días por semana
+                </span>
+              )}
+              <span className="text-[11px] text-slate-400">Limitan el horario y los días de abajo.</span>
+            </p>
+          )}
         </div>
 
         {/*
@@ -3515,7 +3543,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         />
 
         {/* El tipo de contrato: la ventana compartida con las plantillas de equipo (ver contratacion/SelectorTipoContrato). */}
-        <ModalTipoContrato abierto={contratoModalOpen} onCerrar={() => setContratoModalOpen(false)} contratos={contratos} contratoId={formData.contratoId} tramitePorContrato={tramitePorContrato} estados={impositivos} onElegir={(id) =>
+        <ModalTipoContrato abierto={contratoModalOpen} onCerrar={() => setContratoModalOpen(false)} contratos={contratosElegibles} contratoId={formData.contratoId} tramitePorContrato={tramitePorContrato} estados={impositivos} onElegir={(id) =>
             setFormData((prev) => {
               // Los días por semana del tipo («6x6» → 6), precargados y no sólo como tope. Con días sueltos no aplica.
               const tipo = contratos.find((c) => c._id === id);

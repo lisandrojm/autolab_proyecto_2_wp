@@ -17,7 +17,7 @@ const ESTADO_TYPE = "estado-empleado";
 
 /** Estados (catálogo global) configurados con este evento. Ya validado al guardar: todos tienen `ordenDependencia`. */
 export async function cargarEstadosPorEvento(evento: EventoTransicionAutomatica): Promise<IInfo[]> {
-  // Sin «Solicitud de contratación»: su carpeta guarda registros, no mueve contratos (ninguno está en ese estado).
+  // Sin «Solicitud pendiente»: su carpeta guarda registros, no mueve contratos (ninguno está en ese estado).
   return Info.find({ type: ESTADO_TYPE, "data.transicionAutomatica.evento": evento, "data.esSolicitud": { $ne: true } });
 }
 

@@ -5,6 +5,7 @@ import { Modal } from "../ui/Modal";
 import { AvisosSuperposicion } from "./AvisosSuperposicion";
 import { usersAPI, User } from "../../api/users";
 import { estadoLabel } from "../EstadoSelect";
+import { EstadoBadge } from "../EstadoSelect";
 import { ESTADO_SOLICITUD, EstadoSolicitud, ProyectoDeSolicitud, SolicitudVista, formatFechaHoraSolicitud, useCatalogosDeSolicitudes } from "./SolicitudesTable";
 import { ResumenDelAlta, fecha } from "./ResumenDelAlta";
 
@@ -153,10 +154,14 @@ export const SolicitudDetalleModal: React.FC<Props> = ({ isOpen, onClose, solici
       subtitle={`Solicitud de contratación · solicitada el ${formatFechaHoraSolicitud(solicitud?.creadaEl) || "N/A"}`}
       footer={
         <div className="flex items-center justify-between gap-3">
-          <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-bold ${ESTADO_SOLICITUD[estado].clase}`}>
-            <FontAwesomeIcon icon={ESTADO_SOLICITUD[estado].icono} className="text-[9px]" />
-            {ESTADO_SOLICITUD[estado].texto}
-          </span>
+          {estado === "pendiente" ? (
+            <EstadoBadge name={catalogos.estadoPendiente} />
+          ) : (
+            <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-bold ${ESTADO_SOLICITUD[estado].clase}`}>
+              <FontAwesomeIcon icon={ESTADO_SOLICITUD[estado].icono} className="text-[9px]" />
+              {ESTADO_SOLICITUD[estado].texto}
+            </span>
+          )}
           <div className="flex flex-wrap items-center justify-end gap-2">
             <button onClick={onClose} className="px-3 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
               Cerrar

@@ -6,7 +6,7 @@ import { Shift } from "../models/Shift.js";
 // El `populate("clientId")` necesita el modelo registrado; no se depende de que otro archivo lo haya cargado.
 import "../models/Client.js";
 import { fechaISO, hoyArgentina } from "../utils/contratoVigencia.js";
-import { CompromisoExistente, PedidoDeAlta, Superposicion, superposiciones } from "../utils/superposicionContratos.js";
+import { CompromisoExistente, PedidoDeAlta, Superposicion, contratoEnLasFechas, mensajeSoloServicios, superposiciones } from "../utils/superposicionContratos.js";
 
 /*
   SUPERPOSICIÓN DE UN ALTA CON LO QUE LA PERSONA YA TIENE: la parte que toca la base.
@@ -109,6 +109,19 @@ export async function compromisosDePersona(tenantId: Types.ObjectId, userId: str
     compromisos.push({ origen: "solicitud", proyectoNombre: nombreDe.get(String(p.metadata?.projectIds?.[0])) || "", ...pedido });
   }
   return compromisos;
+}
+
+/** El contrato que la persona ya tiene en esas fechas, si tiene (ver `contratoEnLasFechas`). */
+export async function contratoDePersonaEnFechas(tenantId: Types.ObjectId, userId: string | undefined, pedido: Pick<PedidoDeAlta, "desde" | "hasta" | "fechas">): Promise<CompromisoExistente | null> {
+  if (!userId) return null;
+  return contratoEnLasFechas(pedido, await compromisosDePersona(tenantId, userId));
+}
+
+/** Por qué este alta ante ARCA no se puede hacer, o `null`. Sólo frena el trámite de ARCA, no el de Servicios. */
+export async function rechazoAltaArcaConContrato(tenantId: Types.ObjectId, userId: string | undefined, tramite: unknown, pedido: Pick<PedidoDeAlta, "desde" | "hasta" | "fechas">): Promise<string | null> {
+  if (tramite !== "alta_temprana_afip") return null;
+  const contrato = await contratoDePersonaEnFechas(tenantId, userId, pedido);
+  return contrato ? mensajeSoloServicios(contrato) : null;
 }
 
 /** Los avisos de superposición de un alta para una persona. `[]` si no es una persona registrada. */
