@@ -94,8 +94,9 @@ interface Props {
    * mensual se anclaba con valores intermedios (las jornadas del calendario) y, cuando llegaban las
    * del contrato, la jornada se recalculaba sola — una solicitud de $33.474,76 por jornada abría en
    * $30.127,28 sin que nadie tocara nada. Con esto, mientras no se edite un importe, la jornada
-   * recibida manda y el mensual la sigue. Lo usa el panel; el formulario del móvil sigue anclando en
-   * el mensual (ahí cambiar las fechas tiene que mantener el mensual).
+   * recibida manda y el mensual la sigue. Lo usan el panel y, en el móvil, la edición y los tipos con
+   * jornadas por mes; sin jornadas en el tipo, el móvil sigue anclando en el mensual (ahí cambiar las
+   * fechas tiene que mantener el mensual).
    */
   conservarJornadaExterna?: boolean;
   /**

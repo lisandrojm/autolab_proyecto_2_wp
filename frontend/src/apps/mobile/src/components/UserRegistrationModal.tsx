@@ -3000,12 +3000,14 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             Anclado en el mensual, abrir la solicitud lo calculaba con los meses del calendario —un
             miércoles suelto de noviembre = ¼ de mes— antes de que llegara el tipo «Jornada» (1/22): la
             jornada quedaba ÷ 5,5 y se guardaba así en cada edición (66.686,15 → 12.124,75 → 2.204,50).
+            En una solicitud nueva pasa lo mismo si el tipo cuenta jornadas por mes: ahí el mensual es
+            jornada × esas jornadas, así que conservar la jornada propuesta ya conserva el mensual.
           */}
           <ImportesDelContrato
             className="contents"
             valorJornada={formData.dailyRate}
             onValorJornada={(v) => setFormData((p) => ({ ...p, dailyRate: v }))}
-            conservarJornadaExterna={!!editingUser}
+            conservarJornadaExterna={!!editingUser || !!jornadasDelTipo}
             mesesEq={mesesEq}
             indeterminado={indeterminado}
             jornadas={jornadasDelContrato}

@@ -509,6 +509,9 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
                     mesesEq={mesesEq}
                     indeterminado={indeterminado}
                     jornadas={jornadas}
+                    jornadasDelTipo={jornadasDelTipo}
+                    diasPorSemanaDelTipo={Number(contratoDoc?.data?.diasPorSemana) || null}
+                    conservarJornadaExterna={!!jornadasDelTipo}
                     diasSemana={diasDeSemana.length}
                     proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(categoriaActual)}
                     soloNeto={(catalogos.tramitePorContrato.get(contratoRige) || "") === "constancia_cuit"}
