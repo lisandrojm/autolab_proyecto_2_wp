@@ -105,9 +105,9 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
   /** «menu» = las tarjetas; las otras, adentro de una sección (la flecha vuelve al menú). */
   const [pestana, setPestana] = useState<"menu" | "historial" | "por_vencer" | "plantillas">(pestanaInicial || "menu");
   const SECCIONES: { id: "historial" | "por_vencer" | "plantillas"; label: string; icon: typeof faClock }[] = [
-    // Orden de las tarjetas: Enviados y Renovaciones arriba (en fila), Equipos debajo.
+    // Orden de las tarjetas: Enviados y Vencimientos arriba (en fila), Equipos debajo.
     { id: "historial", label: "Enviados", icon: faClock },
-    { id: "por_vencer", label: "Renovaciones", icon: faCalendarAlt },
+    { id: "por_vencer", label: "Vencimientos", icon: faCalendarAlt },
     // Tarjeta propia del permiso «Plantillas de equipo» (`dentroDe` Contratación).
     ...(puedePlantillas ? [{ id: "plantillas" as const, label: "Equipos", icon: faLayerGroup }] : []),
   ];
@@ -688,7 +688,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
         icon={pestana === "menu" ? faUsers : (SECCIONES.find((s) => s.id === pestana)?.icon ?? faUsers)}
         titulo={pestana === "menu" ? "Solicitud de Contratación" : (SECCIONES.find((s) => s.id === pestana)?.label ?? "Solicitud de Contratación")}
         onBack={() => (pestana === "menu" ? onNavigate("home") : setPestana("menu"))}
-        info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Enviados» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Renovaciones» aparecen los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer. Con «Filtrar» elegís con cuánta anticipación verlos (7, 15, 30, 45 o 60 días, y queda guardado) y por qué tipo de contrato."}
+        info={"Pedí altas de personal. Con el + cargás una solicitud con los datos de la persona, el área y el turno donde va a trabajar.\n\nLa solicitud queda pendiente hasta que la aprueben. En «Enviados» están las solicitudes de contratación con el estado de cada una —pendiente, aprobada, rechazada o cancelada—; tocá una para ver el detalle. Quiénes se registraron con tu link no son solicitudes: eso se mira en Registro.\n\nEn «Vencimientos» aparecen los contratos de tu gente que terminan: renovalos —sale una solicitud con la etiqueta Renovación— o dejalos vencer. Con «Filtrar» elegís con cuánta anticipación verlos (7, 15, 30, 45 o 60 días, y queda guardado) y por qué tipo de contrato."}
       />
 
       <div className="px-4 pt-4">
@@ -805,7 +805,7 @@ export default function UserHistory({ onNavigate, pestanaInicial }: UserHistoryP
           <div className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
               <p className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-slate-100">
-                <FontAwesomeIcon icon={faFilter} className="h-4 w-4" /> Filtrar renovaciones
+                <FontAwesomeIcon icon={faFilter} className="h-4 w-4" /> Filtrar vencimientos
               </p>
               <button type="button" onClick={() => setFiltrosAbiertos(false)} aria-label="Cerrar" className="flex h-9 w-9 items-center justify-center rounded text-slate-500">
                 <FontAwesomeIcon icon={faXmark} className="h-5 w-5" />
