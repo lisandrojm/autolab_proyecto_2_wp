@@ -62,6 +62,16 @@ export async function rolesPorDefecto(tenantId: Types.ObjectId, session?: Client
   return [(defaultRole._id as any).toString()];
 }
 
+/** Editada una solicitud, su registro en Dropbox se reescribe: si no, seguiría diciendo lo pedido al principio. */
+export function efectosDeSolicitudEditada(tenantId: Types.ObjectId, user: any, nombreAnterior?: string): void {
+  const creadorId = user?.metadata?.solicitudCreadaPor;
+  void ((creadorId ? User.findById(creadorId).select("firstName lastName").lean() : Promise.resolve(null)) as Promise<any>)
+    .catch(() => null)
+    .then((c) =>
+      guardarSolicitudEnDropbox({ tenantId: String(tenantId), solicitud: user, creador: creadorId ? { id: String(creadorId), nombre: `${c?.firstName || ""} ${c?.lastName || ""}`.trim() } : null, nombreAnterior }),
+    );
+}
+
 /**
  * DESPUÉS DE GUARDAR: lo que la solicitud dispara afuera. Cada efecto con su propio catch donde hace
  * falta: la solicitud ya existe, y eso es lo que no se puede perder.

@@ -21,7 +21,7 @@ import { olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 import { quitarDelConteo, sumarAlConteo } from "../services/conteoUsuariosTenant.js";
 import { contratoDePersonaEnFechas, pedidoDesdeSolicitud, rechazoAltaArcaConContrato, superposicionesDeAlta } from "../services/superposicion.js";
 import { mensajeSoloServicios } from "../utils/superposicionContratos.js";
-import { efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "../services/solicitudes.js";
+import { efectosDeSolicitudEditada, efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "../services/solicitudes.js";
 import { Area } from "../models/Area.js";
 import { Shift } from "../models/Shift.js";
 import { Client } from "../models/Client.js";
@@ -3129,6 +3129,8 @@ router.patch("/:id", requireTenant, authenticateToken, permisoSobreSolicitudProp
       res.status(404).json({ error: "User not found" });
       return;
     }
+    if ((data as any).metadata?.isSolicitud === true) efectosDeSolicitudEditada(req.tenantObjectId!, user, (currentUser.metadata as any)?.fullName);
+
     /*
       UNA SOLICITUD CORREGIDA VUELVE A ESPERAR RESOLUCIÓN, así que hay que avisar.
 

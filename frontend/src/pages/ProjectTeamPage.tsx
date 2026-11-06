@@ -2572,7 +2572,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           // Los días sueltos pedidos (contratos por día): sin esto aprobar los perdía y quedaba sólo el período.
           ...(Array.isArray(metaSolicitud.fechasTrabajadas) ? { fechas_trabajadas: (metaSolicitud.fechasTrabajadas as string[]).map((f) => String(f).slice(0, 10)) } : {}),
           ...(Number(metaSolicitud.workdaysCount) ? { cantidad_jornadas_laborales: Number(metaSolicitud.workdaysCount) } : {}),
-          ...(Number(metaSolicitud.dailyRate) ? { sueldo_jornada: Number(metaSolicitud.dailyRate) } : {}),
+          // Un 0 pedido es un importe: tratado como «sin importe», abría con la jornada del contrato anterior de la persona.
+          ...(metaSolicitud.dailyRate != null && Number.isFinite(Number(metaSolicitud.dailyRate)) ? { sueldo_jornada: Number(metaSolicitud.dailyRate) } : {}),
           ...(metaSolicitud.isReplacement !== undefined ? { reemplazo: !!metaSolicitud.isReplacement } : {}),
           ...(metaSolicitud.empleado_id_reemplezado ? { empleado_id_reemplezado: String(metaSolicitud.empleado_id_reemplezado) } : {}),
           // El motivo que eligió quien pidió el alta.
@@ -2623,8 +2624,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const catParaEscala = allCategoriasSat.find((c) => String(c.data?.id) === String(deLaSolicitud.categoria_sat_id ?? initialCatId));
     const tipoParaEscala = contratos.find((c) => c._id === (deLaSolicitud.contrato_id ?? initialContratoId));
     const jornadaDeEscala = catParaEscala ? importePorJornadaDeCategoria(catParaEscala, Number(tipoParaEscala?.data?.multiplicadorDiario) || null, Number(tipoParaEscala?.data?.cantidadJornadas) || null) : 0;
-    const jornadaInicial = renovar && jornadaDeEscala > 0 ? jornadaDeEscala : Number(deLaSolicitud.sueldo_jornada) || Number(lastContract?.sueldo_jornada) || 0;
-    jornadaBaseWizard.current = jornadaInicial > 0 ? jornadaInicial : null;
+    const jornadaInicial = renovar && jornadaDeEscala > 0 ? jornadaDeEscala : Number(deLaSolicitud.sueldo_jornada ?? lastContract?.sueldo_jornada) || 0;
+    jornadaBaseWizard.current = jornadaInicial > 0 || deLaSolicitud.sueldo_jornada === 0 ? jornadaInicial : null;
     // La propuesta automática (ver abajo) arranca con la categoría y el tipo con los que abre: abrir no es «cambiarlos».
     propuestaWizard.current = `${deLaSolicitud.categoria_sat_id ?? initialCatId}::${deLaSolicitud.contrato_id ?? initialContratoId}`;
     // Reset wizard data with pulled data or defaults
@@ -5435,7 +5436,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       </button>
                     </div>
                   )}
-                  <ImportesDelContrato conservarJornadaExterna className="grid grid-cols-1 md:grid-cols-2 gap-4" valorJornada={wizardData.sueldo_jornada ? String(wizardData.sueldo_jornada) : ''} onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))} mesesEq={mesesEqWizard} indeterminado={indeterminadoWizard} jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0} jornadasDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.cantidadJornadas) || null} diasPorSemanaDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.diasPorSemana) || null} proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id)))} diasSemana={diasSemanaWizard} soloNeto={soloNetoWizard} estadoReferencia={nombreEstadoWizard} resumenTotal={resumenDelTotalWizard} bloqueado={importesEnCeroWizard || (!esServicios && !wizardData.categoria_sat_id)} textoBloqueado={importesEnCeroWizard ? "En 0: este tipo de contrato es un cambio de franco (el día no se paga)." : "Se habilita al elegir la categoría: el importe sale de su escala."} claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1" claseCampo="input-field w-full" claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300" claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1" />
+                  <ImportesDelContrato conservarJornadaExterna className="grid grid-cols-1 md:grid-cols-2 gap-4" valorJornada={wizardData.sueldo_jornada || approvingSolicitudId ? String(wizardData.sueldo_jornada) : ''} onValorJornada={(v) => setWizardData((prev) => ({ ...prev, sueldo_jornada: Number(v) || 0 }))} mesesEq={mesesEqWizard} indeterminado={indeterminadoWizard} jornadas={Number(wizardData.cantidad_jornadas_laborales) || 0} jornadasDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.cantidadJornadas) || null} diasPorSemanaDelTipo={Number(contratos.find((c) => c._id === wizardData.contrato_id)?.data?.diasPorSemana) || null} proporcionNeto={esServicios ? null : proporcionNetoDeCategoria(allCategoriasSat.find((c) => String(c.data?.id) === String(wizardData.categoria_sat_id)))} diasSemana={diasSemanaWizard} soloNeto={soloNetoWizard} estadoReferencia={nombreEstadoWizard} resumenTotal={resumenDelTotalWizard} bloqueado={importesEnCeroWizard || (!esServicios && !wizardData.categoria_sat_id)} textoBloqueado={importesEnCeroWizard ? "En 0: este tipo de contrato es un cambio de franco (el día no se paga)." : "Se habilita al elegir la categoría: el importe sale de su escala."} claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1" claseCampo="input-field w-full" claseCampoTotal="input-field w-full font-bold text-emerald-700 dark:text-emerald-300" claseAyuda="text-[11px] text-gray-500 dark:text-gray-400 ml-1" />
 
                   {/* Lo que se deriva de la categoría y de las jornadas: se muestra, no se carga. */}
                   <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
