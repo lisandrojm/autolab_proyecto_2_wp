@@ -43,7 +43,6 @@ export const LoginPage: React.FC = () => {
   // La guarda de rutas (`ProtectedRoute`) cierra la sesión de quien entra a una pantalla sin permiso y
   // manda acá: se dice por qué, así no parece que se cayó la sesión sola.
   const [error, setError] = useState(() => ((location.state as any)?.motivo === MOTIVO_SIN_ACCESO ? "No tenés acceso a esa pantalla. Se cerró la sesión: ingresá de nuevo." : ""));
-  const [lastErrorObj, setLastErrorObj] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [availableClients, setAvailableClients] = useState<ClientOption[]>([]);
   const [showClientSelector, setShowClientSelector] = useState(false);
@@ -136,7 +135,7 @@ export const LoginPage: React.FC = () => {
         }
         return "Ocurrió un error al iniciar sesión. Verifica tus credenciales";
       }
-      return `[${status ?? "ERR"}] ${msg}`;
+      return msg;
     }
 
     if (err?.__api) {
@@ -153,7 +152,7 @@ export const LoginPage: React.FC = () => {
         return "Error de autenticación. Verifica tus credenciales";
       }
 
-      return `[${status}] ${msg}`;
+      return msg;
     }
 
     if (err instanceof TypeError && /fetch/i.test(String(err))) {
@@ -173,7 +172,6 @@ export const LoginPage: React.FC = () => {
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
     setError("");
-    setLastErrorObj(null);
     try {
       const result = await login(data.email, data.password, data.tenantSlug, data.clientId);
 
@@ -233,10 +231,9 @@ export const LoginPage: React.FC = () => {
       navigate(isSuperadmin ? "/tenants" : "/");
     } catch (err: any) {
       console.error("[login:error]", err);
-      setLastErrorObj(err);
-      // Email o contraseña mal: el mensaje de siempre, sin el «[401]» técnico adelante.
-      if (err?.response?.status === 401) {
-        setError("Credenciales inválidas. Revisá el email y la contraseña.");
+      // Email o contraseña mal. `authStore.login` usa fetch: el error trae `status`, no `response.status`.
+      if (err?.status === 401 || err?.response?.status === 401) {
+        setError("Credenciales inválidas");
         return;
       }
       const msg = extractApiError(err);
@@ -395,14 +392,6 @@ export const LoginPage: React.FC = () => {
             {error && (
               <div className="animate-fade-in rounded-xl border border-red-500/30 bg-red-500/10 p-3.5">
                 <p className="text-sm text-red-300">{error}</p>
-
-                {/* Solo en desarrollo: ver objeto de error completo */}
-                {import.meta.env.DEV && lastErrorObj && (
-                  <details className="mt-2 rounded border border-red-500/40 p-2">
-                    <summary className="cursor-pointer text-xs text-red-300/80">Detalles del error (solo dev)</summary>
-                    <pre className="mt-2 max-h-56 overflow-auto text-[10px] leading-4 text-red-200/80">{JSON.stringify(lastErrorObj, null, 2)}</pre>
-                  </details>
-                )}
               </div>
             )}
 

@@ -1,7 +1,8 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faCircleInfo, faFileContract, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../Modal";
+import { InfoModal } from "../../../../../components/ui/InfoModal";
 import { EstadoBadge } from "../../../../../components/EstadoSelect";
 import { InfoItem } from "../../../../../api/info";
 import { estadoImpositivoPorTipo, TipoImpositivo } from "../../../../../utils/tramiteImpositivo";
@@ -21,6 +22,8 @@ import { estadoImpositivoPorTipo, TipoImpositivo } from "../../../../../utils/tr
 export interface ContratoParaElegir {
   _id: string;
   name: string;
+  /** El ayudamemoria del tipo (Configuración → Contratos → Descripción): en qué casos se usa. */
+  data?: { descripcion?: string };
 }
 
 interface Comun {
@@ -75,7 +78,10 @@ export function CampoTipoContrato({ contratos, contratoId, tramitePorContrato, e
  * adentro del formulario tapa el resto en un teléfono.
  */
 export function ModalTipoContrato({ abierto, onCerrar, contratos, contratoId, tramitePorContrato, estados, onElegir, zIndex = 80 }: Comun & { abierto: boolean; onCerrar: () => void; onElegir: (contratoId: string) => void; zIndex?: number }) {
+  const [verDescripciones, setVerDescripciones] = React.useState(false);
+  const conDescripcion = contratos.filter((c) => c.data?.descripcion?.trim());
   return (
+    <>
     <Modal
       isOpen={abierto}
       onClose={onCerrar}
@@ -91,6 +97,13 @@ export function ModalTipoContrato({ abierto, onCerrar, contratos, contratoId, tr
         </div>
       }
     >
+      {/* Un solo botón para todos: uno por fila llenaba la lista de íconos iguales. */}
+      {conDescripcion.length > 0 && (
+        <button type="button" onClick={() => setVerDescripciones(true)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-500 transition-colors hover:text-blue-600">
+          <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
+          Descripción de tipos
+        </button>
+      )}
       <div className="grid grid-cols-1 gap-2 py-2">
         {contratos.map((c) => {
           const elegido = contratoId === c._id;
@@ -115,5 +128,22 @@ export function ModalTipoContrato({ abierto, onCerrar, contratos, contratoId, tr
         })}
       </div>
     </Modal>
+    <InfoModal isOpen={verDescripciones} onClose={() => setVerDescripciones(false)} title="Descripción de tipos" size="md" zIndex={zIndex + 10}>
+      <div className="space-y-4">
+        {conDescripcion.map((c) => {
+          const estado = estadoDelTramite({ estados, tramitePorContrato }, c._id);
+          return (
+            <div key={c._id} className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold uppercase text-slate-900 dark:text-white">{c.name}</p>
+                {estado && <EstadoBadge name={estado.name} />}
+              </div>
+              <p className="whitespace-pre-line text-xs text-slate-500 dark:text-slate-400">{c.data!.descripcion!.trim()}</p>
+            </div>
+          );
+        })}
+      </div>
+    </InfoModal>
+    </>
   );
 }
