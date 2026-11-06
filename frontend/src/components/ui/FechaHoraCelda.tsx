@@ -28,10 +28,8 @@ export const FechaHoraCelda: React.FC<{ valor?: string | null; vacio?: React.Rea
   return (
     <div className="text-xs leading-tight">
       <p className="text-gray-500 dark:text-gray-400">{f.diaSemana}</p>
-      <p className="text-gray-900 dark:text-white">
-        {f.fecha}
-        {f.hora && <span className="text-gray-500 dark:text-gray-400"> · {f.hora} h</span>}
-      </p>
+      <p className="text-gray-900 dark:text-white whitespace-nowrap">{f.fecha}</p>
+      {f.hora && <p className="text-gray-500 dark:text-gray-400">{f.hora} h</p>}
     </div>
   );
 };
