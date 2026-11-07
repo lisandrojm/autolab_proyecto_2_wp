@@ -427,6 +427,18 @@ const BotonHabilitarFirma: React.FC<{
   );
 };
 
+/*
+  LA COLUMNA «TIPO DE CONTRATO» LLEVA EL TRÁMITE DEL TIPO, NO EL ESTADO (07/11/2026, pedido del usuario).
+  Arriba del nombre del tipo va sólo el badge de ARCA o Servicios —el mismo que muestra el selector de
+  Tipo de contrato del wizard—. «Firma pendiente», «Solicitud pendiente» o «Envío de documentación» son
+  el ESTADO del contrato y van en su columna. Sin trámite vinculado al tipo, no se dibuja nada.
+*/
+const BadgeTramiteDelTipo: React.FC<{ record: ContractOverviewRow; contratoFrames: ContratoFrameItem[]; allEstados: InfoItem[] }> = ({ record, contratoFrames, allEstados }) => {
+  // Con su NOMBRE y su color principal («Pedido de ARCA», «Servicios»), no la etiqueta secundaria gris (AFIP / SERVICIOS).
+  const e = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados);
+  return e ? <EstadoBadge name={e.name} className="text-[10px] whitespace-nowrap" /> : null;
+};
+
 const EstadoImpositivoCellBase: React.FC<{ record: ContractOverviewRow; contratoFrames: ContratoFrameItem[]; allEstados: InfoItem[] }> = ({ record, contratoFrames, allEstados }) => {
   const estadoImpositivo = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados);
   if (!estadoImpositivo) return <span className="text-xs text-gray-400">—</span>;
@@ -3933,8 +3945,8 @@ export const ContractBulkFirmaTab: React.FC<{
                     Proyecto
                   </BotonOrden>
                 </th>
-                {/* Sin «Estado»: va como badge arriba del contrato (01/11/2026). */}
-                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Impositivo</th>
+                {/* «Estado» es el estado del contrato; el trámite (ARCA / Servicios) va arriba del tipo de contrato (07/11/2026). */}
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado</th>
                 <ContractActionsHeader />
               </tr>
             </thead>
@@ -3989,7 +4001,7 @@ export const ContractBulkFirmaTab: React.FC<{
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       <div className="flex flex-col items-start gap-1">
-                        <EstadoBadge name={r.nombre_estado_empleado || ''} />
+                        <BadgeTramiteDelTipo record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
                         <span>{r.nombre_contrato || '—'}</span>
                       </div>
                     </td>
@@ -4003,7 +4015,7 @@ export const ContractBulkFirmaTab: React.FC<{
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
                     <td className="px-4 py-3">
-                      <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
+                      {r.nombre_estado_empleado ? <EstadoBadge name={r.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}
                     </td>
                     <ContractActionsCell record={r} onDeleted={() => load(true)} />
                   </tr>
@@ -4214,8 +4226,8 @@ export const ContractBulkContratadosTab: React.FC<{
                 <th className={th}>
                   <BotonOrden columna="proyecto" {...ordenProps}>Proyecto</BotonOrden>
                 </th>
-                {/* Sin «Estado»: va como badge arriba del tipo de contrato (01/11/2026). */}
-                <th className={th}>Estado Impositivo</th>
+                {/* «Estado» es el estado del contrato; el trámite (ARCA / Servicios) va arriba del tipo de contrato (07/11/2026). */}
+                <th className={th}>Estado</th>
                 <ContractActionsHeader />
               </tr>
             </thead>
@@ -4252,14 +4264,14 @@ export const ContractBulkContratadosTab: React.FC<{
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
                       <div className="flex flex-col items-start gap-1">
-                        <EstadoBadge name={r.nombre_estado_empleado || ''} />
+                        <BadgeTramiteDelTipo record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
                         <span>{r.nombre_contrato || '—'}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
-                    <td className="px-4 py-3">{pendiente ? <span className="text-xs text-gray-400">—</span> : <EstadoImpositivoCell record={r} contratoFrames={contratoFrames} allEstados={allEstados} />}</td>
+                    <td className="px-4 py-3">{r.nombre_estado_empleado ? <EstadoBadge name={r.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}</td>
                     {pendiente ? <td className="px-4 py-3" /> : <ContractActionsCell record={r} onDeleted={() => load(true)} />}
                   </tr>
                 );
