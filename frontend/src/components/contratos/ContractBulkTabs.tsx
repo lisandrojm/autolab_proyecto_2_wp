@@ -165,8 +165,8 @@ interface FiltrosDeContrato {
   usuarios: string;
   vigencia: string;
   novedades: string;
-  tipoContrato: string;
-  /** Varios a la vez (07/11/2026): vacío = todos. */
+  /** Tipo y estado: varios a la vez (07/11/2026): vacío = todos. */
+  tipoContrato: string[];
   estadoContrato: string[];
   reemplazo: string;
 }
@@ -186,14 +186,24 @@ const pasaFiltrosDeContrato = (r: ContractOverviewRow, f: FiltrosDeContrato): bo
     const cargaNovedades = (r.userRoles || []).some((rol) => (rol.permissions || []).includes(PERMISO_NOVEDADES_MOBILE));
     if (f.novedades === 'con' ? !cargaNovedades : cargaNovedades) return false;
   }
-  if (f.tipoContrato && r.nombre_contrato !== f.tipoContrato) return false;
+  if (f.tipoContrato.length > 0 && !f.tipoContrato.includes(r.nombre_contrato || '')) return false;
   if (f.estadoContrato.length > 0 && !f.estadoContrato.includes(estadoLabel(r.nombre_estado_empleado || ''))) return false;
   if (f.reemplazo && (f.reemplazo === 'con' ? !r.reemplazo : r.reemplazo)) return false;
   return true;
 };
 
-/** Las opciones de Tipo de contrato y de Estado de contrato: las que aparecen en las filas. */
-const opcionesDeTipoContrato = (rows: ContractOverviewRow[]) => [...new Set(rows.map((r) => r.nombre_contrato).filter(Boolean) as string[])].sort().map((v) => ({ value: v, label: v }));
+/*
+  LAS OPCIONES DEL FILTRO DE TIPO DE CONTRATO: las que aparecen en las filas, en el orden manual de
+  Configuración → Contratos (07/11/2026, pedido del usuario; `contratosAPI.list` ya viene en ese orden).
+  Un tipo que no está en el catálogo (renombrado o borrado) va al final, alfabético.
+*/
+const opcionesDeTipoContrato = (rows: ContractOverviewRow[], tipos: ContratoItem[]) => {
+  const pos = new Map(tipos.map((t, i) => [claveEstado(t.name), i]));
+  const posDe = (v: string) => pos.get(claveEstado(v)) ?? Infinity;
+  return [...new Set(rows.map((r) => r.nombre_contrato).filter(Boolean) as string[])]
+    .sort((a, b) => posDe(a) - posDe(b) || a.localeCompare(b, 'es'))
+    .map((v) => ({ value: v, label: v }));
+};
 /*
   LAS OPCIONES DEL FILTRO DE ESTADO (07/11/2026, pedido del usuario): en el orden del flujo de
   dependencias (`ordenDependencia` del ABM de estados; sin paso, al final en el orden del ABM), con el
@@ -903,7 +913,7 @@ export const ContractBulkAfipTab: React.FC<{
   const [filterUserStatus, setFilterUserStatus] = useState('');
   const [filterVigencia, setFilterVigencia] = useState('');
   const [filterRolMobile, setFilterRolMobile] = useState('');
-  const [filterTipoContrato, setFilterTipoContrato] = useState('');
+  const [filterTipoContrato, setFilterTipoContrato] = useState<string[]>([]);
   const [filterEstadoContrato, setFilterEstadoContrato] = useState<string[]>([]);
   /** Filtro por estado de la obra social: convierte la grilla en la cola de trabajo del trámite. */
   const [filterObraSocial, setFilterObraSocial] = useState<EstadoObraSocial | ''>('');
@@ -1392,7 +1402,7 @@ export const ContractBulkAfipTab: React.FC<{
       .forEach((r) => r.projectId && m.set(r.projectId, r.projectName || r.projectId));
     return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
   }, [impositivoRows, filterClientId]);
-  const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(impositivoRows.map((x) => x.row)), [impositivoRows]);
+  const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(impositivoRows.map((x) => x.row), afipCat.tipos), [impositivoRows, afipCat.tipos]);
   const estadoContratoOptions = useMemo(() => opcionesDeEstadoContrato(impositivoRows.map((x) => x.row), allEstados), [impositivoRows, allEstados]);
   // Las empresas del filtro son las creadas en el ABM (no solo las ya usadas en algún contrato), para
   // poder elegir de antemano por cuál empresa se va a presentar el alta.
@@ -1852,14 +1862,16 @@ export const ContractBulkAfipTab: React.FC<{
                 options: OPCIONES_VIGENCIA,
               },
             ]}
-            // Estado de contrato: varios a la vez, en el modal de casillas (07/11/2026, pedido del usuario).
-            multiSelectFilters={estadoContratoOptions.length > 0 ? [{ label: 'Estado de contrato', values: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: 'Todos los estados', options: estadoContratoOptions, renderOption: renderOpcionEstado }] : []}
+            // Tipo y estado de contrato: varios a la vez, en el modal de casillas (07/11/2026, pedido del usuario).
+            multiSelectFilters={[
+              { label: 'Tipo de contrato', values: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
+              ...(estadoContratoOptions.length > 0 ? [{ label: 'Estado de contrato', values: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: 'Todos los estados', options: estadoContratoOptions, renderOption: renderOpcionEstado }] : []),
+            ]}
             selectFilters={[
               { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },
               { label: 'Proyecto', value: filterProjectId, onChange: setFilterProjectId, placeholder: 'Todos los proyectos', options: projectOptions },
               // El filtro de Empresa se hace con la columna "Empresa Contrato" de cada fila, no con un select general.
               { label: 'Novedades', value: filterRolMobile, onChange: setFilterRolMobile, placeholder: 'Todos', options: MOBILE_ROLE_OPTIONS },
-              { label: 'Tipo de contrato', value: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
               // Solo en Alta temprana: en Constancia de CUIT la obra social no participa del trámite.
               ...(filterTipo === 'alta_temprana_afip'
                 ? [{ label: 'Obra social', value: filterObraSocial, onChange: (v: string) => setFilterObraSocial(v as EstadoObraSocial | ''), placeholder: 'Todas', options: FILTROS_OBRA_SOCIAL }]
@@ -3486,7 +3498,7 @@ export const ContractBulkFirmaTab: React.FC<{
   const [filterUserStatus, setFilterUserStatus] = useState('');
   const [filterVigencia, setFilterVigencia] = useState('');
   const [filterRolMobile, setFilterRolMobile] = useState('');
-  const [filterTipoContrato, setFilterTipoContrato] = useState('');
+  const [filterTipoContrato, setFilterTipoContrato] = useState<string[]>([]);
   const [filterEstadoContrato, setFilterEstadoContrato] = useState<string[]>([]);
   const [filterReemplazo, setFilterReemplazo] = useState('');
   /** Estado de la obra social: el mismo filtro y la misma clasificación que Trámite impositivo. */
@@ -3594,7 +3606,7 @@ export const ContractBulkFirmaTab: React.FC<{
       return true;
     });
   }, [rowsEnEnvio, search, filterClientId, filterProjectId, filterEmpresaId, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterObraSocial, afipCat]);
-  const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(rowsEnEnvio), [rowsEnEnvio]);
+  const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(rowsEnEnvio, tiposContrato), [rowsEnEnvio, tiposContrato]);
   const estadoContratoOptions = useMemo(() => opcionesDeEstadoContrato(rowsEnEnvio, allEstados), [rowsEnEnvio, allEstados]);
 
   const clientOptions = useMemo(() => {
@@ -3840,14 +3852,16 @@ export const ContractBulkFirmaTab: React.FC<{
               { label: 'Estado de usuarios', value: filterUserStatus, onChange: setFilterUserStatus, options: OPCIONES_ESTADO_USUARIOS },
               { label: 'Contratos', value: filterVigencia, onChange: setFilterVigencia, options: OPCIONES_VIGENCIA },
             ]}
-            // Estado de contrato: varios a la vez, en el modal de casillas (07/11/2026, pedido del usuario).
-            multiSelectFilters={estadoContratoOptions.length > 0 ? [{ label: 'Estado de contrato', values: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: 'Todos los estados', options: estadoContratoOptions, renderOption: renderOpcionEstado }] : []}
+            // Tipo y estado de contrato: varios a la vez, en el modal de casillas (07/11/2026, pedido del usuario).
+            multiSelectFilters={[
+              { label: 'Tipo de contrato', values: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
+              ...(estadoContratoOptions.length > 0 ? [{ label: 'Estado de contrato', values: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: 'Todos los estados', options: estadoContratoOptions, renderOption: renderOpcionEstado }] : []),
+            ]}
             selectFilters={[
               { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },
               { label: 'Proyecto', value: filterProjectId, onChange: setFilterProjectId, placeholder: 'Todos los proyectos', options: projectOptions },
               { label: 'Empresa', value: filterEmpresaId, onChange: setFilterEmpresaId, placeholder: 'Todas las empresas', options: empresaOptions },
               { label: 'Novedades', value: filterRolMobile, onChange: setFilterRolMobile, placeholder: 'Todos', options: MOBILE_ROLE_OPTIONS },
-              { label: 'Tipo de contrato', value: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
               { label: 'Obra social', value: filterObraSocial, onChange: (v: string) => setFilterObraSocial(v as EstadoObraSocial | ''), placeholder: 'Todas', options: FILTROS_OBRA_SOCIAL },
               { label: 'Reemplazo', value: filterReemplazo, onChange: setFilterReemplazo, placeholder: 'Con y sin reemplazo', options: OPCIONES_REEMPLAZO },
             ]}
@@ -4120,9 +4134,16 @@ export const ContractBulkContratadosTab: React.FC<{
   const [search, setSearch] = useState('');
   const [filterClientId, setFilterClientId] = useState('');
   const [filterProjectId, setFilterProjectId] = useState('');
-  const [filterTipoContrato, setFilterTipoContrato] = useState('');
+  const [filterTipoContrato, setFilterTipoContrato] = useState<string[]>([]);
   const [filterVigencia, setFilterVigencia] = useState('');
   const [filterEstado, setFilterEstado] = useState<string[]>([]);
+  // Sólo para ordenar el filtro de Tipo de contrato como en Configuración → Contratos.
+  const [tiposContrato, setTiposContrato] = useState<ContratoItem[]>([]);
+  useEffect(() => {
+    cachedFetch(CLAVE_CACHE_TIPOS_CONTRATO, () => contratosAPI.list())
+      .then(setTiposContrato)
+      .catch(() => setTiposContrato([]));
+  }, []);
 
   const load = useCallback((force = false) => {
     if (force) invalidateRefCache(CONTRACTS_OVERVIEW_CACHE);
@@ -4170,7 +4191,7 @@ export const ContractBulkContratadosTab: React.FC<{
     rows.filter((r) => !filterClientId || r.clientId === filterClientId).forEach((r) => r.projectId && m.set(r.projectId, r.projectName || r.projectId));
     return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
   }, [rows, filterClientId]);
-  const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(rows), [rows]);
+  const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(rows, tiposContrato), [rows, tiposContrato]);
   const estadoOptions = useMemo(() => opcionesDeEstadoContrato(rows, allEstados), [rows, allEstados]);
 
   const { ordenados, orden, setOrden, alternar } = useOrdenTabla(
@@ -4211,12 +4232,14 @@ export const ContractBulkContratadosTab: React.FC<{
             searchPlaceholder="Buscar por colaborador, CUIT, proyecto o contrato..."
             extraActions={<MenuOrdenContratos orden={orden} setOrden={setOrden} columnaAlta="altaBaja" porDefecto="solicitud_desc" />}
             radioFilters={[{ label: 'Contratos', value: filterVigencia, onChange: setFilterVigencia, options: OPCIONES_VIGENCIA }]}
-            // Estado: varios a la vez, en el modal de casillas (07/11/2026, pedido del usuario).
-            multiSelectFilters={[{ label: 'Estado', values: filterEstado, onChange: setFilterEstado, placeholder: 'Todos los estados', options: estadoOptions, renderOption: renderOpcionEstado }]}
+            // Tipo de contrato y estado: varios a la vez, en el modal de casillas (07/11/2026, pedido del usuario).
+            multiSelectFilters={[
+              { label: 'Tipo de contrato', values: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
+              { label: 'Estado', values: filterEstado, onChange: setFilterEstado, placeholder: 'Todos los estados', options: estadoOptions, renderOption: renderOpcionEstado },
+            ]}
             selectFilters={[
               { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },
               { label: 'Proyecto', value: filterProjectId, onChange: setFilterProjectId, placeholder: 'Todos los proyectos', options: projectOptions },
-              { label: 'Tipo de contrato', value: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
             ]}
           />
         </div>
