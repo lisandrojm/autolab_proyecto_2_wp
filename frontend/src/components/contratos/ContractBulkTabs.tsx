@@ -166,7 +166,8 @@ interface FiltrosDeContrato {
   vigencia: string;
   novedades: string;
   tipoContrato: string;
-  estadoContrato: string;
+  /** Varios a la vez (07/11/2026): vacío = todos. */
+  estadoContrato: string[];
   reemplazo: string;
 }
 
@@ -186,7 +187,7 @@ const pasaFiltrosDeContrato = (r: ContractOverviewRow, f: FiltrosDeContrato): bo
     if (f.novedades === 'con' ? !cargaNovedades : cargaNovedades) return false;
   }
   if (f.tipoContrato && r.nombre_contrato !== f.tipoContrato) return false;
-  if (f.estadoContrato && estadoLabel(r.nombre_estado_empleado || '') !== f.estadoContrato) return false;
+  if (f.estadoContrato.length > 0 && !f.estadoContrato.includes(estadoLabel(r.nombre_estado_empleado || ''))) return false;
   if (f.reemplazo && (f.reemplazo === 'con' ? !r.reemplazo : r.reemplazo)) return false;
   return true;
 };
@@ -879,7 +880,7 @@ export const ContractBulkAfipTab: React.FC<{
   const [filterVigencia, setFilterVigencia] = useState('');
   const [filterRolMobile, setFilterRolMobile] = useState('');
   const [filterTipoContrato, setFilterTipoContrato] = useState('');
-  const [filterEstadoContrato, setFilterEstadoContrato] = useState('');
+  const [filterEstadoContrato, setFilterEstadoContrato] = useState<string[]>([]);
   /** Filtro por estado de la obra social: convierte la grilla en la cola de trabajo del trámite. */
   const [filterObraSocial, setFilterObraSocial] = useState<EstadoObraSocial | ''>('');
   const [filterReemplazo, setFilterReemplazo] = useState('');
@@ -1827,6 +1828,8 @@ export const ContractBulkAfipTab: React.FC<{
                 options: OPCIONES_VIGENCIA,
               },
             ]}
+            // Estado de contrato: varios a la vez, en el modal de casillas (07/11/2026, pedido del usuario).
+            multiSelectFilters={[{ label: 'Estado de contrato', values: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: 'Todos los estados', options: estadoContratoOptions }]}
             selectFilters={[
               { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },
               { label: 'Proyecto', value: filterProjectId, onChange: setFilterProjectId, placeholder: 'Todos los proyectos', options: projectOptions },
@@ -1837,7 +1840,6 @@ export const ContractBulkAfipTab: React.FC<{
               ...(filterTipo === 'alta_temprana_afip'
                 ? [{ label: 'Obra social', value: filterObraSocial, onChange: (v: string) => setFilterObraSocial(v as EstadoObraSocial | ''), placeholder: 'Todas', options: FILTROS_OBRA_SOCIAL }]
                 : []),
-              { label: 'Estado de contrato', value: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: 'Todos los estados', options: estadoContratoOptions, renderOption: (opt: { label: string }) => <EstadoBadge name={opt.label} /> },
               {
                 label: 'Reemplazo',
                 value: filterReemplazo,
@@ -3461,7 +3463,7 @@ export const ContractBulkFirmaTab: React.FC<{
   const [filterVigencia, setFilterVigencia] = useState('');
   const [filterRolMobile, setFilterRolMobile] = useState('');
   const [filterTipoContrato, setFilterTipoContrato] = useState('');
-  const [filterEstadoContrato, setFilterEstadoContrato] = useState('');
+  const [filterEstadoContrato, setFilterEstadoContrato] = useState<string[]>([]);
   const [filterReemplazo, setFilterReemplazo] = useState('');
   /** Estado de la obra social: el mismo filtro y la misma clasificación que Trámite impositivo. */
   const [filterObraSocial, setFilterObraSocial] = useState<EstadoObraSocial | ''>('');
@@ -3814,6 +3816,8 @@ export const ContractBulkFirmaTab: React.FC<{
               { label: 'Estado de usuarios', value: filterUserStatus, onChange: setFilterUserStatus, options: OPCIONES_ESTADO_USUARIOS },
               { label: 'Contratos', value: filterVigencia, onChange: setFilterVigencia, options: OPCIONES_VIGENCIA },
             ]}
+            // Estado de contrato: varios a la vez, en el modal de casillas (07/11/2026, pedido del usuario).
+            multiSelectFilters={[{ label: 'Estado de contrato', values: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: 'Todos los estados', options: estadoContratoOptions }]}
             selectFilters={[
               { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },
               { label: 'Proyecto', value: filterProjectId, onChange: setFilterProjectId, placeholder: 'Todos los proyectos', options: projectOptions },
@@ -3821,7 +3825,6 @@ export const ContractBulkFirmaTab: React.FC<{
               { label: 'Novedades', value: filterRolMobile, onChange: setFilterRolMobile, placeholder: 'Todos', options: MOBILE_ROLE_OPTIONS },
               { label: 'Tipo de contrato', value: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
               { label: 'Obra social', value: filterObraSocial, onChange: (v: string) => setFilterObraSocial(v as EstadoObraSocial | ''), placeholder: 'Todas', options: FILTROS_OBRA_SOCIAL },
-              { label: 'Estado de contrato', value: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: 'Todos los estados', options: estadoContratoOptions, renderOption: (opt: { label: string }) => <EstadoBadge name={opt.label} /> },
               { label: 'Reemplazo', value: filterReemplazo, onChange: setFilterReemplazo, placeholder: 'Con y sin reemplazo', options: OPCIONES_REEMPLAZO },
             ]}
           />
@@ -4095,7 +4098,7 @@ export const ContractBulkContratadosTab: React.FC<{
   const [filterProjectId, setFilterProjectId] = useState('');
   const [filterTipoContrato, setFilterTipoContrato] = useState('');
   const [filterVigencia, setFilterVigencia] = useState('');
-  const [filterEstado, setFilterEstado] = useState('');
+  const [filterEstado, setFilterEstado] = useState<string[]>([]);
 
   const load = useCallback((force = false) => {
     if (force) invalidateRefCache(CONTRACTS_OVERVIEW_CACHE);
@@ -4184,11 +4187,12 @@ export const ContractBulkContratadosTab: React.FC<{
             searchPlaceholder="Buscar por colaborador, CUIT, proyecto o contrato..."
             extraActions={<MenuOrdenContratos orden={orden} setOrden={setOrden} columnaAlta="altaBaja" porDefecto="solicitud_desc" />}
             radioFilters={[{ label: 'Contratos', value: filterVigencia, onChange: setFilterVigencia, options: OPCIONES_VIGENCIA }]}
+            // Estado: varios a la vez, en el modal de casillas (07/11/2026, pedido del usuario).
+            multiSelectFilters={[{ label: 'Estado', values: filterEstado, onChange: setFilterEstado, placeholder: 'Todos los estados', options: estadoOptions }]}
             selectFilters={[
               { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },
               { label: 'Proyecto', value: filterProjectId, onChange: setFilterProjectId, placeholder: 'Todos los proyectos', options: projectOptions },
               { label: 'Tipo de contrato', value: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
-              { label: 'Estado', value: filterEstado, onChange: setFilterEstado, placeholder: 'Todos los estados', options: estadoOptions },
             ]}
           />
         </div>
