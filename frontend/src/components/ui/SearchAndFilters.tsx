@@ -49,6 +49,8 @@ export interface MultiSelectFilter {
   options: FilterOption[];
   /** Lo que dice el campo cuando no hay nada elegido («Todos los tipos»). */
   placeholder?: string;
+  /** Cómo se ve cada opción en el modal de casillas (p. ej. el badge de un estado, con su color). Sin esto, el texto. */
+  renderOption?: (opt: FilterOption) => React.ReactNode;
 }
 
 export interface SwitchFilter {
@@ -607,7 +609,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                 <div className="mb-3 flex shrink-0 flex-wrap gap-1.5">
                   {eligiendo.marcados.map((v) => (
                     <span key={v} className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 py-1 pl-2.5 pr-1.5 text-[11px] font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                      {etiquetaDe(mf, v)}
+                      {mf.renderOption ? mf.renderOption(mf.options.find((o) => o.value === v) || { value: v, label: etiquetaDe(mf, v) }) : etiquetaDe(mf, v)}
                       <button type="button" onClick={() => alternar(v)} title={`Quitar ${etiquetaDe(mf, v)}`} className="rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-800/60">
                         <FontAwesomeIcon icon={faXmark} className="h-2.5 w-2.5" />
                       </button>
@@ -632,7 +634,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                   return (
                     <label key={o.value} title={o.label} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-all ${marcado ? "border-blue-200 bg-blue-50 ring-2 ring-blue-500/20 dark:border-blue-800 dark:bg-blue-900/20" : "border-gray-100 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800"}`}>
                       <input type="checkbox" checked={marcado} onChange={() => alternar(o.value)} className="h-4 w-4 shrink-0 rounded text-blue-500 focus:ring-blue-500" />
-                      <span className="truncate text-xs font-medium text-gray-700 dark:text-gray-300">{o.label}</span>
+                      {mf.renderOption ? <span className="min-w-0 truncate">{mf.renderOption(o)}</span> : <span className="truncate text-xs font-medium text-gray-700 dark:text-gray-300">{o.label}</span>}
                     </label>
                   );
                 })}

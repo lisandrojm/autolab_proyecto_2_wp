@@ -194,7 +194,31 @@ const pasaFiltrosDeContrato = (r: ContractOverviewRow, f: FiltrosDeContrato): bo
 
 /** Las opciones de Tipo de contrato y de Estado de contrato: las que aparecen en las filas. */
 const opcionesDeTipoContrato = (rows: ContractOverviewRow[]) => [...new Set(rows.map((r) => r.nombre_contrato).filter(Boolean) as string[])].sort().map((v) => ({ value: v, label: v }));
-const opcionesDeEstadoContrato = (rows: ContractOverviewRow[]) => [...new Set(rows.map((r) => r.nombre_estado_empleado).filter(Boolean).map((e) => estadoLabel(e as string)))].map((v) => ({ value: v, label: v }));
+/*
+  LAS OPCIONES DEL FILTRO DE ESTADO (07/11/2026, pedido del usuario): en el orden del flujo de
+  dependencias (`ordenDependencia` del ABM de estados; sin paso, al final en el orden del ABM), con el
+  badge y su color, y SIN los estados impositivos («AFIP», «Servicios»): esos son el trámite del tipo de
+  contrato, no un estado del contrato. `nombre` es el del ABM, para pintar el badge (`value` es la etiqueta,
+  que es lo que compara el filtro).
+*/
+const opcionesDeEstadoContrato = (rows: ContractOverviewRow[], estados: InfoItem[]): Array<{ value: string; label: string; nombre: string }> => {
+  const porClave = new Map(estados.map((e, i) => [claveEstado(e.name), { e, i }]));
+  const vistos = new Map<string, { label: string; nombre: string; paso: number; pos: number }>();
+  for (const r of rows) {
+    const nombre = r.nombre_estado_empleado;
+    if (!nombre) continue;
+    const cat = porClave.get(claveEstado(nombre));
+    if (cat?.e.data?.esImpositivo) continue;
+    const label = estadoLabel(nombre);
+    if (vistos.has(label)) continue;
+    const paso = cat?.e.data?.ordenDependencia;
+    vistos.set(label, { label, nombre: cat?.e.name || nombre, paso: typeof paso === 'number' ? paso : Infinity, pos: cat ? cat.i : Infinity });
+  }
+  // Infinity - Infinity da NaN, que cuenta como empate y pasa al criterio siguiente.
+  return [...vistos.values()].sort((a, b) => a.paso - b.paso || a.pos - b.pos || a.label.localeCompare(b.label, 'es')).map((x) => ({ value: x.label, label: x.label, nombre: x.nombre }));
+};
+/** El badge del estado, con su color, para el modal del filtro. */
+const renderOpcionEstado = (o: { value: string; label: string }) => <EstadoBadge name={(o as { nombre?: string }).nombre || o.value} className="text-[10px]" />;
 
 /** YYYYMMDD de hoy para el nombre del archivo. */
 const hoyStamp = (): string => {
@@ -1369,7 +1393,7 @@ export const ContractBulkAfipTab: React.FC<{
     return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
   }, [impositivoRows, filterClientId]);
   const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(impositivoRows.map((x) => x.row)), [impositivoRows]);
-  const estadoContratoOptions = useMemo(() => opcionesDeEstadoContrato(impositivoRows.map((x) => x.row)), [impositivoRows]);
+  const estadoContratoOptions = useMemo(() => opcionesDeEstadoContrato(impositivoRows.map((x) => x.row), allEstados), [impositivoRows, allEstados]);
   // Las empresas del filtro son las creadas en el ABM (no solo las ya usadas en algún contrato), para
   // poder elegir de antemano por cuál empresa se va a presentar el alta.
   const empresaOptions = useMemo(() => companies.map((c) => ({ value: c._id, label: c.razonSocial })).sort((a, b) => a.label.localeCompare(b.label)), [companies]);
@@ -1829,7 +1853,7 @@ export const ContractBulkAfipTab: React.FC<{
               },
             ]}
             // Estado de contrato: varios a la vez, en el modal de casillas (07/11/2026, pedido del usuario).
-            multiSelectFilters={[{ label: 'Estado de contrato', values: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: 'Todos los estados', options: estadoContratoOptions }]}
+            multiSelectFilters={estadoContratoOptions.length > 0 ? [{ label: 'Estado de contrato', values: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: 'Todos los estados', options: estadoContratoOptions, renderOption: renderOpcionEstado }] : []}
             selectFilters={[
               { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },
               { label: 'Proyecto', value: filterProjectId, onChange: setFilterProjectId, placeholder: 'Todos los proyectos', options: projectOptions },
@@ -3571,7 +3595,7 @@ export const ContractBulkFirmaTab: React.FC<{
     });
   }, [rowsEnEnvio, search, filterClientId, filterProjectId, filterEmpresaId, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterObraSocial, afipCat]);
   const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(rowsEnEnvio), [rowsEnEnvio]);
-  const estadoContratoOptions = useMemo(() => opcionesDeEstadoContrato(rowsEnEnvio), [rowsEnEnvio]);
+  const estadoContratoOptions = useMemo(() => opcionesDeEstadoContrato(rowsEnEnvio, allEstados), [rowsEnEnvio, allEstados]);
 
   const clientOptions = useMemo(() => {
     const m = new Map<string, string>();
@@ -3817,7 +3841,7 @@ export const ContractBulkFirmaTab: React.FC<{
               { label: 'Contratos', value: filterVigencia, onChange: setFilterVigencia, options: OPCIONES_VIGENCIA },
             ]}
             // Estado de contrato: varios a la vez, en el modal de casillas (07/11/2026, pedido del usuario).
-            multiSelectFilters={[{ label: 'Estado de contrato', values: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: 'Todos los estados', options: estadoContratoOptions }]}
+            multiSelectFilters={estadoContratoOptions.length > 0 ? [{ label: 'Estado de contrato', values: filterEstadoContrato, onChange: setFilterEstadoContrato, placeholder: 'Todos los estados', options: estadoContratoOptions, renderOption: renderOpcionEstado }] : []}
             selectFilters={[
               { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },
               { label: 'Proyecto', value: filterProjectId, onChange: setFilterProjectId, placeholder: 'Todos los proyectos', options: projectOptions },
@@ -4147,7 +4171,7 @@ export const ContractBulkContratadosTab: React.FC<{
     return [...m].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
   }, [rows, filterClientId]);
   const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(rows), [rows]);
-  const estadoOptions = useMemo(() => opcionesDeEstadoContrato(rows).sort((a, b) => a.label.localeCompare(b.label, 'es')), [rows]);
+  const estadoOptions = useMemo(() => opcionesDeEstadoContrato(rows, allEstados), [rows, allEstados]);
 
   const { ordenados, orden, setOrden, alternar } = useOrdenTabla(
     filtered,
@@ -4188,7 +4212,7 @@ export const ContractBulkContratadosTab: React.FC<{
             extraActions={<MenuOrdenContratos orden={orden} setOrden={setOrden} columnaAlta="altaBaja" porDefecto="solicitud_desc" />}
             radioFilters={[{ label: 'Contratos', value: filterVigencia, onChange: setFilterVigencia, options: OPCIONES_VIGENCIA }]}
             // Estado: varios a la vez, en el modal de casillas (07/11/2026, pedido del usuario).
-            multiSelectFilters={[{ label: 'Estado', values: filterEstado, onChange: setFilterEstado, placeholder: 'Todos los estados', options: estadoOptions }]}
+            multiSelectFilters={[{ label: 'Estado', values: filterEstado, onChange: setFilterEstado, placeholder: 'Todos los estados', options: estadoOptions, renderOption: renderOpcionEstado }]}
             selectFilters={[
               { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },
               { label: 'Proyecto', value: filterProjectId, onChange: setFilterProjectId, placeholder: 'Todos los proyectos', options: projectOptions },
