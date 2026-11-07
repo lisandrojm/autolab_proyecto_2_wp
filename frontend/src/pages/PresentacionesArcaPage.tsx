@@ -13,6 +13,7 @@ import { avisoForzarAlta, libreDesdeTrasAlta } from "@compartido/arca/vigenciaAl
 import { sweetAlert } from "../utils/sweetAlert";
 import { ProjectTeamPage } from "./ProjectTeamPage";
 import { TablaConEncabezadoFijo, useAltoDeBarra } from "../components/ui/TablaConEncabezadoFijo";
+import { ChipConstancia } from "../components/contratos/HistorialAltasArca";
 
 /*
   A.R.C.A ALTAS AUTOMÁTICAS: cada alta temprana se presenta sola a la hora configurada (14:00 argentinas
@@ -220,6 +221,8 @@ export const PresentacionesArcaPage: React.FC = () => {
         motivo: x.motivo || "",
         quien: k.usuario || "—",
         constancia: x.constancia,
+        // El estado de la constancia HOY (07/11/2026): el mismo chip en vivo que el Registro.
+        ciclo: x.ciclo,
         presentadaDespues: x.presentadaDespues || null,
         // El desde/hasta del contrato: distingue dos filas de la misma persona (otro contrato o el mismo reintentado).
         contrato: x.contrato || null,
@@ -919,7 +922,8 @@ export const PresentacionesArcaPage: React.FC = () => {
                             )}
                           </td>
                           <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                            {r.constancia === undefined ? "—" : r.constancia === null ? "Sin bajar" : CONSTANCIA[r.constancia.destino] || r.constancia.destino}
+                            {r.ciclo ? <ChipConstancia ciclo={r.ciclo} /> : r.constancia === undefined ? "—" : r.constancia === null ? "Sin bajar" : CONSTANCIA[r.constancia.destino] || r.constancia.destino}
+                            {r.ciclo?.motivoRevision && <p className="text-[11px] text-gray-600 dark:text-gray-300 whitespace-normal max-w-xs">{r.ciclo.motivoRevision}</p>}
                             {r.constancia?.validadaEl && <p className="text-[11px] text-gray-400">validada el {fechaCorta(String(r.constancia.validadaEl).slice(0, 10))}</p>}
                             {r.constancia && <p className="text-[11px] text-gray-500">{r.constancia.origen === "automatica" ? "Bajada automática" : r.constancia.origen === "descarga" ? `Bajada por ${r.constancia.por || "un usuario"}` : r.constancia.origen === "subida" ? `Subida por ${r.constancia.por || "un usuario"}` : "Origen sin registrar"}</p>}
                           </td>

@@ -1000,6 +1000,12 @@ class ProjectsAPI {
     return data;
   }
 
+  /** La búsqueda global del Registro: persona, CUIL o código, en las constancias y en todas las carpetas de Dropbox. */
+  async buscarConstanciasArca(q: string): Promise<{ registros: ConstanciaArcaEnPantalla[]; documentos: Array<{ nombre: string; path: string; carpeta: string }> }> {
+    const { data } = await axios.get(`/contratos/altas-arca/constancias/buscar`, { headers: this.getHeaders(), params: { q } });
+    return data;
+  }
+
   /** La pantalla de ARCA (HTML anonimizado) tal como quedó en una tanda, para verla en una pestaña. */
   async htmlTandaAltasArca(logId: string, n: number): Promise<string> {
     const { data } = await axios.get(`/contratos/altas-arca/historial/${logId}/tandas/${n}/html`, { headers: this.getHeaders(), responseType: "text" });
@@ -1149,7 +1155,32 @@ export interface CorridaAltasGuardada {
     presentadaDespues?: { fecha: string; logId: string; automatica: boolean; usuario: string; via: string } | null;
     /** El desde/hasta del contrato ("YYYY-MM-DD"; baja vacía = indeterminado). Distingue dos altas de la misma persona con la misma empleadora. */
     contrato?: { alta: string; baja: string } | null;
+    /** El ciclo de su constancia HOY (`constancias_arca`, 07/11/2026). Ausente = servidor anterior. */
+    ciclo?: ConstanciaArcaEnPantalla | null;
   }>;
+}
+
+/** Una constancia de ARCA como la ven las pantallas (ver `server/src/services/arca/constanciasArca.ts`). */
+export interface ConstanciaArcaEnPantalla {
+  clave: string;
+  cuil: string;
+  nombre: string;
+  userProjectId: string;
+  contractIndex: number;
+  empresaId: string;
+  empresaRazonSocial: string;
+  fechaAlta: string;
+  fechaBaja: string;
+  presentadaEl: string | null;
+  estado: EstadoConstancia;
+  categoria: "pendientes" | "descargadas" | "en_firma" | "firmadas" | "revision";
+  mismoDia: boolean;
+  tipoConstancia: "alta" | "baja" | null;
+  intentos: IntentoConstancia[];
+  proximoIntentoEl: string | null;
+  motivoRevision: string | null;
+  documento: { codigo: string; nombre: string; path: string; carpeta: string | null; etiquetaCarpeta: string; firmada: boolean } | null;
+  deducida?: boolean;
 }
 
 export interface EstadoCorridaAltas {
