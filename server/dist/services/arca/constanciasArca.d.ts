@@ -133,10 +133,36 @@ export interface ResultadoUbicaciones {
  * `enSeco`: no copia ni escribe nada; devuelve lo que haría. `docs`: las filas a ubicar (el script en seco
  * pasa las deducidas de los contratos, porque `constancias_arca` todavía está vacía).
  */
-export declare function actualizarUbicaciones(tenantId: string, cfg: TenantDropboxConfig, o?: {
+/** Lo que `actualizarUbicaciones` le pide a Dropbox: se inyecta en los tests (ver `constanciasArca.test.ts`). */
+export interface AdaptadorDropbox {
+    listar: (path: string) => Promise<Array<{
+        tag: string;
+        name: string;
+        path: string;
+        id?: string;
+    }>>;
+    copiar: (desde: string, hacia: string) => Promise<{
+        path: string;
+        name: string;
+        id?: string;
+    }>;
+    ubicar: (ref: string) => Promise<{
+        path: string;
+        borrado?: boolean;
+    } | null>;
+    borradoEl: (path: string) => Promise<string | null>;
+}
+export declare function actualizarUbicaciones(tenantId: string, cfg: TenantDropboxConfig | null, o?: {
     log?: (l: string) => void;
     enSeco?: boolean;
     docs?: any[];
+    dropbox?: AdaptadorDropbox;
+    carpetas?: {
+        outbox: string | null;
+        pendbox: string | null;
+        firmados: string | null;
+        altaTemprana: string | null;
+    };
 }): Promise<ResultadoUbicaciones>;
 export declare const ETIQUETA_CARPETA: Record<CarpetaDelDocumento, string>;
 /** Lo que ven las pantallas de cada constancia. */

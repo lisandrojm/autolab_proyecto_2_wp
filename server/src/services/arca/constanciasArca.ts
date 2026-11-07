@@ -268,14 +268,28 @@ export interface ResultadoUbicaciones {
  * `enSeco`: no copia ni escribe nada; devuelve lo que haría. `docs`: las filas a ubicar (el script en seco
  * pasa las deducidas de los contratos, porque `constancias_arca` todavía está vacía).
  */
-export async function actualizarUbicaciones(tenantId: string, cfg: TenantDropboxConfig, o: { log?: (l: string) => void; enSeco?: boolean; docs?: any[] } = {}): Promise<ResultadoUbicaciones> {
+/** Lo que `actualizarUbicaciones` le pide a Dropbox: se inyecta en los tests (ver `constanciasArca.test.ts`). */
+export interface AdaptadorDropbox {
+  listar: (path: string) => Promise<Array<{ tag: string; name: string; path: string; id?: string }>>;
+  copiar: (desde: string, hacia: string) => Promise<{ path: string; name: string; id?: string }>;
+  ubicar: (ref: string) => Promise<{ path: string; borrado?: boolean } | null>;
+  borradoEl: (path: string) => Promise<string | null>;
+}
+
+export async function actualizarUbicaciones(tenantId: string, cfg: TenantDropboxConfig | null, o: { log?: (l: string) => void; enSeco?: boolean; docs?: any[]; dropbox?: AdaptadorDropbox; carpetas?: { outbox: string | null; pendbox: string | null; firmados: string | null; altaTemprana: string | null } } = {}): Promise<ResultadoUbicaciones> {
+  const dbx: AdaptadorDropbox = o.dropbox ?? {
+    listar: async (path) => (await listFolder(tenantId, cfg!, path, true)).entries || [],
+    copiar: (desde, hacia) => copyEntry(tenantId, cfg!, desde, hacia),
+    ubicar: (ref) => ubicarArchivo(tenantId, cfg!, ref, { borrados: true }),
+    borradoEl: (path) => borradoEl(tenantId, cfg!, path),
+  };
   const log = o.log || (() => {});
   const docs: any[] = o.docs ?? await ConstanciaArca.find({ tenantId: new Types.ObjectId(tenantId), documento: { $ne: null }, estado: { $in: ["constancia_descargada", "enviada_a_firmar", "firmada", "requiere_revision", "archivada"] } })
     .select("clave cuil empresaCuit fechaAlta estado documento tipoConstancia")
     .lean();
   const r: ResultadoUbicaciones = { revisadas: docs.length, cambiadas: 0, archivadas: 0, noUbicadas: 0, cambios: [] };
   if (docs.length === 0) return r;
-  const [outbox, pendbox, firmados, altaTemprana] = await Promise.all(["outbox", "pendbox", "firmados", "alta_temprana"].map((p) => resolverCarpetaPorProposito(p as any)));
+  const { outbox, pendbox, firmados, altaTemprana } = o.carpetas ?? Object.fromEntries(await Promise.all((["outbox", "pendbox", "firmados", "altaTemprana"] as const).map(async (k) => [k, await resolverCarpetaPorProposito(k === "altaTemprana" ? "alta_temprana" : (k as any))]))) as { outbox: string | null; pendbox: string | null; firmados: string | null; altaTemprana: string | null };
   const carpetas: Array<{ carpeta: CarpetaDelDocumento; path: string }> = [];
   if (outbox) carpetas.push({ carpeta: "outbox", path: outbox });
   if (pendbox) carpetas.push({ carpeta: "pendbox", path: pendbox });
@@ -297,7 +311,7 @@ export async function actualizarUbicaciones(tenantId: string, cfg: TenantDropbox
   for (const c of carpetas) {
     let entradas: any[] = [];
     try {
-      entradas = (await listFolder(tenantId, cfg, c.path, true)).entries || [];
+      entradas = await dbx.listar(c.path);
     } catch (e: any) {
       if (!/not_found/.test(String(e?.response?.data?.error_summary || e?.message || ""))) throw e;
     }
@@ -322,7 +336,7 @@ export async function actualizarUbicaciones(tenantId: string, cfg: TenantDropbox
     if (carpeta === "firmados" && archivo && altaTemprana) {
       const destino = `${altaTemprana.replace(/\/$/, "")}/${SUBCARPETA_FIRMADAS}/${archivo.name}`;
       try {
-        const copia = o.enSeco ? { path: destino, name: archivo.name, id: undefined } : await copyEntry(tenantId, cfg, archivo.path, destino);
+        const copia = o.enSeco ? { path: destino, name: archivo.name, id: undefined } : await dbx.copiar(archivo.path, destino);
         set["documento.firmadaEl"] = doc.firmadaEl || ahora;
         set["documento.archivadaEn"] = copia.path;
         r.archivadas++;
@@ -352,13 +366,13 @@ export async function actualizarUbicaciones(tenantId: string, cfg: TenantDropbox
     } else if (d.estado !== "archivada") {
       // No está en ninguna carpeta del circuito: se lo sigue por su id o su path.
       const ref = doc.dropboxId || doc.path;
-      const aca = ref ? await ubicarArchivo(tenantId, cfg, ref, { borrados: true }).catch(() => null) : null;
+      const aca = ref ? await dbx.ubicar(ref).catch(() => null) : null;
       if (aca && !aca.borrado) {
         set["documento.path"] = aca.path;
         set["documento.ubicadoEl"] = ahora;
         set["documento.noUbicadoDesde"] = null;
       } else if (!doc.noUbicadoDesde || d.estado !== "requiere_revision") {
-        const cuando = doc.path ? await borradoEl(tenantId, cfg, doc.path) : null;
+        const cuando = doc.path ? await dbx.borradoEl(doc.path) : null;
         const lugar = doc.path ? doc.path.replace(/\/[^/]+$/, "") : "su carpeta";
         motivo = `Documento no ubicado: ${cuando ? `se borró de ${lugar} el ${fechaHoraArgentina(cuando)} y` : ""} no está en Outbox, Pendbox, Requested signatures ni «Alta temprana de Arca». No se envió a firmar.`;
         set.estado = siguienteEstado(d.estado, "requiere_revision");
