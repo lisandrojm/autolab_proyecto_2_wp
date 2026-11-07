@@ -8,7 +8,7 @@ import { User } from "../models/User.js";
 import { Company } from "../models/Company.js";
 import { Contrato } from "../models/Contrato.js";
 import { Tenant } from "../models/Tenant.js";
-import { leerConstanciaTrabajador, leerConstanciaTrabajadorPdf, problemasDeConstancia } from "../utils/constanciaTrabajadorPdf.js";
+import { evaluarConstancia, leerConstanciaTrabajador, leerConstanciaTrabajadorPdf } from "../utils/constanciaTrabajadorPdf.js";
 import { getTenantDropboxConfig, uploadFile } from "./dropboxService.js";
 import { resolverCarpetaPorProposito } from "../utils/estadoCarpetas.js";
 import { aplicarTransicion, estadoDestinoPorProposito } from "./estadoTransicionAutomaticaService.js";
@@ -22,11 +22,14 @@ export async function registrarAltaDeContrato(o) {
     const esAltaTemprana = estadoActual?.data?.tipoImpositivo === "alta_temprana_afip" || !!contratoActual.altaArcaPresentada;
     const validarConstancia = !!o.exigirConstancia || esAltaTemprana || !!constancia.tipo;
     const persona = validarConstancia ? await User.findOne({ _id: userId, tenantId: tenantObjectId }).select("firstName lastName email metadata").lean() : null;
+    // La constancia de BAJA de una relación ya terminada también vale, si su cese es la baja del contrato (ver `evaluarConstancia`).
+    let evaluada;
     if (validarConstancia) {
         const empresa = contratoActual.empresaContratoId ? await Company.findById(contratoActual.empresaContratoId).select("cuit").lean() : null;
-        const problemas = problemasDeConstancia(constancia, { cuil: persona?.metadata?.cuit, empleadorCuit: empresa?.cuit, fechaInicio: contratoActual.fecha_alta_contrato });
-        if (problemas.length > 0)
-            return { ok: false, problemas };
+        const ev = evaluarConstancia(constancia, { cuil: persona?.metadata?.cuit, empleadorCuit: empresa?.cuit, fechaInicio: contratoActual.fecha_alta_contrato, fechaBaja: contratoActual.fecha_baja_contrato });
+        if (ev.problemas.length > 0)
+            return { ok: false, problemas: ev.problemas };
+        evaluada = { deBaja: ev.deBaja, mismoDia: ev.mismoDia };
     }
     // Reemplazo: borrar el archivo anterior del disco (best-effort, no bloquea la respuesta).
     const anterior = contratoActual.altaDocumentoUrl;
@@ -51,8 +54,10 @@ export async function registrarAltaDeContrato(o) {
                 const nombre = `${await nombreArchivoDocumento({ tenantId: tenantObjectId, tipo: "AltaAFIP", user: persona, up, contract: contratoActual, docName: "AltaAFIP" })}.pdf`;
                 // Dropbox crea «No firmar» sola la primera vez: subir a un path arma las carpetas que falten.
                 const destino = `${carpeta.replace(/\/$/, "")}${ruteo.vaAFirma ? "" : "/No firmar"}/${nombre}`;
-                await uploadFile(String(tenantObjectId), cfg, destino, o.buffer, true);
+                const subido = await uploadFile(String(tenantObjectId), cfg, destino, o.buffer, true);
                 ruteo.archivadaEn = destino;
+                ruteo.nombre = nombre;
+                ruteo.dropboxId = subido?.id;
                 enviadaComo = nombre;
             }
         }
@@ -67,6 +72,9 @@ export async function registrarAltaDeContrato(o) {
             vaAFirma: ruteo.vaAFirma,
             archivadaEn: ruteo.archivadaEn,
             enviadaComo,
+            // «baja»: la constancia de la relación ya terminada (aceptada, ver `evaluarConstancia`). El id sigue al archivo si se mueve.
+            tipo: evaluada?.deBaja ? "baja" : "alta",
+            dropboxId: ruteo.dropboxId,
             origen: o.origen?.modo,
             porUsuarioId: o.origen?.usuarioId && Types.ObjectId.isValid(String(o.origen.usuarioId)) ? new Types.ObjectId(String(o.origen.usuarioId)) : undefined,
         };
@@ -97,7 +105,7 @@ export async function registrarAltaDeContrato(o) {
             console.error("Alta temprana: no se pudo avanzar el estado:", e?.message || e);
         }
     }
-    return { ok: true, altaDocumentoUrl: o.altaDocumentoUrl, altaDocumentoNombre: o.altaDocumentoNombre, ruteo };
+    return { ok: true, altaDocumentoUrl: o.altaDocumentoUrl, altaDocumentoNombre: o.altaDocumentoNombre, ruteo, constancia: evaluada };
 }
 /** Guarda en el storage local un PDF que no llegó por formulario (la descarga desde ARCA). Devuelve su URL. */
 export async function guardarPdfDeAlta(o) {

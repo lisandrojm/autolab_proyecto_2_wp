@@ -13,6 +13,11 @@ test("el placeholder (de contrato o de release) no sirve, aunque cambie el forma
     assert.equal(textoCustomUsable("<p><strong>Contrato custom</strong></p>"), false);
     assert.equal(textoCustomUsable("Release   custom"), false);
 });
+test("el bloque de firma solo no sirve; con el cuerpo escrito arriba, sí", () => {
+    assert.match(PLACEHOLDER_CONTRATO_CUSTOM, /\{\{firma\}\}/);
+    assert.equal(textoCustomUsable(PLACEHOLDER_CONTRATO_CUSTOM.replaceAll("&nbsp;", "\u00a0")), false);
+    assert.equal(textoCustomUsable(`<p>Cláusula primera</p>${PLACEHOLDER_CONTRATO_CUSTOM}`), true);
+});
 test("texto real, con o sin variables, sirve", () => {
     assert.equal(textoCustomUsable("<p>Contrato custom con {{nombre}}</p>"), true);
     assert.equal(textoCustomUsable("<p>Cláusula primera</p>"), true);

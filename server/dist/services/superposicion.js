@@ -3,6 +3,9 @@ import UserProject from "../models/UserProject.js";
 import { User } from "../models/User.js";
 import { Project } from "../models/Project.js";
 import { Shift } from "../models/Shift.js";
+import { Info } from "../models/Info.js";
+import { ContratoFrame } from "../models/ContratoFrame.js";
+import { plantillaDelContrato } from "../compartido/plantillaDelContrato.js";
 // El `populate("clientId")` necesita el modelo registrado; no se depende de que otro archivo lo haya cargado.
 import "../models/Client.js";
 import { fechaISO, hoyArgentina } from "../utils/contratoVigencia.js";
@@ -45,7 +48,7 @@ export async function compromisosDePersona(tenantId, userId, excluirSolicitudId)
     const uid = new Types.ObjectId(userId);
     const [asignaciones, pendientes] = await Promise.all([
         UserProject.find({ userId: uid })
-            .select("projectId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.dias_semana contracts.dias_rotativos contracts.fechas_trabajadas contracts.hora_inicio contracts.hora_fin contracts.shiftId contracts.areaShiftAssignments contracts.nombre_turno")
+            .select("projectId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.dias_semana contracts.dias_rotativos contracts.fechas_trabajadas contracts.hora_inicio contracts.hora_fin contracts.shiftId contracts.areaShiftAssignments contracts.nombre_turno contracts.nombre_contrato contracts.tipo_contrato_id contracts.contrato_id")
             .lean(),
         User.find({
             tenantId,
@@ -94,6 +97,7 @@ export async function compromisosDePersona(tenantId, userId, excluirSolicitudId)
                 outTime: c.hora_fin || "",
                 shiftIds: idsDeTurno(c.areaShiftAssignments, c.shiftId),
                 turnoNombre: c.nombre_turno || "",
+                tipo: { nombre_contrato: c.nombre_contrato, tipo_contrato_id: c.tipo_contrato_id, contrato_id: c.contrato_id },
             });
         }
     }
@@ -105,11 +109,36 @@ export async function compromisosDePersona(tenantId, userId, excluirSolicitudId)
     }
     return compromisos;
 }
-/** El contrato que la persona ya tiene en esas fechas, si tiene (ver `contratoEnLasFechas`). */
+/**
+ * Lee el trámite de un contrato: tipo → plantilla → el estado impositivo que la reclama, el mismo camino
+ * que el tag de las pantallas (`estadoImpositivoDelContrato`). No se usa el estado del contrato: avanza por
+ * el circuito y deja de decir el trámite. Sin plantilla o sin estado que la reclame, `null`: no se adivina.
+ */
+async function lectorDeTramites() {
+    const [plantillas, estados] = await Promise.all([
+        ContratoFrame.find().select("name data.id data.nombre contratoId contratoIds").lean(),
+        Info.find({ type: "estado-empleado", "data.esImpositivo": true }).select("data.tipoImpositivo data.contratoFrameIds").lean(),
+    ]);
+    return (tipo) => {
+        if (!tipo)
+            return null;
+        const id = tipo.contrato_id ? String(tipo.contrato_id) : "";
+        const plantilla = plantillaDelContrato(tipo, plantillas) || (id ? plantillas.find((p) => [p.contratoId, ...(p.contratoIds || [])].some((c) => String(c) === id)) : null);
+        if (!plantilla)
+            return null;
+        const estado = estados.find((e) => (e.data?.contratoFrameIds || []).some((f) => String(f) === String(plantilla._id)));
+        return estado?.data?.tipoImpositivo || null;
+    };
+}
+/** El contrato DE ARCA que la persona ya tiene en esas fechas, si tiene. Uno de Servicios no traba nada. */
 export async function contratoDePersonaEnFechas(tenantId, userId, pedido) {
     if (!userId)
         return null;
-    return contratoEnLasFechas(pedido, await compromisosDePersona(tenantId, userId));
+    const enFechas = (await compromisosDePersona(tenantId, userId)).filter((c) => contratoEnLasFechas(pedido, [c]));
+    if (enFechas.length === 0)
+        return null;
+    const tramiteDe = await lectorDeTramites();
+    return enFechas.find((c) => tramiteDe(c.tipo) === "alta_temprana_afip") || null;
 }
 /** Por qué este alta ante ARCA no se puede hacer, o `null`. Sólo frena el trámite de ARCA, no el de Servicios. */
 export async function rechazoAltaArcaConContrato(tenantId, userId, tramite, pedido) {

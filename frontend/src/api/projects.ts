@@ -1298,7 +1298,8 @@ export interface EstadoDescargaConstancias {
   ultimaCorrida: null | {
     fecha: string;
     dia: string;
-    empresas: Array<{ empresa: string; pendientes: number; pedidas: number; listas: number; error?: string }>;
+    // `fuera`: las que no entraron y por qué (07/11/2026): el tope, nuevas primero; reintentos esperando su fecha; en revisión.
+    empresas: Array<{ empresa: string; pendientes: number; pedidas: number; listas: number; fuera?: FueraDeLaCorrida; error?: string }>;
     error?: string;
   };
 }
@@ -1313,6 +1314,23 @@ export interface PendienteDeConstancia {
   fechaAlta: string;
   presentadaEl: string;
   empresa: { _id: string; razonSocial: string };
+  /** El ciclo de su constancia (`constancias_arca`); null si todavía no tiene fila (antes de la migración). */
+  ciclo?: { estado: EstadoConstancia; intentos: IntentoConstancia[]; proximoIntentoEl: string | null; motivoRevision: string | null } | null;
+}
+
+/** Los estados de la constancia de un alta presentada (ver `server/src/services/arca/cicloConstancia.ts`). */
+export type EstadoConstancia = "presentada" | "constancia_pendiente" | "constancia_descargada" | "enviada_a_firmar" | "firmada" | "archivada" | "baja_mismo_dia_ok" | "requiere_revision";
+export interface IntentoConstancia {
+  fecha: string;
+  resultado: "descargada" | "rechazada" | "sin_constancia" | "ambigua" | "error";
+  detalle?: string;
+  manual?: boolean;
+}
+export interface FueraDeLaCorrida {
+  nuevasPorTope: number;
+  reintentosPorTope: number;
+  esperandoReintento: number;
+  enRevision: number;
 }
 
 export interface EstadoDescargasArca extends EstadoDescargaConstancias {

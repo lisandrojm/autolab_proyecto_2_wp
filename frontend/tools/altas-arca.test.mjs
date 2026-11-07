@@ -272,7 +272,8 @@ test("fechaEnTexto tolera cómo escriba la fecha la grilla, y no confunde otra",
 test("cuando no hay una sola relación, el detalle dice qué traía cada fila", () => {
   const r = elegirEnResultadoDeConsulta({ casillas: [{ id: "a", fila: "PEREZ 19/04/2026 19/04/2026" }, { id: "todos", fila: "" }], controles: [], fecha: "01/10/2026" });
   assert.equal(r.motivo, "sin_relacion");
-  assert.match(r.detalle, /Filas: \[PEREZ 19\/04\/2026 19\/04\/2026\] \[sin texto\]/);
+  // Sin la casilla vacía de «todas» ni el volcado crudo (07/11/2026).
+  assert.equal(r.detalle, "ARCA no muestra ninguna relación que empiece el 01/10/2026. Muestra: PEREZ 19/04/2026 19/04/2026.");
 });
 
 test("la tarjeta de la relación se reconoce por su «Fecha de Inicio», no por el fin ni por la fecha del C.A.T.", () => {
@@ -303,7 +304,30 @@ test("la tarjeta real trae la fecha de inicio pasados los 400 caracteres: se lee
   assert.deepEqual(elegirEnResultadoDeConsulta({ casillas, controles, fecha: "01/10/2026" }), { ok: true, casilla: "r2", impresora: "imgPrint" });
   // Y si no está, el aviso dice las fechas de lo que sí había, no el principio de la tarjeta.
   const r = elegirEnResultadoDeConsulta({ casillas, controles, fecha: "05/10/2026" });
-  assert.match(r.detalle, /Filas: \[sin texto\] \[inicio 19\/04\/2026, fin 19\/04\/2026\] \[inicio 01\/10\/2026, fin 31\/10\/2026\]/);
+  // (07/11/2026) En castellano y sin volcar las casillas: ni «Filas:» ni «[sin texto]».
+  assert.match(r.detalle, /^ARCA no muestra ninguna relación que empiece el 05\/10\/2026\. Muestra: inicio 19\/04\/2026, fin 19\/04\/2026, 022 - A TIEMPO COMPLETO DETERMINADO \(CONTRATO A PLAZO FIJO\) · inicio 01\/10\/2026, fin 31\/10\/2026/);
+  assert.doesNotMatch(r.detalle, /Filas:|sin texto/);
+});
+
+test("dos relaciones con el mismo inicio: idénticas se toma la primera; la que termina con el contrato desempata; distintas, a revisión con la comparación", () => {
+  const tarjeta = (inicio, fin, mod = "022 - A TIEMPO COMPLETO DETERMINADO", cat = "26391939579227495223") => `Empleado: 20-11111111-2 - PEREZ JUAN Mod. Contrato: ${mod} Sucursal: 00001 - X Fecha de Inicio: ${inicio} C.A.T.: ${cat} 04/10/2026 21:15:14hs: Fecha de Fin: ${fin} Sit.Revista: 01 - ACTIVO`;
+  const controles = [{ id: "imgPrint", tag: "input", pista: "imgPrint Imprimir" }];
+  // El alta duplicada: misma relación, distinto C.A.T. → la primera, sin rebotar.
+  const duplicada = [{ id: "todos", fila: "" }, { id: "a", fila: tarjeta("24/10/2026", "24/10/2026") }, { id: "b", fila: tarjeta("24/10/2026", "24/10/2026", undefined, "11111111111111111111") }];
+  assert.deepEqual(elegirEnResultadoDeConsulta({ casillas: duplicada, controles, fecha: "24/10/2026" }), { ok: true, casilla: "a", impresora: "imgPrint" });
+  // Mismo inicio, distinto fin: con la baja del contrato se elige la suya.
+  const distintas = [{ id: "a", fila: tarjeta("01/10/2026", "31/10/2026") }, { id: "b", fila: tarjeta("01/10/2026", "15/10/2026") }];
+  assert.deepEqual(elegirEnResultadoDeConsulta({ casillas: distintas, controles, fecha: "01/10/2026", fechaFin: "15/10/2026" }), { ok: true, casilla: "b", impresora: "imgPrint" });
+  // Sin la baja (o con una que no es de ninguna), no se adivina: a revisión, y el aviso las compara.
+  const r = elegirEnResultadoDeConsulta({ casillas: distintas, controles, fecha: "01/10/2026" });
+  assert.equal(r.ok, false);
+  assert.equal(r.motivo, "ambigua");
+  assert.equal(r.sinArreglo, true);
+  assert.deepEqual(r.candidatas.map((c) => c.fin), ["31/10/2026", "15/10/2026"]);
+  assert.match(r.detalle, /\(1\) inicio 01\/10\/2026, fin 31\/10\/2026, 022 - A TIEMPO COMPLETO DETERMINADO · \(2\) inicio 01\/10\/2026, fin 15\/10\/2026/);
+  assert.doesNotMatch(r.detalle, /Filas:|sin texto/);
+  // Misma fecha y fin pero distinta modalidad: tampoco son la misma.
+  assert.equal(elegirEnResultadoDeConsulta({ casillas: [{ id: "a", fila: tarjeta("01/10/2026", "31/10/2026") }, { id: "b", fila: tarjeta("01/10/2026", "31/10/2026", "008 - A TIEMPO PARCIAL") }], controles, fecha: "01/10/2026" }).sinArreglo, true);
 });
 
 test("la búsqueda pide lo más nuevo primero, sin presentar nada", () => {

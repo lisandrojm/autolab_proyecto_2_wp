@@ -1,3 +1,4 @@
+import type { FueraDeLaCorrida } from "./cicloConstancia.js";
 /**
  * BAJAR DE ARCA LAS CONSTANCIAS DE ALTA TEMPRANA de lo ya presentado, y mandarlas a donde va cada
  * una (Outbox si se firma, «Alta temprana de Arca/No firmar» si no).
@@ -51,6 +52,11 @@ export interface Pendiente {
     fechaAlta: string;
     presentadaEl: string;
     empresaId: string;
+    /** "YYYY-MM-DD" de la baja del contrato, o "": con ella se acepta la constancia de baja y se elige entre relaciones del mismo inicio. */
+    fechaBaja: string;
+    /** La de `constancias_arca` (ver `constanciasArca.ts`) y si se pidió a mano: con eso se anota el intento. */
+    clave?: string;
+    manual?: boolean;
 }
 export declare const descargaConstanciasDe: (tenantId: string) => DescargaConstancias | undefined;
 /** Los contratos de esa empleadora presentados en ARCA que todavía no tienen su constancia validada. */
@@ -77,5 +83,6 @@ export declare function arrancarDescargaConstancias(o: {
 }): Promise<{
     total: number;
     pendientes: number;
+    fuera: FueraDeLaCorrida;
 }>;
 export {};

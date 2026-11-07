@@ -9,6 +9,8 @@ import { abrirSesionArca, credencialesDe, guardarSesion } from "./navegador.js";
 import { MOTOR, MOTOR_ALTAS } from "./motor.js";
 import { soltarCandado, tomarCandado } from "./candadoArca.js";
 import { guardarPdfDeAlta, registrarAltaDeContrato } from "../altaTempranaService.js";
+import { anotarDescarga, anotarFallo, colaDeDescarga } from "./constanciasArca.js";
+const bajaDe = (c) => (/^\d{4}-\d{2}-\d{2}/.test(String(c?.fecha_baja_contrato || "")) ? String(c.fecha_baja_contrato).slice(0, 10) : "");
 /** Una por tenant, en memoria, como las demás corridas de ARCA. */
 const descargas = new Map();
 export const descargaConstanciasDe = (tenantId) => descargas.get(tenantId);
@@ -28,7 +30,7 @@ export async function pendientesDeConstancia(tenantObjectId, empresaId) {
             },
         },
     })
-        .select("userId contracts.empresaContratoId contracts.altaArcaPresentada contracts.altaConstancia contracts.fecha_alta_contrato")
+        .select("userId contracts.empresaContratoId contracts.altaArcaPresentada contracts.altaConstancia contracts.fecha_alta_contrato contracts.fecha_baja_contrato")
         .lean();
     const usuarios = await User.find({
         _id: { $in: ups.map((u) => u.userId) },
@@ -57,6 +59,7 @@ export async function pendientesDeConstancia(tenantObjectId, empresaId) {
                 fechaAlta: `${m[1]}-${m[2]}-${m[3]}`,
                 presentadaEl: c.altaArcaPresentada?.fecha ? new Date(c.altaArcaPresentada.fecha).toISOString() : "",
                 empresaId,
+                fechaBaja: bajaDe(c),
             });
         });
     }
@@ -71,7 +74,7 @@ export async function pendientesDeConstanciaTodas(tenantObjectId) {
         projectId: { $in: proyectos.map((p) => p._id) },
         contracts: { $elemMatch: { "altaArcaPresentada.resultado": "presentada" } },
     })
-        .select("userId contracts.empresaContratoId contracts.altaArcaPresentada contracts.altaConstancia contracts.fecha_alta_contrato")
+        .select("userId contracts.empresaContratoId contracts.altaArcaPresentada contracts.altaConstancia contracts.fecha_alta_contrato contracts.fecha_baja_contrato")
         .lean();
     const usuarios = await User.find({ _id: { $in: ups.map((u) => u.userId) }, tenantId: tenantObjectId }).select("firstName lastName metadata.cuit").lean();
     const porId = new Map(usuarios.map((u) => [String(u._id), u]));
@@ -83,7 +86,8 @@ export async function pendientesDeConstanciaTodas(tenantObjectId) {
                 return;
             const u = porId.get(String(up.userId));
             const cuil = digitos(u?.metadata?.cuit);
-            const m = /^(d{4})-(d{2})-(d{2})/.exec(String(c.fecha_alta_contrato || ""));
+            // Hasta el 07/11/2026 decía `(d{4})` sin la barra (se perdió en un heredoc): no matcheaba nunca y la pantalla de Descargas salía vacía.
+            const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(c.fecha_alta_contrato || ""));
             if (cuil.length !== 11 || !m)
                 return;
             out.push({
@@ -97,6 +101,7 @@ export async function pendientesDeConstanciaTodas(tenantObjectId) {
                 presentadaEl: c.altaArcaPresentada?.fecha ? new Date(c.altaArcaPresentada.fecha).toISOString() : "",
                 empresaId,
                 empresaRazonSocial: empresaPorId.get(empresaId) || "",
+                fechaBaja: bajaDe(c),
             });
         });
     }
@@ -114,11 +119,20 @@ export async function arrancarDescargaConstancias(o) {
         const todas = await pendientesDeConstancia(tenantObjectId, o.empresaId);
         if (todas.length === 0)
             throw new Error("No hay altas presentadas de esa empleadora esperando su constancia.");
-        // Sólo las pedidas (forzar), y con tope (la automática): las primeras N; el resto queda para la próxima corrida.
-        const pedidas = o.soloItems ? todas.filter((p) => o.soloItems.some((i) => i.userProjectId === p.userProjectId && Number(i.contractIndex) === p.contractIndex)) : todas;
-        if (pedidas.length === 0)
-            throw new Error("Las altas pedidas ya tienen su constancia o no son de esa empleadora.");
-        const pendientes = o.maximo && o.maximo > 0 ? pedidas.slice(0, o.maximo) : pedidas;
+        /*
+          QUÉ SE PIDE LO DECIDE `constancias_arca` (07/11/2026). La automática: primero las nunca intentadas,
+          después los reintentos vencidos, con el tope; lo que está en revisión o esperando su reintento no
+          entra ni ocupa lugar. La forzada: lo elegido, aunque esté esperando o en revisión (es el
+          «Reintentar»). En las dos, lo que ya tiene constancia no se pide nunca.
+        */
+        const cola = await colaDeDescarga(tenantObjectId, o.empresaId, { ahora: new Date(), tope: o.soloItems ? undefined : o.maximo, soloItems: o.soloItems });
+        const porContrato = new Map(todas.map((p) => [`${p.userProjectId}:${p.contractIndex}`, p]));
+        const pendientes = cola.elegidas.flatMap((e) => {
+            const p = porContrato.get(`${e.userProjectId}:${e.contractIndex}`);
+            return p ? [{ ...p, clave: e.clave, manual: e.manual }] : [];
+        });
+        if (pendientes.length === 0)
+            throw new Error(o.soloItems ? "Las altas pedidas ya tienen su constancia o no son de esa empleadora." : "No hay constancias para pedir hoy: las que faltan esperan su reintento o están en revisión.");
         const cred = await credencialesDe(tenantId);
         if (!cred)
             throw new Error("Faltan las credenciales de ARCA. Cargalas en Configuración → ARCA → Conexión.");
@@ -132,7 +146,7 @@ export async function arrancarDescargaConstancias(o) {
         };
         descargas.set(tenantId, d);
         void correr({ d, pendientes, cuit, cred, ...o });
-        return { total: pendientes.length, pendientes: todas.length };
+        return { total: pendientes.length, pendientes: cola.total, fuera: cola.fuera };
     }
     catch (e) {
         soltarCandado(tenantId, "constancias");
@@ -240,21 +254,35 @@ async function correr(o) {
                     nombre: p.nombre,
                     estado: "descargando",
                 });
+                // Cada intento que no trae la constancia queda anotado: cuenta, espera su reintento o pasa a revisión.
+                const anotar = async (f) => {
+                    if (!p.clave)
+                        return "";
+                    const r = await anotarFallo(tenantObjectId, p.clave, f, { manual: p.manual }).catch((e) => {
+                        console.error(`[CONSTANCIAS-ARCA] no pude anotar el intento de ${p.cuil}:`, e?.message || e);
+                        return null;
+                    });
+                    return !r ? "" : r.estado === "requiere_revision" ? " Pasa a revisión." : ` Se reintenta${r.proximoIntentoEl ? ` el ${new Date(r.proximoIntentoEl).toLocaleDateString("es-AR")}` : ""}.`;
+                };
                 try {
                     const r = await conPestañaViva(() => motor.descargarConstanciaDeAlta({
                         page,
                         cuil: p.cuil,
                         fechaInicio: p.fechaInicio,
+                        // Con la baja, entre dos relaciones del mismo inicio se elige la que termina cuando el contrato.
+                        fechaFin: p.fechaBaja ? `${p.fechaBaja.slice(8, 10)}${p.fechaBaja.slice(5, 7)}${p.fechaBaja.slice(0, 4)}` : "",
                     }));
                     if (r.resultado !== "descargada" || !r.pdf) {
                         // Lo que la pantalla tenía queda en el log del servidor: con eso se ajusta el lector.
                         console.warn(`[CONSTANCIAS-ARCA] ${p.cuil}: ${r.resultado} — ${r.detalle || ""}`);
+                        const detalle = r.detalle || "ARCA no mostró la constancia de esa relación.";
+                        const sigue = await anotar({ resultado: r.resultado === "ambigua" ? "ambigua" : "sin_constancia", detalle, sinArreglo: r.sinArreglo === true });
                         emitir({
                             tipo: "persona",
                             cuil: p.cuil,
                             nombre: p.nombre,
                             estado: "sin_constancia",
-                            detalle: r.detalle || "ARCA no mostró la constancia de esa relación.",
+                            detalle: `${detalle}${sigue}`,
                         });
                         continue;
                     }
@@ -280,23 +308,28 @@ async function correr(o) {
                     });
                     if ("problemas" in res) {
                         fs.promises.unlink(guardado.ruta).catch(() => { });
+                        const sigue = await anotar({ resultado: "rechazada", detalle: res.problemas.join(" ") });
                         emitir({
                             tipo: "persona",
                             cuil: p.cuil,
                             nombre: p.nombre,
                             estado: "rechazada",
-                            detalle: res.problemas.join(" "),
+                            detalle: `${res.problemas.join(" ")}${sigue}`,
                         });
                         continue;
                     }
                     listas++;
+                    if (p.clave) {
+                        await anotarDescarga(tenantObjectId, p.clave, { tipo: res.constancia?.deBaja ? "baja" : "alta", mismoDia: !!res.constancia?.mismoDia, vaAFirma: res.ruteo?.vaAFirma !== false, archivadaEn: res.ruteo?.archivadaEn, nombre: res.ruteo?.nombre, dropboxId: res.ruteo?.dropboxId, manual: p.manual }).catch((e) => console.error(`[CONSTANCIAS-ARCA] no pude anotar la constancia de ${p.cuil}:`, e?.message || e));
+                    }
                     const destino = !res.ruteo?.archivadaEn ? res.ruteo?.aviso || "Quedó cargada en el contrato." : res.ruteo.vaAFirma ? "En el Outbox, lista para enviar a firmar." : "Archivada en «Alta temprana de Arca / No firmar».";
+                    const deBaja = res.constancia?.deBaja ? (res.constancia.mismoDia ? "Constancia de la relación (alta y baja el mismo día). " : "Constancia de la relación ya terminada. ") : "";
                     emitir({
                         tipo: "persona",
                         cuil: p.cuil,
                         nombre: p.nombre,
                         estado: "lista",
-                        detalle: `${destino}${res.ruteo?.estado ? ` El contrato pasó a «${res.ruteo.estado}».` : ""}`,
+                        detalle: `${deBaja}${destino}${res.ruteo?.estado ? ` El contrato pasó a «${res.ruteo.estado}».` : ""}`,
                     });
                 }
                 catch (e) {
@@ -309,24 +342,28 @@ async function correr(o) {
                         const quedanVueltas = vuelta < VUELTAS;
                         if (quedanVueltas)
                             paraDespues.push(p);
+                        // Las vueltas de esta corrida son UN intento: se anota recién cuando se acabaron.
+                        const sigue = quedanVueltas ? "" : await anotar({ resultado: "sin_constancia", detalle: `ARCA no entregó el PDF en ${VUELTAS} pedidos seguidos.` });
                         emitir({
                             tipo: "persona",
                             cuil: p.cuil,
                             nombre: p.nombre,
                             estado: "sin_constancia",
-                            detalle: quedanVueltas ? "ARCA no entregó el PDF a tiempo. Se vuelve a pedir al final." : `ARCA no entregó el PDF en ${VUELTAS} intentos. Probá de nuevo en unos minutos: el alta sigue registrada.${queVio ? ` Después del click: ${queVio}` : ""}`,
+                            detalle: quedanVueltas ? "ARCA no entregó el PDF a tiempo. Se vuelve a pedir al final." : `ARCA no entregó el PDF en ${VUELTAS} pedidos. El alta sigue registrada.${sigue}${queVio ? ` Después del click: ${queVio}` : ""}`,
                         });
                         continue;
                     }
+                    // Sesión caída o pantalla que no es: no es de la persona, no le cuenta como intento, y no tiene sentido seguir con los demás.
+                    const deLaSesion = /sesi[oó]n|No llegu[eé]|Target closed|browser has been closed|crash/i.test(mensaje);
+                    const sigue = deLaSesion ? "" : await anotar({ resultado: "error", detalle: mensaje });
                     emitir({
                         tipo: "persona",
                         cuil: p.cuil,
                         nombre: p.nombre,
                         estado: "error",
-                        detalle: mensaje,
+                        detalle: `${mensaje}${sigue}`,
                     });
-                    // Sesión caída o pantalla que no es: no tiene sentido seguir con los demás.
-                    if (/sesi[oó]n|No llegu[eé]|Target closed|browser has been closed|crash/i.test(mensaje))
+                    if (deLaSesion)
                         throw e;
                 }
             }

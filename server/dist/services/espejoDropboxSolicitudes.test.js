@@ -11,4 +11,10 @@ describe("el registro de una solicitud en Dropbox", () => {
         assert.equal(JSON.stringify(c).includes("secreto"), false);
         assert.equal(c.desde, "2026-11-10");
     });
+    it("lleva el importe y cuándo se modificó: se reescribe al editar", () => {
+        const c = contenidoDeSolicitud({ _id: "1", updatedAt: "2026-11-06T12:00:00Z", metadata: { fullName: "Ana", dailyRate: 0, workdaysCount: 1 } });
+        assert.equal(c.importePorJornada, 0);
+        assert.equal(c.jornadas, 1);
+        assert.equal(c.modificadaEl, "2026-11-06T12:00:00Z");
+    });
 });

@@ -102,6 +102,29 @@ export declare function deleteEntry(tenantId: string, cfg: TenantDropboxConfig, 
 export declare function moveEntry(tenantId: string, cfg: TenantDropboxConfig, fromPath: string, toPath: string): Promise<DropboxEntry>;
 /** Copia un archivo. Con `autorename`: si ya hay uno con ese nombre en el destino, Dropbox le cambia el nombre. */
 export declare function copyEntry(tenantId: string, cfg: TenantDropboxConfig, fromPath: string, toPath: string): Promise<DropboxEntry>;
+/**
+ * Busca archivos por NOMBRE en todo el Dropbox conectado (o debajo de `dentroDe`). Es la búsqueda de
+ * Dropbox, no un listado: encuentra un archivo aunque se haya movido de carpeta, y con
+ * `borrados` también los que se eliminaron. Ojo: Dropbox parte el nombre en palabras, así que se
+ * busca por un pedazo entero («ID-000663», el CUIL), no por cualquier subcadena.
+ */
+export declare function buscarArchivos(tenantId: string, cfg: TenantDropboxConfig, texto: string, o?: {
+    dentroDe?: string;
+    borrados?: boolean;
+    max?: number;
+}): Promise<DropboxEntry[]>;
+/**
+ * Dónde está HOY un archivo. `ref` puede ser un path o el id de Dropbox («id:…»): el id no cambia al
+ * mover ni al renombrar, así que con él se sigue al archivo a la carpeta a la que haya ido. `null` si
+ * no existe; con `borrados`, un archivo eliminado vuelve con `borrado: true`.
+ */
+export declare function ubicarArchivo(tenantId: string, cfg: TenantDropboxConfig, ref: string, o?: {
+    borrados?: boolean;
+}): Promise<(DropboxEntry & {
+    borrado?: boolean;
+}) | null>;
+/** Cuándo se borró un archivo de ese path (`null` si no está borrado o no hubo nunca uno). Para explicar un documento que falta. */
+export declare function borradoEl(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<string | null>;
 export declare function createFolder(tenantId: string, cfg: TenantDropboxConfig, path: string): Promise<DropboxEntry>;
 /** Verifica que un path esté dentro del rootPath del tenant (evita salir de /HelloSign). */
 export declare function isWithinRoot(cfg: TenantDropboxConfig, path: string): boolean;

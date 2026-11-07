@@ -40,4 +40,24 @@ export declare function problemasDeConstancia(c: ConstanciaTrabajador, esperado:
     cuil: unknown;
     empleadorCuit: unknown;
     fechaInicio: unknown;
+    fechaBaja?: unknown;
 }): string[];
+/**
+ * Lo mismo que `problemasDeConstancia`, diciendo además si es la constancia de BAJA aceptada.
+ *
+ * LA CONSTANCIA DE BAJA DE UNA RELACIÓN QUE YA TERMINÓ ES VÁLIDA (07/11/2026). Una jornada empieza y
+ * termina el mismo día: cuando la descarga corre, ARCA ya la tiene con cese y por la impresora entrega
+ * la constancia como «Baja». Es la constancia de esa relación —alta y cese en el mismo papel—, no un
+ * error, y rechazarla la dejaba rebotando todos los días para siempre. Se acepta si su cese es la baja
+ * del contrato (`fechaBaja`); con otro cese, o un contrato sin baja, sigue siendo un problema.
+ */
+export declare function evaluarConstancia(c: ConstanciaTrabajador, esperado: {
+    cuil: unknown;
+    empleadorCuit: unknown;
+    fechaInicio: unknown;
+    fechaBaja?: unknown;
+}): {
+    problemas: string[];
+    deBaja: boolean;
+    mismoDia: boolean;
+};

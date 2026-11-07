@@ -47,6 +47,12 @@ export interface CompromisoExistente {
     outTime?: string;
     shiftIds?: string[];
     turnoNombre?: string;
+    /** De qué tipo es el contrato (sólo `origen: "contrato"`): de ahí sale su trámite, ver `services/superposicion.ts`. */
+    tipo?: {
+        nombre_contrato?: string;
+        tipo_contrato_id?: unknown;
+        contrato_id?: unknown;
+    };
 }
 export interface Superposicion {
     tipo: "horario" | "fechas";
@@ -61,9 +67,9 @@ export interface Superposicion {
     mensaje: string;
 }
 /**
- * ¿TIENE UN CONTRATO EN ESAS FECHAS? (pedido del 05/11/2026). El primer contrato que cubre al menos un día
- * de lo pedido, o `null`. Cualquier contrato, en cualquier proyecto y con cualquier empleadora: quien ya
- * tiene uno en esas fechas no se contrata por ARCA, sólo por Servicios.
+ * ¿TIENE UN CONTRATO EN ESAS FECHAS? (pedido del 05/11/2026). El primer contrato de `existentes` que cubre
+ * al menos un día de lo pedido, o `null`. Con uno de ARCA, en cualquier proyecto y con cualquier empleadora,
+ * sólo se contrata por Servicios: qué contratos son de ARCA lo filtra `services/superposicion.ts`.
  *
  * A diferencia de `superposiciones`, ésta FRENA y no mira días de la semana ni horarios: alcanza con que
  * el período se cruce. Un contrato por días sueltos sólo cubre esos días. Las solicitudes no cuentan:

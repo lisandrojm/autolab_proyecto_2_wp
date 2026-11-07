@@ -4,8 +4,9 @@
  * Una solicitud es un `User` con `metadata.isSolicitud`: vive en la base y no dejaba ningún archivo,
  * así que no había dónde ir a verla. Ahora cada una deja un `.json` en la carpeta del estado «Solicitud
  * pendiente» (propósito `solicitudes`; por defecto `/WEPRODU/Solicitudes`), como
- * `espejoDropboxRegistros.ts`. Es LA FOTO DE LO PEDIDO al enviarla: si después se aprueba o se rechaza,
- * el estado vigente sigue siendo el de la base.
+ * `espejoDropboxRegistros.ts`. Es LA FOTO DE LO PEDIDO: se reescribe cada vez que se edita la solicitud
+ * (`modificadaEl` dice cuándo). Si después se aprueba o se rechaza, el estado vigente sigue siendo el de
+ * la base.
  *
  * NUNCA FRENA LA SOLICITUD: se sube en segundo plano y un error de Dropbox sólo se loguea. Tampoco
  * guarda la contraseña provisoria: el contenido sale de una lista de campos, no del documento entero.
@@ -29,4 +30,5 @@ export declare function guardarSolicitudEnDropbox(o: {
         id: string;
         nombre: string;
     } | null;
+    nombreAnterior?: string;
 }): void;

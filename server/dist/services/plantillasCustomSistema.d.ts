@@ -10,7 +10,8 @@ import { Types } from "mongoose";
  *
  * Idempotente. Lo que ya existe se reconoce por la marca o, la primera vez, por el nombre y lo custom
  * (los que creó el script), y se marca sin duplicarlo. No toca lo que el usuario cambió (membrete,
- * activo, estados): sólo crea lo que falta, pone la marca y mantiene la plantilla como custom.
+ * activo, estados): sólo crea lo que falta, pone la marca y mantiene la plantilla como custom y con el
+ * placeholder vigente.
  *
  * Corre al arrancar el server para todos los tenants y, por las dudas, en los GET de las cuatro
  * pantallas para el tenant que mira (una vez por proceso y tenant).

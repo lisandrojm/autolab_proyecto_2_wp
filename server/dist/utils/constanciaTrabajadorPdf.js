@@ -30,12 +30,34 @@ export const leerConstanciaTrabajadorPdf = async (buffer) => leerConstanciaTraba
  * poder comprobarlo, el PDF queda para revisar y no se envía ni se archiva.
  */
 export function problemasDeConstancia(c, esperado) {
+    return evaluarConstancia(c, esperado).problemas;
+}
+/**
+ * Lo mismo que `problemasDeConstancia`, diciendo además si es la constancia de BAJA aceptada.
+ *
+ * LA CONSTANCIA DE BAJA DE UNA RELACIÓN QUE YA TERMINÓ ES VÁLIDA (07/11/2026). Una jornada empieza y
+ * termina el mismo día: cuando la descarga corre, ARCA ya la tiene con cese y por la impresora entrega
+ * la constancia como «Baja». Es la constancia de esa relación —alta y cese en el mismo papel—, no un
+ * error, y rechazarla la dejaba rebotando todos los días para siempre. Se acepta si su cese es la baja
+ * del contrato (`fechaBaja`); con otro cese, o un contrato sin baja, sigue siendo un problema.
+ */
+export function evaluarConstancia(c, esperado) {
     const out = [];
     const cuil = normalizarCuit(String(esperado.cuil ?? ""));
     const cuit = normalizarCuit(String(esperado.empleadorCuit ?? ""));
     const inicio = String(esperado.fechaInicio ?? "").slice(0, 10);
+    const baja = /^\d{4}-\d{2}-\d{2}/.test(String(esperado.fechaBaja ?? "")) ? String(esperado.fechaBaja).slice(0, 10) : "";
+    const deBaja = c.tipo === "baja";
     if (!c.tipo)
         out.push("No es una «Constancia del trabajador» de ARCA (no se encontró el título).");
+    else if (deBaja) {
+        if (!baja)
+            out.push("Es una constancia de «baja» y el contrato no tiene fecha de baja.");
+        else if (!c.fechaCese)
+            out.push("Es una constancia de «baja» y no se pudo leer su fecha de cese.");
+        else if (c.fechaCese !== baja)
+            out.push(`Es una constancia de «baja» con cese ${c.fechaCese}, y el contrato termina el ${baja}.`);
+    }
     else if (c.tipo !== "alta")
         out.push(`Es una constancia de «${c.tipo}», no de Alta.`);
     if (!c.cuil)
@@ -50,5 +72,5 @@ export function problemasDeConstancia(c, esperado) {
         out.push("No se pudo leer la fecha de inicio de la constancia.");
     else if (c.fechaInicio !== inicio)
         out.push(`La fecha de inicio de la constancia (${c.fechaInicio}) no es la del contrato (${inicio || "sin fecha"}).`);
-    return out;
+    return { problemas: out, deBaja: deBaja && out.length === 0, mismoDia: deBaja && out.length === 0 && !!baja && baja === inicio };
 }

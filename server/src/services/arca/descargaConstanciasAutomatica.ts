@@ -1,6 +1,10 @@
 import { Types } from "mongoose";
 import { Company } from "../../models/Company.js";
 import { arrancarDescargaConstancias, descargaConstanciasDe, pendientesDeConstancia } from "./constanciasAltas.js";
+import { actualizarUbicaciones, colaDeDescarga } from "./constanciasArca.js";
+import type { FueraDeLaCorrida } from "./cicloConstancia.js";
+import { Tenant } from "../../models/Tenant.js";
+import { getTenantDropboxConfig } from "../dropboxService.js";
 import { quienTiene } from "./candadoArca.js";
 import { credencialesDe } from "./navegador.js";
 import { type ConfigAltasAutomaticas, momentoDeCorrida, sumarDias } from "./horarioAltasAutomaticas.js";
@@ -29,6 +33,8 @@ export interface ResumenEmpresaConstancias {
   pendientes: number;
   pedidas: number;
   listas: number;
+  /** Las que no entraron y por qué: el tope (nuevas primero), reintentos que esperan su fecha, revisión (07/11/2026). */
+  fuera?: FueraDeLaCorrida;
   error?: string;
 }
 
@@ -117,6 +123,7 @@ export async function forzarDescargaConstancias(tenantId: string, tenantObjectId
     } finally {
       estado.terminado = true;
       estado.empresaActual = "";
+      await ubicarDespuesDeBajar(tenantId);
     }
   })();
   return { total, empresas: estado.empresas, omitidas: items.length - total };
@@ -144,8 +151,11 @@ export async function correrDescargaConstanciasDelDia(tenantId: string, tenantOb
     if (cuit.length !== 11) continue;
     const pendientes = await pendientesDeConstancia(tenantObjectId, String(e._id));
     if (pendientes.length === 0) continue;
-    const fila: ResumenEmpresaConstancias = { empresa: String(e.razonSocial || cuit), pendientes: pendientes.length, pedidas: 0, listas: 0 };
+    // Qué entra hoy y qué no (nuevas primero; lo que espera su reintento o está en revisión no ocupa cupo).
+    const cola = await colaDeDescarga(tenantObjectId, String(e._id), { ahora: new Date(), tope: MAX_POR_EMPLEADORA });
+    const fila: ResumenEmpresaConstancias = { empresa: String(e.razonSocial || cuit), pendientes: cola.total, pedidas: 0, listas: 0, fuera: cola.fuera };
     resumen.empresas.push(fila);
+    if (cola.elegidas.length === 0) continue;
     // Otra corrida de ARCA en curso (altas, obras sociales): se espera; si no se libera, esta empleadora queda para mañana.
     if (!(await esperarCandadoLibre(tenantId, 30 * 60_000))) {
       fila.error = "Había otra corrida de ARCA en curso y no terminó en 30 minutos.";
@@ -170,5 +180,17 @@ export async function correrDescargaConstanciasDelDia(tenantId: string, tenantOb
       fila.error = String(err?.message || err);
     }
   }
+  await ubicarDespuesDeBajar(tenantId);
   return resumen;
+}
+
+/** Recién bajadas, ya se sabe dónde quedó cada una: el estado de la pantalla no espera al próximo escaneo. */
+async function ubicarDespuesDeBajar(tenantId: string): Promise<void> {
+  try {
+    const t: any = await Tenant.findById(tenantId).lean();
+    const cfg = getTenantDropboxConfig(t);
+    if (cfg) await actualizarUbicaciones(tenantId, cfg);
+  } catch (e: any) {
+    console.warn("[constancias] no se pudieron ubicar los documentos después de la descarga:", e?.message || e);
+  }
 }

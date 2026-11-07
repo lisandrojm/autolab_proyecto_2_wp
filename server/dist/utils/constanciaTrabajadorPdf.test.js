@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { leerConstanciaTrabajador, problemasDeConstancia } from "./constanciaTrabajadorPdf.js";
+import { evaluarConstancia, leerConstanciaTrabajador, problemasDeConstancia } from "./constanciaTrabajadorPdf.js";
 /**
  * El texto de una constancia real de ARCA (talón del empleador), con la persona cambiada: el mismo
  * orden y los mismos rótulos que extrae el lector de PDF.
@@ -57,10 +57,26 @@ describe("problemasDeConstancia", () => {
     it("la constancia de alta del contrato pasa sin problemas", () => {
         assert.deepEqual(problemasDeConstancia(leerConstanciaTrabajador(constancia()), CONTRATO), []);
     });
-    it("la constancia de BAJA no pasa, aunque todo lo demás coincida", () => {
+    it("la constancia de BAJA no pasa si el contrato no tiene baja", () => {
         const p = problemasDeConstancia(leerConstanciaTrabajador(constancia("Baja")), CONTRATO);
         assert.equal(p.length, 1);
-        assert.match(p[0], /«baja», no de Alta/);
+        assert.match(p[0], /«baja» y el contrato no tiene fecha de baja/);
+    });
+    it("(07/11/2026) la constancia de BAJA de una relación ya terminada pasa si su cese es la baja del contrato", () => {
+        const ev = evaluarConstancia(leerConstanciaTrabajador(constancia("Baja")), { ...CONTRATO, fechaBaja: "2026-10-31" });
+        assert.deepEqual(ev, { problemas: [], deBaja: true, mismoDia: false });
+        // Con otro cese, no: no es la relación de este contrato.
+        assert.match(problemasDeConstancia(leerConstanciaTrabajador(constancia("Baja")), { ...CONTRATO, fechaBaja: "2026-10-15" })[0], /cese 2026-10-31, y el contrato termina el 2026-10-15/);
+    });
+    it("(07/11/2026) la JORNADA: alta y baja el mismo día, la constancia de baja es la válida y se marca como mismo día", () => {
+        const jornada = constancia("Baja").replace("Fecha Inicio: 01/10/2026 Fecha Cese: 31/10/2026", "Fecha Inicio: 24/10/2026 Fecha Cese: 24/10/2026");
+        const ev = evaluarConstancia(leerConstanciaTrabajador(jornada), { ...CONTRATO, fechaInicio: "2026-10-24", fechaBaja: "2026-10-24T00:00:00.000Z" });
+        assert.deepEqual(ev, { problemas: [], deBaja: true, mismoDia: true });
+        // Y nunca dice «no de Alta»: ése era el rebote de todos los días.
+        assert.ok(!ev.problemas.some((p) => /no de Alta/.test(p)));
+    });
+    it("la constancia de alta sigue igual: no es «de baja» aunque el contrato tenga baja", () => {
+        assert.deepEqual(evaluarConstancia(leerConstanciaTrabajador(constancia()), { ...CONTRATO, fechaBaja: "2026-10-31" }), { problemas: [], deBaja: false, mismoDia: false });
     });
     it("otro CUIL, otra empleadora u otra fecha de inicio: cada uno se dice", () => {
         const c = leerConstanciaTrabajador(constancia());

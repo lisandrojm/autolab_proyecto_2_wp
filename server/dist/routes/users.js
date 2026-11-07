@@ -21,7 +21,7 @@ import { olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 import { quitarDelConteo, sumarAlConteo } from "../services/conteoUsuariosTenant.js";
 import { contratoDePersonaEnFechas, pedidoDesdeSolicitud, rechazoAltaArcaConContrato, superposicionesDeAlta } from "../services/superposicion.js";
 import { mensajeSoloServicios } from "../utils/superposicionContratos.js";
-import { efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "../services/solicitudes.js";
+import { efectosDeSolicitudEditada, efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "../services/solicitudes.js";
 import { Area } from "../models/Area.js";
 import { Client } from "../models/Client.js";
 import { Company } from "../models/Company.js";
@@ -2646,10 +2646,13 @@ router.get("/:id/contrato-que-rige", requireTenant, authenticateToken, requireAn
             res.status(404).json({ error: "Persona no encontrada." });
             return;
         }
-        const vinculos = await UserProject.find({ userId: id }).select("nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_contrato").lean();
-        const contratos = vinculos.flatMap((v) => (v.contracts || []).map((c) => ({ ...c, proyecto: String(v.nombre_proyecto || "") })));
+        const vinculos = await UserProject.find({ userId: id }).select("projectId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_contrato contracts.tipo_contrato_id").lean();
+        const contratos = vinculos.flatMap((v) => (v.contracts || []).map((c) => ({ ...c, proyecto: String(v.nombre_proyecto || ""), proyectoId: v.projectId })));
         const c = getContratoActivo(contratos);
-        res.json({ contrato: c ? { alta: fechaISO(c.fecha_alta_contrato), baja: fechaISO(c.fecha_baja_contrato) || null, nombre: String(c.nombre_contrato || ""), proyecto: c.proyecto, vigente: esContratoVigente(c) } : null });
+        const proyecto = c?.proyectoId ? await Project.findById(c.proyectoId).select("metadata.centroCostoId metadata.centroCostoEmpresaTangoId").lean() : null;
+        if (proyecto)
+            await resolverCentroCostoDeProyectos([proyecto]);
+        res.json({ contrato: c ? { alta: fechaISO(c.fecha_alta_contrato), baja: fechaISO(c.fecha_baja_contrato) || null, nombre: String(c.nombre_contrato || ""), tipoContratoId: c.tipo_contrato_id ?? null, centroCosto: proyecto ? etiquetaCentroCostoDe(proyecto) : "", proyecto: c.proyecto, vigente: esContratoVigente(c) } : null });
     }
     catch (error) {
         console.error("Contrato que rige error:", error);
@@ -2991,6 +2994,8 @@ router.patch("/:id", requireTenant, authenticateToken, permisoSobreSolicitudProp
             res.status(404).json({ error: "User not found" });
             return;
         }
+        if (data.metadata?.isSolicitud === true)
+            efectosDeSolicitudEditada(req.tenantObjectId, user, currentUser.metadata?.fullName);
         /*
           UNA SOLICITUD CORREGIDA VUELVE A ESPERAR RESOLUCIÓN, así que hay que avisar.
     

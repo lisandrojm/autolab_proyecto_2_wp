@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import type { FueraDeLaCorrida } from "./cicloConstancia.js";
 import { type ConfigAltasAutomaticas } from "./horarioAltasAutomaticas.js";
 /**
  * DESCARGA AUTOMÁTICA DE LAS CONSTANCIAS DE ALTA TEMPRANA (pedido del 18/10/2026). Una vez por día, a la
@@ -19,6 +20,8 @@ export interface ResumenEmpresaConstancias {
     pendientes: number;
     pedidas: number;
     listas: number;
+    /** Las que no entraron y por qué: el tope (nuevas primero), reintentos que esperan su fecha, revisión (07/11/2026). */
+    fuera?: FueraDeLaCorrida;
     error?: string;
 }
 export interface ResumenDescargaConstancias {

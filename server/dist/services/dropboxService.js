@@ -270,6 +270,45 @@ export async function copyEntry(tenantId, cfg, fromPath, toPath) {
     const data = await rpc(tenantId, cfg, "/files/copy_v2", { from_path: fromPath, to_path: toPath, autorename: true });
     return mapEntry(data.metadata);
 }
+/**
+ * Busca archivos por NOMBRE en todo el Dropbox conectado (o debajo de `dentroDe`). Es la búsqueda de
+ * Dropbox, no un listado: encuentra un archivo aunque se haya movido de carpeta, y con
+ * `borrados` también los que se eliminaron. Ojo: Dropbox parte el nombre en palabras, así que se
+ * busca por un pedazo entero («ID-000663», el CUIL), no por cualquier subcadena.
+ */
+export async function buscarArchivos(tenantId, cfg, texto, o = {}) {
+    const data = await rpc(tenantId, cfg, "/files/search_v2", {
+        query: texto,
+        options: { ...(o.dentroDe ? { path: o.dentroDe } : {}), max_results: o.max ?? 100, filename_only: true, file_status: o.borrados ? "deleted" : "active" },
+    });
+    return (data.matches || []).map((m) => m?.metadata?.metadata).filter(Boolean).map(mapEntry);
+}
+/**
+ * Dónde está HOY un archivo. `ref` puede ser un path o el id de Dropbox («id:…»): el id no cambia al
+ * mover ni al renombrar, así que con él se sigue al archivo a la carpeta a la que haya ido. `null` si
+ * no existe; con `borrados`, un archivo eliminado vuelve con `borrado: true`.
+ */
+export async function ubicarArchivo(tenantId, cfg, ref, o = {}) {
+    try {
+        const data = await rpc(tenantId, cfg, "/files/get_metadata", { path: ref, include_deleted: !!o.borrados });
+        return data?.[".tag"] === "deleted" ? { ...mapEntry({ ...data, ".tag": "file" }), borrado: true } : mapEntry(data);
+    }
+    catch (e) {
+        if (/not_found/.test(String(e?.response?.data?.error_summary || "")))
+            return null;
+        throw e;
+    }
+}
+/** Cuándo se borró un archivo de ese path (`null` si no está borrado o no hubo nunca uno). Para explicar un documento que falta. */
+export async function borradoEl(tenantId, cfg, path) {
+    try {
+        const data = await rpc(tenantId, cfg, "/files/list_revisions", { path, mode: "path", limit: 1 });
+        return data?.is_deleted ? String(data.server_deleted || "") || null : null;
+    }
+    catch {
+        return null;
+    }
+}
 export async function createFolder(tenantId, cfg, path) {
     const data = await rpc(tenantId, cfg, "/files/create_folder_v2", { path, autorename: false });
     return mapEntry(data.metadata);

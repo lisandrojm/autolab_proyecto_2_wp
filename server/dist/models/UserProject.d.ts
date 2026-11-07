@@ -314,6 +314,10 @@ interface IContract {
         /** Cómo llegó (18/10/2026): la bajó la descarga automática, la bajó alguien desde ARCA, o alguien subió el PDF a mano. */
         origen?: "automatica" | "descarga" | "subida";
         porUsuarioId?: Types.ObjectId;
+        /** «baja»: la constancia de una relación que ya terminó, aceptada porque su cese es la baja del contrato (07/11/2026). */
+        tipo?: "alta" | "baja";
+        /** El id de Dropbox del archivo subido: sigue al archivo aunque se mueva o se renombre. */
+        dropboxId?: string;
     };
     /** Cuándo salió el alta a firmar. Con esto puesto ningún envío la vuelve a mandar. */
     altaEnviadaAFirmarEl?: Date;

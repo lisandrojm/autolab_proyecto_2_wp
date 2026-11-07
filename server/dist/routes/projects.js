@@ -31,6 +31,9 @@ import { claveDe as claveVerificacion, itemDe, verificacionEnCursoDe, verificarA
 import { ArcaVerificacionAlta } from "../models/ArcaVerificacionAlta.js";
 import { MAX_POR_EMPLEADORA, forzarDescargaConstancias, forzadoDe, proximaDescarga } from "../services/arca/descargaConstanciasAutomatica.js";
 import { pendientesDeConstanciaTodas } from "../services/arca/constanciasAltas.js";
+import { constanciasDeLaPantalla } from "../services/arca/constanciasArca.js";
+/** Lo que la pantalla de Descargas muestra del ciclo de una pendiente: si es nueva, cuándo se reintenta, por qué está en revisión. */
+const cicloDe = (k) => (k ? { estado: k.estado, intentos: k.intentos, proximoIntentoEl: k.proximoIntentoEl, motivoRevision: k.motivoRevision } : null);
 import { claveAreaTurnoDelMiembro } from "../utils/areaTurno.js";
 import { partirClaveAreaTurno, sedeDe, sedePrincipalDe, pendientesDeSede, idDe as idDeArea } from "../compartido/areaTurno.js";
 import { ponerSedeEnArea } from "../services/sedeDeArea.js";
@@ -3745,7 +3748,9 @@ router.get("/contratos/altas-arca/constancias/pendientes", requireTenant, authen
         const cfg = configDe({ hora: dc.hora ?? 15, minuto: dc.minuto ?? 0 });
         const hoy = hoyArgentina();
         const ahora = new Date();
-        const pendientes = await pendientesDeConstanciaTodas(req.tenantObjectId);
+        const [pendientes, constancias] = await Promise.all([pendientesDeConstanciaTodas(req.tenantObjectId), constanciasDeLaPantalla(req.tenantObjectId)]);
+        // El estado de cada una sale de `constancias_arca` (07/11/2026): nueva, esperando su reintento o en revisión, con sus intentos.
+        const cicloPorContrato = new Map(constancias.map((k) => [`${k.userProjectId}:${k.contractIndex}`, k]));
         const d = descargaConstanciasDe(String(req.tenantObjectId));
         const f = forzadoDe(String(req.tenantObjectId));
         res.json({
@@ -3756,7 +3761,7 @@ router.get("/contratos/altas-arca/constancias/pendientes", requireTenant, authen
             proximaCorrida: proximaDescarga(cfg, !!dc.activa, dc.ultimoDia, ahora, hoy),
             ultimaCorrida: dc.ultimaCorrida || null,
             maxPorEmpleadora: MAX_POR_EMPLEADORA,
-            pendientes: pendientes.map((p) => ({ userProjectId: p.userProjectId, contractIndex: p.contractIndex, userId: p.userId, nombre: p.nombre, cuil: p.cuil, fechaAlta: p.fechaAlta, presentadaEl: p.presentadaEl, empresa: { _id: p.empresaId, razonSocial: p.empresaRazonSocial } })),
+            pendientes: pendientes.map((p) => ({ userProjectId: p.userProjectId, contractIndex: p.contractIndex, userId: p.userId, nombre: p.nombre, cuil: p.cuil, fechaAlta: p.fechaAlta, presentadaEl: p.presentadaEl, empresa: { _id: p.empresaId, razonSocial: p.empresaRazonSocial }, ciclo: cicloDe(cicloPorContrato.get(`${p.userProjectId}:${p.contractIndex}`)) })),
             // La descarga de UNA empleadora que corre ahora (forzada o automática), con sus eventos; y el forzado en masa, si lo hay.
             descarga: d ? { empresaId: d.empresaId, empresaRazonSocial: d.empresaRazonSocial, total: d.total, corriendo: !d.terminada, arrancadaEl: d.arrancadaEl, eventos: d.eventos } : null,
             forzado: f ? { ...f } : null,

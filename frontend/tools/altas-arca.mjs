@@ -546,7 +546,42 @@ function resumenDeTarjeta(fila) {
  *   · la impresora es el único control clickeable que se nombra como tal (id, título, imagen).
  * Con cero o con más de uno no se elige: se devuelve qué había, y con eso se ajusta.
  */
-export function elegirEnResultadoDeConsulta({ casillas = [], controles = [], fecha = "" }) {
+/** Inicio, fin y modalidad de una tarjeta del resultado, para compararlas y mostrarlas lado a lado. Puro. */
+export function datosDeTarjeta(fila) {
+  const t = String(fila || "");
+  const inicio = /Fecha de Inicio:?\s*([\d/.-]{8,10})/i.exec(t)?.[1] || "";
+  const fin = /Fecha de Fin:?\s*([\d/.-]{8,10})/i.exec(t)?.[1] || "";
+  // Hasta el rótulo siguiente («Sucursal:», «Obra Social:»): una palabra Capitalizada y dos puntos (la descripción va en mayúsculas).
+  const modalidad = (/(?:Modalidad[^:]{0,30}|Mod\.\s*Contrato):\s*(\d{3}(?:\s*-\s*.{1,70}?)?)(?=\s+[A-ZÁÉÍÓÚ][a-záéíóúñ.]+(?:\s[A-Za-záéíóúñ.]+)?:|$)/.exec(t)?.[1] || "").trim();
+  return { inicio, fin, modalidad };
+}
+
+/**
+ * ¿Son la MISMA relación cargada dos veces? Iguales en inicio, fin y modalidad (si las tarjetas no traen
+ * los rótulos, el texto entero sin los números de C.A.T., que cambian en cada alta). Puro.
+ */
+function sonIdenticas(filas) {
+  const datos = filas.map(datosDeTarjeta);
+  if (datos.every((d) => d.inicio)) return datos.every((d) => d.inicio === datos[0].inicio && d.fin === datos[0].fin && d.modalidad === datos[0].modalidad);
+  const sinCat = (f) => String(f || "").replace(/\d{12,}/g, "").replace(/\d{2}:\d{2}:\d{2}\s*hs?:?/gi, "").replace(/\s+/g, " ").trim();
+  return filas.every((f) => sinCat(f) === sinCat(filas[0]));
+}
+
+/** «fin 31/10/2026, A tiempo parcial» de una tarjeta, para decirlo en un aviso. Puro. */
+const comoSeVe = (fila) => {
+  const d = datosDeTarjeta(fila);
+  return d.inicio ? `inicio ${d.inicio}, ${d.fin ? `fin ${d.fin}` : "sin fin"}${d.modalidad ? `, ${d.modalidad}` : ""}` : resumenDeTarjeta(fila);
+};
+
+/*
+  VARIAS RELACIONES CON EL MISMO INICIO (07/11/2026). Pasa cuando el alta quedó cargada dos veces en
+  ARCA. Antes no se elegía ninguna y el aviso volcaba las casillas crudas, todos los días. Ahora:
+    · si una sola termina cuando el contrato (`fechaFin`), es ésa;
+    · si son idénticas (la misma alta, duplicada), se toma la primera: la constancia es la misma;
+    · si de verdad difieren, no se adivina: `sinArreglo` (va a revisión, reintentar no lo cambia) y
+      un detalle que las compara lado a lado.
+*/
+export function elegirEnResultadoDeConsulta({ casillas = [], controles = [], fecha = "", fechaFin = "" }) {
   /*
     Cada relación es una TARJETA con varias fechas: «Fecha de Inicio», la del C.A.T. y «Fecha de Fin»
     (relevado de la pantalla real, 4/10/2026). La que identifica la relación es la de INICIO: si la
@@ -558,10 +593,26 @@ export function elegirEnResultadoDeConsulta({ casillas = [], controles = [], fec
     return fechaEnTexto(inicio ? inicio[1] : fila, fecha);
   };
   const deLaRelacion = casillas.filter((c) => c.id && esDeEsaFecha(c.fila));
-  if (deLaRelacion.length !== 1) {
-    // Se dice QUÉ había en cada fila: es con lo que se ajusta el lector cuando la pantalla no es la esperada.
-    const visto = casillas.map((c) => `[${resumenDeTarjeta(c.fila)}]`).join(" ");
-    return { ok: false, motivo: deLaRelacion.length === 0 ? "sin_relacion" : "ambigua", detalle: `Esperaba UNA relación con inicio ${fecha} y hay ${deLaRelacion.length} (casillas en pantalla: ${casillas.length}).${visto ? ` Filas: ${visto}` : ""}` };
+  if (deLaRelacion.length === 0) {
+    // Qué relaciones SÍ muestra, en castellano (las casillas sin texto, como la de «todas», no se nombran).
+    const otras = casillas.filter((c) => String(c.fila || "").trim()).map((c) => comoSeVe(c.fila));
+    return { ok: false, motivo: "sin_relacion", detalle: `ARCA no muestra ninguna relación que empiece el ${fecha}.${otras.length ? ` Muestra: ${otras.join(" · ")}.` : ""}` };
+  }
+  let elegida = deLaRelacion.length === 1 ? deLaRelacion[0] : null;
+  if (!elegida && fechaFin) {
+    const conEseFin = deLaRelacion.filter((c) => fechaEnTexto(datosDeTarjeta(c.fila).fin, fechaFin));
+    if (conEseFin.length === 1 || (conEseFin.length > 1 && sonIdenticas(conEseFin.map((c) => c.fila)))) elegida = conEseFin[0];
+  }
+  if (!elegida && sonIdenticas(deLaRelacion.map((c) => c.fila))) elegida = deLaRelacion[0];
+  if (!elegida) {
+    const candidatas = deLaRelacion.map((c) => datosDeTarjeta(c.fila));
+    return {
+      ok: false,
+      motivo: "ambigua",
+      sinArreglo: true,
+      candidatas,
+      detalle: `ARCA muestra ${deLaRelacion.length} relaciones que empiezan el ${fecha} y no son iguales: ${deLaRelacion.map((c, i) => `(${i + 1}) ${comoSeVe(c.fila)}`).join(" · ")}. Hay que ver en ARCA cuál corresponde al contrato.`,
+    };
   }
   const nombrados = controles.filter((c) => c.id && /imprim|impres|print/i.test(String(c.pista || "")));
   // Si la imagen y su botón se nombran igual, vale el botón.
@@ -570,7 +621,7 @@ export function elegirEnResultadoDeConsulta({ casillas = [], controles = [], fec
   if (impresoras.length !== 1) {
     return { ok: false, motivo: "sin_impresora", detalle: `Esperaba UN ícono de impresora y hay ${impresoras.length}: ${nombrados.map((c) => c.id).join(", ") || "ninguno se nombra como impresora"}.` };
   }
-  return { ok: true, casilla: deLaRelacion[0].id, impresora: impresoras[0].id };
+  return { ok: true, casilla: elegida.id, impresora: impresoras[0].id };
 }
 
 /** ¿Esta respuesta de ARCA es la constancia? Por el tipo o por el nombre del adjunto. */
@@ -744,7 +795,7 @@ async function leerResultadoDeConsulta(page) {
  * "sin_impresora", detalle }` si la pantalla no dejó una sola respuesta posible. Qué constancia
  * entrega ARCA (alta o baja) no se decide acá: el PDF se valida después, igual que el subido a mano.
  */
-export async function descargarConstanciaDeAlta({ page, cuil, fechaInicio, onProgreso = () => {} }) {
+export async function descargarConstanciaDeAlta({ page, cuil, fechaInicio, fechaFin = "", onProgreso = () => {} }) {
   const c = soloDigitos(cuil);
   const f = soloDigitos(fechaInicio);
   if (c.length !== 11 || f.length !== 8) throw new Error("La descarga necesita el CUIL (11 dígitos) y la fecha de inicio (ddmmaaaa).");
@@ -757,8 +808,10 @@ export async function descargarConstanciaDeAlta({ page, cuil, fechaInicio, onPro
     // aparecen (la persona no tiene relaciones con esta empleadora) se sigue, y se informa.
     await esperarEstado(async () => (await page.locator("input[type=checkbox]").count()) > 0, { ms: 8_000, que: "las relaciones del resultado", log });
     const enPantalla = await leerResultadoDeConsulta(page);
-    const eleccion = elegirEnResultadoDeConsulta({ ...enPantalla, fecha });
-    if (!eleccion.ok) return { resultado: eleccion.motivo, detalle: eleccion.detalle, html: await htmlAnonimo(page) };
+    // La baja del contrato (ddmmaaaa, opcional) desempata entre relaciones del mismo inicio.
+    const ff = soloDigitos(fechaFin);
+    const eleccion = elegirEnResultadoDeConsulta({ ...enPantalla, fecha, fechaFin: ff.length === 8 ? `${ff.slice(0, 2)}/${ff.slice(2, 4)}/${ff.slice(4)}` : "" });
+    if (!eleccion.ok) return { resultado: eleccion.motivo, detalle: eleccion.detalle, sinArreglo: !!eleccion.sinArreglo, candidatas: eleccion.candidatas, html: await htmlAnonimo(page) };
     const casilla = page.locator(`[id="${eleccion.casilla}"]`);
     if ((await casilla.count()) !== 1) return { resultado: "sin_relacion", detalle: "La casilla de la relación dejó de estar en pantalla.", html: await htmlAnonimo(page) };
     await casilla.check();

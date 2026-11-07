@@ -34,6 +34,9 @@ export interface RuteoAlta {
     aviso?: string;
     /** El estado al que pasó el contrato, si avanzó. */
     estado?: string;
+    /** El nombre con que se subió y su id de Dropbox (sigue al archivo si se mueve): el vínculo de `constancias_arca`. */
+    nombre?: string;
+    dropboxId?: string;
 }
 export type ResultadoAlta = {
     ok: false;
@@ -43,6 +46,10 @@ export type ResultadoAlta = {
     altaDocumentoUrl: string;
     altaDocumentoNombre: string;
     ruteo?: RuteoAlta;
+    constancia?: {
+        deBaja: boolean;
+        mismoDia: boolean;
+    };
 };
 export declare function registrarAltaDeContrato(o: {
     tenantObjectId: any;

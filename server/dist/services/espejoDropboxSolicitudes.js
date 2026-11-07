@@ -1,6 +1,6 @@
 import { Tenant } from "../models/Tenant.js";
 import { Info } from "../models/Info.js";
-import { getTenantDropboxConfig, listFolder, uploadFile } from "./dropboxService.js";
+import { deleteEntry, getTenantDropboxConfig, listFolder, uploadFile } from "./dropboxService.js";
 import { CARPETA_SOLICITUDES, ESTADO_TYPE, NOMBRE_ESTADO_SOLICITUD } from "../utils/estadosImpositivosSistema.js";
 /**
  * EL REGISTRO DE CADA SOLICITUD DE CONTRATACIÓN EN DROPBOX (05/11/2026).
@@ -8,8 +8,9 @@ import { CARPETA_SOLICITUDES, ESTADO_TYPE, NOMBRE_ESTADO_SOLICITUD } from "../ut
  * Una solicitud es un `User` con `metadata.isSolicitud`: vive en la base y no dejaba ningún archivo,
  * así que no había dónde ir a verla. Ahora cada una deja un `.json` en la carpeta del estado «Solicitud
  * pendiente» (propósito `solicitudes`; por defecto `/WEPRODU/Solicitudes`), como
- * `espejoDropboxRegistros.ts`. Es LA FOTO DE LO PEDIDO al enviarla: si después se aprueba o se rechaza,
- * el estado vigente sigue siendo el de la base.
+ * `espejoDropboxRegistros.ts`. Es LA FOTO DE LO PEDIDO: se reescribe cada vez que se edita la solicitud
+ * (`modificadaEl` dice cuándo). Si después se aprueba o se rechaza, el estado vigente sigue siendo el de
+ * la base.
  *
  * NUNCA FRENA LA SOLICITUD: se sube en segundo plano y un error de Dropbox sólo se loguea. Tampoco
  * guarda la contraseña provisoria: el contenido sale de una lista de campos, no del documento entero.
@@ -27,6 +28,7 @@ export function contenidoDeSolicitud(s, creador, estado = NOMBRE_ESTADO_SOLICITU
         solicitudId: String(s?._id || ""),
         estado,
         creadaEl: s?.createdAt || null,
+        modificadaEl: s?.updatedAt || null,
         creadaPor: creador || null,
         persona: { nombre: m.fullName || `${s?.firstName || ""} ${s?.lastName || ""}`.trim(), personaId: m.solicitudUserId ? String(m.solicitudUserId) : null },
         proyectos: (m.projectIds || []).map(String),
@@ -36,6 +38,9 @@ export function contenidoDeSolicitud(s, creador, estado = NOMBRE_ESTADO_SOLICITU
         tramite: m.tipoImpositivo || null,
         areasYTurnos: m.areaShiftAssignments || [],
         diasPorSemana: m.diasPorSemana ?? null,
+        jornadas: m.workdaysCount ?? null,
+        fechasTrabajadas: m.fechasTrabajadas || [],
+        importePorJornada: m.dailyRate ?? null,
         esRenovacion: !!m.esRenovacion,
         comentarios: m.comentarios || null,
     };
@@ -62,8 +67,13 @@ export function guardarSolicitudEnDropbox(o) {
             */
             await listFolder(o.tenantId, cfg, "/" + carpeta.split("/").filter(Boolean)[0]);
             const m = o.solicitud?.metadata || {};
-            const nombre = nombreArchivoSolicitud({ creadaEl: o.solicitud?.createdAt || new Date(), nombre: m.fullName || `${o.solicitud?.lastName || ""} ${o.solicitud?.firstName || ""}`, id: String(o.solicitud?._id) });
+            const nombreDelArchivo = (persona) => nombreArchivoSolicitud({ creadaEl: o.solicitud?.createdAt || new Date(), nombre: persona, id: String(o.solicitud?._id || "") });
+            const nombre = nombreDelArchivo(m.fullName || `${o.solicitud?.lastName || ""} ${o.solicitud?.firstName || ""}`);
             await uploadFile(o.tenantId, cfg, `${carpeta}/${nombre}`, Buffer.from(JSON.stringify(contenidoDeSolicitud(o.solicitud, o.creador, estado), null, 2), "utf8"), true);
+            // Editada con otra persona: el nombre del archivo cambió y el anterior quedaría como una solicitud más.
+            const anterior = o.nombreAnterior === undefined ? nombre : nombreDelArchivo(o.nombreAnterior);
+            if (anterior !== nombre)
+                await deleteEntry(o.tenantId, cfg, `${carpeta}/${anterior}`);
         }
         catch (e) {
             console.warn(`[SOLICITUDES→DROPBOX] No se pudo guardar la solicitud ${o.solicitud?._id || "?"}:`, e?.response?.data?.error_summary || e?.message || e);

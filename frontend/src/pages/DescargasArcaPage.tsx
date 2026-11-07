@@ -6,7 +6,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { CuentaRegresiva } from "../components/ui/CuentaRegresiva";
 import { BotonOrden, useOrdenTabla } from "../components/ui/OrdenTabla";
-import { projectsAPI, horaTexto, type EstadoDescargasArca, type PendienteDeConstancia } from "../api/projects";
+import { projectsAPI, horaTexto, type EstadoDescargasArca, type FueraDeLaCorrida, type PendienteDeConstancia } from "../api/projects";
 import { sweetAlert } from "../utils/sweetAlert";
 import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 import { TablaConEncabezadoFijo, useAltoDeBarra } from "../components/ui/TablaConEncabezadoFijo";
@@ -22,6 +22,48 @@ const fechaCorta = (iso: string) => (/^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.sli
 const fmtCuil = (c: string) => (c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}` : c);
 const fechaArgentina = (iso: string) => fechaCorta(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date(iso)));
 const claveDe = (p: PendienteDeConstancia) => `${p.userProjectId}:${p.contractIndex}`;
+
+/*
+  EL ESTADO DE CADA PENDIENTE (07/11/2026, de `constancias_arca`): nueva (nunca se pidió), reintento
+  (falló, espera su fecha: 1 día, después 2; son 3 intentos como mucho) o en revisión (no se pide sola
+  ni ocupa cupo: hay que mirarla y apretar «Reintentar»).
+*/
+const MAX_INTENTOS = 3;
+type Situacion = "nueva" | "reintento" | "revision";
+const situacionDe = (p: PendienteDeConstancia): Situacion => (p.ciclo?.estado === "requiere_revision" ? "revision" : p.ciclo?.estado === "constancia_pendiente" ? "reintento" : "nueva");
+const intentosAutomaticos = (p: PendienteDeConstancia) => (p.ciclo?.intentos || []).filter((i) => !i.manual && i.resultado !== "descargada").length;
+const EstadoDelCiclo: React.FC<{ p: PendienteDeConstancia }> = ({ p }) => {
+  const s = situacionDe(p);
+  const ultimo = (p.ciclo?.intentos || []).slice(-1)[0];
+  if (s === "nueva") return <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">Nueva</span>;
+  if (s === "reintento")
+    return (
+      <div className="space-y-0.5 max-w-xs">
+        <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+          Reintento {intentosAutomaticos(p) + 1} de {MAX_INTENTOS}
+        </span>
+        {ultimo?.detalle && <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2" title={ultimo.detalle}>Último: {ultimo.detalle}</p>}
+      </div>
+    );
+  return (
+    <div className="space-y-0.5 max-w-xs">
+      <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">Requiere revisión</span>
+      {p.ciclo?.motivoRevision && <p className="text-[11px] text-gray-600 dark:text-gray-300" title={p.ciclo.motivoRevision}>{p.ciclo.motivoRevision}</p>}
+    </div>
+  );
+};
+
+/** «5 nuevas quedan para mañana por el tope · 3 reintentos esperan su fecha · 2 en revisión». */
+const textoFuera = (f?: FueraDeLaCorrida) => {
+  if (!f) return "";
+  const partes = [
+    f.nuevasPorTope > 0 && `${f.nuevasPorTope} nueva${f.nuevasPorTope === 1 ? "" : "s"} para mañana por el tope`,
+    f.reintentosPorTope > 0 && `${f.reintentosPorTope} reintento${f.reintentosPorTope === 1 ? "" : "s"} para mañana por el tope (las nuevas van primero)`,
+    f.esperandoReintento > 0 && `${f.esperandoReintento} reintento${f.esperandoReintento === 1 ? "" : "s"} esperando su fecha`,
+    f.enRevision > 0 && `${f.enRevision} en revisión (no se piden solas)`,
+  ].filter(Boolean);
+  return partes.length ? ` Quedaron afuera: ${partes.join(" · ")}.` : "";
+};
 
 export const DescargasArcaPage: React.FC = () => {
   // La barra de «N tildadas» también se pega debajo del header: el encabezado de la tabla va debajo de ella.
@@ -210,7 +252,7 @@ export const DescargasArcaPage: React.FC = () => {
               {u.empresas.length === 0 && !u.error && <p className="text-xs text-gray-500">No había constancias pendientes ese día.</p>}
               {u.empresas.map((e) => (
                 <p key={e.empresa} className={`text-xs ${e.error ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-300"}`}>
-                  {e.empresa}: {e.listas} de {e.pedidas} bajada(s){e.pendientes > e.pedidas ? ` (${e.pendientes - e.pedidas} quedaron para el día siguiente por el tope)` : ""}
+                  {e.empresa}: {e.listas} de {e.pedidas} bajada(s){e.fuera ? textoFuera(e.fuera) : e.pendientes > e.pedidas ? ` (${e.pendientes - e.pedidas} quedaron para el día siguiente por el tope)` : ""}
                   {e.error ? ` · ${e.error}` : ""}
                 </p>
               ))}
@@ -268,6 +310,8 @@ export const DescargasArcaPage: React.FC = () => {
                         Presentada en ARCA
                       </BotonOrden>
                     </th>
+                    <th className={th}>Estado</th>
+                    <th className={th}>Estado</th>
                     <th className={th}>Se baja en</th>
                     <th className={`${th} text-left`}>Acción</th>
                   </tr>
@@ -286,7 +330,14 @@ export const DescargasArcaPage: React.FC = () => {
                       <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{fechaCorta(p.fechaAlta)}</td>
                       <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{p.presentadaEl ? `${new Date(p.presentadaEl).toLocaleDateString("es-AR")} ${new Date(p.presentadaEl).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}` : "—"}</td>
                       <td className="px-4 py-3">
-                        {estado.proximaCorrida ? (
+                        <EstadoDelCiclo p={p} />
+                      </td>
+                      <td className="px-4 py-3">
+                        {situacionDe(p) === "revision" ? (
+                          <span className="text-xs text-gray-500">No se pide sola</span>
+                        ) : situacionDe(p) === "reintento" && p.ciclo?.proximoIntentoEl && new Date(p.ciclo.proximoIntentoEl).getTime() > ahoraServidor ? (
+                          <span className="text-xs text-gray-600 dark:text-gray-400">En la descarga del {fechaArgentina(p.ciclo.proximoIntentoEl)}</span>
+                        ) : estado.proximaCorrida ? (
                           <div className="space-y-1">
                             <CuentaRegresiva destino={estado.proximaCorrida} ahora={ahoraServidor} />
                             <p className="text-[11px] text-gray-500">{new Date(estado.proximaCorrida).getTime() <= ahoraServidor ? "En la descarga en curso" : `${fechaArgentina(estado.proximaCorrida)} a las ${horaTexto(estado.config)}`}</p>
@@ -298,7 +349,7 @@ export const DescargasArcaPage: React.FC = () => {
                       <td className="px-4 py-3 text-right">
                         <button type="button" onClick={() => forzar([p], `Bajar ahora la constancia de ${p.nombre}`)} disabled={forzando || enCurso} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap">
                           <FontAwesomeIcon icon={faBolt} className="h-3 w-3" />
-                          Forzar descarga
+                          {situacionDe(p) === "nueva" ? "Forzar descarga" : "Reintentar"}
                         </button>
                       </td>
                     </tr>
