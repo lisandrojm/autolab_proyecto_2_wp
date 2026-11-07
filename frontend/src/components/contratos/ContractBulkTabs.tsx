@@ -698,6 +698,9 @@ const FIRMA_IZQ_FECHA = 'left-[13rem]';
 const FIRMA_ANCHO_FECHA = 'w-32 min-w-[8rem] max-w-[8rem]';
 const FIRMA_IZQ_USUARIO = 'left-[21rem]';
 const FIRMA_FIN_DE_FIJAS = 'border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]';
+/** Ancho fijo de Colaborador y Tipo de Contrato en Contratados (07/11/2026): lo que no entra se corta con «…» y el título lo muestra entero. */
+const ANCHO_COLABORADOR = 'w-[220px] min-w-[220px] max-w-[220px]';
+const ANCHO_TIPO_CONTRATO = 'w-[150px] min-w-[150px] max-w-[150px]';
 
 /**
  * EL COLABORADOR, IGUAL QUE EN SOLICITUDES (01/11/2026): arriba el badge «Renovación» si el contrato
@@ -4208,13 +4211,14 @@ export const ContractBulkContratadosTab: React.FC<{
                 <th className={th}>
                   <BotonOrden columna="fechaCarga" {...ordenProps}>Fecha Solicitud</BotonOrden>
                 </th>
-                <th className={th}>
+                {/* Colaborador y Tipo de Contrato con ANCHO FIJO y texto cortado con «…» (07/11/2026): la tabla queda comprimida y se ve entera. */}
+                <th className={`${th} ${ANCHO_COLABORADOR}`}>
                   <BotonOrden columna="usuario" {...ordenProps}>Colaborador</BotonOrden>
                 </th>
                 <th className={th}>
                   <BotonOrden columna="altaBaja" {...ordenProps}>Alta / Baja</BotonOrden>
                 </th>
-                <th className={th}>
+                <th className={`${th} ${ANCHO_TIPO_CONTRATO}`}>
                   <BotonOrden columna="tipoContrato" {...ordenProps}>Tipo de Contrato</BotonOrden>
                 </th>
                 {/* «Estado» es el estado del contrato, al lado del tipo (07/11/2026); el trámite (ARCA / Servicios) va arriba del tipo. */}
@@ -4246,12 +4250,12 @@ export const ContractBulkContratadosTab: React.FC<{
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato sin fecha de carga">—</span>} />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={`px-4 py-3 ${ANCHO_COLABORADOR}`}>
                       <CeldaColaborador r={r} />
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
-                        {!pendiente && <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>}
+                        {!pendiente &&<span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>}
                         <div className="flex flex-col gap-0.5 text-xs">
                           <span>
                             <span className="text-gray-400">Alta:</span> {formatDate(r.fecha_alta_contrato)}
@@ -4262,10 +4266,10 @@ export const ContractBulkContratadosTab: React.FC<{
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                      <div className="flex flex-col items-start gap-1">
+                    <td className={`px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap ${ANCHO_TIPO_CONTRATO}`}>
+                      <div className="flex flex-col items-start gap-1 min-w-0">
                         <BadgeTramiteDelTipo record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
-                        <span>{r.nombre_contrato || '—'}</span>
+                        <span className="block max-w-full truncate" title={r.nombre_contrato || undefined}>{r.nombre_contrato || "—"}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3">{r.nombre_estado_empleado ? <EstadoBadge name={r.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}</td>
