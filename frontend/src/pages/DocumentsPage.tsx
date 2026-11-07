@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLandmark, faFileSignature, faIdCard, faHourglassHalf, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { faDropbox } from "@fortawesome/free-brands-svg-icons";
@@ -12,7 +13,11 @@ type TabKey = "dropbox" | "afip" | "paritarias" | "registros" | "solicitudes" | 
 
 export function DocumentsPage() {
   const puedeAbrir = usePuedeAbrir();
-  const [activeTab, setActiveTab] = useState<TabKey>("dropbox");
+  // `?carpeta=…&buscar=…`: el «ver documento» del Registro de ARCA abre la carpeta donde está HOY la constancia, filtrada por su código.
+  const [params] = useSearchParams();
+  const carpetaInicial = params.get("carpeta") || undefined;
+  const busquedaInicial = params.get("buscar") || undefined;
+  const [activeTab, setActiveTab] = useState<TabKey>(carpetaInicial?.startsWith("/WEPRODU/ARCA") ? "afip" : "dropbox");
   const [itemCount, setItemCount] = useState<number | undefined>(undefined);
   const [showInfo, setShowInfo] = useState(false);
   const helpEntry = getHelp("documents");
@@ -70,14 +75,14 @@ export function DocumentsPage() {
 
           {/* Tab Content */}
           <div className="animate-in fade-in duration-300">
-            {activeTab === "dropbox" && <DropboxTab onCountChange={handleCountChange} />}
+            {activeTab === "dropbox" && <DropboxTab onCountChange={handleCountChange} carpetaInicial={carpetaInicial?.startsWith("/WEPRODU/ARCA") ? undefined : carpetaInicial} busquedaInicial={busquedaInicial} />}
             {/*
               La raíz de esta pestaña estaba fija en «/AFIP», que dejó de existir cuando el árbol se
               movió a «/WEPRODU/ARCA». Es el único lugar del front donde una ruta de Dropbox está
               escrita en el código en vez de resolverse desde la configuración de los Estados — por
               eso el resto sobrevivió a la mudanza y esta pestaña no.
             */}
-            {activeTab === "afip" && <DropboxTab key="afip" fixedRoot="/WEPRODU/ARCA" rootLabel="ARCA" onCountChange={handleCountChange} />}
+            {activeTab === "afip" && <DropboxTab key="afip" fixedRoot="/WEPRODU/ARCA" rootLabel="ARCA" onCountChange={handleCountChange} carpetaInicial={carpetaInicial?.startsWith("/WEPRODU/ARCA") ? carpetaInicial : undefined} busquedaInicial={busquedaInicial} />}
             {/*
               Paritarias: el espejo en Dropbox que arma `espejoDropboxParitaria`. La ruta es la misma
               constante que usa el server (`BASE_POR_DEFECTO`), pero acá va escrita porque el front no

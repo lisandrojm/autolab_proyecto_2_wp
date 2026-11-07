@@ -53,9 +53,12 @@ interface DropboxTabProps {
    * botón de refrescar al lado del de generar invita a confundir uno con el otro.
    */
   ocultarActualizar?: boolean;
+  /** Abrir directo en esta carpeta y con este texto en el buscador (el «ver documento» del Registro de ARCA). */
+  carpetaInicial?: string;
+  busquedaInicial?: string;
 }
 
-export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot, rootLabel, ocultarActualizar }) => {
+export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot, rootLabel, ocultarActualizar, carpetaInicial, busquedaInicial }) => {
   const full = !!fixedRoot;
   const [status, setStatus] = useState<DropboxStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +66,7 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
   const [currentPath, setCurrentPath] = useState("");
   const [rootPath, setRootPath] = useState(fixedRoot || "/HelloSign");
   const [busy, setBusy] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(busquedaInicial || "");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -83,7 +86,7 @@ export const DropboxTab: React.FC<DropboxTabProps> = ({ onCountChange, fixedRoot
       const s = await dropboxAPI.status();
       setStatus(s);
       if (!fixedRoot) setRootPath(s.rootPath);
-      if (s.connected) await loadFolder(fixedRoot || s.rootPath);
+      if (s.connected) await loadFolder(carpetaInicial || fixedRoot || s.rootPath);
     } catch (e: any) {
       sweetAlert.error("Error", e?.response?.data?.error || "No se pudo obtener el estado de Dropbox.");
     } finally {

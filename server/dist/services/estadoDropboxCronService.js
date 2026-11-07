@@ -10,6 +10,7 @@ import { leerAnclas, normalizarEmail } from "../utils/anclasNombre.js";
 import { esElAltaEnviada, momentoDeCarga, motivoParaDescartarArchivo, TEXTO_DESCARTE } from "../utils/archivoDeContrato.js";
 import { limpiarPendbox } from "./limpiezaPendboxService.js";
 import { conciliacionConfirmada, conciliarOutbox } from "./conciliacionOutboxService.js";
+import { actualizarUbicaciones } from "./arca/constanciasArca.js";
 import { DocumentoGenerado } from "../models/DocumentoGenerado.js";
 import { fechaISO } from "../utils/contratoVigencia.js";
 import { marcarReciboFirmado } from "./recibosSueldo.js";
@@ -277,6 +278,20 @@ async function scanTenant(tenant, estadosConTrigger) {
     }
     catch (e) {
         console.warn("[Outbox] no se pudo conciliar el Outbox (se reintenta en la próxima pasada):", e?.message || e);
+    }
+    /*
+      DÓNDE ESTÁ CADA CONSTANCIA DE ARCA (ver `arca/constanciasArca.ts`): Outbox → Pendbox → firmada →
+      archivada en «Alta temprana de Arca/Firmadas». Va después de la limpieza y la conciliación, que son
+      las que mueven y renombran. Así el estado que muestran las pantallas se recalcula en cada escaneo,
+      también los que dispara el webhook de Dropbox, y nunca queda congelado en lo que pasó al bajarla.
+    */
+    try {
+        const r = await actualizarUbicaciones(String(tenant._id), cfg, { log: (l) => console.log(l) });
+        if (r.cambiadas || r.archivadas || r.noUbicadas)
+            console.log(`[constancias] tenant ${tenant._id}: ${r.cambiadas} cambiaron de estado, ${r.archivadas} archivada(s), ${r.noUbicadas} sin ubicar (de ${r.revisadas})`);
+    }
+    catch (e) {
+        console.warn("[constancias] no se pudieron ubicar los documentos (se reintenta en la próxima pasada):", e?.message || e);
     }
     let transicionesAplicadas = 0;
     for (const estadoDestino of estadosConTrigger) {

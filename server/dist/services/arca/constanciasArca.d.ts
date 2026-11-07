@@ -1,6 +1,17 @@
 import { IConstanciaArca } from "../../models/ConstanciaArca.js";
 import { type CarpetaDelDocumento, type CategoriaConstancia, type EstadoConstancia, type Fallo, type FueraDeLaCorrida } from "./cicloConstancia.js";
 import { getTenantDropboxConfig } from "../dropboxService.js";
+/**
+ * La huella de una constancia de alta por su NOMBRE: CUIL|fecha de alta|CUIT de la empleadora. Sólo
+ * para nombres de constancias de alta (AltaAFIP / AltaArca) que traen las tres cosas; si no, "". Puro.
+ */
+export declare function huellaDelNombre(nombre: string): string;
+/** La misma huella, de una fila de `constancias_arca`. Puro. */
+export declare const huellaDe: (d: {
+    cuil: string;
+    fechaAlta: string;
+    empresaCuit: string;
+}) => string;
 /** La subcarpeta de «Alta temprana de Arca» donde se archiva la constancia firmada (la raíz la lee el escaneo de estados). */
 export declare const SUBCARPETA_FIRMADAS = "Firmadas";
 /** Lo que una presentación ya tiene dicho en el contrato, como fila de `constancias_arca` (sin `_id`). */
@@ -105,14 +116,28 @@ type TenantDropboxConfig = NonNullable<ReturnType<typeof getTenantDropboxConfig>
  * path o su id de Dropbox: si se movió a otra carpeta, se anota; si se borró, pasa a revisión
  * («documento no ubicado») con la fecha en que se borró.
  */
-export declare function actualizarUbicaciones(tenantId: string, cfg: TenantDropboxConfig, o?: {
-    log?: (l: string) => void;
-}): Promise<{
+export interface ResultadoUbicaciones {
     revisadas: number;
     cambiadas: number;
     archivadas: number;
     noUbicadas: number;
-}>;
+    /** Cada cambio de estado, con su motivo (lo imprime el script de migración). */
+    cambios: Array<{
+        clave: string;
+        de: EstadoConstancia;
+        a: EstadoConstancia;
+        motivo: string;
+    }>;
+}
+/**
+ * `enSeco`: no copia ni escribe nada; devuelve lo que haría. `docs`: las filas a ubicar (el script en seco
+ * pasa las deducidas de los contratos, porque `constancias_arca` todavía está vacía).
+ */
+export declare function actualizarUbicaciones(tenantId: string, cfg: TenantDropboxConfig, o?: {
+    log?: (l: string) => void;
+    enSeco?: boolean;
+    docs?: any[];
+}): Promise<ResultadoUbicaciones>;
 export declare const ETIQUETA_CARPETA: Record<CarpetaDelDocumento, string>;
 /** Lo que ven las pantallas de cada constancia. */
 export interface ConstanciaEnPantalla {
@@ -153,4 +178,6 @@ export interface ConstanciaEnPantalla {
 export declare function constanciasDeLaPantalla(tenantObjectId: any, o?: {
     empresaId?: string;
 }): Promise<ConstanciaEnPantalla[]>;
+/** «24/10/2026 17:59» en hora argentina (el `toLocaleString` de Node daba «05:59» sin el p. m.). */
+export declare function fechaHoraArgentina(iso: string | Date): string;
 export {};

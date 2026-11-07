@@ -43,6 +43,21 @@ const digitos = (v: unknown) => String(v ?? "").replace(/\D/g, "");
 const fechaIso = (v: unknown) => (/^\d{4}-\d{2}-\d{2}/.test(String(v ?? "")) ? String(v).slice(0, 10) : "");
 const codigoDe = (nombre: unknown) => /ID-\d{6,}/.exec(String(nombre ?? ""))?.[0] || "";
 
+/**
+ * La huella de una constancia de alta por su NOMBRE: CUIL|fecha de alta|CUIT de la empleadora. Sólo
+ * para nombres de constancias de alta (AltaAFIP / AltaArca) que traen las tres cosas; si no, "". Puro.
+ */
+export function huellaDelNombre(nombre: string): string {
+  const n = String(nombre || "");
+  if (!/_Alta(AFIP|Arca)_/i.test(n)) return "";
+  const fecha = /_D-(\d{8})_/.exec(n)?.[1];
+  const cuil = /_(\d{11})_/.exec(n)?.[1];
+  const cuit = /Empresa-(\d{11})/.exec(n)?.[1];
+  return fecha && cuil && cuit ? `${cuil}|${fecha}|${cuit}` : "";
+}
+/** La misma huella, de una fila de `constancias_arca`. Puro. */
+export const huellaDe = (d: { cuil: string; fechaAlta: string; empresaCuit: string }): string => `${digitos(d.cuil)}|${String(d.fechaAlta || "").replace(/-/g, "")}|${digitos(d.empresaCuit)}`;
+
 /** La subcarpeta de «Alta temprana de Arca» donde se archiva la constancia firmada (la raíz la lee el escaneo de estados). */
 export const SUBCARPETA_FIRMADAS = "Firmadas";
 
@@ -240,12 +255,25 @@ type TenantDropboxConfig = NonNullable<ReturnType<typeof getTenantDropboxConfig>
  * path o su id de Dropbox: si se movió a otra carpeta, se anota; si se borró, pasa a revisión
  * («documento no ubicado») con la fecha en que se borró.
  */
-export async function actualizarUbicaciones(tenantId: string, cfg: TenantDropboxConfig, o: { log?: (l: string) => void } = {}): Promise<{ revisadas: number; cambiadas: number; archivadas: number; noUbicadas: number }> {
+export interface ResultadoUbicaciones {
+  revisadas: number;
+  cambiadas: number;
+  archivadas: number;
+  noUbicadas: number;
+  /** Cada cambio de estado, con su motivo (lo imprime el script de migración). */
+  cambios: Array<{ clave: string; de: EstadoConstancia; a: EstadoConstancia; motivo: string }>;
+}
+
+/**
+ * `enSeco`: no copia ni escribe nada; devuelve lo que haría. `docs`: las filas a ubicar (el script en seco
+ * pasa las deducidas de los contratos, porque `constancias_arca` todavía está vacía).
+ */
+export async function actualizarUbicaciones(tenantId: string, cfg: TenantDropboxConfig, o: { log?: (l: string) => void; enSeco?: boolean; docs?: any[] } = {}): Promise<ResultadoUbicaciones> {
   const log = o.log || (() => {});
-  const docs: any[] = await ConstanciaArca.find({ tenantId: new Types.ObjectId(tenantId), "documento.codigo": { $nin: [null, ""] }, estado: { $in: ["constancia_descargada", "enviada_a_firmar", "firmada", "requiere_revision", "archivada"] } })
-    .select("clave estado documento tipoConstancia")
+  const docs: any[] = o.docs ?? await ConstanciaArca.find({ tenantId: new Types.ObjectId(tenantId), documento: { $ne: null }, estado: { $in: ["constancia_descargada", "enviada_a_firmar", "firmada", "requiere_revision", "archivada"] } })
+    .select("clave cuil empresaCuit fechaAlta estado documento tipoConstancia")
     .lean();
-  const r = { revisadas: docs.length, cambiadas: 0, archivadas: 0, noUbicadas: 0 };
+  const r: ResultadoUbicaciones = { revisadas: docs.length, cambiadas: 0, archivadas: 0, noUbicadas: 0, cambios: [] };
   if (docs.length === 0) return r;
   const [outbox, pendbox, firmados, altaTemprana] = await Promise.all(["outbox", "pendbox", "firmados", "alta_temprana"].map((p) => resolverCarpetaPorProposito(p as any)));
   const carpetas: Array<{ carpeta: CarpetaDelDocumento; path: string }> = [];
@@ -256,8 +284,16 @@ export async function actualizarUbicaciones(tenantId: string, cfg: TenantDropbox
     carpetas.push({ carpeta: "alta_firmadas", path: `${altaTemprana.replace(/\/$/, "")}/${SUBCARPETA_FIRMADAS}` });
     carpetas.push({ carpeta: "no_firmar", path: `${altaTemprana.replace(/\/$/, "")}/No firmar` });
   }
-  // Código → dónde aparece. Una carpeta que no existe todavía («Firmadas» antes del primer archivo) es una carpeta vacía.
-  const porCodigo = new Map<string, Array<{ carpeta: CarpetaDelDocumento; name: string; path: string; id?: string }>>();
+  /*
+    Código → dónde aparece; y, para las constancias de antes de los códigos (25/10/2026), su HUELLA:
+    CUIL + fecha de alta + CUIT de la empleadora, que van en el nombre de toda constancia de alta
+    («…_AltaAFIP_…_D-20261024_…_20327243994_…_Empresa-30717068374…»). Una carpeta que no existe
+    todavía («Firmadas» antes del primer archivo) es una carpeta vacía.
+  */
+  type Aparicion = { carpeta: CarpetaDelDocumento; name: string; path: string; id?: string };
+  const porCodigo = new Map<string, Aparicion[]>();
+  const porHuella = new Map<string, Aparicion[]>();
+  const anotar = (m: Map<string, Aparicion[]>, k: string, a: Aparicion) => m.set(k, [...(m.get(k) || []), a]);
   for (const c of carpetas) {
     let entradas: any[] = [];
     try {
@@ -267,17 +303,17 @@ export async function actualizarUbicaciones(tenantId: string, cfg: TenantDropbox
     }
     for (const e of entradas) {
       if (e.tag !== "file") continue;
+      const a = { carpeta: c.carpeta, name: e.name, path: e.path, id: e.id };
       const cod = codigoDe(e.name);
-      if (!cod) continue;
-      const lista = porCodigo.get(cod) || [];
-      lista.push({ carpeta: c.carpeta, name: e.name, path: e.path, id: e.id });
-      porCodigo.set(cod, lista);
+      if (cod) anotar(porCodigo, cod, a);
+      const h = huellaDelNombre(e.name);
+      if (h) anotar(porHuella, h, a);
     }
   }
   const ahora = new Date();
   for (const d of docs) {
     const doc = d.documento || {};
-    const donde = porCodigo.get(doc.codigo) || [];
+    const donde = (doc.codigo && porCodigo.get(doc.codigo)) || porHuella.get(huellaDe(d)) || [];
     let carpeta = carpetaMasAvanzada(donde.map((x) => x.carpeta));
     let archivo = donde.find((x) => x.carpeta === carpeta);
     const set: Record<string, unknown> = {};
@@ -286,7 +322,7 @@ export async function actualizarUbicaciones(tenantId: string, cfg: TenantDropbox
     if (carpeta === "firmados" && archivo && altaTemprana) {
       const destino = `${altaTemprana.replace(/\/$/, "")}/${SUBCARPETA_FIRMADAS}/${archivo.name}`;
       try {
-        const copia = await copyEntry(tenantId, cfg, archivo.path, destino);
+        const copia = o.enSeco ? { path: destino, name: archivo.name, id: undefined } : await copyEntry(tenantId, cfg, archivo.path, destino);
         set["documento.firmadaEl"] = doc.firmadaEl || ahora;
         set["documento.archivadaEn"] = copia.path;
         r.archivadas++;
@@ -302,6 +338,8 @@ export async function actualizarUbicaciones(tenantId: string, cfg: TenantDropbox
       set["documento.carpeta"] = carpeta;
       set["documento.path"] = archivo.path;
       set["documento.nombre"] = archivo.name;
+      // Encontrada por la huella: si el archivo ya tiene código (se lo puso un renombre), queda anotado.
+      if (!doc.codigo && codigoDe(archivo.name)) set["documento.codigo"] = codigoDe(archivo.name);
       if (archivo.id && carpeta === "outbox") set["documento.dropboxId"] = archivo.id;
       set["documento.ubicadoEl"] = ahora;
       set["documento.noUbicadoDesde"] = null;
@@ -322,7 +360,7 @@ export async function actualizarUbicaciones(tenantId: string, cfg: TenantDropbox
       } else if (!doc.noUbicadoDesde || d.estado !== "requiere_revision") {
         const cuando = doc.path ? await borradoEl(tenantId, cfg, doc.path) : null;
         const lugar = doc.path ? doc.path.replace(/\/[^/]+$/, "") : "su carpeta";
-        motivo = `Documento no ubicado: ${cuando ? `se borró de ${lugar} el ${new Date(cuando).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })} y` : ""} no está en Outbox, Pendbox, Requested signatures ni «Alta temprana de Arca». No se envió a firmar.`;
+        motivo = `Documento no ubicado: ${cuando ? `se borró de ${lugar} el ${fechaHoraArgentina(cuando)} y` : ""} no está en Outbox, Pendbox, Requested signatures ni «Alta temprana de Arca». No se envió a firmar.`;
         set.estado = siguienteEstado(d.estado, "requiere_revision");
         set.motivoRevision = motivo;
         set["documento.noUbicadoDesde"] = ahora;
@@ -330,7 +368,11 @@ export async function actualizarUbicaciones(tenantId: string, cfg: TenantDropbox
       }
     }
     if (Object.keys(set).length === 0) continue;
-    if (set.estado && set.estado !== d.estado) r.cambiadas++;
+    if (set.estado && set.estado !== d.estado) {
+      r.cambiadas++;
+      r.cambios.push({ clave: d.clave, de: d.estado, a: set.estado as EstadoConstancia, motivo });
+    }
+    if (o.enSeco) continue;
     await ConstanciaArca.updateOne({ _id: d._id }, { $set: set, ...(set.estado && set.estado !== d.estado ? { $push: { historial: { estado: set.estado, fecha: ahora, motivo } } } : {}) });
   }
   return r;
@@ -399,4 +441,10 @@ export async function constanciasDeLaPantalla(tenantObjectId: any, o: { empresaI
   const [docs, filas] = await Promise.all([ConstanciaArca.find(filtro).select("-historial").lean(), filasPresentadas(tenantObjectId, o)]);
   const conFila = new Set(docs.map((d: any) => d.clave));
   return [...docs.map((d) => aPantalla(d)), ...filas.filter((f) => !conFila.has(f.clave)).map((f) => aPantalla({ ...f, intentos: [], proximoIntentoEl: null, motivoRevision: null }, true))];
+}
+
+/** «24/10/2026 17:59» en hora argentina (el `toLocaleString` de Node daba «05:59» sin el p. m.). */
+export function fechaHoraArgentina(iso: string | Date): string {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
+  return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
 }

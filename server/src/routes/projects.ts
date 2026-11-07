@@ -32,6 +32,7 @@ import { ArcaVerificacionAlta } from "../models/ArcaVerificacionAlta.js";
 import { MAX_POR_EMPLEADORA, forzarDescargaConstancias, forzadoDe, proximaDescarga } from "../services/arca/descargaConstanciasAutomatica.js";
 import { pendientesDeConstanciaTodas } from "../services/arca/constanciasAltas.js";
 import { constanciasDeLaPantalla, type ConstanciaEnPantalla } from "../services/arca/constanciasArca.js";
+import { buscarArchivos, getTenantDropboxConfig } from "../services/dropboxService.js";
 
 /** Lo que la pantalla de Descargas muestra del ciclo de una pendiente: si es nueva, cuándo se reintenta, por qué está en revisión. */
 const cicloDe = (k?: ConstanciaEnPantalla) => (k ? { estado: k.estado, intentos: k.intentos, proximoIntentoEl: k.proximoIntentoEl, motivoRevision: k.motivoRevision } : null);
@@ -3792,6 +3793,12 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
       const otros: any[] = await ArcaAltasLog.find({ _id: { $in: [...idsLogsFaltantes] }, tenantId: req.tenantObjectId }).select("automatica usuarioId createdAt").populate("usuarioId", "firstName lastName").lean();
       for (const o of otros) logPorId.set(String(o._id), o);
     }
+    /*
+      EL CICLO DE LA CONSTANCIA de cada alta (07/11/2026, `constancias_arca`): en qué estado está HOY
+      (bajada, en firma, firmada, en revisión…), dónde está el documento y cada intento. Reemplaza al
+      texto que quedaba grabado al bajarla («En el Outbox…»), que nunca se actualizaba.
+    */
+    const cicloPorContrato = new Map((await constanciasDeLaPantalla(req.tenantObjectId, { empresaId })).map((k) => [`${k.userProjectId}:${k.contractIndex}`, k]));
     const quienDe = (l: any) => (l?.automatica ? "Automática" : l?.usuarioId ? `${l.usuarioId.firstName || ""} ${l.usuarioId.lastName || ""}`.trim() : "");
     const presentadaDespuesDe = (c: any, logId: string) => {
       if (c.resultado === "presentada") return null;
@@ -3853,7 +3860,7 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
           // El desde/hasta del contrato: una misma persona puede tener varias altas con la misma empleadora y es lo que las distingue.
           const k = upPorId.get(String(c.userProjectId || ""))?.contracts?.[c.contractIndex];
           const iso = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : "");
-          return { cuil: c.cuil, nombre: c.nombre, resultado: c.resultado, motivo: c.motivo, tanda: c.tanda, cat: c.cat, porConsulta: c.porConsulta, registro: c.registro, constancia: constanciaDe(c) ?? null, presentadaDespues: presentadaDespuesDe(c, String(l._id)), contrato: k ? { alta: iso(k.fecha_alta_contrato), baja: iso(k.fecha_baja_contrato) } : null };
+          return { cuil: c.cuil, nombre: c.nombre, resultado: c.resultado, motivo: c.motivo, tanda: c.tanda, cat: c.cat, porConsulta: c.porConsulta, registro: c.registro, constancia: constanciaDe(c) ?? null, presentadaDespues: presentadaDespuesDe(c, String(l._id)), contrato: k ? { alta: iso(k.fecha_alta_contrato), baja: iso(k.fecha_baja_contrato) } : null, ciclo: cicloPorContrato.get(`${String(c.userProjectId || "")}:${c.contractIndex}`) || null };
         }),
       })),
     );
@@ -3938,6 +3945,43 @@ router.get("/contratos/altas-arca/constancias/pendientes", requireTenant, authen
     });
   } catch (error: any) {
     console.error("Pendientes de constancia error:", error);
+    res.status(500).json({ error: String(error?.message || "Internal server error") });
+  }
+});
+
+/**
+ * GET /contratos/altas-arca/constancias/buscar?q=… — LA BÚSQUEDA GLOBAL del Registro (07/11/2026): por
+ * persona, CUIL o código de archivo («ID-000663»), en las constancias (todas las empleadoras) Y en los
+ * documentos de TODAS las carpetas de Dropbox —no sólo la que se está mirando, como en Documentos—.
+ * Dropbox busca palabras enteras del nombre (el apellido, el CUIL, el código), no cualquier pedazo.
+ */
+router.get("/contratos/altas-arca/constancias/buscar", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const q = String(req.query?.q || "").trim();
+    if (q.length < 3) {
+      res.json({ registros: [], documentos: [] });
+      return;
+    }
+    const sinAcentos = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    const palabras = sinAcentos(q).split(/\s+/).filter(Boolean);
+    const digitos = q.replace(/\D/g, "");
+    const codigo = /ID-?\d{3,}/i.exec(q)?.[0]?.toUpperCase().replace(/^ID-?/, "ID-") || "";
+    const registros = (await constanciasDeLaPantalla(req.tenantObjectId)).filter((k) => {
+      if (codigo && k.documento?.codigo?.includes(codigo)) return true;
+      if (digitos.length >= 5 && digitos.length === q.replace(/[\s-]/g, "").length && k.cuil.includes(digitos)) return true;
+      return palabras.every((p) => sinAcentos(k.nombre).includes(p));
+    });
+    let documentos: Array<{ nombre: string; path: string; carpeta: string }> = [];
+    const tenant: any = await Tenant.findById(req.tenantObjectId).lean();
+    const cfg = getTenantDropboxConfig(tenant);
+    if (cfg) {
+      // Toda la cuenta, no sólo la raíz de HelloSign: las constancias archivadas viven en /WEPRODU/ARCA.
+      const hallados = await buscarArchivos(String(req.tenantObjectId), cfg, q, { max: 50 }).catch(() => []);
+      documentos = hallados.filter((e) => e.tag === "file").map((e) => ({ nombre: e.name, path: e.path, carpeta: e.path.replace(/\/[^/]+$/, "") }));
+    }
+    res.json({ registros, documentos });
+  } catch (error: any) {
+    console.error("Buscar constancias error:", error);
     res.status(500).json({ error: String(error?.message || "Internal server error") });
   }
 });
