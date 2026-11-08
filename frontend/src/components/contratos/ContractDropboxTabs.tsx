@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare, faCircleInfo, faDownload, faFilePdf, faFileZipper, faFolderOpen, faPen, faRotateRight, faSpinner, faTrash, faTriangleExclamation, faPaperPlane, faListCheck } from "@fortawesome/free-solid-svg-icons";
 import { dropboxAPI, DropboxEntry } from "../../api/dropbox";
@@ -48,6 +49,15 @@ const fmtFecha = (iso?: string): string => {
 
 export type TipoBandejaDropbox = "para_firmar" | "enviado_firma" | "firmados";
 
+/*
+  LOS RECIBOS DE SUELDO NO SON DE CONTRATOS (pedido del 08/11/2026). Pasan por las mismas carpetas
+  (Outbox, Pendbox, Requested signatures) y el bot los envía igual, pero no salen de una Solicitud: se
+  ven sólo en Contratación › Recibos de sueldo. Se reconocen por la nomenclatura «Recibos de sueldo»
+  (`_REC_SUELDO_`), la misma que usa la regla del bot para ubicar su firma.
+*/
+export const esReciboDeSueldo = (nombre: string): boolean => /_REC_SUELDO_/i.test(nombre);
+const esDeContratos = (e: DropboxEntry): boolean => e.tag === "file" && !esReciboDeSueldo(e.name);
+
 /**
  * Cuenta los archivos de las 3 carpetas de Dropbox de una sola vez, para mostrar el número en las
  * pestañas apenas se entra a "Gestión de Contratos" (sin esperar a que el usuario abra cada una).
@@ -67,7 +77,7 @@ export const fetchDropboxCounts = async (): Promise<Record<TipoBandejaDropbox, n
       if (!path) return 0;
       try {
         const res = await dropboxAPI.list(path, true);
-        return (res.entries || []).filter((e) => e.tag === "file").length;
+        return (res.entries || []).filter(esDeContratos).length;
       } catch {
         return 0;
       }
@@ -104,6 +114,8 @@ export { InstructivoParaFirmar } from "./FirmaBotParaFirmar";
  */
 export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: (n: number) => void }> = ({ tipo, onCount }) => {
   const [entries, setEntries] = useState<DropboxEntry[]>([]);
+  /** Recibos de sueldo de la carpeta, que acá no se muestran (ver `esReciboDeSueldo`). */
+  const [recibosOcultos, setRecibosOcultos] = useState(0);
   const [carpeta, setCarpeta] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -152,8 +164,10 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
         return;
       }
       const res = await dropboxAPI.list(path, true);
-      // Solo archivos: las subcarpetas que arma Dropbox Sign no son contratos.
-      setEntries((res.entries || []).filter((e) => e.tag === "file"));
+      // Solo archivos: las subcarpetas que arma Dropbox Sign no son contratos. Y sin los recibos de sueldo.
+      const archivos = (res.entries || []).filter((e) => e.tag === "file");
+      setEntries(archivos.filter(esDeContratos));
+      setRecibosOcultos(archivos.length - archivos.filter(esDeContratos).length);
     } catch (e: any) {
       setEntries([]);
       setError(e?.response?.data?.error || e?.message || "No se pudo leer la carpeta de Dropbox.");
@@ -458,6 +472,15 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
             </button>
           </div>
         </div>
+      )}
+
+      {!loading && recibosOcultos > 0 && (
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {recibosOcultos} recibo{recibosOcultos === 1 ? "" : "s"} de sueldo de esta carpeta no {recibosOcultos === 1 ? "se muestra" : "se muestran"} acá: no salen de una Solicitud.{" "}
+          <Link to="/admin/recibos-sueldo" className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400">
+            Verlos en Recibos de sueldo
+          </Link>
+        </p>
       )}
 
       {loading ? (
