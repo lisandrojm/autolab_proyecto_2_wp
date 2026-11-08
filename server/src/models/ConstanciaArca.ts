@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
-import type { EstadoConstancia, Intento, CarpetaDelDocumento } from "../services/arca/cicloConstancia.js";
+import type { EstadoConstancia, Intento, CarpetaDelDocumento, Redescarga } from "../services/arca/cicloConstancia.js";
 
 /**
  * LA CONSTANCIA DE CADA ALTA PRESENTADA EN ARCA (07/11/2026): una por persona + empleadora + fecha de
@@ -53,6 +53,8 @@ export interface IConstanciaArca extends Document {
     /** No aparece en ninguna carpeta del circuito. */
     noUbicadoDesde?: Date | null;
   } | null;
+  /** «Volver a bajar» (documento no ubicado): lo que había antes y si la re-descarga sigue en curso. */
+  redescarga?: Redescarga | null;
   /** Cada cambio de estado, para la trazabilidad. */
   historial: Array<{ estado: EstadoConstancia; fecha: Date; motivo?: string }>;
   createdAt: Date;
@@ -94,6 +96,20 @@ const schema = new Schema<IConstanciaArca>(
           archivadaEn: { type: String, default: null },
           ubicadoEl: { type: Date, default: null },
           noUbicadoDesde: { type: Date, default: null },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
+    redescarga: {
+      type: new Schema(
+        {
+          pedidaEl: Date,
+          porUsuarioId: { type: String, default: null },
+          validadaElAnterior: { type: Date, default: null },
+          documentoAnterior: { type: Schema.Types.Mixed, default: null },
+          enCurso: { type: Boolean, default: false },
+          terminadaEl: { type: Date, default: null },
         },
         { _id: false },
       ),

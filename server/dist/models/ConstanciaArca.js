@@ -35,6 +35,17 @@ const schema = new Schema({
         }, { _id: false }),
         default: null,
     },
+    redescarga: {
+        type: new Schema({
+            pedidaEl: Date,
+            porUsuarioId: { type: String, default: null },
+            validadaElAnterior: { type: Date, default: null },
+            documentoAnterior: { type: Schema.Types.Mixed, default: null },
+            enCurso: { type: Boolean, default: false },
+            terminadaEl: { type: Date, default: null },
+        }, { _id: false }),
+        default: null,
+    },
     historial: [{ _id: false, estado: String, fecha: Date, motivo: String }],
 }, { timestamps: true, collection: "constancias_arca" });
 // La idempotencia: una sola constancia por persona + empleadora + fecha de alta, por más corridas que haya.

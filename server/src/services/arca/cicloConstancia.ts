@@ -58,7 +58,8 @@ export function sePuedePedir(item: { estado: EstadoConstancia; proximoIntentoEl?
   return !item.proximoIntentoEl || new Date(item.proximoIntentoEl).getTime() <= ahora.getTime();
 }
 
-export type ResultadoIntento = "descargada" | "rechazada" | "sin_constancia" | "ambigua" | "error";
+/** «redescarga»: no es un intento contra ARCA sino la marca de «Volver a bajar» (ver `puedeVolverABajarse`); los intentos se cuentan desde ahí. */
+export type ResultadoIntento = "descargada" | "rechazada" | "sin_constancia" | "ambigua" | "error" | "redescarga";
 
 export interface Intento {
   fecha: Date;
@@ -68,8 +69,37 @@ export interface Intento {
   manual?: boolean;
 }
 
+/** Los intentos que cuentan hoy: los posteriores al último «Volver a bajar» (una re-descarga arranca con sus 3 intentos). */
+export const intentosDesdeLaRedescarga = <T extends { resultado: string }>(intentos: T[]): T[] => {
+  const i = intentos.map((x) => x.resultado).lastIndexOf("redescarga");
+  return i < 0 ? intentos : intentos.slice(i + 1);
+};
+
+/** La re-descarga pedida de una constancia cuyo documento se perdió. `enCurso` hasta que se baja o vuelve a revisión. */
+export interface Redescarga {
+  pedidaEl: Date;
+  porUsuarioId?: string | null;
+  /** La validación de la constancia anterior (la que se perdió), que se limpió del contrato para que vuelva a la cola. */
+  validadaElAnterior?: Date | null;
+  documentoAnterior?: { codigo?: string; nombre?: string; path?: string } | null;
+  enCurso: boolean;
+  terminadaEl?: Date | null;
+}
+
+/**
+ * ¿SE PUEDE «VOLVER A BAJAR»? Sólo una constancia en revisión porque su documento no está en ninguna
+ * carpeta del circuito (se borró). Idempotente: si el documento reapareció (ya no está en revisión, o
+ * está por otro motivo) o ya hay una re-descarga en curso, no. Puro.
+ */
+export function puedeVolverABajarse(item: { estado: EstadoConstancia; documento?: { noUbicadoDesde?: Date | string | null } | null; redescarga?: Pick<Redescarga, "enCurso"> | null }): { ok: true } | { ok: false; motivo: string } {
+  if (item.redescarga?.enCurso && !yaTieneConstancia(item.estado)) return { ok: false, motivo: "Ya se pidió volver a bajarla: está en la cola." };
+  if (item.estado !== "requiere_revision") return { ok: false, motivo: yaTieneConstancia(item.estado) ? "El documento está ubicado: no hace falta volver a bajarla." : "Todavía no tiene constancia: sale sola en la próxima descarga." };
+  if (!item.documento?.noUbicadoDesde) return { ok: false, motivo: "Está en revisión por otro motivo, no por un documento perdido: usá «Reintentar»." };
+  return { ok: true };
+}
+
 export interface Fallo {
-  resultado: Exclude<ResultadoIntento, "descargada">;
+  resultado: Exclude<ResultadoIntento, "descargada" | "redescarga">;
   detalle?: string;
   /**
    * La ambigüedad que no se resuelve sola: ARCA muestra varias relaciones de ese inicio y son
@@ -86,7 +116,7 @@ export interface Fallo {
  * no espera tres días para decirlo.
  */
 export function trasUnFallo(intentosPrevios: Intento[], fallo: Fallo, ahora: Date, o: { manual?: boolean } = {}): { estado: EstadoConstancia; proximoIntentoEl: Date | null; motivoRevision?: string } {
-  const automaticos = intentosPrevios.filter((i) => !i.manual && i.resultado !== "descargada").length + (o.manual ? 0 : 1);
+  const automaticos = intentosDesdeLaRedescarga(intentosPrevios).filter((i) => !i.manual && i.resultado !== "descargada").length + (o.manual ? 0 : 1);
   if (fallo.sinArreglo) return { estado: "requiere_revision", proximoIntentoEl: null, motivoRevision: fallo.detalle || "ARCA muestra varias relaciones distintas para esa fecha: hay que elegir a mano." };
   if (o.manual) return { estado: "requiere_revision", proximoIntentoEl: null, motivoRevision: `El reintento a mano tampoco la bajó: ${textoDelFallo(fallo)}` };
   if (automaticos >= MAX_INTENTOS) return { estado: "requiere_revision", proximoIntentoEl: null, motivoRevision: `No se pudo bajar en ${MAX_INTENTOS} intentos. El último: ${textoDelFallo(fallo)}` };

@@ -1,5 +1,5 @@
 import { Document, Model, Types } from "mongoose";
-import type { EstadoConstancia, Intento, CarpetaDelDocumento } from "../services/arca/cicloConstancia.js";
+import type { EstadoConstancia, Intento, CarpetaDelDocumento, Redescarga } from "../services/arca/cicloConstancia.js";
 /**
  * LA CONSTANCIA DE CADA ALTA PRESENTADA EN ARCA (07/11/2026): una por persona + empleadora + fecha de
  * alta (`clave`, única por tenant), con su estado en el circuito, cada intento de bajarla y dónde está
@@ -52,6 +52,8 @@ export interface IConstanciaArca extends Document {
         /** No aparece en ninguna carpeta del circuito. */
         noUbicadoDesde?: Date | null;
     } | null;
+    /** «Volver a bajar» (documento no ubicado): lo que había antes y si la re-descarga sigue en curso. */
+    redescarga?: Redescarga | null;
     /** Cada cambio de estado, para la trazabilidad. */
     historial: Array<{
         estado: EstadoConstancia;

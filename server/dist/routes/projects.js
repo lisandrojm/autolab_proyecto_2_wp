@@ -31,10 +31,10 @@ import { claveDe as claveVerificacion, itemDe, verificacionEnCursoDe, verificarA
 import { ArcaVerificacionAlta } from "../models/ArcaVerificacionAlta.js";
 import { MAX_POR_EMPLEADORA, forzarDescargaConstancias, forzadoDe, proximaDescarga } from "../services/arca/descargaConstanciasAutomatica.js";
 import { pendientesDeConstanciaTodas } from "../services/arca/constanciasAltas.js";
-import { constanciasDeLaPantalla } from "../services/arca/constanciasArca.js";
+import { constanciasDeLaPantalla, volverABajar } from "../services/arca/constanciasArca.js";
 import { buscarArchivos, getTenantDropboxConfig } from "../services/dropboxService.js";
 /** Lo que la pantalla de Descargas muestra del ciclo de una pendiente: si es nueva, cuándo se reintenta, por qué está en revisión. */
-const cicloDe = (k) => (k ? { estado: k.estado, intentos: k.intentos, proximoIntentoEl: k.proximoIntentoEl, motivoRevision: k.motivoRevision } : null);
+const cicloDe = (k) => (k ? { clave: k.clave, estado: k.estado, intentos: k.intentos, proximoIntentoEl: k.proximoIntentoEl, motivoRevision: k.motivoRevision, redescarga: k.redescarga } : null);
 import { claveAreaTurnoDelMiembro } from "../utils/areaTurno.js";
 import { partirClaveAreaTurno, sedeDe, sedePrincipalDe, pendientesDeSede, idDe as idDeArea } from "../compartido/areaTurno.js";
 import { ponerSedeEnArea } from "../services/sedeDeArea.js";
@@ -3769,6 +3769,8 @@ router.get("/contratos/altas-arca/constancias/pendientes", requireTenant, authen
             ultimaCorrida: dc.ultimaCorrida || null,
             maxPorEmpleadora: MAX_POR_EMPLEADORA,
             pendientes: pendientes.map((p) => ({ userProjectId: p.userProjectId, contractIndex: p.contractIndex, userId: p.userId, nombre: p.nombre, cuil: p.cuil, fechaAlta: p.fechaAlta, presentadaEl: p.presentadaEl, empresa: { _id: p.empresaId, razonSocial: p.empresaRazonSocial }, ciclo: cicloDe(cicloPorContrato.get(`${p.userProjectId}:${p.contractIndex}`)) })),
+            // Las que se validaron pero cuyo documento se perdió (borrado del Outbox): no esperan constancia, se «Vuelven a bajar».
+            noUbicadas: constancias.filter((k) => k.noUbicado),
             // La descarga de UNA empleadora que corre ahora (forzada o automática), con sus eventos; y el forzado en masa, si lo hay.
             descarga: d ? { empresaId: d.empresaId, empresaRazonSocial: d.empresaRazonSocial, total: d.total, corriendo: !d.terminada, arrancadaEl: d.arrancadaEl, eventos: d.eventos } : null,
             forzado: f ? { ...f } : null,
@@ -3815,6 +3817,28 @@ router.get("/contratos/altas-arca/constancias/buscar", requireTenant, authentica
     }
     catch (error) {
         console.error("Buscar constancias error:", error);
+        res.status(500).json({ error: String(error?.message || "Internal server error") });
+    }
+});
+/**
+ * POST /contratos/altas-arca/constancias/redescargar { claves[] } — «VOLVER A BAJAR» las constancias cuyo
+ * documento no se ubica (07/11/2026): se mira antes en Dropbox (si reapareció, no se toca), se limpia la
+ * validación del contrato y vuelven a la cola como nuevas. Idempotente: lo ya pedido no se repite.
+ * No abre ARCA: sale en la próxima descarga, o con «Forzar descarga».
+ */
+router.post("/contratos/altas-arca/constancias/redescargar", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const claves = (Array.isArray(req.body?.claves) ? req.body.claves : []).map((c) => String(c || "")).filter((c) => /^\d{11}\|\d{11}\|\d{4}-\d{2}-\d{2}$/.test(c));
+        if (claves.length === 0) {
+            res.status(400).json({ error: "No hay constancias para volver a bajar." });
+            return;
+        }
+        const tenant = await Tenant.findById(req.tenantObjectId).lean();
+        const resultados = await volverABajar(req.tenantObjectId, claves, { cfg: getTenantDropboxConfig(tenant), porUsuarioId: req.user?.userId || null });
+        res.json({ resultados });
+    }
+    catch (error) {
+        console.error("Redescargar constancias error:", error);
         res.status(500).json({ error: String(error?.message || "Internal server error") });
     }
 });

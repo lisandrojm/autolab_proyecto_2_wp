@@ -1,5 +1,5 @@
 import { IConstanciaArca } from "../../models/ConstanciaArca.js";
-import { type CarpetaDelDocumento, type CategoriaConstancia, type EstadoConstancia, type Fallo, type FueraDeLaCorrida } from "./cicloConstancia.js";
+import { type CarpetaDelDocumento, type CategoriaConstancia, type EstadoConstancia, type Fallo, type FueraDeLaCorrida, type Intento, type Redescarga } from "./cicloConstancia.js";
 import { getTenantDropboxConfig } from "../dropboxService.js";
 /**
  * La huella de una constancia de alta por su NOMBRE: CUIL|fecha de alta|CUIT de la empleadora. Sólo
@@ -108,6 +108,55 @@ export declare function anotarFallo(tenantObjectId: any, clave: string, fallo: F
     estado: EstadoConstancia;
     motivoRevision?: string;
 }>;
+/** La fila y el contrato después de pedir volver a bajarla, o por qué no. Puro (lo prueba `constanciasArca.test.ts`). */
+export declare function planDeRedescarga(fila: {
+    estado: EstadoConstancia;
+    fechaAlta: string;
+    documento?: any;
+    redescarga?: Redescarga | null;
+    intentos?: Intento[];
+}, contrato: {
+    fecha_alta_contrato?: unknown;
+    altaConstancia?: any;
+} | null | undefined, o: {
+    ahora: Date;
+    porUsuarioId?: string | null;
+}): {
+    ok: false;
+    motivo: string;
+} | {
+    ok: true;
+    fila: {
+        estado: EstadoConstancia;
+        proximoIntentoEl: null;
+        motivoRevision: null;
+        documento: null;
+        tipoConstancia: null;
+        mismoDia: false;
+        redescarga: Redescarga;
+        intentos: Intento[];
+    };
+    intento: Intento;
+    contrato: any;
+};
+export interface ResultadoRedescarga {
+    clave: string;
+    nombre: string;
+    cuil: string;
+    pedida: boolean;
+    motivo: string;
+}
+/**
+ * Pide volver a bajar esas constancias. Por cada una: la fila se toma con una escritura condicionada
+ * (sigue en revisión por documento no ubicado), así dos pedidos a la vez no la encolan dos veces; recién
+ * después se limpia la validación del contrato. Si el contrato no se pudo tocar, la fila vuelve a como
+ * estaba. Antes de llamar, `actualizarUbicaciones` sobre estas filas: un documento que reapareció sale
+ * de revisión y acá ya no se toca.
+ */
+export declare function pedirRedescarga(tenantObjectId: any, claves: string[], o?: {
+    porUsuarioId?: string | null;
+    ahora?: Date;
+}): Promise<ResultadoRedescarga[]>;
 type TenantDropboxConfig = NonNullable<ReturnType<typeof getTenantDropboxConfig>>;
 /**
  * DÓNDE ESTÁ HOY CADA CONSTANCIA, y el estado que eso dice. Lista una vez cada carpeta del circuito y
@@ -164,6 +213,17 @@ export declare function actualizarUbicaciones(tenantId: string, cfg: TenantDropb
         altaTemprana: string | null;
     };
 }): Promise<ResultadoUbicaciones>;
+/**
+ * «VOLVER A BAJAR», completo: primero se mira en Dropbox dónde están hoy esos documentos (uno que
+ * reapareció sale de revisión y no se toca) y después se pide la re-descarga de lo que sigue perdido.
+ * Sin Dropbox conectado no se puede mirar: se pide igual (la constancia nueva tampoco tendría a dónde ir,
+ * pero queda en el contrato).
+ */
+export declare function volverABajar(tenantObjectId: any, claves: string[], o: {
+    cfg: TenantDropboxConfig | null;
+    porUsuarioId?: string | null;
+    log?: (l: string) => void;
+}): Promise<ResultadoRedescarga[]>;
 export declare const ETIQUETA_CARPETA: Record<CarpetaDelDocumento, string>;
 /** Lo que ven las pantallas de cada constancia. */
 export interface ConstanciaEnPantalla {
@@ -196,6 +256,14 @@ export interface ConstanciaEnPantalla {
         carpeta: string | null;
         etiquetaCarpeta: string;
         firmada: boolean;
+    } | null;
+    /** En revisión porque el documento no está en ninguna carpeta del circuito: se puede «Volver a bajar». */
+    noUbicado: boolean;
+    /** «Volver a bajar» pedido: cuándo, qué documento se había perdido, y si sigue en curso. */
+    redescarga: {
+        pedidaEl: string;
+        enCurso: boolean;
+        codigoAnterior: string;
     } | null;
     /** Sin fila en `constancias_arca` todavía: deducida del contrato (antes de la migración). */
     deducida?: boolean;

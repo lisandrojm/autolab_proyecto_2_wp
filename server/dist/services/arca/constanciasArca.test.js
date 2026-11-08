@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { actualizarUbicaciones, filaDesdeContrato, huellaDelNombre, huellaDe } from "./constanciasArca.js";
+import { actualizarUbicaciones, filaDesdeContrato, huellaDelNombre, huellaDe, planDeRedescarga } from "./constanciasArca.js";
+import { elegirParaCorrida } from "./cicloConstancia.js";
 /*
   LA TRAZABILIDAD DEL DOCUMENTO, con Dropbox de mentira: las carpetas son listas en memoria y el
   «borrado» es lo que dice `borradoEl`. Todo en seco: no toca la base.
@@ -100,5 +101,53 @@ describe("actualizarUbicaciones: el estado sale de dónde está el documento hoy
         const dbx = dropboxDeMentira({ [CARPETAS.pendbox]: [nombre("R", "20111111112", "ID-000009")] });
         const r = await actualizarUbicaciones("t", null, { enSeco: true, docs: [doc("R", "requiere_revision", { codigo: "ID-000009", noUbicadoDesde: new Date() })], dropbox: dbx, carpetas: CARPETAS });
         assert.deepEqual(r.cambios.map((c) => c.a), ["enviada_a_firmar"]);
+    });
+});
+describe("«Volver a bajar»: la constancia cuyo documento se borró vuelve a la cola", () => {
+    // Tiero tal como está en la base el 07/11/2026: validada el 24/10 15:03, borrada del Outbox a las 17:59.
+    const AHORA = new Date("2026-11-07T22:00:00.000Z");
+    const pathOutbox = `${CARPETAS.outbox}/${TIERO}`;
+    const fila = { clave: "20327243994|30717068374|2026-10-24", estado: "requiere_revision", cuil: "20327243994", empresaCuit: "30717068374", fechaAlta: "2026-10-24", tipoConstancia: "alta", intentos: [], documento: { codigo: "ID-000663", nombre: TIERO, path: pathOutbox, carpeta: "outbox", noUbicadoDesde: new Date("2026-11-08T00:53:50.877Z") }, redescarga: null };
+    const contrato = { fecha_alta_contrato: "2026-10-24", fecha_baja_contrato: "2026-10-24", altaArcaPresentada: { resultado: "presentada" }, altaConstancia: { clave: "CA47302115734083081971", validadaEl: new Date("2026-10-24T18:03:46.854Z"), vaAFirma: true, archivadaEn: pathOutbox, enviadaComo: TIERO, origen: "automatica" } };
+    const up = { _id: "6a0000000000000000000001", userId: "6a0000000000000000000002" };
+    const user = { firstName: "SERGIO DAMIAN", lastName: "TIERO", metadata: { cuit: "20-32724399-4" } };
+    const empresa = { _id: "6a0000000000000000000003", cuit: "30-71706837-4", razonSocial: "2030 S.R.L." };
+    it("limpia la validación del contrato (queda anotada en el intento) y re-encola como nueva, primera en el cupo", () => {
+        const r = planDeRedescarga(fila, contrato, { ahora: AHORA, porUsuarioId: "u1" });
+        assert.ok(r.ok);
+        if (!r.ok)
+            return;
+        assert.equal(r.contrato.altaConstancia.validadaEl, undefined);
+        assert.equal(r.contrato.altaConstancia.clave, "CA47302115734083081971", "lo demás de la constancia anterior no se toca");
+        assert.equal(r.intento.resultado, "redescarga");
+        assert.equal(r.intento.detalle, "Re-descarga pedida: documento no ubicado (ID-000663). La constancia anterior se había validado el 24/10/2026 15:03.");
+        assert.deepEqual(r.fila.redescarga.validadaElAnterior, contrato.altaConstancia.validadaEl);
+        assert.equal(r.fila.redescarga.documentoAnterior?.codigo, "ID-000663");
+        assert.equal(r.fila.documento, null);
+        // El contrato sin validación es otra vez una presentada sin constancia: lo que la descarga va a pedir.
+        assert.equal(filaDesdeContrato({ up, idx: 63, c: r.contrato, user, empresa }).estado, "presentada");
+        const otraEsperando = { estado: "constancia_pendiente", fechaAlta: "2026-10-01", proximoIntentoEl: new Date(AHORA.getTime() - 1) };
+        const { elegidas } = elegirParaCorrida([otraEsperando, { ...fila, ...r.fila }], { ahora: AHORA, tope: 1 });
+        assert.equal(elegidas[0].fechaAlta, "2026-10-24", "entra como nueva, antes que los reintentos");
+    });
+    it("no re-encola dos veces: con la re-descarga en curso, un segundo pedido no hace nada", () => {
+        const r = planDeRedescarga(fila, contrato, { ahora: AHORA });
+        assert.ok(r.ok);
+        if (!r.ok)
+            return;
+        const segunda = planDeRedescarga({ ...fila, ...r.fila }, r.contrato, { ahora: new Date(AHORA.getTime() + 1000) });
+        assert.deepEqual(segunda, { ok: false, motivo: "Ya se pidió volver a bajarla: está en la cola." });
+    });
+    it("el documento reapareció: el escaneo lo saca de revisión y la re-descarga ya no lo toca", async () => {
+        const dbx = dropboxDeMentira({ [CARPETAS.pendbox]: [TIERO] });
+        const u = await actualizarUbicaciones("t", null, { enSeco: true, docs: [fila], dropbox: dbx, carpetas: CARPETAS });
+        assert.deepEqual(u.cambios.map((c) => c.a), ["enviada_a_firmar"]);
+        const r = planDeRedescarga({ ...fila, estado: "enviada_a_firmar", documento: { ...fila.documento, carpeta: "pendbox", noUbicadoDesde: null } }, contrato, { ahora: AHORA });
+        assert.equal(r.ok, false);
+        assert.equal(contrato.altaConstancia.validadaEl instanceof Date, true, "el contrato sigue validado");
+    });
+    it("si el contrato ya no es el de esa constancia (otra fecha de alta), no se toca", () => {
+        const r = planDeRedescarga(fila, { ...contrato, fecha_alta_contrato: "2026-10-25" }, { ahora: AHORA });
+        assert.equal(r.ok, false);
     });
 });

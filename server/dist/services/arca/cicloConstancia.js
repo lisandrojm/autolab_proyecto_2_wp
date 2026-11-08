@@ -43,6 +43,25 @@ export function sePuedePedir(item, ahora) {
         return false;
     return !item.proximoIntentoEl || new Date(item.proximoIntentoEl).getTime() <= ahora.getTime();
 }
+/** Los intentos que cuentan hoy: los posteriores al último «Volver a bajar» (una re-descarga arranca con sus 3 intentos). */
+export const intentosDesdeLaRedescarga = (intentos) => {
+    const i = intentos.map((x) => x.resultado).lastIndexOf("redescarga");
+    return i < 0 ? intentos : intentos.slice(i + 1);
+};
+/**
+ * ¿SE PUEDE «VOLVER A BAJAR»? Sólo una constancia en revisión porque su documento no está en ninguna
+ * carpeta del circuito (se borró). Idempotente: si el documento reapareció (ya no está en revisión, o
+ * está por otro motivo) o ya hay una re-descarga en curso, no. Puro.
+ */
+export function puedeVolverABajarse(item) {
+    if (item.redescarga?.enCurso && !yaTieneConstancia(item.estado))
+        return { ok: false, motivo: "Ya se pidió volver a bajarla: está en la cola." };
+    if (item.estado !== "requiere_revision")
+        return { ok: false, motivo: yaTieneConstancia(item.estado) ? "El documento está ubicado: no hace falta volver a bajarla." : "Todavía no tiene constancia: sale sola en la próxima descarga." };
+    if (!item.documento?.noUbicadoDesde)
+        return { ok: false, motivo: "Está en revisión por otro motivo, no por un documento perdido: usá «Reintentar»." };
+    return { ok: true };
+}
 /**
  * Qué pasa con la constancia después de un intento fallido. Puro.
  *
@@ -51,7 +70,7 @@ export function sePuedePedir(item, ahora) {
  * no espera tres días para decirlo.
  */
 export function trasUnFallo(intentosPrevios, fallo, ahora, o = {}) {
-    const automaticos = intentosPrevios.filter((i) => !i.manual && i.resultado !== "descargada").length + (o.manual ? 0 : 1);
+    const automaticos = intentosDesdeLaRedescarga(intentosPrevios).filter((i) => !i.manual && i.resultado !== "descargada").length + (o.manual ? 0 : 1);
     if (fallo.sinArreglo)
         return { estado: "requiere_revision", proximoIntentoEl: null, motivoRevision: fallo.detalle || "ARCA muestra varias relaciones distintas para esa fecha: hay que elegir a mano." };
     if (o.manual)

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleCheck, faCircleXmark, faCircleQuestion, faCircle, faSpinner, faDownload, faMagnifyingGlass, faCircleExclamation, faClock, faFileArrowDown, faFileSignature, faFlask, faRotateRight, faChevronUp, faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { faCircleCheck, faCircleXmark, faCircleQuestion, faCircle, faSpinner, faDownload, faMagnifyingGlass, faCircleExclamation, faClock, faFileArrowDown, faFileSignature, faFlask, faRotateRight, faChevronUp, faChevronDown, faCloudArrowDown } from '@fortawesome/free-solid-svg-icons';
 import { Modal } from '../ui/Modal';
 import { projectsAPI, CorridaAltasGuardada, EstadoConstanciasAlta, ConstanciaArcaEnPantalla } from '../../api/projects';
 import { detalleDeLoPresentado } from './progresoTandas';
@@ -308,8 +308,8 @@ export const ChipConstancia: React.FC<{ ciclo: ConstanciaArcaEnPantalla | null |
   }
   const doc = ciclo.documento;
   const v: Record<string, { texto: string; clase: string }> = {
-    presentada: { texto: 'Falta bajarla', clase: 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600' },
-    constancia_pendiente: { texto: `Reintento${ciclo.proximoIntentoEl ? ` el ${fechaCortaDe(ciclo.proximoIntentoEl)}` : ''}`, clase: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800' },
+    presentada: ciclo.redescarga?.enCurso ? { texto: 'Re-descarga · en la cola', clase: 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800' } : { texto: 'Falta bajarla', clase: 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600' },
+    constancia_pendiente: { texto: `${ciclo.redescarga?.enCurso ? 'Re-descarga · reintento' : 'Reintento'}${ciclo.proximoIntentoEl ? ` el ${fechaCortaDe(ciclo.proximoIntentoEl)}` : ''}`, clase: 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800' },
     constancia_descargada: { texto: 'Bajada · en Outbox', clase: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800' },
     enviada_a_firmar: { texto: 'Enviada a firmar', clase: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800' },
     firmada: { texto: 'Firmada', clase: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' },
@@ -317,7 +317,7 @@ export const ChipConstancia: React.FC<{ ciclo: ConstanciaArcaEnPantalla | null |
       ? { texto: 'Firmada · archivada', clase: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' }
       : { texto: 'Archivada · No firmar', clase: 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600' },
     baja_mismo_dia_ok: { texto: 'Archivada · No firmar', clase: 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600' },
-    requiere_revision: { texto: doc && /no ubicado/i.test(ciclo.motivoRevision || '') ? 'Documento no ubicado' : 'Requiere revisión', clase: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800' },
+    requiere_revision: { texto: esNoUbicada(ciclo) ? 'Documento no ubicado' : 'Requiere revisión', clase: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800' },
   };
   const x = v[ciclo.estado] || { texto: ciclo.estado, clase: 'bg-gray-100 text-gray-700 border-gray-300' };
   const chip = <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[11px] font-semibold whitespace-nowrap ${x.clase}`}>{x.texto}</span>;
@@ -336,7 +336,57 @@ export const ChipConstancia: React.FC<{ ciclo: ConstanciaArcaEnPantalla | null |
   );
 };
 
-const TEXTO_INTENTO: Record<string, string> = { descargada: 'Bajada', rechazada: 'No coincidía con el contrato', sin_constancia: 'ARCA no la entregó', ambigua: 'Relaciones distintas en ARCA', error: 'Falló la descarga' };
+/** En revisión porque el documento se perdió (el servidor lo dice; uno anterior, sólo por el motivo). */
+export const esNoUbicada = (ciclo: Pick<ConstanciaArcaEnPantalla, 'estado' | 'documento' | 'motivoRevision'> & { noUbicado?: boolean }) => ciclo.noUbicado ?? (ciclo.estado === 'requiere_revision' && !!ciclo.documento && /no ubicado/i.test(ciclo.motivoRevision || ''));
+
+/**
+ * «VOLVER A BAJAR» (07/11/2026): para las constancias cuyo documento se perdió (se borró del Outbox antes
+ * de firmarse). No abre ARCA: limpia la validación y las deja en la cola como nuevas; salen en la próxima
+ * descarga o con «Forzar descarga». Lo ya pedido, o lo que reapareció, el servidor lo saltea y lo dice.
+ */
+export async function volverABajar(ciclos: Array<{ clave: string; nombre: string }>): Promise<boolean> {
+  if (ciclos.length === 0) return false;
+  const quien = ciclos.length === 1 ? `la constancia de ${ciclos[0].nombre}` : `${ciclos.length} constancias`;
+  const r = await sweetAlert.confirm(`Volver a bajar ${quien}`, `El documento no está en ninguna carpeta del circuito. Se limpia la validación anterior (queda anotada) y ${ciclos.length === 1 ? 'vuelve' : 'vuelven'} a la cola de A.R.C.A Descargas como nueva: sale en la próxima descarga automática, o forzándola. Ahora no se abre ARCA.`, 'Sí, volver a bajar', 'Cancelar');
+  if (!r.isConfirmed) return false;
+  try {
+    const { resultados } = await projectsAPI.volverABajarConstancias(ciclos.map((c) => c.clave));
+    const pedidas = resultados.filter((x) => x.pedida);
+    const no = resultados.filter((x) => !x.pedida);
+    const texto = [pedidas.length > 0 ? `${pedidas.length === 1 ? `${pedidas[0].nombre} quedó` : `${pedidas.length} quedaron`} en la cola como «Re-descarga».` : '', ...no.map((x) => `${x.nombre || x.clave}: ${x.motivo}`)].filter(Boolean).join(' ');
+    if (pedidas.length > 0) sweetAlert.success('Pedido', texto);
+    else sweetAlert.info('No hizo falta', texto, 5000);
+    return pedidas.length > 0;
+  } catch (e: any) {
+    sweetAlert.error('No se pudo pedir', e?.response?.data?.error || e?.message || '');
+    return false;
+  }
+}
+
+export const BotonVolverABajar: React.FC<{ ciclos: Array<{ clave: string; nombre: string }>; onHecho?: () => void; texto?: string; disabled?: boolean }> = ({ ciclos, onHecho, texto, disabled }) => {
+  const [pidiendo, setPidiendo] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async (e) => {
+        e.stopPropagation();
+        setPidiendo(true);
+        try {
+          if (await volverABajar(ciclos)) onHecho?.();
+        } finally {
+          setPidiendo(false);
+        }
+      }}
+      disabled={disabled || pidiendo || ciclos.length === 0}
+      className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 whitespace-nowrap"
+    >
+      <FontAwesomeIcon icon={pidiendo ? faSpinner : faCloudArrowDown} spin={pidiendo} className="h-3 w-3" />
+      {texto || 'Volver a bajar'}
+    </button>
+  );
+};
+
+const TEXTO_INTENTO: Record<string, string> = { redescarga: 'Re-descarga pedida', descargada: 'Bajada', rechazada: 'No coincidía con el contrato', sin_constancia: 'ARCA no la entregó', ambigua: 'Relaciones distintas en ARCA', error: 'Falló la descarga' };
 
 /** «ver detalle»: los intentos de bajar la constancia, dónde está el documento, y lo de la presentación. */
 const DetalleDeConstancia: React.FC<{ ciclo: ConstanciaArcaEnPantalla }> = ({ ciclo }) => (
@@ -590,6 +640,7 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
           </div>
           <div className="min-w-[150px]">{grupo === 'no_presentadas' || grupo === 'seco' ? <span className={`text-[11px] ${v.clase}`}><FontAwesomeIcon icon={v.icon} className="h-3 w-3 mr-1" />{v.texto}</span> : <ChipConstancia ciclo={ciclo} constanciaVieja={f.constancia} />}</div>
           <div className="flex items-center gap-2 ml-auto">
+            {grupo === 'revision' && ciclo && esNoUbicada(ciclo) && <BotonVolverABajar ciclos={[ciclo]} onHecho={() => void mirar()} />}
             {grupo === 'revision' && ciclo && !ciclo.documento && (
               <button type="button" onClick={() => void reintentar(ciclo)} disabled={reintentando === ciclo.clave || !!constancias?.corriendo} className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
                 <FontAwesomeIcon icon={reintentando === ciclo.clave ? faSpinner : faRotateRight} spin={reintentando === ciclo.clave} className="h-3 w-3" />
@@ -796,6 +847,7 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
                       <span className="text-gray-500">{k.empresaRazonSocial} · {fechaCortaIso(k.fechaAlta)}</span>
                       <ChipConstancia ciclo={k} />
                       {k.motivoRevision && <span className="text-gray-600 dark:text-gray-300">{k.motivoRevision}</span>}
+                      {esNoUbicada(k) && <BotonVolverABajar ciclos={[k]} onHecho={() => void mirar()} />}
                     </li>
                   ))}
                 </ul>

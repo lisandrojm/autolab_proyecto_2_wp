@@ -13,7 +13,7 @@ import { avisoForzarAlta, libreDesdeTrasAlta } from "@compartido/arca/vigenciaAl
 import { sweetAlert } from "../utils/sweetAlert";
 import { ProjectTeamPage } from "./ProjectTeamPage";
 import { TablaConEncabezadoFijo, useAltoDeBarra } from "../components/ui/TablaConEncabezadoFijo";
-import { ChipConstancia } from "../components/contratos/HistorialAltasArca";
+import { BotonVolverABajar, ChipConstancia, esNoUbicada } from "../components/contratos/HistorialAltasArca";
 
 /*
   A.R.C.A ALTAS AUTOMÁTICAS: cada alta temprana se presenta sola a la hora configurada (14:00 argentinas
@@ -233,6 +233,14 @@ export const PresentacionesArcaPage: React.FC = () => {
     const textoContrato = (r: (typeof filas)[number]) => (r.contrato ? `${fechaCorta(r.contrato.alta)} ${r.contrato.baja ? fechaCorta(r.contrato.baja) : "indeterminado"}` : "");
     return q ? filas.filter((r) => r.nombre.toLowerCase().includes(q) || r.cuil.includes(q.replace(/\D/g, "")) || r.empresa.toLowerCase().includes(q) || textoContrato(r).includes(q)) : filas;
   }, [corridas, buscar, soloAutomaticas, ocultarResueltas]);
+  // «Volver a bajar» (07/11/2026): las constancias cuyo documento se perdió, una vez cada una aunque aparezca en varias corridas.
+  const [tildadasNoUbicadas, setTildadasNoUbicadas] = useState<Set<string>>(new Set());
+  const noUbicadas = useMemo(() => [...new Map(presentadas.filter((r) => r.ciclo && esNoUbicada(r.ciclo)).map((r) => [r.ciclo!.clave, r.ciclo!])).values()], [presentadas]);
+  const noUbicadasTildadas = noUbicadas.filter((k) => tildadasNoUbicadas.has(k.clave));
+  const trasVolverABajar = () => {
+    setTildadasNoUbicadas(new Set());
+    void cargarRegistro();
+  };
   const { ordenados: presentadasOrdenadas, orden: ordenRegistro, alternar: alternarRegistro } = useOrdenTabla(
     presentadas,
     { fecha: (r) => r.fecha, persona: (r) => r.nombre, contrato: (r) => r.contrato?.alta || "", empresa: (r) => r.empresa, resultado: (r) => r.resultado, quien: (r) => r.quien },
@@ -839,6 +847,17 @@ export const PresentacionesArcaPage: React.FC = () => {
                   Actualizar
                 </button>
               </div>
+              {noUbicadas.length > 0 && (
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-900/20 px-4 py-2 text-sm text-violet-900 dark:text-violet-100">
+                  <span>
+                    <strong>{noUbicadas.length}</strong> constancia{noUbicadas.length === 1 ? "" : "s"} con el documento no ubicado (se borró antes de firmarse): se pueden volver a bajar de ARCA.
+                  </span>
+                  <button type="button" onClick={() => setTildadasNoUbicadas(noUbicadasTildadas.length === noUbicadas.length ? new Set() : new Set(noUbicadas.map((k) => k.clave)))} className="text-xs font-semibold hover:underline">
+                    {noUbicadasTildadas.length === noUbicadas.length ? "Destildar" : "Tildar todas"}
+                  </button>
+                  {noUbicadasTildadas.length > 0 && <BotonVolverABajar ciclos={noUbicadasTildadas} onHecho={trasVolverABajar} texto={`Volver a bajar ${noUbicadasTildadas.length}`} />}
+                </div>
+              )}
               {corridas === null ? (
                 <div className="flex justify-center py-10">
                   <LoadingSpinner />
@@ -924,6 +943,12 @@ export const PresentacionesArcaPage: React.FC = () => {
                           <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                             {r.ciclo ? <ChipConstancia ciclo={r.ciclo} /> : r.constancia === undefined ? "—" : r.constancia === null ? "Sin bajar" : CONSTANCIA[r.constancia.destino] || r.constancia.destino}
                             {r.ciclo?.motivoRevision && <p className="text-[11px] text-gray-600 dark:text-gray-300 whitespace-normal max-w-xs">{r.ciclo.motivoRevision}</p>}
+                            {r.ciclo && esNoUbicada(r.ciclo) && (
+                              <div className="mt-1 flex items-center gap-2">
+                                <input type="checkbox" className="rounded border-gray-300 text-violet-600 focus:ring-violet-500" checked={tildadasNoUbicadas.has(r.ciclo.clave)} onChange={() => setTildadasNoUbicadas((prev) => { const t = new Set(prev); if (t.has(r.ciclo!.clave)) t.delete(r.ciclo!.clave); else t.add(r.ciclo!.clave); return t; })} title="Tildar para volver a bajar en masa" />
+                                <BotonVolverABajar ciclos={[r.ciclo]} onHecho={trasVolverABajar} />
+                              </div>
+                            )}
                             {r.constancia?.validadaEl && <p className="text-[11px] text-gray-400">validada el {fechaCorta(String(r.constancia.validadaEl).slice(0, 10))}</p>}
                             {r.constancia && <p className="text-[11px] text-gray-500">{r.constancia.origen === "automatica" ? "Bajada automática" : r.constancia.origen === "descarga" ? `Bajada por ${r.constancia.por || "un usuario"}` : r.constancia.origen === "subida" ? `Subida por ${r.constancia.por || "un usuario"}` : "Origen sin registrar"}</p>}
                           </td>

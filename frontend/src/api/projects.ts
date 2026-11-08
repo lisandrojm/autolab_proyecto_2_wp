@@ -926,6 +926,15 @@ class ProjectsAPI {
     invalidateRefCache("contracts-overview:");
     return data;
   }
+  /**
+   * «Volver a bajar» las constancias cuyo documento no se ubica: vuelven a la cola como nuevas (no abre ARCA).
+   * Lo que ya se pidió, o cuyo documento reapareció, vuelve con `pedida: false` y el motivo.
+   */
+  async volverABajarConstancias(claves: string[]): Promise<{ resultados: Array<{ clave: string; nombre: string; cuil: string; pedida: boolean; motivo: string }> }> {
+    const { data } = await axios.post(`/contratos/altas-arca/constancias/redescargar`, { claves }, { headers: this.getHeaders() });
+    invalidateRefCache("contracts-overview:");
+    return data;
+  }
   /** Descarga automática de constancias (ver `descargaConstanciasAutomatica.ts` en el server). */
   async descargaConstanciasAutomatica(): Promise<EstadoDescargaConstancias> {
     const { data } = await axios.get(`/contratos/altas-arca/constancias/automatica`, { headers: this.getHeaders() });
@@ -1180,6 +1189,9 @@ export interface ConstanciaArcaEnPantalla {
   proximoIntentoEl: string | null;
   motivoRevision: string | null;
   documento: { codigo: string; nombre: string; path: string; carpeta: string | null; etiquetaCarpeta: string; firmada: boolean } | null;
+  /** En revisión porque el documento no está en ninguna carpeta: se puede «Volver a bajar». Servidores anteriores no lo mandan. */
+  noUbicado?: boolean;
+  redescarga?: RedescargaConstancia | null;
   deducida?: boolean;
 }
 
@@ -1346,14 +1358,21 @@ export interface PendienteDeConstancia {
   presentadaEl: string;
   empresa: { _id: string; razonSocial: string };
   /** El ciclo de su constancia (`constancias_arca`); null si todavía no tiene fila (antes de la migración). */
-  ciclo?: { estado: EstadoConstancia; intentos: IntentoConstancia[]; proximoIntentoEl: string | null; motivoRevision: string | null } | null;
+  ciclo?: { clave?: string; estado: EstadoConstancia; intentos: IntentoConstancia[]; proximoIntentoEl: string | null; motivoRevision: string | null; redescarga?: RedescargaConstancia | null } | null;
 }
 
 /** Los estados de la constancia de un alta presentada (ver `server/src/services/arca/cicloConstancia.ts`). */
 export type EstadoConstancia = "presentada" | "constancia_pendiente" | "constancia_descargada" | "enviada_a_firmar" | "firmada" | "archivada" | "baja_mismo_dia_ok" | "requiere_revision";
+/** «Volver a bajar» pedido: cuándo, qué documento se había perdido, y si sigue en la cola. */
+export interface RedescargaConstancia {
+  pedidaEl: string;
+  enCurso: boolean;
+  codigoAnterior: string;
+}
 export interface IntentoConstancia {
   fecha: string;
-  resultado: "descargada" | "rechazada" | "sin_constancia" | "ambigua" | "error";
+  /** «redescarga»: la marca de «Volver a bajar»; los intentos se cuentan desde ahí. */
+  resultado: "descargada" | "rechazada" | "sin_constancia" | "ambigua" | "error" | "redescarga";
   detalle?: string;
   manual?: boolean;
 }
@@ -1368,6 +1387,8 @@ export interface EstadoDescargasArca extends EstadoDescargaConstancias {
   /** ISO de la próxima descarga automática; null si está apagada. */
   proximaCorrida: string | null;
   pendientes: PendienteDeConstancia[];
+  /** Validadas cuyo documento se perdió (borrado del Outbox): no esperan constancia, se «Vuelven a bajar». */
+  noUbicadas?: ConstanciaArcaEnPantalla[];
   /** La descarga de UNA empleadora que corre ahora (o la última), con sus eventos. */
   descarga: null | { empresaId: string; empresaRazonSocial: string; total: number; corriendo: boolean; arrancadaEl: string; eventos: Array<Record<string, any> & { tipo: string }> };
   /** El forzado en masa (varias empleadoras en fila), si lo hay. */

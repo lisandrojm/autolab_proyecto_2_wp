@@ -33,7 +33,8 @@ export declare function sePuedePedir(item: {
     estado: EstadoConstancia;
     proximoIntentoEl?: Date | string | null;
 }, ahora: Date): boolean;
-export type ResultadoIntento = "descargada" | "rechazada" | "sin_constancia" | "ambigua" | "error";
+/** «redescarga»: no es un intento contra ARCA sino la marca de «Volver a bajar» (ver `puedeVolverABajarse`); los intentos se cuentan desde ahí. */
+export type ResultadoIntento = "descargada" | "rechazada" | "sin_constancia" | "ambigua" | "error" | "redescarga";
 export interface Intento {
     fecha: Date;
     resultado: ResultadoIntento;
@@ -41,8 +42,43 @@ export interface Intento {
     /** Pedido a mano («Reintentar», «Forzar descarga»): no cuenta para el tope de intentos automáticos. */
     manual?: boolean;
 }
+/** Los intentos que cuentan hoy: los posteriores al último «Volver a bajar» (una re-descarga arranca con sus 3 intentos). */
+export declare const intentosDesdeLaRedescarga: <T extends {
+    resultado: string;
+}>(intentos: T[]) => T[];
+/** La re-descarga pedida de una constancia cuyo documento se perdió. `enCurso` hasta que se baja o vuelve a revisión. */
+export interface Redescarga {
+    pedidaEl: Date;
+    porUsuarioId?: string | null;
+    /** La validación de la constancia anterior (la que se perdió), que se limpió del contrato para que vuelva a la cola. */
+    validadaElAnterior?: Date | null;
+    documentoAnterior?: {
+        codigo?: string;
+        nombre?: string;
+        path?: string;
+    } | null;
+    enCurso: boolean;
+    terminadaEl?: Date | null;
+}
+/**
+ * ¿SE PUEDE «VOLVER A BAJAR»? Sólo una constancia en revisión porque su documento no está en ninguna
+ * carpeta del circuito (se borró). Idempotente: si el documento reapareció (ya no está en revisión, o
+ * está por otro motivo) o ya hay una re-descarga en curso, no. Puro.
+ */
+export declare function puedeVolverABajarse(item: {
+    estado: EstadoConstancia;
+    documento?: {
+        noUbicadoDesde?: Date | string | null;
+    } | null;
+    redescarga?: Pick<Redescarga, "enCurso"> | null;
+}): {
+    ok: true;
+} | {
+    ok: false;
+    motivo: string;
+};
 export interface Fallo {
-    resultado: Exclude<ResultadoIntento, "descargada">;
+    resultado: Exclude<ResultadoIntento, "descargada" | "redescarga">;
     detalle?: string;
     /**
      * La ambigüedad que no se resuelve sola: ARCA muestra varias relaciones de ese inicio y son

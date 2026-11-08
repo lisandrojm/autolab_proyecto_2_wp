@@ -10,6 +10,7 @@ import { projectsAPI, horaTexto, type EstadoDescargasArca, type FueraDeLaCorrida
 import { sweetAlert } from "../utils/sweetAlert";
 import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 import { TablaConEncabezadoFijo, useAltoDeBarra } from "../components/ui/TablaConEncabezadoFijo";
+import { BotonVolverABajar } from "../components/contratos/HistorialAltasArca";
 
 /*
   A.R.C.A DESCARGAS AUTOMÁTICAS (pedido del 18/10/2026): la hermana de «A.R.C.A Altas Automáticas». Muestra
@@ -31,17 +32,38 @@ const claveDe = (p: PendienteDeConstancia) => `${p.userProjectId}:${p.contractIn
 const MAX_INTENTOS = 3;
 type Situacion = "nueva" | "reintento" | "revision";
 const situacionDe = (p: PendienteDeConstancia): Situacion => (p.ciclo?.estado === "requiere_revision" ? "revision" : p.ciclo?.estado === "constancia_pendiente" ? "reintento" : "nueva");
-const intentosAutomaticos = (p: PendienteDeConstancia) => (p.ciclo?.intentos || []).filter((i) => !i.manual && i.resultado !== "descargada").length;
+// Desde el último «Volver a bajar»: una re-descarga arranca con sus 3 intentos (como `trasUnFallo` en el servidor).
+const intentosDesdeLaRedescarga = (p: PendienteDeConstancia) => {
+  const t = p.ciclo?.intentos || [];
+  return t.slice(t.map((i) => i.resultado).lastIndexOf("redescarga") + 1);
+};
+const intentosAutomaticos = (p: PendienteDeConstancia) => intentosDesdeLaRedescarga(p).filter((i) => !i.manual && i.resultado !== "descargada").length;
+const EtiquetaRedescarga: React.FC<{ p: PendienteDeConstancia }> = ({ p }) =>
+  p.ciclo?.redescarga?.enCurso ? (
+    <p className="text-[11px] text-violet-700 dark:text-violet-300" title="Se pidió volver a bajarla porque el documento anterior no está en ninguna carpeta">
+      Re-descarga pedida el {fechaArgentina(p.ciclo.redescarga.pedidaEl)}
+      {p.ciclo.redescarga.codigoAnterior ? ` · se perdió ${p.ciclo.redescarga.codigoAnterior}` : ""}
+    </p>
+  ) : null;
 const EstadoDelCiclo: React.FC<{ p: PendienteDeConstancia }> = ({ p }) => {
   const s = situacionDe(p);
-  const ultimo = (p.ciclo?.intentos || []).slice(-1)[0];
-  if (s === "nueva") return <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">Nueva</span>;
+  const ultimo = intentosDesdeLaRedescarga(p).slice(-1)[0];
+  if (s === "nueva")
+    return p.ciclo?.redescarga?.enCurso ? (
+      <div className="space-y-0.5 max-w-xs">
+        <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300">Re-descarga</span>
+        <EtiquetaRedescarga p={p} />
+      </div>
+    ) : (
+      <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">Nueva</span>
+    );
   if (s === "reintento")
     return (
       <div className="space-y-0.5 max-w-xs">
         <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-          Reintento {intentosAutomaticos(p) + 1} de {MAX_INTENTOS}
+          {p.ciclo?.redescarga?.enCurso ? "Re-descarga · reintento" : "Reintento"} {intentosAutomaticos(p) + 1} de {MAX_INTENTOS}
         </span>
+        <EtiquetaRedescarga p={p} />
         {ultimo?.detalle && <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2" title={ultimo.detalle}>Último: {ultimo.detalle}</p>}
       </div>
     );
@@ -129,6 +151,14 @@ export const DescargasArcaPage: React.FC = () => {
   }, [pendientes, buscar]);
   const { ordenados, orden, alternar } = useOrdenTabla(filtrados, { persona: (p) => p.nombre, empresa: (p) => p.empresa.razonSocial, alta: (p) => p.fechaAlta, presentada: (p) => p.presentadaEl }, { columna: "presentada", direccion: "desc" });
   const seleccionadas = useMemo(() => pendientes.filter((p) => seleccion.has(claveDe(p))), [pendientes, seleccion]);
+  // Validadas cuyo documento se perdió (07/11/2026): no esperan constancia, se «Vuelven a bajar» y pasan a la cola de abajo.
+  const noUbicadas = estado?.noUbicadas || [];
+  const [tildadasNoUbicadas, setTildadasNoUbicadas] = useState<Set<string>>(new Set());
+  const noUbicadasTildadas = noUbicadas.filter((k) => tildadasNoUbicadas.has(k.clave));
+  const trasVolverABajar = () => {
+    setTildadasNoUbicadas(new Set());
+    void cargar();
+  };
 
   const forzar = async (items: PendienteDeConstancia[], titulo: string) => {
     if (items.length === 0) return;
@@ -276,6 +306,56 @@ export const DescargasArcaPage: React.FC = () => {
             </div>
           )}
 
+          {noUbicadas.length > 0 && (
+            <section className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">Documento no ubicado ({noUbicadas.length})</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Se bajaron y validaron, pero el PDF se borró antes de firmarse. «Volver a bajar» las pone en la cola de abajo como «Re-descarga».</p>
+                </div>
+                {noUbicadasTildadas.length > 0 && <BotonVolverABajar ciclos={noUbicadasTildadas} onHecho={trasVolverABajar} texto={`Volver a bajar ${noUbicadasTildadas.length}`} disabled={enCurso} />}
+              </div>
+              <div className="overflow-x-auto rounded-xl border border-violet-200 dark:border-violet-800 bg-white dark:bg-gray-800">
+                <table className="min-w-full">
+                  <thead>
+                    <tr>
+                      <th className={`${th} w-8`}>
+                        <input type="checkbox" className="rounded border-gray-300 text-violet-600 focus:ring-violet-500" checked={noUbicadasTildadas.length === noUbicadas.length} onChange={() => setTildadasNoUbicadas(noUbicadasTildadas.length === noUbicadas.length ? new Set() : new Set(noUbicadas.map((k) => k.clave)))} title="Tildar todas" />
+                      </th>
+                      <th className={th}>Persona</th>
+                      <th className={th}>Empresa</th>
+                      <th className={th}>Alta</th>
+                      <th className={th}>Qué pasó</th>
+                      <th className={`${th} col-acciones`}>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {noUbicadas.map((k) => (
+                      <tr key={k.clave} className={`border-t border-gray-100 dark:border-gray-800 align-top ${tildadasNoUbicadas.has(k.clave) ? "bg-violet-50/60 dark:bg-violet-900/10" : ""}`}>
+                        <td className="px-3 py-3 w-8">
+                          <input type="checkbox" className="rounded border-gray-300 text-violet-600 focus:ring-violet-500" checked={tildadasNoUbicadas.has(k.clave)} onChange={() => setTildadasNoUbicadas((prev) => { const t = new Set(prev); if (t.has(k.clave)) t.delete(k.clave); else t.add(k.clave); return t; })} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{k.nombre}</p>
+                          <p className="text-xs font-mono text-gray-500">{fmtCuil(k.cuil)}</p>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{k.empresaRazonSocial}</td>
+                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{fechaCorta(k.fechaAlta)}</td>
+                        <td className="px-4 py-3 text-[11px] text-gray-600 dark:text-gray-300 max-w-md">
+                          {k.documento?.codigo && <span className="font-mono font-semibold">{k.documento.codigo} · </span>}
+                          {k.motivoRevision}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <BotonVolverABajar ciclos={[k]} onHecho={trasVolverABajar} disabled={enCurso} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
           <section className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">Esperan su constancia ({pendientes.length})</h2>
@@ -311,9 +391,8 @@ export const DescargasArcaPage: React.FC = () => {
                       </BotonOrden>
                     </th>
                     <th className={th}>Estado</th>
-                    <th className={th}>Estado</th>
                     <th className={th}>Se baja en</th>
-                    <th className={`${th} text-left`}>Acción</th>
+                    <th className={`${th} col-acciones`}>Acción</th>
                   </tr>
                 </thead>
                 <tbody>

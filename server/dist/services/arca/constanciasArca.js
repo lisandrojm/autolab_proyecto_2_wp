@@ -4,7 +4,7 @@ import { Project } from "../../models/Project.js";
 import { User } from "../../models/User.js";
 import { Company } from "../../models/Company.js";
 import { ConstanciaArca } from "../../models/ConstanciaArca.js";
-import { carpetaMasAvanzada, categoriaDe, claveConstancia, elegirParaCorrida, estadoPorCarpeta, siguienteEstado, trasUnFallo, yaTieneConstancia, } from "./cicloConstancia.js";
+import { carpetaMasAvanzada, categoriaDe, claveConstancia, elegirParaCorrida, estadoPorCarpeta, puedeVolverABajarse, siguienteEstado, trasUnFallo, yaTieneConstancia, } from "./cicloConstancia.js";
 import { borradoEl, copyEntry, listFolder, ubicarArchivo } from "../dropboxService.js";
 import { resolverCarpetaPorProposito } from "../../utils/estadoCarpetas.js";
 /**
@@ -130,9 +130,14 @@ export async function sincronizarConstancias(tenantObjectId, o = {}) {
             },
         });
         if (yaTieneConstancia(f.estado)) {
+            /*
+              En revisión se reconoce sólo una constancia DISTINTA de la que ya conoce la fila (otro código: se
+              subió a mano). La misma es la del documento que se perdió: hasta el 07/11/2026 esto la devolvía a
+              «bajada» en cada sincronización y el escaneo de Dropbox, a revisión, una y otra vez.
+            */
             ops.push({
                 updateOne: {
-                    filter: { tenantId, clave: f.clave, estado: { $in: ["presentada", "constancia_pendiente", "requiere_revision"] } },
+                    filter: { tenantId, clave: f.clave, $or: [{ estado: { $in: ["presentada", "constancia_pendiente"] } }, { estado: "requiere_revision", "documento.codigo": { $ne: f.documento?.codigo || "" } }] },
                     update: { $set: { estado: f.estado, documento: f.documento, tipoConstancia: f.tipoConstancia, mismoDia: f.mismoDia, proximoIntentoEl: null, motivoRevision: null }, $push: { historial: { estado: f.estado, fecha: ahora, motivo: "La constancia ya estaba en el contrato" } } },
                 },
             });
@@ -176,7 +181,10 @@ export async function anotarDescarga(tenantObjectId, clave, r) {
             historial: { estado, fecha: ahora, motivo: r.tipo === "baja" ? "Constancia de baja aceptada: la relación ya terminó" : "Constancia bajada de ARCA" },
         },
     });
+    await cerrarRedescarga(tenantObjectId, clave, ahora);
 }
+/** La re-descarga terminó (se bajó, o volvió a revisión): deja de mostrarse como «Re-descarga» y se puede volver a pedir. */
+const cerrarRedescarga = (tenantObjectId, clave, ahora) => ConstanciaArca.updateOne({ tenantId: tenantObjectId, clave, "redescarga.enCurso": true }, { $set: { "redescarga.enCurso": false, "redescarga.terminadaEl": ahora } });
 /** Un intento que no trajo la constancia: cuenta, espera o pasa a revisión (ver `trasUnFallo`). */
 export async function anotarFallo(tenantObjectId, clave, fallo, o = {}) {
     const doc = await ConstanciaArca.findOne({ tenantId: tenantObjectId, clave }).select("intentos estado").lean();
@@ -191,7 +199,92 @@ export async function anotarFallo(tenantObjectId, clave, fallo, o = {}) {
             ...(r.estado !== doc.estado ? { historial: { estado: r.estado, fecha: ahora, motivo: r.motivoRevision } } : {}),
         },
     });
+    if (r.estado === "requiere_revision")
+        await cerrarRedescarga(tenantObjectId, clave, ahora);
     return r;
+}
+/*
+  «VOLVER A BAJAR» UNA CONSTANCIA CUYO DOCUMENTO SE PERDIÓ (07/11/2026). La constancia se validó, se subió
+  al Outbox y alguien la borró de ahí antes de enviarla a firmar (Tiero, Aquino y Veliz, 24/10). Para el
+  sistema ya la tenía (`altaConstancia.validadaEl`), así que no volvía a la cola nunca. Volver a bajarla
+  es: limpiar esa validación del contrato (queda anotada en el intento y en `redescarga`) y dejar la fila
+  como recién presentada. Entra en la cola como nueva (primera en el cupo), y la que baje sigue el
+  circuito de siempre: se valida (la de baja de una relación terminada vale), va a firma y se archiva.
+*/
+/** La fila y el contrato después de pedir volver a bajarla, o por qué no. Puro (lo prueba `constanciasArca.test.ts`). */
+export function planDeRedescarga(fila, contrato, o) {
+    const puede = puedeVolverABajarse(fila);
+    if (puede.ok === false)
+        return { ok: false, motivo: puede.motivo };
+    if (!contrato || fechaIso(contrato.fecha_alta_contrato) !== fila.fechaAlta)
+        return { ok: false, motivo: "El contrato ya no es el de esta constancia (se borró o cambió su fecha de alta)." };
+    const anterior = contrato.altaConstancia?.validadaEl ? new Date(contrato.altaConstancia.validadaEl) : null;
+    const doc = fila.documento || {};
+    const intento = {
+        fecha: o.ahora,
+        resultado: "redescarga",
+        detalle: `Re-descarga pedida: documento no ubicado${doc.codigo ? ` (${doc.codigo})` : ""}.${anterior ? ` La constancia anterior se había validado el ${fechaHoraArgentina(anterior)}.` : ""}`,
+        manual: true,
+    };
+    const { validadaEl: _, ...sinValidar } = contrato.altaConstancia || {};
+    return {
+        ok: true,
+        intento,
+        fila: {
+            estado: "presentada",
+            proximoIntentoEl: null,
+            motivoRevision: null,
+            documento: null,
+            tipoConstancia: null,
+            mismoDia: false,
+            redescarga: { pedidaEl: o.ahora, porUsuarioId: o.porUsuarioId || null, validadaElAnterior: anterior, documentoAnterior: doc.codigo || doc.path ? { codigo: doc.codigo, nombre: doc.nombre, path: doc.path } : null, enCurso: true, terminadaEl: null },
+            intentos: [...(fila.intentos || []), intento],
+        },
+        contrato: { ...contrato, altaConstancia: contrato.altaConstancia ? sinValidar : contrato.altaConstancia },
+    };
+}
+/**
+ * Pide volver a bajar esas constancias. Por cada una: la fila se toma con una escritura condicionada
+ * (sigue en revisión por documento no ubicado), así dos pedidos a la vez no la encolan dos veces; recién
+ * después se limpia la validación del contrato. Si el contrato no se pudo tocar, la fila vuelve a como
+ * estaba. Antes de llamar, `actualizarUbicaciones` sobre estas filas: un documento que reapareció sale
+ * de revisión y acá ya no se toca.
+ */
+export async function pedirRedescarga(tenantObjectId, claves, o = {}) {
+    const ahora = o.ahora || new Date();
+    const docs = await ConstanciaArca.find({ tenantId: tenantObjectId, clave: { $in: claves } }).select("-historial").lean();
+    const porClave = new Map(docs.map((d) => [d.clave, d]));
+    const out = [];
+    for (const clave of [...new Set(claves)]) {
+        const d = porClave.get(clave);
+        if (!d) {
+            out.push({ clave, nombre: "", cuil: "", pedida: false, motivo: "No está en el registro de constancias." });
+            continue;
+        }
+        const base = { clave, nombre: d.nombre, cuil: d.cuil };
+        const up = await UserProject.findById(d.userProjectId).select({ contracts: { $slice: [d.contractIndex, 1] } }).lean();
+        const contrato = up?.contracts?.[0];
+        const plan = planDeRedescarga(d, contrato, { ahora, porUsuarioId: o.porUsuarioId });
+        if (plan.ok === false) {
+            out.push({ ...base, pedida: false, motivo: plan.motivo });
+            continue;
+        }
+        const { intentos: _, ...set } = plan.fila;
+        const tomada = await ConstanciaArca.updateOne({ _id: d._id, estado: "requiere_revision", "documento.noUbicadoDesde": { $ne: null } }, { $set: set, $push: { intentos: plan.intento, historial: { estado: "presentada", fecha: ahora, motivo: plan.intento.detalle } } });
+        if (tomada.modifiedCount === 0) {
+            out.push({ ...base, pedida: false, motivo: "Ya se pidió volver a bajarla, o el documento reapareció." });
+            continue;
+        }
+        const enContrato = `contracts.${d.contractIndex}`;
+        const limpio = await UserProject.updateOne({ _id: d.userProjectId, [`${enContrato}.fecha_alta_contrato`]: contrato.fecha_alta_contrato }, { $unset: { [`${enContrato}.altaConstancia.validadaEl`]: "" } });
+        if (limpio.matchedCount === 0) {
+            await ConstanciaArca.updateOne({ _id: d._id }, { $set: { estado: d.estado, documento: d.documento, motivoRevision: d.motivoRevision, tipoConstancia: d.tipoConstancia, mismoDia: d.mismoDia, redescarga: d.redescarga ?? null }, $pull: { intentos: { fecha: ahora, resultado: "redescarga" } }, $push: { historial: { estado: d.estado, fecha: new Date(), motivo: "Re-descarga cancelada: el contrato cambió mientras se pedía" } } });
+            out.push({ ...base, pedida: false, motivo: "El contrato cambió mientras se pedía: no se tocó nada." });
+            continue;
+        }
+        out.push({ ...base, pedida: true, motivo: plan.intento.detalle || "" });
+    }
+    return out;
 }
 export async function actualizarUbicaciones(tenantId, cfg, o = {}) {
     const dbx = o.dropbox ?? {
@@ -318,6 +411,20 @@ export async function actualizarUbicaciones(tenantId, cfg, o = {}) {
     }
     return r;
 }
+/**
+ * «VOLVER A BAJAR», completo: primero se mira en Dropbox dónde están hoy esos documentos (uno que
+ * reapareció sale de revisión y no se toca) y después se pide la re-descarga de lo que sigue perdido.
+ * Sin Dropbox conectado no se puede mirar: se pide igual (la constancia nueva tampoco tendría a dónde ir,
+ * pero queda en el contrato).
+ */
+export async function volverABajar(tenantObjectId, claves, o) {
+    if (o.cfg && claves.length > 0) {
+        const docs = await ConstanciaArca.find({ tenantId: tenantObjectId, clave: { $in: claves }, estado: "requiere_revision", documento: { $ne: null } }).select("clave cuil empresaCuit fechaAlta estado documento tipoConstancia").lean();
+        if (docs.length > 0)
+            await actualizarUbicaciones(String(tenantObjectId), o.cfg, { docs, log: o.log });
+    }
+    return pedirRedescarga(tenantObjectId, claves, { porUsuarioId: o.porUsuarioId });
+}
 export const ETIQUETA_CARPETA = {
     outbox: "Outbox",
     pendbox: "Pendbox",
@@ -346,6 +453,8 @@ const aPantalla = (d, deducida = false) => ({
     documento: d.documento?.codigo || d.documento?.path
         ? { codigo: d.documento.codigo || "", nombre: d.documento.nombre || "", path: d.documento.path || "", carpeta: d.documento.carpeta || null, etiquetaCarpeta: d.documento.carpeta ? ETIQUETA_CARPETA[d.documento.carpeta] || d.documento.carpeta : "", firmada: !!d.documento.firmadaEl }
         : null,
+    noUbicado: puedeVolverABajarse({ estado: d.estado, documento: d.documento, redescarga: null }).ok,
+    redescarga: d.redescarga?.pedidaEl ? { pedidaEl: new Date(d.redescarga.pedidaEl).toISOString(), enCurso: !!d.redescarga.enCurso && !yaTieneConstancia(d.estado), codigoAnterior: d.redescarga.documentoAnterior?.codigo || "" } : null,
     ...(deducida ? { deducida: true } : {}),
 });
 /** Las constancias para las pantallas: las de la colección y, para las presentadas sin fila, lo que dice el contrato. SOLO LEE. */

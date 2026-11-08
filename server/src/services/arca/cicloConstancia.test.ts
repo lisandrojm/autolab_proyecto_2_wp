@@ -9,6 +9,7 @@ import {
   estadoPorCarpeta,
   sePuedePedir,
   siguienteEstado,
+  puedeVolverABajarse,
   trasUnFallo,
   yaTieneConstancia,
   type EstadoConstancia,
@@ -134,5 +135,23 @@ describe("el documento: dónde está y qué estado es", () => {
     assert.equal(categoriaDe("archivada", { firmada: true }), "firmadas");
     assert.equal(categoriaDe("archivada"), "descargadas");
     assert.equal(categoriaDe("requiere_revision"), "revision");
+  });
+});
+
+describe("«Volver a bajar» (documento no ubicado)", () => {
+  it("una re-descarga arranca con sus 3 intentos: los fallos de antes no cuentan", () => {
+    const f = { resultado: "sin_constancia" as const };
+    const previos: Intento[] = [...fallo(2), { fecha: dias(0), resultado: "redescarga", manual: true }];
+    assert.deepEqual(trasUnFallo(previos, f, AHORA), { estado: "constancia_pendiente", proximoIntentoEl: dias(1) });
+    assert.equal(trasUnFallo([...previos, ...fallo(2)], f, AHORA).estado, "requiere_revision");
+  });
+  it("sólo se pide para lo que está en revisión por documento no ubicado, y una sola vez", () => {
+    assert.deepEqual(puedeVolverABajarse({ estado: "requiere_revision", documento: { noUbicadoDesde: AHORA } }), { ok: true });
+    assert.equal(puedeVolverABajarse({ estado: "presentada", documento: null, redescarga: { enCurso: true } }).ok, false);
+    assert.equal(puedeVolverABajarse({ estado: "constancia_pendiente", documento: null, redescarga: { enCurso: true } }).ok, false);
+    // En revisión por intentos fallidos (sin documento): eso es «Reintentar», no esto.
+    assert.match((puedeVolverABajarse({ estado: "requiere_revision", documento: null }) as any).motivo, /Reintentar/);
+    // El documento reapareció: ya salió de revisión.
+    assert.match((puedeVolverABajarse({ estado: "enviada_a_firmar", documento: { noUbicadoDesde: null } }) as any).motivo, /ubicado/);
   });
 });
