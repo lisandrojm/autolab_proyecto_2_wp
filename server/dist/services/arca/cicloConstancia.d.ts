@@ -69,6 +69,7 @@ export declare function puedeVolverABajarse(item: {
     estado: EstadoConstancia;
     documento?: {
         noUbicadoDesde?: Date | string | null;
+        fueraDelCircuito?: boolean | null;
     } | null;
     redescarga?: Pick<Redescarga, "enCurso"> | null;
 }): {
@@ -129,6 +130,22 @@ export declare function elegirParaCorrida<T extends ItemDeCola>(items: T[], o: {
 }): {
     elegidas: T[];
     fuera: FueraDeLaCorrida;
+};
+/**
+ * ¿SE PUEDE «RETOMAR EL CIRCUITO»? Sólo una constancia en revisión porque su documento apareció fuera
+ * de las carpetas del circuito (alguien lo movió del Outbox a otra carpeta). Puro.
+ */
+export declare function puedeRetomarCircuito(item: {
+    estado: EstadoConstancia;
+    documento?: {
+        path?: string | null;
+        fueraDelCircuito?: boolean | null;
+    } | null;
+}): {
+    ok: true;
+} | {
+    ok: false;
+    motivo: string;
 };
 export type CarpetaDelDocumento = "outbox" | "pendbox" | "firmados" | "alta_firmadas" | "no_firmar";
 /** De todas las carpetas donde aparece el código, la más avanzada del circuito. Puro. */

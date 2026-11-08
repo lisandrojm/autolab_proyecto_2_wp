@@ -4,8 +4,9 @@ import { Project } from "../../models/Project.js";
 import { User } from "../../models/User.js";
 import { Company } from "../../models/Company.js";
 import { ConstanciaArca } from "../../models/ConstanciaArca.js";
-import { carpetaMasAvanzada, categoriaDe, claveConstancia, elegirParaCorrida, estadoPorCarpeta, puedeVolverABajarse, siguienteEstado, trasUnFallo, yaTieneConstancia, } from "./cicloConstancia.js";
-import { borradoEl, copyEntry, listFolder, ubicarArchivo } from "../dropboxService.js";
+import { carpetaMasAvanzada, categoriaDe, claveConstancia, elegirParaCorrida, estadoPorCarpeta, puedeRetomarCircuito, puedeVolverABajarse, siguienteEstado, trasUnFallo, yaTieneConstancia, } from "./cicloConstancia.js";
+import { borradoEl, copyEntry, downloadFileContent, listFolder, ubicarArchivo } from "../dropboxService.js";
+import { evaluarConstancia, leerConstanciaTrabajador, leerConstanciaTrabajadorPdf } from "../../utils/constanciaTrabajadorPdf.js";
 import { resolverCarpetaPorProposito } from "../../utils/estadoCarpetas.js";
 /**
  * LAS CONSTANCIAS DE ARCA EN LA BASE (`constancias_arca`): de dónde salen, quién las pide, qué pasó en
@@ -223,7 +224,7 @@ export function planDeRedescarga(fila, contrato, o) {
     const intento = {
         fecha: o.ahora,
         resultado: "redescarga",
-        detalle: `Re-descarga pedida: documento no ubicado${doc.codigo ? ` (${doc.codigo})` : ""}.${anterior ? ` La constancia anterior se había validado el ${fechaHoraArgentina(anterior)}.` : ""}`,
+        detalle: `Re-descarga pedida: ${doc.fueraDelCircuito ? "el documento que apareció fuera del circuito no es la constancia de este contrato" : "documento no ubicado"}${doc.codigo ? ` (${doc.codigo})` : ""}.${anterior ? ` La constancia anterior se había validado el ${fechaHoraArgentina(anterior)}.` : ""}`,
         manual: true,
     };
     const { validadaEl: _, ...sinValidar } = contrato.altaConstancia || {};
@@ -270,7 +271,7 @@ export async function pedirRedescarga(tenantObjectId, claves, o = {}) {
             continue;
         }
         const { intentos: _, ...set } = plan.fila;
-        const tomada = await ConstanciaArca.updateOne({ _id: d._id, estado: "requiere_revision", "documento.noUbicadoDesde": { $ne: null } }, { $set: set, $push: { intentos: plan.intento, historial: { estado: "presentada", fecha: ahora, motivo: plan.intento.detalle } } });
+        const tomada = await ConstanciaArca.updateOne({ _id: d._id, estado: "requiere_revision", $or: [{ "documento.noUbicadoDesde": { $ne: null } }, { "documento.fueraDelCircuito": true }] }, { $set: set, $push: { intentos: plan.intento, historial: { estado: "presentada", fecha: ahora, motivo: plan.intento.detalle } } });
         if (tomada.modifiedCount === 0) {
             out.push({ ...base, pedida: false, motivo: "Ya se pidió volver a bajarla, o el documento reapareció." });
             continue;
@@ -297,7 +298,7 @@ export async function actualizarUbicaciones(tenantId, cfg, o = {}) {
     const docs = o.docs ?? await ConstanciaArca.find({ tenantId: new Types.ObjectId(tenantId), documento: { $ne: null }, estado: { $in: ["constancia_descargada", "enviada_a_firmar", "firmada", "requiere_revision", "archivada"] } })
         .select("clave cuil empresaCuit fechaAlta estado documento tipoConstancia")
         .lean();
-    const r = { revisadas: docs.length, cambiadas: 0, archivadas: 0, noUbicadas: 0, cambios: [] };
+    const r = { revisadas: docs.length, cambiadas: 0, archivadas: 0, noUbicadas: 0, fueraDelCircuito: 0, cambios: [] };
     if (docs.length === 0)
         return r;
     const { outbox, pendbox, firmados, altaTemprana } = o.carpetas ?? Object.fromEntries(await Promise.all(["outbox", "pendbox", "firmados", "altaTemprana"].map(async (k) => [k, await resolverCarpetaPorProposito(k === "altaTemprana" ? "alta_temprana" : k)])));
@@ -373,6 +374,7 @@ export async function actualizarUbicaciones(tenantId, cfg, o = {}) {
                 set["documento.dropboxId"] = archivo.id;
             set["documento.ubicadoEl"] = ahora;
             set["documento.noUbicadoDesde"] = null;
+            set["documento.fueraDelCircuito"] = false;
             const nuevo = siguienteEstado(d.estado, estadoPorCarpeta(carpeta, { esDeBaja: d.tipoConstancia === "baja" }));
             if (nuevo !== d.estado) {
                 set.estado = nuevo;
@@ -385,9 +387,27 @@ export async function actualizarUbicaciones(tenantId, cfg, o = {}) {
             const ref = doc.dropboxId || doc.path;
             const aca = ref ? await dbx.ubicar(ref).catch(() => null) : null;
             if (aca && !aca.borrado) {
-                set["documento.path"] = aca.path;
-                set["documento.ubicadoEl"] = ahora;
-                set["documento.noUbicadoDesde"] = null;
+                /*
+                  EXISTE, PERO FUERA DEL CIRCUITO (se movió del Outbox a otra carpeta). No es «en Outbox» ni
+                  «no ubicado»: pasa a revisión con dónde está, para «Retomar el circuito». Hasta el 07/11/2026
+                  acá sólo se anotaba el path y la fila quedaba en revisión con el motivo viejo («no ubicado»),
+                  sin ninguna acción que la sacara.
+                */
+                if (!doc.fueraDelCircuito || doc.path !== aca.path || d.estado !== "requiere_revision") {
+                    motivo = `El documento apareció en ${aca.path.replace(/\/[^/]+$/, "") || "/"}, fuera del circuito de firma: no está en Outbox, Pendbox, Requested signatures ni «Alta temprana de Arca». «Retomar el circuito» lo vuelve a poner en el Outbox.`;
+                    set["documento.path"] = aca.path;
+                    if (aca.name)
+                        set["documento.nombre"] = aca.name;
+                    if (aca.id)
+                        set["documento.dropboxId"] = aca.id;
+                    set["documento.carpeta"] = null;
+                    set["documento.ubicadoEl"] = ahora;
+                    set["documento.noUbicadoDesde"] = null;
+                    set["documento.fueraDelCircuito"] = true;
+                    set.estado = siguienteEstado(d.estado, "requiere_revision");
+                    set.motivoRevision = motivo;
+                    r.fueraDelCircuito++;
+                }
             }
             else if (!doc.noUbicadoDesde || d.estado !== "requiere_revision") {
                 const cuando = doc.path ? await dbx.borradoEl(doc.path) : null;
@@ -396,18 +416,23 @@ export async function actualizarUbicaciones(tenantId, cfg, o = {}) {
                 set.estado = siguienteEstado(d.estado, "requiere_revision");
                 set.motivoRevision = motivo;
                 set["documento.noUbicadoDesde"] = ahora;
+                set["documento.fueraDelCircuito"] = false;
                 r.noUbicadas++;
             }
         }
         if (Object.keys(set).length === 0)
             continue;
-        if (set.estado && set.estado !== d.estado) {
+        const otroEstado = !!set.estado && set.estado !== d.estado;
+        if (otroEstado)
             r.cambiadas++;
-            r.cambios.push({ clave: d.clave, de: d.estado, a: set.estado, motivo });
+        // Un motivo nuevo cuenta aunque siga en revisión: es lo que se ve en pantalla.
+        if (otroEstado || (motivo && set.motivoRevision === motivo && motivo !== d.motivoRevision)) {
+            r.cambios.push({ clave: d.clave, de: d.estado, a: set.estado || d.estado, motivo, ...(set["documento.path"] ? { path: set["documento.path"] } : {}), ...("documento.fueraDelCircuito" in set ? { fueraDelCircuito: !!set["documento.fueraDelCircuito"] } : {}) });
         }
         if (o.enSeco)
             continue;
-        await ConstanciaArca.updateOne({ _id: d._id }, { $set: set, ...(set.estado && set.estado !== d.estado ? { $push: { historial: { estado: set.estado, fecha: ahora, motivo } } } : {}) });
+        const anotar = otroEstado || (!!motivo && motivo !== d.motivoRevision);
+        await ConstanciaArca.updateOne({ _id: d._id }, { $set: set, ...(anotar ? { $push: { historial: { estado: set.estado || d.estado, fecha: ahora, motivo } } } : {}) });
     }
     return r;
 }
@@ -424,6 +449,104 @@ export async function volverABajar(tenantObjectId, claves, o) {
             await actualizarUbicaciones(String(tenantObjectId), o.cfg, { docs, log: o.log });
     }
     return pedirRedescarga(tenantObjectId, claves, { porUsuarioId: o.porUsuarioId });
+}
+export async function retomarCircuito(tenantId, cfg, o) {
+    const guardar = o.guardar ?? guardarEnLaBase;
+    const dbx = o.dropbox ?? { copiar: (desde, hacia) => copyEntry(tenantId, cfg, desde, hacia), descargar: (path) => downloadFileContent(tenantId, cfg, path) };
+    const leer = o.leer ?? ((b) => leerConstanciaTrabajadorPdf(b).catch(() => leerConstanciaTrabajador("")));
+    const log = o.log || (() => { });
+    const { outbox, altaTemprana } = o.carpetas ?? { outbox: await resolverCarpetaPorProposito("outbox"), altaTemprana: await resolverCarpetaPorProposito("alta_temprana") };
+    const out = [];
+    for (const d of o.docs) {
+        const base = { clave: d.clave, nombre: d.nombre || "", cuil: d.cuil };
+        const puede = puedeRetomarCircuito(d);
+        if (puede.ok === false) {
+            out.push({ ...base, resultado: "salteada", motivo: puede.motivo });
+            continue;
+        }
+        const doc = d.documento;
+        const vaAFirma = doc.vaAFirma !== false;
+        const carpetaDestino = vaAFirma ? outbox : altaTemprana ? `${altaTemprana.replace(/\/$/, "")}/No firmar` : null;
+        if (!carpetaDestino) {
+            out.push({ ...base, resultado: "salteada", motivo: `No hay una carpeta de «${vaAFirma ? "Outbox" : "Alta temprana de ARCA"}» configurada.` });
+            continue;
+        }
+        // ¿Es la constancia de esta presentación? La misma validación que al bajarla de ARCA.
+        const ev = evaluarConstancia(await leer(await dbx.descargar(doc.path)), { cuil: d.cuil, empleadorCuit: d.empresaCuit, fechaInicio: d.fechaAlta, fechaBaja: d.fechaBaja });
+        if (ev.problemas.length > 0) {
+            out.push({ ...base, resultado: "no_sirve", motivo: `El PDF de ${doc.path} no es la constancia de este contrato: ${ev.problemas.join(" ")}`, desde: doc.path });
+            continue;
+        }
+        const nombre = doc.nombre || doc.path.split("/").pop();
+        const hacia = `${carpetaDestino.replace(/\/$/, "")}/${nombre}`;
+        const carpeta = vaAFirma ? "outbox" : "no_firmar";
+        const estado = siguienteEstado(d.estado, estadoPorCarpeta(carpeta, { esDeBaja: ev.deBaja }));
+        const motivo = `Circuito retomado: el documento estaba en ${doc.path.replace(/\/[^/]+$/, "")} y se copió a ${ETIQUETA_CARPETA[carpeta]}.`;
+        if (o.enSeco) {
+            out.push({ ...base, resultado: "retomada", motivo, desde: doc.path, hacia, estado });
+            continue;
+        }
+        // Se toma la fila antes de copiar: dos pedidos a la vez no dejan dos copias en el Outbox.
+        if (!(await guardar.tomar(d, { estado, tipoConstancia: ev.deBaja ? "baja" : "alta", mismoDia: ev.mismoDia, carpeta, motivo }))) {
+            out.push({ ...base, resultado: "salteada", motivo: "Ya se retomó el circuito, o el documento volvió solo." });
+            continue;
+        }
+        try {
+            const copia = await dbx.copiar(doc.path, hacia);
+            await guardar.copiada(d, copia);
+            log(`[constancias] ${doc.codigo || d.clave}: ${motivo}`);
+            out.push({ ...base, resultado: "retomada", motivo, desde: doc.path, hacia: copia.path, estado });
+        }
+        catch (e) {
+            await guardar.revertir(d, `No se pudo copiar a ${ETIQUETA_CARPETA[carpeta]}: ${e?.message || e}`);
+            out.push({ ...base, resultado: "salteada", motivo: `No se pudo copiar a ${carpetaDestino}: ${e?.message || e}` });
+        }
+    }
+    return out;
+}
+const guardarEnLaBase = {
+    tomar: async (d, c) => {
+        const ahora = new Date();
+        const r = await ConstanciaArca.updateOne({ _id: d._id, estado: "requiere_revision", "documento.fueraDelCircuito": true }, { $set: { estado: c.estado, motivoRevision: null, tipoConstancia: c.tipoConstancia, mismoDia: c.mismoDia, "documento.fueraDelCircuito": false, "documento.carpeta": c.carpeta, "documento.ubicadoEl": ahora }, $push: { historial: { estado: c.estado, fecha: ahora, motivo: c.motivo } } });
+        return r.modifiedCount > 0;
+    },
+    copiada: async (d, copia) => {
+        await ConstanciaArca.updateOne({ _id: d._id }, { $set: { "documento.path": copia.path, "documento.nombre": copia.name, ...(copia.id ? { "documento.dropboxId": copia.id } : {}) } });
+        // El contrato dice a dónde se subió su constancia: ahora es la copia.
+        const k = `contracts.${d.contractIndex}`;
+        await UserProject.updateOne({ _id: d.userProjectId, [`${k}.fecha_alta_contrato`]: d.fechaAlta }, { $set: { [`${k}.altaConstancia.archivadaEn`]: copia.path, [`${k}.altaConstancia.enviadaComo`]: copia.name, ...(copia.id ? { [`${k}.altaConstancia.dropboxId`]: copia.id } : {}) } });
+    },
+    revertir: async (d, motivo) => {
+        await ConstanciaArca.updateOne({ _id: d._id }, { $set: { estado: d.estado, motivoRevision: d.motivoRevision, tipoConstancia: d.tipoConstancia ?? null, mismoDia: !!d.mismoDia, "documento.fueraDelCircuito": true, "documento.carpeta": null }, $push: { historial: { estado: d.estado, fecha: new Date(), motivo } } });
+    },
+};
+/**
+ * «Retomar el circuito», completo: las que no sirven (el PDF no es la constancia) se vuelven a bajar.
+ * Primero se mira dónde están hoy (si volvió solo al circuito, no se toca).
+ */
+export async function retomarElCircuito(tenantObjectId, claves, o) {
+    if (!o.cfg)
+        throw new Error("Dropbox no está conectado: no se puede copiar el documento.");
+    const filtro = { tenantId: tenantObjectId, clave: { $in: claves }, estado: "requiere_revision", documento: { $ne: null } };
+    const antes = await ConstanciaArca.find(filtro).select("clave cuil empresaCuit fechaAlta estado documento tipoConstancia").lean();
+    if (antes.length > 0)
+        await actualizarUbicaciones(String(tenantObjectId), o.cfg, { docs: antes, log: o.log });
+    const docs = await ConstanciaArca.find({ tenantId: tenantObjectId, clave: { $in: claves } }).select("-historial").lean();
+    const r = await retomarCircuito(String(tenantObjectId), o.cfg, { docs, log: o.log });
+    const sinServir = r.filter((x) => x.resultado === "no_sirve").map((x) => x.clave);
+    if (sinServir.length > 0) {
+        const re = await pedirRedescarga(tenantObjectId, sinServir, { porUsuarioId: o.porUsuarioId });
+        for (const x of r) {
+            const y = re.find((z) => z.clave === x.clave);
+            if (y)
+                x.motivo = `${x.motivo} ${y.pedida ? "Se vuelve a bajar de ARCA: quedó en la cola como «Re-descarga»." : `No se pudo re-encolar: ${y.motivo}`}`;
+        }
+    }
+    const pedidas = new Set(claves);
+    for (const c of pedidas)
+        if (!docs.some((d) => d.clave === c))
+            r.push({ clave: c, nombre: "", cuil: "", resultado: "salteada", motivo: "No está en el registro de constancias." });
+    return r;
 }
 export const ETIQUETA_CARPETA = {
     outbox: "Outbox",
@@ -453,7 +576,8 @@ const aPantalla = (d, deducida = false) => ({
     documento: d.documento?.codigo || d.documento?.path
         ? { codigo: d.documento.codigo || "", nombre: d.documento.nombre || "", path: d.documento.path || "", carpeta: d.documento.carpeta || null, etiquetaCarpeta: d.documento.carpeta ? ETIQUETA_CARPETA[d.documento.carpeta] || d.documento.carpeta : "", firmada: !!d.documento.firmadaEl }
         : null,
-    noUbicado: puedeVolverABajarse({ estado: d.estado, documento: d.documento, redescarga: null }).ok,
+    noUbicado: d.estado === "requiere_revision" && !!d.documento?.noUbicadoDesde,
+    fueraDelCircuito: puedeRetomarCircuito({ estado: d.estado, documento: d.documento }).ok,
     redescarga: d.redescarga?.pedidaEl ? { pedidaEl: new Date(d.redescarga.pedidaEl).toISOString(), enCurso: !!d.redescarga.enCurso && !yaTieneConstancia(d.estado), codigoAnterior: d.redescarga.documentoAnterior?.codigo || "" } : null,
     ...(deducida ? { deducida: true } : {}),
 });

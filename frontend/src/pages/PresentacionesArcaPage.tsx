@@ -13,7 +13,7 @@ import { avisoForzarAlta, libreDesdeTrasAlta } from "@compartido/arca/vigenciaAl
 import { sweetAlert } from "../utils/sweetAlert";
 import { ProjectTeamPage } from "./ProjectTeamPage";
 import { TablaConEncabezadoFijo, useAltoDeBarra } from "../components/ui/TablaConEncabezadoFijo";
-import { BotonVolverABajar, ChipConstancia, esNoUbicada } from "../components/contratos/HistorialAltasArca";
+import { AccionDelDocumento, BotonRetomarCircuito, BotonVolverABajar, ChipConstancia, esFueraDelCircuito, esNoUbicada } from "../components/contratos/HistorialAltasArca";
 
 /*
   A.R.C.A ALTAS AUTOMÁTICAS: cada alta temprana se presenta sola a la hora configurada (14:00 argentinas
@@ -235,8 +235,11 @@ export const PresentacionesArcaPage: React.FC = () => {
   }, [corridas, buscar, soloAutomaticas, ocultarResueltas]);
   // «Volver a bajar» (07/11/2026): las constancias cuyo documento se perdió, una vez cada una aunque aparezca en varias corridas.
   const [tildadasNoUbicadas, setTildadasNoUbicadas] = useState<Set<string>>(new Set());
-  const noUbicadas = useMemo(() => [...new Map(presentadas.filter((r) => r.ciclo && esNoUbicada(r.ciclo)).map((r) => [r.ciclo!.clave, r.ciclo!])).values()], [presentadas]);
+  // También las que aparecieron fuera del circuito («Retomar el circuito»): misma casilla, otro botón.
+  const noUbicadas = useMemo(() => [...new Map(presentadas.filter((r) => r.ciclo && (esNoUbicada(r.ciclo) || esFueraDelCircuito(r.ciclo))).map((r) => [r.ciclo!.clave, r.ciclo!])).values()], [presentadas]);
   const noUbicadasTildadas = noUbicadas.filter((k) => tildadasNoUbicadas.has(k.clave));
+  const tildadasPerdidas = noUbicadasTildadas.filter((k) => !esFueraDelCircuito(k));
+  const tildadasFuera = noUbicadasTildadas.filter((k) => esFueraDelCircuito(k));
   const trasVolverABajar = () => {
     setTildadasNoUbicadas(new Set());
     void cargarRegistro();
@@ -850,12 +853,13 @@ export const PresentacionesArcaPage: React.FC = () => {
               {noUbicadas.length > 0 && (
                 <div className="flex flex-wrap items-center gap-3 rounded-lg border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-900/20 px-4 py-2 text-sm text-violet-900 dark:text-violet-100">
                   <span>
-                    <strong>{noUbicadas.length}</strong> constancia{noUbicadas.length === 1 ? "" : "s"} con el documento no ubicado (se borró antes de firmarse): se pueden volver a bajar de ARCA.
+                    <strong>{noUbicadas.length}</strong> constancia{noUbicadas.length === 1 ? "" : "s"} con el documento fuera del circuito de firma (se borró o se movió antes de firmarse).
                   </span>
                   <button type="button" onClick={() => setTildadasNoUbicadas(noUbicadasTildadas.length === noUbicadas.length ? new Set() : new Set(noUbicadas.map((k) => k.clave)))} className="text-xs font-semibold hover:underline">
                     {noUbicadasTildadas.length === noUbicadas.length ? "Destildar" : "Tildar todas"}
                   </button>
-                  {noUbicadasTildadas.length > 0 && <BotonVolverABajar ciclos={noUbicadasTildadas} onHecho={trasVolverABajar} texto={`Volver a bajar ${noUbicadasTildadas.length}`} />}
+                  {tildadasPerdidas.length > 0 && <BotonVolverABajar ciclos={tildadasPerdidas} onHecho={trasVolverABajar} texto={`Volver a bajar ${tildadasPerdidas.length}`} />}
+                  {tildadasFuera.length > 0 && <BotonRetomarCircuito ciclos={tildadasFuera} onHecho={trasVolverABajar} texto={`Retomar el circuito de ${tildadasFuera.length}`} />}
                 </div>
               )}
               {corridas === null ? (
@@ -943,10 +947,10 @@ export const PresentacionesArcaPage: React.FC = () => {
                           <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                             {r.ciclo ? <ChipConstancia ciclo={r.ciclo} /> : r.constancia === undefined ? "—" : r.constancia === null ? "Sin bajar" : CONSTANCIA[r.constancia.destino] || r.constancia.destino}
                             {r.ciclo?.motivoRevision && <p className="text-[11px] text-gray-600 dark:text-gray-300 whitespace-normal max-w-xs">{r.ciclo.motivoRevision}</p>}
-                            {r.ciclo && esNoUbicada(r.ciclo) && (
+                            {r.ciclo && (esNoUbicada(r.ciclo) || esFueraDelCircuito(r.ciclo)) && (
                               <div className="mt-1 flex items-center gap-2">
-                                <input type="checkbox" className="rounded border-gray-300 text-violet-600 focus:ring-violet-500" checked={tildadasNoUbicadas.has(r.ciclo.clave)} onChange={() => setTildadasNoUbicadas((prev) => { const t = new Set(prev); if (t.has(r.ciclo!.clave)) t.delete(r.ciclo!.clave); else t.add(r.ciclo!.clave); return t; })} title="Tildar para volver a bajar en masa" />
-                                <BotonVolverABajar ciclos={[r.ciclo]} onHecho={trasVolverABajar} />
+                                <input type="checkbox" className="rounded border-gray-300 text-violet-600 focus:ring-violet-500" checked={tildadasNoUbicadas.has(r.ciclo.clave)} onChange={() => setTildadasNoUbicadas((prev) => { const t = new Set(prev); if (t.has(r.ciclo!.clave)) t.delete(r.ciclo!.clave); else t.add(r.ciclo!.clave); return t; })} title="Tildar para resolver en masa" />
+                                <AccionDelDocumento ciclo={r.ciclo} onHecho={trasVolverABajar} />
                               </div>
                             )}
                             {r.constancia?.validadaEl && <p className="text-[11px] text-gray-400">validada el {fechaCorta(String(r.constancia.validadaEl).slice(0, 10))}</p>}

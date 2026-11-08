@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleCheck, faCircleXmark, faCircleQuestion, faCircle, faSpinner, faDownload, faMagnifyingGlass, faCircleExclamation, faClock, faFileArrowDown, faFileSignature, faFlask, faRotateRight, faChevronUp, faChevronDown, faCloudArrowDown } from '@fortawesome/free-solid-svg-icons';
+import { faCircleCheck, faCircleXmark, faCircleQuestion, faCircle, faSpinner, faDownload, faMagnifyingGlass, faCircleExclamation, faClock, faFileArrowDown, faFileSignature, faFlask, faRotateRight, faChevronUp, faChevronDown, faCloudArrowDown, faArrowsRotate } from '@fortawesome/free-solid-svg-icons';
 import { Modal } from '../ui/Modal';
 import { projectsAPI, CorridaAltasGuardada, EstadoConstanciasAlta, ConstanciaArcaEnPantalla } from '../../api/projects';
 import { detalleDeLoPresentado } from './progresoTandas';
@@ -317,11 +317,11 @@ export const ChipConstancia: React.FC<{ ciclo: ConstanciaArcaEnPantalla | null |
       ? { texto: 'Firmada · archivada', clase: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' }
       : { texto: 'Archivada · No firmar', clase: 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600' },
     baja_mismo_dia_ok: { texto: 'Archivada · No firmar', clase: 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600' },
-    requiere_revision: { texto: esNoUbicada(ciclo) ? 'Documento no ubicado' : 'Requiere revisión', clase: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800' },
+    requiere_revision: { texto: esFueraDelCircuito(ciclo) ? 'Fuera del circuito' : esNoUbicada(ciclo) ? 'Documento no ubicado' : 'Requiere revisión', clase: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800' },
   };
   const x = v[ciclo.estado] || { texto: ciclo.estado, clase: 'bg-gray-100 text-gray-700 border-gray-300' };
   const chip = <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[11px] font-semibold whitespace-nowrap ${x.clase}`}>{x.texto}</span>;
-  const abrible = !!doc?.path && ciclo.estado !== 'requiere_revision';
+  const abrible = !!doc?.path && (ciclo.estado !== 'requiere_revision' || esFueraDelCircuito(ciclo));
   return (
     <span className="inline-flex flex-col items-start gap-0.5">
       {abrible ? (
@@ -338,6 +338,59 @@ export const ChipConstancia: React.FC<{ ciclo: ConstanciaArcaEnPantalla | null |
 
 /** En revisión porque el documento se perdió (el servidor lo dice; uno anterior, sólo por el motivo). */
 export const esNoUbicada = (ciclo: Pick<ConstanciaArcaEnPantalla, 'estado' | 'documento' | 'motivoRevision'> & { noUbicado?: boolean }) => ciclo.noUbicado ?? (ciclo.estado === 'requiere_revision' && !!ciclo.documento && /no ubicado/i.test(ciclo.motivoRevision || ''));
+
+/** En revisión porque el documento apareció fuera de las carpetas del circuito (se movió del Outbox). */
+export const esFueraDelCircuito = (ciclo: Pick<ConstanciaArcaEnPantalla, 'estado' | 'motivoRevision'> & { fueraDelCircuito?: boolean }) => ciclo.fueraDelCircuito ?? (ciclo.estado === 'requiere_revision' && /fuera del circuito/i.test(ciclo.motivoRevision || ''));
+
+/**
+ * «RETOMAR EL CIRCUITO» (07/11/2026): el documento apareció en otra carpeta. Se valida el PDF contra el
+ * contrato y se copia de vuelta al Outbox (lo de la otra carpeta no se toca); si no es la constancia, se
+ * vuelve a bajar de ARCA. Después el ciclo sigue solo: en firma → firmada → archivada.
+ */
+export async function retomarCircuito(ciclos: Array<{ clave: string; nombre: string }>): Promise<boolean> {
+  if (ciclos.length === 0) return false;
+  const quien = ciclos.length === 1 ? `la constancia de ${ciclos[0].nombre}` : `${ciclos.length} constancias`;
+  const r = await sweetAlert.confirm(`Retomar el circuito de ${quien}`, 'El PDF está en una carpeta que no es del circuito de firma. Se revisa que sea la constancia de ese contrato y se copia al Outbox (o a «No firmar» si no se firma); el original queda donde está. Si no es la constancia, se vuelve a bajar de ARCA.', 'Sí, retomar', 'Cancelar');
+  if (!r.isConfirmed) return false;
+  try {
+    const { resultados } = await projectsAPI.retomarCircuitoConstancias(ciclos.map((c) => c.clave));
+    const texto = resultados.map((x) => `${x.nombre || x.clave}: ${x.motivo}`).join(' ');
+    const algo = resultados.some((x) => x.resultado !== 'salteada');
+    if (algo) sweetAlert.success('Listo', texto);
+    else sweetAlert.info('No hizo falta', texto, 5000);
+    return algo;
+  } catch (e: any) {
+    sweetAlert.error('No se pudo retomar', e?.response?.data?.error || e?.message || '');
+    return false;
+  }
+}
+
+export const BotonRetomarCircuito: React.FC<{ ciclos: Array<{ clave: string; nombre: string }>; onHecho?: () => void; texto?: string; disabled?: boolean }> = ({ ciclos, onHecho, texto, disabled }) => {
+  const [pidiendo, setPidiendo] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async (e) => {
+        e.stopPropagation();
+        setPidiendo(true);
+        try {
+          if (await retomarCircuito(ciclos)) onHecho?.();
+        } finally {
+          setPidiendo(false);
+        }
+      }}
+      disabled={disabled || pidiendo || ciclos.length === 0}
+      className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 whitespace-nowrap"
+    >
+      <FontAwesomeIcon icon={pidiendo ? faSpinner : faArrowsRotate} spin={pidiendo} className="h-3 w-3" />
+      {texto || 'Retomar el circuito'}
+    </button>
+  );
+};
+
+/** El botón que corresponde a una constancia en revisión por su documento: retomar si se movió, volver a bajar si se perdió. */
+export const AccionDelDocumento: React.FC<{ ciclo: ConstanciaArcaEnPantalla; onHecho?: () => void; disabled?: boolean }> = ({ ciclo, onHecho, disabled }) =>
+  esFueraDelCircuito(ciclo) ? <BotonRetomarCircuito ciclos={[ciclo]} onHecho={onHecho} disabled={disabled} /> : esNoUbicada(ciclo) ? <BotonVolverABajar ciclos={[ciclo]} onHecho={onHecho} disabled={disabled} /> : null;
 
 /**
  * «VOLVER A BAJAR» (07/11/2026): para las constancias cuyo documento se perdió (se borró del Outbox antes
@@ -640,7 +693,7 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
           </div>
           <div className="min-w-[150px]">{grupo === 'no_presentadas' || grupo === 'seco' ? <span className={`text-[11px] ${v.clase}`}><FontAwesomeIcon icon={v.icon} className="h-3 w-3 mr-1" />{v.texto}</span> : <ChipConstancia ciclo={ciclo} constanciaVieja={f.constancia} />}</div>
           <div className="flex items-center gap-2 ml-auto">
-            {grupo === 'revision' && ciclo && esNoUbicada(ciclo) && <BotonVolverABajar ciclos={[ciclo]} onHecho={() => void mirar()} />}
+            {grupo === 'revision' && ciclo && <AccionDelDocumento ciclo={ciclo} onHecho={() => void mirar()} />}
             {grupo === 'revision' && ciclo && !ciclo.documento && (
               <button type="button" onClick={() => void reintentar(ciclo)} disabled={reintentando === ciclo.clave || !!constancias?.corriendo} className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
                 <FontAwesomeIcon icon={reintentando === ciclo.clave ? faSpinner : faRotateRight} spin={reintentando === ciclo.clave} className="h-3 w-3" />
@@ -847,7 +900,7 @@ export const HistorialAltasArca: React.FC<Props> = ({ isOpen, onClose, empresaId
                       <span className="text-gray-500">{k.empresaRazonSocial} · {fechaCortaIso(k.fechaAlta)}</span>
                       <ChipConstancia ciclo={k} />
                       {k.motivoRevision && <span className="text-gray-600 dark:text-gray-300">{k.motivoRevision}</span>}
-                      {esNoUbicada(k) && <BotonVolverABajar ciclos={[k]} onHecho={() => void mirar()} />}
+                      <AccionDelDocumento ciclo={k} onHecho={() => void mirar()} />
                     </li>
                   ))}
                 </ul>

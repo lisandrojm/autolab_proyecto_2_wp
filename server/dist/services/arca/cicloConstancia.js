@@ -58,7 +58,8 @@ export function puedeVolverABajarse(item) {
         return { ok: false, motivo: "Ya se pidió volver a bajarla: está en la cola." };
     if (item.estado !== "requiere_revision")
         return { ok: false, motivo: yaTieneConstancia(item.estado) ? "El documento está ubicado: no hace falta volver a bajarla." : "Todavía no tiene constancia: sale sola en la próxima descarga." };
-    if (!item.documento?.noUbicadoDesde)
+    // Fuera del circuito también: es lo que hace «Retomar el circuito» cuando el PDF que apareció no sirve.
+    if (!item.documento?.noUbicadoDesde && !item.documento?.fueraDelCircuito)
         return { ok: false, motivo: "Está en revisión por otro motivo, no por un documento perdido: usá «Reintentar»." };
     return { ok: true };
 }
@@ -111,6 +112,17 @@ export function elegirParaCorrida(items, o) {
             enRevision: items.filter((i) => i.estado === "requiere_revision").length,
         },
     };
+}
+/**
+ * ¿SE PUEDE «RETOMAR EL CIRCUITO»? Sólo una constancia en revisión porque su documento apareció fuera
+ * de las carpetas del circuito (alguien lo movió del Outbox a otra carpeta). Puro.
+ */
+export function puedeRetomarCircuito(item) {
+    if (item.estado !== "requiere_revision")
+        return { ok: false, motivo: yaTieneConstancia(item.estado) ? "Ya está en el circuito: no hace falta retomarlo." : "Todavía no tiene constancia: sale sola en la próxima descarga." };
+    if (!item.documento?.fueraDelCircuito || !item.documento.path)
+        return { ok: false, motivo: "El documento no apareció fuera del circuito: si se perdió, usá «Volver a bajar»." };
+    return { ok: true };
 }
 const PASO_CARPETA = { outbox: 1, pendbox: 2, firmados: 3, alta_firmadas: 4, no_firmar: 4 };
 /** De todas las carpetas donde aparece el código, la más avanzada del circuito. Puro. */

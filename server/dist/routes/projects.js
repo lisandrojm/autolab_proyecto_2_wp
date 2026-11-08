@@ -31,7 +31,7 @@ import { claveDe as claveVerificacion, itemDe, verificacionEnCursoDe, verificarA
 import { ArcaVerificacionAlta } from "../models/ArcaVerificacionAlta.js";
 import { MAX_POR_EMPLEADORA, forzarDescargaConstancias, forzadoDe, proximaDescarga } from "../services/arca/descargaConstanciasAutomatica.js";
 import { pendientesDeConstanciaTodas } from "../services/arca/constanciasAltas.js";
-import { constanciasDeLaPantalla, volverABajar } from "../services/arca/constanciasArca.js";
+import { constanciasDeLaPantalla, retomarElCircuito, volverABajar } from "../services/arca/constanciasArca.js";
 import { buscarArchivos, getTenantDropboxConfig } from "../services/dropboxService.js";
 /** Lo que la pantalla de Descargas muestra del ciclo de una pendiente: si es nueva, cuándo se reintenta, por qué está en revisión. */
 const cicloDe = (k) => (k ? { clave: k.clave, estado: k.estado, intentos: k.intentos, proximoIntentoEl: k.proximoIntentoEl, motivoRevision: k.motivoRevision, redescarga: k.redescarga } : null);
@@ -3769,8 +3769,8 @@ router.get("/contratos/altas-arca/constancias/pendientes", requireTenant, authen
             ultimaCorrida: dc.ultimaCorrida || null,
             maxPorEmpleadora: MAX_POR_EMPLEADORA,
             pendientes: pendientes.map((p) => ({ userProjectId: p.userProjectId, contractIndex: p.contractIndex, userId: p.userId, nombre: p.nombre, cuil: p.cuil, fechaAlta: p.fechaAlta, presentadaEl: p.presentadaEl, empresa: { _id: p.empresaId, razonSocial: p.empresaRazonSocial }, ciclo: cicloDe(cicloPorContrato.get(`${p.userProjectId}:${p.contractIndex}`)) })),
-            // Las que se validaron pero cuyo documento se perdió (borrado del Outbox): no esperan constancia, se «Vuelven a bajar».
-            noUbicadas: constancias.filter((k) => k.noUbicado),
+            // Las que se validaron pero cuyo documento se perdió (borrado: «Volver a bajar») o se movió fuera del circuito («Retomar el circuito»).
+            noUbicadas: constancias.filter((k) => k.noUbicado || k.fueraDelCircuito),
             // La descarga de UNA empleadora que corre ahora (forzada o automática), con sus eventos; y el forzado en masa, si lo hay.
             descarga: d ? { empresaId: d.empresaId, empresaRazonSocial: d.empresaRazonSocial, total: d.total, corriendo: !d.terminada, arrancadaEl: d.arrancadaEl, eventos: d.eventos } : null,
             forzado: f ? { ...f } : null,
@@ -3840,6 +3840,27 @@ router.post("/contratos/altas-arca/constancias/redescargar", requireTenant, auth
     catch (error) {
         console.error("Redescargar constancias error:", error);
         res.status(500).json({ error: String(error?.message || "Internal server error") });
+    }
+});
+/**
+ * POST /contratos/altas-arca/constancias/retomar { claves[] } — «RETOMAR EL CIRCUITO» (07/11/2026): el
+ * documento apareció fuera de las carpetas del circuito. Se valida el PDF contra el contrato y se copia de
+ * vuelta al Outbox (o a «No firmar»); si no es la constancia, se vuelve a bajar de ARCA. Idempotente.
+ */
+router.post("/contratos/altas-arca/constancias/retomar", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const claves = (Array.isArray(req.body?.claves) ? req.body.claves : []).map((c) => String(c || "")).filter((c) => /^\d{11}\|\d{11}\|\d{4}-\d{2}-\d{2}$/.test(c));
+        if (claves.length === 0) {
+            res.status(400).json({ error: "No hay constancias para retomar." });
+            return;
+        }
+        const tenant = await Tenant.findById(req.tenantObjectId).lean();
+        const resultados = await retomarElCircuito(req.tenantObjectId, claves, { cfg: getTenantDropboxConfig(tenant), porUsuarioId: req.user?.userId || null });
+        res.json({ resultados });
+    }
+    catch (error) {
+        console.error("Retomar circuito de constancias error:", error);
+        res.status(400).json({ error: String(error?.message || error) });
     }
 });
 /** POST /contratos/altas-arca/constancias/forzar — baja YA las constancias pedidas (`items[]`), una corrida por empleadora, en fila. */

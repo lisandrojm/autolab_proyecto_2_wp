@@ -1,6 +1,7 @@
 import { IConstanciaArca } from "../../models/ConstanciaArca.js";
 import { type CarpetaDelDocumento, type CategoriaConstancia, type EstadoConstancia, type Fallo, type FueraDeLaCorrida, type Intento, type Redescarga } from "./cicloConstancia.js";
 import { getTenantDropboxConfig } from "../dropboxService.js";
+import { type ConstanciaTrabajador } from "../../utils/constanciaTrabajadorPdf.js";
 /**
  * La huella de una constancia de alta por su NOMBRE: CUIL|fecha de alta|CUIT de la empleadora. Sólo
  * para nombres de constancias de alta (AltaAFIP / AltaArca) que traen las tres cosas; si no, "". Puro.
@@ -170,12 +171,16 @@ export interface ResultadoUbicaciones {
     cambiadas: number;
     archivadas: number;
     noUbicadas: number;
+    /** Aparecieron fuera de las carpetas del circuito (se movieron): quedan en revisión con «Retomar el circuito». */
+    fueraDelCircuito: number;
     /** Cada cambio de estado, con su motivo (lo imprime el script de migración). */
     cambios: Array<{
         clave: string;
         de: EstadoConstancia;
         a: EstadoConstancia;
         motivo: string;
+        path?: string;
+        fueraDelCircuito?: boolean;
     }>;
 }
 /**
@@ -197,6 +202,8 @@ export interface AdaptadorDropbox {
     }>;
     ubicar: (ref: string) => Promise<{
         path: string;
+        name?: string;
+        id?: string;
         borrado?: boolean;
     } | null>;
     borradoEl: (path: string) => Promise<string | null>;
@@ -224,6 +231,65 @@ export declare function volverABajar(tenantObjectId: any, claves: string[], o: {
     porUsuarioId?: string | null;
     log?: (l: string) => void;
 }): Promise<ResultadoRedescarga[]>;
+export interface ResultadoRetomar {
+    clave: string;
+    nombre: string;
+    cuil: string;
+    resultado: "retomada" | "no_sirve" | "salteada";
+    motivo: string;
+    /** Dónde estaba y a dónde se copió. */
+    desde?: string;
+    hacia?: string;
+    /** Cómo queda la fila (también en seco, para mostrarlo). */
+    estado?: EstadoConstancia;
+}
+/** Lo que `retomarCircuito` le pide a Dropbox (se inyecta en los tests). */
+export interface AdaptadorRetomar {
+    copiar: (desde: string, hacia: string) => Promise<{
+        path: string;
+        name: string;
+        id?: string;
+    }>;
+    descargar: (path: string) => Promise<Buffer>;
+}
+export declare function retomarCircuito(tenantId: string, cfg: TenantDropboxConfig | null, o: {
+    docs: any[];
+    enSeco?: boolean;
+    dropbox?: AdaptadorRetomar;
+    carpetas?: {
+        outbox: string | null;
+        altaTemprana: string | null;
+    };
+    leer?: (b: Buffer) => Promise<ConstanciaTrabajador>;
+    guardar?: GuardarRetomar;
+    log?: (l: string) => void;
+}): Promise<ResultadoRetomar[]>;
+/** Lo que `retomarCircuito` escribe: en la base (por defecto) o en memoria (tests). */
+export interface GuardarRetomar {
+    /** Toma la fila si sigue fuera del circuito (escritura condicionada: dos pedidos a la vez no copian dos veces). */
+    tomar: (d: any, c: {
+        estado: EstadoConstancia;
+        tipoConstancia: "alta" | "baja";
+        mismoDia: boolean;
+        carpeta: CarpetaDelDocumento;
+        motivo: string;
+    }) => Promise<boolean>;
+    copiada: (d: any, copia: {
+        path: string;
+        name: string;
+        id?: string;
+    }) => Promise<void>;
+    revertir: (d: any, motivo: string) => Promise<void>;
+}
+/**
+ * «Retomar el circuito», completo: las que no sirven (el PDF no es la constancia) se vuelven a bajar.
+ * Primero se mira dónde están hoy (si volvió solo al circuito, no se toca).
+ */
+export declare function retomarElCircuito(tenantObjectId: any, claves: string[], o: {
+    cfg: TenantDropboxConfig | null;
+    porUsuarioId?: string | null;
+    log?: (l: string) => void;
+}): Promise<ResultadoRetomar[]>;
 export declare const ETIQUETA_CARPETA: Record<CarpetaDelDocumento, string>;
 /** Lo que ven las pantallas de cada constancia. */
 export interface ConstanciaEnPantalla {
@@ -259,6 +325,8 @@ export interface ConstanciaEnPantalla {
     } | null;
     /** En revisión porque el documento no está en ninguna carpeta del circuito: se puede «Volver a bajar». */
     noUbicado: boolean;
+    /** En revisión porque el documento apareció fuera del circuito (se movió): se puede «Retomar el circuito». */
+    fueraDelCircuito: boolean;
     /** «Volver a bajar» pedido: cuándo, qué documento se había perdido, y si sigue en curso. */
     redescarga: {
         pedidaEl: string;

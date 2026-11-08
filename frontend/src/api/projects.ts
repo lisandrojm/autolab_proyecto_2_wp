@@ -935,6 +935,15 @@ class ProjectsAPI {
     invalidateRefCache("contracts-overview:");
     return data;
   }
+  /**
+   * «Retomar el circuito»: el documento apareció fuera de las carpetas del circuito. Se valida y se copia al
+   * Outbox (o a «No firmar»); si no es la constancia, se vuelve a bajar de ARCA.
+   */
+  async retomarCircuitoConstancias(claves: string[]): Promise<{ resultados: Array<{ clave: string; nombre: string; cuil: string; resultado: "retomada" | "no_sirve" | "salteada"; motivo: string; desde?: string; hacia?: string }> }> {
+    const { data } = await axios.post(`/contratos/altas-arca/constancias/retomar`, { claves }, { headers: this.getHeaders() });
+    invalidateRefCache("contracts-overview:");
+    return data;
+  }
   /** Descarga automática de constancias (ver `descargaConstanciasAutomatica.ts` en el server). */
   async descargaConstanciasAutomatica(): Promise<EstadoDescargaConstancias> {
     const { data } = await axios.get(`/contratos/altas-arca/constancias/automatica`, { headers: this.getHeaders() });
@@ -1191,6 +1200,8 @@ export interface ConstanciaArcaEnPantalla {
   documento: { codigo: string; nombre: string; path: string; carpeta: string | null; etiquetaCarpeta: string; firmada: boolean } | null;
   /** En revisión porque el documento no está en ninguna carpeta: se puede «Volver a bajar». Servidores anteriores no lo mandan. */
   noUbicado?: boolean;
+  /** En revisión porque el documento apareció fuera de las carpetas del circuito (se movió): «Retomar el circuito». */
+  fueraDelCircuito?: boolean;
   redescarga?: RedescargaConstancia | null;
   deducida?: boolean;
 }
@@ -1387,7 +1398,7 @@ export interface EstadoDescargasArca extends EstadoDescargaConstancias {
   /** ISO de la próxima descarga automática; null si está apagada. */
   proximaCorrida: string | null;
   pendientes: PendienteDeConstancia[];
-  /** Validadas cuyo documento se perdió (borrado del Outbox): no esperan constancia, se «Vuelven a bajar». */
+  /** Validadas cuyo documento se perdió (borrado: «Volver a bajar») o se movió fuera del circuito («Retomar el circuito»). */
   noUbicadas?: ConstanciaArcaEnPantalla[];
   /** La descarga de UNA empleadora que corre ahora (o la última), con sus eventos. */
   descarga: null | { empresaId: string; empresaRazonSocial: string; total: number; corriendo: boolean; arrancadaEl: string; eventos: Array<Record<string, any> & { tipo: string }> };

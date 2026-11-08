@@ -10,7 +10,7 @@ import { projectsAPI, horaTexto, type EstadoDescargasArca, type FueraDeLaCorrida
 import { sweetAlert } from "../utils/sweetAlert";
 import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 import { TablaConEncabezadoFijo, useAltoDeBarra } from "../components/ui/TablaConEncabezadoFijo";
-import { BotonVolverABajar } from "../components/contratos/HistorialAltasArca";
+import { AccionDelDocumento, BotonRetomarCircuito, BotonVolverABajar, ChipConstancia, esFueraDelCircuito } from "../components/contratos/HistorialAltasArca";
 
 /*
   A.R.C.A DESCARGAS AUTOMÁTICAS (pedido del 18/10/2026): la hermana de «A.R.C.A Altas Automáticas». Muestra
@@ -155,6 +155,8 @@ export const DescargasArcaPage: React.FC = () => {
   const noUbicadas = estado?.noUbicadas || [];
   const [tildadasNoUbicadas, setTildadasNoUbicadas] = useState<Set<string>>(new Set());
   const noUbicadasTildadas = noUbicadas.filter((k) => tildadasNoUbicadas.has(k.clave));
+  const tildadasPerdidas = noUbicadasTildadas.filter((k) => !esFueraDelCircuito(k));
+  const tildadasFuera = noUbicadasTildadas.filter((k) => esFueraDelCircuito(k));
   const trasVolverABajar = () => {
     setTildadasNoUbicadas(new Set());
     void cargar();
@@ -310,10 +312,13 @@ export const DescargasArcaPage: React.FC = () => {
             <section className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">Documento no ubicado ({noUbicadas.length})</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Se bajaron y validaron, pero el PDF se borró antes de firmarse. «Volver a bajar» las pone en la cola de abajo como «Re-descarga».</p>
+                  <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">Documento fuera del circuito ({noUbicadas.length})</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Se bajaron y validaron, pero el PDF no siguió a firma. Si se borró, «Volver a bajar» las pone en la cola de abajo como «Re-descarga»; si se movió a otra carpeta, «Retomar el circuito» lo copia al Outbox.</p>
                 </div>
-                {noUbicadasTildadas.length > 0 && <BotonVolverABajar ciclos={noUbicadasTildadas} onHecho={trasVolverABajar} texto={`Volver a bajar ${noUbicadasTildadas.length}`} disabled={enCurso} />}
+                <div className="flex items-center gap-2">
+                  {tildadasPerdidas.length > 0 && <BotonVolverABajar ciclos={tildadasPerdidas} onHecho={trasVolverABajar} texto={`Volver a bajar ${tildadasPerdidas.length}`} disabled={enCurso} />}
+                  {tildadasFuera.length > 0 && <BotonRetomarCircuito ciclos={tildadasFuera} onHecho={trasVolverABajar} texto={`Retomar el circuito de ${tildadasFuera.length}`} disabled={enCurso} />}
+                </div>
               </div>
               <div className="overflow-x-auto rounded-xl border border-violet-200 dark:border-violet-800 bg-white dark:bg-gray-800">
                 <table className="min-w-full">
@@ -341,12 +346,15 @@ export const DescargasArcaPage: React.FC = () => {
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{k.empresaRazonSocial}</td>
                         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{fechaCorta(k.fechaAlta)}</td>
-                        <td className="px-4 py-3 text-[11px] text-gray-600 dark:text-gray-300 max-w-md">
-                          {k.documento?.codigo && <span className="font-mono font-semibold">{k.documento.codigo} · </span>}
-                          {k.motivoRevision}
+                        <td className="px-4 py-3 text-[11px] text-gray-600 dark:text-gray-300 max-w-md space-y-1">
+                          <ChipConstancia ciclo={k} />
+                          <p>
+                            {k.documento?.codigo && <span className="font-mono font-semibold">{k.documento.codigo} · </span>}
+                            {k.motivoRevision}
+                          </p>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <BotonVolverABajar ciclos={[k]} onHecho={trasVolverABajar} disabled={enCurso} />
+                          <AccionDelDocumento ciclo={k} onHecho={trasVolverABajar} disabled={enCurso} />
                         </td>
                       </tr>
                     ))}

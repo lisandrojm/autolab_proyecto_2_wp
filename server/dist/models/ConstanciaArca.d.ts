@@ -51,6 +51,8 @@ export interface IConstanciaArca extends Document {
         ubicadoEl?: Date | null;
         /** No aparece en ninguna carpeta del circuito. */
         noUbicadoDesde?: Date | null;
+        /** Existe, pero en una carpeta que no es del circuito (se movió del Outbox): «Retomar el circuito». */
+        fueraDelCircuito?: boolean;
     } | null;
     /** «Volver a bajar» (documento no ubicado): lo que había antes y si la re-descarga sigue en curso. */
     redescarga?: Redescarga | null;

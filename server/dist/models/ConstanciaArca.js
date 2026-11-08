@@ -32,6 +32,7 @@ const schema = new Schema({
             archivadaEn: { type: String, default: null },
             ubicadoEl: { type: Date, default: null },
             noUbicadoDesde: { type: Date, default: null },
+            fueraDelCircuito: { type: Boolean, default: false },
         }, { _id: false }),
         default: null,
     },
