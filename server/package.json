@@ -154,6 +154,8 @@
     "test:constancias-arca": "tsx --test src/services/arca/cicloConstancia.test.ts src/services/arca/constanciasArca.test.ts src/utils/constanciaTrabajadorPdf.test.ts",
     "constancias:migrar": "dotenv -e .env.production -- tsx src/scripts/migrarConstanciasArca.ts",
     "constancias:volver-a-bajar": "dotenv -e .env.production -- tsx src/scripts/volverABajarConstancias.ts",
+    "circuito:volver-a-generar": "dotenv -e .env.production -- tsx src/scripts/circuitoVolverAGenerar.ts",
+    "test:circuito": "tsx --test src/utils/circuitoContrato.test.ts",
     "test:verificacion-altas": "tsx --test src/services/arca/decisionVerificacionAlta.test.ts src/services/arca/verificacionAltas.test.ts src/services/arca/decisionAltaExterna.test.ts",
     "test:catalogo-arca": "tsx --test src/compartido/catalogoArca.test.ts src/services/arca/espejoSoloLectura.test.ts",
     "test:puestos": "tsx --test src/compartido/puestosDesempenados.test.ts",

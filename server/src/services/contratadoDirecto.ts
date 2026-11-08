@@ -52,6 +52,18 @@ export async function destinoSiNoSeFirma(contrato: any, destino: IInfo): Promise
   return tipoEnviaAFirmar({ ...(tipo.data || {}), generaAlta }) ? destino : (final as IInfo);
 }
 
+/**
+ * ¿Al contrato se le genera algo en Generar Documentos (contrato o release)? Un tipo que sólo firma el
+ * alta, o nada, no: ése no tiene que esperar documentos para avanzar. Sin tipo, sí (como la pantalla).
+ */
+export async function tipoGeneraDocumentos(contrato: any): Promise<boolean> {
+  const contratoId = contrato?.contrato_id;
+  if (!contratoId || !Types.ObjectId.isValid(String(contratoId))) return true;
+  const tipo: any = await Contrato.findById(contratoId).select("data.requiereFirma data.requiereFirmaRelease").lean();
+  if (!tipo) return true;
+  return tipo.data?.requiereFirma !== false || tipo.data?.requiereFirmaRelease !== false;
+}
+
 export async function estadoDirectoAContratado(contratoId: unknown, estadoId: unknown): Promise<IInfo | null> {
   if (!contratoId || !Types.ObjectId.isValid(String(contratoId))) return null;
   const tipo: any = await Contrato.findById(contratoId).select("data.requiereFirma data.requiereFirmaRelease data.requiereFirmaAlta").lean();

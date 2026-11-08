@@ -342,6 +342,16 @@ interface IContract {
     firmaGeneradoAt?: Date;
     firmaReleasesGeneradoAt?: Date;
     firmaEnviadaAt?: Date;
+    /** Volvió a Generar Documentos porque había salteado el circuito (07/11/2026): cuándo, de qué estado y lo que tenía de firma. */
+    circuitoReparado?: {
+        el: Date;
+        estadoAnterior: {
+            id: number | null;
+            nombre: string;
+        };
+        firmaAnterior: Record<string, unknown>;
+        motivo: string;
+    } | null;
     contenidoCustomContrato?: string | null;
     contenidoCustomReleases?: {
         releaseId: string;

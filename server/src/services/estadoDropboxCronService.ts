@@ -4,7 +4,8 @@ import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
 import UserProject, { IUserProject } from "../models/UserProject.js";
 import { getTenantDropboxConfig, listFolder, downloadFileContent, verifyAccount, DropboxEntry } from "./dropboxService.js";
-import { cargarEstadosPorEvento, aplicarTransicion } from "./estadoTransicionAutomaticaService.js";
+import { cargarEstadosPorEvento, aplicarTransicion, estadoDestinoPorProposito } from "./estadoTransicionAutomaticaService.js";
+import { esDocumentoDelContrato, TEXTO_NO_AVANZAR } from "../utils/circuitoContrato.js";
 import { normalizarCuit, parseConstanciaPdf } from "../utils/constanciaPdf.js";
 import { leerAnclas, normalizarEmail } from "../utils/anclasNombre.js";
 import { esElAltaEnviada, momentoDeCarga, motivoParaDescartarArchivo, TEXTO_DESCARTE } from "../utils/archivoDeContrato.js";
@@ -398,6 +399,10 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
   let disponibles = candidatosBase.filter((c) => c.palabras.length > 0 || c.cuit || c.email);
   if (disponibles.length === 0) return 0;
 
+  // Más allá de Generar Documentos (Outbox, Pendbox, Firmados) sólo mueve el contrato SU contrato o SU release.
+  const generar = await estadoDestinoPorProposito("alta_temprana").catch(() => null);
+  const masAllaDeGenerar = typeof generar?.data?.ordenDependencia === "number" && ordenDestino > generar.data.ordenDependencia;
+
   let transicionesAplicadas = 0;
   for (const { dropboxCarpeta: carpeta, proposito } of carpetas as Array<{ dropboxCarpeta: string; proposito?: string | string[] }>) {
     if (disponibles.length === 0) break;
@@ -519,6 +524,16 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
         if (reg) matches = matches.filter((m) => indiceDelRegistro(m.up, reg) === m.idx);
       }
 
+      /*
+        NI LA CONSTANCIA DE ARCA NI UN RECIBO MUEVEN EL CONTRATO (07/11/2026). Pasan por las mismas carpetas,
+        pero son otro trámite: un recibo registrado como «Contrato» entre el 20 y el 24/10 llevó contratos a
+        «Firma enviada» y «Disponible» sin que nadie les generara el contrato (ver `utils/circuitoContrato.ts`).
+      */
+      if (masAllaDeGenerar && !esDocumentoDelContrato(codigoArchivo ? registroPorCodigo.get(codigoArchivo) ?? null : null, file.name)) {
+        logSiCambio(key, "no_es_el_contrato", `[ESTADO-DROPBOX-CRON] ${file.path}: no es el contrato ni el release (constancia o recibo), no mueve el estado — se omite (destino: ${estadoDestino.name})`);
+        continue;
+      }
+
       // Si no, una misma persona puede tener dos superpuestos, y ahí desempatan las fechas del nombre.
       if (matches.length > 1) {
         const fechasArchivo = extraerFechasDeNombre(file.name);
@@ -564,6 +579,9 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
 
       disponibles = disponibles.filter((c) => c !== candidato);
       const resultado = await aplicarTransicion(candidato.up, candidato.idx, estadoDestino);
+      if (!resultado.aplicada && resultado.motivo && resultado.motivo in TEXTO_NO_AVANZAR) {
+        logSiCambio(key, resultado.motivo, `[ESTADO-DROPBOX-CRON] ${file.path}: el contrato ${TEXTO_NO_AVANZAR[resultado.motivo as keyof typeof TEXTO_NO_AVANZAR]}, no pasa a ${estadoDestino.name} (${candidato.userId} [${candidato.idx}])`);
+      }
       if (resultado.aplicada) {
         lastWarned.delete(key);
         transicionesAplicadas++;

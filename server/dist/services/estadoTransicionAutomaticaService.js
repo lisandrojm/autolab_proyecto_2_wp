@@ -1,5 +1,6 @@
 import { Info } from "../models/Info.js";
-import { destinoSiNoSeFirma, copiarConstanciaAContratados } from "./contratadoDirecto.js";
+import { destinoSiNoSeFirma, copiarConstanciaAContratados, tipoGeneraDocumentos } from "./contratadoDirecto.js";
+import { motivoParaNoAvanzar, sigueElCircuito, tieneDocumentosGenerados } from "../utils/circuitoContrato.js";
 const ESTADO_TYPE = "estado-empleado";
 /** Estados (catálogo global) configurados con este evento. Ya validado al guardar: todos tienen `ordenDependencia`. */
 export async function cargarEstadosPorEvento(evento) {
@@ -37,6 +38,20 @@ export async function aplicarTransicion(up, contractIndex, estadoPedido) {
     const ordenActual = await ordenDependenciaDelEstado(estadoAnteriorId);
     if (destinoOrden <= ordenActual)
         return { aplicada: false, motivo: "no_es_hacia_adelante" };
+    /*
+      EL CIRCUITO EN ORDEN (07/11/2026, ver `utils/circuitoContrato.ts`): más allá de Generar Documentos se
+      llega desde Generar Documentos y con algo generado. Esto lo cumple cualquier evento —carpeta, mail de
+      Dropbox Sign, script—, no sólo el que se acordó revisar. La excepción es la de siempre: lo que no se
+      firma va directo a Contratados (el destino cambiado por `destinoSiNoSeFirma`), y un tipo al que no se
+      le genera nada no espera documentos.
+    */
+    if (estadoDestino === estadoPedido && sigueElCircuito(contrato)) {
+        const generar = await estadoDestinoPorProposito("alta_temprana");
+        const ordenGenerar = typeof generar?.data?.ordenDependencia === "number" ? generar.data.ordenDependencia : null;
+        const motivo = motivoParaNoAvanzar({ ordenActual, ordenDestino: destinoOrden, ordenGenerar, documentosGenerados: tieneDocumentosGenerados(contrato) });
+        if (motivo && (await tipoGeneraDocumentos(contrato)))
+            return { aplicada: false, motivo };
+    }
     up.contracts[contractIndex] = { ...contrato.toObject(), estado_id: destinoId, nombre_estado_empleado: estadoDestino.name };
     up.markModified("contracts");
     await up.save();

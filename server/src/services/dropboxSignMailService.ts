@@ -15,6 +15,7 @@ import { aplicarTransicion } from "./estadoTransicionAutomaticaService.js";
 import { DocumentoGenerado } from "../models/DocumentoGenerado.js";
 import { ReciboSueldoEnviado } from "../models/ReciboSueldoEnviado.js";
 import { DropboxSignEnvio } from "../models/DropboxSignEnvio.js";
+import { esDocumentoDelContrato, TEXTO_NO_AVANZAR } from "../utils/circuitoContrato.js";
 
 /**
  * Detección de "documento enviado a firmar" leyendo la casilla de correo.
@@ -227,8 +228,15 @@ async function contratoDelCodigo(tenantId: string, codigo: string): Promise<{ up
  * Dropbox): no se escribe el nombre a mano. `aplicarTransicion` solo avanza, nunca retrocede, así que
  * es seguro repetirlo en cada lectura. Devuelve el texto para el log.
  */
-async function avanzarContratoDelAviso(tenantId: string, ident: AnclasNombre): Promise<string> {
+async function avanzarContratoDelAviso(tenantId: string, ident: AnclasNombre, archivo: string): Promise<string> {
   try {
+    /*
+      SÓLO EL CONTRATO O EL RELEASE (07/11/2026). El aviso de la constancia de ARCA traía el código del alta,
+      que es un documento del contrato, y lo pasaba a «Firma enviada» sin que le hubieran generado nada.
+      El archivo sí se mueve a Pendbox (es lo que se envió); el contrato no cambia.
+    */
+    const registro: any = ident.codigo ? await DocumentoGenerado.findOne({ tenantId, codigo: ident.codigo }).select("tipo clase").lean() : null;
+    if (!esDocumentoDelContrato(registro, archivo)) return " No es el contrato ni el release (es una constancia o un recibo): el estado del contrato no cambia.";
     const { estado } = await resolverProposito("pendbox");
     const destino = estado ? await Info.findOne({ type: "estado-empleado", name: estado }) : null;
     if (!destino) return " No hay un estado con la carpeta Pendbox configurada: el estado no cambió.";
@@ -237,6 +245,7 @@ async function avanzarContratoDelAviso(tenantId: string, ident: AnclasNombre): P
     if (ident.codigo && !contrato) return ` El código ${ident.codigo} no tiene un contrato registrado: el estado no cambió.`;
     if (!contrato) return " No se pudo identificar un único contrato de esa persona y período: el estado no cambió.";
     const r = await aplicarTransicion(contrato.up, contrato.idx, destino);
+    if (r.motivo && r.motivo in TEXTO_NO_AVANZAR) return ` El contrato ${TEXTO_NO_AVANZAR[r.motivo as keyof typeof TEXTO_NO_AVANZAR]}: no pasa a «${destino.name}».`;
     return r.aplicada ? ` El contrato pasó a «${destino.name}».` : r.motivo === "ya_estaba" ? ` El contrato ya estaba en «${destino.name}».` : "";
   } catch (e: any) {
     return ` No se pudo cambiar el estado: ${e?.message || e}`;
@@ -500,7 +509,7 @@ async function leerCasillaAhora(tenantId: string, soloPrueba = false): Promise<R
             movidos++;
             enOutbox = enOutbox.filter((e) => e.path !== pdf.path);
           }
-          const estado = await avanzarContratoDelAviso(tenantId, ident);
+          const estado = await avanzarContratoDelAviso(tenantId, ident, archivo);
 
           logs.push({
             resultado: "archivado",

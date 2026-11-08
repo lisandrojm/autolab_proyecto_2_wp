@@ -346,6 +346,8 @@ interface IContract {
   firmaGeneradoAt?: Date;
   firmaReleasesGeneradoAt?: Date;
   firmaEnviadaAt?: Date;
+  /** Volvió a Generar Documentos porque había salteado el circuito (07/11/2026): cuándo, de qué estado y lo que tenía de firma. */
+  circuitoReparado?: { el: Date; estadoAnterior: { id: number | null; nombre: string }; firmaAnterior: Record<string, unknown>; motivo: string } | null;
   // CONTRATO / RELEASE CUSTOM: el cuerpo que se escribió en Firma digital para ESTE trámite, cuando la
   // plantilla es `esCustom` (ver `compartido/textoCustom.ts`). No es una plantilla reutilizable. Borrar
   // el PDF (eliminar-contrato / eliminar-release) no lo toca: queda como borrador para re-editar.
@@ -557,6 +559,7 @@ const contractSchema = new Schema<IContract>(
     firmaGeneradoAt: { type: Date },
     firmaReleasesGeneradoAt: { type: Date },
     firmaEnviadaAt: { type: Date },
+    circuitoReparado: { type: Schema.Types.Mixed, default: undefined },
     contenidoCustomContrato: { type: String, default: null, maxlength: 200000 },
     contenidoCustomReleases: [
       {

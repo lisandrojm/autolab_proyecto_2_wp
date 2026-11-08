@@ -131,6 +131,7 @@ const contractSchema = new Schema({
     firmaGeneradoAt: { type: Date },
     firmaReleasesGeneradoAt: { type: Date },
     firmaEnviadaAt: { type: Date },
+    circuitoReparado: { type: Schema.Types.Mixed, default: undefined },
     contenidoCustomContrato: { type: String, default: null, maxlength: 200000 },
     contenidoCustomReleases: [
         {
