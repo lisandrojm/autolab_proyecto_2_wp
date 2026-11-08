@@ -20,13 +20,22 @@
  *      Documentos (o después), y con los documentos generados. La excepción es la de siempre: un tipo
  *      que no manda nada a firmar va directo a Contratados (ver `destinoSiNoSeFirma`).
  */
+/** Un recibo de sueldo: el documento mensual de MEMOSOFT. Nunca es el contrato ni el release de nadie. */
+export declare const esReciboDeSueldo: (registro: {
+    tipo?: string | null;
+    clase?: string | null;
+    archivo?: string | null;
+} | null | undefined, nombre: string) => boolean;
 /**
- * ¿Este documento es el contrato o el release de la persona? Con el registro del código
- * (`documentos_generados`) manda el registro; sin registro (archivos de antes de los códigos), el nombre.
+ * ¿Este documento es el contrato o el release de la persona? Un recibo de sueldo nunca (aunque entre el
+ * 20 y el 24/10 se haya registrado como «Contrato»: lo dice su nombre, REC_SUELDO). Si no, con el registro
+ * del código (`documentos_generados`) manda el registro; sin registro (archivos de antes de los códigos),
+ * el nombre.
  */
 export declare function esDocumentoDelContrato(registro: {
     tipo?: string | null;
     clase?: string | null;
+    archivo?: string | null;
 } | null | undefined, nombre: string): boolean;
 export type MotivoNoAvanzar = "saltea_generar_documentos" | "sin_documentos_generados";
 export declare const TEXTO_NO_AVANZAR: Record<MotivoNoAvanzar, string>;

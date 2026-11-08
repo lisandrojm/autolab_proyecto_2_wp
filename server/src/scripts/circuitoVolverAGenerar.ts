@@ -23,6 +23,12 @@ import { fechaISO } from "../utils/contratoVigencia.js";
  * apuntaban a lo que ya no está (si no, Generar Documentos dice «ya enviado» y no deja generar), y lo
  * anterior queda guardado en `contracts.$.circuitoReparado`. No borra archivos de Dropbox ni del storage.
  *
+ * ANTES, LOS RECIBOS DE SUELDO DEJAN DE FIGURAR COMO CONTRATO. Un recibo es el documento mensual: no
+ * tiene contrato ni release. Entre el 20 y el 24/10 se registraron como «Contrato» (patrón REC_SUELDO) y
+ * algunos quedaron guardados como el contrato de la persona (`firmaContratoNombre`). Con `--aplicar`:
+ * esos registros pasan a tipo «ReciboSueldo» / clase «recibo_sueldo», y al contrato se le quita el
+ * recibo (lo que tenía queda en `contracts.$.reciboDesvinculado`). No se borra ningún archivo.
+ *
  * Uso (desde server/):
  *   npx dotenv -e .env.production -- tsx src/scripts/circuitoVolverAGenerar.ts            → en seco
  *   npx dotenv -e .env.production -- tsx src/scripts/circuitoVolverAGenerar.ts --aplicar  → escribe
@@ -53,6 +59,34 @@ async function main() {
 
   const tenants: any[] = await Tenant.find(process.env.TENANT_SLUG ? { slug: process.env.TENANT_SLUG } : {}).lean();
   const resumen: Record<string, number> = {};
+
+  // 1. Los recibos de sueldo no son contratos.
+  const registros = await DocumentoGenerado.countDocuments({ archivo: /REC_SUELDO/, $or: [{ tipo: { $ne: "ReciboSueldo" } }, { clase: { $ne: "recibo_sueldo" } }] });
+  console.log(`Recibos de sueldo registrados como «Contrato»: ${registros}${APLICAR ? " → pasan a «ReciboSueldo»" : ""}`);
+  if (APLICAR && registros > 0) await DocumentoGenerado.updateMany({ archivo: /REC_SUELDO/ }, { $set: { tipo: "ReciboSueldo", clase: "recibo_sueldo" } });
+  const proyectosDeTenants = await Project.find({ tenantId: { $in: tenants.map((t) => t._id) } }).select("_id").lean();
+  const conRecibo: any[] = await UserProject.find({ projectId: { $in: proyectosDeTenants.map((p: any) => p._id) }, "contracts.firmaContratoNombre": /REC_SUELDO/ })
+    .select("userId contracts.firmaContratoNombre contracts.firmaContratoUrl contracts.firmaEmpresaContratoId contracts.firmaGeneradoAt contracts.firmaEnviadaAt contracts.firmaReleases contracts.nombre_estado_empleado contracts.fecha_alta_contrato")
+    .lean();
+  let desvinculados = 0;
+  for (const up of conRecibo) {
+    for (const [idx, c] of (up.contracts || []).entries() as IterableIterator<[number, any]>) {
+      if (!/REC_SUELDO/.test(String(c.firmaContratoNombre || ""))) continue;
+      desvinculados++;
+      if (!APLICAR) continue;
+      const k = `contracts.${idx}`;
+      // Lo «enviado» era el recibo: si además tenía releases propios, el envío es de ellos y se deja.
+      const sinReleases = !(Array.isArray(c.firmaReleases) && c.firmaReleases.some((r: any) => !/REC_SUELDO/.test(String(r?.nombre || ""))));
+      const campos = ["firmaContratoUrl", "firmaContratoNombre", "firmaEmpresaContratoId", "firmaGeneradoAt", ...(sinReleases ? ["firmaEnviadaAt"] : [])];
+      await UserProject.updateOne(
+        { _id: up._id, [`${k}.firmaContratoNombre`]: c.firmaContratoNombre },
+        { $set: { [`${k}.reciboDesvinculado`]: { el: new Date(), firmaAnterior: Object.fromEntries(campos.filter((f) => c[f] != null).map((f) => [f, c[f]])) } }, $unset: Object.fromEntries(campos.map((f) => [`${k}.${f}`, ""])) },
+      );
+    }
+  }
+  console.log(`Contratos con un recibo guardado como su contrato: ${desvinculados}${APLICAR ? " → se les quitó" : ""}\n`);
+
+  // 2. Los que están más allá de Generar Documentos sin contrato ni release vuelven ahí.
   for (const tenant of tenants) {
     const cfg = getTenantDropboxConfig(tenant);
     const proyectos = await Project.find({ tenantId: tenant._id }).select("_id").lean();

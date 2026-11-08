@@ -509,7 +509,7 @@ async function scanEstadoParaTenant(tenant: any, cfg: NonNullable<ReturnType<typ
       */
       const codigoArchivo = leerAnclas(file.name).codigo;
       if (codigoArchivo && matches.length > 0) {
-        if (!registroPorCodigo.has(codigoArchivo)) registroPorCodigo.set(codigoArchivo, await DocumentoGenerado.findOne({ tenantId: tenant._id, codigo: codigoArchivo }).select("userProjectId contrato clase").lean());
+        if (!registroPorCodigo.has(codigoArchivo)) registroPorCodigo.set(codigoArchivo, await DocumentoGenerado.findOne({ tenantId: tenant._id, codigo: codigoArchivo }).select("userProjectId contrato clase tipo archivo").lean());
         const reg = registroPorCodigo.get(codigoArchivo);
         /*
           UN RECIBO DE SUELDO NO MUEVE EL CONTRATO (módulo Recibos de sueldo, 20/10/2026). Pasa por Outbox,

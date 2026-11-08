@@ -24,12 +24,19 @@
 /** Los tipos de documento que genera Generar Documentos (los de la nomenclatura). */
 const TIPOS_DEL_CONTRATO = new Set(["Contrato", "Release"]);
 
+/** Un recibo de sueldo: el documento mensual de MEMOSOFT. Nunca es el contrato ni el release de nadie. */
+export const esReciboDeSueldo = (registro: { tipo?: string | null; clase?: string | null; archivo?: string | null } | null | undefined, nombre: string): boolean =>
+  registro?.clase === "recibo_sueldo" || registro?.tipo === "ReciboSueldo" || /REC_SUELDO/i.test(String(nombre || "")) || /REC_SUELDO/i.test(String(registro?.archivo || ""));
+
 /**
- * ¿Este documento es el contrato o el release de la persona? Con el registro del código
- * (`documentos_generados`) manda el registro; sin registro (archivos de antes de los códigos), el nombre.
+ * ¿Este documento es el contrato o el release de la persona? Un recibo de sueldo nunca (aunque entre el
+ * 20 y el 24/10 se haya registrado como «Contrato»: lo dice su nombre, REC_SUELDO). Si no, con el registro
+ * del código (`documentos_generados`) manda el registro; sin registro (archivos de antes de los códigos),
+ * el nombre.
  */
-export function esDocumentoDelContrato(registro: { tipo?: string | null; clase?: string | null } | null | undefined, nombre: string): boolean {
-  if (registro) return TIPOS_DEL_CONTRATO.has(String(registro.tipo || "")) && registro.clase !== "recibo_sueldo";
+export function esDocumentoDelContrato(registro: { tipo?: string | null; clase?: string | null; archivo?: string | null } | null | undefined, nombre: string): boolean {
+  if (esReciboDeSueldo(registro, nombre)) return false;
+  if (registro) return TIPOS_DEL_CONTRATO.has(String(registro.tipo || ""));
   return !/_Alta(AFIP|Arca)_|_ConstanciaCUIT_|REC_SUELDO/i.test(String(nombre || ""));
 }
 
@@ -73,7 +80,7 @@ export function decidirReparacion(o: { documentos: Array<{ codigo: string; tipo?
   if (vivo) return { volver: false, motivo: `su ${String(vivo.tipo || "contrato").toLowerCase()} está en Dropbox (${vivo.codigo})` };
   const viejo = o.sinCodigo.find((n) => esDocumentoDelContrato(null, n));
   if (viejo) return { volver: false, motivo: `hay un documento suyo en Dropbox sin código: ${viejo}` };
-  const otros = o.documentos.filter((d) => !esDocumentoDelContrato(d, d.archivo)).map((d) => `${d.clase === "recibo_sueldo" || /REC_SUELDO/i.test(d.archivo) ? "recibo" : String(d.tipo || "otro")} ${d.codigo}`);
+  const otros = o.documentos.filter((d) => !esDocumentoDelContrato(d, d.archivo)).map((d) => `${esReciboDeSueldo(d, d.archivo) ? "recibo de sueldo" : String(d.tipo || "otro")} ${d.codigo}`);
   const borrados = delContrato.map((d) => d.codigo);
   const partes = [borrados.length ? `lo generado (${borrados.join(", ")}) ya no está en Dropbox` : "nunca se le generó el contrato ni el release", otros.length ? `sólo tuvo ${otros.join(", ")}` : ""].filter(Boolean);
   return { volver: true, motivo: partes.join("; ") };

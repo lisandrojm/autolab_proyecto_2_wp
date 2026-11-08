@@ -235,7 +235,7 @@ async function avanzarContratoDelAviso(tenantId: string, ident: AnclasNombre, ar
       que es un documento del contrato, y lo pasaba a «Firma enviada» sin que le hubieran generado nada.
       El archivo sí se mueve a Pendbox (es lo que se envió); el contrato no cambia.
     */
-    const registro: any = ident.codigo ? await DocumentoGenerado.findOne({ tenantId, codigo: ident.codigo }).select("tipo clase").lean() : null;
+    const registro: any = ident.codigo ? await DocumentoGenerado.findOne({ tenantId, codigo: ident.codigo }).select("tipo clase archivo").lean() : null;
     if (!esDocumentoDelContrato(registro, archivo)) return " No es el contrato ni el release (es una constancia o un recibo): el estado del contrato no cambia.";
     const { estado } = await resolverProposito("pendbox");
     const destino = estado ? await Info.findOne({ type: "estado-empleado", name: estado }) : null;

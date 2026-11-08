@@ -352,6 +352,11 @@ interface IContract {
         firmaAnterior: Record<string, unknown>;
         motivo: string;
     } | null;
+    /** Tenía un recibo de sueldo guardado como su contrato (20–24/10/2026); se le quitó (07/11/2026). Lo que tenía. */
+    reciboDesvinculado?: {
+        el: Date;
+        firmaAnterior: Record<string, unknown>;
+    } | null;
     contenidoCustomContrato?: string | null;
     contenidoCustomReleases?: {
         releaseId: string;

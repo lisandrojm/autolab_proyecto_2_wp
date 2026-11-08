@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { decidirReparacion, esDocumentoDelContrato, motivoParaNoAvanzar, tieneDocumentosGenerados } from "./circuitoContrato.js";
+import { decidirReparacion, esDocumentoDelContrato, esReciboDeSueldo, motivoParaNoAvanzar, tieneDocumentosGenerados } from "./circuitoContrato.js";
 
 // Los órdenes de producción: 2 impositivo, 3 Envío de documentación (Generar Documentos), 4 Firma pendiente, 5 Firma enviada, 6 Disponible.
 const GENERAR = 3;
@@ -16,6 +16,15 @@ describe("qué documento mueve el contrato por Outbox / Pendbox / Firmados", () 
   });
   it("(regresión, grupo A) el recibo de sueldo registrado como «Contrato» entre el 20 y el 24/10 no", () => {
     assert.equal(esDocumentoDelContrato({ tipo: "Contrato", clase: "recibo_sueldo" }, "426_LN+_REC_SUELDO_2026_PERIODO_10_X_ID-000590.pdf"), false);
+  });
+  it("un recibo de sueldo NUNCA es contrato ni release, aunque esté registrado como «Contrato» y sin clase (24/10)", () => {
+    assert.equal(esDocumentoDelContrato({ tipo: "Contrato", archivo: "426_LN+_REC_SUELDO_2026_PERIODO_10_TIERO_SERGIO-DAMIAN_x_ID-000700" }, "x"), false);
+    assert.equal(esDocumentoDelContrato({ tipo: "Contrato" }, "426_LN+_REC_SUELDO_2026_PERIODO_10_TIERO_ID-000700.pdf_ Firma solicitada por Sat.pdf"), false);
+    assert.equal(esDocumentoDelContrato({ tipo: "ReciboSueldo" }, "x"), false);
+    assert.equal(esReciboDeSueldo({ tipo: "Contrato" }, "426_LN+_Contrato_PEREZ_ID-000751.pdf"), false);
+  });
+  it("(regresión) con el registro completo el contrato sí se reconoce: el escaneo traía el registro sin tipo", () => {
+    assert.equal(esDocumentoDelContrato({ tipo: "Contrato", clase: null, archivo: "426_LN+_Contrato_AQUINO_x_ID-000751" }, "426_LN+_Contrato_AQUINO_x_ID-000751.pdf"), true);
   });
   it("sin registro (archivos de antes de los códigos), por el nombre", () => {
     assert.equal(esDocumentoDelContrato(null, "426_LN+_PARRINELLO_AltaAFIP_Jornada_D-20261025_H-20261025_23148850984_x.pdf"), false);
@@ -55,13 +64,13 @@ describe("qué contratos vuelven a Generar Documentos", () => {
     const r = decidirReparacion({ documentos: [{ codigo: "ID-000980", tipo: "AltaAFIP", archivo: "426_LN+_FAMULARO_AltaArca_Jornada_x_ID-000980", enDropbox: true }], sinCodigo: [] });
     assert.deepEqual(r, { volver: true, motivo: "nunca se le generó el contrato ni el release; sólo tuvo AltaAFIP ID-000980" });
   });
-  it("grupo A (Tiero): el «contrato» del 24/10 con nombre de recibo, borrado del Outbox → vuelve", () => {
+  it("grupo A (Tiero): lo del 24/10 es un recibo de sueldo, no su contrato → vuelve, y se dice que fue un recibo", () => {
     const r = decidirReparacion({ documentos: [{ codigo: "ID-000700", tipo: "Contrato", archivo: "426_LN+_REC_SUELDO_2026_PERIODO_10_TIERO_ID-000700", enDropbox: false }, { codigo: "ID-001122", tipo: "AltaAFIP", archivo: "426_LN+_TIERO_AltaArca_x_ID-001122", enDropbox: true }], sinCodigo: [] });
-    assert.equal(r.volver, true);
+    assert.deepEqual(r, { volver: true, motivo: "nunca se le generó el contrato ni el release; sólo tuvo recibo de sueldo ID-000700, AltaAFIP ID-001122" });
   });
   it("grupo A del 21/10: un recibo de sueldo de verdad (clase recibo) no cuenta como contrato → vuelve", () => {
     const r = decidirReparacion({ documentos: [{ codigo: "ID-000590", tipo: "Contrato", clase: "recibo_sueldo", archivo: "426_LN+_REC_SUELDO_2026_PERIODO_10_X_ID-000590", enDropbox: true }], sinCodigo: [] });
-    assert.deepEqual(r, { volver: true, motivo: "nunca se le generó el contrato ni el release; sólo tuvo recibo ID-000590" });
+    assert.deepEqual(r, { volver: true, motivo: "nunca se le generó el contrato ni el release; sólo tuvo recibo de sueldo ID-000590" });
   });
   it("con su contrato o su release en Dropbox, no se toca (Aquino)", () => {
     const r = decidirReparacion({ documentos: [{ codigo: "ID-000751", tipo: "Contrato", archivo: "426_LN+_Contrato_AQUINO_x_ID-000751", enDropbox: true }, { codigo: "ID-000754", tipo: "Release", archivo: "x_ID-000754", enDropbox: true }], sinCodigo: [] });
