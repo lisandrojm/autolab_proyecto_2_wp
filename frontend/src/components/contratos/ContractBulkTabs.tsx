@@ -4273,8 +4273,7 @@ export const ContractBulkContratadosTab: React.FC<{
                 <th className={`${th} ${ANCHO_TIPO_CONTRATO}`}>
                   <BotonOrden columna="tipoContrato" {...ordenProps}>Tipo de Contrato</BotonOrden>
                 </th>
-                {/* «Estado» es el estado del contrato, al lado del tipo (07/11/2026); el trámite (ARCA / Servicios) va arriba del tipo. */}
-                <th className={th}>Estado</th>
+                {/* Sin columna «Estado» (08/11/2026): el estado del contrato va arriba de Alta / Baja. El trámite (ARCA / Servicios), arriba del tipo. */}
                 <th className={th}>
                   <BotonOrden columna="cuit" {...ordenProps}>CUIT</BotonOrden>
                 </th>
@@ -4307,7 +4306,12 @@ export const ContractBulkContratadosTab: React.FC<{
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
-                        {!pendiente &&<span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>}
+                        {/* EL ESTADO ARRIBA DE LAS FECHAS, como la solicitud en Trámite impositivo (08/11/2026, pedido del
+                            usuario): era una columna aparte. La vigencia, a su lado. */}
+                        <div className="flex items-center gap-1.5">
+                          {r.nombre_estado_empleado && <EstadoBadge name={r.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" />}
+                          {!pendiente && <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>}
+                        </div>
                         <div className="flex flex-col gap-0.5 text-xs">
                           <span>
                             <span className="text-gray-400">Alta:</span> {formatDate(r.fecha_alta_contrato)}
@@ -4324,7 +4328,6 @@ export const ContractBulkContratadosTab: React.FC<{
                         <span className="block max-w-full truncate" title={r.nombre_contrato || undefined}>{r.nombre_contrato || "—"}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">{r.nombre_estado_empleado ? <EstadoBadge name={r.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}</td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
