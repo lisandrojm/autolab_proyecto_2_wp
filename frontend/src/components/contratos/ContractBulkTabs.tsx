@@ -4271,7 +4271,8 @@ export const ContractBulkContratadosTab: React.FC<{
                   <BotonOrden columna="altaBaja" {...ordenProps}>Alta / Baja</BotonOrden>
                 </th>
                 <th className={`${th} ${ANCHO_TIPO_CONTRATO}`}>
-                  <BotonOrden columna="tipoContrato" {...ordenProps}>Tipo de Contrato</BotonOrden>
+                  {/* «Contrato», como en Trámite impositivo (08/11/2026). */}
+                  <BotonOrden columna="tipoContrato" {...ordenProps}>Contrato</BotonOrden>
                 </th>
                 {/* Sin columna «Estado» (08/11/2026): el estado del contrato va arriba de Alta / Baja. El trámite (ARCA / Servicios), arriba del tipo. */}
                 <th className={th}>
