@@ -340,6 +340,12 @@ export interface ConstanciaEnPantalla {
 export declare function constanciasDeLaPantalla(tenantObjectId: any, o?: {
     empresaId?: string;
 }): Promise<ConstanciaEnPantalla[]>;
+/**
+ * LA CONSTANCIA DE CADA CONTRATO, para el padrón de Contratados (09/11/2026: «ver en un solo lugar qué está
+ * dado de alta en ARCA y qué no»). Clave `${userProjectId}:${contractIndex}`; si un contrato tiene más de
+ * una fila, la última tocada. SOLO LEE.
+ */
+export declare function constanciasPorContrato(tenantObjectId: any, userProjectIds: string[]): Promise<Map<string, ConstanciaEnPantalla>>;
 /** «24/10/2026 17:59» en hora argentina (el `toLocaleString` de Node daba «05:59» sin el p. m.). */
 export declare function fechaHoraArgentina(iso: string | Date): string;
 export {};

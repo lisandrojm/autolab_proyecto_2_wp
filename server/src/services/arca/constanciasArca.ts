@@ -756,6 +756,20 @@ export async function constanciasDeLaPantalla(tenantObjectId: any, o: { empresaI
   return [...docs.map((d) => aPantalla(d)), ...filas.filter((f) => !conFila.has(f.clave)).map((f) => aPantalla({ ...f, intentos: [], proximoIntentoEl: null, motivoRevision: null }, true))];
 }
 
+/**
+ * LA CONSTANCIA DE CADA CONTRATO, para el padrón de Contratados (09/11/2026: «ver en un solo lugar qué está
+ * dado de alta en ARCA y qué no»). Clave `${userProjectId}:${contractIndex}`; si un contrato tiene más de
+ * una fila, la última tocada. SOLO LEE.
+ */
+export async function constanciasPorContrato(tenantObjectId: any, userProjectIds: string[]): Promise<Map<string, ConstanciaEnPantalla>> {
+  const ids = [...new Set(userProjectIds)].filter((id) => Types.ObjectId.isValid(id)).map((id) => new Types.ObjectId(id));
+  const porContrato = new Map<string, ConstanciaEnPantalla>();
+  if (ids.length === 0) return porContrato;
+  const docs = await ConstanciaArca.find({ tenantId: tenantObjectId, userProjectId: { $in: ids } }).select("-historial").sort({ updatedAt: 1 }).lean();
+  for (const d of docs) porContrato.set(`${d.userProjectId}:${d.contractIndex}`, aPantalla(d));
+  return porContrato;
+}
+
 /** «24/10/2026 17:59» en hora argentina (el `toLocaleString` de Node daba «05:59» sin el p. m.). */
 export function fechaHoraArgentina(iso: string | Date): string {
   const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(iso)).map((x) => [x.type, x.value]));

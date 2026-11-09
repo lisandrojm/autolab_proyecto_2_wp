@@ -56,6 +56,7 @@ import { estadoDeRenovacion, procesoTerminadoSegunEstados } from "../utils/estad
 import { antiguedadArcaPorCuil } from "../services/arca/relacionesArcaStore.js";
 import { nombreParaSellar } from "../services/arca/nombreArca.js";
 import { etiquetaCentroCostoDe, resolverCentroCostoDeProyectos } from "../services/centroCostoDeProyectos.js";
+import { constanciasPorContrato } from "../services/arca/constanciasArca.js";
 const router = Router();
 /* ------------------- Filtros del equipo de un proyecto (client-side → server) -------------------
  * Estos filtros dependen del ÚLTIMO contrato del miembro en el proyecto o de su asignación de
@@ -1565,6 +1566,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         const solicitantePorSolicitud = new Map();
         const ultimoPorFila = new Map();
         const centroCostoPorProyecto = new Map();
+        // Sólo el padrón (Contratados): la constancia de ARCA de cada contrato, para la columna «ARCA».
+        let constanciaPorContrato = new Map();
         const consultasUltimo = pageRows
             .map((r) => {
             const c = contratoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || {};
@@ -1621,6 +1624,16 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 for (const p of proyectos)
                     centroCostoPorProyecto.set(String(p._id), etiquetaCentroCostoDe(p));
             })(),
+            (async () => {
+                if (!todosLosContratos || pageRows.length === 0)
+                    return;
+                try {
+                    constanciaPorContrato = await constanciasPorContrato(req.tenantObjectId, pageRows.map((r) => String(r._id)));
+                }
+                catch (e) {
+                    console.error("contracts-overview: no pude leer las constancias de ARCA:", e?.message || e);
+                }
+            })(),
         ]);
         const fullRows = pageRows.map(({ _alta, _orden, _contratoOrden, ...r }) => {
             const c = contratoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || {};
@@ -1632,6 +1645,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 solicitante: c.solicitudId ? solicitantePorSolicitud.get(String(c.solicitudId)) || null : null,
                 ultimoContrato: ultimoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || null,
                 centroCosto: centroCostoPorProyecto.get(String(r.projectId)) || "",
+                ...(todosLosContratos ? { constanciaArca: constanciaPorContrato.get(claveFila(r._id, Number(r.contractIndex) || 0)) || null } : {}),
                 nombre_contrato: c.nombre_contrato || "",
                 nombre_estado_empleado: c.nombre_estado_empleado || "",
                 nombre_sede: c.nombre_sede || "",

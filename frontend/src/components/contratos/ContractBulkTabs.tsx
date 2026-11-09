@@ -25,6 +25,8 @@ import { SinCuitValidacionModal, TIPO_DOC_SIN_CUIT_LABEL } from './SinCuitValida
 import { claveEstado, EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../EstadoSelect';
 import { FechaHoraCelda } from '../ui/FechaHoraCelda';
 import { BadgeCentroCosto } from '../ui/BadgeCentroCosto';
+import { CeldaArca, CeldaDocumentosGenerados } from './ArcaDelContrato';
+import { OPCIONES_FILTRO_ARCA, ORDEN_GRUPO_ARCA, situacionArca, type FilaConArca, type SituacionArca } from './situacionArca';
 import { isContractVigente, formatDate, estadoImpositivoDelContrato, findTemplate, templateHasContent, EmpresaOption } from '../team/ContractCard';
 import { getImageUrl, downloadFileFromUrl } from '../../utils/imageHelpers';
 import { SearchAndFilters } from '../ui/SearchAndFilters';
@@ -4090,7 +4092,7 @@ export const contarContratados = async (): Promise<number | null> => {
 };
 
 /** Una fila del padrón: un contrato, o una solicitud que todavía no lo es (`solicitudPendienteId`). */
-type FilaPadron = ContractOverviewRow & { solicitudPendienteId?: string };
+type FilaPadron = FilaConArca & { solicitudPendienteId?: string };
 
 /** La solicitud con la forma de una fila: lo que el padrón muestra, filtra y ordena. No tiene contrato atrás. */
 const filaDeSolicitud = (s: SolicitudPendienteDeContrato, estado: string): FilaPadron =>
@@ -4139,6 +4141,7 @@ export const ContractBulkContratadosTab: React.FC<{
   const [filterTipoContrato, setFilterTipoContrato] = useState<string[]>([]);
   const [filterVigencia, setFilterVigencia] = useState('');
   const [filterEstado, setFilterEstado] = useState<string[]>([]);
+  const [filterArca, setFilterArca] = useState('');
   // Sólo para ordenar el filtro de Tipo de contrato como en Configuración → Contratos.
   const [tiposContrato, setTiposContrato] = useState<ContratoItem[]>([]);
   useEffect(() => {
@@ -4172,16 +4175,24 @@ export const ContractBulkContratadosTab: React.FC<{
     load();
   }, [load]);
 
+  // La situación ante ARCA de cada fila (columna, filtro y orden «ARCA»), calculada una vez.
+  const situacionDe = useMemo(() => {
+    const m = new Map<FilaPadron, SituacionArca>();
+    for (const r of rows) m.set(r, situacionArca(r, estadoImpositivoDelContrato(r as unknown as Contract, contratoFrames, allEstados)?.data?.tipoImpositivo, { pendiente: !!r.solicitudPendienteId }));
+    return m;
+  }, [rows, contratoFrames, allEstados]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
       // Una solicitud todavía no es un contrato: ni vigente ni no vigente.
       if (filterVigencia && r.solicitudPendienteId) return false;
+      if (filterArca && situacionDe.get(r)?.grupo !== filterArca) return false;
       if (!pasaFiltrosDeContrato(r, { usuarios: '', vigencia: filterVigencia, novedades: '', tipoContrato: filterTipoContrato, estadoContrato: filterEstado, reemplazo: '' })) return false;
       if (q && ![r.userName, r.userEmail, r.clientName, r.projectName, r.nombre_contrato, r.cuit].some((v) => String(v || '').toLowerCase().includes(q))) return false;
       return true;
     });
-  }, [rows, search, filterVigencia, filterTipoContrato, filterEstado]);
+  }, [rows, search, filterVigencia, filterTipoContrato, filterEstado, filterArca, situacionDe]);
 
   const clientOptions = useMemo(() => {
     const m = new Map<string, string>();
@@ -4206,6 +4217,7 @@ export const ContractBulkContratadosTab: React.FC<{
       cliente: (r) => r.clientName,
       proyecto: (r) => r.projectName,
       tipoContrato: (r) => r.nombre_contrato,
+      arca: (r) => ORDEN_GRUPO_ARCA[situacionDe.get(r)?.grupo || 'no_corresponde'],
     },
     // Lo último creado arriba (pedido del 28/10/2026).
     { columna: 'fechaCarga', direccion: 'desc' },
@@ -4233,7 +4245,11 @@ export const ContractBulkContratadosTab: React.FC<{
             onSearchChange={setSearch}
             searchPlaceholder="Buscar por colaborador, CUIT, proyecto o contrato..."
             extraActions={<MenuOrdenContratos orden={orden} setOrden={setOrden} columnaAlta="altaBaja" porDefecto="solicitud_desc" />}
-            radioFilters={[{ label: 'Contratos', value: filterVigencia, onChange: setFilterVigencia, options: OPCIONES_VIGENCIA }]}
+            radioFilters={[
+              { label: 'Contratos', value: filterVigencia, onChange: setFilterVigencia, options: OPCIONES_VIGENCIA },
+              // Qué está dado de alta en ARCA y qué no (09/11/2026, pedido del usuario).
+              { label: 'ARCA', value: filterArca, onChange: setFilterArca, options: OPCIONES_FILTRO_ARCA },
+            ]}
             // Tipo de contrato y estado: varios a la vez, en el modal de casillas (07/11/2026, pedido del usuario).
             multiSelectFilters={[
               { label: 'Tipo de contrato', values: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
@@ -4258,7 +4274,7 @@ export const ContractBulkContratadosTab: React.FC<{
         <EmptyState icon={faUser} title="Sin contratos" description={rows.length === 0 ? 'Todavía no hay contratos ni solicitudes pendientes.' : 'No hay resultados con los filtros aplicados.'} />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-clip">
-          <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1200px]">
+          <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1450px]">
             <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
               <tr>
                 {/*
@@ -4277,6 +4293,11 @@ export const ContractBulkContratadosTab: React.FC<{
                   <BotonOrden columna="tipoContrato" {...ordenProps}>Contrato</BotonOrden>
                 </th>
                 {/* Sin columna «Estado» (08/11/2026): el estado del contrato va arriba de Alta / Baja. El trámite (ARCA / Servicios), arriba del tipo. */}
+                {/* «ARCA» y «Documentos» (09/11/2026): qué está dado de alta y con qué se prueba; el contrato y el release generados. */}
+                <th className={th} title="ARCA: el alta presentada y su constancia. Servicios: el JSON del Padrón que confirma el CUIT.">
+                  <BotonOrden columna="arca" {...ordenProps} title="Ordenar por la situación en ARCA (primero lo que falta)">ARCA</BotonOrden>
+                </th>
+                <th className={th}>Documentos</th>
                 <th className={th}>
                   <BotonOrden columna="cuit" {...ordenProps}>CUIT</BotonOrden>
                 </th>
@@ -4331,6 +4352,8 @@ export const ContractBulkContratadosTab: React.FC<{
                         <span className="block max-w-full truncate" title={r.nombre_contrato || undefined}>{r.nombre_contrato || "—"}</span>
                       </div>
                     </td>
+                    <td className="px-4 py-3">{situacionDe.get(r) && <CeldaArca r={r} s={situacionDe.get(r)!} />}</td>
+                    <td className="px-4 py-3">{pendiente ? <span className="text-xs text-gray-300 dark:text-gray-600">—</span> : <CeldaDocumentosGenerados r={r} />}</td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                     {/* El centro de costo ADELANTE del nombre, con el badge violeta, como en Trámite impositivo (08/11/2026). */}
