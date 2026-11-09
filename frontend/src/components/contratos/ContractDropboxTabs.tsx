@@ -12,7 +12,7 @@ import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { BotonOrden, useOrdenTabla } from "../ui/OrdenTabla";
 import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
-import { CLASE_BARRA_FIJA, useBarraFija } from "../ui/BarraFija";
+import { CLASE_BARRA_FIJA, ENCIMA_DE_LA_BARRA, useBarraFija } from "../ui/BarraFija";
 
 /** Dropbox Sign (ex HelloSign): donde se firman los contratos que se mandan desde acá. */
 const DROPBOX_SIGN_URL = "https://www.dropbox.com/sign";
@@ -381,7 +381,10 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
     <div className="space-y-4" style={barra.raiz}>
       {tipo === "para_firmar" && (
         <>
-          <PanelBotFirma bot={bot} enCola={enColaTotal} />
+          {/* La cola de envío va encima de la barra: su tabla se pega debajo del encabezado de la página. */}
+          <div style={ENCIMA_DE_LA_BARRA}>
+            <PanelBotFirma bot={bot} enCola={enColaTotal} />
+          </div>
           <div className="flex items-center justify-end gap-2 -mt-2">
             <a href={DROPBOX_SIGN_URL} target="_blank" rel="noopener noreferrer" title="Abrir Dropbox Sign (para mirar; el envío lo hace el sistema)" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
               <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="h-3 w-3" />

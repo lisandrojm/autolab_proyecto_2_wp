@@ -24,6 +24,13 @@ import { useAltoDeBarra } from './TablaConEncabezadoFijo';
 /** Fondo opaco del color de la página: las filas pasan por debajo sin verse. */
 export const CLASE_BARRA_FIJA = 'sticky top-[var(--wp-sticky-top-pagina,64px)] z-20 bg-gray-100 dark:bg-gray-900 py-2';
 
+/**
+ * Para lo que está ENCIMA de la barra dentro de la misma raíz (p. ej. la cola de envío en Para Firmar):
+ * mientras se recorre, la barra todavía no llegó a pegarse, así que sus tablas se pegan directo debajo
+ * del encabezado de la página y no dejan el hueco de la barra.
+ */
+export const ENCIMA_DE_LA_BARRA = { '--wp-sticky-top': 'var(--wp-sticky-top-pagina, 64px)' } as React.CSSProperties;
+
 export function useBarraFija(): { ref: (el: HTMLElement | null) => void; raiz: React.CSSProperties } {
   const [ref, alto] = useAltoDeBarra();
   return { ref, raiz: { '--wp-sticky-top': `calc(var(--wp-sticky-top-pagina, 64px) + ${alto}px)` } as React.CSSProperties };
