@@ -4259,11 +4259,12 @@ export const ContractBulkContratadosTab: React.FC<{
           <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1200px]">
             <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
               <tr>
-                <th className={th}>
-                  <BotonOrden columna="fechaCarga" {...ordenProps}>Fecha Solicitud</BotonOrden>
-                </th>
-                {/* Colaborador y Tipo de Contrato con ANCHO FIJO y texto cortado con «…» (07/11/2026): la tabla queda comprimida y se ve entera. */}
-                <th className={`${th} ${ANCHO_COLABORADOR}`}>
+                {/*
+                  EL MISMO ORDEN QUE EN CONTRATOS (08/11/2026, pedido del usuario): «Colaborador» primera y fija a
+                  la izquierda al scrollear a lo ancho; «Fecha Solicitud», la última antes de las acciones.
+                  Colaborador y Tipo de Contrato con ANCHO FIJO y texto cortado con «…» (07/11/2026).
+                */}
+                <th className={`${th} sticky left-0 z-[15] ${ANCHO_COLABORADOR} ${FIRMA_FIN_DE_FIJAS}`}>
                   <BotonOrden columna="usuario" {...ordenProps}>Colaborador</BotonOrden>
                 </th>
                 <th className={th}>
@@ -4283,6 +4284,9 @@ export const ContractBulkContratadosTab: React.FC<{
                 <th className={th}>
                   <BotonOrden columna="proyecto" {...ordenProps}>Proyecto</BotonOrden>
                 </th>
+                <th className={th}>
+                  <BotonOrden columna="fechaCarga" {...ordenProps}>Fecha Solicitud</BotonOrden>
+                </th>
                 <ContractActionsHeader />
               </tr>
             </thead>
@@ -4297,11 +4301,8 @@ export const ContractBulkContratadosTab: React.FC<{
                   else verContrato?.(r, () => load(true));
                 };
                 return (
-                  <tr key={rowKey(r)} onClick={alTocar} title={pendiente ? 'Solicitud sin aprobar: todavía no tiene contrato. Tocá para abrirla en Solicitudes.' : undefined} className={`hover:bg-gray-50 dark:hover:bg-gray-900/20 ${verContrato || pendiente ? 'cursor-pointer' : ''}`}>
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato sin fecha de carga">—</span>} />
-                    </td>
-                    <td className={`px-4 py-3 ${ANCHO_COLABORADOR}`}>
+                  <tr key={rowKey(r)} onClick={alTocar} title={pendiente ? 'Solicitud sin aprobar: todavía no tiene contrato. Tocá para abrirla en Solicitudes.' : undefined} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${verContrato || pendiente ? 'cursor-pointer' : ''}`}>
+                    <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] ${ANCHO_COLABORADOR} ${FIRMA_FIN_DE_FIJAS}`}>
                       <CeldaColaborador r={r} />
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
@@ -4327,6 +4328,9 @@ export const ContractBulkContratadosTab: React.FC<{
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato sin fecha de carga">—</span>} />
+                    </td>
                     {pendiente ? <td className="px-4 py-3" /> : <ContractActionsCell record={r} onDeleted={() => load(true)} />}
                   </tr>
                 );
