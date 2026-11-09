@@ -25,7 +25,7 @@ import { SinCuitValidacionModal, TIPO_DOC_SIN_CUIT_LABEL } from './SinCuitValida
 import { claveEstado, EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../EstadoSelect';
 import { FechaHoraCelda } from '../ui/FechaHoraCelda';
 import { BadgeCentroCosto } from '../ui/BadgeCentroCosto';
-import { CeldaArca, CeldaDocumentosGenerados } from './ArcaDelContrato';
+import { CeldaArca, CeldaDocumentosGenerados, type DocumentosQueLleva } from './ArcaDelContrato';
 import { OPCIONES_FILTRO_ARCA, ORDEN_GRUPO_ARCA, situacionArca, type FilaConArca, type SituacionArca } from './situacionArca';
 import { isContractVigente, formatDate, estadoImpositivoDelContrato, findTemplate, templateHasContent, EmpresaOption } from '../team/ContractCard';
 import { getImageUrl, downloadFileFromUrl } from '../../utils/imageHelpers';
@@ -4128,8 +4128,10 @@ const filaDeSolicitud = (s: SolicitudPendienteDeContrato, estado: string): FilaP
 export const ContractBulkContratadosTab: React.FC<{
   allEstados: InfoItem[];
   contratoFrames: ContratoFrameItem[];
+  /** Los releases, para saber si el tipo de cada contrato lleva release (columna «Documentos»). */
+  releases?: Release[];
   onCount?: (cantidad: number) => void;
-}> = ({ allEstados, contratoFrames, onCount }) => {
+}> = ({ allEstados, contratoFrames, releases = [], onCount }) => {
   // Tocar la fila abre el resumen del contrato (en Contratos; fuera de ahí no hay proveedor y no hace nada).
   const verContrato = useVerContratoEnModal();
   const navigate = useNavigate();
@@ -4181,6 +4183,19 @@ export const ContractBulkContratadosTab: React.FC<{
     for (const r of rows) m.set(r, situacionArca(r, estadoImpositivoDelContrato(r as unknown as Contract, contratoFrames, allEstados)?.data?.tipoImpositivo, { pendiente: !!r.solicitudPendienteId }));
     return m;
   }, [rows, contratoFrames, allEstados]);
+
+  // Qué lleva cada contrato según su tipo, con el criterio de Generar Documentos: «No lleva» no es «Sin generar».
+  const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
+  const llevaDe = useMemo(() => {
+    const releasesQueFirman = activeReleases.filter(releaseRequiereFirma);
+    const m = new Map<FilaPadron, DocumentosQueLleva>();
+    for (const r of rows) {
+      if (r.solicitudPendienteId) continue;
+      const template = findTemplate(r as unknown as Contract, contratoFrames);
+      m.set(r, { contrato: contratoRequiereFirma(template), release: releasesDeLaFila(template, releasesQueFirman, r, tiposContrato, activeReleases).length > 0, firmaAlta: contratoRequiereFirmaAlta(template) });
+    }
+    return m;
+  }, [rows, contratoFrames, activeReleases, tiposContrato]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -4352,8 +4367,8 @@ export const ContractBulkContratadosTab: React.FC<{
                         <span className="block max-w-full truncate" title={r.nombre_contrato || undefined}>{r.nombre_contrato || "—"}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">{situacionDe.get(r) && <CeldaArca r={r} s={situacionDe.get(r)!} />}</td>
-                    <td className="px-4 py-3">{pendiente ? <span className="text-xs text-gray-300 dark:text-gray-600">—</span> : <CeldaDocumentosGenerados r={r} />}</td>
+                    <td className="px-4 py-3">{situacionDe.get(r) && <CeldaArca r={r} s={situacionDe.get(r)!} lleva={llevaDe.get(r)} />}</td>
+                    <td className="px-4 py-3">{pendiente ? <span className="text-xs text-gray-300 dark:text-gray-600">—</span> : <CeldaDocumentosGenerados r={r} lleva={llevaDe.get(r)} />}</td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                     {/* El centro de costo ADELANTE del nombre, con el badge violeta, como en Trámite impositivo (08/11/2026). */}
