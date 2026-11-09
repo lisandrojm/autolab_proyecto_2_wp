@@ -18,6 +18,8 @@ export interface SolicitudPendienteDeContrato {
   projectId: string;
   /** Todos sus proyectos, separados por coma: una solicitud puede pedir varios. */
   projectName: string;
+  /** El centro de costo del primer proyecto ("" si no tiene). */
+  centroCosto: string;
   nombreContrato: string;
   desde: string;
   hasta: string;

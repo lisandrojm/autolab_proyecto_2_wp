@@ -24,6 +24,7 @@ import { afipAPI } from '../../api/afip';
 import { SinCuitValidacionModal, TIPO_DOC_SIN_CUIT_LABEL } from './SinCuitValidacionModal';
 import { claveEstado, EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../EstadoSelect';
 import { FechaHoraCelda } from '../ui/FechaHoraCelda';
+import { BadgeCentroCosto } from '../ui/BadgeCentroCosto';
 import { isContractVigente, formatDate, estadoImpositivoDelContrato, findTemplate, templateHasContent, EmpresaOption } from '../team/ContractCard';
 import { getImageUrl, downloadFileFromUrl } from '../../utils/imageHelpers';
 import { SearchAndFilters } from '../ui/SearchAndFilters';
@@ -4105,6 +4106,7 @@ const filaDeSolicitud = (s: SolicitudPendienteDeContrato, estado: string): FilaP
     clientName: s.clientName,
     projectId: s.projectId,
     projectName: s.projectName,
+    centroCosto: s.centroCosto,
     nombre_contrato: s.nombreContrato,
     // El estado del Paso 1, como cualquier otro: su nombre sale del ABM.
     nombre_estado_empleado: estado,
@@ -4331,7 +4333,13 @@ export const ContractBulkContratadosTab: React.FC<{
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.projectName || '—'}</td>
+                    {/* El centro de costo ADELANTE del nombre, con el badge violeta, como en Trámite impositivo (08/11/2026). */}
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5">
+                        <BadgeCentroCosto codigo={r.centroCosto} />
+                        {r.projectName || '—'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato sin fecha de carga">—</span>} />
                     </td>

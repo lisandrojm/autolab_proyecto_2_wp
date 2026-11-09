@@ -1032,9 +1032,11 @@ router.get("/solicitudes-pendientes", requireTenant, authenticateToken, requireP
             and.push({ "metadata.projectIds": { $in: await Project.find({ tenantId: req.tenantObjectId, clientId }).distinct("_id") } });
         const docs = await User.find({ $and: and })
             .select("firstName lastName email createdAt metadata.fullName metadata.cuit metadata.solicitudUserId metadata.projectIds metadata.startDate metadata.dueDate metadata.nombre_contrato metadata.esRenovacion metadata.comentarios")
-            .populate({ path: "metadata.projectIds", select: "name clientId", model: Project, populate: { path: "clientId", select: "name", model: Client } })
+            .populate({ path: "metadata.projectIds", select: "name clientId metadata.centroCostoId metadata.centroCostoEmpresaTangoId", model: Project, populate: { path: "clientId", select: "name", model: Client } })
             .sort({ createdAt: -1 })
             .lean();
+        // El badge del centro de costo al lado del proyecto, como en los contratos del padrón (08/11/2026).
+        await resolverCentroCostoDeProyectos(docs.flatMap((s) => (s.metadata?.projectIds || []).filter((p) => p && typeof p === "object")));
         const idsPersonas = [...new Set(docs.map((s) => String(s.metadata?.solicitudUserId || "")).filter((id) => Types.ObjectId.isValid(id)))];
         const personas = idsPersonas.length > 0 ? await User.find({ _id: { $in: idsPersonas } }).select("metadata.cuit metadata.sinCuit").lean() : [];
         const personaDe = new Map(personas.map((p) => [String(p._id), p]));
@@ -1053,6 +1055,7 @@ router.get("/solicitudes-pendientes", requireTenant, authenticateToken, requireP
                     clientName: cliente?.name || "",
                     projectId: proyectos[0]?._id ? String(proyectos[0]._id) : "",
                     projectName: proyectos.map((p) => p.name).filter(Boolean).join(", "),
+                    centroCosto: proyectos[0] ? etiquetaCentroCostoDe(proyectos[0]) : "",
                     nombreContrato: s.metadata?.nombre_contrato || "",
                     desde: s.metadata?.startDate || "",
                     hasta: s.metadata?.dueDate || "",
