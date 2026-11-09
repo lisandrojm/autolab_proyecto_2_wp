@@ -4144,6 +4144,7 @@ export const ContractBulkContratadosTab: React.FC<{
   const [filterVigencia, setFilterVigencia] = useState('');
   const [filterEstado, setFilterEstado] = useState<string[]>([]);
   const [filterArca, setFilterArca] = useState('');
+  const [filterImpositivo, setFilterImpositivo] = useState<string[]>([]);
   // Sólo para ordenar el filtro de Tipo de contrato como en Configuración → Contratos.
   const [tiposContrato, setTiposContrato] = useState<ContratoItem[]>([]);
   useEffect(() => {
@@ -4178,11 +4179,19 @@ export const ContractBulkContratadosTab: React.FC<{
   }, [load]);
 
   // La situación ante ARCA de cada fila (columna, filtro y orden «ARCA»), calculada una vez.
-  const situacionDe = useMemo(() => {
-    const m = new Map<FilaPadron, SituacionArca>();
-    for (const r of rows) m.set(r, situacionArca(r, estadoImpositivoDelContrato(r as unknown as Contract, contratoFrames, allEstados)?.data?.tipoImpositivo, { pendiente: !!r.solicitudPendienteId }));
+  // El estado impositivo del tipo de cada fila (AFIP / Servicios): filtro «Estado impositivo» y columna «ARCA».
+  const impositivoDe = useMemo(() => {
+    const m = new Map<FilaPadron, InfoItem | null>();
+    for (const r of rows) m.set(r, estadoImpositivoDelContrato(r as unknown as Contract, contratoFrames, allEstados) || null);
     return m;
   }, [rows, contratoFrames, allEstados]);
+  const situacionDe = useMemo(() => {
+    const m = new Map<FilaPadron, SituacionArca>();
+    for (const r of rows) m.set(r, situacionArca(r, impositivoDe.get(r)?.data?.tipoImpositivo, { pendiente: !!r.solicitudPendienteId }));
+    return m;
+  }, [rows, impositivoDe]);
+  // Los estados impositivos del ABM, en su orden (09/11/2026, pedido del usuario: filtrar por AFIP o Servicios).
+  const impositivoOptions = useMemo(() => allEstados.filter((e) => e.data?.esImpositivo).map((e) => ({ value: e.name, label: e.name, nombre: e.name })), [allEstados]);
 
   // Qué lleva cada contrato según su tipo, con el criterio de Generar Documentos: «No lleva» no es «Sin generar».
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
@@ -4202,11 +4211,12 @@ export const ContractBulkContratadosTab: React.FC<{
       // Una solicitud todavía no es un contrato: ni vigente ni no vigente.
       if (filterVigencia && r.solicitudPendienteId) return false;
       if (filterArca && situacionDe.get(r)?.grupo !== filterArca) return false;
+      if (filterImpositivo.length > 0 && !filterImpositivo.includes(impositivoDe.get(r)?.name || '')) return false;
       if (!pasaFiltrosDeContrato(r, { usuarios: '', vigencia: filterVigencia, novedades: '', tipoContrato: filterTipoContrato, estadoContrato: filterEstado, reemplazo: '' })) return false;
       if (q && ![r.userName, r.userEmail, r.clientName, r.projectName, r.nombre_contrato, r.cuit].some((v) => String(v || '').toLowerCase().includes(q))) return false;
       return true;
     });
-  }, [rows, search, filterVigencia, filterTipoContrato, filterEstado, filterArca, situacionDe]);
+  }, [rows, search, filterVigencia, filterTipoContrato, filterEstado, filterArca, situacionDe, filterImpositivo, impositivoDe]);
 
   const clientOptions = useMemo(() => {
     const m = new Map<string, string>();
@@ -4268,6 +4278,7 @@ export const ContractBulkContratadosTab: React.FC<{
             multiSelectFilters={[
               { label: 'Tipo de contrato', values: filterTipoContrato, onChange: setFilterTipoContrato, placeholder: 'Todos los tipos', options: tipoContratoOptions },
               { label: 'Estado', values: filterEstado, onChange: setFilterEstado, placeholder: 'Todos los estados', options: estadoOptions, renderOption: renderOpcionEstado },
+              { label: 'Estado impositivo', values: filterImpositivo, onChange: setFilterImpositivo, placeholder: 'Todos (AFIP y Servicios)', options: impositivoOptions, renderOption: renderOpcionEstado },
             ]}
             selectFilters={[
               { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },
