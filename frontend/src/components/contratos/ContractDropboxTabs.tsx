@@ -12,6 +12,7 @@ import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { BotonOrden, useOrdenTabla } from "../ui/OrdenTabla";
 import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
+import { CLASE_BARRA_FIJA, useBarraFija } from "../ui/BarraFija";
 
 /** Dropbox Sign (ex HelloSign): donde se firman los contratos que se mandan desde acá. */
 const DROPBOX_SIGN_URL = "https://www.dropbox.com/sign";
@@ -374,8 +375,10 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
     else sweetAlert.warning("Eliminación parcial", `Se eliminaron ${borrados.length} y fallaron ${fallidos.length} (quedan tildados para reintentar):\n${fallidos.slice(0, 8).join("\n")}${fallidos.length > 8 ? "\n…" : ""}`);
   };
 
+  // Buscador y filtros fijos debajo del encabezado; la tabla pega el suyo debajo de ellos (ver `BarraFija`).
+  const barra = useBarraFija();
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" style={barra.raiz}>
       {tipo === "para_firmar" && (
         <>
           <PanelBotFirma bot={bot} enCola={enColaTotal} />
@@ -397,7 +400,7 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
         </Modal>
       )}
 
-      <div className="flex items-center gap-3">
+      <div ref={barra.ref} className={`flex items-center gap-3 ${CLASE_BARRA_FIJA}`}>
         <input
           type="text"
           value={filtro}

@@ -37,6 +37,7 @@ import { MOBILE_ACTIVITY_LOGS as PERMISO_NOVEDADES_MOBILE } from '../utils/permi
 import { arcaRelacionesAPI, EmpresaConCuit, RelacionResumida } from '../api/arcaRelaciones';
 import { CeldaContratosArca } from '../components/arca/CeldaContratosArca';
 import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
+import { CLASE_BARRA_FIJA, useBarraFija } from '../components/ui/BarraFija';
 import { EditarContratoEnModalContext, VerContratoEnModalContext, esClicDeLaFila, type ArcaDelContrato, type ContratoAEditar } from '../components/contratos/editarContratoEnModal';
 import { ContratoDetalleModal } from '../components/contratos/ContratoDetalleModal';
 import { ProjectTeamPage } from './ProjectTeamPage';
@@ -241,6 +242,7 @@ export const ContractsPage: React.FC = () => {
   const [filterProjectId, setFilterProjectId] = useState(initialProjectId);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const barra = useBarraFija();
   const [viewMode, setViewMode] = useState<'table' | 'cards'>(() => {
     return (localStorage.getItem('contractsViewMode') as 'table' | 'cards') || 'table';
   });
@@ -560,96 +562,7 @@ export const ContractsPage: React.FC = () => {
             </button>
           </div>
 
-          {mainTab === 'contracts' ? (
-            <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
-              <div className="flex-1 w-full">
-                <SearchAndFilters
-                  searchTerm={searchTerm}
-                  onSearchChange={setSearchTerm}
-                  searchPlaceholder="Buscar por usuario, proyecto o contrato..."
-                  radioFilters={[
-                    {
-                      label: 'Estado de usuarios',
-                      value: filterUserStatus,
-                      onChange: setFilterUserStatus,
-                      options: [
-                        { label: 'Usuarios Activos', value: 'active' },
-                        { label: 'Usuarios Inactivos', value: 'inactive' },
-                        { label: 'Todos los usuarios', value: '' },
-                      ],
-                    },
-                    {
-                      label: 'Contratos',
-                      value: filterVigencia,
-                      onChange: setFilterVigencia,
-                      options: [
-                        { label: 'Vigentes', value: 'vigente' },
-                        { label: 'No Vigentes', value: 'novigente' },
-                        { label: 'Todos los contratos', value: '' },
-                      ],
-                    },
-                  ]}
-                  selectFilters={[
-                    {
-                      label: 'Cliente',
-                      value: filterClientId,
-                      onChange: setFilterClientId,
-                      placeholder: 'Todos los clientes',
-                      options: clientOptions.map((c) => ({ value: c.id, label: c.name })),
-                    },
-                    {
-                      label: 'Proyecto',
-                      value: filterProjectId,
-                      onChange: setFilterProjectId,
-                      placeholder: 'Todos los proyectos',
-                      options: projectOptions.map((p) => ({ value: p.id, label: p.name })),
-                    },
-                    {
-                      label: 'Novedades',
-                      value: filterRolMobile,
-                      onChange: setFilterRolMobile,
-                      placeholder: 'Todos',
-                      options: MOBILE_ROLE_OPTIONS,
-                    },
-                    {
-                      label: 'Tipo de contrato',
-                      value: filterTipoContrato,
-                      onChange: setFilterTipoContrato,
-                      placeholder: 'Todos los tipos',
-                      options: contratoFrames.filter(plantillaActivaParaFiltrar).map((cf) => ({ value: cf.name, label: cf.name })),
-                    },
-                    {
-                      label: 'Estado de contrato',
-                      value: filterEstadoContrato,
-                      onChange: setFilterEstadoContrato,
-                      placeholder: 'Todos los estados',
-                      options: estadoContratoOptions,
-                      renderOption: (opt) => <EstadoBadge name={opt.label} />,
-                    },
-                    {
-                      label: 'Reemplazo',
-                      value: filterReemplazo,
-                      onChange: setFilterReemplazo,
-                      placeholder: 'Con y sin reemplazo',
-                      options: [
-                        { value: 'con', label: 'Con reemplazo' },
-                        { value: 'sin', label: 'Sin reemplazo' },
-                      ],
-                    },
-                  ]}
-                />
-              </div>
-
-              <div className="items-center gap-2 shrink-0 hidden lg:flex">
-                <button onClick={() => toggleViewMode('cards')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tarjetas">
-                  <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
-                </button>
-                <button onClick={() => toggleViewMode('table')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'table' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tabla">
-                  <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          ) : (
+          {mainTab === 'contracts' ? null : (
             <div className="space-y-3">
               {/* Paso 1: las tres variantes del trámite impositivo son EXCLUYENTES (el contrato está
                   en una sola). Del 2 al 5 son etapas consecutivas. Por eso el stepper de dos niveles:
@@ -722,7 +635,98 @@ export const ContractsPage: React.FC = () => {
           <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} tipo={mgmtTab === 'alta_afip' ? 'alta_temprana_afip' : mgmtTab === 'sin_cuit' ? 'sin_cuit' : 'constancia_cuit'} onCounts={setMgmtCounts} />
         )
       ) : (
-        <>
+        <div style={barra.raiz}>
+          {/* Buscador y filtros fijos debajo del encabezado (09/11/2026); la tabla pega el suyo debajo (ver `BarraFija`). */}
+          <div ref={barra.ref} className={`mb-4 ${CLASE_BARRA_FIJA}`}>
+                <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
+                  <div className="flex-1 w-full">
+                    <SearchAndFilters
+                      searchTerm={searchTerm}
+                      onSearchChange={setSearchTerm}
+                      searchPlaceholder="Buscar por usuario, proyecto o contrato..."
+                      radioFilters={[
+                        {
+                          label: 'Estado de usuarios',
+                          value: filterUserStatus,
+                          onChange: setFilterUserStatus,
+                          options: [
+                            { label: 'Usuarios Activos', value: 'active' },
+                            { label: 'Usuarios Inactivos', value: 'inactive' },
+                            { label: 'Todos los usuarios', value: '' },
+                          ],
+                        },
+                        {
+                          label: 'Contratos',
+                          value: filterVigencia,
+                          onChange: setFilterVigencia,
+                          options: [
+                            { label: 'Vigentes', value: 'vigente' },
+                            { label: 'No Vigentes', value: 'novigente' },
+                            { label: 'Todos los contratos', value: '' },
+                          ],
+                        },
+                      ]}
+                      selectFilters={[
+                        {
+                          label: 'Cliente',
+                          value: filterClientId,
+                          onChange: setFilterClientId,
+                          placeholder: 'Todos los clientes',
+                          options: clientOptions.map((c) => ({ value: c.id, label: c.name })),
+                        },
+                        {
+                          label: 'Proyecto',
+                          value: filterProjectId,
+                          onChange: setFilterProjectId,
+                          placeholder: 'Todos los proyectos',
+                          options: projectOptions.map((p) => ({ value: p.id, label: p.name })),
+                        },
+                        {
+                          label: 'Novedades',
+                          value: filterRolMobile,
+                          onChange: setFilterRolMobile,
+                          placeholder: 'Todos',
+                          options: MOBILE_ROLE_OPTIONS,
+                        },
+                        {
+                          label: 'Tipo de contrato',
+                          value: filterTipoContrato,
+                          onChange: setFilterTipoContrato,
+                          placeholder: 'Todos los tipos',
+                          options: contratoFrames.filter(plantillaActivaParaFiltrar).map((cf) => ({ value: cf.name, label: cf.name })),
+                        },
+                        {
+                          label: 'Estado de contrato',
+                          value: filterEstadoContrato,
+                          onChange: setFilterEstadoContrato,
+                          placeholder: 'Todos los estados',
+                          options: estadoContratoOptions,
+                          renderOption: (opt) => <EstadoBadge name={opt.label} />,
+                        },
+                        {
+                          label: 'Reemplazo',
+                          value: filterReemplazo,
+                          onChange: setFilterReemplazo,
+                          placeholder: 'Con y sin reemplazo',
+                          options: [
+                            { value: 'con', label: 'Con reemplazo' },
+                            { value: 'sin', label: 'Sin reemplazo' },
+                          ],
+                        },
+                      ]}
+                    />
+                  </div>
+
+                  <div className="items-center gap-2 shrink-0 hidden lg:flex">
+                    <button onClick={() => toggleViewMode('cards')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tarjetas">
+                      <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => toggleViewMode('table')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'table' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tabla">
+                      <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+          </div>
           {initialLoading || isFetching || !hasLoaded ? (
             <div className="flex items-center justify-center py-20">
               <LoadingSpinner message={initialLoading ? 'Cargando contratos...' : 'Actualizando contratos...'} />
@@ -1059,7 +1063,7 @@ export const ContractsPage: React.FC = () => {
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
 
       {/* Montado sólo abierto: trae sus catálogos al abrirse, no con cada carga de la página. */}

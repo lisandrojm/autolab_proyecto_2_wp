@@ -152,7 +152,12 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
   React.useEffect(() => {
     const el = headerRef.current;
     if (!el) return;
-    const publicar = () => document.documentElement.style.setProperty('--wp-sticky-top', `${64 + el.getBoundingClientRect().height}px`);
+    // También como `-pagina`: una barra fija de la pantalla redefine `--wp-sticky-top` para lo de abajo (ver `BarraFija`).
+    const publicar = () => {
+      const alto = `${64 + el.getBoundingClientRect().height}px`;
+      document.documentElement.style.setProperty('--wp-sticky-top', alto);
+      document.documentElement.style.setProperty('--wp-sticky-top-pagina', alto);
+    };
     publicar();
     const observer = new ResizeObserver(publicar);
     observer.observe(el);
@@ -160,6 +165,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({ title, subtitle, badge, 
       observer.disconnect();
       // Se limpia al desmontar: una pantalla sin PageLayout no tiene por qué heredar este alto.
       document.documentElement.style.removeProperty('--wp-sticky-top');
+      document.documentElement.style.removeProperty('--wp-sticky-top-pagina');
     };
   }, []);
   const navigate = useNavigate();

@@ -25,6 +25,7 @@ import { SinCuitValidacionModal, TIPO_DOC_SIN_CUIT_LABEL } from './SinCuitValida
 import { claveEstado, EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../EstadoSelect';
 import { FechaHoraCelda } from '../ui/FechaHoraCelda';
 import { BadgeCentroCosto } from '../ui/BadgeCentroCosto';
+import { CLASE_BARRA_FIJA, useBarraFija } from '../ui/BarraFija';
 import { CeldaArca, CeldaDocumentosGenerados, type DocumentosQueLleva } from './ArcaDelContrato';
 import { OPCIONES_FILTRO_ARCA, ORDEN_GRUPO_ARCA, situacionArca, type FilaConArca, type SituacionArca } from './situacionArca';
 import { isContractVigente, formatDate, estadoImpositivoDelContrato, findTemplate, templateHasContent, EmpresaOption } from '../team/ContractCard';
@@ -1841,10 +1842,12 @@ export const ContractBulkAfipTab: React.FC<{
     });
   };
 
+  // Buscador y filtros fijos debajo del encabezado; la tabla pega el suyo debajo de ellos (ver `BarraFija`).
+  const barra = useBarraFija();
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" style={barra.raiz}>
       {/* Buscador + filtro avanzado (mismo que Contratos) + vista + acciones */}
-      <div className="flex flex-col lg:flex-row gap-3 lg:items-start justify-between">
+      <div ref={barra.ref} className={`flex flex-col lg:flex-row gap-3 lg:items-start justify-between ${CLASE_BARRA_FIJA}`}>
         <div className="flex-1 w-full">
           <SearchAndFilters
             searchTerm={search}
@@ -3842,9 +3845,11 @@ export const ContractBulkFirmaTab: React.FC<{
     }
   };
 
+  // Buscador y filtros fijos debajo del encabezado; la tabla pega el suyo debajo de ellos (ver `BarraFija`).
+  const barra = useBarraFija();
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col lg:flex-row gap-3 lg:items-start justify-between">
+    <div className="space-y-4" style={barra.raiz}>
+      <div ref={barra.ref} className={`flex flex-col lg:flex-row gap-3 lg:items-start justify-between ${CLASE_BARRA_FIJA}`}>
         <div className="flex-1 w-full">
           <SearchAndFilters
             searchTerm={search}
@@ -4260,9 +4265,11 @@ export const ContractBulkContratadosTab: React.FC<{
   const rowKey = (r: ContractOverviewRow) => `${r._id}-${r.contractIndex}`;
   const th = 'px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900';
 
+  // Buscador y filtros fijos debajo del encabezado; la tabla pega el suyo debajo de ellos (ver `BarraFija`).
+  const barra = useBarraFija();
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col lg:flex-row gap-3 lg:items-start justify-between">
+    <div className="space-y-4" style={barra.raiz}>
+      <div ref={barra.ref} className={`flex flex-col lg:flex-row gap-3 lg:items-start justify-between ${CLASE_BARRA_FIJA}`}>
         <div className="flex-1 w-full">
           <SearchAndFilters
             searchTerm={search}
