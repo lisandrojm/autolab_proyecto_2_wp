@@ -137,6 +137,18 @@ const PASOS_GESTION: { numero: number; label: string; carpeta?: string; descripc
 /** Clases de un botón de pestaña (mismo estilo que el resto de los tabs de la app). */
 const tabBtnClass = (active: boolean): string => `px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${active ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`;
 
+/** La pestaña, el paso y la variante elegidos, como chips de filtro separados por «›». */
+const UbicacionEnContratos: React.FC<{ partes: string[] }> = ({ partes }) => (
+  <span className="flex items-center gap-1.5 flex-wrap min-w-0 ml-1">
+    {partes.map((parte, i) => (
+      <React.Fragment key={parte}>
+        {i > 0 && <FontAwesomeIcon icon={faChevronRight} className="h-2.5 w-2.5 text-gray-400 shrink-0" />}
+        <span className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium border whitespace-nowrap bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700">{parte}</span>
+      </React.Fragment>
+    ))}
+  </span>
+);
+
 export const ContractsPage: React.FC = () => {
   const navigate = useNavigate();
   const { selectedEmpresa } = useEmpresaContextStore();
@@ -292,6 +304,12 @@ export const ContractsPage: React.FC = () => {
   const [mgmtCounts, setMgmtCounts] = useState<{ alta: number; cuit: number; firma: number; sinCuit: number }>({ alta: 0, cuit: 0, firma: 0, sinCuit: 0 });
   // Explicación de qué es cada pestaña de "Gestión de Contratos" (modal informativo general).
   const [mgmtTabsInfoOpen, setMgmtTabsInfoOpen] = useState(false);
+  const ubicacion = useMemo(() => {
+    if (mainTab === 'contracts') return ['Contratos'];
+    const paso = PASOS_GESTION.find((x) => x.tabs.includes(mgmtTab));
+    const variante = PASO_1_TABS.includes(mgmtTab) ? PASO_1_OPCIONES.find((o) => o.tab === mgmtTab)?.label : undefined;
+    return ['Gestión de Contratos', ...(paso ? [`${paso.numero} · ${paso.label}`] : []), ...(variante ? [variante] : [])];
+  }, [mainTab, mgmtTab]);
   // Explicación puntual de UNA pestaña de "Gestión de Contratos" (si vive en Dropbox, si interviene
   // Dropbox Sign, etc.), aparte del info general de arriba.
   const [subTabInfoOpen, setSubTabInfoOpen] = useState<typeof mgmtTab | null>(null);
@@ -533,6 +551,8 @@ export const ContractsPage: React.FC = () => {
       // LAS ALTAS QUE FALTAN (01/11/2026, pedido del usuario): Alta temprana de ARCA + Constancia de CUIT,
       // con los filtros que se están mirando. El menú muestra el mismo número para todo el tenant.
       itemCount={mgmtCounts.alta + mgmtCounts.cuit}
+      // DÓNDE SE ESTÁ PARADO, al lado del título (09/11/2026, pedido del usuario): pestaña › paso › variante, como chips de filtro.
+      titleBadge={<UbicacionEnContratos partes={ubicacion} />}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
