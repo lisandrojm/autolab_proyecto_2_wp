@@ -23,6 +23,8 @@ export interface SituacionArca {
   clase: string;
   /** Cuándo se presentó el alta ("" si no se sabe). */
   fecha: string;
+  /** Una línea debajo del badge (la solicitud sin aprobar dice qué le falta todavía). */
+  detalle?: string;
 }
 
 const VERDE = "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
@@ -37,7 +39,14 @@ const GRIS = "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
  */
 export function situacionArca(r: FilaConArca, tipo: string | undefined, o: { pendiente?: boolean } = {}): SituacionArca {
   const nada = { fecha: "" };
-  if (o.pendiente) return { ...nada, grupo: "no_corresponde", texto: "", titulo: "Solicitud sin aprobar: todavía no hay contrato", clase: "" };
+  /*
+    LA SOLICITUD SIN APROBAR LO DICE (09/11/2026, pedido del usuario): todavía no hay contrato, así que no se
+    pudo dar el alta ni validar nada. No cuenta ni como alta ni como falta para el filtro.
+  */
+  if (o.pendiente) {
+    const detalle = tipo === "alta_temprana_afip" ? "Alta en ARCA: no dada aún" : tipo === "constancia_cuit" ? "CUIT: sin validar aún" : "";
+    return { ...nada, grupo: "no_corresponde", texto: "Es solicitud", titulo: "Solicitud sin aprobar: todavía no hay contrato", clase: GRIS, detalle };
+  }
   if (r.sinCuit) return { ...nada, grupo: "no_corresponde", texto: "Sin CUIT", titulo: "La persona no tiene CUIT/CUIL argentino: no va por ARCA", clase: GRIS };
   if (tipo === "constancia_cuit") {
     if (r.constanciaAfipDropboxSubidaAt) return { ...nada, grupo: "servicios", texto: "CUIT validado", titulo: "Servicios no lleva alta en ARCA. El CUIT figura activo en el Padrón y el JSON quedó archivado en Dropbox.", clase: VERDE };

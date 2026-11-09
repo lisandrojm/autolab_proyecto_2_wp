@@ -46,7 +46,8 @@ describe("situacionArca: Servicios, Sin CUIT y solicitudes", () => {
   });
   it("una solicitud sin aprobar no cuenta ni como alta ni como falta", () => {
     const s = situacionArca(fila({}), AFIP, { pendiente: true });
-    assert.deepEqual([s.grupo, s.texto], ["no_corresponde", ""]);
+    assert.deepEqual([s.grupo, s.texto, s.detalle], ["no_corresponde", "Es solicitud", "Alta en ARCA: no dada aún"]);
+    assert.equal(situacionArca(fila({}), "constancia_cuit", { pendiente: true }).detalle, "CUIT: sin validar aún");
   });
   it("un tipo sin trámite impositivo no aparece", () => {
     assert.equal(situacionArca(fila({}), undefined).grupo, "no_corresponde");

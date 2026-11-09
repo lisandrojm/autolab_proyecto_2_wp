@@ -4190,7 +4190,6 @@ export const ContractBulkContratadosTab: React.FC<{
     const releasesQueFirman = activeReleases.filter(releaseRequiereFirma);
     const m = new Map<FilaPadron, DocumentosQueLleva>();
     for (const r of rows) {
-      if (r.solicitudPendienteId) continue;
       const template = findTemplate(r as unknown as Contract, contratoFrames);
       m.set(r, { contrato: contratoRequiereFirma(template), release: releasesDeLaFila(template, releasesQueFirman, r, tiposContrato, activeReleases).length > 0, firmaAlta: contratoRequiereFirmaAlta(template) });
     }
@@ -4368,7 +4367,7 @@ export const ContractBulkContratadosTab: React.FC<{
                       </div>
                     </td>
                     <td className="px-4 py-3">{situacionDe.get(r) && <CeldaArca r={r} s={situacionDe.get(r)!} lleva={llevaDe.get(r)} />}</td>
-                    <td className="px-4 py-3">{pendiente ? <span className="text-xs text-gray-300 dark:text-gray-600">—</span> : <CeldaDocumentosGenerados r={r} lleva={llevaDe.get(r)} />}</td>
+                    <td className="px-4 py-3"><CeldaDocumentosGenerados r={r} lleva={llevaDe.get(r)} esSolicitud={pendiente} /></td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>
                     {/* El centro de costo ADELANTE del nombre, con el badge violeta, como en Trámite impositivo (08/11/2026). */}

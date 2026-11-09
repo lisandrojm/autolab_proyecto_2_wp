@@ -47,6 +47,7 @@ export const CeldaArca: React.FC<{ r: FilaConArca; s: SituacionArca; lleva?: Doc
         {s.texto}
       </span>
       {s.fecha && <span className="text-[10px] text-gray-400">el {fechaCorta(s.fecha)}</span>}
+      {s.detalle && <span className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">{s.detalle}</span>}
       {/* Altas que no van a firma: su constancia se archiva y no se espera «Firmada». */}
       {lleva && !lleva.firmaAlta && (s.grupo === "con_alta" || s.grupo === "sin_alta" || s.grupo === "sin_confirmar") && (
         <span title="El tipo de contrato no manda el alta a firma: la constancia se archiva en «Alta temprana de Arca / No firmar»." className="inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold whitespace-nowrap bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600">
@@ -75,7 +76,7 @@ export const CeldaArca: React.FC<{ r: FilaConArca; s: SituacionArca; lleva?: Doc
  * La celda «Documentos»: el contrato y los releases generados. Lo que falta dice por qué: «No lleva»
  * (el tipo no lo genera) en gris, o «Sin generar» (lo lleva y todavía no está) en ámbar.
  */
-export const CeldaDocumentosGenerados: React.FC<{ r: ContractOverviewRow; lleva?: DocumentosQueLleva }> = ({ r, lleva }) => {
+export const CeldaDocumentosGenerados: React.FC<{ r: ContractOverviewRow; lleva?: DocumentosQueLleva; esSolicitud?: boolean }> = ({ r, lleva, esSolicitud }) => {
   const releases = (r.firmaReleases || []).filter((x) => x.url);
   const link = (url: string, nombre: string, texto: string) => (
     <a key={url} href={getImageUrl(url)} target="_blank" rel="noopener noreferrer" title={nombre || texto} className="inline-flex items-center gap-1 text-[11px] text-gray-700 dark:text-gray-200 hover:underline whitespace-nowrap">
@@ -83,6 +84,19 @@ export const CeldaDocumentosGenerados: React.FC<{ r: ContractOverviewRow; lleva?
       {texto}
     </a>
   );
+  /* Una solicitud sin aprobar todavía no tiene nada generado: se dice, sin el ámbar de lo que falta hacer. */
+  if (esSolicitud) {
+    const linea = (doc: "contrato" | "release") => (
+      <span className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">{lleva && !lleva[doc] ? `No lleva ${doc}` : `${doc === "contrato" ? "Contrato" : "Release"} no generado`}</span>
+    );
+    return (
+      <div className="flex flex-col items-start gap-1">
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit whitespace-nowrap bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">Es solicitud</span>
+        {linea("contrato")}
+        {linea("release")}
+      </div>
+    );
+  }
   const falta = (doc: "contrato" | "release") =>
     lleva && !lleva[doc] ? (
       <span className="text-[11px] text-gray-400 dark:text-gray-500" title={`Este tipo de contrato no genera ${doc === "contrato" ? "el contrato" : "release"}`}>
