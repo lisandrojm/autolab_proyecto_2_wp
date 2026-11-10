@@ -85,6 +85,12 @@ interface SearchAndFiltersProps {
 
   className?: string;
   extraActions?: React.ReactNode;
+  /**
+   * Un control propio de la pantalla que va PRIMERO en la fila de los filtros aplicados (el «Período
+   * Anual» de Vacaciones): es un filtro más, pero siempre tiene valor, así que no entra en el modal.
+   * Con esto la fila se dibuja aunque no haya ningún filtro aplicado.
+   */
+  antesDeLosFiltros?: React.ReactNode;
 }
 
 const FilterSelect: React.FC<FilterProps> = ({ value, onChange, options, placeholder }) => {
@@ -169,7 +175,7 @@ const RenderedSelect: React.FC<SelectFilter> = ({ value, onChange, options, plac
   );
 };
 
-export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, onSearchChange, searchPlaceholder = "Buscar...", filters = [], dateFilter, selectFilters = [], multiSelectFilters = [], switchFilters = [], radioFilters = [], className = "", extraActions }) => {
+export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, onSearchChange, searchPlaceholder = "Buscar...", filters = [], dateFilter, selectFilters = [], multiSelectFilters = [], switchFilters = [], radioFilters = [], className = "", extraActions, antesDeLosFiltros }) => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   /** El filtro múltiple que tiene abierto su modal de casillas, y lo que se va marcando hasta «Aplicar». */
   const [eligiendo, setEligiendo] = useState<{ idx: number; marcados: string[]; busqueda?: string } | null>(null);
@@ -292,8 +298,9 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
         </div>
 
         {/* Active Filter Badges */}
-        {shouldShowBadges && (
+        {(shouldShowBadges || !!antesDeLosFiltros) && (
           <div className="flex flex-wrap items-center gap-2">
+            {antesDeLosFiltros}
             {hasDateFilters && (
               <span
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium

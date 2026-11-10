@@ -17,6 +17,7 @@ import { projectsAPI, Project } from "../../api/projects";
 import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
+import { CLASE_BARRA_FIJA, useBarraFija } from '../ui/BarraFija';
 
 /**
  * Fecha de un contrato en DD/MM/YYYY. Pasa por `fechaISO` y no por el `formatDate` de más abajo porque
@@ -369,6 +370,8 @@ export const UserVacationManagementTab: React.FC = () => {
    * editar en la página 1, saltar a la 7, editar ahí y guardar las dos cosas de una.
    */
   const [pagina, setPagina] = useState(1);
+  // El buscador y los filtros quedan fijos debajo del encabezado de Vacaciones; la tabla pega el suyo debajo (ver `BarraFija`).
+  const barra = useBarraFija();
 
   useEffect(() => {
     loadFilters();
@@ -671,39 +674,53 @@ export const UserVacationManagementTab: React.FC = () => {
   const balancesDeLaPagina = ordenAcumulado.ordenados.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
   const filasEmpresaDeLaPagina = ordenEmpresa.ordenados.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
 
+  /*
+    EL PERÍODO VA CON LOS FILTROS (10/11/2026): es lo primero de la fila donde se ven los aplicados, y
+    esa fila queda fija con el buscador. Arriba a la derecha del título se perdía al scrollear, y para
+    cambiar de año había que volver al principio de la lista.
+  */
+  const selectorDePeriodo = (
+    <label className="inline-flex items-center gap-2 px-3 py-1 rounded text-sm font-medium border bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300">
+      <FontAwesomeIcon icon={faCalendarAlt} className="text-blue-500 dark:text-blue-400" />
+      Período Anual:
+      <select
+        value={selectedYear}
+        onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+        className="bg-transparent border-none py-0.5 pl-0 text-sm font-bold text-blue-600 dark:text-blue-400 focus:ring-0 focus:outline-none"
+      >
+        {yearsOptions.map((y) => (
+          <option key={y} value={y} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+            {y}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+
+  /*
+    SIN TARJETA NI «VENTANA» (10/11/2026, pedido del usuario). La lista iba dentro de una tarjeta con
+    la barra de «Guardar Cambios» pegada abajo todo el tiempo: entre el encabezado y esa barra quedaba
+    una franja de tres filas, y se leía como una ventana con alto propio aunque la que scrolleaba era
+    la página. Ahora va suelta sobre la página, como las Solicitudes, de a 50 con el paginador; y la
+    barra de Guardar sólo se pega abajo cuando hay cambios sin guardar.
+  */
   return (
-    <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+    <div style={barra.raiz}>
+      <div className="flex items-center gap-4 mb-2">
         <div className="flex items-center gap-2">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Gestión de Vacaciones por Usuario ({filteredBalances.length})</h3>
           <button type="button" onClick={() => setOpenInfo(true)} title="Cómo se usa esta tabla" className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300">
             <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
           </button>
         </div>
-
-        {/* Year Dropdown */}
-        <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 p-2 rounded border border-gray-200 dark:border-gray-700">
-          <FontAwesomeIcon icon={faCalendarAlt} className="text-blue-500 dark:text-blue-400" />
-          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Período Anual:</span>
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            className="bg-transparent border-none text-sm font-bold text-blue-600 dark:text-blue-400 focus:ring-0 focus:outline-none"
-          >
-            {yearsOptions.map((y) => (
-              <option key={y} value={y} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                {y}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
 
       {/* Los filtros van en el modal de «Filtros», el mismo control que en Usuarios y Pedidos: eran
           cinco selects ocupando una fila entera, y lo aplicado no se veía al scrollear la tabla.
           Ahora queda como badges con su X. */}
-      <div className="mb-6">
+      <div ref={barra.ref} className={`${CLASE_BARRA_FIJA} mb-4`}>
         <SearchAndFilters
+          antesDeLosFiltros={selectorDePeriodo}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           searchPlaceholder="Buscar usuario..."
@@ -949,7 +966,7 @@ export const UserVacationManagementTab: React.FC = () => {
       <Paginador total={totalItems} pagina={paginaActual} onCambiar={setPagina} entidadPlural={esPorEmpresa ? 'filas' : 'personas'} />
 
       {vista === 'acumulado' && (
-      <div className="flex justify-end gap-3 py-4 border-t border-gray-100 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800">
+      <div className={`flex justify-end gap-3 py-4 mt-4 border-t border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 ${hasAnyChanges ? 'sticky bottom-0 z-20' : ''}`}>
         <button
           onClick={handleSaveAll}
           disabled={submitting || !hasAnyChanges}
