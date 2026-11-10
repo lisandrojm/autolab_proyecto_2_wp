@@ -1,252 +1,77 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { usersAPI, ContractOverviewRow, Contract } from '../api/users';
+import { ContractOverviewRow } from '../api/users';
 import { projectsAPI } from '../api/projects';
-import { clientsAPI, Client } from '../api/clients';
-import { contratoFrameAPI, ContratoFrameItem, plantillaActivaParaFiltrar } from '../api/contratosFrame';
-import { areasAPI, Area } from '../api/areas';
-import { shiftsAPI, Shift } from '../api/shifts';
+import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
 import { infoAPI, InfoItem } from '../api/info';
-import { EstadoBadge, EstadoSecundarioBadge, TramiteImpositivoBadge, estadoLabel } from '../components/EstadoSelect';
 import { MemberContractsManagerModal } from '../components/team/MemberContractsManagerModal';
-import { estadoImpositivoDelContrato } from '../components/team/ContractCard';
-import { ContractDocsColumns, ContractDocsHeaders, downloadContractRow, downloadReleaseRow, uploadAltaRow } from '../components/contratos/ContractRowDocs';
-import { fmtCuit, cuitDisplay } from '../components/contratos/ConstanciaBulk';
 import { releasesAPI, Release } from '../api/release';
-import { isContractVigente, formatDate } from '../components/team/EmployeeContractsModal';
-import { cachedFetch } from '../utils/refCache';
 import { PageLayout } from '../components/ui/PageLayout';
-import { SearchAndFilters } from '../components/ui/SearchAndFilters';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { EmptyState } from '../components/ui/EmptyState';
-import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
-import { faFileContract, faBriefcase, faHourglassHalf, faTable, faGrip, faChevronLeft, faChevronRight, faClock, faEdit, faTrash, faUser, faIdCard, faBuilding, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
+import { faFileContract, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { sweetAlert } from '../utils/sweetAlert';
-
-import { getHelp, hasHelp } from '../data/help/helpContent';
-import { ContractBulkAfipTab, ContractBulkContratadosTab, ContractBulkFirmaTab, contarContratados } from '../components/contratos/ContractBulkTabs';
-import { BotonOrden, useOrden } from '../components/ui/OrdenTabla';
-import { ContractDropboxTab, fetchDropboxCounts, InstructivoParaFirmar } from '../components/contratos/ContractDropboxTabs';
+import { ContractBulkAfipTab, ContractBulkContratadosTab, ContractBulkFirmaTab } from '../components/contratos/ContractBulkTabs';
+import { ContractDropboxTab, InstructivoParaFirmar } from '../components/contratos/ContractDropboxTabs';
 import { AlcanceBanner } from '../components/context/AlcanceBanner';
 import { useEmpresaContextStore } from '../stores/empresaContextStore';
 import { firmaDigitalAPI, FirmaDigitalConfig } from '../api/firmaDigital';
-import { MOBILE_ACTIVITY_LOGS as PERMISO_NOVEDADES_MOBILE } from '../utils/permisosMobile';
-import { arcaRelacionesAPI, EmpresaConCuit, RelacionResumida } from '../api/arcaRelaciones';
-import { CeldaContratosArca } from '../components/arca/CeldaContratosArca';
-import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
-import { CLASE_BARRA_FIJA, useBarraFija } from '../components/ui/BarraFija';
-import { EditarContratoEnModalContext, VerContratoEnModalContext, esClicDeLaFila, type ArcaDelContrato, type ContratoAEditar } from '../components/contratos/editarContratoEnModal';
+import { EditarContratoEnModalContext, VerContratoEnModalContext, type ArcaDelContrato, type ContratoAEditar } from '../components/contratos/editarContratoEnModal';
 import { ContratoDetalleModal } from '../components/contratos/ContratoDetalleModal';
 import { ProjectTeamPage } from './ProjectTeamPage';
-import { SolicitudesPage } from './SolicitudesPage';
-import { useAuthStore } from '../stores/authStore';
-import { createNavbarEventListener } from '../utils/navbarEvents';
 import { invalidateRefCache } from '../utils/refCache';
-import { bandejaPorClave, varianteDeQuery, type Bandeja, type ClaveBandeja, type VarianteTramite } from '../config/bandejasContratacion';
+import { bandejaPorClave, contadorDeBandeja, varianteDeQuery, VARIANTES_TRAMITE, type CarpetaFirma, type ClaveBandeja, type VarianteTramite } from '../config/bandejasContratacion';
 import { PasoDelFlujo } from '../components/contratos/PasoDelFlujo';
 import { useContadoresContratacionStore } from '../stores/contadoresContratacionStore';
 
 /*
-  Filtro por lo que la persona PUEDE HACER en la app, no por cómo se llama su rol.
+  LA PANTALLA DE UNA BANDEJA DE CONTRATACIÓN (11/11/2026, pedido del usuario).
 
-  Antes eran los dos roles fijos, Mobile-Colaborador y Mobile-Coordinador, y el filtro los buscaba por
-  nombre: si alguien renombraba el rol, el filtro dejaba de encontrar a nadie sin decir por qué. Lo
-  que se quiere separar es quién carga las novedades del equipo y quién no, y eso hoy es un permiso.
-  Mismas opciones que el filtro "Rol/es" del tab Equipo de Gestionar Equipo.
+  Hasta acá esto era /admin/contracts con dos pestañas de página —«Gestión de Contratos» y
+  «Contratos»— y, adentro de la primera, un stepper con los pasos del circuito. Cada paso es ahora una
+  página con URL propia (`/admin/contratacion/…`) que se abre desde el menú lateral, donde está su
+  número: ver `config/bandejasContratacion.ts`. Solicitudes, el paso 1, tiene su pantalla
+  (`SolicitudesPage`).
+
+  Lo que cada bandeja dibuja es el mismo componente que dibujaba su pestaña, sin tocar: acá queda lo
+  que comparten —los catálogos, el resumen y la edición del contrato encima de la tabla— y el
+  encabezado. El viejo listado «Contratos» se fusionó con el padrón (la bandeja «Contratos»).
 */
-const MOBILE_ROLE_OPTIONS = [
-  { value: 'con', label: 'Carga novedades' },
-  { value: 'sin', label: 'No carga novedades' },
-];
 
-const PAGE_SIZE = 25;
-
-/** Explicación puntual de cada pestaña de "Gestión de Contratos": si vive en la base o en una
- *  carpeta de Dropbox, y si interviene Dropbox Sign. Se muestra con el ⓘ propio de cada pestaña
- *  (aparte del info general que explica el conjunto). */
-const SUB_TAB_INFO: Record<'solicitudes' | 'alta_afip' | 'constancia_cuit' | 'sin_cuit' | 'firma' | 'para_firmar' | 'enviado_firma' | 'firmados' | 'contratados', { title: string; text: string }> = {
-  solicitudes: {
-    title: 'Solicitudes',
-    text: 'Vive en la base de datos. Son las solicitudes de alta pendientes, de todos los clientes y proyectos. Al aprobarlas nace el contrato y pasa al Trámite impositivo (Alta temprana de ARCA, Constancia de CUIT o Sin CUIT). Es la misma pantalla que Contratación › Solicitudes.',
-  },
-  alta_afip: {
-    title: 'Alta temprana de ARCA',
-    text: 'Vive en la base de datos de la aplicación, no en Dropbox. Son los contratos registrados que todavía necesitan un Alta Temprana en ARCA. No interviene Dropbox Sign.',
-  },
-  constancia_cuit: {
-    title: 'Constancia de CUIT',
-    text: 'Vive en la base de datos, no en Dropbox. Son los contratos a los que hay que verificarles si el CUIT está activo en ARCA. No interviene Dropbox Sign.',
-  },
-  sin_cuit: {
-    title: 'Sin CUIT',
-    text: 'Personas extranjeras que TODAVÍA no tienen CUIT/CUIL argentino: su trámite de ARCA/ANSES queda pendiente hasta que cuenten con la documentación migratoria (DNI precario, residencia en trámite, etc.), así que no aparecen en Alta temprana ni en Constancia de CUIT y se agrupan acá. Se carga la documentación de respaldo, se marca la validación y se las envía a Generar Documentos de forma excepcional: se archiva un comprobante en "WEPRODU/ARCA/Sin cuit", el contrato avanza y desde ahí se le generan el Contrato y el Release.',
-  },
-  firma: {
-    title: 'Generar Documentos',
-    text: 'Vive en la base de datos: lista contratos ya dados de alta en ARCA. Acá se generan los PDF de Contrato y Release, que se guardan en la carpeta Outbox de Dropbox. Todavía no interviene Dropbox Sign en esta pestaña.',
-  },
-  para_firmar: {
-    title: 'Para Firmar',
-    text: 'No sale de la base de datos: muestra el contenido de la carpeta Outbox de Dropbox. Son los PDF ya generados, listos para importar a Dropbox Sign y enviarlos a firmar desde ahí. Todavía no se envió nada.',
-  },
-  enviado_firma: {
-    title: 'Enviado a la firma',
-    text: 'No sale de la base de datos: muestra la carpeta Pendbox de Dropbox. La solicitud ya se envió desde Dropbox Sign y se espera la firma del destinatario (se detecta por el mail de aviso de Dropbox Sign).',
-  },
-  firmados: {
-    title: 'Firmados',
-    text: 'No sale de la base de datos: muestra la carpeta "Requested signatures" de Dropbox. Son los contratos que Dropbox Sign ya devolvió firmados, listos para descargar.',
-  },
-  contratados: {
-    title: 'Contratados',
-    text: 'Vive en la base de datos. Es el padrón: todos los contratos creados desde Solicitudes o desde la plataforma, en cualquier estado, uno por renglón, más las solicitudes pendientes, que todavía no tienen contrato y aparecen desde que se envían. Con el filtro de Estado se ve una parte. Ordenados por fecha de creación, lo último arriba.',
-  },
+/** Qué es cada variante del trámite impositivo: el ⓘ de cada una y el de la bandeja. */
+const INFO_VARIANTE: Record<VarianteTramite, string> = {
+  'alta-temprana': 'Vive en la base de datos de la aplicación, no en Dropbox. Son los contratos registrados que todavía necesitan un Alta Temprana en ARCA. No interviene Dropbox Sign.',
+  'constancia-cuit': 'Vive en la base de datos, no en Dropbox. Son los contratos a los que hay que verificarles si el CUIT está activo en ARCA. No interviene Dropbox Sign.',
+  'sin-cuit':
+    'Personas extranjeras que TODAVÍA no tienen CUIT/CUIL argentino: su trámite de ARCA/ANSES queda pendiente hasta que cuenten con la documentación migratoria (DNI precario, residencia en trámite, etc.), así que no aparecen en Alta temprana ni en Constancia de CUIT y se agrupan acá. Se carga la documentación de respaldo, se marca la validación y se las envía a Generar Documentos de forma excepcional: se archiva un comprobante en "WEPRODU/ARCA/Sin cuit", el contrato avanza y desde ahí se le generan el Contrato y el Release.',
 };
 
-/** Cada sub-pestaña de "Gestión de Contratos". */
-type MgmtTab = 'solicitudes' | 'alta_afip' | 'constancia_cuit' | 'sin_cuit' | 'firma' | 'para_firmar' | 'enviado_firma' | 'firmados' | 'contratados';
+/** El trámite que le pide cada variante a `ContractBulkAfipTab`. */
+const TIPO_DE_VARIANTE: Record<VarianteTramite, 'alta_temprana_afip' | 'constancia_cuit' | 'sin_cuit'> = { 'alta-temprana': 'alta_temprana_afip', 'constancia-cuit': 'constancia_cuit', 'sin-cuit': 'sin_cuit' };
 
-/**
- * El circuito son PASOS, no pestañas sueltas. El 1 son las Solicitudes (10/11/2026: lo que todavía no
- * es contrato). El 2 (trámite impositivo) tiene tres variantes EXCLUYENTES —según si al contrato le
- * corresponde el alta temprana, la constancia, o va por el circuito sin CUIT— y del 3 en adelante son
- * etapas consecutivas. Se muestra como stepper de dos niveles
- * para que se entienda que las tres primeras son alternativas entre sí y no pasos sucesivos.
- */
-const TRAMITE_TABS: MgmtTab[] = ['alta_afip', 'constancia_cuit', 'sin_cuit'];
-
-const TRAMITE_OPCIONES: { tab: MgmtTab; label: string; total: (c: { mgmtCounts: { alta: number; cuit: number; sinCuit: number } }) => number }[] = [
-  { tab: 'alta_afip', label: 'Alta temprana de ARCA', total: ({ mgmtCounts }) => mgmtCounts.alta },
-  { tab: 'constancia_cuit', label: 'Constancia de CUIT', total: ({ mgmtCounts }) => mgmtCounts.cuit },
-  { tab: 'sin_cuit', label: 'Sin CUIT', total: ({ mgmtCounts }) => mgmtCounts.sinCuit },
-];
-
-/* En una bandeja (11/11/2026) la pestaña sale de la ruta, y la variante del trámite de `?variante=`. */
-const TAB_DE_VARIANTE: Record<VarianteTramite, MgmtTab> = { 'alta-temprana': 'alta_afip', 'constancia-cuit': 'constancia_cuit', 'sin-cuit': 'sin_cuit' };
-const VARIANTE_DE_TAB: Partial<Record<MgmtTab, VarianteTramite>> = { alta_afip: 'alta-temprana', constancia_cuit: 'constancia-cuit', sin_cuit: 'sin-cuit' };
-/** Lo que dibuja cada bandeja: la pestaña que antes se elegía con el stepper. */
-const tabDeBandeja = (b: Bandeja, variante: VarianteTramite): MgmtTab => {
-  switch (b.contenido.tipo) {
-    case 'tramite':
-      return TAB_DE_VARIANTE[variante];
-    case 'generar':
-      return 'firma';
-    case 'dropbox':
-      return b.contenido.carpeta;
-    case 'padron':
-      return 'contratados';
-    default:
-      return 'solicitudes';
-  }
-};
-
-interface TotalesGestion {
-  mgmtCounts: { alta: number; cuit: number; firma: number; sinCuit: number };
-  dropboxCounts: { para_firmar: number | null; enviado_firma: number | null; firmados: number | null };
-  contratados: number | null;
-  solicitudes: number | null;
-}
-
-const PASOS_GESTION: { numero: number; label: string; carpeta?: string; descripcion: string; tabs: MgmtTab[]; total: (c: TotalesGestion) => number | null }[] = [
-  { numero: 1, label: 'Solicitudes', descripcion: 'Las solicitudes de alta pendientes. Al aprobarlas nace el contrato y pasa al Trámite impositivo.', tabs: ['solicitudes'], total: ({ solicitudes }) => solicitudes },
-  {
-    numero: 2,
-    label: 'Trámite impositivo',
-    descripcion: 'El contrato está en UNA de las tres variantes: Alta temprana de ARCA, Constancia de CUIT o Sin CUIT.',
-    tabs: TRAMITE_TABS,
-    total: ({ mgmtCounts }) => mgmtCounts.alta + mgmtCounts.cuit + mgmtCounts.sinCuit,
-  },
-  { numero: 3, label: 'Generar Documentos', descripcion: 'Se generan los PDF de Contrato y Release, que quedan en la carpeta Outbox.', tabs: ['firma'], total: ({ mgmtCounts }) => mgmtCounts.firma },
-  { numero: 4, label: 'Para Firmar', carpeta: 'Outbox', descripcion: 'Documentos listos para importar en Dropbox Sign y enviarlos a firmar.', tabs: ['para_firmar'], total: ({ dropboxCounts }) => dropboxCounts.para_firmar },
-  { numero: 5, label: 'Enviado a la firma', carpeta: 'Pendbox', descripcion: 'La solicitud ya se envió desde Dropbox Sign y se espera la firma.', tabs: ['enviado_firma'], total: ({ dropboxCounts }) => dropboxCounts.enviado_firma },
-  { numero: 6, label: 'Firmados', carpeta: 'Requested signatures', descripcion: 'Contratos que ya volvieron firmados.', tabs: ['firmados'], total: ({ dropboxCounts }) => dropboxCounts.firmados },
-  { numero: 7, label: 'Contratados', descripcion: 'Todos los contratos en cualquier estado, y las solicitudes pendientes desde que se envían.', tabs: ['contratados'], total: ({ contratados }) => contratados },
-];
-
-/** Clases de un botón de pestaña (mismo estilo que el resto de los tabs de la app). */
-const tabBtnClass = (active: boolean): string => `px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${active ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`;
-
-/** La pestaña, el paso y la variante elegidos, como chips de filtro separados por «›». */
-const UbicacionEnContratos: React.FC<{ partes: string[] }> = ({ partes }) => (
-  <span className="flex items-center gap-1.5 flex-wrap min-w-0 ml-1">
-    {partes.map((parte, i) => (
-      <React.Fragment key={parte}>
-        {i > 0 && <FontAwesomeIcon icon={faChevronRight} className="h-2.5 w-2.5 text-gray-400 shrink-0" />}
-        <span className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium border whitespace-nowrap bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-700">{parte}</span>
-      </React.Fragment>
-    ))}
-  </span>
-);
-
-/**
- * `bandeja`: la pantalla de UNA bandeja de Contratación (`/admin/contratacion/…`, ver
- * `config/bandejasContratacion.ts`), sin pestañas de página ni stepper: el circuito se recorre desde
- * el menú lateral y con el «siguiente paso» del título.
- */
-export const ContractsPage: React.FC<{ bandeja?: ClaveBandeja }> = ({ bandeja: claveBandeja }) => {
+export const ContractsPage: React.FC<{ bandeja: Exclude<ClaveBandeja, 'solicitudes'> }> = ({ bandeja: claveBandeja }) => {
   const navigate = useNavigate();
   const { selectedEmpresa } = useEmpresaContextStore();
-  // "Gestión de Contratos" es la pestaña de trabajo (y la primera), así que es la que abre por
-  // defecto. Con ?tab=contracts se entra al listado, y desde Gestionar Equipo se sigue llegando con
-  // ?tab=management&projectId=... para caer filtrado por ese proyecto.
+  const bandeja = bandejaPorClave(claveBandeja);
+  const contenido = bandeja.contenido;
+  // Desde Gestionar Equipo se llega con `?projectId=…` para caer filtrado por ese proyecto.
   const [searchParams, setSearchParams] = useSearchParams();
-  const bandeja = claveBandeja ? bandejaPorClave(claveBandeja) : undefined;
-  const initialTab = searchParams.get('tab') === 'contracts' ? 'contracts' : 'management';
   const initialProjectId = searchParams.get('projectId') || '';
+  // Las tres variantes del trámite impositivo quedan adentro de su bandeja; la elegida, en la URL.
+  const variante = varianteDeQuery(searchParams.get('variante'));
+  const elegirVariante = (v: VarianteTramite) =>
+    setSearchParams(
+      (prev) => {
+        const n = new URLSearchParams(prev);
+        n.set('variante', v);
+        return n;
+      },
+      { replace: true },
+    );
 
-  const [rows, setRows] = useState<ContractOverviewRow[]>([]);
-  /*
-    ORDEN POR COLUMNA. El listado se pagina en el server, así que el orden también se hace allá
-    (`sort`/`dir` de contracts-overview): ordenar acá sería ordenar sólo las 25 filas de la página.
-    Sólo son ordenables las columnas que el server conoce antes de paginar.
-  */
-  const { orden, alternar } = useOrden();
-  const ordenProps = { orden, onAlternar: alternar };
-
-  /*
-    CONTRATOS EN ARCA (columna): las relaciones de las personas de la página, por CUIL, en una consulta
-    aparte para no demorar la tabla. Se guardan las ya traídas: al paginar sólo se piden las nuevas.
-    `null` = no se pudo consultar (la celda no dice «sin contratos», que sería mentir).
-  */
-  const [relacionesArca, setRelacionesArca] = useState<Record<string, RelacionResumida[] | null>>({});
-  const [empresasArca, setEmpresasArca] = useState<EmpresaConCuit[]>([]);
-  const cuilDe = (cuit?: string) => String(cuit || '').replace(/\D/g, '');
-  useEffect(() => {
-    const faltan = [...new Set(rows.map((r) => cuilDe(r.cuit)).filter((c) => c.length === 11 && !(c in relacionesArca)))];
-    if (faltan.length === 0) return;
-    let vigente = true;
-    arcaRelacionesAPI
-      .relacionesDePersonas(faltan)
-      .then(({ empresas, relaciones }) => {
-        if (!vigente) return;
-        setEmpresasArca(empresas);
-        setRelacionesArca((prev) => ({ ...prev, ...Object.fromEntries(faltan.map((c) => [c, relaciones[c] || []])) }));
-      })
-      .catch(() => vigente && setRelacionesArca((prev) => ({ ...prev, ...Object.fromEntries(faltan.map((c) => [c, null])) })));
-    return () => {
-      vigente = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows]);
-  const razonSocialArca = (cuit: string) => empresasArca.find((e) => e.cuit === cuit)?.razonSocial || cuit;
-  const [allAreas, setAllAreas] = useState<Area[]>([]);
-  const [allShifts, setAllShifts] = useState<Shift[]>([]);
-  const [totalRows, setTotalRows] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [clientOptions, setClientOptions] = useState<{ id: string; name: string }[]>([]);
-  const [projectOptions, setProjectOptions] = useState<{ id: string; name: string }[]>([]);
   const [contratoFrames, setContratoFrames] = useState<ContratoFrameItem[]>([]);
   const [allEstados, setAllEstados] = useState<InfoItem[]>([]);
-  const [isFetching, setIsFetching] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const [openInfo, setOpenInfo] = useState(false);
-
-  // Modal de gestión de TODOS los contratos de una persona (cross-proyecto)
-  const [managedUser, setManagedUser] = useState<{ id: string; name: string } | null>(null);
   const [releases, setReleases] = useState<Release[]>([]);
   /** Carpetas reales de Dropbox Sign (Outbox/Pendbox/Requested signatures) según la configuración. */
   const [firmaCfg, setFirmaCfg] = useState<FirmaDigitalConfig | null>(null);
@@ -255,8 +80,6 @@ export const ContractsPage: React.FC<{ bandeja?: ClaveBandeja }> = ({ bandeja: c
       .config()
       .then(setFirmaCfg)
       .catch(() => setFirmaCfg(null));
-  }, []);
-  useEffect(() => {
     contratoFrameAPI
       .list()
       .then(setContratoFrames)
@@ -269,327 +92,94 @@ export const ContractsPage: React.FC<{ bandeja?: ClaveBandeja }> = ({ bandeja: c
       .getAll()
       .then(setReleases)
       .catch(() => setReleases([]));
-    cachedFetch('areas:all', () => areasAPI.listAll())
-      .then(setAllAreas)
-      .catch(() => setAllAreas([]));
-    cachedFetch('shifts:all', () => shiftsAPI.getAll())
-      .then(setAllShifts)
-      .catch(() => setAllShifts([]));
   }, []);
 
-  // Filtros — mismo set que el tab Equipo de Gestionar Equipo, más Cliente/Proyecto (acá aplican
-  // porque esta página no está atada a un solo proyecto). No incluye Área/Turno: ese filtro se arma
-  // sobre la configuración de UN proyecto y no tiene un criterio claro para mezclar áreas de
-  // proyectos distintos.
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterUserStatus, setFilterUserStatus] = useState('');
-  const [filterVigencia, setFilterVigencia] = useState('');
-  const [filterRolMobile, setFilterRolMobile] = useState('');
-  const [filterTipoContrato, setFilterTipoContrato] = useState('');
-  const [filterEstadoContrato, setFilterEstadoContrato] = useState('');
-  const [filterReemplazo, setFilterReemplazo] = useState('');
-  const [filterClientId, setFilterClientId] = useState('');
-  const [filterProjectId, setFilterProjectId] = useState(initialProjectId);
+  const [openInfo, setOpenInfo] = useState(false);
+  /** El ⓘ de UNA variante del trámite impositivo. */
+  const [infoVariante, setInfoVariante] = useState<VarianteTramite | null>(null);
+  // Modal de gestión de TODOS los contratos de una persona (cross-proyecto)
+  const [managedUser, setManagedUser] = useState<{ id: string; name: string } | null>(null);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const barra = useBarraFija();
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>(() => {
-    return (localStorage.getItem('contractsViewMode') as 'table' | 'cards') || 'table';
-  });
-
-  const HELP_KEY = 'contracts';
-  const helpEntry = getHelp(HELP_KEY);
-
-  const [isLg, setIsLg] = useState(window.innerWidth >= 1024);
-  useEffect(() => {
-    const handleResize = () => setIsLg(window.innerWidth >= 1024);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  const effectiveViewMode = isLg ? viewMode : 'cards';
-
-  // Pestañas de la página: "Contratos" (la vista actual) y "Gestión de Contratos" (acciones masivas).
-  const [mainTab, setMainTab] = useState<'contracts' | 'management'>(bandeja ? 'management' : initialTab);
-  // Sub-pestañas de "Gestión de Contratos".
-  // Con `?paso=solicitudes` arranca ahí: si arrancara en el trámite, esa pestaña llegaría a contar ceros.
-  const [mgmtTab, setMgmtTab] = useState<MgmtTab>(() => (searchParams.get('paso') === 'solicitudes' ? 'solicitudes' : 'alta_afip'));
-  const tabActiva: MgmtTab = bandeja ? tabDeBandeja(bandeja, varianteDeQuery(searchParams.get('variante'))) : mgmtTab;
-  /** Cambiar de variante del trámite: en una bandeja queda en la URL, así se puede volver o compartir. */
-  const elegirTab = (t: MgmtTab) => {
-    if (!bandeja) return setMgmtTab(t);
-    const variante = VARIANTE_DE_TAB[t];
-    if (variante)
-      setSearchParams(
-        (prev) => {
-          const n = new URLSearchParams(prev);
-          n.set('variante', variante);
-          return n;
-        },
-        { replace: true },
-      );
-  };
-  // Cantidades de las pestañas que leen de Dropbox. `null` = todavía no se leyeron.
-  const [paraFirmarCount, setParaFirmarCount] = useState<number | null>(null);
-  const [pendienteFirmaCount, setPendienteFirmaCount] = useState<number | null>(null);
-  const [firmadosCount, setFirmadosCount] = useState<number | null>(null);
-  const dropboxCounts = { para_firmar: paraFirmarCount, enviado_firma: pendienteFirmaCount, firmados: firmadosCount };
-  // Paso 7: se cuenta al entrar a Gestión, como los de Dropbox; la pestaña lo actualiza al abrirla.
-  const [contratadosCount, setContratadosCount] = useState<number | null>(null);
-  // Paso 1: las solicitudes pendientes, con el mismo contador que el menú. Sin permiso no hay paso.
-  const puedeVerSolicitudes = useAuthStore((st) => st.hasPermission('admin_users:view'));
-  const [solicitudesCount, setSolicitudesCount] = useState<number | null>(null);
-  const [recontarSolicitudes, setRecontarSolicitudes] = useState(0);
-  useEffect(() => createNavbarEventListener('pendientesChanged', () => setRecontarSolicitudes((n) => n + 1)), []);
-  useEffect(() => {
-    if (mainTab !== 'management' || !puedeVerSolicitudes) return;
-    usersAPI.contarSolicitudesPendientes().then(setSolicitudesCount).catch(() => {});
-  }, [mainTab, puedeVerSolicitudes, recontarSolicitudes]);
-  const pasosGestion = useMemo(() => PASOS_GESTION.filter((p) => puedeVerSolicitudes || !p.tabs.includes('solicitudes')), [puedeVerSolicitudes]);
-  // `?paso=solicitudes`: llega desde el padrón de Contratados, con la solicitud tocada en `?buscar=`.
-  useEffect(() => {
-    if (searchParams.get('paso') !== 'solicitudes') return;
-    setMainTab('management');
-    setMgmtTab('solicitudes');
-  }, [searchParams]);
-  // Al entrar a "Gestión de Contratos" se leen las 3 carpetas de Dropbox una sola vez, para que el
-  // número aparezca en las 3 pestañas aunque el usuario no las haya abierto todavía (igual que las
-  // pestañas de ARCA/CUIT/Firma). Al abrir cada pestaña, ContractDropboxTab vuelve a leer su carpeta
-  // y actualiza el número con datos frescos.
-  const dropboxCountsFetchedRef = useRef(false);
-  useEffect(() => {
-    if (mainTab !== 'management' || dropboxCountsFetchedRef.current) return;
-    dropboxCountsFetchedRef.current = true;
-    contarContratados()
-      .then(setContratadosCount)
-      .catch(() => {});
-    fetchDropboxCounts()
-      .then((c) => {
-        setParaFirmarCount(c.para_firmar);
-        setPendienteFirmaCount(c.enviado_firma);
-        setFirmadosCount(c.firmados);
-      })
-      .catch(() => {});
-  }, [mainTab]);
-  // Lo recién leído de una carpeta de Dropbox o del padrón queda también en el menú lateral.
+  /*
+    LOS NÚMEROS. El del menú lateral sale del almacén compartido (`contadoresContratacionStore`); lo
+    que la pantalla acaba de leer —su carpeta de Dropbox, el padrón, la bandeja de generar— se deja
+    ahí también, así el menú y el título dicen lo mismo.
+  */
+  const contadores = useContadoresContratacionStore((st) => st.contadores);
   const informarAlMenu = useContadoresContratacionStore((st) => st.informar);
-  const alContarCarpeta = useCallback(
-    (carpeta: 'para_firmar' | 'enviado_firma' | 'firmados') => (cantidad: number) => {
-      (carpeta === 'para_firmar' ? setParaFirmarCount : carpeta === 'enviado_firma' ? setPendienteFirmaCount : setFirmadosCount)(cantidad);
-      informarAlMenu({ carpeta: { clave: carpeta, cantidad } });
-    },
-    [informarAlMenu],
-  );
-  const contarEnCarpeta = useMemo(() => ({ para_firmar: alContarCarpeta('para_firmar'), enviado_firma: alContarCarpeta('enviado_firma'), firmados: alContarCarpeta('firmados') }), [alContarCarpeta]);
-  // Generar documentos, abierta como bandeja: la pestaña del trámite (que era la que contaba) no está montada.
-  const [generarCount, setGenerarCount] = useState<number | null>(null);
-  const alContarGenerar = useCallback(
-    (cantidad: number) => {
-      setGenerarCount(cantidad);
-      informarAlMenu({ generarDocumentos: cantidad });
-    },
-    [informarAlMenu],
-  );
-  const alContarPadron = useCallback(
-    (cantidad: number) => {
-      setContratadosCount(cantidad);
-      informarAlMenu({ contratos: cantidad });
-    },
-    [informarAlMenu],
-  );
-  // Cantidad de contratos de cada trámite, informada por ContractBulkAfipTab para mostrarla en las pestañas.
-  const [mgmtCounts, setMgmtCounts] = useState<{ alta: number; cuit: number; firma: number; sinCuit: number }>({ alta: 0, cuit: 0, firma: 0, sinCuit: 0 });
-  /* Si se entra directo al paso 1 (Solicitudes), la pestaña del trámite todavía no contó: sin número
-     en vez de un «(0)» que no es cierto. */
-  const mgmtContado = useRef(false);
+  const contarEnCarpeta = useMemo(() => {
+    const de = (clave: CarpetaFirma) => (cantidad: number) => informarAlMenu({ carpeta: { clave, cantidad } });
+    return { para_firmar: de('para_firmar'), enviado_firma: de('enviado_firma'), firmados: de('firmados') };
+  }, [informarAlMenu]);
+  const alContarPadron = useCallback((cantidad: number) => informarAlMenu({ contratos: cantidad }), [informarAlMenu]);
+  const alContarGenerar = useCallback((cantidad: number) => informarAlMenu({ generarDocumentos: cantidad }), [informarAlMenu]);
+  /*
+    Trámite impositivo: los tres números los informa `ContractBulkAfipTab`, con los filtros que se
+    están mirando (p. ej. el proyecto con el que se llegó). `null` = todavía no contó: sin número, no «0».
+  */
+  const [tramite, setTramite] = useState<{ alta: number; cuit: number; sinCuit: number } | null>(null);
   const refrescoDelMenu = useRef<number | undefined>(undefined);
+  const yaConto = useRef(false);
   const informarConteos = useCallback((c: { alta: number; cuit: number; firma: number; sinCuit: number }) => {
     // Cambió la bandeja con la pantalla abierta (se presentó un alta, pasó a generar): el menú recuenta.
-    if (mgmtContado.current) {
+    if (yaConto.current) {
       window.clearTimeout(refrescoDelMenu.current);
       refrescoDelMenu.current = window.setTimeout(() => useContadoresContratacionStore.getState().refrescarBase(), 1500);
     }
-    mgmtContado.current = true;
-    setMgmtCounts(c);
+    yaConto.current = true;
+    setTramite({ alta: c.alta, cuit: c.cuit, sinCuit: c.sinCuit });
   }, []);
-  // Explicación de qué es cada pestaña de "Gestión de Contratos" (modal informativo general).
-  const [mgmtTabsInfoOpen, setMgmtTabsInfoOpen] = useState(false);
-  const ubicacion = useMemo(() => {
-    if (mainTab === 'contracts') return ['Contratos'];
-    const paso = PASOS_GESTION.find((x) => x.tabs.includes(tabActiva));
-    const variante = TRAMITE_TABS.includes(tabActiva) ? TRAMITE_OPCIONES.find((o) => o.tab === tabActiva)?.label : undefined;
-    return ['Gestión de Contratos', ...(paso ? [`${paso.numero} · ${paso.label}`] : []), ...(variante ? [variante] : [])];
-  }, [mainTab, tabActiva]);
-  // Explicación puntual de UNA pestaña de "Gestión de Contratos" (si vive en Dropbox, si interviene
-  // Dropbox Sign, etc.), aparte del info general de arriba.
-  const [subTabInfoOpen, setSubTabInfoOpen] = useState<typeof mgmtTab | null>(null);
-
-  /**
-   * Qué carpetas de Dropbox alimentan cada paso. Salen de la configuración real, no de una lista fija:
-   *  - Paso 2 (Generar Documentos): las carpetas vigiladas del estado al que llegan los contratos con
-   *    el trámite impositivo terminado (Alta temprana de Arca, Constancia de cuit, Sin cuit).
-   *  - Pasos 3 a 5: las carpetas de Dropbox Sign configuradas (Outbox, Pendbox, Requested signatures).
-   */
-  const carpetasPorTab = useMemo<Partial<Record<MgmtTab, string[]>>>(() => {
-    const estadoEnvio = firmaCfg?.estadoEnvioDocNombre ? allEstados.find((e) => e.name === firmaCfg.estadoEnvioDocNombre) : undefined;
-    const carpetasEnvio = ((estadoEnvio?.data as any)?.transicionAutomatica?.carpetas || []).map((c: any) => c?.dropboxCarpeta).filter(Boolean) as string[];
-    return {
-      firma: carpetasEnvio,
-      para_firmar: [firmaCfg?.outboxCarpeta].filter(Boolean) as string[],
-      enviado_firma: [firmaCfg?.pendienteFirmaCarpeta].filter(Boolean) as string[],
-      firmados: [firmaCfg?.firmadosCarpeta].filter(Boolean) as string[],
-    };
-  }, [firmaCfg, allEstados]);
-
-  /** Paso cuyas carpetas de Dropbox se están mostrando en el modal del ícono. */
-  const [carpetasInfo, setCarpetasInfo] = useState<{ titulo: string; carpetas: string[] } | null>(null);
-
-  const estadoContratoOptions = useMemo(() => {
-    const seen = new Set<string>();
-    allEstados.forEach((e) => e.name && seen.add(estadoLabel(e.name)));
-    rows.forEach((r) => r.nombre_estado_empleado && seen.add(estadoLabel(r.nombre_estado_empleado)));
-    return [...seen].map((name) => ({ value: name, label: name }));
-  }, [allEstados, rows]);
-
-  const requestIdRef = useRef(0);
-
-  const fetchContracts = async (page = currentPage) => {
-    // Las bandejas no muestran el listado viejo: no se pide.
-    if (bandeja) {
-      setHasLoaded(true);
-      return;
-    }
-    try {
-      setIsFetching(true);
-      const currentId = ++requestIdRef.current;
-
-      const resp = await usersAPI.listContractsOverview({
-        page,
-        limit: PAGE_SIZE,
-        // Sólo los contratos creados en WeProdu (Solicitudes o «Agregar miembro»): los importados de
-        // FRAME/WP no se gestionan desde acá. Es el mismo filtro que las bandejas de Gestión.
-        origen: 'sistema',
-        search: searchTerm || undefined,
-        clientId: filterClientId || undefined,
-        projectId: filterProjectId || undefined,
-        metadataActivo: filterUserStatus ? String(filterUserStatus === 'active') : undefined,
-        permission: filterRolMobile === 'con' ? PERMISO_NOVEDADES_MOBILE : undefined,
-        notPermission: filterRolMobile === 'sin' ? PERMISO_NOVEDADES_MOBILE : undefined,
-        vigencia: filterVigencia || undefined,
-        tipoContrato: filterTipoContrato || undefined,
-        estadoContrato: filterEstadoContrato || undefined,
-        reemplazo: filterReemplazo || undefined,
-        sort: orden?.columna,
-        dir: orden?.direccion,
-      });
-      if (currentId !== requestIdRef.current) return;
-
-      setRows(resp.rows);
-      setTotalRows(resp.total);
-      setTotalPages(resp.totalPages);
-      setHasLoaded(true);
-    } catch (error) {
-      console.error('Error fetching contracts:', error);
-      sweetAlert.error('Error', 'No se pudieron cargar los contratos');
-      setHasLoaded(true);
-    } finally {
-      setIsFetching(false);
-    }
-  };
-
-  // Resuelve a quién reemplaza cada contrato dentro de la página actual (mismo criterio que ya
-  // usaba esta pantalla: si la persona reemplazada no está en la misma página, se muestra el id).
-  const replacedNames = useMemo(() => {
-    const map: Record<string, string> = {};
-    rows.forEach((r) => {
-      if (r.userExternalId != null) map[String(r.userExternalId)] = r.userName;
-    });
-    return map;
-  }, [rows]);
-
-  useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        setInitialLoading(true);
-        const [clients, projects] = await Promise.all([cachedFetch('clients:all', () => clientsAPI.listAll({ limit: 500 })), cachedFetch('projects:all', () => projectsAPI.listAll({ limit: 500 }))]);
-        setClientOptions((clients as Client[]).map((c: any) => ({ id: c._id as string, name: (c.name as string) || '' })).sort((a, b) => a.name.localeCompare(b.name)));
-        setProjectOptions((projects as any[]).map((p: any) => ({ id: p._id as string, name: (p.name as string) || '' })).sort((a, b) => a.name.localeCompare(b.name)));
-        await fetchContracts(1);
-      } finally {
-        setInitialLoading(false);
-      }
-    };
-    fetchAllData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Cualquier cambio de filtro/búsqueda → server-side, resetea a página 1 (debounced).
-  const filtersInitedRef = useRef(false);
-  useEffect(() => {
-    if (!filtersInitedRef.current) {
-      filtersInitedRef.current = true;
-      return;
-    }
-    const h = setTimeout(() => {
-      setCurrentPage(1);
-      fetchContracts(1);
-    }, 300);
-    return () => clearTimeout(h);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterClientId, filterProjectId, orden]);
-
-  // Cambio de página → traer esa página del server.
-  const pageInitedRef = useRef(false);
-  useEffect(() => {
-    if (!pageInitedRef.current) {
-      pageInitedRef.current = true;
-      return;
-    }
-    fetchContracts(currentPage);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]);
-
-  const toggleViewMode = (mode: 'table' | 'cards') => {
-    setViewMode(mode);
-    localStorage.setItem('contractsViewMode', mode);
-  };
+  useEffect(() => () => window.clearTimeout(refrescoDelMenu.current), []);
+  const alEnviarAFirmar = useCallback(() => useContadoresContratacionStore.getState().refrescarBase(), []);
 
   /*
-    EDITAR SIN SALIR DE CONTRATOS (01/11/2026, pedido del usuario): el wizard del equipo se abre encima,
+    El número del título. Trámite impositivo: LAS ALTAS QUE FALTAN (01/11/2026, pedido del usuario),
+    Alta temprana de ARCA + Constancia de CUIT con los filtros que se están mirando. El resto, el de
+    su ítem del menú.
+  */
+  const cuenta = contenido.tipo === 'tramite' ? (tramite ? tramite.alta + tramite.cuit : undefined) : (contadorDeBandeja(contadores, bandeja.clave) ?? undefined);
+
+  /**
+   * Qué carpetas de Dropbox alimentan la bandeja. Salen de la configuración real, no de una lista fija:
+   *  - Generar documentos: las carpetas vigiladas del estado al que llegan los contratos con el
+   *    trámite impositivo terminado (Alta temprana de Arca, Constancia de cuit, Sin cuit).
+   *  - Para Firmar / Enviado / Firmados: las de Dropbox Sign (Outbox, Pendbox, Requested signatures).
+   */
+  const carpetas = useMemo<string[]>(() => {
+    if (contenido.tipo === 'generar') {
+      const estadoEnvio = firmaCfg?.estadoEnvioDocNombre ? allEstados.find((e) => e.name === firmaCfg.estadoEnvioDocNombre) : undefined;
+      return ((estadoEnvio?.data as any)?.transicionAutomatica?.carpetas || []).map((c: any) => c?.dropboxCarpeta).filter(Boolean) as string[];
+    }
+    if (contenido.tipo !== 'dropbox') return [];
+    const porCarpeta: Record<CarpetaFirma, string | null | undefined> = { para_firmar: firmaCfg?.outboxCarpeta, enviado_firma: firmaCfg?.pendienteFirmaCarpeta, firmados: firmaCfg?.firmadosCarpeta };
+    return [porCarpeta[contenido.carpeta]].filter(Boolean) as string[];
+  }, [contenido, firmaCfg, allEstados]);
+
+  /*
+    EDITAR SIN SALIR DE LA BANDEJA (01/11/2026, pedido del usuario): el wizard del equipo se abre encima,
     como en Solicitudes al aprobar, con «Editar Miembro» y el comentario de la solicitud si lo tiene. Lo
-    usan el lápiz de esta tabla y el de las pestañas de Gestión (`ContractActionsButtons`, por contexto).
+    usa el lápiz de las tablas (`ContractActionsButtons`, por contexto).
   */
   const [editandoContrato, setEditandoContrato] = useState<{ contrato: ContratoAEditar; alGuardar?: () => void } | null>(null);
   const editarContratoEnModal = useCallback((contrato: ContratoAEditar, alGuardar?: () => void) => setEditandoContrato({ contrato, alGuardar }), []);
-  const handleEditContract = (record: ContractOverviewRow) =>
-    editarContratoEnModal({ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex }, () => fetchContracts(currentPage));
 
   /*
-    EL RESUMEN AL TOCAR LA FILA (02/11/2026, pedido del usuario), como en Solicitudes. Lo usan esta
-    tabla y las de Gestión (por contexto). Editar y eliminar desde el resumen refrescan la tabla de
+    EL RESUMEN AL TOCAR LA FILA (02/11/2026, pedido del usuario), como en Solicitudes. Lo usan las
+    tablas de las bandejas (por contexto). Editar y eliminar desde el resumen refrescan la tabla de
     donde vino (`alCambiar`).
   */
   const [viendoContrato, setViendoContrato] = useState<{ record: ContractOverviewRow; alCambiar?: () => void; arca?: ArcaDelContrato } | null>(null);
   const verContratoEnModal = useCallback((record: ContractOverviewRow, alCambiar?: () => void, arca?: ArcaDelContrato) => setViendoContrato({ record, alCambiar, arca }), []);
-  const verContrato = (record: ContractOverviewRow) => verContratoEnModal(record, () => fetchContracts(currentPage));
-
-  const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
-
-  const handleDownloadContractRow = (record: ContractOverviewRow, empresaId?: string) => downloadContractRow(record, contratoFrames, empresaId);
-  const handleDownloadReleaseRow = (record: ContractOverviewRow, release: Release, empresaId?: string) => downloadReleaseRow(record, release, empresaId);
-  const handleUploadAltaRow = async (record: ContractOverviewRow, file: File) => {
-    await uploadAltaRow(record, file);
-    fetchContracts();
-  };
 
   // Eliminar SOLO ese contrato (por índice) del proyecto.
-  const handleDeleteContract = async (record: ContractOverviewRow, alBorrar: () => void = () => fetchContracts()) => {
+  const handleDeleteContract = async (record: ContractOverviewRow, alBorrar?: () => void) => {
     const res = await sweetAlert.confirm('¿Eliminar contrato?', `Se eliminará este contrato de "${record.projectName}". Esta acción no se puede deshacer.`, 'Sí, eliminar');
     if (!res.isConfirmed) return false;
     try {
       await projectsAPI.deleteMemberContract(record.projectId, record.userId, record.contractIndex);
       invalidateRefCache('contracts-overview:');
       sweetAlert.success('Contrato eliminado', 'El contrato fue eliminado.');
-      alBorrar();
+      alBorrar?.();
       return true;
     } catch {
       sweetAlert.error('Error', 'No se pudo eliminar el contrato.');
@@ -597,58 +187,20 @@ export const ContractsPage: React.FC<{ bandeja?: ClaveBandeja }> = ({ bandeja: c
     }
   };
 
-  const renderAreaTurno = (record: ContractOverviewRow) => {
-    const areaData = (record.areaShiftAssignments || [])
-      .map((asa: any) => {
-        const aId = typeof asa.areaId === 'object' ? asa.areaId?._id : asa.areaId;
-        const aName = typeof asa.areaId === 'object' ? asa.areaId?.name : allAreas.find((a) => String(a._id) === String(aId))?.name;
-        const shifts = (asa.shiftIds || [])
-          .map((sid: any) => {
-            const sId = typeof sid === 'object' ? sid?._id : sid;
-            return allShifts.find((sh) => String(sh._id) === String(sId));
-          })
-          .filter(Boolean);
-        return aName ? { id: String(aId), name: aName, shifts } : null;
-      })
-      .filter(Boolean) as { id: string; name: string; shifts: Shift[] }[];
-
-    if (areaData.length === 0) return <span className="text-xs text-gray-400">—</span>;
-
-    return (
-      <div className="flex flex-wrap items-start gap-1.5">
-        {areaData.map((ad, i) => (
-          <div key={i} className="flex flex-col gap-1">
-            <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg border border-blue-100 dark:border-blue-800 w-fit">
-              <span className="text-blue-700 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{ad.name}</span>
-            </div>
-            {ad.shifts.length > 0 && (
-              <div className="flex flex-col gap-1 mt-0.5 pl-0.5">
-                {ad.shifts.map((sh, idx) => (
-                  <span key={idx} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50/50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border border-blue-100/50 dark:border-blue-900/40 whitespace-nowrap w-fit" title={`${sh.startTime} - ${sh.endTime}`}>
-                    {sh.name} ({sh.startTime} - {sh.endTime})
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  /* Variantes del trámite impositivo: se muestran solo cuando el paso activo es ese. */
-  const filaVariantes =
-  TRAMITE_TABS.includes(tabActiva) && (
+  /* Las tres variantes del trámite impositivo son EXCLUYENTES (el contrato está en una sola): se elige cuál mirar. */
+  const filaVariantes = contenido.tipo === 'tramite' && (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 px-3 py-2">
-      {TRAMITE_OPCIONES.map((op) => {
-        const activo = tabActiva === op.tab;
+      {VARIANTES_TRAMITE.map((op) => {
+        const activo = variante === op.clave;
+        const total = tramite ? (op.clave === 'alta-temprana' ? tramite.alta : op.clave === 'constancia-cuit' ? tramite.cuit : tramite.sinCuit) : null;
         return (
-          <div key={op.tab} className="flex items-center gap-1">
-            <button type="button" onClick={() => elegirTab(op.tab)} className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm font-medium transition-colors whitespace-nowrap ${activo ? 'border-blue-500 bg-white text-blue-600 dark:bg-gray-900 dark:text-blue-400' : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-900/60'}`}>
+          <div key={op.clave} className="flex items-center gap-1">
+            <button type="button" onClick={() => elegirVariante(op.clave)} className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm font-medium transition-colors whitespace-nowrap ${activo ? 'border-blue-500 bg-white text-blue-600 dark:bg-gray-900 dark:text-blue-400' : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-900/60'}`}>
               <span className={`h-3.5 w-3.5 rounded-full border-2 shrink-0 ${activo ? 'border-blue-500 bg-blue-500 ring-2 ring-inset ring-white dark:ring-gray-900' : 'border-gray-300 dark:border-gray-600'}`} />
-              {op.label} ({op.total({ mgmtCounts })})
+              {op.label}
+              {total !== null && ` (${total})`}
             </button>
-            <button type="button" onClick={() => setSubTabInfoOpen(op.tab)} title={SUB_TAB_INFO[op.tab].title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0">
+            <button type="button" onClick={() => setInfoVariante(op.clave)} title={op.label} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0">
               <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
             </button>
           </div>
@@ -657,51 +209,31 @@ export const ContractsPage: React.FC<{ bandeja?: ClaveBandeja }> = ({ bandeja: c
     </div>
   );
 
-  /*
-    EL NÚMERO DEL TÍTULO DE UNA BANDEJA: el mismo que su ítem del menú. Sin contar todavía, nada (no «0»).
-    Trámite impositivo = Alta temprana + Constancia de CUIT (las altas que faltan, pedido del 01/11/2026).
-  */
-  const cuentaDeBandeja = ((): number | undefined => {
-    if (!bandeja) return undefined;
-    switch (bandeja.contenido.tipo) {
-      case 'tramite':
-        return mgmtContado.current ? mgmtCounts.alta + mgmtCounts.cuit : undefined;
-      case 'generar':
-        return generarCount ?? undefined;
-      case 'dropbox':
-        return dropboxCounts[bandeja.contenido.carpeta] ?? undefined;
-      case 'padron':
-        return contratadosCount ?? undefined;
-      default:
-        return undefined;
-    }
-  })();
-
-  /** El ⓘ de una bandeja: qué hay acá (era el modal «Qué es cada pestaña»), de qué carpetas sale y, en Para Firmar, el instructivo. */
-  const carpetasDeLaBandeja = carpetasPorTab[tabActiva] || [];
-  const infoDeBandeja = bandeja && (
+  /** El ⓘ de la bandeja: qué hay acá (era el modal «Qué es cada pestaña»), de qué carpetas sale y, en Para Firmar, el instructivo. */
+  const infoDeBandeja = (
     <div className="space-y-4">
       <p className="text-sm text-gray-600 dark:text-gray-300">{bandeja.explicacion}</p>
-      {TRAMITE_TABS.includes(tabActiva) && (
+      {contenido.tipo === 'tramite' && (
         <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc list-inside">
-          {TRAMITE_OPCIONES.map((op) => (
-            <li key={op.tab}>
-              <strong>{op.label}</strong>: {SUB_TAB_INFO[op.tab].text}
+          {VARIANTES_TRAMITE.map((op) => (
+            <li key={op.clave}>
+              <strong>{op.label}</strong>: {INFO_VARIANTE[op.clave]}
             </li>
           ))}
         </ul>
       )}
-      {carpetasDeLaBandeja.length > 0 && (
+      {carpetas.length > 0 && (
         <div>
-          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">{carpetasDeLaBandeja.length === 1 ? 'Carpeta de Dropbox' : 'Carpetas de Dropbox'}</p>
+          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">{carpetas.length === 1 ? 'Carpeta de Dropbox' : 'Carpetas de Dropbox'}</p>
           <ul className="space-y-1.5">
-            {carpetasDeLaBandeja.map((c) => (
+            {carpetas.map((c) => (
               <li key={c} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
                 <FontAwesomeIcon icon={faDropbox} className="h-4 w-4 text-blue-500 shrink-0" />
                 <span className="font-mono text-xs text-gray-700 dark:text-gray-200 break-all">{c.replace(/^\//, '')}</span>
               </li>
             ))}
           </ul>
+          <p className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">Se configuran en Dropbox | Documentos → Configurar transición automática.</p>
         </div>
       )}
       {bandeja.clave === 'para-firmar' && <InstructivoParaFirmar />}
@@ -710,657 +242,84 @@ export const ContractsPage: React.FC<{ bandeja?: ClaveBandeja }> = ({ bandeja: c
 
   return (
     <EditarContratoEnModalContext.Provider value={editarContratoEnModal}>
-    <VerContratoEnModalContext.Provider value={verContratoEnModal}>
-    {editandoContrato && (
-      <ProjectTeamPage
-        soloAprobacion={{
-          projectId: editandoContrato.contrato.projectId,
-          solicitudId: '',
-          editarContrato: { userId: editandoContrato.contrato.userId, contractIndex: editandoContrato.contrato.contractIndex },
-          onCerrar: () => setEditandoContrato(null),
-          onAprobada: () => {
-            const alGuardar = editandoContrato.alGuardar;
-            setEditandoContrato(null);
-            invalidateRefCache('contracts-overview:');
-            alGuardar?.();
-          },
-        }}
-      />
-    )}
-    <PageLayout
-      title={bandeja ? bandeja.label : 'Contratos'}
-      subtitle={bandeja ? bandeja.descripcion : 'Visualiza y gestiona todos los registros de contratación de los usuarios.'}
-      faIcon={{ icon: faFileContract }}
-      // Solo cuando se entró desde otra pantalla (ej. Gestionar Equipo del proyecto): volver ahí.
-      // Se usa la ruta del proyecto y no history(-1) para que también funcione al recargar la URL.
-      onBack={initialProjectId ? () => navigate(`/projects/${initialProjectId}/team`) : undefined}
-      // LAS ALTAS QUE FALTAN (01/11/2026, pedido del usuario): Alta temprana de ARCA + Constancia de CUIT,
-      // con los filtros que se están mirando. El menú muestra el mismo número para todo el tenant.
-      itemCount={bandeja ? cuentaDeBandeja : mgmtContado.current ? mgmtCounts.alta + mgmtCounts.cuit : undefined}
-      // DÓNDE SE ESTÁ PARADO, al lado del título (09/11/2026, pedido del usuario): pestaña › paso › variante, como chips de filtro.
-      titleBadge={bandeja ? <PasoDelFlujo clave={bandeja.clave} variante={TRAMITE_TABS.includes(tabActiva) ? TRAMITE_OPCIONES.find((o) => o.tab === tabActiva)?.label : undefined} /> : <UbicacionEnContratos partes={ubicacion} />}
-      infoModal={{
-        isOpen: openInfo,
-        onOpen: () => setOpenInfo(true),
-        onClose: () => setOpenInfo(false),
-        title: bandeja ? bandeja.label : helpEntry?.title || 'Ayuda',
-        size: bandeja ? 'md' : (helpEntry?.size as any),
-        content: bandeja ? infoDeBandeja : helpEntry?.content,
-      }}
-      shouldShowInfo={bandeja ? true : hasHelp(HELP_KEY)}
-      // Lista los contratos de TODAS las empleadoras. Es el alcance correcto para esta pantalla —acá
-      // se asigna la empresa a los que todavía no la tienen—, pero con una empresa activa en el
-      // contexto hay que decirlo: es la misma pantalla que su "Contratos", sin el corte.
-      preSearchContent={<AlcanceBanner eje="empresa" modo="global" irAlFiltrado={selectedEmpresa ? `/empresas/${selectedEmpresa._id}/contratos` : undefined} />}
-      searchAndFilters={
-        bandeja ? (
-          filaVariantes || undefined
-        ) : (
-        <div className="space-y-4">
-          {/* Pestañas principales de la página */}
-          <div className="flex items-center border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-            <button className={tabBtnClass(mainTab === 'management')} onClick={() => setMainTab('management')}>
-              Gestión de Contratos
-            </button>
-            {/* Info general: qué es cada una de las pestañas de "Gestión de Contratos" (ARCA, Firma digital y Dropbox Sign). */}
-            <button type="button" onClick={() => setMgmtTabsInfoOpen(true)} title="Qué es cada pestaña de Gestión de Contratos" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0 -ml-2 mr-2">
-              <FontAwesomeIcon icon={faCircleInfo} className="h-4 w-4" />
-            </button>
-            <button className={tabBtnClass(mainTab === 'contracts')} onClick={() => setMainTab('contracts')}>
-              Contratos
-            </button>
-          </div>
-
-          {mainTab === 'contracts' ? null : (
-            <div className="space-y-3">
-              {/* Paso 2: las tres variantes del trámite impositivo son EXCLUYENTES (el contrato está
-                  en una sola). El resto son etapas consecutivas. Por eso el stepper de dos niveles:
-                  arriba los pasos, y la fila de variantes solo cuando se está parado en el paso 2. */}
-              {/* Pasos en fila que hacen wrap, no un carrusel con scroll (pedido del 28/10/2026). */}
-              <div className="flex flex-wrap items-center gap-x-1 gap-y-2">
-                {pasosGestion.map((paso, i) => {
-                  const activo = paso.tabs.includes(tabActiva);
-                  const total = !mgmtContado.current && (paso.tabs.includes('firma') || paso.tabs.includes('alta_afip')) ? null : paso.total({ mgmtCounts, dropboxCounts, contratados: contratadosCount, solicitudes: solicitudesCount });
-                  return (
-                    <React.Fragment key={paso.numero}>
-                      {i > 0 && <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-gray-300 dark:text-gray-600 shrink-0" />}
-                      <button type="button" onClick={() => setMgmtTab(paso.tabs[0])} title={paso.carpeta ? `${paso.descripcion} (carpeta ${paso.carpeta})` : paso.descripcion} className={`group flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors whitespace-nowrap shrink-0 ${activo ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                        <span className={`flex items-center justify-center h-5 w-5 rounded-full text-[11px] font-bold shrink-0 ${activo ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>{paso.numero}</span>
-                        <span className={`text-sm font-medium ${activo ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                          {/* Sin «| Outbox» y compañía (28/10/2026): ocupaba lugar. La carpeta sigue en el título y en el ícono de Dropbox. */}
-                          {paso.label}
-                        </span>
-                        {total !== null && <span className="text-xs text-gray-400">({total})</span>}
-                      </button>
-                      {/* Estos pasos se alimentan de carpetas de Dropbox: el ícono muestra cuáles. */}
-                      {paso.tabs.length === 1 && (carpetasPorTab[paso.tabs[0]]?.length ?? 0) > 0 && (
-                        <button type="button" onClick={() => setCarpetasInfo({ titulo: paso.label, carpetas: carpetasPorTab[paso.tabs[0]] || [] })} title="Ver las carpetas de Dropbox de este paso" className="text-blue-500 hover:text-blue-600 transition-colors shrink-0">
-                          <FontAwesomeIcon icon={faDropbox} className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                      {/* El paso 2 no lleva ⓘ acá: cada una de sus tres variantes tiene el suyo abajo. */}
-                      {paso.tabs.length === 1 && (
-                        <button type="button" onClick={() => setSubTabInfoOpen(paso.tabs[0])} title={SUB_TAB_INFO[paso.tabs[0]].title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 ml-1">
-                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                        </button>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-
-              {filaVariantes}
-            </div>
-          )}
-        </div>
-        )
-      }
-    >
-      {mainTab === 'management' ? (
-        tabActiva === 'solicitudes' ? (
-          <SolicitudesPage enGestion={{ onTotal: setSolicitudesCount }} />
-        ) : tabActiva === 'para_firmar' || tabActiva === 'enviado_firma' || tabActiva === 'firmados' ? (
-          <ContractDropboxTab key={tabActiva} tipo={tabActiva} onCount={contarEnCarpeta[tabActiva]} />
-        ) : tabActiva === 'contratados' ? (
-          <ContractBulkContratadosTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onCount={alContarPadron} />
-        ) : tabActiva === 'firma' ? (
-          <ContractBulkFirmaTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onCount={alContarGenerar} onEnviados={(n) => setMgmtCounts((c) => ({ ...c, firma: Math.max(0, c.firma - n) }))} />
-        ) : (
-          <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} tipo={tabActiva === 'alta_afip' ? 'alta_temprana_afip' : tabActiva === 'sin_cuit' ? 'sin_cuit' : 'constancia_cuit'} onCounts={informarConteos} />
-        )
-      ) : (
-        <div style={barra.raiz}>
-          {/* Buscador y filtros fijos debajo del encabezado (09/11/2026); la tabla pega el suyo debajo (ver `BarraFija`). */}
-          <div ref={barra.ref} className={`mb-4 ${CLASE_BARRA_FIJA}`}>
-                <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
-                  <div className="flex-1 w-full">
-                    <SearchAndFilters
-                      searchTerm={searchTerm}
-                      onSearchChange={setSearchTerm}
-                      searchPlaceholder="Buscar por usuario, proyecto o contrato..."
-                      radioFilters={[
-                        {
-                          label: 'Estado de usuarios',
-                          value: filterUserStatus,
-                          onChange: setFilterUserStatus,
-                          options: [
-                            { label: 'Usuarios Activos', value: 'active' },
-                            { label: 'Usuarios Inactivos', value: 'inactive' },
-                            { label: 'Todos los usuarios', value: '' },
-                          ],
-                        },
-                        {
-                          label: 'Contratos',
-                          value: filterVigencia,
-                          onChange: setFilterVigencia,
-                          options: [
-                            { label: 'Vigentes', value: 'vigente' },
-                            { label: 'No Vigentes', value: 'novigente' },
-                            { label: 'Todos los contratos', value: '' },
-                          ],
-                        },
-                      ]}
-                      selectFilters={[
-                        {
-                          label: 'Cliente',
-                          value: filterClientId,
-                          onChange: setFilterClientId,
-                          placeholder: 'Todos los clientes',
-                          options: clientOptions.map((c) => ({ value: c.id, label: c.name })),
-                        },
-                        {
-                          label: 'Proyecto',
-                          value: filterProjectId,
-                          onChange: setFilterProjectId,
-                          placeholder: 'Todos los proyectos',
-                          options: projectOptions.map((p) => ({ value: p.id, label: p.name })),
-                        },
-                        {
-                          label: 'Novedades',
-                          value: filterRolMobile,
-                          onChange: setFilterRolMobile,
-                          placeholder: 'Todos',
-                          options: MOBILE_ROLE_OPTIONS,
-                        },
-                        {
-                          label: 'Tipo de contrato',
-                          value: filterTipoContrato,
-                          onChange: setFilterTipoContrato,
-                          placeholder: 'Todos los tipos',
-                          options: contratoFrames.filter(plantillaActivaParaFiltrar).map((cf) => ({ value: cf.name, label: cf.name })),
-                        },
-                        {
-                          label: 'Estado de contrato',
-                          value: filterEstadoContrato,
-                          onChange: setFilterEstadoContrato,
-                          placeholder: 'Todos los estados',
-                          options: estadoContratoOptions,
-                          renderOption: (opt) => <EstadoBadge name={opt.label} />,
-                        },
-                        {
-                          label: 'Reemplazo',
-                          value: filterReemplazo,
-                          onChange: setFilterReemplazo,
-                          placeholder: 'Con y sin reemplazo',
-                          options: [
-                            { value: 'con', label: 'Con reemplazo' },
-                            { value: 'sin', label: 'Sin reemplazo' },
-                          ],
-                        },
-                      ]}
-                    />
-                  </div>
-
-                  <div className="items-center gap-2 shrink-0 hidden lg:flex">
-                    <button onClick={() => toggleViewMode('cards')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'cards' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tarjetas">
-                      <FontAwesomeIcon icon={faGrip} className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => toggleViewMode('table')} className={`px-4 py-2 rounded-md transition-all border dark:border-gray-700 ${viewMode === 'table' ? 'bg-blue-500 text-white shadow-sm border-blue-500' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`} title="Vista de tabla">
-                      <FontAwesomeIcon icon={faTable} className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-          </div>
-          {initialLoading || isFetching || !hasLoaded ? (
-            <div className="flex items-center justify-center py-20">
-              <LoadingSpinner message={initialLoading ? 'Cargando contratos...' : 'Actualizando contratos...'} />
-            </div>
-          ) : rows.length === 0 ? (
-            <EmptyState title="No se encontraron contratos" description={searchTerm ? 'Intenta con otros términos de búsqueda.' : 'No hay registros de contratos en el sistema.'} icon={faFileContract} />
-          ) : effectiveViewMode === 'table' ? (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-clip">
-              <TablaConEncabezadoFijo tabla="w-full text-left border-collapse min-w-[3010px]">
-                <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
-                  <tr className="border-b border-gray-100 dark:border-gray-800">
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                      <BotonOrden columna="usuario" {...ordenProps}>
-                        Colaborador
-                      </BotonOrden>
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                      <BotonOrden columna="cuit" {...ordenProps}>
-                        CUIT
-                      </BotonOrden>
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-left bg-gray-50 dark:bg-gray-900">
-                      <BotonOrden columna="contratos" {...ordenProps}>
-                        Contratos
-                      </BotonOrden>
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Las relaciones laborales que ARCA tiene de la persona, de la más nueva a la más vieja (última sincronización)">
-                      Contratos en ARCA
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                      <BotonOrden columna="cliente" {...ordenProps}>
-                        Cliente
-                      </BotonOrden>
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                      <BotonOrden columna="proyecto" {...ordenProps}>
-                        Proyecto
-                      </BotonOrden>
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Rol/es</th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                      <BotonOrden columna="rolEmpresa" {...ordenProps}>
-                        Rol/es Empresa
-                      </BotonOrden>
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                      <BotonOrden columna="estado" {...ordenProps}>
-                        Estado
-                      </BotonOrden>
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Área / Turno</th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Sede</th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                      <BotonOrden columna="contrato" {...ordenProps}>
-                        Contrato
-                      </BotonOrden>
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                      <BotonOrden columna="estadoContrato" {...ordenProps}>
-                        Estado Contrato
-                      </BotonOrden>
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado Impositivo</th>
-                    <ContractDocsHeaders />
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
-                      <BotonOrden columna="reemplazo" {...ordenProps}>
-                        Reemplazo
-                      </BotonOrden>
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
-                      <BotonOrden columna="altaBaja" {...ordenProps}>
-                        Alta / Baja
-                      </BotonOrden>
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-left bg-gray-50 dark:bg-gray-900">Monto / Jorn.</th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">Horario</th>
-                    <th className="col-acciones px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-left bg-gray-50 dark:bg-gray-900">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {rows.map((record) => (
-                    <tr key={record._id} onClick={(e) => esClicDeLaFila(e) && verContrato(record)} title="Ver el resumen del contrato" className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors group cursor-pointer">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center shrink-0">
-                            <FontAwesomeIcon icon={faUser} className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{record.userName}</p>
-                            <p className="text-xs text-gray-500 truncate">{record.userEmail}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(record.cuit, record.sinCuit)}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="text-sm font-bold px-2.5 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona en el proyecto">
-                          {record.contractsInProject}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        {relacionesArca[cuilDe(record.cuit)] === null ? (
-                          <span className="text-xs text-gray-400" title="No se pudo consultar">—</span>
-                        ) : (
-                          <CeldaContratosArca cuil={record.cuit} nombre={record.userName} relaciones={relacionesArca[cuilDe(record.cuit)] ?? undefined} razonSocialDe={razonSocialArca} />
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{record.clientName || '—'}</td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm font-bold text-gray-900 dark:text-gray-100">{record.projectName}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {(() => {
-                            const filteredRoles = (record.userRoles || []).filter((r) => !r.name.toLowerCase().includes('responsable'));
-                            return (
-                              <>
-                                {filteredRoles.slice(0, 3).map((r) => {
-                                  const isCoordinador = (r.permissions || []).includes(PERMISO_NOVEDADES_MOBILE);
-                                  const badgeClasses = isCoordinador ? 'border-amber-500/30 text-amber-700 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400' : 'border-blue-500/30 text-blue-700 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400';
-                                  return (
-                                    <span key={r._id} className={`text-[10px] px-2 py-0.5 rounded font-medium border whitespace-nowrap ${badgeClasses}`}>
-                                      {r.name}
-                                    </span>
-                                  );
-                                })}
-                                {filteredRoles.length > 3 && <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">+{filteredRoles.length - 3}</span>}
-                              </>
-                            );
-                          })()}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{record.nombreRolFrame || '-'}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${record.userActivo ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{record.userActivo ? 'ACTIVO' : 'INACTIVO'}</span>
-                      </td>
-                      <td className="px-4 py-3">{renderAreaTurno(record)}</td>
-                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">{record.nombre_sede || '-'}</td>
-                      <td className="px-4 py-3">
-                        <span className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
-                          <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
-                          {record.nombre_contrato || '-'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">{record.nombre_estado_empleado ? <EstadoBadge name={record.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}</td>
-                      {/* Estado impositivo (Alta ARCA / Alta Servicios): según el Tipo de Contrato, no el estado actual. */}
-                      <td className="px-4 py-3">
-                        {(() => {
-                          const estadoImpositivo = estadoImpositivoDelContrato(record as unknown as Contract, contratoFrames, allEstados);
-                          if (!estadoImpositivo) return <span className="text-xs text-gray-400">—</span>;
-                          return (
-                            <div className="flex flex-col gap-1 w-fit">
-                              {estadoImpositivo.data?.etiquetaSecundaria?.trim() ? <EstadoSecundarioBadge estado={estadoImpositivo} className="text-[10px] whitespace-nowrap" /> : <EstadoBadge name={estadoImpositivo.name} className="text-[10px] whitespace-nowrap" />}
-                              <TramiteImpositivoBadge estado={estadoImpositivo} persona={{ cuit: record.cuit, sinCuit: record.sinCuit }} />
-                            </div>
-                          );
-                        })()}
-                      </td>
-                      <ContractDocsColumns record={record} contratoFrames={contratoFrames} allEstados={allEstados} activeReleases={activeReleases} onDownloadContract={handleDownloadContractRow} onDownloadRelease={handleDownloadReleaseRow} onUploadAlta={handleUploadAltaRow} canUploadAlta={false} />
-                      <td className="px-4 py-3">
-                        {record.reemplazo ? (
-                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-800/50 w-fit">
-                            <FontAwesomeIcon icon={faIdCard} className="text-[9px]" />
-                            <span>{record.nombre_reemplazado || replacedNames[String(record.empleado_id_reemplezado)] || `ID: ${record.empleado_id_reemplezado}`}</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-500">
-                        {(() => {
-                          const vigente = isContractVigente(record.fecha_alta_contrato, record.fecha_baja_contrato);
-                          return (
-                            <div className="flex flex-col gap-1">
-                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold w-fit ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
-                              <div className="flex flex-col gap-0.5 text-xs">
-                                <span>
-                                  <span className="text-gray-400">Alta:</span> {formatDate(record.fecha_alta_contrato)}
-                                </span>
-                                <span>
-                                  <span className="text-gray-400">Baja:</span> {record.fecha_baja_contrato ? formatDate(record.fecha_baja_contrato) : '—'}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="text-sm font-bold text-primary-600 dark:text-primary-400">${record.sueldo_mano?.toLocaleString()}</div>
-                        {record.cantidad_jornadas_laborales ? <div className="text-xs text-gray-400">{record.cantidad_jornadas_laborales} jor.</div> : null}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{record.hora_inicio ? `${record.hora_inicio} - ${record.hora_fin}` : '-'}</td>
-                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => handleEditContract(record)} title="Editar contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-                            <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
-                          </button>
-                          <button onClick={() => handleDeleteContract(record)} title="Eliminar contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                            <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </TablaConEncabezadoFijo>
-            </div>
+      <VerContratoEnModalContext.Provider value={verContratoEnModal}>
+        {editandoContrato && (
+          <ProjectTeamPage
+            soloAprobacion={{
+              projectId: editandoContrato.contrato.projectId,
+              solicitudId: '',
+              editarContrato: { userId: editandoContrato.contrato.userId, contractIndex: editandoContrato.contrato.contractIndex },
+              onCerrar: () => setEditandoContrato(null),
+              onAprobada: () => {
+                const alGuardar = editandoContrato.alGuardar;
+                setEditandoContrato(null);
+                invalidateRefCache('contracts-overview:');
+                alGuardar?.();
+              },
+            }}
+          />
+        )}
+        <PageLayout
+          title={bandeja.label}
+          subtitle={bandeja.descripcion}
+          faIcon={{ icon: faFileContract }}
+          // Solo cuando se entró desde otra pantalla (ej. Gestionar Equipo del proyecto): volver ahí.
+          // Se usa la ruta del proyecto y no history(-1) para que también funcione al recargar la URL.
+          onBack={initialProjectId ? () => navigate(`/projects/${initialProjectId}/team`) : undefined}
+          itemCount={cuenta}
+          // DÓNDE SE ESTÁ PARADO, al lado del título (09/11/2026, pedido del usuario), y el link al paso que sigue.
+          titleBadge={<PasoDelFlujo clave={bandeja.clave} variante={contenido.tipo === 'tramite' ? VARIANTES_TRAMITE.find((v) => v.clave === variante)?.label : undefined} />}
+          infoModal={{ isOpen: openInfo, onOpen: () => setOpenInfo(true), onClose: () => setOpenInfo(false), title: bandeja.label, size: 'md', content: infoDeBandeja }}
+          shouldShowInfo
+          // Lista los contratos de TODAS las empleadoras. Es el alcance correcto para esta pantalla —acá
+          // se asigna la empresa a los que todavía no la tienen—, pero con una empresa activa en el
+          // contexto hay que decirlo: es la misma pantalla que su "Contratos", sin el corte.
+          preSearchContent={<AlcanceBanner eje="empresa" modo="global" irAlFiltrado={selectedEmpresa ? `/empresas/${selectedEmpresa._id}/contratos` : undefined} />}
+          searchAndFilters={filaVariantes || undefined}
+        >
+          {contenido.tipo === 'dropbox' ? (
+            <ContractDropboxTab key={contenido.carpeta} tipo={contenido.carpeta} onCount={contarEnCarpeta[contenido.carpeta]} />
+          ) : contenido.tipo === 'padron' ? (
+            <ContractBulkContratadosTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onCount={alContarPadron} />
+          ) : contenido.tipo === 'generar' ? (
+            <ContractBulkFirmaTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onCount={alContarGenerar} onEnviados={alEnviarAFirmar} />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {rows.map((record) => (
-                <Card key={record._id} onClick={() => verContrato(record)} className="p-0 overflow-hidden group hover:border-primary-500 transition-all border-gray-200 dark:border-gray-700 cursor-pointer">
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700/50">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center shrink-0">
-                          <FontAwesomeIcon icon={faFileContract} className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight">{record.userName}</h3>
-                            <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" title="Contratos de esta persona en el proyecto">
-                              {record.contractsInProject} contr.
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-gray-500">{record.userEmail}</p>
-                          {fmtCuit(record.cuit) && <p className="text-[10px] text-gray-400 font-mono">CUIT {fmtCuit(record.cuit)}</p>}
-                        </div>
-                      </div>
-                      {record.nombre_estado_empleado ? <EstadoBadge name={record.nombre_estado_empleado} className="shrink-0 text-[8px] tracking-tighter" /> : null}
-                    </div>
-                  </div>
-
-                  <div className="p-4 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Cliente</label>
-                        <div className="flex items-center gap-1.5">
-                          <FontAwesomeIcon icon={faBuilding} className="text-gray-400 text-[10px]" />
-                          <span className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{record.clientName || '—'}</span>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Proyecto</label>
-                        <div className="flex items-center gap-1.5">
-                          <FontAwesomeIcon icon={faBriefcase} className="text-gray-400 text-[10px]" />
-                          <span className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{record.projectName}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700/50">
-                      <div>
-                        <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Contrato</label>
-                        <div className="flex items-center gap-1.5">
-                          <FontAwesomeIcon icon={faFileContract} className="text-blue-600 dark:text-blue-400 text-[10px]" />
-                          <span className="text-xs text-gray-600 dark:text-gray-400 truncate">{record.nombre_contrato}</span>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Sede / Rol</label>
-                        <div className="text-[10px] text-gray-600 dark:text-gray-400">
-                          <p className="font-bold text-gray-800 dark:text-gray-200">{record.nombre_sede}</p>
-                          <p>{record.nombreRolFrame}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Último contrato: mismos datos y misma validación de vigencia que la columna
-                    "Alta / Baja" de la tabla, para que las dos vistas digan lo mismo. */}
-                    <div className="pt-4 border-t border-gray-100 dark:border-gray-700/50">
-                      <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Último contrato</label>
-                      {(() => {
-                        const vigente = isContractVigente(record.fecha_alta_contrato, record.fecha_baja_contrato);
-                        return (
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${vigente ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{vigente ? 'VIGENTE' : 'NO VIGENTE'}</span>
-                            <span className="text-[10px] text-gray-600 dark:text-gray-400">
-                              <span className="text-gray-400">Alta:</span> {formatDate(record.fecha_alta_contrato)}
-                            </span>
-                            <span className="text-[10px] text-gray-600 dark:text-gray-400">
-                              <span className="text-gray-400">Baja:</span> {record.fecha_baja_contrato ? formatDate(record.fecha_baja_contrato) : '—'}
-                            </span>
-                          </div>
-                        );
-                      })()}
-                    </div>
-
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700/50">
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-1.5 text-[10px] text-gray-600 dark:text-gray-400 font-medium">
-                          <FontAwesomeIcon icon={faHourglassHalf} className="text-[10px]" />
-                          <span>{record.cantidad_jornadas_laborales || 0} jornadas</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[9px] text-gray-400">
-                          <FontAwesomeIcon icon={faClock} className="text-[9px]" />
-                          <span>{record.hora_inicio ? `${record.hora_inicio} - ${record.hora_fin}` : '-'}</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[8px] text-gray-400 uppercase font-bold tracking-widest leading-none">Monto</p>
-                        <p className="text-lg font-black text-gray-900 dark:text-white leading-tight">${record.sueldo_mano?.toLocaleString()}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-end gap-1 pt-2 border-t border-gray-100 dark:border-gray-700/50" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => handleEditContract(record)} title="Editar contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-                        <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => handleDeleteContract(record)} title="Eliminar contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                        <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+            <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} tipo={TIPO_DE_VARIANTE[variante]} onCounts={informarConteos} />
           )}
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="mt-8 flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                <span className="font-semibold text-gray-900 dark:text-gray-100">{totalRows}</span> contratos · pág. {currentPage}/{totalPages}
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} disabled={currentPage === 1} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                  <FontAwesomeIcon icon={faChevronLeft} />
-                </button>
-                <div className="flex items-center px-4 text-sm font-medium dark:text-gray-100">
-                  Página {currentPage} de {totalPages}
-                </div>
-                <button onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                  <FontAwesomeIcon icon={faChevronRight} />
-                </button>
-              </div>
-            </div>
+          {/* Montado sólo abierto: trae sus catálogos al abrirse, no con cada carga de la página. */}
+          {viendoContrato && (
+            <ContratoDetalleModal
+              isOpen
+              onClose={() => setViendoContrato(null)}
+              record={viendoContrato.record}
+              arca={viendoContrato.arca}
+              contratoFrames={contratoFrames}
+              allEstados={allEstados}
+              onEditar={(r) => {
+                const alCambiar = viendoContrato.alCambiar;
+                setViendoContrato(null);
+                editarContratoEnModal({ projectId: r.projectId, userId: r.userId, contractIndex: r.contractIndex }, alCambiar);
+              }}
+              onEliminar={async (r) => {
+                if (await handleDeleteContract(r, viendoContrato.alCambiar)) setViendoContrato(null);
+              }}
+              onVerTodos={(r) => {
+                setViendoContrato(null);
+                setManagedUser({ id: r.userId, name: r.userName });
+              }}
+            />
           )}
-        </div>
-      )}
 
-      {/* Montado sólo abierto: trae sus catálogos al abrirse, no con cada carga de la página. */}
-      {viendoContrato && (
-      <ContratoDetalleModal
-        isOpen
-        onClose={() => setViendoContrato(null)}
-        record={viendoContrato?.record || null}
-        arca={viendoContrato?.arca}
-        contratoFrames={contratoFrames}
-        allEstados={allEstados}
-        onEditar={(r) => {
-          const alCambiar = viendoContrato?.alCambiar;
-          setViendoContrato(null);
-          editarContratoEnModal({ projectId: r.projectId, userId: r.userId, contractIndex: r.contractIndex }, alCambiar);
-        }}
-        onEliminar={async (r) => {
-          if (await handleDeleteContract(r, viendoContrato?.alCambiar || (() => fetchContracts()))) setViendoContrato(null);
-        }}
-        onVerTodos={(r) => {
-          setViendoContrato(null);
-          setManagedUser({ id: r.userId, name: r.userName });
-        }}
-      />
-      )}
+          <MemberContractsManagerModal isOpen={!!managedUser} onClose={() => setManagedUser(null)} userId={managedUser?.id || null} userName={managedUser?.name} contratoFrames={contratoFrames} releases={releases} />
 
-      <MemberContractsManagerModal isOpen={!!managedUser} onClose={() => setManagedUser(null)} userId={managedUser?.id || null} userName={managedUser?.name} contratoFrames={contratoFrames} releases={releases} />
-
-      {mgmtTabsInfoOpen && (
-        <Modal isOpen={mgmtTabsInfoOpen} onClose={() => setMgmtTabsInfoOpen(false)} title="Qué es cada pestaña" size="md" zIndex={80}>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Estas pestañas son las etapas de un mismo circuito: primero el contrato se da de alta en <strong>ARCA</strong> (o va por <strong>Sin CUIT</strong> si la persona no tiene CUIL argentino), después se genera su documento en <strong>Generar Documentos</strong> y, por último, se firma digitalmente en <strong>Dropbox Sign</strong> (las últimas tres pestañas). Las tres primeras leen la base de datos de la aplicación; las tres últimas leen directamente las carpetas de Dropbox donde trabaja Dropbox Sign.
-            </p>
-            <div>
-              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Alta temprana de ARCA · Constancia de CUIT</p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">Son los contratos que ya se registraron en la aplicación pero todavía no se hizo nada en ARCA. No interviene Dropbox ni Dropbox Sign en esta etapa.</p>
-              <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc list-inside mt-2">
-                <li>
-                  <strong>Alta temprana de ARCA</strong>: contratos que necesitan un Alta.
-                </li>
-                <li>
-                  <strong>Constancia de CUIT</strong>: contratos a los que hay que verificarles si el CUIT está activo o no en ARCA.
-                </li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Sin CUIT</p>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-                Personas que todavía no tienen CUIT/CUIL argentino: su trámite de ARCA queda pendiente hasta que cuenten con la documentación migratoria, así que no figuran en las dos pestañas anteriores. Se carga la documentación de respaldo, se valida y se las envía a <strong>Generar Documentos</strong> de forma excepcional.
-              </p>
-              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Generar Documentos</p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                Contratos cuyo documento ya llegó a <span className="font-mono text-xs">WEPRODU/ARCA/Alta temprana de Arca</span> o <span className="font-mono text-xs">WEPRODU/ARCA/Constancia de cuit</span>. Acá se generan los PDF de Contrato y Release, que quedan en la carpeta <span className="font-mono text-xs">Outbox</span> de Dropbox: es el paso previo a importarlos en Dropbox Sign, pero todavía no se envía nada a firmar desde esta pestaña.
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">Para Firmar · Enviado a la firma · Firmados</p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">Estas tres no salen de la aplicación: son lo que hay en las carpetas de Dropbox de Dropbox Sign, en el orden del circuito de firma.</p>
-              <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc list-inside mt-2">
-                <li>
-                  <strong>Para Firmar</strong>: carpeta <span className="font-mono text-xs">Outbox</span>. Contratos ya generados, listos para importar en Dropbox Sign y enviarlos a firmar desde ahí. Todavía no se envió nada.
-                </li>
-                <li>
-                  <strong>Enviado a la firma</strong>: carpeta <span className="font-mono text-xs">Pendbox</span>. La solicitud <strong>ya se envió</strong> desde Dropbox Sign y se espera la firma del destinatario. Se detecta por el correo de aviso que manda Dropbox Sign —es la única forma de saberlo—, y con eso el archivo se mueve desde Outbox, así no se puede enviar dos veces por error.
-                </li>
-                <li>
-                  <strong>Firmados</strong>: carpeta <span className="font-mono text-xs">Requested signatures</span>. Contratos que ya volvieron firmados y se pueden descargar.
-                </li>
-              </ul>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* Carpetas de Dropbox que alimentan un paso. */}
-      {carpetasInfo && (
-        <Modal isOpen={!!carpetasInfo} onClose={() => setCarpetasInfo(null)} title={`Carpetas de Dropbox — ${carpetasInfo.titulo}`} size="sm" zIndex={80}>
-          <div className="space-y-3">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Lo que se ve en <strong>{carpetasInfo.titulo}</strong> sale de {carpetasInfo.carpetas.length === 1 ? 'esta carpeta' : 'estas carpetas'} de Dropbox:
-            </p>
-            <ul className="space-y-1.5">
-              {carpetasInfo.carpetas.map((c) => (
-                <li key={c} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
-                  <FontAwesomeIcon icon={faDropbox} className="h-4 w-4 text-blue-500 shrink-0" />
-                  <span className="font-mono text-xs text-gray-700 dark:text-gray-200 break-all">{c.replace(/^\//, '')}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">Se configuran en Dropbox | Documentos → Configurar transición automática.</p>
-          </div>
-        </Modal>
-      )}
-
-      {subTabInfoOpen && (
-        <Modal isOpen={!!subTabInfoOpen} onClose={() => setSubTabInfoOpen(null)} title={subTabInfoOpen === 'para_firmar' ? 'Cómo enviarlos a firmar en Dropbox Sign' : SUB_TAB_INFO[subTabInfoOpen].title} size={subTabInfoOpen === 'para_firmar' ? 'md' : 'sm'} zIndex={80}>
-          {/* "Para Firmar" lleva el instructivo paso a paso (el mismo que el ⓘ de la pestaña). */}
-          {subTabInfoOpen === 'para_firmar' ? <InstructivoParaFirmar /> : <p className="text-sm text-gray-600 dark:text-gray-300">{SUB_TAB_INFO[subTabInfoOpen].text}</p>}
-        </Modal>
-      )}
-    </PageLayout>
-    </VerContratoEnModalContext.Provider>
+          {infoVariante && (
+            <Modal isOpen onClose={() => setInfoVariante(null)} title={VARIANTES_TRAMITE.find((v) => v.clave === infoVariante)?.label || ''} size="sm" zIndex={80}>
+              <p className="text-sm text-gray-600 dark:text-gray-300">{INFO_VARIANTE[infoVariante]}</p>
+            </Modal>
+          )}
+        </PageLayout>
+      </VerContratoEnModalContext.Provider>
     </EditarContratoEnModalContext.Provider>
   );
 };

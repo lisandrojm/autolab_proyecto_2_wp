@@ -126,7 +126,7 @@ export const PersonnelSideNav: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = fa
 
   const adminItems: MenuItem[] = [
     { path: "/admin/administracion/empleados", label: "Gestión de Empleados", icon: faUserGear },
-    { path: "/admin/contracts", label: "Contratos", icon: faFileContract },
+    { path: "/admin/contratacion/contratos", label: "Contratos", icon: faFileContract },
     {
       label: "Aprobaciones",
       icon: faCheckCircle,

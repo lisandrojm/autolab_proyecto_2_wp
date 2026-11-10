@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserPlus, faChevronLeft, faChevronRight, faTrash, faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
-import { CLASE_BARRA_FIJA, useBarraFija } from "../components/ui/BarraFija";
+import { useContadoresContratacionStore } from "../stores/contadoresContratacionStore";
 import { PasoDelFlujo } from "../components/contratos/PasoDelFlujo";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { MenuOrdenar, type OpcionOrden } from "../components/ui/MenuOrdenar";
@@ -87,12 +87,7 @@ const gruposDeValidacion = (items: { nombre: string; os: ObraSocialDeSolicitud }
   return [...grupos.values()];
 };
 
-/**
- * `enGestion`: la misma pantalla como PASO 1 de Gestión de Contratos (10/11/2026, pedido del usuario),
- * sin su encabezado propio: el de Contratos ya está arriba. `onTotal` le pasa al stepper cuántas
- * pendientes hay (sólo sin filtros: con un filtro el total es el de la búsqueda, no el del paso).
- */
-export const SolicitudesPage: React.FC<{ enGestion?: { onTotal?: (n: number) => void } }> = ({ enGestion }) => {
+export const SolicitudesPage: React.FC = () => {
   const catalogos = useCatalogosDeSolicitudes();
   /** Qué solicitud se está aprobando: abre el wizard del proyecto encima de esta pantalla. */
   const [aprobando, setAprobando] = useState<{ projectId: string; solicitudId: string; editarContrato?: { userId: string; contractIndex: number } } | null>(null);
@@ -293,12 +288,10 @@ export const SolicitudesPage: React.FC<{ enGestion?: { onTotal?: (n: number) => 
   );
 
   const hayFiltros = !!(busqueda || filtroCliente || filtroProyecto);
-  const onTotal = enGestion?.onTotal;
+  // El total sin filtros es el número de la bandeja: queda también en el menú lateral.
   useEffect(() => {
-    if (!cargando && !hayFiltros) onTotal?.(total);
-  }, [cargando, hayFiltros, total, onTotal]);
-  // Dentro de Gestión, el buscador queda fijo debajo del encabezado como en los demás pasos.
-  const barra = useBarraFija();
+    if (!cargando && !hayFiltros) useContadoresContratacionStore.getState().informar({ solicitudes: total });
+  }, [cargando, hayFiltros, total]);
 
   useEffect(() => {
     soltarSeleccion();
@@ -771,15 +764,6 @@ export const SolicitudesPage: React.FC<{ enGestion?: { onTotal?: (n: number) => 
       */}
     </>
   );
-
-  if (enGestion) {
-    return (
-      <div style={barra.raiz}>
-        <div ref={barra.ref} className={`mb-4 ${CLASE_BARRA_FIJA}`}>{filtros}</div>
-        {contenido}
-      </div>
-    );
-  }
 
   return (
     <PageLayout

@@ -240,7 +240,7 @@ export const ArcaComoFuncionaPage: React.FC = () => {
           <Capa numero={4} titulo="Archivo TXT" color="ambar" descripcion="Registro de ancho fijo: 130 caracteres por línea, una línea por alta.">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Se genera desde{' '}
-              <LinkSiPuede sinPermiso="texto" to="/admin/contracts" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+              <LinkSiPuede sinPermiso="texto" to="/admin/contratacion/tramite-impositivo" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                 Admin GENERAL → Contratos
               </LinkSiPuede>
               , pestaña <em className="not-italic font-medium">Alta temprana de ARCA</em>, y se sube en <strong>ARCA → Relaciones Laborales → Carga Masiva</strong> con la clave fiscal de la empleadora.

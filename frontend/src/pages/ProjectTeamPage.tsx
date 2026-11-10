@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { bandejaPorClave } from '../config/bandejasContratacion';
 import { valoracionesDeCategoria } from '@compartido/valoracionesDeCategoria';
 import { diferenciasConElEquipo, firmaDeAreas, horarioAlElegirTurno, queActualizarDelEquipo } from '@compartido/configDelEquipo';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
@@ -232,6 +233,9 @@ export interface AprobacionEnModal {
   /** Se guardó: la solicitud quedó aprobada, o el contrato corregido. */
   onAprobada: () => void;
 }
+
+/** A dónde lleva «Contratos» desde el equipo de un proyecto: la bandeja de trabajo, filtrada por él. */
+const RUTA_TRAMITE_IMPOSITIVO = bandejaPorClave('tramite-impositivo').ruta;
 
 export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> = ({ soloAprobacion }) => {
   const { projectId: projectIdDeLaUrl } = useParams<{ projectId: string }>();
@@ -5937,8 +5941,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             <FontAwesomeIcon icon={faPlus} />
           </button>
           {/* Atajo a Contratos → Gestión de Contratos, ya filtrado por este proyecto. */}
-          {puedeAbrir("/admin/contracts") && (
-            <button onClick={() => navigate(`/admin/contracts?tab=management&projectId=${projectId}`)} title="Gestión masiva de Contratos de este proyecto" className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
+          {puedeAbrir(RUTA_TRAMITE_IMPOSITIVO) && (
+            <button onClick={() => navigate(`${RUTA_TRAMITE_IMPOSITIVO}?projectId=${projectId}`)} title="Trámite impositivo de los contratos de este proyecto" className="px-4 py-2 rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm">
               <FontAwesomeIcon icon={faFileContract} />
               <span className="hidden lg:block whitespace-nowrap">Gestión masiva de Contratos</span>
             </button>

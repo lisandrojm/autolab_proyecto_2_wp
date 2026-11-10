@@ -32,7 +32,14 @@ import { ArcaDescargaConstanciasConfigPage } from "./pages/ArcaDescargaConstanci
 import { DescargasArcaPage } from "./pages/DescargasArcaPage";
 import { RecibosSueldoPage } from "./pages/RecibosSueldoPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
-import { BANDEJAS, RUTA_CONTRATACION } from "./config/bandejasContratacion";
+import { BANDEJAS, RUTA_CONTRATACION, rutaNuevaDeContratos, type ClaveBandeja } from "./config/bandejasContratacion";
+
+/**
+ * /admin/contracts ya no es una pantalla (11/11/2026): cada paso es una bandeja con su URL. Los links
+ * viejos —guardados, del historial, de un mail— caen en la bandeja que les corresponde, con sus
+ * parámetros (`projectId`, `buscar`). Ver `rutaNuevaDeContratos`.
+ */
+const RedirigirContratos: React.FC = () => <Navigate to={rutaNuevaDeContratos(useLocation().search)} replace />;
 import { ContratosSinDiasPage } from "./pages/ContratosSinDiasPage";
 import { PlantillasGeneralesPage } from "./pages/PlantillasGeneralesPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
@@ -337,7 +344,7 @@ function App() {
                 path="/admin/contracts"
                 element={
                   <ProtectedRoute>
-                    <ContractsPage />
+                    <RedirigirContratos />
                   </ProtectedRoute>
                 }
               />
@@ -348,7 +355,7 @@ function App() {
                   path={b.ruta}
                   element={
                     <ProtectedRoute>
-                      <ContractsPage bandeja={b.clave} />
+                      <ContractsPage bandeja={b.clave as Exclude<ClaveBandeja, "solicitudes">} />
                     </ProtectedRoute>
                   }
                 />
