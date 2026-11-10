@@ -831,7 +831,7 @@ export const MobileNavbar: React.FC = () => {
       const bandeja = (item as any).pendientes as number | undefined;
       const pill =
         bandeja && bandeja > 0 ? (
-          <span title={(item as any).accionable === false ? `${bandeja} en esta bandeja` : `${bandeja} ${bandeja === 1 ? 'cosa' : 'cosas'} para resolver`} className="ml-1.5 shrink-0 text-xs font-semibold text-gray-500 dark:text-gray-400">
+          <span title={(item as any).accionable === false ? `${bandeja} en esta bandeja` : `${bandeja} ${bandeja === 1 ? 'cosa' : 'cosas'} para resolver`} className="!ml-1.5 shrink-0 text-xs lg:text-[11px] font-semibold text-gray-500 dark:text-gray-400">
             ({bandeja})
           </span>
         ) : null;
@@ -856,7 +856,7 @@ export const MobileNavbar: React.FC = () => {
               onClick={() => toggleGroup(item.groupKey)}
               className="w-full group flex items-center justify-between px-2 py-2 rounded transition-all text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50"
             >
-              <div className="flex items-center space-x-3 flex-1 min-w-0">
+              <div className="flex items-center space-x-3 lg:space-x-2 flex-1 min-w-0">
                 {/*
                   Un subgrupo ANIDADO se dibuja como sus hermanos, con el ícono plano.
 
@@ -881,7 +881,7 @@ export const MobileNavbar: React.FC = () => {
               <FontAwesomeIcon icon={isOpen ? faChevronDown : faChevronRight} className="ml-2 h-3 w-3 shrink-0" />
             </button>
 
-            {isOpen && <nav className="space-y-1 mt-1 ml-5 pl-2 border-l-2 border-gray-200 dark:border-gray-700">{item.children.map((child: any) => renderMenuItem(child, true))}</nav>}
+            {isOpen && <nav className="space-y-1 mt-1 ml-5 lg:ml-4 pl-2 border-l-2 border-gray-200 dark:border-gray-700">{item.children.map((child: any) => renderMenuItem(child, true))}</nav>}
           </div>
         );
       }
@@ -899,7 +899,7 @@ export const MobileNavbar: React.FC = () => {
             }}
             className="group flex items-center justify-between px-2 py-2 transition-colors text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
           >
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 lg:space-x-2">
               <FontAwesomeIcon icon={item.icon} className="h-5 w-5" />
               <span className="font-medium">{item.label}</span>
             </div>
@@ -918,7 +918,7 @@ export const MobileNavbar: React.FC = () => {
             }}
             className="group relative flex items-center justify-between px-2 py-2 rounded transition-all w-full text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50"
           >
-            <div className="flex items-center space-x-3 flex-1 min-w-0">
+            <div className="flex items-center space-x-3 lg:space-x-2 flex-1 min-w-0">
               <FontAwesomeIcon icon={item.icon} className="h-5 w-5 flex-shrink-0" />
               <span className="font-medium truncate">{item.label}</span>
             </div>
@@ -933,7 +933,7 @@ export const MobileNavbar: React.FC = () => {
         const rotulo = enDesarrollo ? 'En desarrollo' : item.badge;
         return (
           <div key={item.path} title={rotulo ? `${item.label}: ${String(rotulo).toLowerCase()}` : undefined} className="group relative flex items-center justify-between px-2 py-2 rounded transition-all cursor-not-allowed opacity-60 bg-gray-100 dark:bg-gray-700 select-none">
-            <div className="flex items-center space-x-3 flex-1 min-w-0">
+            <div className="flex items-center space-x-3 lg:space-x-2 flex-1 min-w-0">
               <div className="h-8 w-8 flex items-center justify-center rounded-md bg-gray-200 dark:bg-gray-600">
                 <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
               </div>
@@ -944,8 +944,8 @@ export const MobileNavbar: React.FC = () => {
         );
       }
       return (
-        <Link key={item.path} to={item.path} onClick={onItemClick} title={item.title} aria-current={isActive(item.path) ? 'page' : undefined} className={`group relative flex items-center justify-between px-2 py-2 rounded border transition-all ${isActive(item.path) ? (isChild ? 'border-transparent text-primary-700 dark:text-primary-300 font-semibold hover:bg-gray-100 dark:hover:bg-blue-900/50' : 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-blue-300 dark:border-blue-800') : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50'}`}>
-          <div className="flex items-center space-x-3 flex-1 min-w-0">
+        <Link key={item.path} to={item.path} onClick={onItemClick} title={item.title || item.label} aria-current={isActive(item.path) ? 'page' : undefined} className={`group relative flex items-center justify-between px-2 py-2 rounded border transition-all ${isActive(item.path) ? (isChild ? 'border-transparent text-primary-700 dark:text-primary-300 font-semibold hover:bg-gray-100 dark:hover:bg-blue-900/50' : 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-blue-300 dark:border-blue-800') : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50'}`}>
+          <div className="flex items-center space-x-3 lg:space-x-2 flex-1 min-w-0">
             {item.paso ? (
               // Paso del circuito: el número dice el orden, que es el dato.
               <span className="h-8 w-8 flex items-center justify-center shrink-0">
@@ -972,11 +972,11 @@ export const MobileNavbar: React.FC = () => {
     };
 
     return (
-      <div>
+      <div className="lg:text-[13px]">
         {/* ADMIN GENERAL (RRHH) */}
         {generalAdminItems.length > 0 && (
           <div className="px-2 mb-2">
-            <button onClick={() => toggleAdminSection('general')} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
+            <button onClick={() => toggleAdminSection('general')} className="w-full flex items-center justify-between text-sm lg:text-xs font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
               <span>
                 <FontAwesomeIcon icon={faUsersGear} className="mr-2 h-4 w-4" />
                 Admin <span className="uppercase">General</span>
@@ -994,7 +994,7 @@ export const MobileNavbar: React.FC = () => {
         {/* CONFIGURACIÓN */}
         {configItems.length > 0 && (
           <div className="px-2 mb-2">
-            <button onClick={() => toggleAdminSection('config')} className="w-full flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
+            <button onClick={() => toggleAdminSection('config')} className="w-full flex items-center justify-between text-sm lg:text-xs font-medium text-gray-500 dark:text-gray-400 tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors pb-2 pt-2">
               <span>
                 <FontAwesomeIcon icon={faCog} className="mr-2 h-4 w-4" />
                 Configuración
