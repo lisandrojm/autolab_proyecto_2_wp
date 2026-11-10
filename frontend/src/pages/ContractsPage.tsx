@@ -45,6 +45,8 @@ import { SolicitudesPage } from './SolicitudesPage';
 import { useAuthStore } from '../stores/authStore';
 import { createNavbarEventListener } from '../utils/navbarEvents';
 import { invalidateRefCache } from '../utils/refCache';
+import { bandejaPorClave, varianteDeQuery, type Bandeja, type ClaveBandeja, type VarianteTramite } from '../config/bandejasContratacion';
+import { PasoDelFlujo } from '../components/contratos/PasoDelFlujo';
 
 /*
   Filtro por lo que la persona PUEDE HACER en la app, no por cómo se llama su rol.
@@ -121,6 +123,25 @@ const TRAMITE_OPCIONES: { tab: MgmtTab; label: string; total: (c: { mgmtCounts: 
   { tab: 'sin_cuit', label: 'Sin CUIT', total: ({ mgmtCounts }) => mgmtCounts.sinCuit },
 ];
 
+/* En una bandeja (11/11/2026) la pestaña sale de la ruta, y la variante del trámite de `?variante=`. */
+const TAB_DE_VARIANTE: Record<VarianteTramite, MgmtTab> = { 'alta-temprana': 'alta_afip', 'constancia-cuit': 'constancia_cuit', 'sin-cuit': 'sin_cuit' };
+const VARIANTE_DE_TAB: Partial<Record<MgmtTab, VarianteTramite>> = { alta_afip: 'alta-temprana', constancia_cuit: 'constancia-cuit', sin_cuit: 'sin-cuit' };
+/** Lo que dibuja cada bandeja: la pestaña que antes se elegía con el stepper. */
+const tabDeBandeja = (b: Bandeja, variante: VarianteTramite): MgmtTab => {
+  switch (b.contenido.tipo) {
+    case 'tramite':
+      return TAB_DE_VARIANTE[variante];
+    case 'generar':
+      return 'firma';
+    case 'dropbox':
+      return b.contenido.carpeta;
+    case 'padron':
+      return 'contratados';
+    default:
+      return 'solicitudes';
+  }
+};
+
 interface TotalesGestion {
   mgmtCounts: { alta: number; cuit: number; firma: number; sinCuit: number };
   dropboxCounts: { para_firmar: number | null; enviado_firma: number | null; firmados: number | null };
@@ -159,13 +180,19 @@ const UbicacionEnContratos: React.FC<{ partes: string[] }> = ({ partes }) => (
   </span>
 );
 
-export const ContractsPage: React.FC = () => {
+/**
+ * `bandeja`: la pantalla de UNA bandeja de Contratación (`/admin/contratacion/…`, ver
+ * `config/bandejasContratacion.ts`), sin pestañas de página ni stepper: el circuito se recorre desde
+ * el menú lateral y con el «siguiente paso» del título.
+ */
+export const ContractsPage: React.FC<{ bandeja?: ClaveBandeja }> = ({ bandeja: claveBandeja }) => {
   const navigate = useNavigate();
   const { selectedEmpresa } = useEmpresaContextStore();
   // "Gestión de Contratos" es la pestaña de trabajo (y la primera), así que es la que abre por
   // defecto. Con ?tab=contracts se entra al listado, y desde Gestionar Equipo se sigue llegando con
   // ?tab=management&projectId=... para caer filtrado por ese proyecto.
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const bandeja = claveBandeja ? bandejaPorClave(claveBandeja) : undefined;
   const initialTab = searchParams.get('tab') === 'contracts' ? 'contracts' : 'management';
   const initialProjectId = searchParams.get('projectId') || '';
 
@@ -281,10 +308,25 @@ export const ContractsPage: React.FC = () => {
   const effectiveViewMode = isLg ? viewMode : 'cards';
 
   // Pestañas de la página: "Contratos" (la vista actual) y "Gestión de Contratos" (acciones masivas).
-  const [mainTab, setMainTab] = useState<'contracts' | 'management'>(initialTab);
+  const [mainTab, setMainTab] = useState<'contracts' | 'management'>(bandeja ? 'management' : initialTab);
   // Sub-pestañas de "Gestión de Contratos".
   // Con `?paso=solicitudes` arranca ahí: si arrancara en el trámite, esa pestaña llegaría a contar ceros.
   const [mgmtTab, setMgmtTab] = useState<MgmtTab>(() => (searchParams.get('paso') === 'solicitudes' ? 'solicitudes' : 'alta_afip'));
+  const tabActiva: MgmtTab = bandeja ? tabDeBandeja(bandeja, varianteDeQuery(searchParams.get('variante'))) : mgmtTab;
+  /** Cambiar de variante del trámite: en una bandeja queda en la URL, así se puede volver o compartir. */
+  const elegirTab = (t: MgmtTab) => {
+    if (!bandeja) return setMgmtTab(t);
+    const variante = VARIANTE_DE_TAB[t];
+    if (variante)
+      setSearchParams(
+        (prev) => {
+          const n = new URLSearchParams(prev);
+          n.set('variante', variante);
+          return n;
+        },
+        { replace: true },
+      );
+  };
   // Cantidades de las pestañas que leen de Dropbox. `null` = todavía no se leyeron.
   const [paraFirmarCount, setParaFirmarCount] = useState<number | null>(null);
   const [pendienteFirmaCount, setPendienteFirmaCount] = useState<number | null>(null);
@@ -340,10 +382,10 @@ export const ContractsPage: React.FC = () => {
   const [mgmtTabsInfoOpen, setMgmtTabsInfoOpen] = useState(false);
   const ubicacion = useMemo(() => {
     if (mainTab === 'contracts') return ['Contratos'];
-    const paso = PASOS_GESTION.find((x) => x.tabs.includes(mgmtTab));
-    const variante = TRAMITE_TABS.includes(mgmtTab) ? TRAMITE_OPCIONES.find((o) => o.tab === mgmtTab)?.label : undefined;
+    const paso = PASOS_GESTION.find((x) => x.tabs.includes(tabActiva));
+    const variante = TRAMITE_TABS.includes(tabActiva) ? TRAMITE_OPCIONES.find((o) => o.tab === tabActiva)?.label : undefined;
     return ['Gestión de Contratos', ...(paso ? [`${paso.numero} · ${paso.label}`] : []), ...(variante ? [variante] : [])];
-  }, [mainTab, mgmtTab]);
+  }, [mainTab, tabActiva]);
   // Explicación puntual de UNA pestaña de "Gestión de Contratos" (si vive en Dropbox, si interviene
   // Dropbox Sign, etc.), aparte del info general de arriba.
   const [subTabInfoOpen, setSubTabInfoOpen] = useState<typeof mgmtTab | null>(null);
@@ -378,6 +420,11 @@ export const ContractsPage: React.FC = () => {
   const requestIdRef = useRef(0);
 
   const fetchContracts = async (page = currentPage) => {
+    // Las bandejas no muestran el listado viejo: no se pide.
+    if (bandeja) {
+      setHasLoaded(true);
+      return;
+    }
     try {
       setIsFetching(true);
       const currentId = ++requestIdRef.current;
@@ -556,6 +603,78 @@ export const ContractsPage: React.FC = () => {
     );
   };
 
+  /* Variantes del trámite impositivo: se muestran solo cuando el paso activo es ese. */
+  const filaVariantes =
+  TRAMITE_TABS.includes(tabActiva) && (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 px-3 py-2">
+      {TRAMITE_OPCIONES.map((op) => {
+        const activo = tabActiva === op.tab;
+        return (
+          <div key={op.tab} className="flex items-center gap-1">
+            <button type="button" onClick={() => elegirTab(op.tab)} className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm font-medium transition-colors whitespace-nowrap ${activo ? 'border-blue-500 bg-white text-blue-600 dark:bg-gray-900 dark:text-blue-400' : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-900/60'}`}>
+              <span className={`h-3.5 w-3.5 rounded-full border-2 shrink-0 ${activo ? 'border-blue-500 bg-blue-500 ring-2 ring-inset ring-white dark:ring-gray-900' : 'border-gray-300 dark:border-gray-600'}`} />
+              {op.label} ({op.total({ mgmtCounts })})
+            </button>
+            <button type="button" onClick={() => setSubTabInfoOpen(op.tab)} title={SUB_TAB_INFO[op.tab].title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0">
+              <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  /*
+    EL NÚMERO DEL TÍTULO DE UNA BANDEJA: el mismo que su ítem del menú. Sin contar todavía, nada (no «0»).
+    Trámite impositivo = Alta temprana + Constancia de CUIT (las altas que faltan, pedido del 01/11/2026).
+  */
+  const cuentaDeBandeja = ((): number | undefined => {
+    if (!bandeja) return undefined;
+    switch (bandeja.contenido.tipo) {
+      case 'tramite':
+        return mgmtContado.current ? mgmtCounts.alta + mgmtCounts.cuit : undefined;
+      case 'generar':
+        return mgmtContado.current ? mgmtCounts.firma : undefined;
+      case 'dropbox':
+        return dropboxCounts[bandeja.contenido.carpeta] ?? undefined;
+      case 'padron':
+        return contratadosCount ?? undefined;
+      default:
+        return undefined;
+    }
+  })();
+
+  /** El ⓘ de una bandeja: qué hay acá (era el modal «Qué es cada pestaña»), de qué carpetas sale y, en Para Firmar, el instructivo. */
+  const carpetasDeLaBandeja = carpetasPorTab[tabActiva] || [];
+  const infoDeBandeja = bandeja && (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-600 dark:text-gray-300">{bandeja.explicacion}</p>
+      {TRAMITE_TABS.includes(tabActiva) && (
+        <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1.5 list-disc list-inside">
+          {TRAMITE_OPCIONES.map((op) => (
+            <li key={op.tab}>
+              <strong>{op.label}</strong>: {SUB_TAB_INFO[op.tab].text}
+            </li>
+          ))}
+        </ul>
+      )}
+      {carpetasDeLaBandeja.length > 0 && (
+        <div>
+          <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">{carpetasDeLaBandeja.length === 1 ? 'Carpeta de Dropbox' : 'Carpetas de Dropbox'}</p>
+          <ul className="space-y-1.5">
+            {carpetasDeLaBandeja.map((c) => (
+              <li key={c} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+                <FontAwesomeIcon icon={faDropbox} className="h-4 w-4 text-blue-500 shrink-0" />
+                <span className="font-mono text-xs text-gray-700 dark:text-gray-200 break-all">{c.replace(/^\//, '')}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {bandeja.clave === 'para-firmar' && <InstructivoParaFirmar />}
+    </div>
+  );
+
   return (
     <EditarContratoEnModalContext.Provider value={editarContratoEnModal}>
     <VerContratoEnModalContext.Provider value={verContratoEnModal}>
@@ -576,31 +695,34 @@ export const ContractsPage: React.FC = () => {
       />
     )}
     <PageLayout
-      title="Contratos"
-      subtitle="Visualiza y gestiona todos los registros de contratación de los usuarios."
+      title={bandeja ? bandeja.label : 'Contratos'}
+      subtitle={bandeja ? bandeja.descripcion : 'Visualiza y gestiona todos los registros de contratación de los usuarios.'}
       faIcon={{ icon: faFileContract }}
       // Solo cuando se entró desde otra pantalla (ej. Gestionar Equipo del proyecto): volver ahí.
       // Se usa la ruta del proyecto y no history(-1) para que también funcione al recargar la URL.
       onBack={initialProjectId ? () => navigate(`/projects/${initialProjectId}/team`) : undefined}
       // LAS ALTAS QUE FALTAN (01/11/2026, pedido del usuario): Alta temprana de ARCA + Constancia de CUIT,
       // con los filtros que se están mirando. El menú muestra el mismo número para todo el tenant.
-      itemCount={mgmtContado.current ? mgmtCounts.alta + mgmtCounts.cuit : undefined}
+      itemCount={bandeja ? cuentaDeBandeja : mgmtContado.current ? mgmtCounts.alta + mgmtCounts.cuit : undefined}
       // DÓNDE SE ESTÁ PARADO, al lado del título (09/11/2026, pedido del usuario): pestaña › paso › variante, como chips de filtro.
-      titleBadge={<UbicacionEnContratos partes={ubicacion} />}
+      titleBadge={bandeja ? <PasoDelFlujo clave={bandeja.clave} variante={TRAMITE_TABS.includes(tabActiva) ? TRAMITE_OPCIONES.find((o) => o.tab === tabActiva)?.label : undefined} /> : <UbicacionEnContratos partes={ubicacion} />}
       infoModal={{
         isOpen: openInfo,
         onOpen: () => setOpenInfo(true),
         onClose: () => setOpenInfo(false),
-        title: helpEntry?.title || 'Ayuda',
-        size: helpEntry?.size as any,
-        content: helpEntry?.content,
+        title: bandeja ? bandeja.label : helpEntry?.title || 'Ayuda',
+        size: bandeja ? 'md' : (helpEntry?.size as any),
+        content: bandeja ? infoDeBandeja : helpEntry?.content,
       }}
-      shouldShowInfo={hasHelp(HELP_KEY)}
+      shouldShowInfo={bandeja ? true : hasHelp(HELP_KEY)}
       // Lista los contratos de TODAS las empleadoras. Es el alcance correcto para esta pantalla —acá
       // se asigna la empresa a los que todavía no la tienen—, pero con una empresa activa en el
       // contexto hay que decirlo: es la misma pantalla que su "Contratos", sin el corte.
       preSearchContent={<AlcanceBanner eje="empresa" modo="global" irAlFiltrado={selectedEmpresa ? `/empresas/${selectedEmpresa._id}/contratos` : undefined} />}
       searchAndFilters={
+        bandeja ? (
+          filaVariantes || undefined
+        ) : (
         <div className="space-y-4">
           {/* Pestañas principales de la página */}
           <div className="flex items-center border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
@@ -624,7 +746,7 @@ export const ContractsPage: React.FC = () => {
               {/* Pasos en fila que hacen wrap, no un carrusel con scroll (pedido del 28/10/2026). */}
               <div className="flex flex-wrap items-center gap-x-1 gap-y-2">
                 {pasosGestion.map((paso, i) => {
-                  const activo = paso.tabs.includes(mgmtTab);
+                  const activo = paso.tabs.includes(tabActiva);
                   const total = !mgmtContado.current && (paso.tabs.includes('firma') || paso.tabs.includes('alta_afip')) ? null : paso.total({ mgmtCounts, dropboxCounts, contratados: contratadosCount, solicitudes: solicitudesCount });
                   return (
                     <React.Fragment key={paso.numero}>
@@ -654,41 +776,24 @@ export const ContractsPage: React.FC = () => {
                 })}
               </div>
 
-              {/* Variantes del paso 2: se muestran solo cuando el paso activo es ese. */}
-              {TRAMITE_TABS.includes(mgmtTab) && (
-                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 px-3 py-2">
-                  {TRAMITE_OPCIONES.map((op) => {
-                    const activo = mgmtTab === op.tab;
-                    return (
-                      <div key={op.tab} className="flex items-center gap-1">
-                        <button type="button" onClick={() => setMgmtTab(op.tab)} className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm font-medium transition-colors whitespace-nowrap ${activo ? 'border-blue-500 bg-white text-blue-600 dark:bg-gray-900 dark:text-blue-400' : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-900/60'}`}>
-                          <span className={`h-3.5 w-3.5 rounded-full border-2 shrink-0 ${activo ? 'border-blue-500 bg-blue-500 ring-2 ring-inset ring-white dark:ring-gray-900' : 'border-gray-300 dark:border-gray-600'}`} />
-                          {op.label} ({op.total({ mgmtCounts })})
-                        </button>
-                        <button type="button" onClick={() => setSubTabInfoOpen(op.tab)} title={SUB_TAB_INFO[op.tab].title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0">
-                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              {filaVariantes}
             </div>
           )}
         </div>
+        )
       }
     >
       {mainTab === 'management' ? (
-        mgmtTab === 'solicitudes' ? (
+        tabActiva === 'solicitudes' ? (
           <SolicitudesPage enGestion={{ onTotal: setSolicitudesCount }} />
-        ) : mgmtTab === 'para_firmar' || mgmtTab === 'enviado_firma' || mgmtTab === 'firmados' ? (
-          <ContractDropboxTab tipo={mgmtTab} onCount={mgmtTab === 'para_firmar' ? setParaFirmarCount : mgmtTab === 'enviado_firma' ? setPendienteFirmaCount : setFirmadosCount} />
-        ) : mgmtTab === 'contratados' ? (
+        ) : tabActiva === 'para_firmar' || tabActiva === 'enviado_firma' || tabActiva === 'firmados' ? (
+          <ContractDropboxTab key={tabActiva} tipo={tabActiva} onCount={tabActiva === 'para_firmar' ? setParaFirmarCount : tabActiva === 'enviado_firma' ? setPendienteFirmaCount : setFirmadosCount} />
+        ) : tabActiva === 'contratados' ? (
           <ContractBulkContratadosTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onCount={setContratadosCount} />
-        ) : mgmtTab === 'firma' ? (
+        ) : tabActiva === 'firma' ? (
           <ContractBulkFirmaTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onEnviados={(n) => setMgmtCounts((c) => ({ ...c, firma: Math.max(0, c.firma - n) }))} />
         ) : (
-          <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} tipo={mgmtTab === 'alta_afip' ? 'alta_temprana_afip' : mgmtTab === 'sin_cuit' ? 'sin_cuit' : 'constancia_cuit'} onCounts={informarConteos} />
+          <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} tipo={tabActiva === 'alta_afip' ? 'alta_temprana_afip' : tabActiva === 'sin_cuit' ? 'sin_cuit' : 'constancia_cuit'} onCounts={informarConteos} />
         )
       ) : (
         <div style={barra.raiz}>

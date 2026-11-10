@@ -32,6 +32,7 @@ import { ArcaDescargaConstanciasConfigPage } from "./pages/ArcaDescargaConstanci
 import { DescargasArcaPage } from "./pages/DescargasArcaPage";
 import { RecibosSueldoPage } from "./pages/RecibosSueldoPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
+import { BANDEJAS, RUTA_CONTRATACION } from "./config/bandejasContratacion";
 import { ContratosSinDiasPage } from "./pages/ContratosSinDiasPage";
 import { PlantillasGeneralesPage } from "./pages/PlantillasGeneralesPage";
 import { ProjectDetailPage } from "./pages/ProjectDetailPage";
@@ -340,6 +341,18 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              {/* Las bandejas de Contratación (11/11/2026): una página por paso del circuito. Solicitudes tiene la suya. */}
+              {BANDEJAS.filter((b) => b.ruta.startsWith(RUTA_CONTRATACION)).map((b) => (
+                <Route
+                  key={b.clave}
+                  path={b.ruta}
+                  element={
+                    <ProtectedRoute>
+                      <ContractsPage bandeja={b.clave} />
+                    </ProtectedRoute>
+                  }
+                />
+              ))}
               <Route
                 path="/admin/renovaciones"
                 element={

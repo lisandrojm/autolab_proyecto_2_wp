@@ -1,5 +1,6 @@
 import { matchPath } from "react-router-dom";
 import { esPermisoMobile, esPermisoPlataforma } from "../utils/permisosMobile";
+import { BANDEJAS, RUTA_CONTRATACION } from "./bandejasContratacion";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -76,6 +77,8 @@ export const REGLAS_RUTAS: ReglaRuta[] = [
   { path: "/valoraciones", permisos: ["config_valoraciones:view", "config_frame_functions:view"] },
   { path: "/admin/sedes", permisos: ["admin_sedes:view"] },
   { path: "/admin/contracts", permisos: ["admin_contracts:view"] },
+  // Las bandejas de Contratación: cada una con el permiso de la pestaña que reemplaza (ver `config/bandejasContratacion.ts`).
+  ...BANDEJAS.filter((b) => b.ruta.startsWith(RUTA_CONTRATACION)).map((b) => ({ path: b.ruta, permisos: b.permisos })),
   { path: "/admin/renovaciones", permisos: ["admin_contracts:view"] },
   { path: "/admin/presentaciones-arca", permisos: ["admin_contracts:view"] },
   { path: "/admin/descargas-arca", permisos: ["admin_contracts:view"] },

@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserPlus, faChevronLeft, faChevronRight, faTrash, faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { CLASE_BARRA_FIJA, useBarraFija } from "../components/ui/BarraFija";
+import { PasoDelFlujo } from "../components/contratos/PasoDelFlujo";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { MenuOrdenar, type OpcionOrden } from "../components/ui/MenuOrdenar";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -786,6 +787,8 @@ export const SolicitudesPage: React.FC<{ enGestion?: { onTotal?: (n: number) => 
       subtitle="Todas las solicitudes de alta, de todos los clientes y proyectos."
       faIcon={{ icon: faUserPlus }}
       itemCount={total}
+      // Es el paso 1 del circuito de Contratación (11/11/2026): dónde se está y el link al trámite impositivo.
+      titleBadge={<PasoDelFlujo clave="solicitudes" />}
       infoModal={{
         isOpen: ayudaAbierta,
         onOpen: () => setAyudaAbierta(true),
