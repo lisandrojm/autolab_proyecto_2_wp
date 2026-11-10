@@ -4352,7 +4352,7 @@ export const ContractBulkContratadosTab: React.FC<{
                 // La solicitud todavía no tiene contrato que abrir: lleva a Solicitudes, ya buscada.
                 const alTocar = (e: React.MouseEvent<HTMLElement>) => {
                   if (!esClicDeLaFila(e)) return;
-                  if (pendiente) navigate(`/admin/solicitudes?buscar=${encodeURIComponent(r.userName)}`);
+                  if (pendiente) navigate(`/admin/contracts?paso=solicitudes&buscar=${encodeURIComponent(r.userName)}`);
                   else verContrato?.(r, () => load(true));
                 };
                 return (

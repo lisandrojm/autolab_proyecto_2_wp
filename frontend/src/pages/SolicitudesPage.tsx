@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserPlus, faChevronLeft, faChevronRight, faTrash, faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
+import { CLASE_BARRA_FIJA, useBarraFija } from "../components/ui/BarraFija";
 import { SearchAndFilters } from "../components/ui/SearchAndFilters";
 import { MenuOrdenar, type OpcionOrden } from "../components/ui/MenuOrdenar";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
@@ -85,7 +86,12 @@ const gruposDeValidacion = (items: { nombre: string; os: ObraSocialDeSolicitud }
   return [...grupos.values()];
 };
 
-export const SolicitudesPage: React.FC = () => {
+/**
+ * `enGestion`: la misma pantalla como PASO 1 de Gestión de Contratos (10/11/2026, pedido del usuario),
+ * sin su encabezado propio: el de Contratos ya está arriba. `onTotal` le pasa al stepper cuántas
+ * pendientes hay (sólo sin filtros: con un filtro el total es el de la búsqueda, no el del paso).
+ */
+export const SolicitudesPage: React.FC<{ enGestion?: { onTotal?: (n: number) => void } }> = ({ enGestion }) => {
   const catalogos = useCatalogosDeSolicitudes();
   /** Qué solicitud se está aprobando: abre el wizard del proyecto encima de esta pantalla. */
   const [aprobando, setAprobando] = useState<{ projectId: string; solicitudId: string; editarContrato?: { userId: string; contractIndex: number } } | null>(null);
@@ -286,6 +292,12 @@ export const SolicitudesPage: React.FC = () => {
   );
 
   const hayFiltros = !!(busqueda || filtroCliente || filtroProyecto);
+  const onTotal = enGestion?.onTotal;
+  useEffect(() => {
+    if (!cargando && !hayFiltros) onTotal?.(total);
+  }, [cargando, hayFiltros, total, onTotal]);
+  // Dentro de Gestión, el buscador queda fijo debajo del encabezado como en los demás pasos.
+  const barra = useBarraFija();
 
   useEffect(() => {
     soltarSeleccion();
@@ -545,57 +557,38 @@ export const SolicitudesPage: React.FC = () => {
     cargar(page);
   };
 
-  return (
-    <PageLayout
-      title="Solicitudes"
-      subtitle="Todas las solicitudes de alta, de todos los clientes y proyectos."
-      faIcon={{ icon: faUserPlus }}
-      itemCount={total}
-      infoModal={{
-        isOpen: ayudaAbierta,
-        onOpen: () => setAyudaAbierta(true),
-        onClose: () => setAyudaAbierta(false),
-        title: ayuda?.title || "Ayuda",
-        size: ayuda?.size as any,
-        content: ayuda?.content,
-      }}
-      shouldShowInfo={hasHelp(CLAVE_AYUDA)}
-      /*
-        Los filtros van detrás del botón de embudo, en el modal "Filtros Avanzados", igual que en
-        Contratos: `SearchAndFilters` ya trae la búsqueda, el botón, el modal, los chips de lo que
-        está aplicado y el "Limpiar Todo". Sueltos arriba de la tabla ocupaban tres renglones para
-        algo que casi siempre queda en "todos".
-      */
-      searchAndFilters={
-        <SearchAndFilters
-          searchTerm={busqueda}
-          onSearchChange={setBusqueda}
-          searchPlaceholder="Buscar por nombre o email..."
-          extraActions={<MenuOrdenar valor={orden} opciones={OPCIONES_ORDEN} onChange={setOrden} porDefecto="desde" />}
-          selectFilters={[
-            {
-              label: "Cliente",
-              value: filtroCliente,
-              // El proyecto elegido puede no ser de este cliente: se limpia para no dejar una
-              // combinación que no existe y devuelve vacío sin explicar por qué.
-              onChange: (v) => {
-                setFiltroCliente(v);
-                setFiltroProyecto("");
-              },
-              placeholder: "Todos los clientes",
-              options: clientes.map((c) => ({ value: c._id, label: c.name })),
-            },
-            {
-              label: "Proyecto",
-              value: filtroProyecto,
-              onChange: setFiltroProyecto,
-              placeholder: "Todos los proyectos",
-              options: proyectosDelFiltro.map((p) => ({ value: p._id, label: p.name })),
-            },
-          ]}
-        />
-      }
-    >
+  const filtros = (
+    <SearchAndFilters
+      searchTerm={busqueda}
+      onSearchChange={setBusqueda}
+      searchPlaceholder="Buscar por nombre o email..."
+      extraActions={<MenuOrdenar valor={orden} opciones={OPCIONES_ORDEN} onChange={setOrden} porDefecto="desde" />}
+      selectFilters={[
+        {
+          label: "Cliente",
+          value: filtroCliente,
+          // El proyecto elegido puede no ser de este cliente: se limpia para no dejar una
+          // combinación que no existe y devuelve vacío sin explicar por qué.
+          onChange: (v) => {
+            setFiltroCliente(v);
+            setFiltroProyecto("");
+          },
+          placeholder: "Todos los clientes",
+          options: clientes.map((c) => ({ value: c._id, label: c.name })),
+        },
+        {
+          label: "Proyecto",
+          value: filtroProyecto,
+          onChange: setFiltroProyecto,
+          placeholder: "Todos los proyectos",
+          options: proyectosDelFiltro.map((p) => ({ value: p._id, label: p.name })),
+        },
+      ]}
+    />
+  );
+
+  const contenido = (
+    <>
       {cargando ? (
         <div className="flex items-center justify-center py-20">
           <LoadingSpinner message="Cargando solicitudes..." />
@@ -775,6 +768,42 @@ export const SolicitudesPage: React.FC = () => {
         La ventana va FUERA del listado: la carga masiva es lo primero que se usa en una cuenta que
         todavía no tiene ninguna solicitud, y ahí lo que se dibuja es el estado vacío.
       */}
+    </>
+  );
+
+  if (enGestion) {
+    return (
+      <div style={barra.raiz}>
+        <div ref={barra.ref} className={`mb-4 ${CLASE_BARRA_FIJA}`}>{filtros}</div>
+        {contenido}
+      </div>
+    );
+  }
+
+  return (
+    <PageLayout
+      title="Solicitudes"
+      subtitle="Todas las solicitudes de alta, de todos los clientes y proyectos."
+      faIcon={{ icon: faUserPlus }}
+      itemCount={total}
+      infoModal={{
+        isOpen: ayudaAbierta,
+        onOpen: () => setAyudaAbierta(true),
+        onClose: () => setAyudaAbierta(false),
+        title: ayuda?.title || "Ayuda",
+        size: ayuda?.size as any,
+        content: ayuda?.content,
+      }}
+      shouldShowInfo={hasHelp(CLAVE_AYUDA)}
+      /*
+        Los filtros van detrás del botón de embudo, en el modal "Filtros Avanzados", igual que en
+        Contratos: `SearchAndFilters` ya trae la búsqueda, el botón, el modal, los chips de lo que
+        está aplicado y el "Limpiar Todo". Sueltos arriba de la tabla ocupaban tres renglones para
+        algo que casi siempre queda en "todos".
+      */
+      searchAndFilters={filtros}
+    >
+      {contenido}
     </PageLayout>
   );
 };

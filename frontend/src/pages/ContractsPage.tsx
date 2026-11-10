@@ -41,6 +41,9 @@ import { CLASE_BARRA_FIJA, useBarraFija } from '../components/ui/BarraFija';
 import { EditarContratoEnModalContext, VerContratoEnModalContext, esClicDeLaFila, type ArcaDelContrato, type ContratoAEditar } from '../components/contratos/editarContratoEnModal';
 import { ContratoDetalleModal } from '../components/contratos/ContratoDetalleModal';
 import { ProjectTeamPage } from './ProjectTeamPage';
+import { SolicitudesPage } from './SolicitudesPage';
+import { useAuthStore } from '../stores/authStore';
+import { createNavbarEventListener } from '../utils/navbarEvents';
 import { invalidateRefCache } from '../utils/refCache';
 
 /*
@@ -61,7 +64,11 @@ const PAGE_SIZE = 25;
 /** Explicación puntual de cada pestaña de "Gestión de Contratos": si vive en la base o en una
  *  carpeta de Dropbox, y si interviene Dropbox Sign. Se muestra con el ⓘ propio de cada pestaña
  *  (aparte del info general que explica el conjunto). */
-const SUB_TAB_INFO: Record<'alta_afip' | 'constancia_cuit' | 'sin_cuit' | 'firma' | 'para_firmar' | 'enviado_firma' | 'firmados' | 'contratados', { title: string; text: string }> = {
+const SUB_TAB_INFO: Record<'solicitudes' | 'alta_afip' | 'constancia_cuit' | 'sin_cuit' | 'firma' | 'para_firmar' | 'enviado_firma' | 'firmados' | 'contratados', { title: string; text: string }> = {
+  solicitudes: {
+    title: 'Solicitudes',
+    text: 'Vive en la base de datos. Son las solicitudes de alta pendientes, de todos los clientes y proyectos. Al aprobarlas nace el contrato y pasa al Trámite impositivo (Alta temprana de ARCA, Constancia de CUIT o Sin CUIT). Es la misma pantalla que Contratación › Solicitudes.',
+  },
   alta_afip: {
     title: 'Alta temprana de ARCA',
     text: 'Vive en la base de datos de la aplicación, no en Dropbox. Son los contratos registrados que todavía necesitan un Alta Temprana en ARCA. No interviene Dropbox Sign.',
@@ -97,17 +104,18 @@ const SUB_TAB_INFO: Record<'alta_afip' | 'constancia_cuit' | 'sin_cuit' | 'firma
 };
 
 /** Cada sub-pestaña de "Gestión de Contratos". */
-type MgmtTab = 'alta_afip' | 'constancia_cuit' | 'sin_cuit' | 'firma' | 'para_firmar' | 'enviado_firma' | 'firmados' | 'contratados';
+type MgmtTab = 'solicitudes' | 'alta_afip' | 'constancia_cuit' | 'sin_cuit' | 'firma' | 'para_firmar' | 'enviado_firma' | 'firmados' | 'contratados';
 
 /**
- * El circuito son 5 PASOS, no 7 pestañas: el paso 1 (trámite impositivo) tiene tres variantes
- * EXCLUYENTES —según si al contrato le corresponde el alta temprana, la constancia, o va por el
- * circuito sin CUIT— y del 2 al 5 son etapas consecutivas. Se muestra como stepper de dos niveles
+ * El circuito son PASOS, no pestañas sueltas. El 1 son las Solicitudes (10/11/2026: lo que todavía no
+ * es contrato). El 2 (trámite impositivo) tiene tres variantes EXCLUYENTES —según si al contrato le
+ * corresponde el alta temprana, la constancia, o va por el circuito sin CUIT— y del 3 en adelante son
+ * etapas consecutivas. Se muestra como stepper de dos niveles
  * para que se entienda que las tres primeras son alternativas entre sí y no pasos sucesivos.
  */
-const PASO_1_TABS: MgmtTab[] = ['alta_afip', 'constancia_cuit', 'sin_cuit'];
+const TRAMITE_TABS: MgmtTab[] = ['alta_afip', 'constancia_cuit', 'sin_cuit'];
 
-const PASO_1_OPCIONES: { tab: MgmtTab; label: string; total: (c: { mgmtCounts: { alta: number; cuit: number; sinCuit: number } }) => number }[] = [
+const TRAMITE_OPCIONES: { tab: MgmtTab; label: string; total: (c: { mgmtCounts: { alta: number; cuit: number; sinCuit: number } }) => number }[] = [
   { tab: 'alta_afip', label: 'Alta temprana de ARCA', total: ({ mgmtCounts }) => mgmtCounts.alta },
   { tab: 'constancia_cuit', label: 'Constancia de CUIT', total: ({ mgmtCounts }) => mgmtCounts.cuit },
   { tab: 'sin_cuit', label: 'Sin CUIT', total: ({ mgmtCounts }) => mgmtCounts.sinCuit },
@@ -117,21 +125,23 @@ interface TotalesGestion {
   mgmtCounts: { alta: number; cuit: number; firma: number; sinCuit: number };
   dropboxCounts: { para_firmar: number | null; enviado_firma: number | null; firmados: number | null };
   contratados: number | null;
+  solicitudes: number | null;
 }
 
 const PASOS_GESTION: { numero: number; label: string; carpeta?: string; descripcion: string; tabs: MgmtTab[]; total: (c: TotalesGestion) => number | null }[] = [
+  { numero: 1, label: 'Solicitudes', descripcion: 'Las solicitudes de alta pendientes. Al aprobarlas nace el contrato y pasa al Trámite impositivo.', tabs: ['solicitudes'], total: ({ solicitudes }) => solicitudes },
   {
-    numero: 1,
+    numero: 2,
     label: 'Trámite impositivo',
     descripcion: 'El contrato está en UNA de las tres variantes: Alta temprana de ARCA, Constancia de CUIT o Sin CUIT.',
-    tabs: PASO_1_TABS,
+    tabs: TRAMITE_TABS,
     total: ({ mgmtCounts }) => mgmtCounts.alta + mgmtCounts.cuit + mgmtCounts.sinCuit,
   },
-  { numero: 2, label: 'Generar Documentos', descripcion: 'Se generan los PDF de Contrato y Release, que quedan en la carpeta Outbox.', tabs: ['firma'], total: ({ mgmtCounts }) => mgmtCounts.firma },
-  { numero: 3, label: 'Para Firmar', carpeta: 'Outbox', descripcion: 'Documentos listos para importar en Dropbox Sign y enviarlos a firmar.', tabs: ['para_firmar'], total: ({ dropboxCounts }) => dropboxCounts.para_firmar },
-  { numero: 4, label: 'Enviado a la firma', carpeta: 'Pendbox', descripcion: 'La solicitud ya se envió desde Dropbox Sign y se espera la firma.', tabs: ['enviado_firma'], total: ({ dropboxCounts }) => dropboxCounts.enviado_firma },
-  { numero: 5, label: 'Firmados', carpeta: 'Requested signatures', descripcion: 'Contratos que ya volvieron firmados.', tabs: ['firmados'], total: ({ dropboxCounts }) => dropboxCounts.firmados },
-  { numero: 6, label: 'Contratados', descripcion: 'Todos los contratos en cualquier estado, y las solicitudes pendientes desde que se envían.', tabs: ['contratados'], total: ({ contratados }) => contratados },
+  { numero: 3, label: 'Generar Documentos', descripcion: 'Se generan los PDF de Contrato y Release, que quedan en la carpeta Outbox.', tabs: ['firma'], total: ({ mgmtCounts }) => mgmtCounts.firma },
+  { numero: 4, label: 'Para Firmar', carpeta: 'Outbox', descripcion: 'Documentos listos para importar en Dropbox Sign y enviarlos a firmar.', tabs: ['para_firmar'], total: ({ dropboxCounts }) => dropboxCounts.para_firmar },
+  { numero: 5, label: 'Enviado a la firma', carpeta: 'Pendbox', descripcion: 'La solicitud ya se envió desde Dropbox Sign y se espera la firma.', tabs: ['enviado_firma'], total: ({ dropboxCounts }) => dropboxCounts.enviado_firma },
+  { numero: 6, label: 'Firmados', carpeta: 'Requested signatures', descripcion: 'Contratos que ya volvieron firmados.', tabs: ['firmados'], total: ({ dropboxCounts }) => dropboxCounts.firmados },
+  { numero: 7, label: 'Contratados', descripcion: 'Todos los contratos en cualquier estado, y las solicitudes pendientes desde que se envían.', tabs: ['contratados'], total: ({ contratados }) => contratados },
 ];
 
 /** Clases de un botón de pestaña (mismo estilo que el resto de los tabs de la app). */
@@ -273,14 +283,31 @@ export const ContractsPage: React.FC = () => {
   // Pestañas de la página: "Contratos" (la vista actual) y "Gestión de Contratos" (acciones masivas).
   const [mainTab, setMainTab] = useState<'contracts' | 'management'>(initialTab);
   // Sub-pestañas de "Gestión de Contratos".
-  const [mgmtTab, setMgmtTab] = useState<MgmtTab>('alta_afip');
+  // Con `?paso=solicitudes` arranca ahí: si arrancara en el trámite, esa pestaña llegaría a contar ceros.
+  const [mgmtTab, setMgmtTab] = useState<MgmtTab>(() => (searchParams.get('paso') === 'solicitudes' ? 'solicitudes' : 'alta_afip'));
   // Cantidades de las pestañas que leen de Dropbox. `null` = todavía no se leyeron.
   const [paraFirmarCount, setParaFirmarCount] = useState<number | null>(null);
   const [pendienteFirmaCount, setPendienteFirmaCount] = useState<number | null>(null);
   const [firmadosCount, setFirmadosCount] = useState<number | null>(null);
   const dropboxCounts = { para_firmar: paraFirmarCount, enviado_firma: pendienteFirmaCount, firmados: firmadosCount };
-  // Paso 6: se cuenta al entrar a Gestión, como los de Dropbox; la pestaña lo actualiza al abrirla.
+  // Paso 7: se cuenta al entrar a Gestión, como los de Dropbox; la pestaña lo actualiza al abrirla.
   const [contratadosCount, setContratadosCount] = useState<number | null>(null);
+  // Paso 1: las solicitudes pendientes, con el mismo contador que el menú. Sin permiso no hay paso.
+  const puedeVerSolicitudes = useAuthStore((st) => st.hasPermission('admin_users:view'));
+  const [solicitudesCount, setSolicitudesCount] = useState<number | null>(null);
+  const [recontarSolicitudes, setRecontarSolicitudes] = useState(0);
+  useEffect(() => createNavbarEventListener('pendientesChanged', () => setRecontarSolicitudes((n) => n + 1)), []);
+  useEffect(() => {
+    if (mainTab !== 'management' || !puedeVerSolicitudes) return;
+    usersAPI.contarSolicitudesPendientes().then(setSolicitudesCount).catch(() => {});
+  }, [mainTab, puedeVerSolicitudes, recontarSolicitudes]);
+  const pasosGestion = useMemo(() => PASOS_GESTION.filter((p) => puedeVerSolicitudes || !p.tabs.includes('solicitudes')), [puedeVerSolicitudes]);
+  // `?paso=solicitudes`: llega desde el padrón de Contratados, con la solicitud tocada en `?buscar=`.
+  useEffect(() => {
+    if (searchParams.get('paso') !== 'solicitudes') return;
+    setMainTab('management');
+    setMgmtTab('solicitudes');
+  }, [searchParams]);
   // Al entrar a "Gestión de Contratos" se leen las 3 carpetas de Dropbox una sola vez, para que el
   // número aparezca en las 3 pestañas aunque el usuario no las haya abierto todavía (igual que las
   // pestañas de ARCA/CUIT/Firma). Al abrir cada pestaña, ContractDropboxTab vuelve a leer su carpeta
@@ -302,12 +329,19 @@ export const ContractsPage: React.FC = () => {
   }, [mainTab]);
   // Cantidad de contratos de cada trámite, informada por ContractBulkAfipTab para mostrarla en las pestañas.
   const [mgmtCounts, setMgmtCounts] = useState<{ alta: number; cuit: number; firma: number; sinCuit: number }>({ alta: 0, cuit: 0, firma: 0, sinCuit: 0 });
+  /* Si se entra directo al paso 1 (Solicitudes), la pestaña del trámite todavía no contó: sin número
+     en vez de un «(0)» que no es cierto. */
+  const mgmtContado = useRef(false);
+  const informarConteos = useCallback((c: { alta: number; cuit: number; firma: number; sinCuit: number }) => {
+    mgmtContado.current = true;
+    setMgmtCounts(c);
+  }, []);
   // Explicación de qué es cada pestaña de "Gestión de Contratos" (modal informativo general).
   const [mgmtTabsInfoOpen, setMgmtTabsInfoOpen] = useState(false);
   const ubicacion = useMemo(() => {
     if (mainTab === 'contracts') return ['Contratos'];
     const paso = PASOS_GESTION.find((x) => x.tabs.includes(mgmtTab));
-    const variante = PASO_1_TABS.includes(mgmtTab) ? PASO_1_OPCIONES.find((o) => o.tab === mgmtTab)?.label : undefined;
+    const variante = TRAMITE_TABS.includes(mgmtTab) ? TRAMITE_OPCIONES.find((o) => o.tab === mgmtTab)?.label : undefined;
     return ['Gestión de Contratos', ...(paso ? [`${paso.numero} · ${paso.label}`] : []), ...(variante ? [variante] : [])];
   }, [mainTab, mgmtTab]);
   // Explicación puntual de UNA pestaña de "Gestión de Contratos" (si vive en Dropbox, si interviene
@@ -550,7 +584,7 @@ export const ContractsPage: React.FC = () => {
       onBack={initialProjectId ? () => navigate(`/projects/${initialProjectId}/team`) : undefined}
       // LAS ALTAS QUE FALTAN (01/11/2026, pedido del usuario): Alta temprana de ARCA + Constancia de CUIT,
       // con los filtros que se están mirando. El menú muestra el mismo número para todo el tenant.
-      itemCount={mgmtCounts.alta + mgmtCounts.cuit}
+      itemCount={mgmtContado.current ? mgmtCounts.alta + mgmtCounts.cuit : undefined}
       // DÓNDE SE ESTÁ PARADO, al lado del título (09/11/2026, pedido del usuario): pestaña › paso › variante, como chips de filtro.
       titleBadge={<UbicacionEnContratos partes={ubicacion} />}
       infoModal={{
@@ -584,14 +618,14 @@ export const ContractsPage: React.FC = () => {
 
           {mainTab === 'contracts' ? null : (
             <div className="space-y-3">
-              {/* Paso 1: las tres variantes del trámite impositivo son EXCLUYENTES (el contrato está
-                  en una sola). Del 2 al 5 son etapas consecutivas. Por eso el stepper de dos niveles:
-                  arriba los 5 pasos, y la fila de variantes solo cuando se está parado en el paso 1. */}
+              {/* Paso 2: las tres variantes del trámite impositivo son EXCLUYENTES (el contrato está
+                  en una sola). El resto son etapas consecutivas. Por eso el stepper de dos niveles:
+                  arriba los pasos, y la fila de variantes solo cuando se está parado en el paso 2. */}
               {/* Pasos en fila que hacen wrap, no un carrusel con scroll (pedido del 28/10/2026). */}
               <div className="flex flex-wrap items-center gap-x-1 gap-y-2">
-                {PASOS_GESTION.map((paso, i) => {
+                {pasosGestion.map((paso, i) => {
                   const activo = paso.tabs.includes(mgmtTab);
-                  const total = paso.total({ mgmtCounts, dropboxCounts, contratados: contratadosCount });
+                  const total = !mgmtContado.current && (paso.tabs.includes('firma') || paso.tabs.includes('alta_afip')) ? null : paso.total({ mgmtCounts, dropboxCounts, contratados: contratadosCount, solicitudes: solicitudesCount });
                   return (
                     <React.Fragment key={paso.numero}>
                       {i > 0 && <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-gray-300 dark:text-gray-600 shrink-0" />}
@@ -609,7 +643,7 @@ export const ContractsPage: React.FC = () => {
                           <FontAwesomeIcon icon={faDropbox} className="h-3.5 w-3.5" />
                         </button>
                       )}
-                      {/* El paso 1 no lleva ⓘ acá: cada una de sus tres variantes tiene el suyo abajo. */}
+                      {/* El paso 2 no lleva ⓘ acá: cada una de sus tres variantes tiene el suyo abajo. */}
                       {paso.tabs.length === 1 && (
                         <button type="button" onClick={() => setSubTabInfoOpen(paso.tabs[0])} title={SUB_TAB_INFO[paso.tabs[0]].title} className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-300 shrink-0 ml-1">
                           <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
@@ -620,10 +654,10 @@ export const ContractsPage: React.FC = () => {
                 })}
               </div>
 
-              {/* Variantes del paso 1: se muestran solo cuando el paso activo es ese. */}
-              {PASO_1_TABS.includes(mgmtTab) && (
+              {/* Variantes del paso 2: se muestran solo cuando el paso activo es ese. */}
+              {TRAMITE_TABS.includes(mgmtTab) && (
                 <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 px-3 py-2">
-                  {PASO_1_OPCIONES.map((op) => {
+                  {TRAMITE_OPCIONES.map((op) => {
                     const activo = mgmtTab === op.tab;
                     return (
                       <div key={op.tab} className="flex items-center gap-1">
@@ -645,14 +679,16 @@ export const ContractsPage: React.FC = () => {
       }
     >
       {mainTab === 'management' ? (
-        mgmtTab === 'para_firmar' || mgmtTab === 'enviado_firma' || mgmtTab === 'firmados' ? (
+        mgmtTab === 'solicitudes' ? (
+          <SolicitudesPage enGestion={{ onTotal: setSolicitudesCount }} />
+        ) : mgmtTab === 'para_firmar' || mgmtTab === 'enviado_firma' || mgmtTab === 'firmados' ? (
           <ContractDropboxTab tipo={mgmtTab} onCount={mgmtTab === 'para_firmar' ? setParaFirmarCount : mgmtTab === 'enviado_firma' ? setPendienteFirmaCount : setFirmadosCount} />
         ) : mgmtTab === 'contratados' ? (
           <ContractBulkContratadosTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onCount={setContratadosCount} />
         ) : mgmtTab === 'firma' ? (
           <ContractBulkFirmaTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onEnviados={(n) => setMgmtCounts((c) => ({ ...c, firma: Math.max(0, c.firma - n) }))} />
         ) : (
-          <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} tipo={mgmtTab === 'alta_afip' ? 'alta_temprana_afip' : mgmtTab === 'sin_cuit' ? 'sin_cuit' : 'constancia_cuit'} onCounts={setMgmtCounts} />
+          <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} tipo={mgmtTab === 'alta_afip' ? 'alta_temprana_afip' : mgmtTab === 'sin_cuit' ? 'sin_cuit' : 'constancia_cuit'} onCounts={informarConteos} />
         )
       ) : (
         <div style={barra.raiz}>
