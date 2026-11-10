@@ -12,11 +12,12 @@ import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
-import { usersAPI } from '../api/users';
 import { SettingsModal } from './SettingsModal';
 import { useClientContextStore } from '../stores/clientContextStore';
 import { useEmpresaContextStore } from '../stores/empresaContextStore';
 import { createNavbarEventListener } from '../utils/navbarEvents';
+import { BANDEJAS, contadorDeBandeja, sumaAccionable } from '../config/bandejasContratacion';
+import { useContadoresContratacionStore } from '../stores/contadoresContratacionStore';
 
 interface AdminCounts {
   clients: number;
@@ -148,20 +149,22 @@ const USUARIOS_PATH = '/users';
 const USUARIOS_PATHS_GENERAL = [USUARIOS_PATH, '/areas', '/shifts', '/roles-empresa'];
 
 /**
- * Subgrupo «Contratación» de Admin GENERAL: el ciclo por el que pasa la incorporación de una persona.
+ * Subgrupo «Contratación» de Admin GENERAL: las BANDEJAS del circuito y lo que lo acompaña.
  *
- * Las tres pantallas son etapas de lo MISMO y se recorren en este orden: se pide el alta
- * (Solicitudes), se contrata y se hace el trámite impositivo (Contratos), y queda archivado lo
- * firmado (Documentos). Sueltas en el menú se leían como tres cosas sin relación, y para seguir un
- * alta había que saber de antemano en cuál de las tres mirar.
+ * Desde el 11/11/2026 (pedido del usuario) los pasos de «Gestión de Contratos» dejaron de ser
+ * pestañas adentro de una página y son ítems de acá, cada uno con su número. Tres bloques con título:
  *
- * Van en ORDEN DE FLUJO y no alfabético, que es la única excepción junto a «Centros de Costos» y
- * «Clientes»: acá el orden es el dato —dice qué va antes y qué después—, y alfabético quedaría
- * Contratos, Documentos, Solicitudes, que es el ciclo contado al revés.
+ *  · FLUJO: las bandejas, en el ORDEN DEL CIRCUITO y numeradas (ver `config/bandejasContratacion.ts`).
+ *    Es la excepción al alfabético del resto del menú: acá el orden es el dato.
+ *  · GESTIÓN: lo que se hace sobre contratos que ya existen.
+ *  · AUTOMATIZACIONES Y ARCHIVO: lo que corre solo, y dónde queda lo firmado.
  */
-const CONTRATACION_PATHS = ['/admin/solicitudes', '/admin/contracts', '/admin/recibos-sueldo', '/admin/renovaciones', '/admin/validacion-obras-sociales', '/admin/presentaciones-arca', '/admin/descargas-arca', '/documents', '/admin/plantillas-equipo', '/admin/contratos-sin-dias'];
-/** «Sin días» no es una etapa del ciclo sino una tarea de limpieza: va última y separada por una raya. */
-const CONTRATACION_APARTE = '/admin/contratos-sin-dias';
+const CONTRATACION_BLOQUES: { titulo: string; paths: string[] }[] = [
+  { titulo: 'Flujo', paths: BANDEJAS.map((b) => b.ruta) },
+  { titulo: 'Gestión', paths: ['/admin/renovaciones', '/admin/recibos-sueldo'] },
+  { titulo: 'Automatizaciones y archivo', paths: ['/admin/validacion-obras-sociales', '/admin/presentaciones-arca', '/admin/descargas-arca', '/documents', '/admin/plantillas-equipo', '/admin/contratos-sin-dias'] },
+];
+const CONTRATACION_PATHS = CONTRATACION_BLOQUES.flatMap((b) => b.paths);
 /**
  * Subgrupo «Usuarios» de Configuración, con Roles adentro.
  *
@@ -311,23 +314,23 @@ export const MobileNavbar: React.FC = () => {
     Cada pedido con su `catch`: sin permiso el server contesta 403 y esa parte queda en cero, sin
     llevarse puesto el resto del menú.
   */
-  const [pendientes, setPendientes] = useState({ solicitudes: 0, contratos: 0 });
-  // Aprobar desde Solicitudes no cambia de ruta: la pantalla avisa con `pendientesChanged` y se recuenta.
-  const [recontar, setRecontar] = useState(0);
-  useEffect(() => createNavbarEventListener('pendientesChanged', () => setRecontar((n) => n + 1)), []);
+  const contadores = useContadoresContratacionStore((st) => st.contadores);
+  const permisosDeConteo = useMemo(() => ({ solicitudes: hasPermission('admin_users:view'), contratos: hasPermission('admin_contracts:view') }), [hasPermission, user]);
+  // Otro usuario u otro tenant: los números del anterior no sirven.
+  const sesion = `${(user as any)?._id || (user as any)?.id || ''}:${user?.tenantSlug || ''}`;
   useEffect(() => {
-    let cancelado = false;
-    Promise.all([
-      hasPermission('admin_users:view') ? usersAPI.contarSolicitudesPendientes().catch(() => 0) : Promise.resolve(0),
-      hasPermission('admin_contracts:view') ? usersAPI.contarContratosPendientes().catch(() => 0) : Promise.resolve(0),
-    ]).then(([solicitudes, contratos]) => {
-      if (!cancelado) setPendientes({ solicitudes, contratos });
-    });
-    return () => {
-      cancelado = true;
-    };
-    // `location.pathname`: al volver de aprobar o rechazar algo, el número tiene que estar al día.
-  }, [hasPermission, user, location.pathname, recontar]);
+    useContadoresContratacionStore.getState().reiniciar();
+    // Dropbox y el padrón: una vez por sesión, no por ítem ni por render (ver el almacén).
+    if (user) useContadoresContratacionStore.getState().asegurarCaros(permisosDeConteo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sesion]);
+  // Lo de la base se recuenta al navegar (con tope de frecuencia)…
+  useEffect(() => {
+    if (user) useContadoresContratacionStore.getState().recontarBase(permisosDeConteo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sesion, location.pathname]);
+  // …y ya mismo cuando una pantalla avisa que algo cambió (aprobar desde Solicitudes no cambia de ruta).
+  useEffect(() => createNavbarEventListener('pendientesChanged', () => useContadoresContratacionStore.getState().recontarBase(permisosDeConteo, true)), [permisosDeConteo]);
 
   useEffect(() => {
     const fetchAdminCounts = async () => {
@@ -405,8 +408,13 @@ export const MobileNavbar: React.FC = () => {
       external?: boolean;
       scope?: 'global' | 'client';
       count?: number;
-      /** Cuántas cosas esperan que alguien las resuelva acá adentro. Ver `pendientes`. */
+      /** El número de la bandeja (ver `contadoresContratacionStore`). */
       pendientes?: number;
+      /** Paso del circuito de Contratación: se dibuja el número en vez del ícono. */
+      paso?: number;
+      /** El número es trabajo para hacer (y no sólo un recuento). */
+      accionable?: boolean;
+      title?: string;
       dividerTop?: boolean;
       badge?: string;
       badgeColor?: string;
@@ -447,7 +455,11 @@ export const MobileNavbar: React.FC = () => {
       */
       if (puedeAbrir('/valoraciones')) base.push({ path: '/valoraciones', icon: faRankingStar, label: 'Valoraciones', scope: 'global' });
       if (puedeAbrir('/admin/sedes')) base.push({ permiso: 'admin_sedes:view', path: '/admin/sedes', icon: faBuilding, label: 'Sedes', scope: 'global' });
-      if (puedeAbrir('/admin/contracts')) base.push({ permiso: 'admin_contracts:view', path: '/admin/contracts', icon: faFileContract, label: 'Contratos', scope: 'global', pendientes: pendientes.contratos });
+      // Las bandejas del circuito de Contratación, cada una con su número (el permiso, el de la pestaña que reemplaza).
+      for (const b of BANDEJAS) {
+        if (!puedeAbrir(b.ruta)) continue;
+        base.push({ permiso: b.permisos[0], path: b.ruta, icon: b.clave === 'solicitudes' ? faUserPlus : faFileContract, label: b.label, scope: 'global', paso: b.numero, accionable: b.accionable, title: `${b.label}: ${b.descripcion}`, pendientes: contadorDeBandeja(contadores, b.clave) ?? undefined });
+      }
       // La sábana de recibos del mes, partida por persona y mandada a firmar por el mismo circuito que los contratos.
       if (puedeAbrir('/admin/recibos-sueldo')) base.push({ permiso: 'admin_contracts:view', path: '/admin/recibos-sueldo', icon: faReceipt, label: 'Recibos de sueldo', scope: 'global' });
       // Los contratos vencidos sin otro vigente en el proyecto: el acceso simple para renovarlos.
@@ -461,10 +473,6 @@ export const MobileNavbar: React.FC = () => {
       if (puedeAbrir('/admin/plantillas-equipo')) base.push({ permiso: 'admin_hiring_templates:view', path: '/admin/plantillas-equipo', icon: faPeopleGroup, label: 'Plantillas', scope: 'global' });
       // Los vigentes que no dicen qué días se trabaja (casi todos vienen de FRAME): se completan ahí.
       if (puedeAbrir('/admin/contratos-sin-dias')) base.push({ permiso: 'admin_contracts:view', path: '/admin/contratos-sin-dias', icon: faCalendarXmark, label: 'Sin días', scope: 'global' });
-      // Solicitudes va pegada a Contratos porque son los dos extremos del mismo ciclo: lo que se
-      // pidió y lo que ya se contrató. Comparte permiso con Usuarios —una solicitud es un alta de
-      // usuario, no un contrato— igual que el endpoint que la alimenta.
-      if (puedeAbrir('/admin/solicitudes')) base.push({ permiso: 'admin_users:view', path: '/admin/solicitudes', icon: faUserPlus, label: 'Solicitudes', scope: 'global', pendientes: pendientes.solicitudes });
       if (puedeAbrir('/requests')) base.push({ permiso: 'admin_activity_logs:view', path: '/requests', icon: faFileText, label: 'Novedades', scope: 'global', dividerTop: true });
       if (puedeAbrir('/orders')) base.push({ permiso: 'admin_orders:view', path: '/orders', icon: faShoppingCart, label: 'Pedidos', scope: 'global' });
       if (puedeAbrir('/vacations')) base.push({ permiso: 'admin_vacations:view', path: '/vacations', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
@@ -562,7 +570,7 @@ export const MobileNavbar: React.FC = () => {
     }
 
     return base;
-  }, [puedeAbrir, adminCounts, user?.tenantSlug]);
+  }, [puedeAbrir, adminCounts, user?.tenantSlug, contadores]);
 
   const handleMenuClick = () => {};
 
@@ -634,15 +642,16 @@ export const MobileNavbar: React.FC = () => {
       Subgrupo «Contratación». A diferencia de «Usuarios», sus hijos NO se ordenan alfabético: van en
       el orden del ciclo (ver `CONTRATACION_PATHS`), porque ahí el orden dice qué etapa va antes.
     */
-    const contratacionChildren = (CONTRATACION_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems).flatMap((item, i) =>
-      // La raya solo si hay algo arriba de «Sin días»: sola no separa nada.
-      item.path === CONTRATACION_APARTE && i > 0 ? [{ path: '#contratacion-separador', separador: true } as any, item] : [item],
-    );
+    const contratacionItems = CONTRATACION_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
+    // Cada bloque con su título; un bloque sin nada que mostrar no deja el título solo.
+    const contratacionChildren = CONTRATACION_BLOQUES.flatMap((bloque) => {
+      const items = contratacionItems.filter((item) => bloque.paths.includes(item.path));
+      return items.length > 0 ? [{ path: `#contratacion-${bloque.titulo}`, section: bloque.titulo } as any, ...items] : [];
+    });
     /*
-      El número del grupo es la SUMA de sus hijos, no un tercer contador.
-
-      «Contratación» cerrado tiene que decir cuánto hay para hacer adentro —si no, hay que abrirlo
-      para enterarse—, y sumar acá garantiza que diga exactamente lo que se ve al abrirlo.
+      El número del grupo es LO ACCIONABLE de adentro: lo que espera que alguien haga algo
+      (Solicitudes, Trámite impositivo, Generar documentos, Para Firmar). Sumar también enviados,
+      firmados y el padrón daba un «99+» que no decía nada.
     */
     const contratacionGroup = {
       path: '#contratacion',
@@ -651,7 +660,11 @@ export const MobileNavbar: React.FC = () => {
       label: 'Contratación',
       scope: 'global' as const,
       children: contratacionChildren,
-      pendientes: contratacionChildren.reduce((total, hijo: any) => total + (hijo.pendientes || 0), 0),
+      accionable: true,
+      pendientes: sumaAccionable(
+        contadores,
+        BANDEJAS.filter((b) => contratacionItems.some((item) => item.path === b.ruta)).map((b) => b.clave),
+      ),
     };
 
     // Los sueltos de la sección. Los grupos entran aparte y ordenan por su propio rótulo.
@@ -818,8 +831,8 @@ export const MobileNavbar: React.FC = () => {
       const bandeja = (item as any).pendientes as number | undefined;
       const pill =
         bandeja && bandeja > 0 ? (
-          <span title={`${bandeja} ${bandeja === 1 ? 'cosa' : 'cosas'} para resolver`} className="ml-1.5 shrink-0 text-xs font-semibold text-gray-500 dark:text-gray-400">
-            ({bandeja > 99 ? '99+' : bandeja})
+          <span title={(item as any).accionable === false ? `${bandeja} en esta bandeja` : `${bandeja} ${bandeja === 1 ? 'cosa' : 'cosas'} para resolver`} className="ml-1.5 shrink-0 text-xs font-semibold text-gray-500 dark:text-gray-400">
+            ({bandeja})
           </span>
         ) : null;
 
@@ -931,9 +944,14 @@ export const MobileNavbar: React.FC = () => {
         );
       }
       return (
-        <Link key={item.path} to={item.path} onClick={onItemClick} aria-current={isActive(item.path) ? 'page' : undefined} className={`group relative flex items-center justify-between px-2 py-2 rounded border transition-all ${isActive(item.path) ? (isChild ? 'border-transparent text-primary-700 dark:text-primary-300 font-semibold hover:bg-gray-100 dark:hover:bg-blue-900/50' : 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-blue-300 dark:border-blue-800') : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50'}`}>
+        <Link key={item.path} to={item.path} onClick={onItemClick} title={item.title} aria-current={isActive(item.path) ? 'page' : undefined} className={`group relative flex items-center justify-between px-2 py-2 rounded border transition-all ${isActive(item.path) ? (isChild ? 'border-transparent text-primary-700 dark:text-primary-300 font-semibold hover:bg-gray-100 dark:hover:bg-blue-900/50' : 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-blue-300 dark:border-blue-800') : 'border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-blue-900/50'}`}>
           <div className="flex items-center space-x-3 flex-1 min-w-0">
-            {isChild ? (
+            {item.paso ? (
+              // Paso del circuito: el número dice el orden, que es el dato.
+              <span className="h-8 w-8 flex items-center justify-center shrink-0">
+                <span className={`flex items-center justify-center h-5 w-5 rounded-full text-[11px] font-bold ${isActive(item.path) ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>{item.paso}</span>
+              </span>
+            ) : isChild ? (
               <span className="h-8 w-8 flex items-center justify-center shrink-0 text-gray-500 dark:text-gray-400">
                 <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
               </span>

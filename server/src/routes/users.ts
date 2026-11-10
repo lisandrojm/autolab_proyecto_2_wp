@@ -56,6 +56,8 @@ import { esContratoVigente, fechaISO, getContratoActivo, hoyArgentina } from "..
 import { contratosQueRigenDeLasPersonas, contratosQueRigenDelProyecto, fechaISOExpr } from "../utils/contratosQueRigen.js";
 import { momentoDeCarga } from "../utils/archivoDeContrato.js";
 import { claveEstado } from "../utils/estadoClave.js";
+import { contarBandejasDeLaBase, noPoseeCuit } from "../utils/contadoresContratacion.js";
+import { resolverEstadoPorPropositos } from "../utils/estadoCarpetas.js";
 import { estadoDeRenovacion, procesoTerminadoSegunEstados } from "../utils/estadoDeRenovacion.js";
 import { antiguedadArcaPorCuil } from "../services/arca/relacionesArcaStore.js";
 import { nombreParaSellar } from "../services/arca/nombreArca.js";
@@ -1903,6 +1905,69 @@ router.get("/contratos-pendientes/count", requireTenant, authenticateToken, requ
     res.json({ count });
   } catch (error) {
     console.error("Get contratos pendientes count error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/*
+  LOS NÚMEROS DE LAS BANDEJAS DE CONTRATACIÓN QUE VIVEN EN LA BASE (11/11/2026), para el menú lateral:
+  Trámite impositivo (alta / cuit / sin CUIT) y Generar documentos, con el mismo corte que la pantalla
+  (ver `utils/contadoresContratacion.ts`). Las carpetas de Dropbox no se cuentan acá.
+
+  Liviano: sólo viajan los vínculos que tienen algún contrato en esos estados, y de cada contrato lo
+  justo para decidir (fechas, estado, origen, si ya se envió a firmar).
+*/
+router.get("/contratacion/contadores", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const vacio = { alta: 0, cuit: 0, sinCuit: 0, generarDocumentos: 0 };
+    const [estados, estadoEnvio, projectIds] = await Promise.all([
+      Info.find({ type: "estado-empleado", "data.esImpositivo": true }).select("name data.tipoImpositivo").lean() as Promise<any[]>,
+      resolverEstadoPorPropositos(["alta_temprana", "constancia_cuit"]).catch(() => null),
+      Project.find({ tenantId: req.tenantObjectId }).distinct("_id"),
+    ]);
+    if (projectIds.length === 0) {
+      res.json(vacio);
+      return;
+    }
+    const claves = new Set([...estados.map((e) => claveEstado(String(e?.name || ""))), ...(estadoEnvio ? [claveEstado(estadoEnvio)] : [])].filter(Boolean));
+    // Mongo compara texto crudo: primero los nombres que existen, y de ésos los que caen en lo pedido.
+    const nombres: unknown[] = await UserProject.distinct("contracts.nombre_estado_empleado", { projectId: { $in: projectIds } });
+    const crudos = nombres.map((n) => String(n ?? "")).filter((n) => claves.has(claveEstado(n)));
+    if (crudos.length === 0) {
+      res.json(vacio);
+      return;
+    }
+    const filas: any[] = await UserProject.aggregate([
+      { $match: { projectId: { $in: projectIds }, "contracts.nombre_estado_empleado": { $in: crudos } } },
+      {
+        $project: {
+          u: "$userId",
+          c: {
+            $map: {
+              input: { $ifNull: ["$contracts", []] },
+              as: "x",
+              in: { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga", e: "$$x.nombre_estado_empleado", o: { $or: [{ $gt: ["$$x.solicitudId", null] }, { $eq: ["$$x.origen", "agregar_miembro"] }] }, f: { $gt: ["$$x.firmaEnviadaAt", null] } },
+            },
+          },
+        },
+      },
+    ]);
+    const vinculos = filas.map((d) => ({
+      userId: String(d.u || ""),
+      contracts: (d.c || []).map((c: any) => ({ fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_estado_empleado: c.e, delSistema: !!c.o, firmaEnviadaAt: c.f ? true : null })),
+    }));
+    const userIds = [...new Set(vinculos.map((v) => v.userId))].filter((id) => Types.ObjectId.isValid(id));
+    const usuarios: any[] = userIds.length ? await User.find({ _id: { $in: userIds } }).select("metadata.cuit metadata.sinCuit").lean() : [];
+    const sinCuit = new Map(usuarios.map((u) => [String(u._id), noPoseeCuit(u?.metadata?.cuit, u?.metadata?.sinCuit)]));
+    // Un vínculo sin usuario no sale en la pantalla: tampoco se cuenta.
+    res.json(
+      contarBandejasDeLaBase(
+        vinculos.filter((v) => sinCuit.has(v.userId)),
+        { estadosImpositivos: estados.map((e) => ({ name: String(e?.name || ""), tipoImpositivo: e?.data?.tipoImpositivo })), estadoEnvio, sinCuitDe: (id) => sinCuit.get(id) === true },
+      ),
+    );
+  } catch (error) {
+    console.error("Get contadores de contratación error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

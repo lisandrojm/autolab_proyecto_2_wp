@@ -47,6 +47,7 @@ import { createNavbarEventListener } from '../utils/navbarEvents';
 import { invalidateRefCache } from '../utils/refCache';
 import { bandejaPorClave, varianteDeQuery, type Bandeja, type ClaveBandeja, type VarianteTramite } from '../config/bandejasContratacion';
 import { PasoDelFlujo } from '../components/contratos/PasoDelFlujo';
+import { useContadoresContratacionStore } from '../stores/contadoresContratacionStore';
 
 /*
   Filtro por lo que la persona PUEDE HACER en la app, no por cómo se llama su rol.
@@ -369,12 +370,44 @@ export const ContractsPage: React.FC<{ bandeja?: ClaveBandeja }> = ({ bandeja: c
       })
       .catch(() => {});
   }, [mainTab]);
+  // Lo recién leído de una carpeta de Dropbox o del padrón queda también en el menú lateral.
+  const informarAlMenu = useContadoresContratacionStore((st) => st.informar);
+  const alContarCarpeta = useCallback(
+    (carpeta: 'para_firmar' | 'enviado_firma' | 'firmados') => (cantidad: number) => {
+      (carpeta === 'para_firmar' ? setParaFirmarCount : carpeta === 'enviado_firma' ? setPendienteFirmaCount : setFirmadosCount)(cantidad);
+      informarAlMenu({ carpeta: { clave: carpeta, cantidad } });
+    },
+    [informarAlMenu],
+  );
+  const contarEnCarpeta = useMemo(() => ({ para_firmar: alContarCarpeta('para_firmar'), enviado_firma: alContarCarpeta('enviado_firma'), firmados: alContarCarpeta('firmados') }), [alContarCarpeta]);
+  // Generar documentos, abierta como bandeja: la pestaña del trámite (que era la que contaba) no está montada.
+  const [generarCount, setGenerarCount] = useState<number | null>(null);
+  const alContarGenerar = useCallback(
+    (cantidad: number) => {
+      setGenerarCount(cantidad);
+      informarAlMenu({ generarDocumentos: cantidad });
+    },
+    [informarAlMenu],
+  );
+  const alContarPadron = useCallback(
+    (cantidad: number) => {
+      setContratadosCount(cantidad);
+      informarAlMenu({ contratos: cantidad });
+    },
+    [informarAlMenu],
+  );
   // Cantidad de contratos de cada trámite, informada por ContractBulkAfipTab para mostrarla en las pestañas.
   const [mgmtCounts, setMgmtCounts] = useState<{ alta: number; cuit: number; firma: number; sinCuit: number }>({ alta: 0, cuit: 0, firma: 0, sinCuit: 0 });
   /* Si se entra directo al paso 1 (Solicitudes), la pestaña del trámite todavía no contó: sin número
      en vez de un «(0)» que no es cierto. */
   const mgmtContado = useRef(false);
+  const refrescoDelMenu = useRef<number | undefined>(undefined);
   const informarConteos = useCallback((c: { alta: number; cuit: number; firma: number; sinCuit: number }) => {
+    // Cambió la bandeja con la pantalla abierta (se presentó un alta, pasó a generar): el menú recuenta.
+    if (mgmtContado.current) {
+      window.clearTimeout(refrescoDelMenu.current);
+      refrescoDelMenu.current = window.setTimeout(() => useContadoresContratacionStore.getState().refrescarBase(), 1500);
+    }
     mgmtContado.current = true;
     setMgmtCounts(c);
   }, []);
@@ -634,7 +667,7 @@ export const ContractsPage: React.FC<{ bandeja?: ClaveBandeja }> = ({ bandeja: c
       case 'tramite':
         return mgmtContado.current ? mgmtCounts.alta + mgmtCounts.cuit : undefined;
       case 'generar':
-        return mgmtContado.current ? mgmtCounts.firma : undefined;
+        return generarCount ?? undefined;
       case 'dropbox':
         return dropboxCounts[bandeja.contenido.carpeta] ?? undefined;
       case 'padron':
@@ -787,11 +820,11 @@ export const ContractsPage: React.FC<{ bandeja?: ClaveBandeja }> = ({ bandeja: c
         tabActiva === 'solicitudes' ? (
           <SolicitudesPage enGestion={{ onTotal: setSolicitudesCount }} />
         ) : tabActiva === 'para_firmar' || tabActiva === 'enviado_firma' || tabActiva === 'firmados' ? (
-          <ContractDropboxTab key={tabActiva} tipo={tabActiva} onCount={tabActiva === 'para_firmar' ? setParaFirmarCount : tabActiva === 'enviado_firma' ? setPendienteFirmaCount : setFirmadosCount} />
+          <ContractDropboxTab key={tabActiva} tipo={tabActiva} onCount={contarEnCarpeta[tabActiva]} />
         ) : tabActiva === 'contratados' ? (
-          <ContractBulkContratadosTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onCount={setContratadosCount} />
+          <ContractBulkContratadosTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onCount={alContarPadron} />
         ) : tabActiva === 'firma' ? (
-          <ContractBulkFirmaTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onEnviados={(n) => setMgmtCounts((c) => ({ ...c, firma: Math.max(0, c.firma - n) }))} />
+          <ContractBulkFirmaTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onCount={alContarGenerar} onEnviados={(n) => setMgmtCounts((c) => ({ ...c, firma: Math.max(0, c.firma - n) }))} />
         ) : (
           <ContractBulkAfipTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} initialProjectId={initialProjectId} tipo={tabActiva === 'alta_afip' ? 'alta_temprana_afip' : tabActiva === 'sin_cuit' ? 'sin_cuit' : 'constancia_cuit'} onCounts={informarConteos} />
         )

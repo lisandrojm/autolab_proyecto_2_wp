@@ -3490,7 +3490,9 @@ export const ContractBulkFirmaTab: React.FC<{
   releases: Release[];
   /** Cuántos se acaban de enviar a firmar: el contador de la pestaña lo calcula otra pestaña, desmontada ahora. */
   onEnviados?: (cantidad: number) => void;
-}> = ({ allEstados, contratoFrames, releases, onEnviados }) => {
+  /** Cuántos hay en la bandeja (sin los filtros de la barra): el número de la bandeja «Generar documentos». */
+  onCount?: (cantidad: number) => void;
+}> = ({ allEstados, contratoFrames, releases, onEnviados, onCount }) => {
   // Tocar la fila abre el resumen del contrato (en Contratos; fuera de ahí no hay proveedor y no hace nada).
   const verContrato = useVerContratoEnModal();
   const [rows, setRows] = useState<ContractOverviewRow[]>([]);
@@ -3594,6 +3596,13 @@ export const ContractBulkFirmaTab: React.FC<{
     hecho: se sigue en «Para Firmar» (Outbox). Antes quedaba con «Enviado» hasta recargar la página.
   */
   const rowsEnEnvio = useMemo(() => (claveEnvio ? rows.filter((r) => claveEstado(r.nombre_estado_empleado || '') === claveEnvio && !r.firmaEnviadaAt) : []), [rows, claveEnvio]);
+  // Con cliente o proyecto elegidos el server ya trae una parte: ese número no es el de la bandeja.
+  const onCountRef = useRef(onCount);
+  onCountRef.current = onCount;
+  useEffect(() => {
+    if (!loading && config && !filterClientId && !filterProjectId) onCountRef.current?.(rowsEnEnvio.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rowsEnEnvio.length, loading, config]);
 
   const empresasDelContrato = (r: ContractOverviewRow): string[] => (r.empresaContratoId ? [r.empresaContratoId] : (r.contratoEmpresas || []).map((e) => e.id));
 

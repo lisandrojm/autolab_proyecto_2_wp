@@ -852,6 +852,12 @@ class UsersAPI {
     return Number(data?.count) || 0;
   }
 
+  /** Los números de las bandejas de Contratación que viven en la base (menú lateral), con el corte de la pantalla. */
+  async contadoresDeContratacion(): Promise<{ alta: number; cuit: number; sinCuit: number; generarDocumentos: number }> {
+    const { data } = await axios.get("/users/contratacion/contadores", { headers: this.getHeaders() });
+    return { alta: Number(data?.alta) || 0, cuit: Number(data?.cuit) || 0, sinCuit: Number(data?.sinCuit) || 0, generarDocumentos: Number(data?.generarDocumentos) || 0 };
+  }
+
   async contarContratosPendientes(): Promise<number> {
     const { data } = await axios.get("/users/contratos-pendientes/count", { headers: this.getHeaders() });
     return Number(data?.count) || 0;
