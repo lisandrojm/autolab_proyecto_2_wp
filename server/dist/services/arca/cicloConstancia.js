@@ -19,6 +19,13 @@
 export const MAX_INTENTOS = 3;
 /** Días de espera después del intento fallido n (1.º → 1 día, 2.º → 2 días). Al 3.º, a revisión. */
 export const ESPERA_DIAS = [1, 2, 4];
+/**
+ * Después de un fallo de la descarga ENCADENADA a la presentación (11/11/2026) se espera esto y no un
+ * día: la encadenada de las 00:05 que no pudo bajar una constancia tiene que entrar en el barrido de
+ * ESE día (15:00). Con un día de espera vencía a las 00:05 siguientes y recién salía en el barrido de
+ * pasado mañana.
+ */
+export const ESPERA_TRAS_ENCADENADA_MS = 2 * 60 * 60_000;
 /** El orden del circuito, para no volver nunca para atrás (ver `siguienteEstado`). */
 const PASO = {
     presentada: 0,
@@ -78,6 +85,9 @@ export function trasUnFallo(intentosPrevios, fallo, ahora, o = {}) {
         return { estado: "requiere_revision", proximoIntentoEl: null, motivoRevision: `El reintento a mano tampoco la bajó: ${textoDelFallo(fallo)}` };
     if (automaticos >= MAX_INTENTOS)
         return { estado: "requiere_revision", proximoIntentoEl: null, motivoRevision: `No se pudo bajar en ${MAX_INTENTOS} intentos. El último: ${textoDelFallo(fallo)}` };
+    // Cuenta como intento igual; lo que cambia es cuánto espera (ver `ESPERA_TRAS_ENCADENADA_MS`).
+    if (o.origen === "encadenada")
+        return { estado: "constancia_pendiente", proximoIntentoEl: new Date(ahora.getTime() + ESPERA_TRAS_ENCADENADA_MS) };
     const dias = ESPERA_DIAS[Math.min(automaticos, ESPERA_DIAS.length) - 1];
     return { estado: "constancia_pendiente", proximoIntentoEl: new Date(ahora.getTime() + dias * 86_400_000) };
 }
@@ -112,6 +122,18 @@ export function elegirParaCorrida(items, o) {
             enRevision: items.filter((i) => i.estado === "requiere_revision").length,
         },
     };
+}
+/**
+ * LAS QUE ENTRAN EN LA DESCARGA ENCADENADA A UNA PRESENTACIÓN (11/11/2026). Puro.
+ *
+ * Exactamente las altas recién presentadas de esa tanda (`recien`), sin tope: el lote ya lo acota el
+ * tamaño de la tanda. De ésas, sólo lo que una corrida automática puede pedir: lo que ya tiene su
+ * constancia no se vuelve a bajar (idempotencia por clave), y lo que está en revisión o esperando su
+ * reintento sigue su ciclo —no se fuerza por haberse presentado de nuevo—.
+ */
+export function elegirEncadenadas(items, recien, ahora) {
+    const pedidas = new Set(recien.map((i) => `${i.userProjectId}:${Number(i.contractIndex)}`));
+    return items.filter((i) => pedidas.has(`${String(i.userProjectId)}:${i.contractIndex}`) && !yaTieneConstancia(i.estado) && sePuedePedir(i, ahora)).sort((a, b) => a.fechaAlta.localeCompare(b.fechaAlta));
 }
 /**
  * ¿SE PUEDE «RETOMAR EL CIRCUITO»? Sólo una constancia en revisión porque su documento apareció fuera

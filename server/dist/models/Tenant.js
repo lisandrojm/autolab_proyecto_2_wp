@@ -85,6 +85,7 @@ const tenantSchema = new Schema({
             },
             descargaConstancias: {
                 activa: { type: Boolean, default: false },
+                alPresentar: { type: Boolean },
                 hora: { type: Number },
                 minuto: { type: Number },
                 ultimoDia: { type: String },

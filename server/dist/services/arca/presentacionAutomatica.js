@@ -22,6 +22,7 @@ import { TEXTO_PROBLEMA_SUCURSAL } from "../../compartido/sucursalesDeEmpresa.js
 import { altasPresentadasDe, relacionesArcaDe, ultimaSyncOkPorCuit } from "./altasVigentes.js";
 import { DESBLOQUEO_RECHAZO_ALTA_ACTIVA, TEXTO_RECHAZO_ALTA_ACTIVA, bloqueoPorVigencia, esperanSuTurno, mandaFechaFin, momentoDetrasDe, momentoTrasBaja, rechazoAltaActivaDestrabado, vueltasPorPersona, } from "./secuenciaPorPersona.js";
 import { arrancarCorridaAltas, corridaAltasDe } from "./corridaAltas.js";
+import { conPresentacionesEnFila } from "./colaEncadenada.js";
 import { quienTiene } from "./candadoArca.js";
 import { esRechazoDefinitivo } from "./rechazoDefinitivo.js";
 import { CONFIG_POR_DEFECTO, entraEnLaCorrida, esDelDia, esperaAManana, hastaDeLaCorrida, motivoDeOmision, proximaCorridaPara, rechazadasAlFinal, yaTermino } from "./horarioAltasAutomaticas.js";
@@ -452,7 +453,10 @@ async function esperarQue(cond, plazoMs) {
  * fila: cada corrida espera a que termine la anterior. Si hay otra corrida de ARCA en curso (una
  * validación de obras sociales, una presentación manual), espera a que se libere.
  */
-export async function presentarCandidatos(o) {
+export const presentarCandidatos = (o) => 
+// Las descargas encadenadas esperan a que termine toda la fila: presentar va primero (ver `colaEncadenada.ts`).
+conPresentacionesEnFila(o.tenantId, () => presentarEnFila(o));
+async function presentarEnFila(o) {
     const grupos = new Map();
     for (const c of o.candidatos) {
         if (!c.presentable || !c.registro || !c.empresa)
@@ -539,7 +543,10 @@ export function registrarForzadoAltas(tenantId, f) {
  *   · "cola": modo frecuente, entre corrida y corrida del día: sólo lo que ya tuvo su turno. Corta entre
  *     lotes si llega la hora del día (`debeCortar`).
  */
-export async function correrPresentacionAutomatica(tenantId, tenantObjectId, cfg, tipo, o = {}) {
+export const correrPresentacionAutomatica = (tenantId, tenantObjectId, cfg, tipo, o = {}) => 
+// Una sola fila para las del día y las atrasadas: las descargas encadenadas arrancan cuando terminan las dos.
+conPresentacionesEnFila(tenantId, () => correrPresentacion(tenantId, tenantObjectId, cfg, tipo, o));
+async function correrPresentacion(tenantId, tenantObjectId, cfg, tipo, o = {}) {
     const hoy = hoyArgentina();
     const candidatos = await candidatosDeAlta(tenantObjectId, { hasta: hastaDeLaCorrida(hoy, cfg, tipo), cfg });
     const entran = rechazadasAlFinal(candidatos.filter((c) => entraEnLaCorrida(c, hoy)));

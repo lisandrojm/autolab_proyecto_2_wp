@@ -151,7 +151,7 @@
     "test:arca-pantalla": "tsx --test src/services/arca/pantallaArca.test.ts src/services/arca/sincronizacionRelacionesCron.test.ts",
     "test:arca-altas": "tsx --test src/services/arca/cotejoAltas.test.ts",
     "test:secuencia-altas": "tsx --test src/services/arca/secuenciaPorPersona.test.ts src/services/arca/altasVigentes.test.ts",
-    "test:constancias-arca": "tsx --test src/services/arca/cicloConstancia.test.ts src/services/arca/constanciasArca.test.ts src/utils/constanciaTrabajadorPdf.test.ts",
+    "test:constancias-arca": "tsx --test src/services/arca/cicloConstancia.test.ts src/services/arca/constanciasArca.test.ts src/services/arca/colaEncadenada.test.ts src/utils/constanciaTrabajadorPdf.test.ts",
     "constancias:migrar": "dotenv -e .env.production -- tsx src/scripts/migrarConstanciasArca.ts",
     "constancias:volver-a-bajar": "dotenv -e .env.production -- tsx src/scripts/volverABajarConstancias.ts",
     "circuito:volver-a-generar": "dotenv -e .env.production -- tsx src/scripts/circuitoVolverAGenerar.ts",

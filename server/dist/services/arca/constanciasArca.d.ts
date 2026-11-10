@@ -1,5 +1,5 @@
 import { IConstanciaArca } from "../../models/ConstanciaArca.js";
-import { type CarpetaDelDocumento, type CategoriaConstancia, type EstadoConstancia, type Fallo, type FueraDeLaCorrida, type Intento, type Redescarga } from "./cicloConstancia.js";
+import { type CarpetaDelDocumento, type CategoriaConstancia, type EstadoConstancia, type Fallo, type FueraDeLaCorrida, type Intento, type OrigenDescarga, type Redescarga } from "./cicloConstancia.js";
 import { getTenantDropboxConfig } from "../dropboxService.js";
 import { type ConstanciaTrabajador } from "../../utils/constanciaTrabajadorPdf.js";
 /**
@@ -86,7 +86,8 @@ export declare function colaDeDescarga(tenantObjectId: any, empresaId: string, o
     soloItems?: Array<{
         userProjectId: string;
         contractIndex: number;
-    }>;
+    }>; /** `soloItems` son las altas recién presentadas de una tanda: corrida automática, no un pedido a mano. */
+    encadenada?: boolean;
 }): Promise<{
     elegidas: ElegidaParaDescargar[];
     fuera: FueraDeLaCorrida;
@@ -101,10 +102,12 @@ export declare function anotarDescarga(tenantObjectId: any, clave: string, r: {
     nombre?: string;
     dropboxId?: string;
     manual?: boolean;
+    origen?: OrigenDescarga;
 }): Promise<void>;
 /** Un intento que no trajo la constancia: cuenta, espera o pasa a revisión (ver `trasUnFallo`). */
 export declare function anotarFallo(tenantObjectId: any, clave: string, fallo: Fallo, o?: {
     manual?: boolean;
+    origen?: OrigenDescarga;
 }): Promise<{
     estado: EstadoConstancia;
     motivoRevision?: string;

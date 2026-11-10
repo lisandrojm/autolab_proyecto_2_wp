@@ -20,6 +20,13 @@ export type EstadoConstancia = "presentada" | "constancia_pendiente" | "constanc
 export declare const MAX_INTENTOS = 3;
 /** Días de espera después del intento fallido n (1.º → 1 día, 2.º → 2 días). Al 3.º, a revisión. */
 export declare const ESPERA_DIAS: number[];
+/**
+ * Después de un fallo de la descarga ENCADENADA a la presentación (11/11/2026) se espera esto y no un
+ * día: la encadenada de las 00:05 que no pudo bajar una constancia tiene que entrar en el barrido de
+ * ESE día (15:00). Con un día de espera vencía a las 00:05 siguientes y recién salía en el barrido de
+ * pasado mañana.
+ */
+export declare const ESPERA_TRAS_ENCADENADA_MS: number;
 /** Persona + empleadora + fecha de alta: lo que identifica una constancia. Dos corridas sobre lo mismo dan la misma clave. */
 export declare const claveConstancia: (o: {
     cuil: unknown;
@@ -35,10 +42,16 @@ export declare function sePuedePedir(item: {
 }, ahora: Date): boolean;
 /** «redescarga»: no es un intento contra ARCA sino la marca de «Volver a bajar» (ver `puedeVolverABajarse`); los intentos se cuentan desde ahí. */
 export type ResultadoIntento = "descargada" | "rechazada" | "sin_constancia" | "ambigua" | "error" | "redescarga";
+/**
+ * Qué corrida hizo el intento (11/11/2026): la ENCADENADA a la presentación (se baja apenas se presenta
+ * el alta), el BARRIDO diario (lo que quedó pendiente) o una pedida A MANO (forzar, reintentar).
+ */
+export type OrigenDescarga = "encadenada" | "barrido" | "manual";
 export interface Intento {
     fecha: Date;
     resultado: ResultadoIntento;
     detalle?: string;
+    origen?: OrigenDescarga;
     /** Pedido a mano («Reintentar», «Forzar descarga»): no cuenta para el tope de intentos automáticos. */
     manual?: boolean;
 }
@@ -96,6 +109,7 @@ export interface Fallo {
  */
 export declare function trasUnFallo(intentosPrevios: Intento[], fallo: Fallo, ahora: Date, o?: {
     manual?: boolean;
+    origen?: OrigenDescarga;
 }): {
     estado: EstadoConstancia;
     proximoIntentoEl: Date | null;
@@ -131,6 +145,21 @@ export declare function elegirParaCorrida<T extends ItemDeCola>(items: T[], o: {
     elegidas: T[];
     fuera: FueraDeLaCorrida;
 };
+/**
+ * LAS QUE ENTRAN EN LA DESCARGA ENCADENADA A UNA PRESENTACIÓN (11/11/2026). Puro.
+ *
+ * Exactamente las altas recién presentadas de esa tanda (`recien`), sin tope: el lote ya lo acota el
+ * tamaño de la tanda. De ésas, sólo lo que una corrida automática puede pedir: lo que ya tiene su
+ * constancia no se vuelve a bajar (idempotencia por clave), y lo que está en revisión o esperando su
+ * reintento sigue su ciclo —no se fuerza por haberse presentado de nuevo—.
+ */
+export declare function elegirEncadenadas<T extends ItemDeCola & {
+    userProjectId: unknown;
+    contractIndex: number;
+}>(items: T[], recien: Array<{
+    userProjectId: string;
+    contractIndex: number;
+}>, ahora: Date): T[];
 /**
  * ¿SE PUEDE «RETOMAR EL CIRCUITO»? Sólo una constancia en revisión porque su documento apareció fuera
  * de las carpetas del circuito (alguien lo movió del Outbox a otra carpeta). Puro.

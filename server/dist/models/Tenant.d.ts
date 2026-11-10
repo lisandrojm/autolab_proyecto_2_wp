@@ -167,7 +167,10 @@ export interface ITenant extends Document {
              * (ver `descargaConstanciasAutomatica.ts`). Apagada por defecto. Sólo lee en ARCA.
              */
             descargaConstancias?: {
+                /** El BARRIDO diario (lo que quedó pendiente). */
                 activa?: boolean;
+                /** «Bajar constancias al presentar» (11/11/2026): la descarga encadenada a cada presentación. Sin dato = prendida. */
+                alPresentar?: boolean;
                 hora?: number;
                 minuto?: number;
                 ultimoDia?: string;

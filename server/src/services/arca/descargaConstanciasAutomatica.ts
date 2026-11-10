@@ -10,6 +10,13 @@ import { credencialesDe } from "./navegador.js";
 import { type ConfigAltasAutomaticas, momentoDeCorrida, sumarDias } from "./horarioAltasAutomaticas.js";
 
 /**
+ * EL BARRIDO DIARIO DE CONSTANCIAS (11/11/2026). Desde ese día cada constancia se baja apenas se presenta
+ * su alta (`descargaEncadenada.ts`), y esta corrida diaria pasó a ser el barrido de seguridad: procesa
+ * sólo lo que quedó pendiente —lo que la encadenada no pudo bajar, los reintentos cuya espera venció, las
+ * altas hechas a mano en ARCA—, con el tope de siempre. Lo que ya tiene constancia no se vuelve a pedir
+ * (la cola sale de `constancias_arca`, una fila por clave). Con «Bajar al presentar» apagado, vuelve a
+ * ser lo de antes: la única descarga automática.
+ *
  * DESCARGA AUTOMÁTICA DE LAS CONSTANCIAS DE ALTA TEMPRANA (pedido del 18/10/2026). Una vez por día, a la
  * hora configurada por el tenant, se bajan de ARCA las constancias de las altas ya presentadas que
  * todavía no la tienen, y cada una sigue su camino (Outbox si se firma, «No firmar» si no). Es lo mismo
@@ -185,7 +192,7 @@ export async function correrDescargaConstanciasDelDia(tenantId: string, tenantOb
 }
 
 /** Recién bajadas, ya se sabe dónde quedó cada una: el estado de la pantalla no espera al próximo escaneo. */
-async function ubicarDespuesDeBajar(tenantId: string): Promise<void> {
+export async function ubicarDespuesDeBajar(tenantId: string): Promise<void> {
   try {
     const t: any = await Tenant.findById(tenantId).lean();
     const cfg = getTenantDropboxConfig(t);

@@ -4,7 +4,7 @@ import { Project } from "../../models/Project.js";
 import { User } from "../../models/User.js";
 import { Company } from "../../models/Company.js";
 import { ConstanciaArca } from "../../models/ConstanciaArca.js";
-import { carpetaMasAvanzada, categoriaDe, claveConstancia, elegirParaCorrida, estadoPorCarpeta, puedeRetomarCircuito, puedeVolverABajarse, siguienteEstado, trasUnFallo, yaTieneConstancia, } from "./cicloConstancia.js";
+import { carpetaMasAvanzada, categoriaDe, claveConstancia, elegirEncadenadas, elegirParaCorrida, estadoPorCarpeta, puedeRetomarCircuito, puedeVolverABajarse, siguienteEstado, trasUnFallo, yaTieneConstancia, } from "./cicloConstancia.js";
 import { borradoEl, copyEntry, downloadFileContent, listFolder, ubicarArchivo } from "../dropboxService.js";
 import { evaluarConstancia, leerConstanciaTrabajador, leerConstanciaTrabajadorPdf } from "../../utils/constanciaTrabajadorPdf.js";
 import { resolverCarpetaPorProposito } from "../../utils/estadoCarpetas.js";
@@ -156,6 +156,11 @@ export async function colaDeDescarga(tenantObjectId, empresaId, o) {
     await sincronizarConstancias(tenantObjectId, { empresaId });
     const docs = await ConstanciaArca.find({ tenantId: tenantObjectId, empresaId: new Types.ObjectId(empresaId) }).select("clave estado proximoIntentoEl fechaAlta userProjectId contractIndex").lean();
     const sinConstancia = docs.filter((d) => !yaTieneConstancia(d.estado));
+    if (o.soloItems && o.encadenada) {
+        // Un fallo acá cuenta como intento automático y sigue el ciclo normal (reintento → barrido), no va derecho a revisión.
+        const pedidas = elegirEncadenadas(sinConstancia, o.soloItems, o.ahora);
+        return { elegidas: pedidas.map((d) => ({ userProjectId: String(d.userProjectId), contractIndex: d.contractIndex, clave: d.clave, manual: false })), fuera: { nuevasPorTope: 0, reintentosPorTope: 0, esperandoReintento: 0, enRevision: 0 }, total: sinConstancia.length };
+    }
     if (o.soloItems) {
         const pedidas = sinConstancia.filter((d) => o.soloItems.some((i) => i.userProjectId === String(d.userProjectId) && Number(i.contractIndex) === d.contractIndex));
         return { elegidas: pedidas.map((d) => ({ userProjectId: String(d.userProjectId), contractIndex: d.contractIndex, clave: d.clave, manual: true })), fuera: { nuevasPorTope: 0, reintentosPorTope: 0, esperandoReintento: 0, enRevision: 0 }, total: sinConstancia.length };
@@ -178,7 +183,7 @@ export async function anotarDescarga(tenantObjectId, clave, r) {
             documento: { codigo: codigoDe(r.nombre || r.archivadaEn), nombre: r.nombre || "", path: r.archivadaEn || undefined, dropboxId: r.dropboxId, carpeta: r.archivadaEn ? (noFirmar ? "no_firmar" : "outbox") : null, vaAFirma: r.vaAFirma, firmadaEl: null, archivadaEn: null, ubicadoEl: r.archivadaEn ? ahora : null, noUbicadoDesde: null },
         },
         $push: {
-            intentos: { fecha: ahora, resultado: "descargada", detalle: r.tipo === "baja" ? (r.mismoDia ? "Constancia de la relación (alta y baja el mismo día)." : "Constancia de la relación ya terminada (de baja).") : undefined, manual: !!r.manual },
+            intentos: { fecha: ahora, resultado: "descargada", detalle: r.tipo === "baja" ? (r.mismoDia ? "Constancia de la relación (alta y baja el mismo día)." : "Constancia de la relación ya terminada (de baja).") : undefined, manual: !!r.manual, origen: r.origen },
             historial: { estado, fecha: ahora, motivo: r.tipo === "baja" ? "Constancia de baja aceptada: la relación ya terminó" : "Constancia bajada de ARCA" },
         },
     });
@@ -196,7 +201,7 @@ export async function anotarFallo(tenantObjectId, clave, fallo, o = {}) {
     await ConstanciaArca.updateOne({ tenantId: tenantObjectId, clave }, {
         $set: { estado: r.estado, proximoIntentoEl: r.proximoIntentoEl, motivoRevision: r.motivoRevision ?? null },
         $push: {
-            intentos: { fecha: ahora, resultado: fallo.resultado, detalle: fallo.detalle, manual: !!o.manual },
+            intentos: { fecha: ahora, resultado: fallo.resultado, detalle: fallo.detalle, manual: !!o.manual, origen: o.origen },
             ...(r.estado !== doc.estado ? { historial: { estado: r.estado, fecha: ahora, motivo: r.motivoRevision } } : {}),
         },
     });

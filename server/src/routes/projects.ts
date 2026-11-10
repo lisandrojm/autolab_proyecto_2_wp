@@ -30,6 +30,8 @@ import { candidatosDeAlta, presentarCandidatos, forzadoAltasDe, registrarForzado
 import { claveDe as claveVerificacion, itemDe, verificacionEnCursoDe, verificarAltasEnArca } from "../services/arca/verificacionAltas.js";
 import { ArcaVerificacionAlta } from "../models/ArcaVerificacionAlta.js";
 import { MAX_POR_EMPLEADORA, forzarDescargaConstancias, forzadoDe, proximaDescarga } from "../services/arca/descargaConstanciasAutomatica.js";
+import { bajaAlPresentar, encadenadasEnFila } from "../services/arca/descargaEncadenada.js";
+import { ArcaDescargaLog } from "../models/ArcaDescargaLog.js";
 import { pendientesDeConstanciaTodas } from "../services/arca/constanciasAltas.js";
 import { constanciasDeLaPantalla, retomarElCircuito, volverABajar, type ConstanciaEnPantalla } from "../services/arca/constanciasArca.js";
 import { buscarArchivos, getTenantDropboxConfig } from "../services/dropboxService.js";
@@ -3925,13 +3927,23 @@ router.get("/contratos/altas-arca/constancias/pendientes", requireTenant, authen
     const cfg = configDe({ hora: dc.hora ?? 15, minuto: dc.minuto ?? 0 });
     const hoy = hoyArgentina();
     const ahora = new Date();
-    const [pendientes, constancias] = await Promise.all([pendientesDeConstanciaTodas(req.tenantObjectId), constanciasDeLaPantalla(req.tenantObjectId)]);
+    const [pendientes, constancias, corridas] = await Promise.all([
+      pendientesDeConstanciaTodas(req.tenantObjectId),
+      constanciasDeLaPantalla(req.tenantObjectId),
+      // El historial: las últimas corridas de descarga, sea cual sea su origen (encadenada, barrido o a mano).
+      ArcaDescargaLog.find({ tenantId: req.tenantObjectId }).sort({ arrancadaEl: -1 }).limit(20).select("-tenantId -__v").lean(),
+    ]);
     // El estado de cada una sale de `constancias_arca` (07/11/2026): nueva, esperando su reintento o en revisión, con sus intentos.
     const cicloPorContrato = new Map(constancias.map((k) => [`${k.userProjectId}:${k.contractIndex}`, k]));
     const d = descargaConstanciasDe(String(req.tenantObjectId));
     const f = forzadoDe(String(req.tenantObjectId));
     res.json({
       activa: !!dc.activa,
+      // «Bajar constancias al presentar» (11/11/2026): la descarga encadenada a cada presentación; el horario es el del barrido.
+      alPresentar: bajaAlPresentar(dc),
+      // Las tandas recién presentadas que esperan su turno en ARCA o se están bajando.
+      encadenadas: encadenadasEnFila(String(req.tenantObjectId)).map((t) => ({ empresaId: t.empresaId, empresaRazonSocial: t.empresaRazonSocial, estado: t.estado, presentadaEl: t.terminadaEl, items: t.items })),
+      corridas,
       config: { hora: cfg.hora, minuto: cfg.minuto },
       ahora: ahora.toISOString(),
       hoy,
@@ -3942,7 +3954,7 @@ router.get("/contratos/altas-arca/constancias/pendientes", requireTenant, authen
       // Las que se validaron pero cuyo documento se perdió (borrado: «Volver a bajar») o se movió fuera del circuito («Retomar el circuito»).
       noUbicadas: constancias.filter((k) => k.noUbicado || k.fueraDelCircuito),
       // La descarga de UNA empleadora que corre ahora (forzada o automática), con sus eventos; y el forzado en masa, si lo hay.
-      descarga: d ? { empresaId: d.empresaId, empresaRazonSocial: d.empresaRazonSocial, total: d.total, corriendo: !d.terminada, arrancadaEl: d.arrancadaEl, eventos: d.eventos } : null,
+      descarga: d ? { empresaId: d.empresaId, empresaRazonSocial: d.empresaRazonSocial, total: d.total, corriendo: !d.terminada, arrancadaEl: d.arrancadaEl, eventos: d.eventos, origen: d.origen, presentacionTerminadaEl: d.presentacionTerminadaEl || null } : null,
       forzado: f ? { ...f } : null,
     });
   } catch (error: any) {
@@ -4057,7 +4069,7 @@ router.get("/contratos/altas-arca/constancias/automatica", requireTenant, authen
     const t: any = await Tenant.findById(req.tenantObjectId).select("integrations.arcaSimplificacion.descargaConstancias").lean();
     const dc = t?.integrations?.arcaSimplificacion?.descargaConstancias || {};
     const cfg = configDe({ hora: dc.hora ?? 15, minuto: dc.minuto ?? 0 });
-    res.json({ activa: !!dc.activa, config: { hora: cfg.hora, minuto: cfg.minuto }, ahora: new Date().toISOString(), hoy: hoyArgentina(), ultimaCorrida: dc.ultimaCorrida || null, maxPorEmpleadora: MAX_POR_EMPLEADORA });
+    res.json({ activa: !!dc.activa, alPresentar: bajaAlPresentar(dc), config: { hora: cfg.hora, minuto: cfg.minuto }, ahora: new Date().toISOString(), hoy: hoyArgentina(), ultimaCorrida: dc.ultimaCorrida || null, maxPorEmpleadora: MAX_POR_EMPLEADORA });
   } catch (error: any) {
     console.error("Get descarga constancias automatica error:", error);
     res.status(500).json({ error: String(error?.message || "Internal server error") });
@@ -4075,13 +4087,15 @@ router.put("/contratos/altas-arca/constancias/automatica", requireTenant, authen
     const set: Record<string, unknown> = {};
     for (const [k, val] of Object.entries(v.cambios)) set[`${base}.${k}`] = val;
     if (req.body?.activa !== undefined) set[`${base}.activa`] = req.body.activa === true;
+    // «Bajar constancias al presentar»: independiente del barrido (se puede tener una sin la otra).
+    if (req.body?.alPresentar !== undefined) set[`${base}.alPresentar`] = req.body.alPresentar === true;
     const t: any = await Tenant.findById(req.tenantObjectId).select(base).lean();
     const dc = t?.integrations?.arcaSimplificacion?.descargaConstancias || {};
     const cfg = configDe({ hora: dc.hora ?? 15, minuto: dc.minuto ?? 0, ...v.cambios });
     // Prendida DESPUÉS de la hora, arranca mañana: prender un interruptor no tiene que entrar a ARCA en el acto.
     if (req.body?.activa === true && !dc.activa && yaPasoLaHora(cfg)) set[`${base}.ultimoDia`] = hoyArgentina();
     if (Object.keys(set).length > 0) await Tenant.updateOne({ _id: req.tenantObjectId }, { $set: set });
-    res.json({ activa: req.body?.activa !== undefined ? req.body.activa === true : !!dc.activa, config: { hora: cfg.hora, minuto: cfg.minuto } });
+    res.json({ activa: req.body?.activa !== undefined ? req.body.activa === true : !!dc.activa, alPresentar: req.body?.alPresentar !== undefined ? req.body.alPresentar === true : bajaAlPresentar(dc), config: { hora: cfg.hora, minuto: cfg.minuto } });
   } catch (error: any) {
     console.error("Put descarga constancias automatica error:", error);
     res.status(500).json({ error: "Internal server error" });

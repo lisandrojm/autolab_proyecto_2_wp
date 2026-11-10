@@ -1,4 +1,4 @@
-import type { FueraDeLaCorrida } from "./cicloConstancia.js";
+import type { FueraDeLaCorrida, OrigenDescarga } from "./cicloConstancia.js";
 /**
  * BAJAR DE ARCA LAS CONSTANCIAS DE ALTA TEMPRANA de lo ya presentado, y mandarlas a donde va cada
  * una (Outbox si se firma, «Alta temprana de Arca/No firmar» si no).
@@ -24,6 +24,8 @@ export type EventoConstancias = {
     nombre: string;
     estado: "descargando" | "lista" | "rechazada" | "sin_constancia" | "error";
     detalle?: string;
+    /** Bajada: si ARCA la dio de ALTA (relación activa) o de BAJA (ya terminada). */
+    tipoConstancia?: "alta" | "baja";
 } | {
     tipo: "fin";
     listas: number;
@@ -39,6 +41,16 @@ interface DescargaConstancias {
     eventos: EventoConstancias[];
     terminada: boolean;
     arrancadaEl: Date;
+    /** Encadenada a una presentación, el barrido diario o pedida a mano (11/11/2026). */
+    origen: OrigenDescarga;
+    /** La encadenada: cuándo terminó la presentación de la que salió. */
+    presentacionTerminadaEl?: Date;
+}
+/** La presentación de la que sale una descarga encadenada (ver `descargaEncadenada.ts`). */
+export interface PresentacionEncadenada {
+    terminadaEl: Date;
+    logId?: string | null;
+    automatica: boolean;
 }
 export interface Pendiente {
     userProjectId: string;
@@ -80,6 +92,11 @@ export declare function arrancarDescargaConstancias(o: {
     /** Quién la pidió; la descarga automática no tiene persona (`automatica: true`). Queda en cada constancia. */
     usuarioId?: string | null;
     automatica?: boolean;
+    /**
+     * ENCADENADA A UNA PRESENTACIÓN (11/11/2026): `soloItems` son las altas que se acaban de presentar. Sin
+     * tope, pero como corrida automática: un fallo cuenta como intento y sigue su ciclo de reintentos.
+     */
+    encadenada?: PresentacionEncadenada;
 }): Promise<{
     total: number;
     pendientes: number;

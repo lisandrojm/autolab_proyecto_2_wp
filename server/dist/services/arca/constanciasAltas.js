@@ -10,6 +10,7 @@ import { MOTOR, MOTOR_ALTAS } from "./motor.js";
 import { soltarCandado, tomarCandado } from "./candadoArca.js";
 import { guardarPdfDeAlta, registrarAltaDeContrato } from "../altaTempranaService.js";
 import { anotarDescarga, anotarFallo, colaDeDescarga } from "./constanciasArca.js";
+import { ArcaDescargaLog } from "../../models/ArcaDescargaLog.js";
 const bajaDe = (c) => (/^\d{4}-\d{2}-\d{2}/.test(String(c?.fecha_baja_contrato || "")) ? String(c.fecha_baja_contrato).slice(0, 10) : "");
 /** Una por tenant, en memoria, como las demás corridas de ARCA. */
 const descargas = new Map();
@@ -125,14 +126,14 @@ export async function arrancarDescargaConstancias(o) {
           entra ni ocupa lugar. La forzada: lo elegido, aunque esté esperando o en revisión (es el
           «Reintentar»). En las dos, lo que ya tiene constancia no se pide nunca.
         */
-        const cola = await colaDeDescarga(tenantObjectId, o.empresaId, { ahora: new Date(), tope: o.soloItems ? undefined : o.maximo, soloItems: o.soloItems });
+        const cola = await colaDeDescarga(tenantObjectId, o.empresaId, { ahora: new Date(), tope: o.soloItems ? undefined : o.maximo, soloItems: o.soloItems, encadenada: !!o.encadenada });
         const porContrato = new Map(todas.map((p) => [`${p.userProjectId}:${p.contractIndex}`, p]));
         const pendientes = cola.elegidas.flatMap((e) => {
             const p = porContrato.get(`${e.userProjectId}:${e.contractIndex}`);
             return p ? [{ ...p, clave: e.clave, manual: e.manual }] : [];
         });
         if (pendientes.length === 0)
-            throw new Error(o.soloItems ? "Las altas pedidas ya tienen su constancia o no son de esa empleadora." : "No hay constancias para pedir hoy: las que faltan esperan su reintento o están en revisión.");
+            throw new Error(o.encadenada ? "Las altas recién presentadas ya tienen su constancia o esperan su reintento." : o.soloItems ? "Las altas pedidas ya tienen su constancia o no son de esa empleadora." : "No hay constancias para pedir hoy: las que faltan esperan su reintento o están en revisión.");
         const cred = await credencialesDe(tenantId);
         if (!cred)
             throw new Error("Faltan las credenciales de ARCA. Cargalas en Configuración → ARCA → Conexión.");
@@ -143,6 +144,8 @@ export async function arrancarDescargaConstancias(o) {
             eventos: [],
             terminada: false,
             arrancadaEl: new Date(),
+            origen: o.encadenada ? "encadenada" : o.automatica ? "barrido" : "manual",
+            presentacionTerminadaEl: o.encadenada?.terminadaEl,
         };
         descargas.set(tenantId, d);
         void correr({ d, pendientes, cuit, cred, ...o });
@@ -159,6 +162,9 @@ async function correr(o) {
     let sesion = null;
     let fallo = false;
     let listas = 0;
+    // De ALTA (la relación seguía activa) o de BAJA (ya terminada): la métrica del encadenamiento.
+    let deAlta = 0;
+    let deBaja = 0;
     try {
         emitir({ tipo: "abriendo" });
         sesion = await abrirSesionArca(tenantId, o.cred);
@@ -258,7 +264,7 @@ async function correr(o) {
                 const anotar = async (f) => {
                     if (!p.clave)
                         return "";
-                    const r = await anotarFallo(tenantObjectId, p.clave, f, { manual: p.manual }).catch((e) => {
+                    const r = await anotarFallo(tenantObjectId, p.clave, f, { manual: p.manual, origen: d.origen }).catch((e) => {
                         console.error(`[CONSTANCIAS-ARCA] no pude anotar el intento de ${p.cuil}:`, e?.message || e);
                         return null;
                     });
@@ -319,17 +325,23 @@ async function correr(o) {
                         continue;
                     }
                     listas++;
+                    const tipoConstancia = res.constancia?.deBaja ? "baja" : "alta";
+                    if (tipoConstancia === "baja")
+                        deBaja++;
+                    else
+                        deAlta++;
                     if (p.clave) {
-                        await anotarDescarga(tenantObjectId, p.clave, { tipo: res.constancia?.deBaja ? "baja" : "alta", mismoDia: !!res.constancia?.mismoDia, vaAFirma: res.ruteo?.vaAFirma !== false, archivadaEn: res.ruteo?.archivadaEn, nombre: res.ruteo?.nombre, dropboxId: res.ruteo?.dropboxId, manual: p.manual }).catch((e) => console.error(`[CONSTANCIAS-ARCA] no pude anotar la constancia de ${p.cuil}:`, e?.message || e));
+                        await anotarDescarga(tenantObjectId, p.clave, { tipo: tipoConstancia, mismoDia: !!res.constancia?.mismoDia, vaAFirma: res.ruteo?.vaAFirma !== false, archivadaEn: res.ruteo?.archivadaEn, nombre: res.ruteo?.nombre, dropboxId: res.ruteo?.dropboxId, manual: p.manual, origen: d.origen }).catch((e) => console.error(`[CONSTANCIAS-ARCA] no pude anotar la constancia de ${p.cuil}:`, e?.message || e));
                     }
                     const destino = !res.ruteo?.archivadaEn ? res.ruteo?.aviso || "Quedó cargada en el contrato." : res.ruteo.vaAFirma ? "En el Outbox, lista para enviar a firmar." : "Archivada en «Alta temprana de Arca / No firmar».";
-                    const deBaja = res.constancia?.deBaja ? (res.constancia.mismoDia ? "Constancia de la relación (alta y baja el mismo día). " : "Constancia de la relación ya terminada. ") : "";
+                    const textoDeBaja = res.constancia?.deBaja ? (res.constancia.mismoDia ? "Constancia de la relación (alta y baja el mismo día). " : "Constancia de la relación ya terminada. ") : "";
                     emitir({
                         tipo: "persona",
                         cuil: p.cuil,
                         nombre: p.nombre,
                         estado: "lista",
-                        detalle: `${deBaja}${destino}${res.ruteo?.estado ? ` El contrato pasó a «${res.ruteo.estado}».` : ""}`,
+                        tipoConstancia,
+                        detalle: `${textoDeBaja}${destino}${res.ruteo?.estado ? ` El contrato pasó a «${res.ruteo.estado}».` : ""}`,
                     });
                 }
                 catch (e) {
@@ -382,5 +394,30 @@ async function correr(o) {
         await s?.browser.close().catch(() => { });
         soltarCandado(tenantId, "constancias");
         d.terminada = true;
+        /*
+          EL REGISTRO DE LA CORRIDA (11/11/2026): el historial de Descargas y la métrica alta/baja. Lo último
+          que se supo de cada persona; el estado de cada constancia sigue en `constancias_arca`. Si no se
+          puede guardar, la descarga ya está hecha: queda el log del servidor.
+        */
+        const porCuil = new Map();
+        for (const e of d.eventos)
+            if (e.tipo === "persona")
+                porCuil.set(e.cuil, e);
+        const corte = d.eventos.find((e) => e.tipo === "fallo");
+        await ArcaDescargaLog.create({
+            tenantId: tenantObjectId,
+            origen: d.origen,
+            empresaId: Types.ObjectId.isValid(d.empresaId) ? d.empresaId : null,
+            empresaRazonSocial: d.empresaRazonSocial,
+            arrancadaEl: d.arrancadaEl,
+            terminadaEl: new Date(),
+            presentacion: o.encadenada ? { terminadaEl: o.encadenada.terminadaEl, logId: o.encadenada.logId && Types.ObjectId.isValid(o.encadenada.logId) ? o.encadenada.logId : null, automatica: o.encadenada.automatica } : null,
+            pedidas: pendientes.length,
+            listas,
+            deAlta,
+            deBaja,
+            items: [...porCuil.values()].map((e) => ({ cuil: e.cuil, nombre: e.nombre, estado: e.estado, detalle: e.detalle, tipoConstancia: e.tipoConstancia || null })),
+            error: corte?.mensaje || null,
+        }).catch((e) => console.error("[CONSTANCIAS-ARCA] no pude guardar el registro de la corrida:", e?.message || e));
     }
 }

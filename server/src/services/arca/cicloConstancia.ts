@@ -30,6 +30,13 @@ export type EstadoConstancia =
 export const MAX_INTENTOS = 3;
 /** Días de espera después del intento fallido n (1.º → 1 día, 2.º → 2 días). Al 3.º, a revisión. */
 export const ESPERA_DIAS = [1, 2, 4];
+/**
+ * Después de un fallo de la descarga ENCADENADA a la presentación (11/11/2026) se espera esto y no un
+ * día: la encadenada de las 00:05 que no pudo bajar una constancia tiene que entrar en el barrido de
+ * ESE día (15:00). Con un día de espera vencía a las 00:05 siguientes y recién salía en el barrido de
+ * pasado mañana.
+ */
+export const ESPERA_TRAS_ENCADENADA_MS = 2 * 60 * 60_000;
 
 /** El orden del circuito, para no volver nunca para atrás (ver `siguienteEstado`). */
 const PASO: Record<EstadoConstancia, number> = {
@@ -61,10 +68,17 @@ export function sePuedePedir(item: { estado: EstadoConstancia; proximoIntentoEl?
 /** «redescarga»: no es un intento contra ARCA sino la marca de «Volver a bajar» (ver `puedeVolverABajarse`); los intentos se cuentan desde ahí. */
 export type ResultadoIntento = "descargada" | "rechazada" | "sin_constancia" | "ambigua" | "error" | "redescarga";
 
+/**
+ * Qué corrida hizo el intento (11/11/2026): la ENCADENADA a la presentación (se baja apenas se presenta
+ * el alta), el BARRIDO diario (lo que quedó pendiente) o una pedida A MANO (forzar, reintentar).
+ */
+export type OrigenDescarga = "encadenada" | "barrido" | "manual";
+
 export interface Intento {
   fecha: Date;
   resultado: ResultadoIntento;
   detalle?: string;
+  origen?: OrigenDescarga;
   /** Pedido a mano («Reintentar», «Forzar descarga»): no cuenta para el tope de intentos automáticos. */
   manual?: boolean;
 }
@@ -116,11 +130,13 @@ export interface Fallo {
  * los que le quedaban, y uno que sale bien la saca. Lo que no se arregla reintentando (`sinArreglo`)
  * no espera tres días para decirlo.
  */
-export function trasUnFallo(intentosPrevios: Intento[], fallo: Fallo, ahora: Date, o: { manual?: boolean } = {}): { estado: EstadoConstancia; proximoIntentoEl: Date | null; motivoRevision?: string } {
+export function trasUnFallo(intentosPrevios: Intento[], fallo: Fallo, ahora: Date, o: { manual?: boolean; origen?: OrigenDescarga } = {}): { estado: EstadoConstancia; proximoIntentoEl: Date | null; motivoRevision?: string } {
   const automaticos = intentosDesdeLaRedescarga(intentosPrevios).filter((i) => !i.manual && i.resultado !== "descargada").length + (o.manual ? 0 : 1);
   if (fallo.sinArreglo) return { estado: "requiere_revision", proximoIntentoEl: null, motivoRevision: fallo.detalle || "ARCA muestra varias relaciones distintas para esa fecha: hay que elegir a mano." };
   if (o.manual) return { estado: "requiere_revision", proximoIntentoEl: null, motivoRevision: `El reintento a mano tampoco la bajó: ${textoDelFallo(fallo)}` };
   if (automaticos >= MAX_INTENTOS) return { estado: "requiere_revision", proximoIntentoEl: null, motivoRevision: `No se pudo bajar en ${MAX_INTENTOS} intentos. El último: ${textoDelFallo(fallo)}` };
+  // Cuenta como intento igual; lo que cambia es cuánto espera (ver `ESPERA_TRAS_ENCADENADA_MS`).
+  if (o.origen === "encadenada") return { estado: "constancia_pendiente", proximoIntentoEl: new Date(ahora.getTime() + ESPERA_TRAS_ENCADENADA_MS) };
   const dias = ESPERA_DIAS[Math.min(automaticos, ESPERA_DIAS.length) - 1];
   return { estado: "constancia_pendiente", proximoIntentoEl: new Date(ahora.getTime() + dias * 86_400_000) };
 }
@@ -175,6 +191,19 @@ export function elegirParaCorrida<T extends ItemDeCola>(items: T[], o: { ahora: 
       enRevision: items.filter((i) => i.estado === "requiere_revision").length,
     },
   };
+}
+
+/**
+ * LAS QUE ENTRAN EN LA DESCARGA ENCADENADA A UNA PRESENTACIÓN (11/11/2026). Puro.
+ *
+ * Exactamente las altas recién presentadas de esa tanda (`recien`), sin tope: el lote ya lo acota el
+ * tamaño de la tanda. De ésas, sólo lo que una corrida automática puede pedir: lo que ya tiene su
+ * constancia no se vuelve a bajar (idempotencia por clave), y lo que está en revisión o esperando su
+ * reintento sigue su ciclo —no se fuerza por haberse presentado de nuevo—.
+ */
+export function elegirEncadenadas<T extends ItemDeCola & { userProjectId: unknown; contractIndex: number }>(items: T[], recien: Array<{ userProjectId: string; contractIndex: number }>, ahora: Date): T[] {
+  const pedidas = new Set(recien.map((i) => `${i.userProjectId}:${Number(i.contractIndex)}`));
+  return items.filter((i) => pedidas.has(`${String(i.userProjectId)}:${i.contractIndex}`) && !yaTieneConstancia(i.estado) && sePuedePedir(i, ahora)).sort((a, b) => a.fechaAlta.localeCompare(b.fechaAlta));
 }
 
 /**

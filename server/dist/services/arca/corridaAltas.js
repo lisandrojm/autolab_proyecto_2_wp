@@ -8,6 +8,8 @@ import { soltarCandado, tomarCandado } from "./candadoArca.js";
 import { LoteAltasError, validarLoteAltas } from "./validarLoteAltas.js";
 import { correrTandas } from "./tandasAltas.js";
 import { aplicarTransicion, estadoDestinoPorProposito } from "../estadoTransicionAutomaticaService.js";
+import { encadenarDescarga } from "./descargaEncadenada.js";
+import { presentadasDeLaCorrida } from "./colaEncadenada.js";
 /**
  * PRESENTADA EN ARCA → GENERAR DOCUMENTOS (01/11/2026, pedido del usuario). Apenas ARCA confirma el
  * alta, el trámite impositivo terminó: el contrato pasa al estado que alimenta la carpeta de altas
@@ -253,6 +255,18 @@ async function correr(o) {
             if (x.contrato === "presentada")
                 await avanzarPresentada(i.userProjectId, i.contractIndex);
         }
+        // Lo presentado se baja enseguida (ver `descargaEncadenada.ts`): después de marcar los contratos, que es de donde sale la cola.
+        void encadenarDescarga({
+            tenantId: corrida.tenantId,
+            tenantObjectId,
+            empresaId: lote.empresa._id,
+            empresaRazonSocial: lote.empresa.razonSocial,
+            items: lote.items.filter((i) => resultadoDe(i.cuil).contrato === "presentada").map((i) => ({ userProjectId: i.userProjectId, contractIndex: i.contractIndex })),
+            terminadaEl: new Date(),
+            logId: log?._id ? String(log._id) : null,
+            automatica: !!corrida.automatica,
+            usuarioId,
+        });
     }
 }
 /** Pausa entre tandas: el ritmo de una persona, no el de un script. Configurable para los tests. */
@@ -417,6 +431,25 @@ async function correrPorTandas(o) {
                     duracionMs: Date.now() - inicio,
                 },
             }).catch((e) => console.error("Altas ARCA: no pude cerrar el log:", e?.message || e));
+        }
+        /*
+          LA DESCARGA ENCADENADA (11/11/2026): las altas que ARCA aceptó en esta corrida se bajan ya, con la
+          relación todavía activa, en vez de esperar a la descarga de las 15:00 (para entonces la jornada
+          terminó y ARCA da la constancia de baja). Se encola y sigue sola: espera el candado y a que
+          termine la fila de presentaciones (ver `colaEncadenada.ts`). En seco no hay nada que bajar.
+        */
+        if (r && !corrida.enSeco) {
+            void encadenarDescarga({
+                tenantId: corrida.tenantId,
+                tenantObjectId,
+                empresaId: lote.empresa._id,
+                empresaRazonSocial: lote.empresa.razonSocial,
+                items: presentadasDeLaCorrida(r.resultados),
+                terminadaEl: new Date(),
+                logId: log?._id ? String(log._id) : null,
+                automatica: !!corrida.automatica,
+                usuarioId,
+            });
         }
     }
 }

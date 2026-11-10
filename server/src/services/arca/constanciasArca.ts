@@ -8,6 +8,7 @@ import {
   carpetaMasAvanzada,
   categoriaDe,
   claveConstancia,
+  elegirEncadenadas,
   elegirParaCorrida,
   estadoPorCarpeta,
   puedeRetomarCircuito,
@@ -21,6 +22,7 @@ import {
   type Fallo,
   type FueraDeLaCorrida,
   type Intento,
+  type OrigenDescarga,
   type Redescarga,
 } from "./cicloConstancia.js";
 import { borradoEl, copyEntry, downloadFileContent, getTenantDropboxConfig, listFolder, ubicarArchivo } from "../dropboxService.js";
@@ -200,10 +202,19 @@ export interface ElegidaParaDescargar {
  * esperas y la revisión; la forzada (`soloItems`) pide lo que se eligió aunque esté esperando o en
  * revisión. En las dos, lo que ya tiene su constancia no se pide nunca.
  */
-export async function colaDeDescarga(tenantObjectId: any, empresaId: string, o: { ahora: Date; tope?: number; soloItems?: Array<{ userProjectId: string; contractIndex: number }> }): Promise<{ elegidas: ElegidaParaDescargar[]; fuera: FueraDeLaCorrida; total: number }> {
+export async function colaDeDescarga(
+  tenantObjectId: any,
+  empresaId: string,
+  o: { ahora: Date; tope?: number; soloItems?: Array<{ userProjectId: string; contractIndex: number }>; /** `soloItems` son las altas recién presentadas de una tanda: corrida automática, no un pedido a mano. */ encadenada?: boolean },
+): Promise<{ elegidas: ElegidaParaDescargar[]; fuera: FueraDeLaCorrida; total: number }> {
   await sincronizarConstancias(tenantObjectId, { empresaId });
   const docs: any[] = await ConstanciaArca.find({ tenantId: tenantObjectId, empresaId: new Types.ObjectId(empresaId) }).select("clave estado proximoIntentoEl fechaAlta userProjectId contractIndex").lean();
   const sinConstancia = docs.filter((d) => !yaTieneConstancia(d.estado));
+  if (o.soloItems && o.encadenada) {
+    // Un fallo acá cuenta como intento automático y sigue el ciclo normal (reintento → barrido), no va derecho a revisión.
+    const pedidas = elegirEncadenadas(sinConstancia, o.soloItems, o.ahora);
+    return { elegidas: pedidas.map((d) => ({ userProjectId: String(d.userProjectId), contractIndex: d.contractIndex, clave: d.clave, manual: false })), fuera: { nuevasPorTope: 0, reintentosPorTope: 0, esperandoReintento: 0, enRevision: 0 }, total: sinConstancia.length };
+  }
   if (o.soloItems) {
     const pedidas = sinConstancia.filter((d) => o.soloItems!.some((i) => i.userProjectId === String(d.userProjectId) && Number(i.contractIndex) === d.contractIndex));
     return { elegidas: pedidas.map((d) => ({ userProjectId: String(d.userProjectId), contractIndex: d.contractIndex, clave: d.clave, manual: true })), fuera: { nuevasPorTope: 0, reintentosPorTope: 0, esperandoReintento: 0, enRevision: 0 }, total: sinConstancia.length };
@@ -213,7 +224,7 @@ export async function colaDeDescarga(tenantObjectId: any, empresaId: string, o: 
 }
 
 /** La constancia se bajó y quedó subida (o cargada en el contrato). */
-export async function anotarDescarga(tenantObjectId: any, clave: string, r: { tipo: "alta" | "baja"; mismoDia: boolean; vaAFirma: boolean; archivadaEn?: string; nombre?: string; dropboxId?: string; manual?: boolean }): Promise<void> {
+export async function anotarDescarga(tenantObjectId: any, clave: string, r: { tipo: "alta" | "baja"; mismoDia: boolean; vaAFirma: boolean; archivadaEn?: string; nombre?: string; dropboxId?: string; manual?: boolean; origen?: OrigenDescarga }): Promise<void> {
   const noFirmar = !!r.archivadaEn && /\/No firmar\//i.test(r.archivadaEn);
   const estado: EstadoConstancia = !noFirmar ? "constancia_descargada" : r.tipo === "baja" ? "baja_mismo_dia_ok" : "archivada";
   const ahora = new Date();
@@ -229,7 +240,7 @@ export async function anotarDescarga(tenantObjectId: any, clave: string, r: { ti
         documento: { codigo: codigoDe(r.nombre || r.archivadaEn), nombre: r.nombre || "", path: r.archivadaEn || undefined, dropboxId: r.dropboxId, carpeta: r.archivadaEn ? (noFirmar ? "no_firmar" : "outbox") : null, vaAFirma: r.vaAFirma, firmadaEl: null, archivadaEn: null, ubicadoEl: r.archivadaEn ? ahora : null, noUbicadoDesde: null },
       },
       $push: {
-        intentos: { fecha: ahora, resultado: "descargada", detalle: r.tipo === "baja" ? (r.mismoDia ? "Constancia de la relación (alta y baja el mismo día)." : "Constancia de la relación ya terminada (de baja).") : undefined, manual: !!r.manual },
+        intentos: { fecha: ahora, resultado: "descargada", detalle: r.tipo === "baja" ? (r.mismoDia ? "Constancia de la relación (alta y baja el mismo día)." : "Constancia de la relación ya terminada (de baja).") : undefined, manual: !!r.manual, origen: r.origen },
         historial: { estado, fecha: ahora, motivo: r.tipo === "baja" ? "Constancia de baja aceptada: la relación ya terminó" : "Constancia bajada de ARCA" },
       },
     },
@@ -241,7 +252,7 @@ export async function anotarDescarga(tenantObjectId: any, clave: string, r: { ti
 const cerrarRedescarga = (tenantObjectId: any, clave: string, ahora: Date) => ConstanciaArca.updateOne({ tenantId: tenantObjectId, clave, "redescarga.enCurso": true }, { $set: { "redescarga.enCurso": false, "redescarga.terminadaEl": ahora } });
 
 /** Un intento que no trajo la constancia: cuenta, espera o pasa a revisión (ver `trasUnFallo`). */
-export async function anotarFallo(tenantObjectId: any, clave: string, fallo: Fallo, o: { manual?: boolean } = {}): Promise<{ estado: EstadoConstancia; motivoRevision?: string }> {
+export async function anotarFallo(tenantObjectId: any, clave: string, fallo: Fallo, o: { manual?: boolean; origen?: OrigenDescarga } = {}): Promise<{ estado: EstadoConstancia; motivoRevision?: string }> {
   const doc: any = await ConstanciaArca.findOne({ tenantId: tenantObjectId, clave }).select("intentos estado").lean();
   if (!doc || yaTieneConstancia(doc.estado)) return { estado: doc?.estado || "presentada" };
   const ahora = new Date();
@@ -251,7 +262,7 @@ export async function anotarFallo(tenantObjectId: any, clave: string, fallo: Fal
     {
       $set: { estado: r.estado, proximoIntentoEl: r.proximoIntentoEl, motivoRevision: r.motivoRevision ?? null },
       $push: {
-        intentos: { fecha: ahora, resultado: fallo.resultado, detalle: fallo.detalle, manual: !!o.manual },
+        intentos: { fecha: ahora, resultado: fallo.resultado, detalle: fallo.detalle, manual: !!o.manual, origen: o.origen },
         ...(r.estado !== doc.estado ? { historial: { estado: r.estado, fecha: ahora, motivo: r.motivoRevision } } : {}),
       },
     },

@@ -82,7 +82,7 @@ const schema = new Schema<IConstanciaArca>(
     estado: { type: String, required: true },
     tipoConstancia: { type: String, default: null },
     mismoDia: { type: Boolean, default: false },
-    intentos: [{ _id: false, fecha: Date, resultado: String, detalle: String, manual: Boolean }],
+    intentos: [{ _id: false, fecha: Date, resultado: String, detalle: String, manual: Boolean, origen: String }],
     proximoIntentoEl: { type: Date, default: null },
     motivoRevision: { type: String, default: null },
     documento: {

@@ -118,7 +118,8 @@ export interface ResultadoEmpresa {
  * fila: cada corrida espera a que termine la anterior. Si hay otra corrida de ARCA en curso (una
  * validación de obras sociales, una presentación manual), espera a que se libere.
  */
-export declare function presentarCandidatos(o: {
+export declare const presentarCandidatos: (o: Parameters<typeof presentarEnFila>[0]) => Promise<ResultadoEmpresa[]>;
+declare function presentarEnFila(o: {
     tenantId: string;
     tenantObjectId: Types.ObjectId;
     usuarioId?: string;
@@ -158,9 +159,9 @@ export declare function registrarForzadoAltas(tenantId: string, f: ForzadoAltasE
  *   · "cola": modo frecuente, entre corrida y corrida del día: sólo lo que ya tuvo su turno. Corta entre
  *     lotes si llega la hora del día (`debeCortar`).
  */
-export declare function correrPresentacionAutomatica(tenantId: string, tenantObjectId: Types.ObjectId, cfg: ConfigAltasAutomaticas, tipo: "dia" | "cola", o?: {
+export declare const correrPresentacionAutomatica: (tenantId: string, tenantObjectId: Types.ObjectId, cfg: ConfigAltasAutomaticas, tipo: "dia" | "cola", o?: {
     debeCortar?: () => boolean;
-}): Promise<{
+}) => Promise<{
     fecha: string;
     dia: string;
     tipo: "dia" | "cola";
@@ -172,3 +173,4 @@ export declare function correrPresentacionAutomatica(tenantId: string, tenantObj
         motivo: string;
     }[];
 }>;
+export {};

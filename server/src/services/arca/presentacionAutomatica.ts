@@ -33,6 +33,7 @@ import {
   type Bloqueo,
 } from "./secuenciaPorPersona.js";
 import { arrancarCorridaAltas, corridaAltasDe } from "./corridaAltas.js";
+import { conPresentacionesEnFila } from "./colaEncadenada.js";
 import { quienTiene } from "./candadoArca.js";
 import { esRechazoDefinitivo } from "./rechazoDefinitivo.js";
 import { ConfigAltasAutomaticas, CONFIG_POR_DEFECTO, entraEnLaCorrida, esDelDia, esperaAManana, hastaDeLaCorrida, motivoDeOmision, proximaCorridaPara, rechazadasAlFinal, yaTermino } from "./horarioAltasAutomaticas.js";
@@ -539,7 +540,11 @@ export interface ResultadoEmpresa {
  * fila: cada corrida espera a que termine la anterior. Si hay otra corrida de ARCA en curso (una
  * validación de obras sociales, una presentación manual), espera a que se libere.
  */
-export async function presentarCandidatos(o: {
+export const presentarCandidatos = (o: Parameters<typeof presentarEnFila>[0]): Promise<ResultadoEmpresa[]> =>
+  // Las descargas encadenadas esperan a que termine toda la fila: presentar va primero (ver `colaEncadenada.ts`).
+  conPresentacionesEnFila(o.tenantId, () => presentarEnFila(o));
+
+async function presentarEnFila(o: {
   tenantId: string;
   tenantObjectId: Types.ObjectId;
   usuarioId?: string;
@@ -648,7 +653,11 @@ export function registrarForzadoAltas(tenantId: string, f: ForzadoAltasEnCurso):
  *   · "cola": modo frecuente, entre corrida y corrida del día: sólo lo que ya tuvo su turno. Corta entre
  *     lotes si llega la hora del día (`debeCortar`).
  */
-export async function correrPresentacionAutomatica(
+export const correrPresentacionAutomatica = (tenantId: string, tenantObjectId: Types.ObjectId, cfg: ConfigAltasAutomaticas, tipo: "dia" | "cola", o: { debeCortar?: () => boolean } = {}) =>
+  // Una sola fila para las del día y las atrasadas: las descargas encadenadas arrancan cuando terminan las dos.
+  conPresentacionesEnFila(tenantId, () => correrPresentacion(tenantId, tenantObjectId, cfg, tipo, o));
+
+async function correrPresentacion(
   tenantId: string,
   tenantObjectId: Types.ObjectId,
   cfg: ConfigAltasAutomaticas,
