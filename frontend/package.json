@@ -34,7 +34,8 @@
     "test:cascada-arca": "tsx --test src/components/contratos/cascadaArca.test.ts",
     "test:dias": "tsx --test src/components/contratos/diasDeTrabajo.test.ts",
     "test:seleccion-categoria": "tsx --test src/utils/seleccionConvenioCategoria.test.ts",
-    "test:situacion-arca": "tsx --test src/components/contratos/situacionArca.test.ts"
+    "test:situacion-arca": "tsx --test src/components/contratos/situacionArca.test.ts",
+    "test:bandejas": "tsx --test src/config/bandejasContratacion.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
