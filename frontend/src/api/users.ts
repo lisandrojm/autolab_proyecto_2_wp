@@ -26,6 +26,10 @@ export interface SolicitudPendienteDeContrato {
   creadaEl: string;
   esRenovacion: boolean;
   comentarios: string;
+  /** El horario pedido, como texto («18:00 - 00:00»). */
+  horario?: string;
+  /** Quién la cargó, para la columna «Solicitó». */
+  solicitante?: { nombre: string; roles: string[] } | null;
 }
 
 /* ---------- Tipos base ---------- */

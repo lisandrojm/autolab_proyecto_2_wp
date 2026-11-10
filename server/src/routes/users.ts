@@ -1086,7 +1086,7 @@ router.get("/solicitudes-pendientes", requireTenant, authenticateToken, requireP
     else if (clientId) and.push({ "metadata.projectIds": { $in: await Project.find({ tenantId: req.tenantObjectId, clientId }).distinct("_id") } });
 
     const docs: any[] = await User.find({ $and: and })
-      .select("firstName lastName email createdAt metadata.fullName metadata.cuit metadata.solicitudUserId metadata.projectIds metadata.startDate metadata.dueDate metadata.nombre_contrato metadata.esRenovacion metadata.comentarios")
+      .select("firstName lastName email createdAt metadata.fullName metadata.cuit metadata.solicitudUserId metadata.projectIds metadata.startDate metadata.dueDate metadata.nombre_contrato metadata.esRenovacion metadata.comentarios metadata.schedule metadata.solicitudCreadaPor")
       .populate({ path: "metadata.projectIds", select: "name clientId metadata.centroCostoId metadata.centroCostoEmpresaTangoId", model: Project, populate: { path: "clientId", select: "name", model: Client } })
       .sort({ createdAt: -1 })
       .lean();
@@ -1095,6 +1095,8 @@ router.get("/solicitudes-pendientes", requireTenant, authenticateToken, requireP
     const idsPersonas = [...new Set(docs.map((s) => String(s.metadata?.solicitudUserId || "")).filter((id) => Types.ObjectId.isValid(id)))];
     const personas: any[] = idsPersonas.length > 0 ? await User.find({ _id: { $in: idsPersonas } }).select("metadata.cuit metadata.sinCuit").lean() : [];
     const personaDe = new Map(personas.map((p) => [String(p._id), p]));
+    // «Horario» y «Solicitó» del padrón (11/11/2026), como en Solicitudes.
+    const solicitantes = await solicitantesDe(req.tenantObjectId as Types.ObjectId, docs);
 
     res.json({
       solicitudes: docs.map((s) => {
@@ -1118,6 +1120,8 @@ router.get("/solicitudes-pendientes", requireTenant, authenticateToken, requireP
           creadaEl: s.createdAt,
           esRenovacion: !!s.metadata?.esRenovacion,
           comentarios: s.metadata?.comentarios || "",
+          horario: s.metadata?.schedule || "",
+          solicitante: s.metadata?.solicitudCreadaPor ? solicitantes.get(String(s.metadata.solicitudCreadaPor)) || null : null,
         };
       }),
     });

@@ -747,6 +747,24 @@ const ANCHO_TIPO_CONTRATO = 'w-[150px] min-w-[150px] max-w-[150px]';
  * quien pidió el alta dejó un comentario, su ícono —el hover lo muestra y el click lo abre—. Sin el
  * email debajo: ocupaba un renglón por fila y está en la ficha.
  */
+/** «Solicitó»: los roles de coordinación o supervisión ARRIBA del nombre, como en Solicitudes. */
+const CeldaSolicito: React.FC<{ solicitante?: { nombre: string; roles: string[] } | null }> = ({ solicitante }) => (
+  <div className="min-w-0">
+    {solicitante?.nombre && solicitante.roles.some((x) => ROL_QUE_SOLICITA.test(x)) && (
+      <div className="mb-1 flex flex-wrap gap-1">
+        {solicitante.roles
+          .filter((x) => ROL_QUE_SOLICITA.test(x))
+          .map((x) => (
+            <span key={x} className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">
+              {x}
+            </span>
+          ))}
+      </div>
+    )}
+    {solicitante?.nombre ? <p className="text-sm text-gray-900 dark:text-white truncate">{solicitante.nombre}</p> : <span className="text-sm text-gray-400">—</span>}
+  </div>
+);
+
 const CeldaColaborador: React.FC<{ r: ContractOverviewRow }> = ({ r }) => (
   <div className="min-w-0">
     {r.esRenovacion && (
@@ -2400,22 +2418,8 @@ export const ContractBulkAfipTab: React.FC<{
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.hora_inicio && r.hora_fin ? `${r.hora_inicio} - ${r.hora_fin}` : '-'}</td>
-                  {/* Solicitó: los roles de coordinación o supervisión ARRIBA del nombre, como en Solicitudes. */}
                   <td className="px-4 py-3">
-                    <div className="min-w-0">
-                      {r.solicitante?.nombre && r.solicitante.roles.some((x) => ROL_QUE_SOLICITA.test(x)) && (
-                        <div className="mb-1 flex flex-wrap gap-1">
-                          {r.solicitante.roles
-                            .filter((x) => ROL_QUE_SOLICITA.test(x))
-                            .map((x) => (
-                              <span key={x} className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">
-                                {x}
-                              </span>
-                            ))}
-                        </div>
-                      )}
-                      {r.solicitante?.nombre ? <p className="text-sm text-gray-900 dark:text-white truncate">{r.solicitante.nombre}</p> : <span className="text-sm text-gray-400">—</span>}
-                    </div>
+                    <CeldaSolicito solicitante={r.solicitante} />
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.nombreRolFrame || 'Sin rol'}</td>
                   {filterTipo === 'sin_cuit' && (
@@ -4107,7 +4111,7 @@ export const contarContratados = async (): Promise<number | null> => {
 };
 
 /** Una fila del padrón: un contrato, o una solicitud que todavía no lo es (`solicitudPendienteId`). */
-type FilaPadron = FilaConArca & { solicitudPendienteId?: string };
+type FilaPadron = FilaConArca & { solicitudPendienteId?: string; /** El horario pedido en la solicitud, ya como texto. */ horarioSolicitud?: string };
 
 /** La solicitud con la forma de una fila: lo que el padrón muestra, filtra y ordena. No tiene contrato atrás. */
 const filaDeSolicitud = (s: SolicitudPendienteDeContrato, estado: string): FilaPadron =>
@@ -4132,6 +4136,8 @@ const filaDeSolicitud = (s: SolicitudPendienteDeContrato, estado: string): FilaP
     fecha_carga: s.creadaEl,
     esRenovacion: s.esRenovacion,
     solicitudComentarios: s.comentarios,
+    horarioSolicitud: s.horario || '',
+    solicitante: s.solicitante || null,
   }) as unknown as FilaPadron;
 
 /**
@@ -4328,7 +4334,7 @@ export const ContractBulkContratadosTab: React.FC<{
         <EmptyState icon={faUser} title="Sin contratos" description={rows.length === 0 ? 'Todavía no hay contratos ni solicitudes pendientes.' : 'No hay resultados con los filtros aplicados.'} />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-clip">
-          <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1450px]">
+          <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1750px]">
             <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
               <tr>
                 {/*
@@ -4346,6 +4352,9 @@ export const ContractBulkContratadosTab: React.FC<{
                   {/* «Contrato», como en Trámite impositivo (08/11/2026). */}
                   <BotonOrden columna="tipoContrato" {...ordenProps}>Contrato</BotonOrden>
                 </th>
+                {/* «Horario» y «Solicitó», después de «Contrato» como en Solicitudes (11/11/2026, pedido del usuario). */}
+                <th className={th}>Horario</th>
+                <th className={th} title="Quién cargó la solicitud que originó el contrato">Solicitó</th>
                 {/* Sin columna «Estado» (08/11/2026): el estado del contrato va arriba de Alta / Baja. El trámite (ARCA / Servicios), arriba del tipo. */}
                 {/* «ARCA» y «Documentos» (09/11/2026): qué está dado de alta y con qué se prueba; el contrato y el release generados. */}
                 <th className={th} title="ARCA: el alta presentada y su constancia. Servicios: el JSON del Padrón que confirma el CUIT.">
@@ -4405,6 +4414,10 @@ export const ContractBulkContratadosTab: React.FC<{
                         <BadgeTramiteDelTipo record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
                         <span className="block max-w-full truncate" title={r.nombre_contrato || undefined}>{r.nombre_contrato || "—"}</span>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.hora_inicio && r.hora_fin ? `${r.hora_inicio} - ${r.hora_fin}` : r.horarioSolicitud || '-'}</td>
+                    <td className="px-4 py-3">
+                      <CeldaSolicito solicitante={r.solicitante} />
                     </td>
                     <td className="px-4 py-3">{situacionDe.get(r) && <CeldaArca r={r} s={situacionDe.get(r)!} lleva={llevaDe.get(r)} />}</td>
                     <td className="px-4 py-3"><CeldaDocumentosGenerados r={r} lleva={llevaDe.get(r)} esSolicitud={pendiente} /></td>
