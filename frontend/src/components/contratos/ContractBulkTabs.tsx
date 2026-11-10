@@ -2234,7 +2234,8 @@ export const ContractBulkAfipTab: React.FC<{
                       que «Último contrato» confundía —se leía como uno anterior y ya vigente—. Son las fechas
                       que se aprobaron y que van a ir al alta. En las otras pestañas sigue «Último contrato». */}
                   <BotonOrden columna="ultimoContrato" {...ordenProps} title={hayEncuadre ? "Ordenar por la fecha de alta de la solicitud aprobada" : "Ordenar por la fecha de alta del último contrato"}>
-                    {hayEncuadre ? "Solicitud" : "Vigencia"}
+                    {/* «Alta / Baja» en todas las bandejas (11/11/2026, pedido del usuario): era «Solicitud» acá y en Solicitudes. */}
+                    Alta / Baja
                   </BotonOrden>
                 </th>
                 {/* «Contrato» (con el estado arriba) pegada a «Solicitud» (01/11/2026). */}
