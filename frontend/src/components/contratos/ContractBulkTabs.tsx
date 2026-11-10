@@ -4093,10 +4093,10 @@ export const ContractBulkFirmaTab: React.FC<{
 
 export default ContractBulkAfipTab;
 
-/** Clave de los contratados (paso 6): el ámbito, como `claveCacheEnvio`. */
+/** Clave del padrón (la bandeja «Contratos»): el ámbito, como `claveCacheEnvio`. */
 const claveCacheContratados = (clientId = '', projectId = '') => `${CONTRACTS_OVERVIEW_CACHE}contratados:${ambito(clientId, projectId)}`;
 
-/** Cuántos contratados hay, para el número del paso 6 sin haber entrado a la pestaña. */
+/** Cuántos hay en el padrón, para el número de la bandeja «Contratos» sin haber entrado. */
 export const contarContratados = async (): Promise<number | null> => {
   const [res, pendientes] = await Promise.all([
     cachedFetch(`${claveCacheContratados()}:total`, () => usersAPI.listContractsOverview({ limit: 1, origen: 'sistema', todosLosContratos: true })),
@@ -4134,7 +4134,10 @@ const filaDeSolicitud = (s: SolicitudPendienteDeContrato, estado: string): FilaP
   }) as unknown as FilaPadron;
 
 /**
- * Paso 6 «Contratados»: EL PADRÓN. Desde el 05/11/2026 (pedido del usuario) lista todos los contratos de
+ * La bandeja «Contratos» (antes el paso «Contratados»): EL PADRÓN. Desde el 11/11/2026 reemplaza también al
+ * viejo listado «Contratos», que mostraba estos mismos contratos (sólo el que rige de cada persona): por eso
+ * suma sus filtros —estado de usuarios, novedades, reemplazo— y acepta el proyecto con el que se llega.
+ * Desde el 05/11/2026 (pedido del usuario) lista todos los contratos de
  * WeProdu (Solicitudes o «Agregar miembro») en CUALQUIER estado, una fila por contrato, y las solicitudes
  * pendientes, que todavía no tienen contrato: se ven desde que se envían. Antes eran sólo los que habían
  * llegado al estado final. Sin la ventana de 90 días de las bandejas. Lo último creado arriba.
@@ -4145,7 +4148,9 @@ export const ContractBulkContratadosTab: React.FC<{
   /** Los releases, para saber si el tipo de cada contrato lleva release (columna «Documentos»). */
   releases?: Release[];
   onCount?: (cantidad: number) => void;
-}> = ({ allEstados, contratoFrames, releases = [], onCount }) => {
+  /** `?projectId=…`: se abre filtrado por ese proyecto. */
+  initialProjectId?: string;
+}> = ({ allEstados, contratoFrames, releases = [], onCount, initialProjectId = '' }) => {
   // Tocar la fila abre el resumen del contrato (en Contratos; fuera de ahí no hay proveedor y no hace nada).
   const verContrato = useVerContratoEnModal();
   const navigate = useNavigate();
@@ -4153,10 +4158,14 @@ export const ContractBulkContratadosTab: React.FC<{
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterClientId, setFilterClientId] = useState('');
-  const [filterProjectId, setFilterProjectId] = useState('');
+  const [filterProjectId, setFilterProjectId] = useState(initialProjectId);
   const [filterTipoContrato, setFilterTipoContrato] = useState<string[]>([]);
   const [filterVigencia, setFilterVigencia] = useState('');
   const [filterEstado, setFilterEstado] = useState<string[]>([]);
+  // Los del listado «Contratos» que el padrón no tenía (11/11/2026): son de la persona o del contrato.
+  const [filterUserStatus, setFilterUserStatus] = useState('');
+  const [filterRolMobile, setFilterRolMobile] = useState('');
+  const [filterReemplazo, setFilterReemplazo] = useState('');
   const [filterArca, setFilterArca] = useState('');
   const [filterImpositivo, setFilterImpositivo] = useState<string[]>([]);
   // Sólo para ordenar el filtro de Tipo de contrato como en Configuración → Contratos.
@@ -4222,15 +4231,15 @@ export const ContractBulkContratadosTab: React.FC<{
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
-      // Una solicitud todavía no es un contrato: ni vigente ni no vigente.
-      if (filterVigencia && r.solicitudPendienteId) return false;
+      // Una solicitud todavía no es un contrato: ni vigente ni no vigente, ni tiene usuario activo, roles o reemplazo.
+      if ((filterVigencia || filterUserStatus || filterRolMobile || filterReemplazo) && r.solicitudPendienteId) return false;
       if (filterArca && situacionDe.get(r)?.grupo !== filterArca) return false;
       if (filterImpositivo.length > 0 && !filterImpositivo.includes(impositivoDe.get(r)?.name || '')) return false;
-      if (!pasaFiltrosDeContrato(r, { usuarios: '', vigencia: filterVigencia, novedades: '', tipoContrato: filterTipoContrato, estadoContrato: filterEstado, reemplazo: '' })) return false;
+      if (!pasaFiltrosDeContrato(r, { usuarios: filterUserStatus, vigencia: filterVigencia, novedades: filterRolMobile, tipoContrato: filterTipoContrato, estadoContrato: filterEstado, reemplazo: filterReemplazo })) return false;
       if (q && ![r.userName, r.userEmail, r.clientName, r.projectName, r.nombre_contrato, r.cuit].some((v) => String(v || '').toLowerCase().includes(q))) return false;
       return true;
     });
-  }, [rows, search, filterVigencia, filterTipoContrato, filterEstado, filterArca, situacionDe, filterImpositivo, impositivoDe]);
+  }, [rows, search, filterVigencia, filterUserStatus, filterRolMobile, filterReemplazo, filterTipoContrato, filterEstado, filterArca, situacionDe, filterImpositivo, impositivoDe]);
 
   const clientOptions = useMemo(() => {
     const m = new Map<string, string>();
@@ -4286,6 +4295,7 @@ export const ContractBulkContratadosTab: React.FC<{
             searchPlaceholder="Buscar por colaborador, CUIT, proyecto o contrato..."
             extraActions={<MenuOrdenContratos orden={orden} setOrden={setOrden} columnaAlta="altaBaja" porDefecto="solicitud_desc" />}
             radioFilters={[
+              { label: 'Estado de usuarios', value: filterUserStatus, onChange: setFilterUserStatus, options: OPCIONES_ESTADO_USUARIOS },
               { label: 'Contratos', value: filterVigencia, onChange: setFilterVigencia, options: OPCIONES_VIGENCIA },
               // Qué está dado de alta en ARCA y qué no (09/11/2026, pedido del usuario).
               { label: 'ARCA', value: filterArca, onChange: setFilterArca, options: OPCIONES_FILTRO_ARCA },
@@ -4299,6 +4309,8 @@ export const ContractBulkContratadosTab: React.FC<{
             selectFilters={[
               { label: 'Cliente', value: filterClientId, onChange: setFilterClientId, placeholder: 'Todos los clientes', options: clientOptions },
               { label: 'Proyecto', value: filterProjectId, onChange: setFilterProjectId, placeholder: 'Todos los proyectos', options: projectOptions },
+              { label: 'Novedades', value: filterRolMobile, onChange: setFilterRolMobile, placeholder: 'Todos', options: MOBILE_ROLE_OPTIONS },
+              { label: 'Reemplazo', value: filterReemplazo, onChange: setFilterReemplazo, placeholder: 'Con y sin reemplazo', options: OPCIONES_REEMPLAZO },
             ]}
           />
         </div>

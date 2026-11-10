@@ -960,7 +960,8 @@ export const MobileNavbar: React.FC = () => {
                 <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
               </div>
             )}
-            <span className="font-medium truncate">{item.label}</span>
+            {/* El nombre de un paso entra entero (en dos renglones si hace falta): cortado con «…» no se distinguía uno de otro. */}
+            <span className={`font-medium ${item.paso ? 'leading-tight' : 'truncate'}`}>{item.label}</span>
             {item.badge && <span className={`ml-1 px-2 py-0.5 rounded text-[8px] font-bold ${item.badgeColor || 'bg-green-500'} text-white uppercase`}>{item.badge}</span>}
             {pill}
           </div>

@@ -280,7 +280,7 @@ export const ContractsPage: React.FC<{ bandeja: Exclude<ClaveBandeja, 'solicitud
           {contenido.tipo === 'dropbox' ? (
             <ContractDropboxTab key={contenido.carpeta} tipo={contenido.carpeta} onCount={contarEnCarpeta[contenido.carpeta]} />
           ) : contenido.tipo === 'padron' ? (
-            <ContractBulkContratadosTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onCount={alContarPadron} />
+            <ContractBulkContratadosTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onCount={alContarPadron} initialProjectId={initialProjectId} />
           ) : contenido.tipo === 'generar' ? (
             <ContractBulkFirmaTab allEstados={allEstados} contratoFrames={contratoFrames} releases={releases} onCount={alContarGenerar} onEnviados={alEnviarAFirmar} />
           ) : (
