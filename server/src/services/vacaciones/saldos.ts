@@ -122,11 +122,16 @@ export async function saldosDeVacaciones(tenantId: any, tenantObjectId: any, sel
   // Desde el 30/10/2026 manda el rol del EQUIPO del proyecto donde rige su contrato (`rolDelMiembroHoy`):
   // con el del último contrato, terminar una jornada cambiaba el rol que se veía.
   const hoyRol = hoyArgentina();
-  const rolEmpresaDe = (misVinculos: any[], rolesPropios: { nombre: string }[]): string => {
+  /**
+   * Lo mismo, como LISTA (10/11/2026): la pantalla dibuja un badge por rol, y partir el texto por la
+   * coma rompería un rol que la lleve en el nombre. Vacía = sin rol empresa.
+   */
+  const rolesEmpresaDe = (misVinculos: any[], rolesPropios: { nombre: string }[]): string[] => {
     const rol = rolDelMiembroHoy(misVinculos, hoyRol);
-    if (rol) return rol;
-    return rolesPropios.length ? rolesPropios.map((r) => r.nombre).join(", ") : "Sin rol empresa";
+    if (rol) return [rol];
+    return rolesPropios.map((r) => r.nombre).filter(Boolean);
   };
+  const rolEmpresaDe = (misVinculos: any[], rolesPropios: { nombre: string }[]): string => rolesEmpresaDe(misVinculos, rolesPropios).join(", ") || "Sin rol empresa";
 
   // 2. Fetch all overrides for the selected year
   const { UserVacationBalance } = await import("../../models/UserVacationBalance.js");
@@ -520,6 +525,7 @@ export async function saldosDeVacaciones(tenantId: any, tenantObjectId: any, sel
         cosas. Se calculan acá, con las mismas funciones, y viajan como tres campos.
       */
       rolEmpresa: rolEmpresaDe(misVinculos, rolesPropiosDe(user)),
+      rolesEmpresa: rolesEmpresaDe(misVinculos, rolesPropiosDe(user)),
       contratoQueRige: contratoQueRigeDe.get(uIdStr) || null,
       // Para el filtro por rol empresa, que mira el vínculo y no el contrato. Suma los roles propios
       // de la ficha, como el filtro `rolFrame` de `routes/users.ts`: si no, filtrar por FOTOGRAFO

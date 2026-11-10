@@ -18,6 +18,10 @@ import { roleFrameAPI, RoleFrameItem } from "../../api/roleFrames";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 import { CLASE_BARRA_FIJA, useBarraFija } from '../ui/BarraFija';
+import { formatCuit } from '../../utils/cuit';
+
+/** El badge de un rol empresa: el mismo de la tarjeta de Usuarios (`UserCard`). */
+const BADGE_ROL = 'inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight';
 
 /**
  * Fecha de un contrato en DD/MM/YYYY. Pasa por `fechaISO` y no por el `formatDate` de más abajo porque
@@ -95,6 +99,8 @@ interface UserVacationBalance {
     mismas funciones y viajan resueltos.
   */
   rolEmpresa?: string;
+  /** Los mismos roles, uno por elemento (un badge cada uno). Un servidor anterior no lo manda: ver `rolesDe`. */
+  rolesEmpresa?: string[];
   contratoQueRige?: any | null;
   rolesFrame?: { rol_frame_id?: any; nombre_rol_frame?: string }[];
 }
@@ -361,6 +367,8 @@ export const UserVacationManagementTab: React.FC = () => {
   const [openInfoExtra, setOpenInfoExtra] = useState(false);
   /** La persona cuya cuenta de antigüedad se está mirando. */
   const [antiguedadDe, setAntiguedadDe] = useState<UserVacationBalance | null>(null);
+  /** La persona cuyos roles empresa se están mirando (cuando tiene más de uno, la celda sólo dice cuántos). */
+  const [rolesDeQuien, setRolesDeQuien] = useState<UserVacationBalance | null>(null);
   /**
    * Página que se está viendo. Son 1573 personas: dibujarlas todas son 1573 filas con cinco inputs
    * cada una —casi ocho mil campos— y el navegador se arrastra al tipear en cualquiera de ellos.
@@ -458,15 +466,28 @@ export const UserVacationManagementTab: React.FC = () => {
     return rolDelMiembroHoy((balance.metadata?.projects || []) as any[], new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Argentina/Buenos_Aires' })) || 'Sin rol empresa';
   };
 
+  /**
+   * Los roles empresa, de a uno. La lista la manda el server (`rolesEmpresa`); con uno anterior se
+   * parte el texto por «, », que es como los unía.
+   */
+  const rolesDe = (balance: UserVacationBalance): string[] => {
+    if (balance.rolesEmpresa) return balance.rolesEmpresa;
+    const texto = getActiveRoleFrame(balance);
+    return texto && texto !== 'Sin rol empresa' ? texto.split(', ').map((r) => r.trim()).filter(Boolean) : [];
+  };
+
   const filterBalances = () => {
     let result = balances;
 
     if (searchTerm) {
       const lowerTerm = searchTerm.toLowerCase();
+      // También por CUIT, con o sin guiones (desde tres dígitos, para que «20» no traiga a media lista).
+      const digitos = searchTerm.replace(/\D/g, '');
       result = result.filter((b) => 
         b.firstName?.toLowerCase().includes(lowerTerm) || 
         b.lastName?.toLowerCase().includes(lowerTerm) || 
-        b.email.toLowerCase().includes(lowerTerm)
+        b.email.toLowerCase().includes(lowerTerm) ||
+        (digitos.length >= 3 && (b.cuil || '').includes(digitos))
       );
     }
 
@@ -613,6 +634,7 @@ export const UserVacationManagementTab: React.FC = () => {
   const ordenAcumulado = useOrdenTabla(filteredBalances, {
     empresas: (b: UserVacationBalance) => (b.empresas || []).join(' | '),
     usuario: (b: UserVacationBalance) => `${b.lastName || ''} ${b.firstName || ''}`.trim(),
+    cuit: (b: UserVacationBalance) => b.cuil || '',
     ingreso: (b: UserVacationBalance) => b.hireDate || '',
     antiguedad: (b: UserVacationBalance) => b.antiguedad?.dias ?? 0,
     rol: (b: UserVacationBalance) => getActiveRoleFrame(b),
@@ -790,6 +812,7 @@ export const UserVacationManagementTab: React.FC = () => {
           <tr>
             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="empresas" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Empresa/s</BotonOrden></th>
             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="usuario" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Usuario</BotonOrden></th>
+            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="cuit" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>CUIT</BotonOrden></th>
             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><span className="inline-flex items-center gap-2"><BotonOrden columna="ingreso" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Ingreso</BotonOrden><span className="text-gray-300">/</span><BotonOrden columna="antiguedad" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Antigüedad</BotonOrden></span></th>
             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="rol" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Rol Empresa</BotonOrden></th>
             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="contrato" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Contrato</BotonOrden></th>
@@ -852,6 +875,10 @@ export const UserVacationManagementTab: React.FC = () => {
                     </div>
                     <div className="text-xs text-gray-500">{balance.email}</div>
                   </td>
+                  {/* El CUIT/CUIL de la ficha, con guiones como en Usuarios. */}
+                  <td className="px-6 py-4 whitespace-nowrap text-xs font-mono text-gray-700 dark:text-gray-300">
+                    {balance.cuil ? formatCuit(balance.cuil) : <span className="font-sans text-gray-400 dark:text-gray-500">Sin CUIT</span>}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                     <div>
                       Ingreso: <span className="font-semibold text-gray-750 dark:text-gray-300">{formatDate(balance.hireDate)}</span>
@@ -871,8 +898,23 @@ export const UserVacationManagementTab: React.FC = () => {
                       )}
                     </div>
                   </td>
+                  {/*
+                    ROL EMPRESA: badge como en Usuarios. Con varios (los de la ficha, cuando no hay un
+                    equipo que fije uno) iban todos seguidos en un renglón y la columna se llevaba media
+                    tabla: ahora la celda dice cuántos son y el click los abre (10/11/2026).
+                  */}
                   <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
-                    {getActiveRoleFrame(balance)}
+                    {(() => {
+                      const roles = rolesDe(balance);
+                      if (roles.length === 0) return <span className="text-gray-400 dark:text-gray-500">Sin rol empresa</span>;
+                      if (roles.length === 1) return <span className={BADGE_ROL}>{roles[0]}</span>;
+                      return (
+                        <button type="button" onClick={() => setRolesDeQuien(balance)} title={roles.join(', ')} className={`${BADGE_ROL} gap-1.5 hover:opacity-80`}>
+                          {roles.length} roles
+                          <FontAwesomeIcon icon={faChevronRight} className="h-2 w-2" />
+                        </button>
+                      );
+                    })()}
                   </td>
                   {/* Contrato: el tipo, si está vigente y sus fechas — igual que en Contratos. */}
                   <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">
@@ -953,7 +995,7 @@ export const UserVacationManagementTab: React.FC = () => {
             })
           ) : (
             <tr>
-              <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+              <td colSpan={11} className="px-6 py-8 text-center text-gray-500">
                 No se encontraron usuarios con los filtros seleccionados
               </td>
             </tr>
@@ -1068,6 +1110,19 @@ export const UserVacationManagementTab: React.FC = () => {
               <p>Total anual = días por ley + días extra{antiguedadDe.extraVacationDays ? ` (${antiguedadDe.extraVacationDays})` : ""} + beneficio de la compañía (+ arrastre si está habilitado) = <span className="font-semibold">{antiguedadDe.calculated.totalAnnual}</span>{antiguedadDe.override?.totalAnnual !== undefined && antiguedadDe.override.totalAnnual !== antiguedadDe.calculated.totalAnnual ? `, editado a mano a ${antiguedadDe.override.totalAnnual}` : ""}.</p>
             </div>
             <p className="text-xs text-gray-500">El detalle de cada relación (fechas, modalidad, puesto, obra social) está en Documentos → Antigüedad ARCA.</p>
+          </div>
+        )}
+      </InfoModal>
+
+      <InfoModal isOpen={!!rolesDeQuien} onClose={() => setRolesDeQuien(null)} title={`Rol/es Empresa de ${rolesDeQuien?.firstName || ""} ${rolesDeQuien?.lastName || ""}`} size="md">
+        {rolesDeQuien && (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 dark:text-gray-300">Son los {rolesDe(rolesDeQuien).length} roles de su ficha. Hoy no tiene un contrato vigente en un equipo que fije uno solo.</p>
+            <div className="flex flex-wrap gap-1.5">
+              {rolesDe(rolesDeQuien).map((rol) => (
+                <span key={rol} className={BADGE_ROL}>{rol}</span>
+              ))}
+            </div>
           </div>
         )}
       </InfoModal>
