@@ -949,7 +949,7 @@ class ProjectsAPI {
     const { data } = await axios.get(`/contratos/altas-arca/constancias/automatica`, { headers: this.getHeaders() });
     return data;
   }
-  async setDescargaConstanciasAutomatica(cambios: Partial<{ activa: boolean } & ConfigDescargaConstancias>): Promise<{ activa: boolean; config: ConfigDescargaConstancias }> {
+  async setDescargaConstanciasAutomatica(cambios: Partial<{ activa: boolean; alPresentar: boolean } & ConfigDescargaConstancias>): Promise<{ activa: boolean; alPresentar?: boolean; config: ConfigDescargaConstancias }> {
     const { data } = await axios.put(`/contratos/altas-arca/constancias/automatica`, cambios, { headers: this.getHeaders() });
     return data;
   }
@@ -1343,7 +1343,13 @@ export interface ConfigDescargaConstancias {
 }
 
 export interface EstadoDescargaConstancias {
+  /** El barrido diario. */
   activa: boolean;
+  /**
+   * «Bajar constancias al presentar» (11/11/2026): cada constancia se baja apenas se presenta su alta, y
+   * la corrida diaria queda como barrido. Sin dato = un servidor anterior al cambio (sólo la corrida diaria).
+   */
+  alPresentar?: boolean;
   config: ConfigDescargaConstancias;
   ahora: string;
   hoy: string;
@@ -1387,6 +1393,24 @@ export interface IntentoConstancia {
   detalle?: string;
   manual?: boolean;
 }
+/** Una corrida de descarga de una empleadora: encadenada a una presentación, el barrido diario o pedida a mano. */
+export interface CorridaDeDescarga {
+  _id: string;
+  origen: "encadenada" | "barrido" | "manual";
+  empresaRazonSocial: string;
+  arrancadaEl: string;
+  terminadaEl: string;
+  /** Sólo la encadenada: la presentación de la que salió. */
+  presentacion?: { terminadaEl: string; automatica: boolean } | null;
+  pedidas: number;
+  listas: number;
+  /** De ALTA (la relación seguía activa) y de BAJA (ya terminada): la medida de si el encadenamiento funciona. */
+  deAlta: number;
+  deBaja: number;
+  items: Array<{ cuil: string; nombre: string; estado: "descargando" | "lista" | "rechazada" | "sin_constancia" | "error"; detalle?: string; tipoConstancia?: "alta" | "baja" | null }>;
+  error?: string | null;
+}
+
 export interface FueraDeLaCorrida {
   nuevasPorTope: number;
   reintentosPorTope: number;
@@ -1401,7 +1425,11 @@ export interface EstadoDescargasArca extends EstadoDescargaConstancias {
   /** Validadas cuyo documento se perdió (borrado: «Volver a bajar») o se movió fuera del circuito («Retomar el circuito»). */
   noUbicadas?: ConstanciaArcaEnPantalla[];
   /** La descarga de UNA empleadora que corre ahora (o la última), con sus eventos. */
-  descarga: null | { empresaId: string; empresaRazonSocial: string; total: number; corriendo: boolean; arrancadaEl: string; eventos: Array<Record<string, any> & { tipo: string }> };
+  descarga: null | { empresaId: string; empresaRazonSocial: string; total: number; corriendo: boolean; arrancadaEl: string; eventos: Array<Record<string, any> & { tipo: string }>; origen?: CorridaDeDescarga["origen"]; presentacionTerminadaEl?: string | null };
+  /** Las tandas recién presentadas que esperan su turno en ARCA o se están bajando. */
+  encadenadas?: Array<{ empresaId: string; empresaRazonSocial: string; estado: "en_fila" | "bajando"; presentadaEl: string; items: Array<{ userProjectId: string; contractIndex: number }> }>;
+  /** El historial: las últimas corridas, la más nueva primero. */
+  corridas?: CorridaDeDescarga[];
   /** El forzado en masa (varias empleadoras en fila), si lo hay. */
   forzado: null | { arrancadoEl: string; total: number; empresas: string[]; empresaActual: string; terminadas: number; listas: number; terminado: boolean; errores: string[] };
 }

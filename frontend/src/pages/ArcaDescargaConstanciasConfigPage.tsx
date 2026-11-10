@@ -72,6 +72,21 @@ export const ArcaDescargaConstanciasConfigPage: React.FC = () => {
     }
   };
 
+  /** «Bajar constancias al presentar» (11/11/2026). Prenderlo no entra a ARCA: vale desde la próxima presentación. */
+  const cambiarAlPresentar = async (valor: boolean) => {
+    setGuardando(true);
+    try {
+      const r = await projectsAPI.setDescargaConstanciasAutomatica({ alPresentar: valor });
+      setEstado((prev) => (prev ? { ...prev, alPresentar: r.alPresentar } : prev));
+    } catch (err: any) {
+      sweetAlert.error("No se pudo guardar", err?.response?.data?.error || err?.message || "");
+    } finally {
+      setGuardando(false);
+    }
+  };
+  // Con el modelo nuevo la corrida diaria es el barrido de lo que quedó pendiente.
+  const alPresentar = estado?.alPresentar === true;
+
   const u = estado?.ultimaCorrida;
 
   return (
@@ -102,11 +117,24 @@ export const ArcaDescargaConstanciasConfigPage: React.FC = () => {
         </div>
       ) : (
         <div className="max-w-2xl space-y-6">
+          {/* El modelo nuevo: sólo si el servidor ya lo conoce. */}
+          {estado.alPresentar !== undefined && (
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+              <label className="inline-flex items-center gap-3 cursor-pointer select-none">
+                <input type="checkbox" className="sr-only peer" checked={alPresentar} disabled={guardando} onChange={(e) => cambiarAlPresentar(e.target.checked)} />
+                <span className="relative w-11 h-6 rounded-full bg-gray-300 dark:bg-gray-600 peer-checked:bg-green-600 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-5" />
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">Bajar constancias al presentar: {alPresentar ? "activado" : "desactivado"}</span>
+              </label>
+              <p className="mt-2 text-xs text-gray-500">
+                Apenas termina una presentación de altas (la automática, «Forzar presentación» o el forzado en masa) se bajan las constancias de lo que ARCA aceptó, por empleadora y sin el tope diario. Con la relación todavía activa, ARCA da la constancia de alta. La corrida diaria de abajo queda como barrido de lo que no salió.
+              </p>
+            </div>
+          )}
           <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
             <label className="inline-flex items-center gap-3 cursor-pointer select-none">
               <input type="checkbox" className="sr-only peer" checked={estado.activa} disabled={guardando} onChange={(e) => cambiarActiva(e.target.checked)} />
               <span className="relative w-11 h-6 rounded-full bg-gray-300 dark:bg-gray-600 peer-checked:bg-green-600 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-5" />
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">Descarga automática {estado.activa ? "activada" : "desactivada"}</span>
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">{alPresentar ? "Barrido diario" : "Descarga automática"} {estado.activa ? (alPresentar ? "activado" : "activada") : alPresentar ? "desactivado" : "desactivada"}</span>
             </label>
             <p className="mt-2 text-xs text-gray-500">
               Las constancias bajadas y dónde quedó cada una se ven en Contratos (registro de «Alta Temprana A.R.C.A») y en{" "}
@@ -118,7 +146,7 @@ export const ArcaDescargaConstanciasConfigPage: React.FC = () => {
           </div>
 
           <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-5">
-            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Horario</h2>
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">{alPresentar ? "Horario del barrido diario" : "Horario"}</h2>
             <div className="grid grid-cols-2 gap-4 max-w-sm">
               <div>
                 <label className={rotulo}>Hora</label>
@@ -143,6 +171,7 @@ export const ArcaDescargaConstanciasConfigPage: React.FC = () => {
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-gray-900/40 px-3 py-2">
               Todos los días a las <strong>{horaTexto(form)}</strong> (hora argentina) se bajan de ARCA las constancias de las altas presentadas que todavía no la tienen, hasta <strong>{estado.maxPorEmpleadora}</strong> por empleadora.
+              {alPresentar && " Con «Bajar al presentar» activado, acá llega sólo lo que quedó pendiente: lo que no se pudo bajar en el momento, los reintentos y las altas hechas a mano en ARCA."}
             </p>
             <div className="flex items-center gap-3">
               <button type="button" onClick={guardar} disabled={!hayCambios || guardando} className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed">
