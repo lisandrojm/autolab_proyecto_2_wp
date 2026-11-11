@@ -20,6 +20,10 @@ import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 import { CLASE_BARRA_FIJA, useBarraFija } from '../ui/BarraFija';
 import { formatCuit } from '../../utils/cuit';
 
+type CuentaDeEmpresa = NonNullable<UserVacationBalance['porEmpresa']>[number];
+/** La cuenta de la persona con UNA empleadora (por CUIT); nada si no trabajó para ella. */
+const deLaEmpresa = (b: UserVacationBalance, cuit: string): CuentaDeEmpresa | undefined => (b.porEmpresa || []).find((e) => e.cuit === cuit);
+
 /** El badge de un rol empresa: el mismo de la tarjeta de Usuarios (`UserCard`). */
 const BADGE_ROL = 'inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight';
 
@@ -380,6 +384,14 @@ export const UserVacationManagementTab: React.FC = () => {
   const [pagina, setPagina] = useState(1);
   // El buscador y los filtros quedan fijos debajo del encabezado de Vacaciones; la tabla pega el suyo debajo (ver `BarraFija`).
   const barra = useBarraFija();
+  /*
+    UNA COLUMNA POR EMPLEADORA EN «ACUMULADO» (10/11/2026). Las columnas son las empresas del catálogo
+    (las mismas de las pestañas). Si alguien trabajó para una que no está ahí —un CUIT sin cargar— no
+    se pierde: aparece una columna «Otras empresas», que sólo se dibuja si hace falta.
+  */
+  const cuitsDelCatalogo = useMemo(() => new Set(empresasTabs.map((e) => e.cuit)), [empresasTabs]);
+  const otrasEmpresasDe = (b: UserVacationBalance) => (b.porEmpresa || []).filter((e) => e.nombre !== 'Sin empresa' && !cuitsDelCatalogo.has(e.cuit));
+  const hayOtrasEmpresas = useMemo(() => balances.some((b) => (b.porEmpresa || []).some((e) => e.nombre !== 'Sin empresa' && !cuitsDelCatalogo.has(e.cuit))), [balances, cuitsDelCatalogo]);
 
   useEffect(() => {
     loadFilters();
@@ -632,7 +644,7 @@ export const UserVacationManagementTab: React.FC = () => {
     (`BotonOrden`). Se ordena el total filtrado y recién después se corta la página, igual que el filtro.
   */
   const ordenAcumulado = useOrdenTabla(filteredBalances, {
-    empresas: (b: UserVacationBalance) => (b.empresas || []).join(' | '),
+    ...Object.fromEntries(empresasTabs.map((e) => [`emp:${e.cuit}`, (b: UserVacationBalance) => deLaEmpresa(b, e.cuit)?.totalAnnual ?? -1])),
     usuario: (b: UserVacationBalance) => `${b.lastName || ''} ${b.firstName || ''}`.trim(),
     cuit: (b: UserVacationBalance) => b.cuil || '',
     ingreso: (b: UserVacationBalance) => b.hireDate || '',
@@ -810,10 +822,14 @@ export const UserVacationManagementTab: React.FC = () => {
       <TablaConEncabezadoFijo className="rounded border border-gray-200 dark:border-gray-700 mb-6" tabla="min-w-full divide-y divide-gray-200 dark:divide-gray-700 relative">
         <thead className="bg-gray-50 dark:bg-gray-800 shadow-sm">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="empresas" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Empresa/s</BotonOrden></th>
             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="usuario" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Usuario</BotonOrden></th>
             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="cuit" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>CUIT</BotonOrden></th>
             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><span className="inline-flex items-center gap-2"><BotonOrden columna="ingreso" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Ingreso</BotonOrden><span className="text-gray-300">/</span><BotonOrden columna="antiguedad" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Antigüedad</BotonOrden></span></th>
+            {/* Una columna por empleadora: los días que le corresponden por su antigüedad en ella. */}
+            {empresasTabs.map((e) => (
+              <th key={e.cuit} title={`Días que le corresponden por su antigüedad en ${e.nombre}`} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 text-violet-600 dark:text-violet-400"><BotonOrden columna={`emp:${e.cuit}`} orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>{e.nombre}</BotonOrden></th>
+            ))}
+            {hayOtrasEmpresas && <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Otras empresas</th>}
             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="rol" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Rol Empresa</BotonOrden></th>
             <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900"><BotonOrden columna="contrato" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Contrato</BotonOrden></th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider w-24 bg-gray-50 dark:bg-gray-900 text-violet-600 dark:text-violet-400"><BotonOrden columna="total" orden={ordenAcumulado.orden} onAlternar={ordenAcumulado.alternar}>Total Anual</BotonOrden></th>
@@ -849,21 +865,6 @@ export const UserVacationManagementTab: React.FC = () => {
 
               return (
                 <tr key={balance.userId} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 ${isModified ? "bg-amber-50/10 dark:bg-amber-900/5" : ""}`}>
-                  {/* Las empleadoras para las que trabajó, separadas por «|»; el detalle de cada una está en «Por empresa». */}
-                  <td className="px-6 py-4 text-xs text-gray-700 dark:text-gray-300 max-w-[220px]">
-                    {balance.empresas && balance.empresas.length > 0 ? (
-                      <span className="flex flex-wrap gap-x-1">
-                        {balance.empresas.map((e, i) => (
-                          <span key={e} className="whitespace-nowrap">
-                            {i > 0 && <span className="text-gray-400 mr-1">|</span>}
-                            {e}
-                          </span>
-                        ))}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 dark:text-gray-500">—</span>
-                    )}
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -898,6 +899,28 @@ export const UserVacationManagementTab: React.FC = () => {
                       )}
                     </div>
                   </td>
+                  {/* Por empleadora: los días por ley con la antigüedad en ESA empresa (la antigüedad, al pasar el mouse). */}
+                  {empresasTabs.map((emp) => {
+                    const cuenta = deLaEmpresa(balance, emp.cuit);
+                    return (
+                      <td key={emp.cuit} className="px-4 py-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                        {cuenta ? (
+                          <div title={`Antigüedad en ${emp.nombre}: ${cuenta.texto} (${cuenta.fuente === 'arca' ? 'según ARCA' : 'según los contratos de WeProdu'})`}>
+                            <span className="inline-flex w-fit items-center px-2 py-1 rounded border font-bold text-sm bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300">
+                              {cuenta.totalAnnual} {cuenta.totalAnnual === 1 ? 'día' : 'días'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 dark:text-gray-500">—</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  {hayOtrasEmpresas && (
+                    <td className="px-4 py-4 text-xs text-gray-700 dark:text-gray-300 max-w-[220px]">
+                      {otrasEmpresasDe(balance).length > 0 ? otrasEmpresasDe(balance).map((e) => `${e.nombre} (${e.totalAnnual})`).join(' | ') : <span className="text-gray-400 dark:text-gray-500">—</span>}
+                    </td>
+                  )}
                   {/*
                     ROL EMPRESA: badge como en Usuarios. Con varios (los de la ficha, cuando no hay un
                     equipo que fije uno) iban todos seguidos en un renglón y la columna se llevaba media
@@ -995,7 +1018,7 @@ export const UserVacationManagementTab: React.FC = () => {
             })
           ) : (
             <tr>
-              <td colSpan={11} className="px-6 py-8 text-center text-gray-500">
+              <td colSpan={10 + empresasTabs.length + (hayOtrasEmpresas ? 1 : 0)} className="px-6 py-8 text-center text-gray-500">
                 No se encontraron usuarios con los filtros seleccionados
               </td>
             </tr>
@@ -1056,7 +1079,7 @@ export const UserVacationManagementTab: React.FC = () => {
           <div>
             <p className="font-semibold mb-2">Acumulado y Por empresa</p>
             <p>
-              <strong>Acumulado</strong> es una fila por persona con todas sus empleadoras juntas (la columna «Empresa/s» dice cuáles) y es lo que se edita. <strong>Por empresa</strong> abre esa fila en
+              <strong>Acumulado</strong> es una fila por persona con todas sus empleadoras juntas (hay una columna por empresa: los días que le corresponden por su antigüedad en ella) y es lo que se edita. <strong>Por empresa</strong> abre esa fila en
               una por empleadora: la antigüedad en esa empresa, sus días por ley y las vacaciones tomadas estando contratado por ella (una vacación es de la empresa del contrato que regía el día que
               empezó). Los días extra, el beneficio y el arrastre son de la persona: están sólo en el acumulado.
             </p>
