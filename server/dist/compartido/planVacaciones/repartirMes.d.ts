@@ -25,7 +25,8 @@ export interface Bloque {
     recortadoPor: RecorteDeBloque;
 }
 export interface OpcionesDeReparto {
-    tope: number;
+    /** Máximo de días por persona. `null` = el plan no tiene tope (10/11/2026): mandan el saldo y el tramo. */
+    tope: number | null;
     ventanaDesde: string;
     ventanaHasta: string;
 }

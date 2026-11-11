@@ -75,6 +75,14 @@ describe("repartir un mes entre las personas de un rol", () => {
     const b = repartirMes([{ userId: "a", disponibles: 28 }], "2027-02", { tope: 10, ...V });
     assert.deepEqual(b.map((x) => [x.desde, x.hasta, x.dias, x.recortadoPor]), [["2027-02-01", "2027-02-10", 10, "tope"]]);
   });
+  it("sin tope (null) el bloque llega hasta donde den el saldo y el tramo", () => {
+    // Sola en febrero con 28 días: el mes entero, sin recorte.
+    const [solo] = repartirMes([{ userId: "a", disponibles: 28 }], "2027-02", { tope: null, ...V });
+    assert.deepEqual([solo.desde, solo.hasta, solo.dias, solo.recortadoPor], ["2027-02-01", "2027-02-28", 28, "ninguno"]);
+    // Con menos saldo que el tramo, lo que recorta es el saldo, nunca «tope».
+    const [corto] = repartirMes([{ userId: "a", disponibles: 21 }], "2027-01", { tope: null, ...V });
+    assert.deepEqual([corto.desde, corto.hasta, corto.dias, corto.recortadoPor], ["2027-01-01", "2027-01-21", 21, "saldo"]);
+  });
   it("una ventana que empieza el 15 reparte el mes desde el 15", () => {
     const b = repartirMes(dos, "2026-12", { tope: 15, ventanaDesde: "2026-12-15", ventanaHasta: "2027-03-31" });
     assert.deepEqual(b.map((x) => [x.desde, x.hasta, x.dias, x.recortadoPor]), [
@@ -106,6 +114,11 @@ describe("validar el plan", () => {
     const avisos = validarPlan(plan([item({ desde: "2026-11-20", hasta: "2026-12-10", dias: 21 })]), ctx());
     assert.deepEqual(codigos(avisos), ["fuera_de_ventana", "supera_tope"]);
     assert.equal(hayErrores(avisos), true);
+  });
+  it("sin tope (null) un bloque largo no es error; el saldo sigue mandando", () => {
+    const sinTope = (items: PlanParaValidar["items"]): PlanParaValidar => ({ ...V, topeDiasPorPersona: null, items });
+    assert.deepEqual(validarPlan(sinTope([item({ hasta: "2026-12-21", dias: 21 })]), ctx()), []);
+    assert.deepEqual(codigos(validarPlan(sinTope([item({ hasta: "2026-12-28", dias: 28 })]), ctx())), ["supera_saldo"]);
   });
   it("la suma de los bloques de una persona no puede superar su saldo", () => {
     const avisos = validarPlan(plan([item(), item({ id: "i2", desde: "2027-01-01", hasta: "2027-01-10", dias: 10 })]), ctx({ disponiblesDe: { a: 21 } }));

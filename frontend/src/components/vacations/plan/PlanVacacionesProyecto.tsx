@@ -177,7 +177,7 @@ export const PlanVacacionesProyecto: React.FC<Props> = ({ planId, onVolver, onCa
               <span className={`${chip} ${CLASE_ESTADO_PLAN[plan.estado]}`}>{TEXTO_ESTADO_PLAN[plan.estado]}</span>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-              {plan.proyecto.name} · {fechaCorta(plan.ventanaDesde)} → {fechaCorta(plan.ventanaHasta)} ({plan.meses.map(mesCorto).join(", ")}) · saldo {plan.anioDeSaldo} · tope {plan.topeDiasPorPersona} días
+              {plan.proyecto.name} · {fechaCorta(plan.ventanaDesde)} → {fechaCorta(plan.ventanaHasta)} ({plan.meses.map(mesCorto).join(", ")}) · saldo {plan.anioDeSaldo} · {plan.topeDiasPorPersona == null ? 'sin tope de días' : `tope ${plan.topeDiasPorPersona} días`}
             </p>
             <p className="text-xs text-gray-500 mt-1">
               {plan.equipo.length} personas en {plan.grupos.length} grupos · {n("propuesto")} propuestos · {enviados} esperando al coordinador · {n("aprobado")} aprobados{n("rechazado") > 0 && ` · ${n("rechazado")} rechazados`}

@@ -159,7 +159,7 @@ export const PlanesPorProyectoTab: React.FC<Props> = ({ projectIdFijo }) => {
                   {fechaCorta(p.ventanaDesde)} → {fechaCorta(p.ventanaHasta)}
                 </td>
                 <td className={td}>
-                  {p.anioDeSaldo} · tope {p.topeDiasPorPersona}
+                  {p.anioDeSaldo} · {p.topeDiasPorPersona == null ? 'sin tope' : `tope ${p.topeDiasPorPersona}`}
                 </td>
                 <td className={td}>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${CLASE_ESTADO_PLAN[p.estado]}`}>{TEXTO_ESTADO_PLAN[p.estado]}</span>

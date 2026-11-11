@@ -11,7 +11,7 @@ export function validarPlan(plan, ctx) {
         if (it.desde < plan.ventanaDesde || it.hasta > plan.ventanaHasta || it.hasta < it.desde) {
             avisos.push({ nivel: "error", codigo: "fuera_de_ventana", itemId: it.id, userId: it.userId, mensaje: `${nombre(it.userId)}: el bloque ${fechaCorta(it.desde)}–${fechaCorta(it.hasta)} queda fuera de la ventana del plan.` });
         }
-        if (dias > plan.topeDiasPorPersona) {
+        if (plan.topeDiasPorPersona != null && dias > plan.topeDiasPorPersona) {
             avisos.push({ nivel: "error", codigo: "supera_tope", itemId: it.id, userId: it.userId, mensaje: `${nombre(it.userId)}: ${dias} días superan el tope de ${plan.topeDiasPorPersona} por persona.` });
         }
         if (equipo && !equipo.has(it.userId)) {

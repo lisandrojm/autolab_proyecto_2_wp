@@ -105,7 +105,8 @@ export interface PlanVacaciones {
   ventanaDesde: string;
   ventanaHasta: string;
   anioDeSaldo: number;
-  topeDiasPorPersona: number;
+  /** `null` = el plan no tiene tope. */
+  topeDiasPorPersona: number | null;
   estado: EstadoPlan;
   equipo: MiembroDelPlan[];
   equipoActualizadoAt: string;
@@ -141,7 +142,8 @@ export interface PlanResumen {
   ventanaDesde: string;
   ventanaHasta: string;
   anioDeSaldo: number;
-  topeDiasPorPersona: number;
+  /** `null` = el plan no tiene tope. */
+  topeDiasPorPersona: number | null;
   estado: EstadoPlan;
   enviadoAt?: string;
   createdAt: string;
@@ -197,7 +199,7 @@ class PlanVacacionesAPI {
     const { data } = await axios.get(`${BASE}/proyectos/${projectId}/equipo-para-plan`, { params: { anioDeSaldo } });
     return data;
   }
-  async crear(body: { projectId: string; nombre?: string; ventanaDesde: string; ventanaHasta: string; anioDeSaldo?: number; topeDiasPorPersona?: number }): Promise<PlanVacaciones> {
+  async crear(body: { projectId: string; nombre?: string; ventanaDesde: string; ventanaHasta: string; anioDeSaldo?: number; topeDiasPorPersona?: number | null }): Promise<PlanVacaciones> {
     const { data } = await axios.post(BASE, body);
     return data;
   }
@@ -205,7 +207,7 @@ class PlanVacacionesAPI {
     const { data } = await axios.get(`${BASE}/${planId}`);
     return data;
   }
-  async actualizar(planId: string, body: { nombre?: string; ventanaDesde?: string; ventanaHasta?: string; anioDeSaldo?: number; topeDiasPorPersona?: number }): Promise<PlanVacaciones> {
+  async actualizar(planId: string, body: { nombre?: string; ventanaDesde?: string; ventanaHasta?: string; anioDeSaldo?: number; topeDiasPorPersona?: number | null }): Promise<PlanVacaciones> {
     const { data } = await axios.patch(`${BASE}/${planId}`, body);
     return data;
   }

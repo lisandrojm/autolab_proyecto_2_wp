@@ -234,10 +234,16 @@ function validarVentana(desde: unknown, hasta: unknown): { desde: string; hasta:
   return { desde, hasta };
 }
 
-const validarTope = (v: unknown, porDefecto = 15): number => {
-  if (v === undefined || v === null || v === "") return porDefecto;
+/**
+ * EL TOPE ES OPCIONAL (10/11/2026). `null` —o 0, que es lo que se tipea para decir «ninguno»— es un
+ * plan SIN tope: cada bloque puede durar lo que el saldo de la persona permita. Si el campo no viene,
+ * queda el valor por defecto (15 al crear; el que tenía al editar).
+ */
+const validarTope = (v: unknown, porDefecto: number | null = 15): number | null => {
+  if (v === undefined || v === "") return porDefecto;
+  if (v === null || v === 0 || v === "0") return null;
   const n = Number(v);
-  if (!Number.isInteger(n) || n < 1 || n > 60) throw new ErrorPlan("El tope de días por persona tiene que ser un entero entre 1 y 60.");
+  if (!Number.isInteger(n) || n < 1 || n > 60) throw new ErrorPlan("El tope de días por persona tiene que ser un entero entre 1 y 60 (o ninguno).");
   return n;
 };
 

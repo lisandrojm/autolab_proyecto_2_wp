@@ -96,7 +96,8 @@ export interface IPlanVacaciones extends Document {
     ventanaHasta: string;
     /** De qué año se descuentan los días (default: el año en que empieza la ventana). */
     anioDeSaldo: number;
-    topeDiasPorPersona: number;
+    /** Máximo de días por bloque. `null` = el plan no tiene tope (10/11/2026). */
+    topeDiasPorPersona: number | null;
     estado: EstadoPlan;
     equipo: IMiembroDelPlan[];
     equipoActualizadoAt: Date;

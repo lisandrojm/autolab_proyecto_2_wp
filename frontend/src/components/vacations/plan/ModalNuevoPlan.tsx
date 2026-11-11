@@ -23,7 +23,8 @@ const hoyISO = () => new Date().toISOString().slice(0, 10);
  * NUEVO PLAN / EDITAR PLAN. La ventana es la temporada (p. ej. 1/12 → 31/3); el año de saldo es de
  * dónde se descuentan los días (por defecto el año en que empieza la ventana: la temporada 2026/27
  * gasta los días de 2026 aunque un bloque caiga en enero); el tope es el máximo por persona aunque le
- * correspondan más (pedido del 17/10/2026: 15). Al crear, muestra en vivo cuánta gente entra.
+ * correspondan más (pedido del 17/10/2026: 15) y es OPCIONAL (10/11/2026): sin tope, cada bloque llega
+ * hasta donde dé el saldo de la persona. Al crear, muestra en vivo cuánta gente entra.
  */
 export const ModalNuevoPlan: React.FC<Props> = ({ isOpen, onClose, proyectos = [], projectIdFijo, plan, onListo }) => {
   const editando = !!plan;
@@ -34,6 +35,8 @@ export const ModalNuevoPlan: React.FC<Props> = ({ isOpen, onClose, proyectos = [
   const [anio, setAnio] = useState<number>(plan?.anioDeSaldo || new Date().getFullYear());
   const [anioTocado, setAnioTocado] = useState(editando);
   const [tope, setTope] = useState<number>(plan?.topeDiasPorPersona || 15);
+  /** Si el plan lleva tope. Apagado se guarda `null`; el número queda en el campo por si se vuelve a prender. */
+  const [conTope, setConTope] = useState<boolean>(plan ? plan.topeDiasPorPersona != null : true);
   const [guardando, setGuardando] = useState(false);
   const [equipo, setEquipo] = useState<EquipoParaPlan | null | "cargando">(null);
 
@@ -46,6 +49,7 @@ export const ModalNuevoPlan: React.FC<Props> = ({ isOpen, onClose, proyectos = [
     setAnio(plan?.anioDeSaldo || new Date().getFullYear());
     setAnioTocado(!!plan);
     setTope(plan?.topeDiasPorPersona || 15);
+    setConTope(plan ? plan.topeDiasPorPersona != null : true);
     setEquipo(null);
   }, [isOpen, plan, projectIdFijo]);
 
@@ -55,7 +59,7 @@ export const ModalNuevoPlan: React.FC<Props> = ({ isOpen, onClose, proyectos = [
   }, [desde, anioTocado]);
 
   const meses = useMemo(() => (desde && hasta ? mesesDeVentana(desde, hasta) : []), [desde, hasta]);
-  const problema = !projectId ? "Elegí el proyecto." : !desde || !hasta ? "Completá la ventana." : hasta < desde ? "La fecha hasta es anterior a la desde." : meses.length > 12 ? "La ventana no puede pasar de 12 meses." : tope < 1 || tope > 60 ? "El tope tiene que estar entre 1 y 60." : "";
+  const problema = !projectId ? "Elegí el proyecto." : !desde || !hasta ? "Completá la ventana." : hasta < desde ? "La fecha hasta es anterior a la desde." : meses.length > 12 ? "La ventana no puede pasar de 12 meses." : conTope && (!Number.isInteger(tope) || tope < 1 || tope > 60) ? "El tope tiene que estar entre 1 y 60 (o destildá «Con tope»)." : "";
 
   // Vista previa del equipo (sólo al crear): cuánta gente entra y en cuántos grupos.
   useEffect(() => {
@@ -78,7 +82,10 @@ export const ModalNuevoPlan: React.FC<Props> = ({ isOpen, onClose, proyectos = [
     if (problema) return sweetAlert.warning("Falta algo", problema);
     setGuardando(true);
     try {
-      const r = editando ? await planVacacionesAPI.actualizar(plan!._id, { nombre, ventanaDesde: desde, ventanaHasta: hasta, anioDeSaldo: anio, topeDiasPorPersona: tope }) : await planVacacionesAPI.crear({ projectId, nombre: nombre || undefined, ventanaDesde: desde, ventanaHasta: hasta, anioDeSaldo: anio, topeDiasPorPersona: tope });
+      const topeDiasPorPersona = conTope ? tope : null;
+      const r = editando ? await planVacacionesAPI.actualizar(plan!._id, { nombre, ventanaDesde: desde, ventanaHasta: hasta, anioDeSaldo: anio, topeDiasPorPersona }) : await planVacacionesAPI.crear({ projectId, nombre: nombre || undefined, ventanaDesde: desde, ventanaHasta: hasta, anioDeSaldo: anio, topeDiasPorPersona });
+      // Un servidor anterior al cambio ignora el «sin tope» y deja el que había: se avisa en vez de callarlo.
+      if (!conTope && r.topeDiasPorPersona != null) sweetAlert.warning("El plan quedó con tope", `El servidor todavía no admite planes sin tope: quedó en ${r.topeDiasPorPersona} días. Hay que publicar la versión nueva.`);
       if (editando && r.quitados) sweetAlert.info("Ventana cambiada", `${r.quitados} bloque(s) quedaron fuera de la ventana nueva y se quitaron.`);
       onListo(r);
       onClose();
@@ -165,9 +172,19 @@ export const ModalNuevoPlan: React.FC<Props> = ({ isOpen, onClose, proyectos = [
             <p className="text-[11px] text-gray-500 mt-1">De qué año se descuentan los días. La temporada que empieza en diciembre gasta los días de ese año, aunque el bloque caiga en enero.</p>
           </div>
           <div>
-            <label className={label}>Tope de días por persona</label>
-            <input type="number" min={1} max={60} className={input} value={tope} onChange={(e) => setTope(Number(e.target.value))} />
-            <p className="text-[11px] text-gray-500 mt-1">Máximo por bloque aunque a la persona le correspondan más; el resto le queda para después.</p>
+            <div className="flex items-center justify-between gap-2">
+              <label className={label}>Tope de días por persona</label>
+              <label className="mb-1 inline-flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 cursor-pointer select-none">
+                <input type="checkbox" checked={conTope} onChange={(e) => setConTope(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
+                Con tope
+              </label>
+            </div>
+            {conTope ? (
+              <input type="number" min={1} max={60} className={input} value={tope || ""} onChange={(e) => setTope(Number(e.target.value))} />
+            ) : (
+              <div className={`${input} text-gray-500 dark:text-gray-400`}>Sin tope</div>
+            )}
+            <p className="text-[11px] text-gray-500 mt-1">{conTope ? "Máximo por bloque aunque a la persona le correspondan más; el resto le queda para después." : "Cada bloque puede durar hasta los días que le correspondan a la persona."}</p>
           </div>
         </div>
         {!editando && projectId && (

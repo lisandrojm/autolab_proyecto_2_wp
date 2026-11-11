@@ -26,7 +26,8 @@ export interface ItemParaValidar {
 export interface PlanParaValidar {
     ventanaDesde: string;
     ventanaHasta: string;
-    topeDiasPorPersona: number;
+    /** `null` = sin tope: un bloque puede durar lo que el saldo de la persona permita. */
+    topeDiasPorPersona: number | null;
     items: ItemParaValidar[];
 }
 export interface ContextoDeValidacion {

@@ -16,7 +16,7 @@ export function repartirMes(personas, mes, o) {
         const segmentoHasta = sumarDias(cursor, largoTramo - 1);
         cursor = sumarDias(segmentoHasta, 1);
         const disponibles = Math.max(0, Math.floor(p.disponibles || 0));
-        const tope = Math.max(0, Math.floor(o.tope || 0));
+        const tope = o.tope == null ? Infinity : Math.max(0, Math.floor(o.tope || 0));
         const dias = Math.min(largoTramo, disponibles, tope);
         let recortadoPor = "ninguno";
         if (dias < largoTramo)

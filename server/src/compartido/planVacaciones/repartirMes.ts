@@ -31,7 +31,8 @@ export interface Bloque {
 }
 
 export interface OpcionesDeReparto {
-  tope: number;
+  /** Máximo de días por persona. `null` = el plan no tiene tope (10/11/2026): mandan el saldo y el tramo. */
+  tope: number | null;
   ventanaDesde: string;
   ventanaHasta: string;
 }
@@ -52,7 +53,7 @@ export function repartirMes(personas: PersonaARepartir[], mes: string, o: Opcion
     const segmentoHasta = sumarDias(cursor, largoTramo - 1);
     cursor = sumarDias(segmentoHasta, 1);
     const disponibles = Math.max(0, Math.floor(p.disponibles || 0));
-    const tope = Math.max(0, Math.floor(o.tope || 0));
+    const tope = o.tope == null ? Infinity : Math.max(0, Math.floor(o.tope || 0));
     const dias = Math.min(largoTramo, disponibles, tope);
     let recortadoPor: RecorteDeBloque = "ninguno";
     if (dias < largoTramo) recortadoPor = disponibles <= tope ? "saldo" : "tope";
