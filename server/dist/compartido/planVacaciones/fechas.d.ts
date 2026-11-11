@@ -8,6 +8,8 @@ export declare const esISO: (v: unknown) => v is string;
 export declare function sumarDias(iso: string, n: number): string;
 /** Días corridos entre dos fechas, ambas incluidas. 0 si `hasta` es anterior a `desde`. */
 export declare function diasEntre(desde: string, hasta: string): number;
+/** Cuántos días faltan desde `hoy` hasta `fecha`: 0 si es hoy, negativo si ya pasó. `NaN` si alguna no es una fecha. */
+export declare function diasHasta(hoy: string, fecha: string): number;
 /** ¿Dos rangos comparten al menos un día? */
 export declare const sePisan: (a: {
     desde: string;

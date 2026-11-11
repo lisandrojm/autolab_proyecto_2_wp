@@ -3,7 +3,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { diasDelMes, diasEntre, mesesDeVentana, rangoDelMesEnVentana, sePisan, sumarDias } from "./fechas.js";
+import { diasDelMes, diasEntre, mesesDeVentana, rangoDelMesEnVentana, sePisan, sumarDias, diasHasta } from "./fechas.js";
 import { repartirMes } from "./repartirMes.js";
 import { validarPlan, hayErrores } from "./validarPlan.js";
 import { coberturaDelMes } from "./cobertura.js";
@@ -24,6 +24,13 @@ describe("fechas del plan", () => {
     it("el mes recortado a la ventana", () => {
         assert.deepEqual(rangoDelMesEnVentana("2026-12", "2026-12-15", "2027-03-31"), { desde: "2026-12-15", hasta: "2026-12-31", dias: 17 });
         assert.equal(rangoDelMesEnVentana("2026-11", V.ventanaDesde, V.ventanaHasta), null);
+    });
+    it("días que faltan hasta una fecha (la anticipación de una solicitud)", () => {
+        assert.equal(diasHasta("2026-11-10", "2026-11-10"), 0);
+        assert.equal(diasHasta("2026-11-10", "2026-11-25"), 15);
+        assert.equal(diasHasta("2026-12-28", "2027-01-04"), 7); // cruza el año
+        assert.equal(diasHasta("2026-11-10", "2026-11-01"), -9); // ya pasó
+        assert.ok(Number.isNaN(diasHasta("2026-11-10", "25/11/2026")));
     });
     it("se pisan si comparten un día", () => {
         assert.equal(sePisan({ desde: "2026-12-01", hasta: "2026-12-15" }, { desde: "2026-12-15", hasta: "2026-12-20" }), true);
