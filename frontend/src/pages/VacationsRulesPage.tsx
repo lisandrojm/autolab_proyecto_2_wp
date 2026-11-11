@@ -9,6 +9,7 @@ import { VacationOverlapRules } from '../components/vacations/VacationOverlapRul
 
 import { ProjectVacationConfigTab } from '../components/vacations/ProjectVacationConfigTab';
 import { ConsecutiveDaysConfigTab } from '../components/vacations/ConsecutiveDaysConfigTab';
+import { AnnualWindowConfigTab } from '../components/vacations/AnnualWindowConfigTab';
 
 import { ContractConfigTab } from '../components/vacations/ContractConfigTab';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
@@ -20,7 +21,7 @@ export function VacationsRulesPage() {
   const puedeAbrir = usePuedeAbrir();
   const helpEntry = getHelp(HELP_KEY);
   const [openInfo, setOpenInfo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'global' | 'overlap' | 'projects' | 'consecutive_days' | 'contracts'>('global');
+  const [activeTab, setActiveTab] = useState<'global' | 'overlap' | 'projects' | 'consecutive_days' | 'annual_window' | 'contracts'>('global');
 
   return (
     <PageLayout
@@ -49,6 +50,9 @@ export function VacationsRulesPage() {
             <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'consecutive_days' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('consecutive_days')}>
               Días Corridos
             </button>
+            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'annual_window' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('annual_window')}>
+              Ventana Anual
+            </button>
             <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'overlap' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('overlap')}>
               Solapamiento
             </button>
@@ -62,6 +66,7 @@ export function VacationsRulesPage() {
             {activeTab === 'global' && <VacationConfigTab />}
             {activeTab === 'projects' && <ProjectVacationConfigTab />}
             {activeTab === 'consecutive_days' && <ConsecutiveDaysConfigTab />}
+            {activeTab === 'annual_window' && <AnnualWindowConfigTab />}
             {activeTab === 'overlap' && <VacationOverlapRules />}
             {/* «Gestión por Usuario» se mudó a Vacaciones (Admin General): los saldos se miran junto a
                 las solicitudes, no acá, que es donde se configuran las reglas. */}

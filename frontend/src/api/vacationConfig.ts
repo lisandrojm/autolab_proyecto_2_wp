@@ -33,6 +33,8 @@ export interface VacationConfig {
   permiteFraccionadas: boolean;
   minDiasFraccion?: number;
   diasCorridos: boolean;
+  /** Ventana anual de goce: el tramo del año en que se pueden tomar vacaciones, sin año ("MM-DD"). Ver `@compartido/ventanaGoce`. */
+  ventanaGoce?: { enabled: boolean; inicio: string; fin: string };
   requiereFirma: boolean;
   pdfId?: string;
   contractRules?: ContractRule[];

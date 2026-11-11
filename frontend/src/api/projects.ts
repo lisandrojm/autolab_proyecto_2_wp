@@ -100,6 +100,10 @@ export interface Project {
     permiteFraccionadas: boolean;
     minDiasFraccion?: number;
     diasCorridos?: boolean;
+    /** Ventana anual de goce propia ("MM-DD"); sólo rige con `useGlobalConfig: false`. */
+    ventanaGoceEnabled?: boolean;
+    ventanaGoceInicio?: string;
+    ventanaGoceFin?: string;
   };
   activityLogConfig?: {
     useGlobalConfig: boolean;
@@ -557,6 +561,10 @@ class ProjectsAPI {
         permiteFraccionadas: boolean;
         minDiasFraccion?: number;
         diasCorridos?: boolean;
+        /** Ventana anual de goce propia ("MM-DD"); sólo rige con `useGlobalConfig: false`. */
+        ventanaGoceEnabled?: boolean;
+        ventanaGoceInicio?: string;
+        ventanaGoceFin?: string;
       };
       activityLogConfig?: {
         useGlobalConfig: boolean;

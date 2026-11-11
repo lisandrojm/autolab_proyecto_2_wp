@@ -22,6 +22,10 @@ export interface Area {
     permiteFraccionadas: boolean;
     minDiasFraccion?: number;
     diasCorridos?: boolean;
+    /** Ventana anual de goce propia ("MM-DD"); sólo rige con `useGlobalConfig: false`. */
+    ventanaGoceEnabled?: boolean;
+    ventanaGoceInicio?: string;
+    ventanaGoceFin?: string;
   };
   createdAt: string;
   updatedAt: string;
@@ -36,6 +40,10 @@ export interface AreaFormData {
     permiteFraccionadas: boolean;
     minDiasFraccion?: number;
     diasCorridos?: boolean;
+    /** Ventana anual de goce propia ("MM-DD"); sólo rige con `useGlobalConfig: false`. */
+    ventanaGoceEnabled?: boolean;
+    ventanaGoceInicio?: string;
+    ventanaGoceFin?: string;
   };
 }
 

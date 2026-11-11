@@ -69,6 +69,12 @@ export interface ProfileStats {
     minDiasFraccion?: number;
     diasCorridos?: boolean;
   };
+  /**
+   * La ventana anual de goce que rige para la persona, ya resuelta por el server (la misma con la que
+   * valida la solicitud). Casi siempre un tramo; `texto` es «entre el 1/11 y el 30/4». Un servidor
+   * anterior no la manda.
+   */
+  ventanaGoce?: { enabled: boolean; tramos: { inicio: string; fin: string }[]; texto?: string };
   vacationConfigSource?: string;
   vacationRulesMeta?: {
     minDiasSource: string;
