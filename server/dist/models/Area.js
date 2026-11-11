@@ -10,6 +10,9 @@ const areaSchema = new Schema({
         permiteFraccionadas: { type: Boolean, default: true },
         minDiasFraccion: { type: Number },
         diasCorridos: { type: Boolean },
+        ventanaGoceEnabled: { type: Boolean },
+        ventanaGoceInicio: { type: String },
+        ventanaGoceFin: { type: String },
     },
 }, { timestamps: true });
 areaSchema.index({ tenantId: 1, name: 1 }, { unique: true });

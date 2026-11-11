@@ -71,6 +71,12 @@ const VacationConfigSchema = new Schema({
         required: true,
         default: false,
     },
+    // Ventana anual de goce. Los defaults hacen que un tenant que nunca la tocó la lea apagada.
+    ventanaGoce: {
+        enabled: { type: Boolean, default: false },
+        inicio: { type: String, default: "11-01" },
+        fin: { type: String, default: "04-30" },
+    },
     requiereFirma: {
         type: Boolean,
         required: true,

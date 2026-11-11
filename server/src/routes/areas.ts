@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { esMesDia } from "../compartido/ventanaGoce.js";
 import { Area } from "../models/Area.js";
 import { User } from "../models/User.js";
 import { Project } from "../models/Project.js";
@@ -28,6 +29,10 @@ const createAreaSchema = z.object({
       permiteFraccionadas: z.boolean(),
       minDiasFraccion: z.number().min(1).nullable().optional(),
       diasCorridos: z.boolean().optional(),
+      // Ventana anual de goce propia ("MM-DD"); sólo rige con `useGlobalConfig: false` (ver `compartido/ventanaGoce.ts`).
+      ventanaGoceEnabled: z.boolean().nullable().optional(),
+      ventanaGoceInicio: z.string().refine(esMesDia, "Día y mes inválidos (MM-DD)").nullable().optional(),
+      ventanaGoceFin: z.string().refine(esMesDia, "Día y mes inválidos (MM-DD)").nullable().optional(),
     })
     .optional(),
 });

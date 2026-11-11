@@ -70,6 +70,10 @@ const vacationSchema = new Schema({
             permiteFraccionadas: { type: Boolean, required: true },
             minDiasFraccion: { type: Number, required: false },
             diasCorridos: { type: Boolean, required: false },
+            ventanaGoce: {
+                enabled: { type: Boolean },
+                tramos: { type: [{ _id: false, inicio: { type: String }, fin: { type: String } }], default: undefined },
+            },
             requiereFirma: { type: Boolean, required: true },
             pdfId: { type: String, required: false },
         },

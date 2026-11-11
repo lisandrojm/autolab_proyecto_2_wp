@@ -18,6 +18,10 @@ export interface IArea extends Document {
     permiteFraccionadas: boolean;
     minDiasFraccion?: number;
     diasCorridos?: boolean;
+    /** Ventana anual de goce propia (ver `compartido/ventanaGoce.ts`). Sólo rige con `useGlobalConfig: false`; lo que falte sale de la global. */
+    ventanaGoceEnabled?: boolean;
+    ventanaGoceInicio?: string;
+    ventanaGoceFin?: string;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -36,6 +40,9 @@ const areaSchema = new Schema<IArea>(
       permiteFraccionadas: { type: Boolean, default: true },
       minDiasFraccion: { type: Number },
       diasCorridos: { type: Boolean },
+      ventanaGoceEnabled: { type: Boolean },
+      ventanaGoceInicio: { type: String },
+      ventanaGoceFin: { type: String },
     },
   },
   { timestamps: true }

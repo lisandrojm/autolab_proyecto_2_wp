@@ -2,6 +2,7 @@ import express from "express";
 import { VacationConfig } from "../models/VacationConfig.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
+import { errorDeVentana } from "../compartido/ventanaGoce.js";
 const router = express.Router();
 router.use(authenticateToken);
 router.get("/contracts-available", async (req, res) => {
@@ -57,6 +58,14 @@ router.put("/", async (req, res) => {
     try {
         const tenantId = req.tenantId;
         console.log("Updating vacation config with data:", JSON.stringify(req.body, null, 2));
+        // La ventana anual de goce se valida acá: el `$set` de abajo guardaría tal cual un día que no existe (30/2).
+        if (req.body?.ventanaGoce !== undefined) {
+            const problema = errorDeVentana(req.body.ventanaGoce);
+            if (problema)
+                return res.status(400).json({ error: problema });
+            const { enabled, inicio, fin } = req.body.ventanaGoce;
+            req.body.ventanaGoce = { enabled, inicio, fin };
+        }
         let config = await VacationConfig.findOne({ tenantId });
         if (!config) {
             config = await VacationConfig.create({

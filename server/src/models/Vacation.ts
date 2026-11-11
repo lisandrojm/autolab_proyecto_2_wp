@@ -24,6 +24,8 @@ interface VacationRules {
   permiteFraccionadas: boolean;
   minDiasFraccion?: number;
   diasCorridos?: boolean;
+  /** La ventana anual de goce que regía al crearla (ya resuelta para la persona). Las anteriores al 10/11/2026 no la tienen. */
+  ventanaGoce?: { enabled: boolean; tramos: { inicio: string; fin: string }[] };
   requiereFirma: boolean;
   pdfId?: string;
 }
@@ -150,6 +152,10 @@ const vacationSchema = new Schema<IVacation>(
         permiteFraccionadas: { type: Boolean, required: true },
         minDiasFraccion: { type: Number, required: false },
         diasCorridos: { type: Boolean, required: false },
+        ventanaGoce: {
+          enabled: { type: Boolean },
+          tramos: { type: [{ _id: false, inicio: { type: String }, fin: { type: String } }], default: undefined },
+        },
         requiereFirma: { type: Boolean, required: true },
         pdfId: { type: String, required: false },
       },

@@ -17,6 +17,14 @@ interface VacationRules {
     permiteFraccionadas: boolean;
     minDiasFraccion?: number;
     diasCorridos?: boolean;
+    /** La ventana anual de goce que regía al crearla (ya resuelta para la persona). Las anteriores al 10/11/2026 no la tienen. */
+    ventanaGoce?: {
+        enabled: boolean;
+        tramos: {
+            inicio: string;
+            fin: string;
+        }[];
+    };
     requiereFirma: boolean;
     pdfId?: string;
 }

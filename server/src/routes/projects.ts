@@ -3,6 +3,7 @@ import { sumarAlConteo } from "../services/conteoUsuariosTenant.js";
 import { faltaDefinirDias } from "../compartido/diasDeTrabajo.js";
 import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
 import { z } from "zod";
+import { esMesDia } from "../compartido/ventanaGoce.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -323,6 +324,10 @@ const createProjectSchema = z.object({
       permiteFraccionadas: z.boolean(),
       minDiasFraccion: z.number().min(1).nullable().optional(),
       diasCorridos: z.boolean().optional(),
+      // Ventana anual de goce propia ("MM-DD"); sólo rige con `useGlobalConfig: false` (ver `compartido/ventanaGoce.ts`).
+      ventanaGoceEnabled: z.boolean().nullable().optional(),
+      ventanaGoceInicio: z.string().refine(esMesDia, "Día y mes inválidos (MM-DD)").nullable().optional(),
+      ventanaGoceFin: z.string().refine(esMesDia, "Día y mes inválidos (MM-DD)").nullable().optional(),
     })
     .optional()
     .nullable(),

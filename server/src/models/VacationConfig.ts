@@ -47,6 +47,11 @@ export interface IVacationConfig extends Document {
   permiteFraccionadas: boolean;
   minDiasFraccion?: number;
   diasCorridos: boolean;
+  /**
+   * VENTANA ANUAL DE GOCE (10/11/2026): el tramo del año en que se pueden tomar vacaciones, sin año
+   * ("MM-DD"), p. ej. 11-01 → 04-30. Apagada por defecto. Reglas en `compartido/ventanaGoce.ts`.
+   */
+  ventanaGoce?: { enabled: boolean; inicio: string; fin: string };
   requiereFirma: boolean;
   pdfId?: string;
 
@@ -135,6 +140,12 @@ const VacationConfigSchema = new Schema<IVacationConfig>(
       type: Boolean,
       required: true,
       default: false,
+    },
+    // Ventana anual de goce. Los defaults hacen que un tenant que nunca la tocó la lea apagada.
+    ventanaGoce: {
+      enabled: { type: Boolean, default: false },
+      inicio: { type: String, default: "11-01" },
+      fin: { type: String, default: "04-30" },
     },
     requiereFirma: {
       type: Boolean,

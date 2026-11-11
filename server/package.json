@@ -128,6 +128,7 @@
     "tipos-servicio:grupo": "dotenv -e .env.production -- tsx src/scripts/backfillGrupoTipoServicio.ts",
     "test:additive": "tsx --test src/utils/additiveSync.test.ts",
     "test:texto-custom": "tsx --test src/compartido/textoCustom.test.ts",
+    "test:ventana-goce": "tsx --test src/compartido/ventanaGoce.test.ts",
     "test:formas-pago": "tsx --test src/compartido/formasPago.test.ts",
     "test:estados-firma": "tsx --test src/compartido/estadosFirma.test.ts",
     "test:retribucion-pactada": "tsx --test src/compartido/arca/retribucionPactada.test.ts",

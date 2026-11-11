@@ -60,6 +60,9 @@ const projectSchema = new Schema({
         permiteFraccionadas: { type: Boolean, default: true },
         minDiasFraccion: { type: Number },
         diasCorridos: { type: Boolean },
+        ventanaGoceEnabled: { type: Boolean },
+        ventanaGoceInicio: { type: String },
+        ventanaGoceFin: { type: String },
     },
     activityLogConfig: {
         useGlobalConfig: { type: Boolean, default: true },

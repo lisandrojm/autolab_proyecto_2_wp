@@ -161,6 +161,10 @@ export interface IProject extends Document {
     permiteFraccionadas: boolean;
     minDiasFraccion?: number;
     diasCorridos?: boolean;
+    /** Ventana anual de goce propia (ver `compartido/ventanaGoce.ts`). Sólo rige con `useGlobalConfig: false`; lo que falte sale de la global. */
+    ventanaGoceEnabled?: boolean;
+    ventanaGoceInicio?: string;
+    ventanaGoceFin?: string;
   };
   activityLogConfig?: {
     useGlobalConfig: boolean;
@@ -266,6 +270,9 @@ const projectSchema = new Schema<IProject>(
       permiteFraccionadas: { type: Boolean, default: true },
       minDiasFraccion: { type: Number },
       diasCorridos: { type: Boolean },
+      ventanaGoceEnabled: { type: Boolean },
+      ventanaGoceInicio: { type: String },
+      ventanaGoceFin: { type: String },
     },
 
     activityLogConfig: {
