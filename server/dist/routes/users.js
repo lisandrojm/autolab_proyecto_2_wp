@@ -1931,12 +1931,35 @@ router.get("/contratacion/contadores", requireTenant, authenticateToken, require
  * ver tres solicitudes donde hay una. Filtrar por proyecto o cliente devuelve la solicitud si
  * ALGUNO de sus proyectos coincide.
  */
+/**
+ * GET /users/solicitudes-overview/solicitantes - Las opciones del filtro «Solicitó»: quiénes cargaron
+ * alguna solicitud (en `estado`, si viene), ordenados por nombre. Sólo los que tienen solicitudes: un
+ * coordinador que nunca pidió a nadie es una opción que siempre devolvería vacío.
+ */
+router.get("/solicitudes-overview/solicitantes", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
+    try {
+        const estado = req.query.estado ? String(req.query.estado) : "";
+        const ids = await User.distinct("metadata.solicitudCreadaPor", {
+            tenantId: req.tenantObjectId,
+            "metadata.solicitudStatus": estado ? estado : { $exists: true, $ne: null },
+            "metadata.solicitudCreadaPor": { $ne: null },
+        });
+        const quienes = await solicitantesDe(req.tenantObjectId, ids.map((id) => ({ metadata: { solicitudCreadaPor: id } })));
+        res.json([...quienes.entries()].map(([_id, q]) => ({ _id, nombre: q.nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre, "es")));
+    }
+    catch (error) {
+        console.error("Solicitantes de solicitudes error:", error);
+        res.status(500).json({ error: "No se pudo cargar la lista de quiénes solicitaron." });
+    }
+});
 router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req, res) => {
     try {
         const search = req.query.search ? String(req.query.search).trim() : "";
         const estado = req.query.estado ? String(req.query.estado) : "";
         const clientId = req.query.clientId ? String(req.query.clientId) : "";
         const projectId = req.query.projectId ? String(req.query.projectId) : "";
+        /** Quién cargó la solicitud (el coordinador de la columna «Solicitó»): su id de usuario. */
+        const solicitadoPor = req.query.solicitadoPor ? String(req.query.solicitadoPor) : "";
         const page = Math.max(1, Number(req.query.page) || 1);
         const limit = Math.max(1, Number(req.query.limit) || 25);
         /** «recientes» (por defecto, la última cargada arriba), «antiguas» (la primera cargada arriba), «aprobadas», «desde» o «desde_desc» (ver el orden más abajo). */
@@ -1944,6 +1967,9 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
         const and = [{ tenantId: req.tenantObjectId }, { "metadata.solicitudStatus": { $exists: true, $ne: null } }];
         if (estado)
             and.push({ "metadata.solicitudStatus": estado });
+        // Un id inválido no puede haber cargado nada: 0 resultados, no «sin filtro».
+        if (solicitadoPor)
+            and.push({ "metadata.solicitudCreadaPor": Types.ObjectId.isValid(solicitadoPor) ? new Types.ObjectId(solicitadoPor) : null, ...(Types.ObjectId.isValid(solicitadoPor) ? {} : { _id: null }) });
         /*
          * Cliente y proyecto son el MISMO filtro sobre `metadata.projectIds`: por cliente se resuelven
          * antes sus proyectos y se pide que la solicitud tenga alguno. Un `$in` sobre el array ya

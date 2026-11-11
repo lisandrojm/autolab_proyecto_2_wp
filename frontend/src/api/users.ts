@@ -829,12 +829,19 @@ class UsersAPI {
    * `User` completo para pasárselo al wizard de aprobación. Acá vuelven filas ya armadas: una por
    * solicitud, con sus proyectos y clientes resueltos.
    */
-  async listSolicitudesOverview(params: { search?: string; estado?: string; clientId?: string; projectId?: string; orden?: "antiguas" | "recientes" | "aprobadas" | "desde" | "desde_desc"; page?: number; limit?: number } = {}): Promise<{ rows: SolicitudOverviewRow[]; total: number; page: number; totalPages: number }> {
+  /** Quiénes cargaron alguna solicitud (opciones del filtro «Solicitó» de Solicitudes). */
+  async listSolicitantesDeSolicitudes(estado?: string): Promise<{ _id: string; nombre: string }[]> {
+    const { data } = await axios.get(`/users/solicitudes-overview/solicitantes${estado ? `?estado=${encodeURIComponent(estado)}` : ""}`, { headers: this.getHeaders() });
+    return Array.isArray(data) ? data : [];
+  }
+
+  async listSolicitudesOverview(params: { search?: string; estado?: string; clientId?: string; projectId?: string; solicitadoPor?: string; orden?: "antiguas" | "recientes" | "aprobadas" | "desde" | "desde_desc"; page?: number; limit?: number } = {}): Promise<{ rows: SolicitudOverviewRow[]; total: number; page: number; totalPages: number }> {
     const sp = new URLSearchParams();
     if (params.search) sp.append("search", params.search);
     if (params.estado) sp.append("estado", params.estado);
     if (params.clientId) sp.append("clientId", params.clientId);
     if (params.projectId) sp.append("projectId", params.projectId);
+    if (params.solicitadoPor) sp.append("solicitadoPor", params.solicitadoPor);
     if (params.orden && params.orden !== "recientes") sp.append("orden", params.orden);
     sp.append("page", String(params.page ?? 1));
     sp.append("limit", String(params.limit ?? 25));

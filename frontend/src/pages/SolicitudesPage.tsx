@@ -134,6 +134,9 @@ export const SolicitudesPage: React.FC = () => {
   const [busqueda, setBusqueda] = useState(() => new URLSearchParams(window.location.search).get("buscar") || "");
   const [filtroCliente, setFiltroCliente] = useState("");
   const [filtroProyecto, setFiltroProyecto] = useState("");
+  /** El coordinador que cargó la solicitud (columna «Solicitó»). */
+  const [filtroSolicito, setFiltroSolicito] = useState("");
+  const [solicitantes, setSolicitantes] = useState<{ _id: string; nombre: string }[]>([]);
   const [orden, setOrden] = useState<OrdenSolicitudes>("desde");
 
   const [clientes, setClientes] = useState<{ _id: string; name: string }[]>([]);
@@ -149,6 +152,10 @@ export const SolicitudesPage: React.FC = () => {
       .listAll({ limit: 500 })
       .then((ps) => setProyectos(ps.map((p: any) => ({ _id: p._id, name: p.name, clientId: p.clientId }))))
       .catch((e) => console.error("Error cargando proyectos:", e));
+    usersAPI
+      .listSolicitantesDeSolicitudes(ESTADO_LISTADO)
+      .then(setSolicitantes)
+      .catch((e) => console.error("Error cargando quiénes solicitaron:", e));
   }, []);
 
   /** Elegido un cliente, el selector de proyecto solo ofrece los suyos: si no, se puede armar una
@@ -167,6 +174,7 @@ export const SolicitudesPage: React.FC = () => {
           estado: ESTADO_LISTADO,
           clientId: filtroCliente || undefined,
           projectId: filtroProyecto || undefined,
+          solicitadoPor: filtroSolicito || undefined,
           orden,
           page: pagina,
           limit: PAGE_SIZE,
@@ -185,7 +193,7 @@ export const SolicitudesPage: React.FC = () => {
         setRefrescando(false);
       }
     },
-    [busqueda, filtroCliente, filtroProyecto, orden],
+    [busqueda, filtroCliente, filtroProyecto, filtroSolicito, orden],
   );
 
   // La búsqueda va con debounce; el resto de los filtros, al toque. Cualquier cambio vuelve a la
@@ -287,7 +295,7 @@ export const SolicitudesPage: React.FC = () => {
     [rows],
   );
 
-  const hayFiltros = !!(busqueda || filtroCliente || filtroProyecto);
+  const hayFiltros = !!(busqueda || filtroCliente || filtroProyecto || filtroSolicito);
   // El total sin filtros es el número de la bandeja: queda también en el menú lateral.
   useEffect(() => {
     if (!cargando && !hayFiltros) useContadoresContratacionStore.getState().informar({ solicitudes: total });
@@ -296,7 +304,7 @@ export const SolicitudesPage: React.FC = () => {
   useEffect(() => {
     soltarSeleccion();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busqueda, filtroCliente, filtroProyecto]);
+  }, [busqueda, filtroCliente, filtroProyecto, filtroSolicito]);
 
   const cambiarSeleccion = (ids: Set<string>) =>
     setSeleccion((antes) => {
@@ -332,7 +340,7 @@ export const SolicitudesPage: React.FC = () => {
     if (enPagina.size >= total) return;
     setSeleccionandoTodas(true);
     try {
-      const resp = await usersAPI.listSolicitudesOverview({ search: busqueda || undefined, estado: ESTADO_LISTADO, clientId: filtroCliente || undefined, projectId: filtroProyecto || undefined, page: 1, limit: Math.max(total, 1) });
+      const resp = await usersAPI.listSolicitudesOverview({ search: busqueda || undefined, estado: ESTADO_LISTADO, clientId: filtroCliente || undefined, projectId: filtroProyecto || undefined, solicitadoPor: filtroSolicito || undefined, page: 1, limit: Math.max(total, 1) });
       if (vuelta !== vueltaSeleccion.current) return;
       setSeleccion((antes) => {
         const nueva = new Map(antes);
@@ -576,6 +584,13 @@ export const SolicitudesPage: React.FC = () => {
           onChange: setFiltroProyecto,
           placeholder: "Todos los proyectos",
           options: proyectosDelFiltro.map((p) => ({ value: p._id, label: p.name })),
+        },
+        {
+          label: "Solicitó",
+          value: filtroSolicito,
+          onChange: setFiltroSolicito,
+          placeholder: "Todos los coordinadores",
+          options: solicitantes.map((q) => ({ value: q._id, label: q.nombre })),
         },
       ]}
     />
