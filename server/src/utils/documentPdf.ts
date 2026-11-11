@@ -310,6 +310,8 @@ export function getDummyDocVariables(): Record<string, string> {
     area: "TECNICA",
     nombreTurno: "Mañana",
     turno: "Mañana",
+    modalidad: "Presencial",
+    nombreModalidad: "Presencial",
     fechaAltaContrato: "16/03/2026",
     fechaBajaContrato: "16/03/2026",
     cantidadJornadas: "30",

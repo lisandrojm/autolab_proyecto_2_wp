@@ -105,6 +105,9 @@ interface IContract {
   shiftId: Types.ObjectId | string | null;
   nombre_area: string;
   nombre_turno: string;
+  /** Modalidad de trabajo (Presencial, Remoto…; catálogo `modalidades`). Sin dato = la por defecto del tenant. */
+  modalidadId?: Types.ObjectId | string | null;
+  nombre_modalidad?: string;
   // Empresa (razón social) elegida para el contrato / release de ESTE miembro.
   // Debe ser una de las empresas activadas en el proyecto (project.contratoEmpresas / releaseEmpresas).
   empresaContratoId?: Types.ObjectId | string | null;
@@ -476,6 +479,8 @@ const contractSchema = new Schema<IContract>(
     shiftId: { type: Schema.Types.ObjectId, ref: "Shift" },
     nombre_area: { type: String },
     nombre_turno: { type: String },
+    modalidadId: { type: Schema.Types.ObjectId, ref: "Modalidad", default: null },
+    nombre_modalidad: { type: String },
     empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
     empresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
     nombre_empresa_contrato: { type: String },

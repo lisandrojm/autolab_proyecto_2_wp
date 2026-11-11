@@ -107,6 +107,9 @@ export interface Contract {
   nombre_estado_empleado?: string;
   nombre_categoria_sat?: string;
   nombre_turno?: string;
+  /** Modalidad (Presencial, Remoto…). Sin dato = la por defecto de la productora. */
+  modalidadId?: string | null;
+  nombre_modalidad?: string;
   nombre_area?: string;
   // Numeric IDs from UserProject collection
   categoria_sat_id?: number;

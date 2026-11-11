@@ -74,6 +74,7 @@ import { BancosPage } from "./pages/BancosPage";
 import { ObrasSocialesPage } from "./pages/ObrasSocialesPage";
 import { SindicatosPage } from "./pages/SindicatosPage";
 import { ValoracionesPage } from "./pages/ValoracionesPage";
+import { ModalidadesPage } from "./pages/ModalidadesPage";
 import { PaisesResidenciaPage } from "./pages/PaisesResidenciaPage";
 import { FormasPagoPage } from "./pages/FormasPagoPage";
 import { ArcaSucursalesPage } from "./pages/ArcaSucursalesPage";
@@ -695,6 +696,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <SindicatosPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/modalidades"
+                element={
+                  <ProtectedRoute>
+                    <ModalidadesPage />
                   </ProtectedRoute>
                 }
               />

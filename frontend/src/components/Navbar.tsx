@@ -6,7 +6,7 @@ import { EmpresaSelector } from './EmpresaSelector';
 import { EmpresaContextMenu } from './EmpresaContextMenu';
 import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faEarthAmericas, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature, faToggleOn, faRankingStar, faCalendarXmark, faRotateRight, faFileArrowDown, faReceipt, faMoneyBillTransfer } from '@fortawesome/free-solid-svg-icons';
+import { faXmark, faBars, faRightFromBracket, faUsers, faUserGear, faBuilding, faArrowUpRightFromSquare, faCalendar, faCog, faUser, faUserShield, faChevronDown, faChevronRight, faFileText, faShoppingCart, faFilePdf, faUsersGear, faLayerGroup, faUmbrellaBeach, faUserTag, faBriefcase, faFileContract, faClock, faListCheck, faBuildingColumns, faEarthAmericas, faBriefcaseMedical, faPiggyBank, faIdCard, faRocket, faLandmark, faPlug, faLocationDot, faSitemap, faIndustry, faShieldHeart, faTag, faPeopleGroup, faDatabase, faUserPlus, faFileSignature, faToggleOn, faRankingStar, faCalendarXmark, faRotateRight, faFileArrowDown, faReceipt, faMoneyBillTransfer, faHouseLaptop } from '@fortawesome/free-solid-svg-icons';
 import { usePermisoInactivo } from '../stores/permisosInactivosStore';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
@@ -146,7 +146,7 @@ const USUARIOS_PATH = '/users';
  * con el que se ubica a una persona en un proyecto— y antes iban pegados por eso; el orden por
  * nombre los separa, y a cambio los cuatro se encuentran sin recordar cuál era «la entidad».
  */
-const USUARIOS_PATHS_GENERAL = [USUARIOS_PATH, '/areas', '/shifts', '/roles-empresa'];
+const USUARIOS_PATHS_GENERAL = [USUARIOS_PATH, '/areas', '/modalidades', '/shifts', '/roles-empresa'];
 
 /**
  * Subgrupo «Contratación» de Admin GENERAL: las BANDEJAS del circuito y lo que lo acompaña.
@@ -435,6 +435,8 @@ export const MobileNavbar: React.FC = () => {
       if (puedeAbrir('/terminos-condiciones')) base.push({ path: '/terminos-condiciones', icon: faFileSignature, label: 'Términos y condiciones', scope: 'global' });
       if (puedeAbrir('/roles-empresa')) base.push({ permiso: 'admin_roles_empresa:view', path: '/roles-empresa', icon: faUserTag, label: 'Roles Empresa', scope: 'global' });
       if (puedeAbrir('/areas')) base.push({ permiso: 'admin_areas:view', path: '/areas', icon: faLayerGroup, label: 'Áreas', scope: 'global', count: adminCounts.areas });
+      // Presencial, Remoto, Híbrido: se elige en cada contrato. Mismo permiso que Áreas (los roles están congelados en la base).
+      if (puedeAbrir('/modalidades')) base.push({ permiso: 'admin_areas:view', path: '/modalidades', icon: faHouseLaptop, label: 'Modalidades', scope: 'global' });
       if (puedeAbrir('/users')) base.push({ permiso: 'admin_users:view', path: '/users', icon: faUserGear, label: 'Usuarios', scope: 'global', count: adminCounts.users });
       if (puedeAbrir('/users/import-wp')) base.push({ permiso: 'admin_users_import:view', path: '/users/import-wp', icon: faArrowUpRightFromSquare, label: 'Import WP', scope: 'global' });
 

@@ -59,6 +59,7 @@ export const REGLAS_RUTAS: ReglaRuta[] = [
   { path: "/roles", permisos: ["admin_roles:view"] },
   { path: "/roles-empresa", permisos: ["admin_roles_empresa:view"] },
   { path: "/areas", permisos: ["admin_areas:view"] },
+  { path: "/modalidades", permisos: ["admin_areas:view", "config_shifts:view"] },
   { path: "/shifts", permisos: ["config_shifts:view"] },
   { path: "/users/import-wp", permisos: ["admin_users_import:view"] },
   { path: "/terminos-condiciones", permisos: ["config_terminos:view", "admin_users:view"] },

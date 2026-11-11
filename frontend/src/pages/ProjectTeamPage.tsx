@@ -446,6 +446,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // Empresas del proyecto elegidas para el contrato / release de este miembro (ObjectId o "")
     empresaContratoId: '',
     empresaReleaseId: '',
+    // Modalidad (Presencial, Remoto…). Vacío = la por defecto de la productora (el server la escribe).
+    modalidadId: '',
     hora_inicio: '09:00',
     hora_fin: '18:00',
     fecha_alta_contrato: new Date().toISOString().split('T')[0],
@@ -524,6 +526,15 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const [catalogosWizardListos, setCatalogosWizardListos] = useState(false);
   const [releases, setReleases] = useState<Release[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  /** Modalidades de la productora (Presencial, Remoto…). La por defecto viene elegida en el wizard. */
+  const [modalidades, setModalidades] = useState<SimpleCatalogItem[]>([]);
+  useEffect(() => {
+    createSimpleCatalogApi('/modalidades')
+      .list()
+      .then((l) => setModalidades([...l].sort((a, b) => Number(a.orden ?? 999) - Number(b.orden ?? 999) || String(a.name).localeCompare(String(b.name)))))
+      .catch(() => setModalidades([]));
+  }, []);
+  const modalidadPorDefectoId = String(modalidades.find((m) => m.esDefault === true && m.activo !== false)?._id || modalidades.find((m) => m.activo !== false)?._id || '');
   const [detailRefsLoaded, setDetailRefsLoaded] = useState(false);
 
   const handleOpenMemberDetail = async (user: User) => {
@@ -2643,6 +2654,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       estado_id: agregaNuevo ? '' : initialEstadoId,
       empresaContratoId: lastContract?.empresaContratoId ? String(lastContract.empresaContratoId) : '',
       empresaReleaseId: lastContract?.empresaReleaseId ? String(lastContract.empresaReleaseId) : '',
+      modalidadId: lastContract?.modalidadId ? String(lastContract.modalidadId) : '',
       // Editando un contrato, su horario o vacío (se pide al guardar): inventarle 09:00–18:00 lo cambiaba sin avisar.
       hora_inicio: lastContract?.hora_inicio || (editaContratoExistente ? '' : metaHoraInicio || '09:00'),
       hora_fin: lastContract?.hora_fin || (editaContratoExistente ? '' : metaHoraFin || '18:00'),
@@ -2976,6 +2988,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           // Enviar null (no "") para que Mongoose no falle al castear a ObjectId cuando no se elige empresa.
           empresaContratoId: wizardData.empresaContratoId || null,
           empresaReleaseId: wizardData.empresaReleaseId || null,
+          // Vacío = la por defecto: el server la resuelve y la deja escrita en el contrato.
+          modalidadId: wizardData.modalidadId || modalidadPorDefectoId || null,
         },
       });
 
@@ -4686,6 +4700,27 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                     ))}
                   </select>
                 </div>
+
+                {/*
+                  LA MODALIDAD (Presencial, Remoto…), del ABM de Usuarios › Modalidades. Viene elegida la
+                  por defecto; una inactiva sólo aparece si es la que este contrato ya tenía.
+                */}
+                {modalidades.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Modalidad</label>
+                    <select className="input-field w-full" value={wizardData.modalidadId || modalidadPorDefectoId} onChange={(e) => setWizardData((prev) => ({ ...prev, modalidadId: e.target.value }))}>
+                      {modalidades
+                        .filter((m) => m.activo !== false || String(m._id) === wizardData.modalidadId)
+                        .map((m) => (
+                          <option key={m._id} value={m._id}>
+                            {m.name}
+                            {m.esDefault === true ? ' (por defecto)' : ''}
+                            {m.activo === false ? ' (inactiva)' : ''}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
 
                 {/*
                   EL PUESTO DESEMPEÑADO, siempre cargado con el que le toca por el rol, la categoría,

@@ -116,7 +116,7 @@ const combosDelMiembro = (fila: any, c: any): { areaId: string; shiftIds: string
   fila ? combosDeContrato({ areaShiftAssignments: fila.areaShiftAssignments || [] }) : combosDeContrato(c);
 
 // Lo que se lee de cada contrato. Los contratos cargan documentación y firmas: traerlos enteros pesa.
-const CAMPOS_CONTRATO = ["fecha_alta_contrato", "fecha_baja_contrato", "nombre_contrato", "nombre_rol_frame", "rol_frame_id", "nombre_area", "nombre_turno", "areaId", "shiftId", "areaShiftAssignments", "hora_inicio", "hora_fin", "sueldo_jornada", "dias_por_semana", "dias_semana", "dias_rotativos", "empresaContratoId", "sede_id"];
+const CAMPOS_CONTRATO = ["fecha_alta_contrato", "fecha_baja_contrato", "nombre_contrato", "nombre_rol_frame", "rol_frame_id", "nombre_area", "nombre_turno", "modalidadId", "nombre_modalidad", "areaId", "shiftId", "areaShiftAssignments", "hora_inicio", "hora_fin", "sueldo_jornada", "dias_por_semana", "dias_semana", "dias_rotativos", "empresaContratoId", "sede_id"];
 
 /*
   CACHÉ CORTA, POR PERSONA.

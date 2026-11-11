@@ -126,6 +126,7 @@ import { filaDelEquipoTrasGuardar, firmaDeAreas, rolDelEquipoTrasGuardar, tieneR
 import { cambiosDeAreas, fotoDeAreas, registrarCambiosDelEquipo, type CambioDelEquipo } from "../services/historialEquipo.js";
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { quitarContrato } from "../services/contratoDeSolicitud.js";
+import { modalidadParaGuardar } from "../services/modalidades.js";
 import { Contrato } from "../models/Contrato.js";
 import { FormaPago } from "../models/FormaPago.js";
 import { formasDelTipo, rechazoPorDatosBancarios } from "../compartido/formasPago.js";
@@ -2196,7 +2197,7 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
     const esContratoNuevo = !hayIndice && !isUpdate;
     let contratoPrevio: any = null;
     if (!esContratoNuevo) {
-      const up: any = await UserProject.findOne({ userId, projectId: project._id }).select("contracts.valoracion_regla_id").lean();
+      const up: any = await UserProject.findOne({ userId, projectId: project._id }).select("contracts.valoracion_regla_id contracts.modalidadId").lean();
       const lista = (up?.contracts as any[]) || [];
       contratoPrevio = hayIndice ? lista[Number(contractIndex)] : lista[lista.length - 1];
     }
@@ -2370,6 +2371,18 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
     if (fijas !== null && Number(contract.cantidad_jornadas_laborales) !== fijas) contract.cantidad_jornadas_laborales = fijas;
     // Los sueldos, con la misma cuenta que la solicitud del móvil y el formulario (ver `sueldosConEscala`).
     if (Number(contract.sueldo_jornada) > 0 || tipoContrato?.data?.importesEnCero) Object.assign(contract, await sueldosConEscala(contract, tipoContrato));
+
+    /*
+      LA MODALIDAD (Presencial, Remoto…). Vacía = la por defecto del tenant: la regla es «por defecto,
+      presencial», y así queda escrita en el contrato en vez de depender de cómo se lea después. Una
+      apagada se acepta sólo si es la que el contrato ya tenía.
+    */
+    const modalidad = await modalidadParaGuardar(project.tenantId, contract.modalidadId, contratoPrevio?.modalidadId);
+    if ("error" in modalidad) {
+      res.status(400).json({ error: modalidad.error });
+      return;
+    }
+    Object.assign(contract, modalidad);
 
     const enrichedContract = {
       ...contract,
