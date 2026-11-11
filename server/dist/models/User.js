@@ -122,6 +122,7 @@ const userSchema = new Schema({
             },
         ],
         empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
+        modalidadId: { type: Schema.Types.ObjectId, ref: "Modalidad" },
         sedeId: { type: Number },
         convenioId: { type: Schema.Types.ObjectId, ref: "Convenio" },
         // El id de FRAME de la persona reemplazada: puede venir como número o como texto.

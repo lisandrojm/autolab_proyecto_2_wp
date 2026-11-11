@@ -182,6 +182,15 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   const [catalogoSedes, setCatalogoSedes] = useState<InfoItem[]>([]);
   /** Ya contestó el catálogo de empleadoras (haya traído algo o no). Ver el campo «Empresa que contrata». */
   const [empresasCargadas, setEmpresasCargadas] = useState(false);
+  /** Modalidades de la productora (Presencial, Remoto…). Vacía en el formulario = la por defecto. */
+  const [modalidades, setModalidades] = useState<SimpleCatalogItem[]>([]);
+  useEffect(() => {
+    createSimpleCatalogApi("/modalidades")
+      .list()
+      .then((l) => setModalidades([...l].filter((m) => m.activo !== false).sort((a, b) => Number(a.orden ?? 999) - Number(b.orden ?? 999))))
+      .catch(() => setModalidades([]));
+  }, []);
+  const modalidadPorDefectoId = String(modalidades.find((m) => m.esDefault === true)?._id || modalidades[0]?._id || "");
   const [convenios, setConvenios] = useState<SimpleCatalogItem[]>([]);
   /*
     LAS PERSONAS LAS BUSCA EL SERVER, NO EL TELÉFONO.
@@ -301,6 +310,8 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     outTime: "",
     /** La empleadora que contrata y el convenio bajo el que lo hace. Salen del proyecto elegido. */
     empresaContratoId: "",
+    /** Modalidad (Presencial, Remoto…). Vacía = la por defecto. */
+    modalidadId: "",
     /** La sede donde va a trabajar: una de las del proyecto, la principal por defecto (ver `sedesDelContrato`). */
     sedeId: "",
     convenioId: "",
@@ -644,6 +655,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         workdaysOverrideNote: abreEnAjuste ? m.workdaysOverrideNote || "" : "",
         inTime: inTime || "",
         empresaContratoId: meta.empresaContratoId || "",
+        modalidadId: (meta as any).modalidadId ? String((meta as any).modalidadId) : "",
         sedeId: Number((meta as any).sedeId) > 0 ? String((meta as any).sedeId) : "",
         convenioId: meta.convenioId || "",
         outTime: outTime || "",
@@ -677,6 +689,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         workdaysOverrideNote: "",
         inTime: "",
         empresaContratoId: "",
+        modalidadId: "",
         sedeId: "",
         convenioId: "",
         outTime: "",
@@ -2258,6 +2271,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         inTime: formData.inTime,
         outTime: formData.outTime,
         empresaContratoId: formData.empresaContratoId,
+        modalidadId: formData.modalidadId || modalidadPorDefectoId || undefined,
         sedeId: formData.sedeId,
         convenioId: formData.convenioId,
         dailyRate: formData.dailyRate,
@@ -2332,6 +2346,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         workdaysOverrideNote: "",
         inTime: "",
         empresaContratoId: "",
+        modalidadId: "",
         sedeId: "",
         convenioId: "",
         outTime: "",
@@ -2622,6 +2637,22 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               </select>
             )}
           </div>
+          {/* LA MODALIDAD (Usuarios › Modalidades), debajo de la empresa: viene elegida la por defecto. */}
+          {modalidades.length > 0 && (
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                <FontAwesomeIcon icon={faBuilding} className="text-blue-500 text-[10px]" />
+                Modalidad
+              </label>
+              <select name="modalidadId" value={formData.modalidadId || modalidadPorDefectoId} onChange={handleChange} className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white appearance-none">
+                {modalidades.map((m) => (
+                  <option key={m._id} value={m._id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* LA SEDE, debajo de la empresa: depende de ella (ver `opcionesSede`). */}

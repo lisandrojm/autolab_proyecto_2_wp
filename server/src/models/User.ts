@@ -216,6 +216,8 @@ export interface IUserMetadata {
   nombre_contrato?: string;
   areaShiftAssignments?: { areaId?: Types.ObjectId; shiftIds?: Types.ObjectId[]; sedeId?: number }[];
   empresaContratoId?: Types.ObjectId;
+  /** Modalidad pedida (Presencial, Remoto…): al aprobar pasa al contrato. Vacía = la por defecto. */
+  modalidadId?: Types.ObjectId;
   /** La sede pedida (`data.id` del Info `sede`): al aprobar pasa al `sede_id` del contrato. */
   sedeId?: number;
   convenioId?: Types.ObjectId;
@@ -453,6 +455,7 @@ const userSchema = new Schema<IUser>(
         },
       ],
       empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
+      modalidadId: { type: Schema.Types.ObjectId, ref: "Modalidad" },
       sedeId: { type: Number },
       convenioId: { type: Schema.Types.ObjectId, ref: "Convenio" },
       // El id de FRAME de la persona reemplazada: puede venir como número o como texto.

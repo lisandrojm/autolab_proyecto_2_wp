@@ -2577,6 +2577,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           // El horario pedido, por encima del de un contrato anterior.
           ...(metaHoraInicio && metaHoraFin ? { hora_inicio: metaHoraInicio, hora_fin: metaHoraFin } : {}),
           ...(metaSolicitud.empresaContratoId ? { empresaContratoId: String(metaSolicitud.empresaContratoId) } : {}),
+          // La modalidad pedida; sin ella, la por defecto (no la del contrato anterior de la persona).
+          modalidadId: metaSolicitud.modalidadId ? String(metaSolicitud.modalidadId) : '',
           // La sede que eligió quien pidió el alta.
           ...(Number((metaSolicitud as any).sedeId) > 0 ? { sede_id: String((metaSolicitud as any).sedeId) } : {}),
           ...(metaSolicitud.startDate ? { fecha_alta_contrato: String(metaSolicitud.startDate).slice(0, 10) } : {}),

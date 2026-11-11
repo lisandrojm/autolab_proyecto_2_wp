@@ -206,6 +206,8 @@ export interface IUserMetadata {
         sedeId?: number;
     }[];
     empresaContratoId?: Types.ObjectId;
+    /** Modalidad pedida (Presencial, Remoto…): al aprobar pasa al contrato. Vacía = la por defecto. */
+    modalidadId?: Types.ObjectId;
     /** La sede pedida (`data.id` del Info `sede`): al aprobar pasa al `sede_id` del contrato. */
     sedeId?: number;
     convenioId?: Types.ObjectId;

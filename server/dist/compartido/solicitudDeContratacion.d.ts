@@ -41,6 +41,8 @@ export interface DatosSolicitud {
     inTime: string;
     outTime: string;
     empresaContratoId?: string;
+    /** Modalidad (Presencial, Remoto…). Vacía = la por defecto, que pone el server al aprobar. */
+    modalidadId?: string;
     /** La sede donde va a trabajar (`data.id` del Info `sede`). */
     sedeId?: number | string;
     convenioId?: string;
@@ -102,6 +104,7 @@ export declare function armarPayloadDeSolicitud(d: DatosSolicitud, opciones?: Op
         fechasTrabajadas: string[];
         schedule: string;
         empresaContratoId: string;
+        modalidadId: string;
         sedeId: number;
         convenioId: string;
         dailyRate: number;

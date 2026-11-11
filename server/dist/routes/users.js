@@ -485,6 +485,8 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
             // Las tarjetas del modal de contratos: empresas y el documento del alta.
             "empresaContratoId",
             "nombre_empresa_contrato",
+            "modalidadId",
+            "nombre_modalidad",
             "empresaReleaseId",
             "nombre_empresa_release",
             "altaDocumentoUrl",
@@ -1004,7 +1006,7 @@ const CAMPOS_FILA_CONTRATO = [
     "constanciaVigenciaDesde", "constanciaVigenciaHasta", "constanciaVerificador", "constanciaAfipEstado", "constanciaAfipConsultadaAt", "constanciaAfipDropboxSubidaAt",
     "firmaContratoUrl", "firmaContratoNombre", "firmaReleases", "firmaGeneradoAt", "firmaReleasesGeneradoAt", "firmaEnviadaAt",
     "contenidoCustomContrato", "contenidoCustomReleases",
-    "empresaContratoId", "empresaReleaseId", "nombre_empresa_contrato", "nombre_empresa_release",
+    "empresaContratoId", "empresaReleaseId", "nombre_empresa_contrato", "nombre_empresa_release", "modalidadId", "nombre_modalidad",
     "categoria_sat_id", "rol_frame_id", "sede_id", "tipo_contrato_id", "sucursalArcaId", "actividadArca",
     "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "obraSocialBloqueada",
     "sinCuitValidacion", "puestoDesempenado", "contrato_id",
