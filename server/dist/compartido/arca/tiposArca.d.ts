@@ -92,6 +92,11 @@ export interface ContractOverviewRow {
         areaId: string | any;
         shiftIds: (string | any)[];
     }[];
+    /** Área y turnos del contrato, ya con nombre (columna «Área / Turno» de Contratados). */
+    areasTurnos?: {
+        area: string;
+        turnos: string[];
+    }[];
     reemplazo: boolean;
     empleado_id_reemplezado?: number | null;
     /** El nombre de la persona reemplazada (el server lo resuelve por su id de FRAME). Vacío si no se encontró. */

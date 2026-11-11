@@ -23,6 +23,7 @@ import { contratoDePersonaEnFechas, pedidoDesdeSolicitud, rechazoAltaArcaConCont
 import { mensajeSoloServicios } from "../utils/superposicionContratos.js";
 import { efectosDeSolicitudEditada, efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "../services/solicitudes.js";
 import { Area } from "../models/Area.js";
+import { Shift } from "../models/Shift.js";
 import { Client } from "../models/Client.js";
 import { Company } from "../models/Company.js";
 import { ObraSocial } from "../models/ObraSocial.js";
@@ -1000,7 +1001,7 @@ router.get("/roles-frame-counts", requireTenant, authenticateToken, requireAnyPe
  * empieza a usar otro, hay que sumarlo acá: lo que no está no viaja.
  */
 const CAMPOS_FILA_CONTRATO = [
-    "_id", "nombre_contrato", "nombre_estado_empleado", "nombre_sede", "areaShiftAssignments", "reemplazo", "empleado_id_reemplezado",
+    "_id", "nombre_contrato", "nombre_estado_empleado", "nombre_sede", "areaShiftAssignments", "areaId", "shiftId", "nombre_area", "nombre_turno", "reemplazo", "empleado_id_reemplezado",
     "fecha_alta_contrato", "fecha_baja_contrato", "fecha_carga", "sueldo_mano", "cantidad_jornadas_laborales", "hora_inicio", "hora_fin",
     "altaDocumentoUrl", "altaDocumentoNombre", "altaArcaPresentada",
     "constanciaVigenciaDesde", "constanciaVigenciaHasta", "constanciaVerificador", "constanciaAfipEstado", "constanciaAfipConsultadaAt", "constanciaAfipDropboxSubidaAt",
@@ -1643,6 +1644,34 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 }
             })(),
         ]);
+        /*
+          ÁREA Y TURNO DE CADA CONTRATO, ya con nombre (columna «Área / Turno», 11/11/2026). Las filas de
+          área+turnos del contrato (`areaShiftAssignments`); los viejos que sólo tienen `areaId`/`shiftId`
+          o el nombre guardado, como una fila. Dos consultas para toda la página.
+        */
+        const contratosPagina = pageRows.map((r) => contratoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || {});
+        const filasAreaTurno = (c) => {
+            const asig = (c.areaShiftAssignments || []).filter((a) => a?.areaId).map((a) => ({ areaId: String(a.areaId), shiftIds: (a.shiftIds || []).map(String) }));
+            if (asig.length)
+                return asig;
+            return c.areaId ? [{ areaId: String(c.areaId), shiftIds: c.shiftId ? [String(c.shiftId)] : [] }] : [];
+        };
+        const idsArea = [...new Set(contratosPagina.flatMap((c) => filasAreaTurno(c).map((a) => a.areaId)).filter((id) => Types.ObjectId.isValid(id)))];
+        const idsTurno = [...new Set(contratosPagina.flatMap((c) => filasAreaTurno(c).flatMap((a) => a.shiftIds)).filter((id) => Types.ObjectId.isValid(id)))];
+        const [areasPagina, turnosPagina] = await Promise.all([
+            idsArea.length ? Area.find({ _id: { $in: idsArea.map((id) => new Types.ObjectId(id)) } }).select("name").lean() : [],
+            idsTurno.length ? Shift.find({ _id: { $in: idsTurno.map((id) => new Types.ObjectId(id)) } }).select("name").lean() : [],
+        ]);
+        const nombreArea = new Map(areasPagina.map((a) => [String(a._id), String(a.name || "")]));
+        const nombreTurno = new Map(turnosPagina.map((t) => [String(t._id), String(t.name || "")]));
+        const areasTurnosDe = (c) => {
+            const filas = filasAreaTurno(c).map((a) => ({ area: nombreArea.get(a.areaId) || c.nombre_area || "Área", turnos: a.shiftIds.map((id) => nombreTurno.get(id) || "").filter(Boolean) }));
+            if (filas.length)
+                return filas;
+            const area = c.nombre_area && c.nombre_area !== "Sin área" ? String(c.nombre_area) : "";
+            const turno = c.nombre_turno && c.nombre_turno !== "Sin turno" ? String(c.nombre_turno) : "";
+            return area || turno ? [{ area: area || "—", turnos: turno ? [turno] : [] }] : [];
+        };
         const fullRows = pageRows.map(({ _alta, _orden, _contratoOrden, ...r }) => {
             const c = contratoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || {};
             const sol = c.solicitudId ? solicitudPorId.get(String(c.solicitudId)) : undefined;
@@ -1658,6 +1687,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 nombre_estado_empleado: c.nombre_estado_empleado || "",
                 nombre_sede: c.nombre_sede || "",
                 areaShiftAssignments: c.areaShiftAssignments || [],
+                areasTurnos: areasTurnosDe(c),
                 reemplazo: !!c.reemplazo,
                 empleado_id_reemplezado: c.empleado_id_reemplezado ?? null,
                 nombre_reemplazado: c.reemplazo && c.empleado_id_reemplezado != null ? nombreReemplazado.get(String(c.empleado_id_reemplezado)) || "" : "",

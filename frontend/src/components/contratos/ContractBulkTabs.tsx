@@ -748,6 +748,21 @@ const ANCHO_TIPO_CONTRATO = 'w-[150px] min-w-[150px] max-w-[150px]';
  * email debajo: ocupaba un renglón por fila y está en la ficha.
  */
 /** «Solicitó»: los roles de coordinación o supervisión ARRIBA del nombre, como en Solicitudes. */
+/** «Área / Turno» de un contrato: un renglón por área, con sus turnos al lado. */
+const CeldaAreaTurno: React.FC<{ filas?: { area: string; turnos: string[] }[] }> = ({ filas }) =>
+  filas && filas.length > 0 ? (
+    <div className="flex flex-col gap-0.5 text-sm whitespace-nowrap">
+      {filas.map((f, i) => (
+        <span key={i}>
+          <span className="font-medium text-gray-900 dark:text-white">{f.area}</span>
+          {f.turnos.length > 0 && <span className="text-gray-500 dark:text-gray-400"> · {f.turnos.join(', ')}</span>}
+        </span>
+      ))}
+    </div>
+  ) : (
+    <span className="text-sm text-gray-400">—</span>
+  );
+
 /** Valor del filtro «Solicitud» para los contratos que no salieron de una solicitud. */
 const SIN_SOLICITUD = '__sin_solicitud__';
 
@@ -4355,7 +4370,7 @@ export const ContractBulkContratadosTab: React.FC<{
         <EmptyState icon={faUser} title="Sin contratos" description={rows.length === 0 ? 'Todavía no hay contratos ni solicitudes pendientes.' : 'No hay resultados con los filtros aplicados.'} />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-clip">
-          <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1750px]">
+          <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1950px]">
             <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
               <tr>
                 {/*
@@ -4375,6 +4390,7 @@ export const ContractBulkContratadosTab: React.FC<{
                 </th>
                 {/* «Horario» y «Solicitó», después de «Contrato» como en Solicitudes (11/11/2026, pedido del usuario). */}
                 <th className={th}>Horario</th>
+                <th className={th}>Área / Turno</th>
                 <th className={th} title="Quién cargó la solicitud que originó el contrato">Solicitó</th>
                 {/* Sin columna «Estado» (08/11/2026): el estado del contrato va arriba de Alta / Baja. El trámite (ARCA / Servicios), arriba del tipo. */}
                 {/* «ARCA» y «Documentos» (09/11/2026): qué está dado de alta y con qué se prueba; el contrato y el release generados. */}
@@ -4437,6 +4453,9 @@ export const ContractBulkContratadosTab: React.FC<{
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.hora_inicio && r.hora_fin ? `${r.hora_inicio} - ${r.hora_fin}` : r.horarioSolicitud || '-'}</td>
+                    <td className="px-4 py-3">
+                      <CeldaAreaTurno filas={r.areasTurnos} />
+                    </td>
                     <td className="px-4 py-3">
                       <CeldaSolicito solicitante={r.solicitante} />
                     </td>
