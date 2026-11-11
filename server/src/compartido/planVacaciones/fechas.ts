@@ -21,6 +21,14 @@ export function diasEntre(desde: string, hasta: string): number {
   return Math.round((b - a) / 86_400_000) + 1;
 }
 
+/** Cuántos días faltan desde `hoy` hasta `fecha`: 0 si es hoy, negativo si ya pasó. `NaN` si alguna no es una fecha. */
+export function diasHasta(hoy: string, fecha: string): number {
+  if (!esISO(hoy) || !esISO(fecha)) return NaN;
+  const a = Date.UTC(Number(hoy.slice(0, 4)), Number(hoy.slice(5, 7)) - 1, Number(hoy.slice(8, 10)));
+  const b = Date.UTC(Number(fecha.slice(0, 4)), Number(fecha.slice(5, 7)) - 1, Number(fecha.slice(8, 10)));
+  return Math.round((b - a) / 86_400_000);
+}
+
 /** ¿Dos rangos comparten al menos un día? */
 export const sePisan = (a: { desde: string; hasta: string }, b: { desde: string; hasta: string }): boolean => a.desde <= b.hasta && b.desde <= a.hasta;
 

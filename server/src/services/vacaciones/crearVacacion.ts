@@ -6,6 +6,8 @@ import { UserProfile } from "../../models/UserProfile.js";
 import { Project } from "../../models/Project.js";
 import { Area } from "../../models/Area.js";
 import { normalizarVentana, rangoPermitido, textoDeVentana, ventanaEfectiva, type VentanaEfectiva } from "../../compartido/ventanaGoce.js";
+import { diasHasta, fechaCorta, sumarDias } from "../../compartido/planVacaciones/fechas.js";
+import { hoyArgentina } from "../../utils/contratoVigencia.js";
 import { Pdf } from "../../models/Pdf.js";
 import { Tenant } from "../../models/Tenant.js";
 import { UserVacationBalance } from "../../models/UserVacationBalance.js";
@@ -169,8 +171,22 @@ export async function crearVacacionParaPersona(o: PedidoDeVacacion): Promise<IVa
   const globalConfig = await VacationConfig.findOne({ tenantId });
   if (!globalConfig) throw new ErrorVacacion("No se encontró configuración global de vacaciones para este tenant");
   const efectiva = await configEfectivaDe(tenantId, user, globalConfig, { areaNombre: profile?.department });
+  const desdeISO = diaISO(o.startDate, start);
+  /*
+    ANTICIPACIÓN MÍNIMA (10/11/2026). `anticipacionMinimaDias` se guardaba en el snapshot de reglas pero
+    nadie la validaba. Sólo para lo que la persona pide desde la app: entre hoy (día argentino) y el
+    primer día de vacaciones tienen que mediar al menos esos días. Un bloque del plan no pasa por acá:
+    lo arma RR.HH. y lo aprueba el coordinador, que son quienes fijan esa regla.
+  */
+  const anticipacion = Math.floor(Number(globalConfig.anticipacionMinimaDias) || 0);
+  if (o.origen === "solicitud" && anticipacion > 0) {
+    const hoy = hoyArgentina();
+    if (diasHasta(hoy, desdeISO) < anticipacion) {
+      throw new ErrorVacacion(`Las vacaciones se piden con al menos ${anticipacion} ${anticipacion === 1 ? "día" : "días"} de anticipación: hoy, la primera fecha que se puede pedir es el ${fechaCorta(sumarDias(hoy, anticipacion))}.`);
+    }
+  }
   // Ventana anual de goce: el rango ENTERO tiene que caer adentro, venga de la app o de un bloque del plan.
-  if (!rangoPermitido(diaISO(o.startDate, start), diaISO(o.endDate, end), efectiva.ventanaGoce)) {
+  if (!rangoPermitido(desdeISO, diaISO(o.endDate, end), efectiva.ventanaGoce)) {
     throw new ErrorVacacion(`Las vacaciones solo pueden ${o.origen === "plan" ? "tomarse" : "solicitarse"} ${textoDeVentana(efectiva.ventanaGoce)}.`);
   }
   const daysRequested = contarDias(start, end, efectiva.diasCorridos);
