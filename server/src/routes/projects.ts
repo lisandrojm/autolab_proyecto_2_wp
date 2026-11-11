@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { llevarVentanaALosPlanes, ventanaDelProyecto } from "../services/vacaciones/ventanaYPlanes.js";
 import { sumarAlConteo } from "../services/conteoUsuariosTenant.js";
 import { faltaDefinirDias } from "../compartido/diasDeTrabajo.js";
 import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
@@ -1415,6 +1416,9 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
     // Las filas de áreas de antes: para ver qué áreas pasan de una sede a varias (ver más abajo).
     const areasAntes: any[] = JSON.parse(JSON.stringify(currentProject.areasConfig || []));
 
+    // La ventana anual de antes: si cambia, se mueven los planes de vacaciones en borrador (ver `ventanaYPlanes.ts`).
+    const ventanaAntes = updateData.vacationConfig !== undefined ? await ventanaDelProyecto(req.tenantObjectId!, (currentProject as any).toObject().vacationConfig) : null;
+
     // Apply updates to currentProject
     Object.assign(currentProject, updateData);
 
@@ -1522,6 +1526,12 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
 
 
     await currentProject.save();
+    if (ventanaAntes) {
+      const ventana = await ventanaDelProyecto(req.tenantObjectId!, (currentProject as any).toObject().vacationConfig);
+      if (ventana.inicio !== ventanaAntes.inicio || ventana.fin !== ventanaAntes.fin) {
+        await llevarVentanaALosPlanes(req.tenantObjectId!, currentProject._id as any, ventana).catch((e) => console.error("[PLAN-VACACIONES] No se pudo mover la temporada de los planes:", e?.message || e));
+      }
+    }
 
     /*
       EL NOMBRE EN LOS VÍNCULOS (27/10/2026). Cada vínculo persona-proyecto (`users_&_projects`) guarda
