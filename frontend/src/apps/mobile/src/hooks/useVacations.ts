@@ -2,6 +2,7 @@ import { eachDayOfInterval, format, parseISO } from "date-fns";
 import { useState, useEffect } from "react";
 import { personnelAPI } from "../../../../api/personnel";
 import { vacationsAPI, VacationRequest } from "../../../../api/vacations";
+import type { VentanaEfectiva } from "@compartido/ventanaGoce";
 
 export const useVacations = () => {
   const [vacations, setVacations] = useState<VacationRequest[]>([]);
@@ -9,6 +10,12 @@ export const useVacations = () => {
   const [occupiedDates, setOccupiedDates] = useState<string[]>([]); // All blocked dates
   const [pendingDates, setPendingDates] = useState<string[]>([]);
   const [approvedDates, setApprovedDates] = useState<string[]>([]);
+  /**
+   * La ventana anual de goce que rige para la persona (el tramo del año en que puede pedir). La resuelve
+   * el server en `/profile/stats` con la misma cuenta con la que después valida la solicitud; `null`
+   * mientras carga o si el servidor todavía no la manda (y entonces no se restringe nada acá).
+   */
+  const [ventanaGoce, setVentanaGoce] = useState<VentanaEfectiva | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,6 +26,7 @@ export const useVacations = () => {
       const [vacationsData, profileStats, availabilityData] = await Promise.all([vacationsAPI.getAll({ mine: true }), personnelAPI.getProfileStats(), vacationsAPI.getAvailability()]);
       setVacations(vacationsData);
       setAvailableDays(profileStats.vacations);
+      setVentanaGoce(profileStats.ventanaGoce ? { enabled: !!profileStats.ventanaGoce.enabled, tramos: profileStats.ventanaGoce.tramos || [] } : null);
 
       const pendingSet = new Set<string>();
       const approvedSet = new Set<string>();
@@ -108,6 +116,7 @@ export const useVacations = () => {
     occupiedDates,
     pendingDates,
     approvedDates,
+    ventanaGoce,
     loading,
     error,
     refetch: fetchVacations,

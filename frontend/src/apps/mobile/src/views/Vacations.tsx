@@ -23,6 +23,7 @@ import {
 import { ViewType } from '../types';
 import SectionHeader from '../components/SectionHeader';
 import { useVacations } from '../hooks/useVacations';
+import { fechaPermitida, rangoPermitido, textoDeVentana } from '@compartido/ventanaGoce';
 import { useProfile } from '../hooks/useProfile';
 import { sweetAlert } from '../utils/sweetAlert';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isWithinInterval, isBefore, isAfter, addDays, subDays, isMonday, isSunday, isFriday, isSaturday, differenceInYears, differenceInDays } from 'date-fns';
@@ -51,7 +52,9 @@ interface VacationsProps {
 // const MOCK_OCCUPIED_DATES = ["2025-12-20", "2025-12-21", "2025-12-22", "2025-12-24", "2025-12-25", "2026-01-01"];
 
 export default function Vacations({ onNavigate }: VacationsProps) {
-  const { vacations, availableDays, occupiedDates, pendingDates, loading: vacationsLoading, createVacation, refetch } = useVacations();
+  const { vacations, availableDays, occupiedDates, pendingDates, ventanaGoce, loading: vacationsLoading, createVacation, refetch } = useVacations();
+  // «entre el 1/11 y el 30/4»: vacío si la empresa no fijó una ventana anual de goce (se puede pedir cualquier fecha).
+  const textoVentanaGoce = textoDeVentana(ventanaGoce);
   const { profile, stats, loading: profileLoading } = useProfile();
 
   const [showForm, setShowForm] = useState(false);
@@ -285,6 +288,12 @@ export default function Vacations({ onNavigate }: VacationsProps) {
       sweetAlert.error('Error', 'Por favor selecciona fecha de inicio y fin');
       return;
     }
+    // El rango ENTERO tiene que caer en la ventana anual: un ajuste automático del fin (días corridos,
+    // «tomar todo») puede haberlo sacado aunque el calendario no deje tocar esos días.
+    if (!rangoPermitido(startDate, endDate, ventanaGoce)) {
+      sweetAlert.error('Fuera del período', `Las vacaciones solo pueden solicitarse ${textoVentanaGoce}. Elegí un período que termine dentro de esas fechas.`);
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -388,7 +397,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
     const formattedDate = format(day, 'yyyy-MM-dd');
 
     // Fallback check - button should be disabled, but guard anyway
-    if (isOccupied(day)) {
+    if (isOccupied(day) || !fechaPermitida(formattedDate, ventanaGoce)) {
       return;
     }
 
@@ -631,6 +640,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
               <form onSubmit={handleSubmit} className="p-4 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Fechas</label>
+                  {textoVentanaGoce && <p className="text-xs text-slate-500 dark:text-slate-400 -mt-1 mb-2">Podés solicitar vacaciones {textoVentanaGoce}.</p>}
                   <div onClick={() => !hasNoDays && setCalendarOpen('start')} className={`relative ${hasNoDays ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
                     <input type="text" value={startDate && endDate ? `Desde ${format(getLocalDate(startDate), 'dd/MM/yyyy')} Hasta ${format(getLocalDate(endDate), 'dd/MM/yyyy')}` : startDate ? `Desde ${format(getLocalDate(startDate), 'dd/MM/yyyy')} ...` : ''} readOnly disabled={hasNoDays} placeholder="Seleccionar rango de fechas" className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary/50 focus:outline-none cursor-pointer disabled:cursor-not-allowed" />
                     <FontAwesomeIcon icon={faCalendar} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -710,6 +720,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
             <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
               <div className="flex flex-col">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white capitalize">{format(viewDate, 'MMMM yyyy', { locale: es })}</h3>
+                {textoVentanaGoce && <span className="text-[11px] text-slate-500 dark:text-slate-400">Se pueden pedir {textoVentanaGoce}</span>}
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded p-1">
@@ -785,7 +796,9 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                   }
 
                   // Disable past dates, dates exceeding limit, AND occupied dates
-                  const isDisabled = isPast || isExceedingLimit || isOccupiedDay;
+                  // Fuera de la ventana anual de goce (la validación dura es del server; acá se evita el intento).
+                  const fueraDeVentana = !fechaPermitida(format(day, 'yyyy-MM-dd'), ventanaGoce);
+                  const isDisabled = isPast || isExceedingLimit || isOccupiedDay || fueraDeVentana;
 
                   const isSelected = isStart || isEnd || isInRange;
                   const isSuggested = !isSelected && !isDisabled && !isOccupiedDay && suggestedEndDate && calendarOpen === 'end' && startDate && isAfter(day, parseISO(startDate)) && (isBefore(day, suggestedEndDate) || isSameDay(day, suggestedEndDate));
@@ -841,6 +854,8 @@ export default function Vacations({ onNavigate }: VacationsProps) {
                     dayTitle = isPendingOcc ? 'Vacación pendiente de otro usuario' : 'Vacación aprobada de otro usuario';
                   } else if (isPast) {
                     dayTitle = 'Fecha pasada';
+                  } else if (fueraDeVentana) {
+                    dayTitle = `Fuera del período: se pueden pedir ${textoVentanaGoce}`;
                   } else if (isExceedingLimit) {
                     dayTitle = 'Excede límite de días';
                   }
