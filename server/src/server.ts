@@ -17,6 +17,7 @@ import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 
 import { connectDB } from "./config/db.js";
+import { asegurarModalidadesEnTodos } from "./services/modalidades.js";
 import { PlantillaEquipo } from "./models/PlantillaEquipo.js";
 import { seedOnStart, ensureSuperAdmin } from "./scripts/seedOnStart.js";
 import { asegurarPlantillasCustomEnTodos } from "./services/plantillasCustomSistema.js";
@@ -522,6 +523,8 @@ connectDB()
     // Una copia local contra la base real (SIN_TAREAS_PROGRAMADAS) no escribe al arrancar: igual se
     // aseguran al abrir las pantallas.
     if (process.env.SIN_TAREAS_PROGRAMADAS !== "true") void asegurarPlantillasCustomEnTodos().catch((error) => console.error("❌ plantillas custom:", error));
+    // Presencial (por defecto), Remoto e Híbrido para cada productora que todavía no tenga modalidades.
+    if (process.env.SIN_TAREAS_PROGRAMADAS !== "true") void asegurarModalidadesEnTodos().catch((error) => console.error("❌ modalidades:", error));
 
     if (String(env.SEED_ON_START) === "true") {
       try {

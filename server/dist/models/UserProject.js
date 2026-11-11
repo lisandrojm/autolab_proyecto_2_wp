@@ -52,6 +52,8 @@ const contractSchema = new Schema({
     shiftId: { type: Schema.Types.ObjectId, ref: "Shift" },
     nombre_area: { type: String },
     nombre_turno: { type: String },
+    modalidadId: { type: Schema.Types.ObjectId, ref: "Modalidad", default: null },
+    nombre_modalidad: { type: String },
     empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
     empresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
     nombre_empresa_contrato: { type: String },

@@ -24,6 +24,7 @@ import { repartirMes } from "../../compartido/planVacaciones/repartirMes.js";
 import { validarPlan, hayErrores } from "../../compartido/planVacaciones/validarPlan.js";
 import { normalizarVentana, ventanaEfectiva } from "../../compartido/ventanaGoce.js";
 import { coberturaDelMes } from "../../compartido/planVacaciones/cobertura.js";
+import { llevarTemporadaAlProyecto } from "./ventanaYPlanes.js";
 import { estadoDerivado, esEditable } from "../../compartido/planVacaciones/estado.js";
 /**
  * EL PLAN DE VACACIONES POR PROYECTO: lo que hace cada endpoint de `routes/planVacaciones.ts`.
@@ -231,7 +232,7 @@ export async function crearPlan(tenantObjectId, tenantId, creadorId, body) {
     const tope = validarTope(body?.topeDiasPorPersona);
     const nombre = String(body?.nombre || "").trim() || `Temporada ${desde.slice(0, 4)}${hasta.slice(0, 4) !== desde.slice(0, 4) ? `/${hasta.slice(2, 4)}` : ""}`;
     const eq = await equipoParaPlan(tenantObjectId, tenantId, String(body.projectId), anioDeSaldo);
-    return PlanVacaciones.create({
+    const plan = await PlanVacaciones.create({
         tenantId: tenantObjectId,
         projectId: oid(body.projectId),
         nombre,
@@ -246,6 +247,9 @@ export async function crearPlan(tenantObjectId, tenantId, creadorId, body) {
         reemplazos: [],
         creadoPor: oid(creadorId),
     });
+    // La temporada es la ventana anual del proyecto (ver `ventanaYPlanes.ts`).
+    await llevarTemporadaAlProyecto(tenantObjectId, plan).catch((e) => console.error("[PLAN-VACACIONES] No se pudo llevar la temporada al proyecto:", e?.message || e));
+    return plan;
 }
 export async function cargarPlan(tenantObjectId, planId) {
     if (!idValido(planId))
@@ -402,10 +406,12 @@ const recalcularEstado = (plan) => {
 export async function actualizarPlan(tenantObjectId, tenantId, plan, body) {
     soloBorrador(plan);
     let quitados = 0;
+    let cambioLaTemporada = false;
     if (body.nombre !== undefined)
         plan.nombre = String(body.nombre).trim() || plan.nombre;
     if (body.ventanaDesde !== undefined || body.ventanaHasta !== undefined) {
         const { desde, hasta } = validarVentana(body.ventanaDesde ?? plan.ventanaDesde, body.ventanaHasta ?? plan.ventanaHasta);
+        cambioLaTemporada = desde !== plan.ventanaDesde || hasta !== plan.ventanaHasta;
         plan.ventanaDesde = desde;
         plan.ventanaHasta = hasta;
         // Los bloques propuestos que quedan fuera de la ventana nueva se quitan; se informa cuántos.
@@ -423,6 +429,9 @@ export async function actualizarPlan(tenantObjectId, tenantId, plan, body) {
         await refrescarEquipo(tenantObjectId, tenantId, plan, false);
     }
     await plan.save();
+    // La temporada es la ventana anual del proyecto (ver `ventanaYPlanes.ts`).
+    if (cambioLaTemporada)
+        await llevarTemporadaAlProyecto(tenantObjectId, plan).catch((e) => console.error("[PLAN-VACACIONES] No se pudo llevar la temporada al proyecto:", e?.message || e));
     return { quitados };
 }
 export async function eliminarPlan(plan) {

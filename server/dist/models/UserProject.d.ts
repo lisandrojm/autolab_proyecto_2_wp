@@ -103,6 +103,9 @@ interface IContract {
     shiftId: Types.ObjectId | string | null;
     nombre_area: string;
     nombre_turno: string;
+    /** Modalidad de trabajo (Presencial, Remoto…; catálogo `modalidades`). Sin dato = la por defecto del tenant. */
+    modalidadId?: Types.ObjectId | string | null;
+    nombre_modalidad?: string;
     empresaContratoId?: Types.ObjectId | string | null;
     empresaReleaseId?: Types.ObjectId | string | null;
     nombre_empresa_contrato?: string;

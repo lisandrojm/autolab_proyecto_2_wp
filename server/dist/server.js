@@ -15,6 +15,7 @@ import https from "https";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import { connectDB } from "./config/db.js";
+import { asegurarModalidadesEnTodos } from "./services/modalidades.js";
 import { PlantillaEquipo } from "./models/PlantillaEquipo.js";
 import { seedOnStart, ensureSuperAdmin } from "./scripts/seedOnStart.js";
 import { asegurarPlantillasCustomEnTodos } from "./services/plantillasCustomSistema.js";
@@ -66,6 +67,7 @@ import { formaPagoRoutes } from "./routes/formasPago.js";
 import { obraSocialRoutes } from "./routes/obrasSociales.js";
 import { sindicatoRoutes } from "./routes/sindicatos.js";
 import { valoracionRoutes } from "./routes/valoraciones.js";
+import { modalidadRoutes } from "./routes/modalidades.js";
 import { paisResidenciaRoutes } from "./routes/paisesResidencia.js";
 import { terminosCondicionesRoutes } from "./routes/terminosCondiciones.js";
 import { contratosPorVencerRoutes } from "./routes/contratosPorVencer.js";
@@ -276,6 +278,7 @@ app.use("/api/v1/formas-de-pago", formaPagoRoutes);
 app.use("/api/v1/obras-sociales", obraSocialRoutes);
 app.use("/api/v1/sindicatos", sindicatoRoutes);
 app.use("/api/v1/valoraciones", valoracionRoutes);
+app.use("/api/v1/modalidades", modalidadRoutes);
 app.use("/api/v1/paises-residencia", paisResidenciaRoutes);
 app.use("/api/v1/terminos-condiciones", terminosCondicionesRoutes);
 app.use("/api/v1/contratos-por-vencer", contratosPorVencerRoutes);
@@ -485,6 +488,9 @@ connectDB()
     // aseguran al abrir las pantallas.
     if (process.env.SIN_TAREAS_PROGRAMADAS !== "true")
         void asegurarPlantillasCustomEnTodos().catch((error) => console.error("❌ plantillas custom:", error));
+    // Presencial (por defecto), Remoto e Híbrido para cada productora que todavía no tenga modalidades.
+    if (process.env.SIN_TAREAS_PROGRAMADAS !== "true")
+        void asegurarModalidadesEnTodos().catch((error) => console.error("❌ modalidades:", error));
     if (String(env.SEED_ON_START) === "true") {
         try {
             console.log("🌱 Starting auto-seed process...");

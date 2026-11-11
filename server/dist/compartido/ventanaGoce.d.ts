@@ -88,3 +88,13 @@ export declare function resumenDeVentana(ventana: VentanaEfectiva | null | undef
 export declare function textoDeVentana(ventana: VentanaEfectiva | null | undefined): string;
 /** Qué tiene de malo una ventana que se quiere guardar; `null` si está bien. */
 export declare function errorDeVentana(v: unknown): string | null;
+/** La ventana («MM-DD») que dice la temporada de un plan. */
+export declare const ventanaDeTemporada: (desde: string, hasta: string) => TramoDeVentana;
+/**
+ * La temporada de un plan con la ventana nueva, en el MISMO año en que empieza la de ahora. Si la
+ * ventana envuelve el 1/1 (1/11 → 30/4), el fin cae en el año siguiente.
+ */
+export declare function temporadaConVentana(desdeActual: string, tramo: TramoDeVentana): {
+    desde: string;
+    hasta: string;
+};

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { llevarVentanaALosPlanes, ventanaDelProyecto } from "../services/vacaciones/ventanaYPlanes.js";
 import { sumarAlConteo } from "../services/conteoUsuariosTenant.js";
 import { faltaDefinirDias } from "../compartido/diasDeTrabajo.js";
 import { alcanceDeResponsable } from "../utils/visibilidadResponsable.js";
@@ -120,6 +121,7 @@ import { filaDelEquipoTrasGuardar, firmaDeAreas, rolDelEquipoTrasGuardar, tieneR
 import { cambiosDeAreas, fotoDeAreas, registrarCambiosDelEquipo } from "../services/historialEquipo.js";
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { quitarContrato } from "../services/contratoDeSolicitud.js";
+import { modalidadParaGuardar } from "../services/modalidades.js";
 import { Contrato } from "../models/Contrato.js";
 import { FormaPago } from "../models/FormaPago.js";
 import { formasDelTipo, rechazoPorDatosBancarios } from "../compartido/formasPago.js";
@@ -1302,6 +1304,8 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
         const margenAntes = currentProject.margen ?? null;
         // Las filas de áreas de antes: para ver qué áreas pasan de una sede a varias (ver más abajo).
         const areasAntes = JSON.parse(JSON.stringify(currentProject.areasConfig || []));
+        // La ventana anual de antes: si cambia, se mueven los planes de vacaciones en borrador (ver `ventanaYPlanes.ts`).
+        const ventanaAntes = updateData.vacationConfig !== undefined ? await ventanaDelProyecto(req.tenantObjectId, currentProject.toObject().vacationConfig) : null;
         // Apply updates to currentProject
         Object.assign(currentProject, updateData);
         /*
@@ -1411,6 +1415,12 @@ router.patch("/projects/:projectId", requireTenant, authenticateToken, requireAn
             }
         }
         await currentProject.save();
+        if (ventanaAntes) {
+            const ventana = await ventanaDelProyecto(req.tenantObjectId, currentProject.toObject().vacationConfig);
+            if (ventana.inicio !== ventanaAntes.inicio || ventana.fin !== ventanaAntes.fin) {
+                await llevarVentanaALosPlanes(req.tenantObjectId, currentProject._id, ventana).catch((e) => console.error("[PLAN-VACACIONES] No se pudo mover la temporada de los planes:", e?.message || e));
+            }
+        }
         /*
           EL NOMBRE EN LOS VÍNCULOS (27/10/2026). Cada vínculo persona-proyecto (`users_&_projects`) guarda
           una copia del nombre (`nombre_proyecto`, y otra en cada contrato), que es lo que muestran el
@@ -2034,7 +2044,7 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         const esContratoNuevo = !hayIndice && !isUpdate;
         let contratoPrevio = null;
         if (!esContratoNuevo) {
-            const up = await UserProject.findOne({ userId, projectId: project._id }).select("contracts.valoracion_regla_id").lean();
+            const up = await UserProject.findOne({ userId, projectId: project._id }).select("contracts.valoracion_regla_id contracts.modalidadId").lean();
             const lista = up?.contracts || [];
             contratoPrevio = hayIndice ? lista[Number(contractIndex)] : lista[lista.length - 1];
         }
@@ -2203,6 +2213,17 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         // Los sueldos, con la misma cuenta que la solicitud del móvil y el formulario (ver `sueldosConEscala`).
         if (Number(contract.sueldo_jornada) > 0 || tipoContrato?.data?.importesEnCero)
             Object.assign(contract, await sueldosConEscala(contract, tipoContrato));
+        /*
+          LA MODALIDAD (Presencial, Remoto…). Vacía = la por defecto del tenant: la regla es «por defecto,
+          presencial», y así queda escrita en el contrato en vez de depender de cómo se lea después. Una
+          apagada se acepta sólo si es la que el contrato ya tenía.
+        */
+        const modalidad = await modalidadParaGuardar(project.tenantId, contract.modalidadId, contratoPrevio?.modalidadId);
+        if ("error" in modalidad) {
+            res.status(400).json({ error: modalidad.error });
+            return;
+        }
+        Object.assign(contract, modalidad);
         const enrichedContract = {
             ...contract,
             empresaContratoId: contract.empresaContratoId || null,

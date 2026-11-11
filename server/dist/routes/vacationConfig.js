@@ -2,7 +2,9 @@ import express from "express";
 import { VacationConfig } from "../models/VacationConfig.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
-import { errorDeVentana } from "../compartido/ventanaGoce.js";
+import { errorDeVentana, normalizarVentana } from "../compartido/ventanaGoce.js";
+import { Types } from "mongoose";
+import { llevarVentanaGlobalALosPlanes } from "../services/vacaciones/ventanaYPlanes.js";
 const router = express.Router();
 router.use(authenticateToken);
 router.get("/contracts-available", async (req, res) => {
@@ -67,6 +69,7 @@ router.put("/", async (req, res) => {
             req.body.ventanaGoce = { enabled, inicio, fin };
         }
         let config = await VacationConfig.findOne({ tenantId });
+        const ventanaAntes = normalizarVentana(config?.ventanaGoce);
         if (!config) {
             config = await VacationConfig.create({
                 ...req.body,
@@ -75,6 +78,11 @@ router.put("/", async (req, res) => {
         }
         else {
             config = await VacationConfig.findOneAndUpdate({ tenantId }, { $set: req.body }, { new: true, runValidators: true });
+        }
+        // La ventana global cambió: se mueve la temporada de los planes en borrador de los proyectos que la usan.
+        const ventana = normalizarVentana(config?.ventanaGoce);
+        if (req.body?.ventanaGoce !== undefined && (ventana.inicio !== ventanaAntes.inicio || ventana.fin !== ventanaAntes.fin) && Types.ObjectId.isValid(String(tenantId))) {
+            await llevarVentanaGlobalALosPlanes(new Types.ObjectId(String(tenantId)), ventana).catch((e) => console.error("[PLAN-VACACIONES] No se pudo mover la temporada de los planes:", e?.message || e));
         }
         res.json(config);
     }

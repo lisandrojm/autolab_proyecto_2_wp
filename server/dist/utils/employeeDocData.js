@@ -1,3 +1,4 @@
+import { modalidadPorDefecto } from "../services/modalidades.js";
 import { buscarCategoriaCompatPorLegacyId } from "./categoriaCompat.js";
 import { numeroALetras } from "./numeroALetras.js";
 import { formatDateAr } from "./releaseFiller.js";
@@ -361,9 +362,16 @@ export async function buildEmployeeDocData(user, up, contract, empresa) {
       equivocado se lee como correcto, y uno vacío se ve.
     */
     let nombreCliente = "";
+    /*
+      La modalidad (Presencial, Remoto…). Un contrato sin modalidad —los anteriores al ABM, o los de
+      flujos que no la eligen— es de la por defecto del tenant: «por defecto, presencial».
+    */
+    let nombreModalidad = String(contract?.nombre_modalidad || "");
     try {
         if (up?.projectId) {
-            const proyecto = await Project.findById(up.projectId).select("clientId").lean();
+            const proyecto = await Project.findById(up.projectId).select("clientId tenantId").lean();
+            if (!nombreModalidad && proyecto?.tenantId)
+                nombreModalidad = (await modalidadPorDefecto(proyecto.tenantId))?.name || "";
             if (proyecto?.clientId) {
                 const cliente = await Client.findById(proyecto.clientId).select("name").lean();
                 nombreCliente = String(cliente?.name || "");
@@ -509,6 +517,8 @@ export async function buildEmployeeDocData(user, up, contract, empresa) {
         area: c.nombre_area || "",
         nombreTurno: c.nombre_turno || "",
         turno: c.nombre_turno || "",
+        modalidad: nombreModalidad,
+        nombreModalidad,
         fechaAltaContrato: formatDateAr(c.fecha_alta_contrato),
         /*
           SIN FECHA DE BAJA, LA DE ALTA: el documento dice que termina el mismo día que empieza.

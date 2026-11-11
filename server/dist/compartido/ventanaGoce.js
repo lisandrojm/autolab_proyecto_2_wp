@@ -131,3 +131,21 @@ export function errorDeVentana(v) {
         return "El fin de la ventana de goce tiene que ser un día y mes que exista (MM-DD).";
     return null;
 }
+/*
+  EL PLAN DE VACACIONES Y LA VENTANA ANUAL ESTÁN ATADOS (11/11/2026): la temporada de un plan
+  (`ventanaDesde`–`ventanaHasta`, con año) es la ventana anual de su proyecto («MM-DD», sin año) puesta
+  en un año. Cambiar una cambia la otra; la cuenta de ida y vuelta vive acá.
+*/
+/** La ventana («MM-DD») que dice la temporada de un plan. */
+export const ventanaDeTemporada = (desde, hasta) => ({ inicio: desde.slice(5, 10), fin: hasta.slice(5, 10) });
+const esBisiesto = (anio) => (anio % 4 === 0 && anio % 100 !== 0) || anio % 400 === 0;
+/** «MM-DD» en un año; el 29/2 de un año que no lo tiene cae en el 28. */
+const enAnio = (anio, mesDia) => `${anio}-${mesDia === "02-29" && !esBisiesto(anio) ? "02-28" : mesDia}`;
+/**
+ * La temporada de un plan con la ventana nueva, en el MISMO año en que empieza la de ahora. Si la
+ * ventana envuelve el 1/1 (1/11 → 30/4), el fin cae en el año siguiente.
+ */
+export function temporadaConVentana(desdeActual, tramo) {
+    const anio = Number(desdeActual.slice(0, 4));
+    return { desde: enAnio(anio, tramo.inicio), hasta: enAnio(tramo.inicio <= tramo.fin ? anio : anio + 1, tramo.fin) };
+}

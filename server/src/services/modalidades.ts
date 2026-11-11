@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 import { Modalidad } from "../models/Modalidad.js";
+import { Tenant } from "../models/Tenant.js";
 
 /** Las que trae una productora que todavía no cargó ninguna. Presencial es la por defecto. */
 export const MODALIDADES_INICIALES = [
@@ -50,4 +51,10 @@ export async function modalidadParaGuardar(tenantId: Types.ObjectId | string, br
   if (!m) return { error: "La modalidad elegida no existe. Recargá la página y elegila de nuevo." };
   if (m.activo === false && String(anteriorId ?? "") !== id) return { error: `La modalidad «${m.name}» está inactiva: no se puede usar en un contrato nuevo.` };
   return { modalidadId: m._id, nombre_modalidad: m.name };
+}
+
+/** Al arrancar el server: cada productora (menos superadmin) queda con sus modalidades iniciales. */
+export async function asegurarModalidadesEnTodos(): Promise<void> {
+  const tenants: any[] = await Tenant.find({ slug: { $ne: "superadmin" } }).select("_id").lean();
+  for (const t of tenants) await asegurarModalidades(t._id);
 }
