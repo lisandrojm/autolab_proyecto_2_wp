@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 
 interface ModalProps {
   isOpen: boolean;
@@ -60,7 +61,13 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
 
   const isFullscreen = size === "fullscreen" || size === "full";
 
-  return (
+  /*
+    EN UN PORTAL, directo en <body>. Dibujado adentro de la página quedaba atrapado en el contexto de
+    apilamiento de algún contenedor (las barras fijas de las bandejas, por ejemplo): con z-50 y todo,
+    la barra superior (z-40) y los encabezados fijos le pasaban por encima a él y al overlay.
+    El portal conserva el contexto de React; sólo cambia dónde vive en el DOM.
+  */
+  return createPortal(
     <div className="fixed inset-0 overflow-y-auto" style={{ zIndex }}>
       <div className={`flex min-h-screen items-center justify-center ${size === "full" ? "p-4" : isFullscreen ? "p-2" : "p-4"}`}>
         {/* Backdrop */}
@@ -101,6 +108,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, 
           {footer && <div className="flex items-center justify-end space-x-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 sticky bottom-0 z-50">{footer}</div>}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };

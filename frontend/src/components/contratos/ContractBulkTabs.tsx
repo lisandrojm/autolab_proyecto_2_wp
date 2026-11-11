@@ -748,6 +748,9 @@ const ANCHO_TIPO_CONTRATO = 'w-[150px] min-w-[150px] max-w-[150px]';
  * email debajo: ocupaba un renglón por fila y está en la ficha.
  */
 /** «Solicitó»: los roles de coordinación o supervisión ARRIBA del nombre, como en Solicitudes. */
+/** Valor del filtro «Solicitud» para los contratos que no salieron de una solicitud. */
+const SIN_SOLICITUD = '__sin_solicitud__';
+
 const CeldaSolicito: React.FC<{ solicitante?: { nombre: string; roles: string[] } | null }> = ({ solicitante }) => (
   <div className="min-w-0">
     {solicitante?.nombre && solicitante.roles.some((x) => ROL_QUE_SOLICITA.test(x)) && (
@@ -3514,6 +3517,8 @@ export const ContractBulkFirmaTab: React.FC<{
   const [filterTipoContrato, setFilterTipoContrato] = useState<string[]>([]);
   const [filterEstadoContrato, setFilterEstadoContrato] = useState<string[]>([]);
   const [filterReemplazo, setFilterReemplazo] = useState('');
+  /** «Solicitud»: quién la cargó (el nombre de la columna «Solicitó»), o `SIN_SOLICITUD`. */
+  const [filterSolicito, setFilterSolicito] = useState('');
   /** Estado de la obra social: el mismo filtro y la misma clasificación que Trámite impositivo. */
   const [filterObraSocial, setFilterObraSocial] = useState<EstadoObraSocial | ''>('');
   // Las empresas y los catálogos de ARCA: los mismos que Trámite impositivo (ver `useCatalogosArca`).
@@ -3619,13 +3624,20 @@ export const ContractBulkFirmaTab: React.FC<{
       if (filterProjectId && r.projectId !== filterProjectId) return false;
       if (filterEmpresaId && !empresasDelContrato(r).includes(filterEmpresaId)) return false;
       if (filterObraSocial && estadoObraSocial(r, resolveAfipValues(r, afipCat)) !== filterObraSocial) return false;
+      if (filterSolicito && (r.solicitante?.nombre || SIN_SOLICITUD) !== filterSolicito) return false;
       if (q) {
         const hay = [r.userName, r.userEmail, r.clientName, r.projectName, r.nombre_contrato].some((v) => (v || '').toLowerCase().includes(q));
         if (!hay) return false;
       }
       return true;
     });
-  }, [rowsEnEnvio, search, filterClientId, filterProjectId, filterEmpresaId, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterObraSocial, afipCat]);
+  }, [rowsEnEnvio, search, filterClientId, filterProjectId, filterEmpresaId, filterUserStatus, filterVigencia, filterRolMobile, filterTipoContrato, filterEstadoContrato, filterReemplazo, filterObraSocial, filterSolicito, afipCat]);
+  /** Opciones de «Solicitud»: quienes cargaron alguna de estas filas, por nombre, y al final las que no vienen de una solicitud. */
+  const solicitoOptions = useMemo(() => {
+    const nombres = [...new Set(rowsEnEnvio.map((r) => r.solicitante?.nombre || '').filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+    const haySin = rowsEnEnvio.some((r) => !r.solicitante?.nombre);
+    return [...nombres.map((n) => ({ value: n, label: n })), ...(haySin ? [{ value: SIN_SOLICITUD, label: 'Sin solicitud' }] : [])];
+  }, [rowsEnEnvio]);
   const tipoContratoOptions = useMemo(() => opcionesDeTipoContrato(rowsEnEnvio, tiposContrato), [rowsEnEnvio, tiposContrato]);
   const estadoContratoOptions = useMemo(() => opcionesDeEstadoContrato(rowsEnEnvio, allEstados), [rowsEnEnvio, allEstados]);
 
@@ -3886,6 +3898,7 @@ export const ContractBulkFirmaTab: React.FC<{
               { label: 'Novedades', value: filterRolMobile, onChange: setFilterRolMobile, placeholder: 'Todos', options: MOBILE_ROLE_OPTIONS },
               { label: 'Obra social', value: filterObraSocial, onChange: (v: string) => setFilterObraSocial(v as EstadoObraSocial | ''), placeholder: 'Todas', options: FILTROS_OBRA_SOCIAL },
               { label: 'Reemplazo', value: filterReemplazo, onChange: setFilterReemplazo, placeholder: 'Con y sin reemplazo', options: OPCIONES_REEMPLAZO },
+              { label: 'Solicitud', value: filterSolicito, onChange: setFilterSolicito, placeholder: 'Todos los que solicitaron', options: solicitoOptions },
             ]}
           />
         </div>
@@ -3961,7 +3974,7 @@ export const ContractBulkFirmaTab: React.FC<{
               </button>
             </div>
           )}
-          <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1600px]">
+          <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1850px]">
             <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
               <tr className="border-b border-gray-100 dark:border-gray-800">
                 <th className={`sticky left-0 z-[15] px-4 py-3 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK}`}>
@@ -3991,12 +4004,16 @@ export const ContractBulkFirmaTab: React.FC<{
                 </th>
                 <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-900">
                   <BotonOrden columna="tipoContrato" {...ordenProps}>
-                    Tipo de Contrato
+                    Contrato
                   </BotonOrden>
                 </th>
+                {/* «Horario» y «Solicitó», después de «Contrato» como en Contratados y Solicitudes (11/11/2026, pedido del usuario). */}
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Horario</th>
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900" title="Quién cargó la solicitud que originó el contrato">Solicitó</th>
                 {/* «Estado» es el estado del contrato, al lado del tipo (07/11/2026); el trámite (ARCA / Servicios) va arriba del tipo. */}
                 <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Estado</th>
-                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Contrato</th>
+                {/* «Doc. Contrato»: el documento a generar. Se llamaba «Contrato», y con el tipo renombrado a «Contrato» había dos columnas iguales. */}
+                <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Doc. Contrato</th>
                 <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">Release</th>
                 <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900">
                   <BotonOrden columna="cuit" {...ordenProps}>
@@ -4070,6 +4087,10 @@ export const ContractBulkFirmaTab: React.FC<{
                         <BadgeTramiteDelTipo record={r} contratoFrames={contratoFrames} allEstados={allEstados} />
                         <span>{r.nombre_contrato || '—'}</span>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.hora_inicio && r.hora_fin ? `${r.hora_inicio} - ${r.hora_fin}` : '-'}</td>
+                    <td className="px-4 py-3">
+                      <CeldaSolicito solicitante={r.solicitante} />
                     </td>
                     <td className="px-4 py-3">
                       {r.nombre_estado_empleado ? <EstadoBadge name={r.nombre_estado_empleado} className="text-[10px] whitespace-nowrap" /> : <span className="text-xs text-gray-400">—</span>}
