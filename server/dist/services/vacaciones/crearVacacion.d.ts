@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 import { type IVacation } from "../../models/Vacation.js";
+import { type VentanaEfectiva } from "../../compartido/ventanaGoce.js";
 import { type VacacionVirtual } from "./solapamiento.js";
 /**
  * CREAR Y PRE-APROBAR UNA VACACIÓN, PARA CUALQUIER PERSONA.
@@ -19,11 +20,19 @@ export declare function adjustBalanceOnRequestChange(tenantId: any, userId: any,
  * La configuración que rige para la persona, resuelta entre todos sus proyectos (regla de siempre
  * para multiproyecto): fraccionar gana si ALGUNO lo permite (y con el menor mínimo), y días hábiles
  * gana sobre corridos si ALGUNO los usa.
+ *
+ * LA VENTANA ANUAL DE GOCE (10/11/2026) sigue el mismo criterio —lo más flexible—: si ALGÚN proyecto
+ * no tiene ventana, no se aplica; si todos la tienen, vale la unión. Y el Área de la persona, si tiene
+ * configuración propia, manda sobre los proyectos (`areaNombre` es el `department` del perfil). La
+ * cuenta está en `compartido/ventanaGoce.ts`; la app muestra la misma, pedida por `/profile/stats`.
  */
-export declare function configEfectivaDe(tenantId: any, user: any, globalConfig: any): Promise<{
+export declare function configEfectivaDe(tenantId: any, user: any, globalConfig: any, opciones?: {
+    areaNombre?: string | null;
+}): Promise<{
     permiteFraccionadas: boolean;
     minDiasFraccion: number;
     diasCorridos: boolean;
+    ventanaGoce: VentanaEfectiva;
 }>;
 /** Cuántos días pide un rango: corridos inclusive, o hábiles de lunes a viernes (los feriados no se descuentan, como siempre). */
 export declare function contarDias(start: Date, end: Date, diasCorridos: boolean): number;

@@ -1,3 +1,4 @@
+import { type VentanaEfectiva } from "../ventanaGoce.js";
 /**
  * LAS REGLAS DEL PLAN, puras: reciben el plan y un contexto ya resuelto (saldos, vacaciones existentes,
  * configuración, equipo) y devuelven avisos. No consultan nada: lo que hace falta de la base lo arma el
@@ -7,7 +8,7 @@
  * `error` frena el envío al coordinador; `aviso` se muestra y se deja decidir.
  */
 export type NivelDeAviso = "error" | "aviso";
-export type CodigoDeAviso = "fuera_de_ventana" | "supera_tope" | "supera_saldo" | "se_pisa_consigo" | "persona_fuera_del_equipo" | "vacacion_existente" | "en_otro_plan" | "fraccion_minima" | "fraccionamiento_no_permitido" | "contrato_vence_antes" | "solapamiento_regla";
+export type CodigoDeAviso = "fuera_de_ventana" | "fuera_de_ventana_anual" | "supera_tope" | "supera_saldo" | "se_pisa_consigo" | "persona_fuera_del_equipo" | "vacacion_existente" | "en_otro_plan" | "fraccion_minima" | "fraccionamiento_no_permitido" | "contrato_vence_antes" | "solapamiento_regla";
 export interface Aviso {
     nivel: NivelDeAviso;
     codigo: CodigoDeAviso;
@@ -56,6 +57,12 @@ export interface ContextoDeValidacion {
     personasDelEquipo?: string[];
     /** Por ítem, el mensaje de la regla de solapamiento que viola (lo resuelve el server). */
     solapamientos?: Record<string, string>;
+    /**
+     * La ventana anual de goce que rige para el proyecto (`compartido/ventanaGoce.ts`). No es la ventana
+     * PROPIA del plan (`ventanaDesde`/`ventanaHasta`, que es la temporada que se reparte): es el tramo del
+     * año en que la empresa deja tomar vacaciones. Sin el campo, o apagada, no se valida.
+     */
+    ventanaAnual?: VentanaEfectiva;
 }
 export declare function validarPlan(plan: PlanParaValidar, ctx: ContextoDeValidacion): Aviso[];
 export declare const hayErrores: (avisos: Aviso[]) => boolean;

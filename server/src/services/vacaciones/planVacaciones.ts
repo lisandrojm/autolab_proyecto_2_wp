@@ -22,6 +22,7 @@ import { notificar, responsablesDeProyectos, NOVEDAD_PLAN_VACACIONES_ENVIADO, NO
 import { esISO, diasEntre, mesDe, mesesDeVentana, fechaCorta, nombreDeMes } from "../../compartido/planVacaciones/fechas.js";
 import { repartirMes } from "../../compartido/planVacaciones/repartirMes.js";
 import { validarPlan, hayErrores, type Aviso, type ContextoDeValidacion } from "../../compartido/planVacaciones/validarPlan.js";
+import { normalizarVentana, ventanaEfectiva, type VentanaEfectiva } from "../../compartido/ventanaGoce.js";
 import { coberturaDelMes } from "../../compartido/planVacaciones/cobertura.js";
 import { estadoDerivado, esEditable } from "../../compartido/planVacaciones/estado.js";
 
@@ -352,6 +353,16 @@ async function configDeFraccionamiento(tenantObjectId: Types.ObjectId, project: 
   };
 }
 
+/**
+ * La ventana anual de goce que rige para el proyecto del plan: la propia si no usa la global. Al
+ * aprobarse cada bloque, el alta de la vacación vuelve a mirar la de la PERSONA (su área, sus otros
+ * proyectos), que es la que frena de verdad; esta es la que avisa mientras se arma el plan.
+ */
+async function ventanaAnualDelProyecto(tenantObjectId: Types.ObjectId, project: any): Promise<VentanaEfectiva> {
+  const global: any = await VacationConfig.findOne({ tenantId: tenantObjectId }).select("ventanaGoce").lean();
+  return ventanaEfectiva({ global: normalizarVentana(global?.ventanaGoce), proyectos: [project?.vacationConfig] });
+}
+
 /** Los avisos del plan con el contexto resuelto de la base (ver `compartido/planVacaciones/validarPlan.ts`). */
 async function avisosDelPlan(tenantObjectId: Types.ObjectId, plan: IPlanVacaciones, project: any): Promise<Aviso[]> {
   const equipo = plan.equipo as IMiembroDelPlan[];
@@ -393,9 +404,10 @@ async function avisosDelPlan(tenantObjectId: Types.ObjectId, plan: IPlanVacacion
     }
   }
   const config = await configDeFraccionamiento(tenantObjectId, project);
+  const ventanaAnual = await ventanaAnualDelProyecto(tenantObjectId, project);
   return validarPlan(
     { ventanaDesde: plan.ventanaDesde, ventanaHasta: plan.ventanaHasta, topeDiasPorPersona: plan.topeDiasPorPersona, items: (plan.items as any[]).map((i) => ({ id: String(i._id), userId: String(i.userId), desde: i.desde, hasta: i.hasta, dias: i.dias, estado: i.estado })) },
-    { disponiblesDe, nombreDe: nombreDeId, vacacionesExistentes, itemsDeOtrosPlanes, config, contratoVenceEl, personasDelEquipo: equipo.map((m) => String(m.userId)) },
+    { disponiblesDe, nombreDe: nombreDeId, vacacionesExistentes, itemsDeOtrosPlanes, config, contratoVenceEl, personasDelEquipo: equipo.map((m) => String(m.userId)), ventanaAnual },
   );
 }
 
@@ -554,14 +566,16 @@ export async function quitarAsignacion(plan: IPlanVacaciones, body: any): Promis
   return { quitados: ids.length };
 }
 
-/** Valida un bloque suelto (alta o edición) contra el tope, la ventana, el saldo y sus otros bloques. 422 con los avisos si no pasa. */
-function validarBloqueSuelto(plan: IPlanVacaciones, item: { id: string; userId: string; desde: string; hasta: string; dias: number }) {
+/** Valida un bloque suelto (alta o edición) contra el tope, la ventana del plan, la ventana anual de goce, el saldo y sus otros bloques. 422 con los avisos si no pasa. */
+async function validarBloqueSuelto(plan: IPlanVacaciones, item: { id: string; userId: string; desde: string; hasta: string; dias: number }) {
+  const project: any = await Project.findOne({ _id: plan.projectId, tenantId: plan.tenantId }).select("vacationConfig").lean();
+  const ventanaAnual = await ventanaAnualDelProyecto(plan.tenantId as Types.ObjectId, project);
   const m = miembroDe(plan, item.userId);
   if (!m) throw new ErrorPlan("La persona no está en el equipo del plan.", 404);
   const otros = (plan.items as any[]).filter((i) => String(i._id) !== item.id).map((i) => ({ id: String(i._id), userId: String(i.userId), desde: i.desde, hasta: i.hasta, dias: i.dias, estado: i.estado }));
   const avisos = validarPlan(
     { ventanaDesde: plan.ventanaDesde, ventanaHasta: plan.ventanaHasta, topeDiasPorPersona: plan.topeDiasPorPersona, items: [...otros, { ...item, estado: "propuesto" }] },
-    { disponiblesDe: { [item.userId]: m.diasDisponibles }, nombreDe: { [item.userId]: m.nombre } },
+    { disponiblesDe: { [item.userId]: m.diasDisponibles }, nombreDe: { [item.userId]: m.nombre }, ventanaAnual },
   ).filter((a) => a.nivel === "error" && (a.itemId === item.id || (!a.itemId && a.userId === item.userId)));
   if (avisos.length > 0) throw new ErrorPlan(avisos[0].mensaje, 422, avisos);
 }
@@ -577,7 +591,7 @@ export async function crearItem(plan: IPlanVacaciones, body: any): Promise<strin
   if (!grupo) throw new ErrorPlan("La persona no pertenece a ese grupo.", 400);
   const dias = diasEntre(body.desde, body.hasta);
   const id = new Types.ObjectId();
-  validarBloqueSuelto(plan, { id: String(id), userId: String(m.userId), desde: body.desde, hasta: body.hasta, dias });
+  await validarBloqueSuelto(plan, { id: String(id), userId: String(m.userId), desde: body.desde, hasta: body.hasta, dias });
   plan.items.push({
     _id: id,
     userId: m.userId,
@@ -613,7 +627,7 @@ export async function actualizarItem(plan: IPlanVacaciones, itemId: string, body
   if (!esISO(desde) || !esISO(hasta)) throw new ErrorPlan("Fechas inválidas (YYYY-MM-DD).");
   const dias = diasEntre(desde, hasta);
   if (dias <= 0) throw new ErrorPlan("La fecha hasta es anterior a la fecha desde.");
-  validarBloqueSuelto(plan, { id: String(it._id), userId: String(it.userId), desde, hasta, dias });
+  await validarBloqueSuelto(plan, { id: String(it._id), userId: String(it.userId), desde, hasta, dias });
   it.desde = desde;
   it.hasta = hasta;
   it.dias = dias;

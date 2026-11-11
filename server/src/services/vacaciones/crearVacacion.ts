@@ -4,6 +4,8 @@ import { VacationConfig } from "../../models/VacationConfig.js";
 import { User } from "../../models/User.js";
 import { UserProfile } from "../../models/UserProfile.js";
 import { Project } from "../../models/Project.js";
+import { Area } from "../../models/Area.js";
+import { normalizarVentana, rangoPermitido, textoDeVentana, ventanaEfectiva, type VentanaEfectiva } from "../../compartido/ventanaGoce.js";
 import { Pdf } from "../../models/Pdf.js";
 import { Tenant } from "../../models/Tenant.js";
 import { UserVacationBalance } from "../../models/UserVacationBalance.js";
@@ -71,13 +73,19 @@ export async function adjustBalanceOnRequestChange(tenantId: any, userId: any, y
  * La configuración que rige para la persona, resuelta entre todos sus proyectos (regla de siempre
  * para multiproyecto): fraccionar gana si ALGUNO lo permite (y con el menor mínimo), y días hábiles
  * gana sobre corridos si ALGUNO los usa.
+ *
+ * LA VENTANA ANUAL DE GOCE (10/11/2026) sigue el mismo criterio —lo más flexible—: si ALGÚN proyecto
+ * no tiene ventana, no se aplica; si todos la tienen, vale la unión. Y el Área de la persona, si tiene
+ * configuración propia, manda sobre los proyectos (`areaNombre` es el `department` del perfil). La
+ * cuenta está en `compartido/ventanaGoce.ts`; la app muestra la misma, pedida por `/profile/stats`.
  */
-export async function configEfectivaDe(tenantId: any, user: any, globalConfig: any): Promise<{ permiteFraccionadas: boolean; minDiasFraccion: number; diasCorridos: boolean }> {
+export async function configEfectivaDe(tenantId: any, user: any, globalConfig: any, opciones: { areaNombre?: string | null } = {}): Promise<{ permiteFraccionadas: boolean; minDiasFraccion: number; diasCorridos: boolean; ventanaGoce: VentanaEfectiva }> {
   let permiteFraccionadas = globalConfig.permiteFraccionadas;
   let minDiasFraccion = globalConfig.minDiasFraccion || 7;
   let diasCorridos = globalConfig.diasCorridos;
+  let projects: any[] = [];
   if (user.projectIds && user.projectIds.length > 0) {
-    const projects = await Project.find({ _id: { $in: user.projectIds }, tenantId });
+    projects = await Project.find({ _id: { $in: user.projectIds }, tenantId });
     const projectConfigs = projects.map((p: any) =>
       p.vacationConfig && !p.vacationConfig.useGlobalConfig
         ? { permiteFraccionadas: p.vacationConfig.permiteFraccionadas, minDiasFraccion: p.vacationConfig.minDiasFraccion, diasCorridos: p.vacationConfig.diasCorridos }
@@ -93,8 +101,13 @@ export async function configEfectivaDe(tenantId: any, user: any, globalConfig: a
       diasCorridos = corridosValues.every((v) => v === true);
     }
   }
-  return { permiteFraccionadas, minDiasFraccion, diasCorridos };
+  const area: any = opciones.areaNombre ? await Area.findOne({ tenantId, name: opciones.areaNombre }).select("vacationConfig").lean() : null;
+  const ventanaGoce = ventanaEfectiva({ global: normalizarVentana(globalConfig.ventanaGoce), area: area?.vacationConfig, proyectos: projects.map((p: any) => p.vacationConfig) });
+  return { permiteFraccionadas, minDiasFraccion, diasCorridos, ventanaGoce };
 }
+
+/** El día "YYYY-MM-DD" de una fecha pedida: el que vino escrito si vino como texto (sin pasar por la zona horaria). */
+const diaISO = (pedido: string | Date, fecha: Date): string => (typeof pedido === "string" && /^\d{4}-\d{2}-\d{2}/.test(pedido) ? pedido.slice(0, 10) : fecha.toISOString().slice(0, 10));
 
 /** Cuántos días pide un rango: corridos inclusive, o hábiles de lunes a viernes (los feriados no se descuentan, como siempre). */
 export function contarDias(start: Date, end: Date, diasCorridos: boolean): number {
@@ -155,7 +168,11 @@ export async function crearVacacionParaPersona(o: PedidoDeVacacion): Promise<IVa
 
   const globalConfig = await VacationConfig.findOne({ tenantId });
   if (!globalConfig) throw new ErrorVacacion("No se encontró configuración global de vacaciones para este tenant");
-  const efectiva = await configEfectivaDe(tenantId, user, globalConfig);
+  const efectiva = await configEfectivaDe(tenantId, user, globalConfig, { areaNombre: profile?.department });
+  // Ventana anual de goce: el rango ENTERO tiene que caer adentro, venga de la app o de un bloque del plan.
+  if (!rangoPermitido(diaISO(o.startDate, start), diaISO(o.endDate, end), efectiva.ventanaGoce)) {
+    throw new ErrorVacacion(`Las vacaciones solo pueden ${o.origen === "plan" ? "tomarse" : "solicitarse"} ${textoDeVentana(efectiva.ventanaGoce)}.`);
+  }
   const daysRequested = contarDias(start, end, efectiva.diasCorridos);
 
   // Saldo: usados (entregadas o firmadas) y pendientes (todo lo demás activo); el override de la grilla manda si existe.
@@ -211,6 +228,7 @@ export async function crearVacacionParaPersona(o: PedidoDeVacacion): Promise<IVa
       permiteFraccionadas: efectiva.permiteFraccionadas,
       minDiasFraccion: efectiva.minDiasFraccion,
       diasCorridos: efectiva.diasCorridos,
+      ventanaGoce: efectiva.ventanaGoce,
       requiereFirma: globalConfig.requiereFirma,
       pdfId: globalConfig.pdfId,
     },

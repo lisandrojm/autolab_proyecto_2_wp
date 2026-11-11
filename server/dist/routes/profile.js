@@ -585,6 +585,25 @@ router.get('/stats', async (req, res) => {
                 fractionationSource = areaName || 'Área';
             }
         }
+        /*
+          LA VENTANA ANUAL DE GOCE que rige para la persona (10/11/2026). Sale de la MISMA función que usa
+          el alta de la vacación (`configEfectivaDe`), no de la resolución de arriba: lo que la app muestra
+          y deshabilita en el calendario tiene que ser exactamente lo que el server después acepta.
+        */
+        let ventanaGoce = { enabled: false, tramos: [], texto: '' };
+        try {
+            const { VacationConfig } = await import('../models/VacationConfig.js');
+            const { configEfectivaDe } = await import('../services/vacaciones/crearVacacion.js');
+            const { textoDeVentana } = await import('../compartido/ventanaGoce.js');
+            const configGlobal = await VacationConfig.findOne({ tenantId });
+            if (configGlobal && user) {
+                const efectiva = await configEfectivaDe(tenantId, user, configGlobal, { areaNombre: profile.department });
+                ventanaGoce = { ...efectiva.ventanaGoce, texto: textoDeVentana(efectiva.ventanaGoce) };
+            }
+        }
+        catch (err) {
+            console.error('Error resolving vacation window for stats:', err);
+        }
         const { UserVacationBalance } = await import('../models/UserVacationBalance.js');
         const override = await UserVacationBalance.findOne({ tenantId, userId, year: currentYear }).lean();
         let displayTotal = annualDays;
@@ -611,6 +630,7 @@ router.get('/stats', async (req, res) => {
             },
             project: projectName,
             projectVacationConfig: effectiveVacationConfig,
+            ventanaGoce,
             vacationConfigSource,
             // New metadata fields
             vacationRulesMeta: {

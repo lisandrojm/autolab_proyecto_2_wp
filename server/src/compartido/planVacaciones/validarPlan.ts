@@ -1,4 +1,5 @@
 import { diasEntre, fechaCorta, sePisan } from "./fechas.js";
+import { rangoPermitido, textoDeVentana, type VentanaEfectiva } from "../ventanaGoce.js";
 
 /**
  * LAS REGLAS DEL PLAN, puras: reciben el plan y un contexto ya resuelto (saldos, vacaciones existentes,
@@ -13,6 +14,7 @@ export type NivelDeAviso = "error" | "aviso";
 
 export type CodigoDeAviso =
   | "fuera_de_ventana"
+  | "fuera_de_ventana_anual"
   | "supera_tope"
   | "supera_saldo"
   | "se_pisa_consigo"
@@ -64,6 +66,12 @@ export interface ContextoDeValidacion {
   personasDelEquipo?: string[];
   /** Por ítem, el mensaje de la regla de solapamiento que viola (lo resuelve el server). */
   solapamientos?: Record<string, string>;
+  /**
+   * La ventana anual de goce que rige para el proyecto (`compartido/ventanaGoce.ts`). No es la ventana
+   * PROPIA del plan (`ventanaDesde`/`ventanaHasta`, que es la temporada que se reparte): es el tramo del
+   * año en que la empresa deja tomar vacaciones. Sin el campo, o apagada, no se valida.
+   */
+  ventanaAnual?: VentanaEfectiva;
 }
 
 /** Los ítems que cuentan: lo cancelado y lo rechazado no se va a crear tal como está. */
@@ -74,11 +82,20 @@ export function validarPlan(plan: PlanParaValidar, ctx: ContextoDeValidacion): A
   const nombre = (userId: string) => ctx.nombreDe?.[userId] || "La persona";
   const items = plan.items.filter(vivo);
   const equipo = ctx.personasDelEquipo ? new Set(ctx.personasDelEquipo) : null;
+  const anual = ctx.ventanaAnual && ctx.ventanaAnual.enabled ? ctx.ventanaAnual : null;
+
+  // La temporada del plan tiene que caber en la ventana anual: si se sale, se repartirían meses que nadie puede tomar.
+  if (anual && !rangoPermitido(plan.ventanaDesde, plan.ventanaHasta, anual)) {
+    avisos.push({ nivel: "error", codigo: "fuera_de_ventana_anual", mensaje: `La ventana del plan (${fechaCorta(plan.ventanaDesde)}–${fechaCorta(plan.ventanaHasta)}) se sale de la ventana anual de goce: las vacaciones solo pueden tomarse ${textoDeVentana(anual)}.` });
+  }
 
   for (const it of items) {
     const dias = it.dias || diasEntre(it.desde, it.hasta);
     if (it.desde < plan.ventanaDesde || it.hasta > plan.ventanaHasta || it.hasta < it.desde) {
       avisos.push({ nivel: "error", codigo: "fuera_de_ventana", itemId: it.id, userId: it.userId, mensaje: `${nombre(it.userId)}: el bloque ${fechaCorta(it.desde)}–${fechaCorta(it.hasta)} queda fuera de la ventana del plan.` });
+    }
+    if (anual && it.hasta >= it.desde && !rangoPermitido(it.desde, it.hasta, anual)) {
+      avisos.push({ nivel: "error", codigo: "fuera_de_ventana_anual", itemId: it.id, userId: it.userId, mensaje: `${nombre(it.userId)}: el bloque ${fechaCorta(it.desde)}–${fechaCorta(it.hasta)} queda fuera de la ventana anual de goce (las vacaciones solo pueden tomarse ${textoDeVentana(anual)}).` });
     }
     if (plan.topeDiasPorPersona != null && dias > plan.topeDiasPorPersona) {
       avisos.push({ nivel: "error", codigo: "supera_tope", itemId: it.id, userId: it.userId, mensaje: `${nombre(it.userId)}: ${dias} días superan el tope de ${plan.topeDiasPorPersona} por persona.` });

@@ -112,6 +112,25 @@ describe("validar el plan", () => {
         assert.deepEqual(validarPlan(sinTope([item({ hasta: "2026-12-21", dias: 21 })]), ctx()), []);
         assert.deepEqual(codigos(validarPlan(sinTope([item({ hasta: "2026-12-28", dias: 28 })]), ctx())), ["supera_saldo"]);
     });
+    it("la ventana anual de goce: el bloque que se sale es un error; apagada o ausente, no se mira", () => {
+        const anual = { enabled: true, tramos: [{ inicio: "11-01", fin: "04-30" }] };
+        // El plan (V) y el bloque de diciembre caben en la temporada 1/11–30/4.
+        assert.deepEqual(validarPlan(plan([item()]), ctx({ ventanaAnual: anual })), []);
+        // Un bloque que cae en una ventana anual más corta (sólo enero y febrero) es un error del ítem.
+        const corta = { enabled: true, tramos: [{ inicio: "01-01", fin: "02-28" }] };
+        const delItem = validarPlan(plan([item()]), ctx({ ventanaAnual: corta })).filter((a) => a.itemId === "i1");
+        assert.deepEqual(delItem.map((a) => [a.codigo, a.nivel]), [["fuera_de_ventana_anual", "error"]]);
+        assert.match(delItem[0].mensaje, /entre el 1\/1 y el 28\/2/);
+        // Apagada, o sin el campo, el mismo plan no tiene avisos.
+        assert.deepEqual(validarPlan(plan([item()]), ctx({ ventanaAnual: { enabled: false, tramos: [] } })), []);
+        assert.deepEqual(validarPlan(plan([item()]), ctx()), []);
+    });
+    it("la ventana anual de goce: una temporada del plan que se sale es un error del plan, aunque no tenga bloques", () => {
+        const corta = { enabled: true, tramos: [{ inicio: "01-01", fin: "02-28" }] };
+        const avisos = validarPlan(plan([]), ctx({ ventanaAnual: corta }));
+        assert.deepEqual(avisos.map((a) => [a.codigo, a.nivel, a.itemId]), [["fuera_de_ventana_anual", "error", undefined]]);
+        assert.equal(hayErrores(avisos), true);
+    });
     it("la suma de los bloques de una persona no puede superar su saldo", () => {
         const avisos = validarPlan(plan([item(), item({ id: "i2", desde: "2027-01-01", hasta: "2027-01-10", dias: 10 })]), ctx({ disponiblesDe: { a: 21 } }));
         assert.deepEqual(codigos(avisos), ["supera_saldo"]);
