@@ -17,7 +17,7 @@ import { InfoModal } from '../components/ui/InfoModal';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
-import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
+import { TablaConEncabezadoFijo, useAltoDeBarra } from '../components/ui/TablaConEncabezadoFijo';
 
 const DAYS_OF_WEEK = [
   { id: 0, label: 'Domingo', short: 'D' },
@@ -113,6 +113,8 @@ export const RequestsConfigPage: React.FC = () => {
 
   // DnD Sensors
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  // La barra de pestañas también queda fija: el encabezado de la tabla se pega debajo de ella.
+  const [tabsRef, altoTabs] = useAltoDeBarra();
 
   useEffect(() => {
     fetchTypes();
@@ -493,7 +495,7 @@ export const RequestsConfigPage: React.FC = () => {
       searchAndFilters={
         <div className="mx-auto">
           {/* Tabs Header */}
-          <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 sticky top-[140px] z-20 bg-white dark:bg-gray-900">
+          <div ref={tabsRef} className="flex border-b border-gray-200 dark:border-gray-700 mb-6 sticky top-[var(--wp-sticky-top,140px)] z-20 bg-white dark:bg-gray-900">
             <button className={tabClass(activeTab === 'general')} onClick={() => setActiveTab('general')}>
               General
             </button>
@@ -677,7 +679,7 @@ export const RequestsConfigPage: React.FC = () => {
 
             {/* ===================== TIPOS DE NOVEDADES TAB ===================== */}
             {activeTab === 'types' && (
-              <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700 overflow-clip">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center bg-gray-50/50 dark:bg-gray-800/50">
                   <div className="flex items-center gap-4 me-4">
                     <span className="text-lg font-semibold text-gray-900 dark:text-white">Gestión de Tipos de Ausencias</span>
@@ -719,7 +721,7 @@ export const RequestsConfigPage: React.FC = () => {
                 </div>
 
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <TablaConEncabezadoFijo tabla="w-full text-sm text-left">
+                  <TablaConEncabezadoFijo top={`calc(var(--wp-sticky-top, 140px) + ${altoTabs}px)`} tabla="w-full text-sm text-left">
                     <thead className="text-xs uppercase bg-gray-900 text-gray-400 font-medium">
                       <tr>
                         <th className="py-4 px-6 w-16 text-left">Ordenar</th>
