@@ -3425,7 +3425,12 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
             let areaData: { id: string; name: string; sede?: string; faltaSede?: boolean }[] = [];
             // La sede en que cae en esa área (sólo si el proyecto tiene esa área por sede): se muestra «Edición · Libertador».
             const filaDe = (asa: any, aId: any) => sedeEnArea(project?.areasConfig as any, aId, asa?.sedeId, sedePrincipalDe(project?.metadata));
-            const sedeDeLaFila = (asa: any, aId: any) => nombreDeSedeId(filaDe(asa, aId) ?? null);
+            // La fila sin sede es la de la sede PRINCIPAL del proyecto: se nombra también («Técnica · La corte»),
+            // así la columna siempre dice dónde está (12/11/2026). `undefined` = falta elegir: no se inventa.
+            const sedeDeLaFila = (asa: any, aId: any) => {
+              const fila = filaDe(asa, aId);
+              return fila === undefined ? '' : nombreDeSedeId(fila ?? sedeDe(asa?.sedeId) ?? sedePrincipalDe(project?.metadata) ?? null);
+            };
 
             // 1. Priority: Detailed project team configuration (areaShiftAssignments)
             const config = teamConfig.find((c) => String(c.userId) === String(user._id));
