@@ -35,7 +35,7 @@ import { ImportesDelContrato } from '../components/contratacion/ImportesDelContr
 import { SelectorHora } from '../components/contratacion/SelectorHora';
 import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from '../utils/horario';
 import { numeroALetras } from '../utils/numeroALetras';
-import { avisoIndeterminado, erroresDeJornadas, sueldosDelContrato, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
+import { avisoIndeterminado, erroresDeJornadas, hayAjuste, sueldosDelContrato, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
 import { CustomMultiDatePicker } from '../apps/mobile/src/components/CustomMultiDatePicker';
 import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
 import { estadoImpositivoDelContrato, formatDate as fechaDDMMAAAA } from '../components/team/ContractCard';
@@ -1318,10 +1318,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     nota: ajusteJornadas.nota,
   };
   const erroresJornadasWizard = erroresDeJornadas(datosJornadasWizard);
-  // Fijadas por el tipo: no hay ajuste a mano que conservar.
+  // Fijadas por el tipo con días rotativos: no hay ajuste a mano que conservar (con días fijos sí se ajustan, 12/11/2026).
   useEffect(() => {
-    if (jornadasFijadasWizard !== null && ajusteJornadas.ajustado) setAjusteJornadas({ ajustado: false, motivo: '', nota: '' });
-  }, [jornadasFijadasWizard, ajusteJornadas.ajustado]);
+    if (jornadasFijadasWizard !== null && wizardData.dias_rotativos && ajusteJornadas.ajustado) setAjusteJornadas({ ajustado: false, motivo: '', nota: '' });
+  }, [jornadasFijadasWizard, wizardData.dias_rotativos, ajusteJornadas.ajustado]);
   useEffect(() => {
     if (ajusteJornadas.ajustado || jornadasCalculadasWizard === null) return;
     setWizardData((prev) => (prev.cantidad_jornadas_laborales === jornadasCalculadasWizard ? prev : { ...prev, cantidad_jornadas_laborales: jornadasCalculadasWizard }));
@@ -2992,6 +2992,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           empresaReleaseId: wizardData.empresaReleaseId || null,
           // Vacío = la por defecto: el server la resuelve y la deja escrita en el contrato.
           modalidadId: wizardData.modalidadId || modalidadPorDefectoId || null,
+          // Jornadas cargadas a mano: el server no las pisa con las que fija el tipo de contrato.
+          jornadas_ajustadas: hayAjuste(datosJornadasWizard),
+          motivo_ajuste_jornadas: hayAjuste(datosJornadasWizard) ? [ajusteJornadas.motivo, ajusteJornadas.nota.trim()].filter(Boolean).join(' · ') : '',
         },
       });
 

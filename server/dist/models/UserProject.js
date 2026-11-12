@@ -54,6 +54,8 @@ const contractSchema = new Schema({
     nombre_turno: { type: String },
     modalidadId: { type: Schema.Types.ObjectId, ref: "Modalidad", default: null },
     nombre_modalidad: { type: String },
+    jornadas_ajustadas: { type: Boolean, default: false },
+    motivo_ajuste_jornadas: { type: String, default: "" },
     empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
     empresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
     nombre_empresa_contrato: { type: String },

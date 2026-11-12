@@ -106,6 +106,9 @@ interface IContract {
     /** Modalidad de trabajo (Presencial, Remoto…; catálogo `modalidades`). Sin dato = la por defecto del tenant. */
     modalidadId?: Types.ObjectId | string | null;
     nombre_modalidad?: string;
+    /** Jornadas cargadas a mano en el alta: no se pisan con las que fija el tipo de contrato. */
+    jornadas_ajustadas?: boolean;
+    motivo_ajuste_jornadas?: string;
     empresaContratoId?: Types.ObjectId | string | null;
     empresaReleaseId?: Types.ObjectId | string | null;
     nombre_empresa_contrato?: string;

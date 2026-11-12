@@ -1944,10 +1944,12 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     cargado; pero si el cambio de fechas o días hace que vuelvan a coincidir, ya no hay nada que
     justificar y se sale solo del ajuste, limpiando motivo y aclaración.
   */
-  // «Cantidad de jornadas» del tipo de contrato (un plazo fijo, 30): manda sobre el calendario y no se ajusta.
+  // «Cantidad de jornadas» del tipo de contrato (un plazo fijo, 30): manda sobre el calendario. Ya viene
+  // en `jornadasCalculadas`, así que el ajuste a mano funciona igual que con el calendario; sólo con días
+  // rotativos (sin ajuste posible) se impone tal cual.
   const jornadasFijadas = jornadasFijadasPorElTipo(contratoElegido?.data?.cantidadJornadas, porDiasSueltos, periodo.desde, periodo.hasta, formData.diasRotativos ? [] : formData.diasSemana);
   useEffect(() => {
-    if (jornadasFijadas !== null) {
+    if (jornadasFijadas !== null && formData.diasRotativos) {
       setFormData((p) => (p.workdaysCount === String(jornadasFijadas) && !p.workdaysOverridden ? p : { ...p, workdaysCount: String(jornadasFijadas), workdaysOverridden: false, workdaysOverrideReason: "", workdaysOverrideNote: "" }));
       return;
     }

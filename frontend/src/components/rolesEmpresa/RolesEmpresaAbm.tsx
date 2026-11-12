@@ -611,7 +611,23 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
     return [...porConvenio.entries()]
       // "Sin convenio" al final: no es un convenio más, es un dato roto.
       .sort((a, b) => (a[0] === 'Sin convenio' ? 1 : b[0] === 'Sin convenio' ? -1 : a[0].localeCompare(b[0])))
-      .map(([convenio, cats]) => ({ convenio, cats: cats.sort((x, y) => String(x.data?.codigoArca || '').localeCompare(String(y.data?.codigoArca || ''))) }));
+      .map(([convenio, cats]) => {
+        cats.sort((x, y) => String(x.data?.codigoArca || '').localeCompare(String(y.data?.codigoArca || '')));
+        /*
+          Y DENTRO DEL CONVENIO, POR GRUPO SALARIAL (12/11/2026): «Grupo 1», «Grupo 2»… en orden, con
+          las de cada grupo debajo. Las sin grupo, al final. Un convenio sin grupos queda en un solo
+          bloque sin encabezado.
+        */
+        const porGrupo = new Map<string, { grupo: string; orden: number; cats: CategoriaSatItem[] }>();
+        for (const cat of cats) {
+          const grupo = grupoDe(cat);
+          const n = Number(cat.data?.numeroCategoria);
+          if (!porGrupo.has(grupo)) porGrupo.set(grupo, { grupo, orden: !grupo ? Infinity : Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER, cats: [] });
+          porGrupo.get(grupo)!.cats.push(cat);
+        }
+        const subgrupos = [...porGrupo.values()].sort((a, b) => a.orden - b.orden || a.grupo.localeCompare(b.grupo, 'es', { numeric: true }));
+        return { convenio, cats, subgrupos };
+      });
   }, [allCategories, catSearch]);
 
   const totalParaSelect = useMemo(() => gruposParaSelect.reduce((acc, g) => acc + g.cats.length, 0), [gruposParaSelect]);
@@ -1148,7 +1164,16 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                           {nombreDelConvenio(grupo.convenio) && <span className="truncate text-[11px] font-semibold text-gray-600 dark:text-gray-300">{nombreDelConvenio(grupo.convenio)}</span>}
                           <span className="shrink-0 text-[10px] text-gray-400">{grupo.cats.length} categoría(s)</span>
                         </div>
-                        {grupo.cats.map((cat) => {
+                        {grupo.subgrupos.map((sub) => (
+                          <div key={sub.grupo || '__sin_grupo__'}>
+                            {(sub.grupo || grupo.subgrupos.length > 1) && (
+                              <div className="flex items-center gap-2 px-1.5 pt-2 pb-0.5">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{sub.grupo || 'Sin grupo'}</span>
+                                <span className="text-[10px] text-gray-400">{sub.cats.length}</span>
+                                <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+                              </div>
+                            )}
+                        {sub.cats.map((cat) => {
                           const isChecked = idsElegidos.has(cat._id);
                           return (
                             <div key={cat._id} className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 p-1.5 rounded transition-colors">
@@ -1184,6 +1209,8 @@ export const RolesEmpresaAbm = React.forwardRef<RolesEmpresaAbmHandle>((_props, 
                             </div>
                           );
                         })}
+                          </div>
+                        ))}
                       </div>
                     ))
                   )}

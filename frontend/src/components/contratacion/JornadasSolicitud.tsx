@@ -38,7 +38,8 @@ interface Props {
   aviso?: string;
   /**
    * El tipo de contrato FIJA las jornadas («Cantidad de jornadas» de su ABM, ver
-   * `jornadasFijadasPorElTipo`): se muestra su nombre y el número no se calcula ni se edita.
+   * `jornadasFijadasPorElTipo`): se muestra su nombre y ese número es el de partida. Se puede editar a
+   * mano igual que uno calculado, con la diferencia a la vista y el motivo obligatorio (12/11/2026).
    */
   fijadasPorTipo?: string | null;
 }
@@ -80,12 +81,21 @@ export function JornadasSolicitud({ desde, hasta, rotativos, calculadas, dias = 
 
   /*
     FIJADAS POR EL TIPO DE CONTRATO: un plazo fijo son 30, dé lo que dé el calendario. No hay cuenta
-    que mostrar ni ajuste que hacer: si el número no corresponde, lo que hay que cambiar es el tipo.
+    del calendario que mostrar. Se pueden ajustar a mano (pedido del 12/11/2026): «Editar manualmente»
+    pasa al mismo input con diferencia y motivo que el de los días fijos (más abajo). Con días
+    rotativos no: ahí el número sale de la proporción del tipo.
   */
-  if (fijadasPorTipo) {
+  if (fijadasPorTipo && !(ajustado && !rotativos)) {
     return (
       <div id="bloque-jornadas" className="space-y-2">
-        <label className={etiqueta}>Cantidad de jornadas</label>
+        <div className="flex items-center justify-between gap-3">
+          <label className={etiqueta}>Cantidad de jornadas</label>
+          {!rotativos && (
+            <button type="button" onClick={onEditarManual} disabled={calculadas === null} className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 disabled:cursor-not-allowed disabled:opacity-40 dark:text-blue-400">
+              <FontAwesomeIcon icon={faPen} className="h-3 w-3" /> Editar manualmente
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-3 rounded-xl border border-dashed border-slate-300 px-4 py-3 dark:border-slate-600" aria-readonly="true">
           <FontAwesomeIcon icon={faCalculator} className="h-4 w-4 text-slate-400" />
           <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{calculadas ?? "—"}</span>

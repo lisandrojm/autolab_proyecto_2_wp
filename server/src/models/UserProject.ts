@@ -108,6 +108,9 @@ interface IContract {
   /** Modalidad de trabajo (Presencial, Remoto…; catálogo `modalidades`). Sin dato = la por defecto del tenant. */
   modalidadId?: Types.ObjectId | string | null;
   nombre_modalidad?: string;
+  /** Jornadas cargadas a mano en el alta: no se pisan con las que fija el tipo de contrato. */
+  jornadas_ajustadas?: boolean;
+  motivo_ajuste_jornadas?: string;
   // Empresa (razón social) elegida para el contrato / release de ESTE miembro.
   // Debe ser una de las empresas activadas en el proyecto (project.contratoEmpresas / releaseEmpresas).
   empresaContratoId?: Types.ObjectId | string | null;
@@ -481,6 +484,8 @@ const contractSchema = new Schema<IContract>(
     nombre_turno: { type: String },
     modalidadId: { type: Schema.Types.ObjectId, ref: "Modalidad", default: null },
     nombre_modalidad: { type: String },
+    jornadas_ajustadas: { type: Boolean, default: false },
+    motivo_ajuste_jornadas: { type: String, default: "" },
     empresaContratoId: { type: Schema.Types.ObjectId, ref: "Company" },
     empresaReleaseId: { type: Schema.Types.ObjectId, ref: "Company" },
     nombre_empresa_contrato: { type: String },

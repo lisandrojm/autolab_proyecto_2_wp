@@ -340,7 +340,7 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-clip">
             {groupedCombinations.map(({ area, sedeId, shifts }, idx) => (
               <div key={`${claveFilaArea({ areaId: area._id, sedeId })}-${idx}`} className={idx > 0 ? "border-t-[8px] border-gray-100 dark:border-gray-900" : ""}>
                 {/* Area Header Row */}
@@ -398,15 +398,18 @@ export const TeamCoordinadoresTab: React.FC<TeamCoordinadoresTabProps> = ({ proj
                   <thead>
                     <tr className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700/50 text-xs text-gray-400 uppercase tracking-wider">
                       <th className="px-6 py-2.5 font-semibold w-[40%]">Turno</th>
-                      <th className="px-6 py-2.5 font-semibold w-[60%] flex items-center gap-2">
-                        Supervisor Asignado
-                        <button
-                          onClick={() => setShowInfoModal(true)}
-                          className="text-gray-400 hover:text-blue-500 transition-colors"
-                          title="Información sobre supervisores"
-                        >
-                          <FontAwesomeIcon icon={faInfoCircle} />
-                        </button>
+                      <th className="px-6 py-2.5 font-semibold w-[60%]">
+                        {/* El flex va adentro: un <th> con display:flex deja de ser celda y descuadra la tabla. */}
+                        <span className="flex items-center gap-2">
+                          Supervisor Asignado
+                          <button
+                            onClick={() => setShowInfoModal(true)}
+                            className="text-gray-400 hover:text-blue-500 transition-colors"
+                            title="Información sobre supervisores"
+                          >
+                            <FontAwesomeIcon icon={faInfoCircle} />
+                          </button>
+                        </span>
                       </th>
                     </tr>
                   </thead>

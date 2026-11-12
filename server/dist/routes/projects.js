@@ -2208,7 +2208,11 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         }
         const tipoContrato = isValidId(contract.contrato_id) ? await Contrato.findById(contract.contrato_id).select(CAMPOS_DEL_TIPO_PARA_IMPORTES).lean() : null;
         const fijas = jornadasQueFijaElTipo(contract, tipoContrato);
-        if (fijas !== null && Number(contract.cantidad_jornadas_laborales) !== fijas)
+        // Salvo que se hayan ajustado a mano en el alta, con motivo (12/11/2026): ésas se respetan.
+        contract.jornadas_ajustadas = !!contract.jornadas_ajustadas && Number(contract.cantidad_jornadas_laborales) > 0;
+        if (!contract.jornadas_ajustadas)
+            contract.motivo_ajuste_jornadas = "";
+        if (fijas !== null && !contract.jornadas_ajustadas && Number(contract.cantidad_jornadas_laborales) !== fijas)
             contract.cantidad_jornadas_laborales = fijas;
         // Los sueldos, con la misma cuenta que la solicitud del móvil y el formulario (ver `sueldosConEscala`).
         if (Number(contract.sueldo_jornada) > 0 || tipoContrato?.data?.importesEnCero)

@@ -192,6 +192,9 @@ export function contratoDesdeSolicitud({ solicitud, persona, proyecto, cat }: { 
     fecha_alta_contrato: fechaAlta,
     fecha_baja_contrato: fechaBaja,
     cantidad_jornadas_laborales: jornadas,
+    // Ajustadas a mano en la solicitud: el server no las pisa con las que fija el tipo de contrato.
+    jornadas_ajustadas: ajustado && !diasRotativos && calculadas !== null && jornadas !== calculadas,
+    motivo_ajuste_jornadas: ajustado ? [ms.workdaysOverrideReason, String(ms.workdaysOverrideNote || "").trim()].filter(Boolean).join(" · ") : "",
     dias_por_semana: diasPorSemana,
     dias_semana: diasSemana,
     dias_rotativos: diasRotativos,
