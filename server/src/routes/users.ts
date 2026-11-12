@@ -1704,25 +1704,35 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
       o el nombre guardado, como una fila. Dos consultas para toda la página.
     */
     const contratosPagina: any[] = pageRows.map((r: any) => contratoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || {});
-    const filasAreaTurno = (c: any): { areaId: string; shiftIds: string[] }[] => {
-      const asig = ((c.areaShiftAssignments || []) as any[]).filter((a) => a?.areaId).map((a) => ({ areaId: String(a.areaId), shiftIds: ((a.shiftIds || []) as any[]).map(String) }));
+    // La sede de la fila (proyecto con varias sedes, 12/11/2026); si la fila no la tiene, la del contrato.
+    const sedeNum = (v: unknown): number | null => (Number(v) > 0 ? Number(v) : null);
+    const filasAreaTurno = (c: any): { areaId: string; shiftIds: string[]; sedeId: number | null }[] => {
+      const asig = ((c.areaShiftAssignments || []) as any[]).filter((a) => a?.areaId).map((a) => ({ areaId: String(a.areaId), shiftIds: ((a.shiftIds || []) as any[]).map(String), sedeId: sedeNum(a.sedeId) ?? sedeNum(c.sede_id) }));
       if (asig.length) return asig;
-      return c.areaId ? [{ areaId: String(c.areaId), shiftIds: c.shiftId ? [String(c.shiftId)] : [] }] : [];
+      return c.areaId ? [{ areaId: String(c.areaId), shiftIds: c.shiftId ? [String(c.shiftId)] : [], sedeId: sedeNum(c.sede_id) }] : [];
     };
     const idsArea = [...new Set(contratosPagina.flatMap((c) => filasAreaTurno(c).map((a) => a.areaId)).filter((id) => Types.ObjectId.isValid(id)))];
     const idsTurno = [...new Set(contratosPagina.flatMap((c) => filasAreaTurno(c).flatMap((a) => a.shiftIds)).filter((id) => Types.ObjectId.isValid(id)))];
-    const [areasPagina, turnosPagina] = await Promise.all([
+    const idsSede = [...new Set(contratosPagina.flatMap((c) => filasAreaTurno(c).map((a) => a.sedeId)).filter((id): id is number => id !== null))];
+    const [areasPagina, turnosPagina, sedesPagina] = await Promise.all([
       idsArea.length ? Area.find({ _id: { $in: idsArea.map((id) => new Types.ObjectId(id)) } }).select("name").lean() : [],
       idsTurno.length ? Shift.find({ _id: { $in: idsTurno.map((id) => new Types.ObjectId(id)) } }).select("name").lean() : [],
+      idsSede.length ? Info.find({ type: "sede", "data.id": { $in: idsSede } }).select("name data.id").lean() : [],
     ]);
+    const nombreSede = new Map((sedesPagina as any[]).map((sd) => [Number(sd.data?.id), String(sd.name || "")]));
     const nombreArea = new Map((areasPagina as any[]).map((a) => [String(a._id), String(a.name || "")]));
     const nombreTurno = new Map((turnosPagina as any[]).map((t) => [String(t._id), String(t.name || "")]));
-    const areasTurnosDe = (c: any): { area: string; turnos: string[] }[] => {
-      const filas = filasAreaTurno(c).map((a) => ({ area: nombreArea.get(a.areaId) || c.nombre_area || "Área", turnos: a.shiftIds.map((id) => nombreTurno.get(id) || "").filter(Boolean) }));
+    const sedeGuardada = (c: any): string => (c.nombre_sede && c.nombre_sede !== "Sin sede" ? String(c.nombre_sede) : "");
+    const areasTurnosDe = (c: any): { area: string; turnos: string[]; sede?: string }[] => {
+      const filas = filasAreaTurno(c).map((a) => ({
+        area: nombreArea.get(a.areaId) || c.nombre_area || "Área",
+        turnos: a.shiftIds.map((id) => nombreTurno.get(id) || "").filter(Boolean),
+        sede: (a.sedeId !== null ? nombreSede.get(a.sedeId) : "") || sedeGuardada(c),
+      }));
       if (filas.length) return filas;
       const area = c.nombre_area && c.nombre_area !== "Sin área" ? String(c.nombre_area) : "";
       const turno = c.nombre_turno && c.nombre_turno !== "Sin turno" ? String(c.nombre_turno) : "";
-      return area || turno ? [{ area: area || "—", turnos: turno ? [turno] : [] }] : [];
+      return area || turno ? [{ area: area || "—", turnos: turno ? [turno] : [], sede: sedeGuardada(c) }] : [];
     };
 
     const fullRows = pageRows.map(({ _alta, _orden, _contratoOrden, ...r }) => {
