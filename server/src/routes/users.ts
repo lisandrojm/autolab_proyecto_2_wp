@@ -11,6 +11,7 @@ import { usuarioExistenteConCuit } from "../services/arca/consultaCuit.js";
 import { cuitEsValido, normalizarCuit } from "../utils/constanciaPdf.js";
 import { MOBILE_ACTIVITY_LOGS, MOBILE_USERS, permisosDeRoles, permisosDeRolesIds, PROJECT_COORDINATOR, PROJECT_SUPERVISOR } from "../utils/permisosMobile.js";
 import { NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA, NOVEDAD_SOLICITUD_RECHAZADA, nombreDePersona, notificar, responsablesDeProyectos } from "../services/novedadesNotificaciones.js";
+import { filaSegunContratos, superponerContratos } from "../services/equipoSegunContratos.js";
 import { Info } from "../models/Info.js";
 import { RoleFrame } from "../models/RoleFrame.js";
 import UserProject from "../models/UserProject.js"; // This registers the model
@@ -112,7 +113,8 @@ async function resolveProjectTeamFilterIds(projectId: string, filtros: TeamFilte
     contratosQueRigenDelProyecto(projectId, hoyArgentina(), ["nombre_contrato", "nombre_estado_empleado", "reemplazo"]),
   ]);
 
-  const configByUser = new Map<string, any>((project.teamConfig || []).map((c: any) => [String(c.userId), c]));
+  // El área de cada miembro, del contrato que rige (12/11/2026).
+  const configByUser = new Map<string, any>(superponerContratos(project.teamConfig, contratoDe).map((c: any) => [String(c.userId), c]));
 
   /*
     Coordinador = tiene áreas y turnos a cargo. Se pregunta por la CAPACIDAD del rol.
@@ -2938,6 +2940,11 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_us
     const userObj = user as any;
     if (userObj.metadata && Array.isArray(userObj.metadata.projects)) {
       userObj.metadata.projects = userObj.metadata.projects.filter((up: any) => up && up.projectId);
+      // En cada proyecto, el área de esta persona es la de su contrato que rige ahí (12/11/2026).
+      for (const up of userObj.metadata.projects) {
+        const equipo = up.projectId?.teamConfig;
+        if (Array.isArray(equipo)) up.projectId.teamConfig = equipo.map((f: any) => (String(f?.userId) === String(userObj._id) ? filaSegunContratos(f, up.contracts) : f));
+      }
     }
 
     res.json(userObj);

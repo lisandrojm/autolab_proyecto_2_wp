@@ -34,15 +34,22 @@ export const tieneRol = (nombre) => !SIN_ROL.test(String(nombre ?? "").trim());
  *    (12/11/2026). Pasaba que el contrato decía «Mañana» y el equipo «Tarde»: guardar no arreglaba nada
  *    y no había forma de alinearlos desde el wizard.
  */
+/*
+  ÁREA Y TURNO: EL EQUIPO = EL CONTRATO, EXACTO (pedido del 12/11/2026). Al guardar el contrato que rige
+  (editarlo, aprobar o renovar), la fila del equipo pasa a tener exactamente sus áreas, turnos y sedes,
+  sin preguntar y aunque no se haya tocado nada: había miembros con «Mañana» en el contrato y «Tarde» en
+  el equipo, y guardar no lo arreglaba. Corregir una tarjeta vieja sigue sin tocar el equipo.
+  El ROL sigue con la regla del 30/10: sólo si se cambió o se confirmó.
+*/
 export function queActualizarDelEquipo(p) {
     if (p.nuevoEnElEquipo)
         return { areas: true, rol: true };
     if (p.contratoNuevo)
-        return { areas: !!p.confirmado?.areas, rol: !!p.confirmado?.rol };
+        return { areas: true, rol: !!p.confirmado?.rol };
     if (!p.editaElQueRige || !p.precarga)
         return { areas: false, rol: false };
     return {
-        areas: p.ahora.areas !== p.precarga.areas || !!p.confirmado?.areas,
+        areas: true,
         rol: String(p.ahora.rolFrameId) !== String(p.precarga.rolFrameId) || !!p.confirmado?.rol,
     };
 }

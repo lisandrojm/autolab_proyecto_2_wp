@@ -9,12 +9,12 @@ const TURNO_NOCHE = "64b000000000000000000002";
 const filaEquipo = { userId: "u1", canRegister: false, useProjectSchedule: false, startTime: "10:30", endTime: "19:15", areaShiftAssignments: [{ areaId: AREA, shiftIds: [TURNO_TARDE] }] };
 const rolEquipo = "Peinador";
 describe("6. regresión: «Configurar Miembro» y guardar SIN tocar nada", () => {
-    it("con el contrato que rige = una jornada con otro rol que la ficha, no cambia el equipo, ni el rol, ni el horario", () => {
+    it("con el contrato que rige = una jornada con otro rol que la ficha, no cambia el rol ni el horario; el área se alinea con el contrato (12/11/2026)", () => {
         // Lo que precarga el wizard: rol del contrato que se edita (Maquillador, id 7) y el área del equipo.
         const precarga = { rolFrameId: "7", areas: firmaDeAreas([{ areaId: AREA, shiftIds: [TURNO_TARDE] }]) };
         const ahora = { ...precarga }; // no se tocó nada
         const que = queActualizarDelEquipo({ nuevoEnElEquipo: false, contratoNuevo: false, editaElQueRige: true, precarga, ahora });
-        assert.deepEqual(que, { areas: false, rol: false });
+        assert.deepEqual(que, { areas: true, rol: false });
         // El server con ese pedido: la fila del equipo y el rol de la tabla quedan idénticos.
         assert.equal(filaDelEquipoTrasGuardar(filaEquipo, { areaId: AREA, shiftId: TURNO_TARDE, areaShiftAssignments: [{ areaId: AREA, shiftIds: [TURNO_TARDE] }] }, que.areas), null);
         assert.equal(rolDelEquipoTrasGuardar(rolEquipo, "Maquillador", que.rol), null);
@@ -44,16 +44,16 @@ describe("qué escribe un guardado en el equipo", () => {
         assert.equal(fila.canRegister, false);
         assert.equal(fila.startTime, "10:30");
     });
-    it("editando el que rige sin cambiar nada: sólo lo confirmado (equipo desalineado con el contrato)", () => {
-        assert.deepEqual(queActualizarDelEquipo({ nuevoEnElEquipo: false, contratoNuevo: false, editaElQueRige: true, precarga, ahora: precarga }), { areas: false, rol: false });
+    it("editando el que rige sin cambiar nada: el área del equipo = la del contrato, siempre (12/11/2026)", () => {
+        assert.deepEqual(queActualizarDelEquipo({ nuevoEnElEquipo: false, contratoNuevo: false, editaElQueRige: true, precarga, ahora: precarga }), { areas: true, rol: false });
         assert.deepEqual(queActualizarDelEquipo({ nuevoEnElEquipo: false, contratoNuevo: false, editaElQueRige: true, precarga, ahora: precarga, confirmado: { areas: true } }), { areas: true, rol: false });
         assert.deepEqual(queActualizarDelEquipo({ nuevoEnElEquipo: false, contratoNuevo: false, editaElQueRige: false, precarga, ahora: precarga, confirmado: { areas: true } }), { areas: false, rol: false });
     });
     it("corregir una tarjeta vieja no toca el equipo", () => {
         assert.deepEqual(queActualizarDelEquipo({ nuevoEnElEquipo: false, contratoNuevo: false, editaElQueRige: false, precarga, ahora: { rolFrameId: "9", areas: otraArea } }), { areas: false, rol: false });
     });
-    it("aprobar o renovar: sólo lo confirmado", () => {
-        assert.deepEqual(queActualizarDelEquipo({ nuevoEnElEquipo: false, contratoNuevo: true, editaElQueRige: false, precarga: null, ahora: { rolFrameId: "9", areas: otraArea } }), { areas: false, rol: false });
+    it("aprobar o renovar: el área siempre; el rol, sólo lo confirmado", () => {
+        assert.deepEqual(queActualizarDelEquipo({ nuevoEnElEquipo: false, contratoNuevo: true, editaElQueRige: false, precarga: null, ahora: { rolFrameId: "9", areas: otraArea } }), { areas: true, rol: false });
         assert.deepEqual(queActualizarDelEquipo({ nuevoEnElEquipo: false, contratoNuevo: true, editaElQueRige: false, precarga: null, ahora: { rolFrameId: "9", areas: otraArea }, confirmado: { areas: true } }), { areas: true, rol: false });
     });
     it("alta en el equipo: todo; y lo que falta se completa sin pedirlo", () => {

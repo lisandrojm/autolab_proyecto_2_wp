@@ -2886,47 +2886,21 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     const isExistingMember = teamMembers.some((m) => m._id === selectedUserForWizard._id);
 
     /*
-      QUÉ DE LO DEL EQUIPO SE ESCRIBE (ver `compartido/configDelEquipo.ts`). Editando, sólo lo que el
-      usuario cambió y si es el contrato que rige. Un contrato NUEVO de alguien que ya está (aprobar o
-      renovar) con otra área o rol que los que tiene hoy en el equipo: se pregunta, no se pisa en silencio.
+      QUÉ DE LO DEL EQUIPO SE ESCRIBE (ver `compartido/configDelEquipo.ts`). ÁREA Y TURNO: el equipo queda
+      exactamente como el contrato que rige o el nuevo (aprobar/renovar), sin preguntar (12/11/2026).
+      ROL: editando, sólo si se cambió; en un contrato nuevo con otro rol que el del equipo, se pregunta.
     */
     const contratoNuevoDeMiembro = isExistingMember && (!!approvingSolicitudId || renovando);
     const nombreRolElegido = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || '';
-    const nombreDeAreas = (firma: string) =>
-      (JSON.parse(firma) as { a: string; s: string[]; sede: number | null }[])
-        .map((f) => `${allAreas.find((ar) => String(ar._id) === f.a)?.name || 'Área'}${f.sede ? ` · ${nombreDeSedeId(f.sede)}` : ''} (${f.s.map((id) => allShifts.find((sh) => String(sh._id) === id)?.name || 'turno').join(', ')})`)
-        .join(' + ') || 'sin área';
     const alAbrir = equipoAlAbrir.current;
     let confirmado: { areas?: boolean; rol?: boolean } = {};
     if (contratoNuevoDeMiembro && alAbrir) {
       const areasContrato = firmaDeAreas(wizardData.areaShiftAssignments);
       const dif = diferenciasConElEquipo({ areasEquipo: alAbrir.areasEquipo, areasContrato, rolEquipo: alAbrir.rolEquipo, rolContrato: nombreRolElegido });
-      if (dif.areas || dif.rol) {
-        const lineas = [
-          ...(dif.areas ? [`Área y turno: ${approvingSolicitudId ? 'la solicitud declara' : 'el contrato nuevo tiene'} ${nombreDeAreas(areasContrato)}; hoy en el equipo tiene ${nombreDeAreas(alAbrir.areasEquipo)}.`] : []),
-          ...(dif.rol ? [`Rol: ${approvingSolicitudId ? 'la solicitud declara' : 'el contrato nuevo tiene'} ${nombreRolElegido}; hoy en el equipo es ${alAbrir.rolEquipo}.`] : []),
-        ];
-        const r = await sweetAlert.confirm('¿Cambiar también en el equipo?', `${lineas.join(' ')} El contrato se guarda igual con lo elegido; «No» deja el equipo como está.`, 'Sí, cambiar en el equipo', 'No, sólo el contrato');
-        confirmado = r.isConfirmed ? dif : {};
-      }
-    } else if (isExistingMember && alAbrir?.editaElQueRige) {
-      /*
-        EDITANDO EL CONTRATO QUE RIGE, con el equipo DESALINEADO (12/11/2026): el contrato dice «Técnica ·
-        Mañana · La corte» y la tabla del equipo, «Técnica · Tarde». Si el usuario no tocó el área, la
-        regla de arriba no escribe nada y guardar no arreglaba la tabla. Se pregunta, como al renovar.
-        Si el usuario SÍ cambió el área, se escribe sin preguntar (ya lo pidió).
-      */
-      const areasContrato = firmaDeAreas(wizardData.areaShiftAssignments);
-      const tocoAreas = alAbrir.precarga.areas !== areasContrato;
-      const dif = diferenciasConElEquipo({ areasEquipo: alAbrir.areasEquipo, areasContrato, rolEquipo: alAbrir.rolEquipo, rolContrato: nombreRolElegido });
-      if (dif.areas && !tocoAreas) {
-        const r = await sweetAlert.confirm(
-          '¿Cambiar también en el equipo?',
-          `Área y turno: este contrato tiene ${nombreDeAreas(areasContrato)}; en el equipo figura ${nombreDeAreas(alAbrir.areasEquipo)}. El contrato se guarda igual; «No» deja el equipo como está.`,
-          'Sí, cambiar en el equipo',
-          'No, sólo el contrato',
-        );
-        confirmado = r.isConfirmed ? { areas: true } : {};
+      if (dif.rol) {
+        const linea = `Rol: ${approvingSolicitudId ? 'la solicitud declara' : 'el contrato nuevo tiene'} ${nombreRolElegido}; hoy en el equipo es ${alAbrir.rolEquipo}.`;
+        const r = await sweetAlert.confirm('¿Cambiar también el rol en el equipo?', `${linea} El contrato se guarda igual con lo elegido; «No» deja el rol del equipo como está. El área y el turno del equipo pasan a ser los del contrato.`, 'Sí, cambiar el rol', 'No, sólo el contrato');
+        confirmado = r.isConfirmed ? { rol: true } : {};
       }
     }
     const actualizarEquipo = queActualizarDelEquipo({

@@ -42,6 +42,7 @@ const cicloDe = (k) => (k ? { clave: k.clave, estado: k.estado, intentos: k.inte
 import { claveAreaTurnoDelMiembro } from "../utils/areaTurno.js";
 import { partirClaveAreaTurno, sedeDe, sedePrincipalDe, pendientesDeSede, idDe as idDeArea } from "../compartido/areaTurno.js";
 import { ponerSedeEnArea } from "../services/sedeDeArea.js";
+import { llevarAreasAlContratoQueRige } from "../services/areasDelContratoQueRige.js";
 import { FRECUENCIAS_MINUTOS, MAX_INTENTOS_AUTOMATICOS, configDe, proximaDeLaCola, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { Tenant } from "../models/Tenant.js";
 import { LoteAltasError, bloqueadasPorVigencia } from "../services/arca/validarLoteAltas.js";
@@ -1499,8 +1500,9 @@ router.delete("/projects/:projectId", requireTenant, authenticateToken, requireA
   registrar novedades, y con un endpoint que manda todo junto eso depende de que el cliente reenvíe
   bien lo que no quiso tocar.
 
-  NO toca contratos: el wizard lee el área de `teamConfig` primero y del contrato sólo como respaldo,
-  así que arrastrar mal no altera un alta de ARCA ni un sueldo.
+  SÍ TOCA EL CONTRATO QUE RIGE, pero sólo su área y turno (12/11/2026, ver
+  `services/areasDelContratoQueRige.ts`): el equipo y el contrato tienen que decir lo mismo. No altera
+  fechas, horario, sueldos ni nada de ARCA.
 */
 router.patch("/projects/:projectId/team-config/:userId/areas", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
     try {
@@ -1538,6 +1540,8 @@ router.patch("/projects/:projectId/team-config/:userId/areas", requireTenant, au
         if (cambio || !entrada) {
             await registrarCambiosDelEquipo({ tenantId: req.tenantObjectId, projectId: project._id, porUserId: req.user?.userId, origen: "jerarquia", payload: { areaShiftAssignments }, cambios: [{ userId: uid, campo: "areas", antes: JSON.parse(firmaDeAreas(entrada?.areaShiftAssignments)), despues: JSON.parse(firmaDeAreas(asignaciones)) }] });
         }
+        // El equipo y el contrato que rige, iguales (también si ya estaban desparejos de antes).
+        await llevarAreasAlContratoQueRige(project._id, new Map([[String(uid), asignaciones]]));
         const actualizado = await Project.findById(project._id).select("teamConfig").lean();
         res.json({ teamConfig: actualizado?.teamConfig || [] });
     }
@@ -1553,7 +1557,8 @@ router.patch("/projects/:projectId/team-config/:userId/areas", requireTenant, au
 /*
   PATCH /projects/:projectId/team-config/sede-de-area — UBICAR EN UNA SEDE, en lote, a la gente de un
   área (área × sede explícita, 18/10/2026). Lo usa «Pasar todos a…» de la Jerarquía para los que les
-  falta elegir sede. Escribe sólo `teamConfig` (ver `services/sedeDeArea.ts`), nunca contratos.
+  falta elegir sede. Escribe `teamConfig` (ver `services/sedeDeArea.ts`) y lleva la sede a la fila de
+  área del contrato que rige de cada uno (12/11/2026).
 */
 const sedeDeAreaSchema = z.object({
     areaId: z.string().refine((v) => Types.ObjectId.isValid(v)),
@@ -1576,6 +1581,8 @@ router.patch("/projects/:projectId/team-config/sede-de-area", requireTenant, aut
                     Object.assign(c, { updatedBy: req.user?.userId && Types.ObjectId.isValid(req.user.userId) ? new Types.ObjectId(req.user.userId) : undefined, updatedAt: new Date() });
             await project.save();
             await registrarCambiosDelEquipo({ tenantId: req.tenantObjectId, projectId: project._id, porUserId: req.user?.userId, origen: "sede-de-area", payload: { areaId, sedeId, userIds: userIds.length }, cambios });
+            // La sede nueva de la fila, también en el contrato que rige de cada uno.
+            await llevarAreasAlContratoQueRige(project._id, new Map((project.teamConfig || []).filter((c) => quienes.has(String(c.userId))).map((c) => [String(c.userId), (c.areaShiftAssignments || []).map((a) => ({ areaId: a.areaId, shiftIds: a.shiftIds || [], ...(Number(a.sedeId) > 0 ? { sedeId: Number(a.sedeId) } : {}) }))])));
         }
         res.json({ cambiadas });
     }
