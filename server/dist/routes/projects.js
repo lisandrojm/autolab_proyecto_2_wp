@@ -43,6 +43,7 @@ import { claveAreaTurnoDelMiembro } from "../utils/areaTurno.js";
 import { partirClaveAreaTurno, sedeDe, sedePrincipalDe, pendientesDeSede, idDe as idDeArea } from "../compartido/areaTurno.js";
 import { ponerSedeEnArea } from "../services/sedeDeArea.js";
 import { llevarAreasAlContratoQueRige } from "../services/areasDelContratoQueRige.js";
+import { equipoSegunContratos, superponerContratos } from "../services/equipoSegunContratos.js";
 import { FRECUENCIAS_MINUTOS, MAX_INTENTOS_AUTOMATICOS, configDe, proximaDeLaCola, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { Tenant } from "../models/Tenant.js";
 import { LoteAltasError, bloqueadasPorVigencia } from "../services/arca/validarLoteAltas.js";
@@ -950,10 +951,12 @@ router.get("/projects/asignaciones-de-equipo", requireTenant, authenticateToken,
         const proyectos = await Project.find({ tenantId: req.tenantObjectId, _id: { $in: ids.map((x) => new Types.ObjectId(x)) } })
             .select("teamConfig.userId teamConfig.areaShiftAssignments")
             .lean();
+        // El área de cada uno, del contrato que rige (12/11/2026).
+        const equipos = await Promise.all(proyectos.map((p) => equipoSegunContratos(String(p._id), p.teamConfig)));
         const out = {};
-        for (const p of proyectos) {
+        for (const [i, p] of proyectos.entries()) {
             const porUsuario = {};
-            for (const c of p.teamConfig || []) {
+            for (const c of equipos[i]) {
                 const asignaciones = (c.areaShiftAssignments || [])
                     .map((a) => ({ areaId: String(a?.areaId?._id || a?.areaId || ""), shiftIds: (a?.shiftIds || []).map((sh) => String(sh?._id || sh)).filter(Boolean) }))
                     .filter((a) => a.areaId);
@@ -1110,6 +1113,8 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
                 project.metadataUserCount = userCount;
         }
         await resolveProjectGlobalConfig(project, req.tenantObjectId);
+        // El área y turno de cada miembro, del contrato que rige (ver `services/equipoSegunContratos.ts`).
+        project.teamConfig = await equipoSegunContratos(String(project._id), project.teamConfig);
         res.json(project);
     }
     catch (error) {
@@ -1136,7 +1141,7 @@ router.get("/projects/:projectId/area-shift-counts", requireTenant, authenticate
         // Con `tenantId` el filtro usa el índice {tenantId, projectIds}; sin él recorría todos los usuarios.
         // Los contratos no se traen: la base devuelve sólo el que rige de cada uno.
         const [members, contratoDe] = await Promise.all([User.find({ tenantId: req.tenantObjectId, projectIds: projectId }).select("_id metadata.activo").lean(), contratosQueRigenDelProyecto(projectId, hoy)]);
-        const configByUser = new Map((project.teamConfig || []).map((c) => [String(c.userId), c]));
+        const configByUser = new Map(superponerContratos(project.teamConfig, contratoDe).map((c) => [String(c.userId), c]));
         const counts = {};
         // Ids por combinación: el front los usa para el total del área sin contar dos veces a quien
         // está en más de un turno de esa misma área.
@@ -1205,7 +1210,7 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
             User.find({ tenantId: req.tenantObjectId, projectIds: projectId }).select("_id firstName lastName email metadata.activo").lean(),
             contratosQueRigenDelProyecto(String(projectId), hoy),
         ]);
-        const configByUser = new Map((project.teamConfig || []).map((c) => [String(c.userId), c]));
+        const configByUser = new Map(superponerContratos(project.teamConfig, contratoDe).map((c) => [String(c.userId), c]));
         const rows = [];
         for (const member of members) {
             const contratoActivo = contratoDe.get(String(member._id)) || null;
@@ -1543,7 +1548,7 @@ router.patch("/projects/:projectId/team-config/:userId/areas", requireTenant, au
         // El equipo y el contrato que rige, iguales (también si ya estaban desparejos de antes).
         await llevarAreasAlContratoQueRige(project._id, new Map([[String(uid), asignaciones]]));
         const actualizado = await Project.findById(project._id).select("teamConfig").lean();
-        res.json({ teamConfig: actualizado?.teamConfig || [] });
+        res.json({ teamConfig: await equipoSegunContratos(String(project._id), actualizado?.teamConfig) });
     }
     catch (error) {
         if (error instanceof z.ZodError) {

@@ -12,6 +12,7 @@ import { VacationConfig } from "../../models/VacationConfig.js";
 import { Notification } from "../../models/Notification.js";
 import { hoyArgentina, esContratoVigente, fechaISO } from "../../utils/contratoVigencia.js";
 import { contratosQueRigenDelProyecto } from "../../utils/contratosQueRigen.js";
+import { superponerContratos } from "../equipoSegunContratos.js";
 import { claveAreaTurnoDelMiembro, asignacionesDelMiembro, partirClave } from "../../utils/areaTurno.js";
 import { claveAreaTurno, claveFilaArea, sedeDe, sedePrincipalDe } from "../../compartido/areaTurno.js";
 import { Info } from "../../models/Info.js";
@@ -62,7 +63,8 @@ export async function equipoParaPlan(tenantObjectId, tenantId, projectId, anioDe
         User.find({ tenantId: tenantObjectId, projectIds: project._id, "metadata.activo": true }).select("firstName lastName email metadata.fullName").lean(),
         contratosQueRigenDelProyecto(String(project._id), hoy, ["nombre_rol_frame", "rol_frame_id", "hora_inicio", "hora_fin", "empresaContratoId", "tipo_contrato_id"]),
     ]);
-    const configByUser = new Map((project.teamConfig || []).map((c) => [String(c.userId), c]));
+    // El área de cada miembro, del contrato que rige (12/11/2026).
+    const configByUser = new Map(superponerContratos(project.teamConfig, contratoDe).map((c) => [String(c.userId), c]));
     const vinculos = await UserProject.find({ projectId: project._id, userId: { $in: members.map((m) => m._id) } }).select("userId rol_frame_id nombre_rol_frame").lean();
     const vinculoDe = new Map(vinculos.map((v) => [String(v.userId), v]));
     // El id numérico del rol del equipo cuando no es el del contrato (las reglas de solapamiento van por id).
