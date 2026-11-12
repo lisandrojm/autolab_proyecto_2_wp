@@ -48,6 +48,11 @@ describe("qué escribe un guardado en el equipo", () => {
     assert.equal(fila.canRegister, false);
     assert.equal(fila.startTime, "10:30");
   });
+  it("editando el que rige sin cambiar nada: sólo lo confirmado (equipo desalineado con el contrato)", () => {
+    assert.deepEqual(queActualizarDelEquipo({ nuevoEnElEquipo: false, contratoNuevo: false, editaElQueRige: true, precarga, ahora: precarga }), { areas: false, rol: false });
+    assert.deepEqual(queActualizarDelEquipo({ nuevoEnElEquipo: false, contratoNuevo: false, editaElQueRige: true, precarga, ahora: precarga, confirmado: { areas: true } }), { areas: true, rol: false });
+    assert.deepEqual(queActualizarDelEquipo({ nuevoEnElEquipo: false, contratoNuevo: false, editaElQueRige: false, precarga, ahora: precarga, confirmado: { areas: true } }), { areas: false, rol: false });
+  });
   it("corregir una tarjeta vieja no toca el equipo", () => {
     assert.deepEqual(queActualizarDelEquipo({ nuevoEnElEquipo: false, contratoNuevo: false, editaElQueRige: false, precarga, ahora: { rolFrameId: "9", areas: otraArea } }), { areas: false, rol: false });
   });

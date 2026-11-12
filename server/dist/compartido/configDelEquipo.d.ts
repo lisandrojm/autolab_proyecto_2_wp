@@ -31,6 +31,9 @@ export interface QueActualizar {
  *  · Editando un contrato: sólo lo que el usuario cambió respecto de lo precargado, y sólo si ese contrato
  *    es el que rige (corregir una tarjeta vieja corrige ese contrato y nada más).
  *  · Contrato nuevo de alguien que ya está (aprobar/renovar): lo que confirmó (`confirmado`).
+ *  · Editando el que rige SIN cambiar nada, pero con el equipo distinto del contrato: lo que confirmó
+ *    (12/11/2026). Pasaba que el contrato decía «Mañana» y el equipo «Tarde»: guardar no arreglaba nada
+ *    y no había forma de alinearlos desde el wizard.
  */
 export declare function queActualizarDelEquipo(p: {
     nuevoEnElEquipo: boolean;

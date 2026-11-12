@@ -30,6 +30,9 @@ export const tieneRol = (nombre) => !SIN_ROL.test(String(nombre ?? "").trim());
  *  · Editando un contrato: sólo lo que el usuario cambió respecto de lo precargado, y sólo si ese contrato
  *    es el que rige (corregir una tarjeta vieja corrige ese contrato y nada más).
  *  · Contrato nuevo de alguien que ya está (aprobar/renovar): lo que confirmó (`confirmado`).
+ *  · Editando el que rige SIN cambiar nada, pero con el equipo distinto del contrato: lo que confirmó
+ *    (12/11/2026). Pasaba que el contrato decía «Mañana» y el equipo «Tarde»: guardar no arreglaba nada
+ *    y no había forma de alinearlos desde el wizard.
  */
 export function queActualizarDelEquipo(p) {
     if (p.nuevoEnElEquipo)
@@ -38,7 +41,10 @@ export function queActualizarDelEquipo(p) {
         return { areas: !!p.confirmado?.areas, rol: !!p.confirmado?.rol };
     if (!p.editaElQueRige || !p.precarga)
         return { areas: false, rol: false };
-    return { areas: p.ahora.areas !== p.precarga.areas, rol: String(p.ahora.rolFrameId) !== String(p.precarga.rolFrameId) };
+    return {
+        areas: p.ahora.areas !== p.precarga.areas || !!p.confirmado?.areas,
+        rol: String(p.ahora.rolFrameId) !== String(p.precarga.rolFrameId) || !!p.confirmado?.rol,
+    };
 }
 /** Qué difiere entre lo que trae el contrato nuevo y lo que el miembro tiene hoy en el equipo (para confirmar). */
 export function diferenciasConElEquipo(p) {

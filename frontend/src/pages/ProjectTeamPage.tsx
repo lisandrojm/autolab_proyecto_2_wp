@@ -2909,6 +2909,25 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         const r = await sweetAlert.confirm('¿Cambiar también en el equipo?', `${lineas.join(' ')} El contrato se guarda igual con lo elegido; «No» deja el equipo como está.`, 'Sí, cambiar en el equipo', 'No, sólo el contrato');
         confirmado = r.isConfirmed ? dif : {};
       }
+    } else if (isExistingMember && alAbrir?.editaElQueRige) {
+      /*
+        EDITANDO EL CONTRATO QUE RIGE, con el equipo DESALINEADO (12/11/2026): el contrato dice «Técnica ·
+        Mañana · La corte» y la tabla del equipo, «Técnica · Tarde». Si el usuario no tocó el área, la
+        regla de arriba no escribe nada y guardar no arreglaba la tabla. Se pregunta, como al renovar.
+        Si el usuario SÍ cambió el área, se escribe sin preguntar (ya lo pidió).
+      */
+      const areasContrato = firmaDeAreas(wizardData.areaShiftAssignments);
+      const tocoAreas = alAbrir.precarga.areas !== areasContrato;
+      const dif = diferenciasConElEquipo({ areasEquipo: alAbrir.areasEquipo, areasContrato, rolEquipo: alAbrir.rolEquipo, rolContrato: nombreRolElegido });
+      if (dif.areas && !tocoAreas) {
+        const r = await sweetAlert.confirm(
+          '¿Cambiar también en el equipo?',
+          `Área y turno: este contrato tiene ${nombreDeAreas(areasContrato)}; en el equipo figura ${nombreDeAreas(alAbrir.areasEquipo)}. El contrato se guarda igual; «No» deja el equipo como está.`,
+          'Sí, cambiar en el equipo',
+          'No, sólo el contrato',
+        );
+        confirmado = r.isConfirmed ? { areas: true } : {};
+      }
     }
     const actualizarEquipo = queActualizarDelEquipo({
       nuevoEnElEquipo: !isExistingMember,
