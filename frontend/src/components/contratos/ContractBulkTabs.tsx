@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCommentDots, faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt, faRotateRight, faPenToSquare, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faCommentDots, faStethoscope, faFileInvoiceDollar, faFileSignature, faCheck, faTriangleExclamation, faXmark, faFileLines, faGrip, faTable, faUser, faFilePdf, faPaperPlane, faSpinner, faDownload, faCircleInfo, faTrash, faUpload, faChevronLeft, faChevronRight, faBolt, faRotateRight, faPenToSquare, faPlus, faLocationDot } from '@fortawesome/free-solid-svg-icons';
 import { BotonOrden, useOrdenTabla, type Orden } from '../ui/OrdenTabla';
 import { MenuOrdenar, type OpcionOrden } from '../ui/MenuOrdenar';
 import { fechaISO } from '../../utils/contratoVigencia';
@@ -749,13 +749,22 @@ const ANCHO_TIPO_CONTRATO = 'w-[150px] min-w-[150px] max-w-[150px]';
  */
 /** «Solicitó»: los roles de coordinación o supervisión ARRIBA del nombre, como en Solicitudes. */
 /** «Área / Turno» de un contrato: un renglón por área, con sus turnos al lado. */
-const CeldaAreaTurno: React.FC<{ filas?: { area: string; turnos: string[] }[] }> = ({ filas }) =>
+/** Con la sede debajo, si la tiene (proyecto con varias sedes: la misma área puede estar en dos). */
+const CeldaAreaTurno: React.FC<{ filas?: { area: string; turnos: string[]; sede?: string }[] }> = ({ filas }) =>
   filas && filas.length > 0 ? (
-    <div className="flex flex-col gap-0.5 text-sm whitespace-nowrap">
+    <div className="flex flex-col gap-1 text-sm whitespace-nowrap">
       {filas.map((f, i) => (
-        <span key={i}>
-          <span className="font-medium text-gray-900 dark:text-white">{f.area}</span>
-          {f.turnos.length > 0 && <span className="text-gray-500 dark:text-gray-400"> · {f.turnos.join(', ')}</span>}
+        <span key={i} className="flex flex-col">
+          <span>
+            <span className="font-medium text-gray-900 dark:text-white">{f.area}</span>
+            {f.turnos.length > 0 && <span className="text-gray-500 dark:text-gray-400"> · {f.turnos.join(', ')}</span>}
+          </span>
+          {f.sede && (
+            <span className="mt-0.5 inline-flex w-fit items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300" title="Sede">
+              <FontAwesomeIcon icon={faLocationDot} className="h-2.5 w-2.5" />
+              {f.sede}
+            </span>
+          )}
         </span>
       ))}
     </div>

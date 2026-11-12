@@ -96,6 +96,7 @@ export interface ContractOverviewRow {
     areasTurnos?: {
         area: string;
         turnos: string[];
+        sede?: string;
     }[];
     reemplazo: boolean;
     empleado_id_reemplezado?: number | null;
