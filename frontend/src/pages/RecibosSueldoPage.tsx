@@ -178,12 +178,20 @@ export const RecibosSueldoPage: React.FC = () => {
   };
 
   const recibos = lote?.recibos || [];
+  /*
+    LOS QUE VIENEN EN CERO (bruto o neto a cobrar) no se envían a firmar, pero NO se pierden: quedan
+    guardados en su sábana, con su PDF, y este filtro los junta para revisarlos (13/11/2026).
+  */
+  const [soloEnCero, setSoloEnCero] = useState(false);
+  const enCero = recibos.filter((r) => reciboSinImportes(lote, r));
+  useEffect(() => setSoloEnCero(false), [loteId]);
   const filtrados = useMemo(() => {
     const q = buscar.trim().toLowerCase();
     const digitos = q.replace(/\D/g, "");
     const textos = (r: ReciboDelLote) => [r.nombreUsuario, r.datos.nombre, r.datos.legajo, r.datos.categoria, r.datos.tarea, r.datos.sector, r.datos.numeroRecibo, r.nombreProyecto].map((x) => (x || "").toLowerCase());
-    return q ? recibos.filter((r) => textos(r).some((t) => t.includes(q)) || (digitos.length >= 3 && r.datos.cuil.includes(digitos))) : recibos;
-  }, [recibos, buscar]);
+    const base = soloEnCero ? recibos.filter((r) => reciboSinImportes(lote, r)) : recibos;
+    return q ? base.filter((r) => textos(r).some((t) => t.includes(q)) || (digitos.length >= 3 && r.datos.cuil.includes(digitos))) : base;
+  }, [recibos, buscar, soloEnCero, lote]);
   const { ordenados, orden, alternar } = useOrdenTabla(
     filtrados,
     {
@@ -452,6 +460,11 @@ export const RecibosSueldoPage: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-3">
                     <input value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por nombre, CUIL o legajo…" className="input-field py-2 text-sm w-72" />
                     <BadgesLote lote={lote} conteo={conteoDe({ ...lote, resumen: undefined })} />
+                    {(enCero.length > 0 || soloEnCero) && (
+                      <button type="button" onClick={() => setSoloEnCero((v) => !v)} className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${soloEnCero ? "border-red-500 bg-red-600 text-white" : "border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-900/20"}`} title="Los que vienen con el bruto o el neto a cobrar en cero: no se envían a firmar y quedan guardados acá">
+                        {soloEnCero ? "Ver todos los recibos" : `Ver los ${enCero.length} en cero (no se envían)`}
+                      </button>
+                    )}
                     <div className="ml-auto flex items-center gap-2">
                       {deTxt ? null : cola ? (
                         <span className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
@@ -640,9 +653,15 @@ export const RecibosSueldoPage: React.FC = () => {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex flex-col gap-1">
-                              <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[11px] font-semibold border ${CLASE_ESTADO[r.estado]}`} title={r.error || r.nombreEnviado || ""}>
+                              {r.estado === "listo" && sinImportes(r) ? (
+                                <span className="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[11px] font-semibold border border-red-200 bg-red-100 text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300" title="Bruto o neto a cobrar en cero: no se envía a firmar. Queda guardado en esta sábana.">
+                                  <FontAwesomeIcon icon={faCircleXmark} className="h-3 w-3" /> En cero
+                                </span>
+                              ) : (
+                                <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[11px] font-semibold border ${CLASE_ESTADO[r.estado]}`} title={r.error || r.nombreEnviado || ""}>
                                 <FontAwesomeIcon icon={ICONO_ESTADO[r.estado]} spin={r.estado === "enviando"} className="h-3 w-3" /> {ETIQUETA_ESTADO_RECIBO[r.estado]}
                               </span>
+                              )}
                               {r.enviadoEl && (
                                 <span className="text-[11px] text-gray-400">
                                   Enviado {fechaHora(r.enviadoEl)}
@@ -651,7 +670,7 @@ export const RecibosSueldoPage: React.FC = () => {
                               )}
                               {r.firmadoEl && <span className="text-[11px] text-green-600">Firmado {fechaHora(r.firmadoEl)}</span>}
                               {r.error && <span className="text-[11px] text-red-600 max-w-xs">{r.error}</span>}
-                              {r.estado === "listo" && sinImportes(r) && <span className="text-[11px] font-semibold text-red-600 max-w-xs">Bruto o neto a cobrar en cero: no se envía a firmar.</span>}
+                              {r.estado === "listo" && sinImportes(r) && <span className="text-[11px] font-semibold text-red-600 max-w-xs">Bruto o neto a cobrar en cero: no se envía a firmar. Queda guardado en esta sábana.</span>}
                             </div>
                           </td>
                           <td className="px-4 py-3">

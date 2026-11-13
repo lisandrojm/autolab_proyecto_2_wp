@@ -69,10 +69,22 @@ async function extraerPaginas(sabana: PDFDocument, indices: number[]): Promise<B
 
 /**
  * La persona y su contrato que rige, para un CUIL. Si la persona está en varios proyectos, el
- * contrato vigente más reciente; sin ninguno vigente, nada: un recibo no se asocia a un contrato
- * terminado hace meses.
+ * contrato vigente más reciente; sin ninguno vigente, su último contrato (ver abajo).
  */
-async function personaYContrato(tenantId: Types.ObjectId, userId: Types.ObjectId): Promise<Pick<IReciboDelLote, "userProjectId" | "projectId" | "contractIndex" | "nombreProyecto">> {
+type ContratoDelRecibo = Pick<IReciboDelLote, "userProjectId" | "projectId" | "contractIndex" | "nombreProyecto"> & {
+  /** Vacío si el contrato está vigente; si no, por qué va con otro (o por qué no va). */
+  aviso: string;
+};
+const SIN_CONTRATO = "La persona no tiene ningún contrato en ningún proyecto: no hay con qué nombrar el archivo. Cargale un contrato o elegí otra persona.";
+const fechaCorta = (iso: string) => (/^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : iso);
+
+/*
+  SIN CONTRATO VIGENTE SE ENVÍA IGUAL (13/11/2026). El recibo de un mes llega cuando el contrato de esa
+  persona ya terminó (jornaleros, contratos de un mes): antes quedaba «Sin persona» y no se podía enviar.
+  Ahora va con su ÚLTIMO contrato (el de alta más reciente, en cualquier proyecto), que es el que da la
+  nomenclatura del archivo, y la fila lo avisa. Sólo queda sin enviar quien no tiene ningún contrato.
+*/
+async function personaYContrato(tenantId: Types.ObjectId, userId: Types.ObjectId): Promise<ContratoDelRecibo> {
   const vinculos: any[] = await UserProject.find({ userId }).lean();
   const hoy = hoyArgentina();
   let mejor: { up: any; idx: number; alta: string } | null = null;
@@ -83,9 +95,45 @@ async function personaYContrato(tenantId: Types.ObjectId, userId: Types.ObjectId
     const alta = String(c.fecha_alta_contrato || "");
     if (!mejor || alta > mejor.alta) mejor = { up, idx, alta };
   }
-  if (!mejor) return { userProjectId: null, projectId: null, contractIndex: null, nombreProyecto: "" };
+  let aviso = "";
+  if (!mejor) {
+    for (const up of vinculos) {
+      for (const [idx, c] of ((up.contracts || []) as any[]).entries()) {
+        const alta = String(c?.fecha_alta_contrato || "");
+        if (alta && (!mejor || alta > mejor.alta)) mejor = { up, idx, alta };
+      }
+    }
+    if (!mejor) return { userProjectId: null, projectId: null, contractIndex: null, nombreProyecto: "", aviso: SIN_CONTRATO };
+    const baja = String(mejor.up.contracts[mejor.idx]?.fecha_baja_contrato || "");
+    aviso = `Sin contrato vigente: va con su último contrato${baja ? ` (terminó el ${fechaCorta(baja)})` : ""}.`;
+  }
   const proyecto: any = await Project.findOne({ _id: mejor.up.projectId, tenantId }).select("name").lean();
-  return { userProjectId: mejor.up._id, projectId: mejor.up.projectId, contractIndex: mejor.idx, nombreProyecto: proyecto?.name || mejor.up.nombre_proyecto || "" };
+  return { userProjectId: mejor.up._id, projectId: mejor.up.projectId, contractIndex: mejor.idx, nombreProyecto: proyecto?.name || mejor.up.nombre_proyecto || "", aviso };
+}
+
+/**
+ * Los recibos que quedaron «Sin persona» sólo porque la persona no tenía contrato vigente (lotes subidos
+ * antes del 13/11/2026): se les busca el último contrato y pasan a «Listo». Se llama al ver el lote.
+ */
+export async function completarContratos(lote: ILoteRecibosSueldo): Promise<boolean> {
+  const pendientes: any[] = (lote.recibos as any[]).filter((r) => r.estado === "sin_persona" && r.userId && !r.userProjectId);
+  if (pendientes.length === 0 || lote.estadoLote === "leyendo") return false;
+  let cambio = false;
+  for (const r of pendientes) {
+    const { aviso, ...contrato } = await personaYContrato(lote.tenantId, r.userId);
+    if (!contrato.userProjectId) {
+      if (r.error === aviso) continue;
+      await LoteRecibosSueldo.updateOne({ _id: lote._id, "recibos._id": r._id, "recibos.estado": "sin_persona" }, { $set: { "recibos.$.error": aviso } });
+    } else {
+      // Posicional y condicionado al estado: no pisa un recibo que entre tanto cambió.
+      await LoteRecibosSueldo.updateOne(
+        { _id: lote._id, recibos: { $elemMatch: { _id: r._id, estado: "sin_persona" } } },
+        { $set: { "recibos.$.userProjectId": contrato.userProjectId, "recibos.$.projectId": contrato.projectId, "recibos.$.contractIndex": contrato.contractIndex, "recibos.$.nombreProyecto": contrato.nombreProyecto, "recibos.$.estado": "listo", "recibos.$.error": aviso } },
+      );
+    }
+    cambio = true;
+  }
+  return cambio;
 }
 
 /** Las personas del tenant por CUIL normalizado (el guardado puede traer guiones). */
@@ -305,7 +353,7 @@ async function armarRecibos(lote: ILoteRecibosSueldo, sabana: PDFDocument, leido
   const fuente = lote.fuente === "txt" ? "El TXT" : "El OCR";
 
   const porCuil = await usuariosPorCuil(lote.tenantId, [...new Set(leidos.map((g) => g.datos.cuil).filter(Boolean))]);
-  const contratoDe = new Map<string, Awaited<ReturnType<typeof personaYContrato>>>();
+  const contratoDe = new Map<string, ContratoDelRecibo>();
   const contratoDeUsuario = async (u: any) => {
     if (!contratoDe.has(String(u._id))) contratoDe.set(String(u._id), await personaYContrato(lote.tenantId, u._id));
     return contratoDe.get(String(u._id))!;
@@ -334,10 +382,13 @@ async function armarRecibos(lote: ILoteRecibosSueldo, sabana: PDFDocument, leido
       archivoUrl: `/storage/${lote.tenantId}/recibos-sueldo/${lote._id}/${archivo}`,
       userId: u?._id || null,
       nombreUsuario: u ? nombreDe(u) : "",
-      ...(contrato || { userProjectId: null, projectId: null, contractIndex: null, nombreProyecto: "" }),
+      userProjectId: contrato?.userProjectId || null,
+      projectId: contrato?.projectId || null,
+      contractIndex: contrato?.contractIndex ?? null,
+      nombreProyecto: contrato?.nombreProyecto || "",
       asociadoPorNombre: porNombre,
       estado: u && contrato?.userProjectId ? "listo" : "sin_persona",
-      error: u && !contrato?.userProjectId ? "La persona no tiene un contrato vigente en ningún proyecto." : porNombre ? `${fuente} no trajo el CUIL: se asoció por apellido y nombre. Revisá que sea la persona antes de enviar.` : !g.datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "",
+      error: u && !contrato?.userProjectId ? contrato?.aviso || SIN_CONTRATO : porNombre ? `${fuente} no trajo el CUIL: se asoció por apellido y nombre. Revisá que sea la persona antes de enviar.${contrato?.aviso ? ` ${contrato.aviso}` : ""}` : u && contrato?.aviso ? contrato.aviso : !g.datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "",
     });
   }
   const periodo = [...periodos.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
@@ -394,7 +445,7 @@ export async function releerRecibo(lote: ILoteRecibosSueldo, reciboId: string): 
     r.nombreProyecto = contrato?.nombreProyecto || "";
     r.asociadoPorNombre = porNombre;
     r.estado = u && contrato?.userProjectId ? "listo" : "sin_persona";
-    r.error = u && !contrato?.userProjectId ? "La persona no tiene un contrato vigente en ningún proyecto." : porNombre ? "El OCR no leyó el CUIL: se asoció por apellido y nombre. Revisá que sea la persona antes de enviar." : !datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "";
+    r.error = u && !contrato?.userProjectId ? contrato?.aviso || SIN_CONTRATO : porNombre ? `El OCR no leyó el CUIL: se asoció por apellido y nombre. Revisá que sea la persona antes de enviar.${contrato?.aviso ? ` ${contrato.aviso}` : ""}` : u && contrato?.aviso ? contrato.aviso : !datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "";
   }
   lote.markModified("recibos");
   await lote.save();
@@ -417,7 +468,7 @@ export async function asignarPersona(lote: ILoteRecibosSueldo, reciboId: string,
   r.nombreProyecto = contrato.nombreProyecto;
   r.asignadoAMano = true;
   r.estado = contrato.userProjectId ? "listo" : "sin_persona";
-  r.error = contrato.userProjectId ? "" : "La persona no tiene un contrato vigente en ningún proyecto.";
+  r.error = contrato.aviso;
   lote.markModified("recibos");
   await lote.save();
 }

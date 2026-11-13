@@ -9,7 +9,7 @@ import { LoteRecibosSueldo } from "../models/LoteRecibosSueldo.js";
 import { ReciboSueldoEnviado } from "../models/ReciboSueldoEnviado.js";
 import { User } from "../models/User.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
-import { ErrorRecibos, destrabarEnvio, procesarVarios, completarHistorial, listarEnviados, asignarPersona, eliminarLote, eliminarRecibos, reciboSinImportes, enviarAFirmar, exportacionDelLote, procesarSabana, releerRecibo } from "../services/recibosSueldo.js";
+import { ErrorRecibos, destrabarEnvio, procesarVarios, completarHistorial, listarEnviados, asignarPersona, eliminarLote, eliminarRecibos, completarContratos, reciboSinImportes, enviarAFirmar, exportacionDelLote, procesarSabana, releerRecibo } from "../services/recibosSueldo.js";
 
 /**
  * /api/v1/recibos-sueldo — el módulo Recibos de sueldo (ver `services/recibosSueldo.ts`).
@@ -126,6 +126,8 @@ recibosSueldoRoutes.get("/lotes/:id", async (req: AuthenticatedRequest & TenantR
     const lote = await loteDe(req);
     // Un envío que dejó de avanzar (reinicio del server) libera sus recibos.
     if (await destrabarEnvio(lote)) return res.json(await loteDe(req));
+    // Los «Sin persona» por no tener contrato vigente pasan a «Listo» con su último contrato.
+    if (await completarContratos(lote)) return res.json(await loteDe(req));
     res.json(lote);
   } catch (e) {
     responderError(res, e, "ver");
