@@ -446,7 +446,7 @@ export async function enviarAFirmar(lote, reciboIds, enviadoPor) {
     const carpeta = outbox.replace(/\/$/, "");
     const elegidos = lote.recibos.filter((r) => (!reciboIds || reciboIds.includes(String(r._id))) && r.estado === "listo" && !reciboSinImportes(lote, r));
     if (elegidos.length === 0)
-        throw new ErrorRecibos("No hay recibos listos para enviar entre los elegidos (los que vienen con el bruto y el neto en cero no se envían).");
+        throw new ErrorRecibos("No hay recibos listos para enviar entre los elegidos (los que vienen con el bruto o el neto en cero no se envían).");
     const quien = enviadoPor && Types.ObjectId.isValid(enviadoPor) ? await User.findById(enviadoPor).select("firstName lastName email").lean() : null;
     // Marcar todo de una, condicionado a que siga «listo»: si otra pestaña los tomó, no salen dos veces.
     const ids = elegidos.map((r) => r._id);
@@ -512,11 +512,10 @@ export async function destrabarEnvio(lote) {
     return true;
 }
 /**
- * RECIBO SIN IMPORTES (13/11/2026): el TXT de MEMOSOFT lo trae con el bruto y el neto en cero (una
- * liquidación vacía). No se manda a firmar. Sólo vale con TXT: el OCR nunca trae importes.
+ * RECIBO SIN IMPORTES (13/11/2026): el TXT de MEMOSOFT lo trae con el bruto o el neto a cobrar en cero. No se manda a firmar. Sólo vale con TXT: el OCR nunca trae importes.
  */
 const numeroDe = (s) => (s ? Number(String(s).replace(/\./g, "").replace(",", ".")) || 0 : 0);
-export const reciboSinImportes = (lote, r) => lote.fuente === "txt" && numeroDe(r?.datos?.sueldoBruto) === 0 && numeroDe(r?.datos?.neto) === 0;
+export const reciboSinImportes = (lote, r) => lote.fuente === "txt" && (numeroDe(r?.datos?.sueldoBruto) === 0 || numeroDe(r?.datos?.neto) === 0);
 /**
  * Borra recibos sueltos del lote (su PDF separado y lo leído): los que no van. Sólo los que todavía no
  * salieron a firmar; la sábana original y los demás recibos no se tocan.

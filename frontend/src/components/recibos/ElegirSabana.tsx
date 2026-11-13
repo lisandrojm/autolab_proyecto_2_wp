@@ -17,7 +17,7 @@ export interface ConteoLote {
   sinPersona: number;
   enviados: number;
   firmados: number;
-  /** Listos pero con el bruto y el neto en cero: no se envían a firmar. */
+  /** Listos pero con el bruto o el neto en cero: no se envían a firmar. */
   sinImportes?: number;
 }
 
@@ -51,7 +51,7 @@ export const BadgesLote: React.FC<{ lote: LoteRecibos; conteo?: ConteoLote; conF
       {c.firmados > 0 && <Badge clase="border-green-200 bg-green-100 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300">{c.firmados} firmados</Badge>}
       {c.sinPersona > 0 && <Badge clase="border-amber-200 bg-amber-100 text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300">{c.sinPersona} sin persona</Badge>}
       {!!c.sinImportes && (
-        <Badge clase="border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300" title="Vienen con el bruto y el neto en cero: no se envían a firmar">
+        <Badge clase="border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300" title="Vienen con el bruto o el neto a cobrar en cero: no se envían a firmar">
           {c.sinImportes} sin importes
         </Badge>
       )}

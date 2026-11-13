@@ -202,7 +202,7 @@ export const RecibosSueldoPage: React.FC = () => {
     { columna: "pagina", direccion: "asc" },
   );
   const deTxt = lote?.fuente === "txt";
-  /** Los que vienen con el bruto y el neto en cero no se mandan a firmar (13/11/2026): se revisan o se borran. */
+  /** Los que vienen con el bruto o el neto en cero no se mandan a firmar (13/11/2026): se revisan o se borran. */
   const sinImportes = (r: ReciboDelLote) => reciboSinImportes(lote, r);
   const listos = recibos.filter((r) => r.estado === "listo" && !sinImportes(r));
   /** Se puede tildar (y releer) todo lo que todavía no salió a firmar. Enviar toma sólo los listos de entre lo tildado. */
@@ -651,7 +651,7 @@ export const RecibosSueldoPage: React.FC = () => {
                               )}
                               {r.firmadoEl && <span className="text-[11px] text-green-600">Firmado {fechaHora(r.firmadoEl)}</span>}
                               {r.error && <span className="text-[11px] text-red-600 max-w-xs">{r.error}</span>}
-                              {r.estado === "listo" && sinImportes(r) && <span className="text-[11px] font-semibold text-red-600 max-w-xs">Bruto y neto en cero: no se envía a firmar.</span>}
+                              {r.estado === "listo" && sinImportes(r) && <span className="text-[11px] font-semibold text-red-600 max-w-xs">Bruto o neto a cobrar en cero: no se envía a firmar.</span>}
                             </div>
                           </td>
                           <td className="px-4 py-3">

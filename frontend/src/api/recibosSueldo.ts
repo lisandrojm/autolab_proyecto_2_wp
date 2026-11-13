@@ -144,10 +144,10 @@ export interface PersonaBuscada {
 
 const numeroDeImporte = (s?: string) => (s ? Number(s.replace(/\./g, "").replace(",", ".")) || 0 : 0);
 /**
- * RECIBO SIN IMPORTES: el TXT lo trae con el bruto y el neto en cero (liquidación vacía). No se manda a
+ * RECIBO SIN IMPORTES: el TXT lo trae con el bruto o el neto a cobrar en cero. No se manda a
  * firmar (la misma regla está en el server). Sólo vale con TXT: el OCR nunca trae importes.
  */
-export const reciboSinImportes = (lote: Pick<LoteRecibos, "fuente"> | null | undefined, r: Pick<ReciboDelLote, "datos">): boolean => lote?.fuente === "txt" && numeroDeImporte(r.datos.sueldoBruto) === 0 && numeroDeImporte(r.datos.neto) === 0;
+export const reciboSinImportes = (lote: Pick<LoteRecibos, "fuente"> | null | undefined, r: Pick<ReciboDelLote, "datos">): boolean => lote?.fuente === "txt" && (numeroDeImporte(r.datos.sueldoBruto) === 0 || numeroDeImporte(r.datos.neto) === 0);
 
 export const ETIQUETA_ESTADO_RECIBO: Record<EstadoRecibo, string> = {
   sin_persona: "Sin persona",
