@@ -9,7 +9,7 @@ import { LoteRecibosSueldo } from "../models/LoteRecibosSueldo.js";
 import { ReciboSueldoEnviado } from "../models/ReciboSueldoEnviado.js";
 import { User } from "../models/User.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
-import { ErrorRecibos, destrabarEnvio, procesarVarios, completarHistorial, listarEnviados, asignarPersona, eliminarLote, enviarAFirmar, exportacionDelLote, procesarSabana, releerRecibo } from "../services/recibosSueldo.js";
+import { ErrorRecibos, destrabarEnvio, procesarVarios, completarHistorial, listarEnviados, asignarPersona, eliminarLote, eliminarRecibos, reciboSinImportes, enviarAFirmar, exportacionDelLote, procesarSabana, releerRecibo } from "../services/recibosSueldo.js";
 /**
  * /api/v1/recibos-sueldo — el módulo Recibos de sueldo (ver `services/recibosSueldo.ts`).
  * Mismo permiso que Contratos: es una etapa más del circuito de firma.
@@ -110,7 +110,8 @@ recibosSueldoRoutes.get("/lotes", async (req, res) => {
             ...l,
             resumen: {
                 total: l.recibos.length,
-                listos: l.recibos.filter((r) => r.estado === "listo").length,
+                listos: l.recibos.filter((r) => r.estado === "listo" && !reciboSinImportes(l, r)).length,
+                sinImportes: l.recibos.filter((r) => r.estado === "listo" && reciboSinImportes(l, r)).length,
                 sinPersona: l.recibos.filter((r) => r.estado === "sin_persona").length,
                 enviados: l.recibos.filter((r) => r.estado === "enviado").length,
                 firmados: l.recibos.filter((r) => r.estado === "firmado").length,
@@ -193,10 +194,28 @@ recibosSueldoRoutes.post("/lotes/:id/enviar", async (req, res) => {
         responderError(res, e, "enviar");
     }
 });
-recibosSueldoRoutes.delete("/lotes/:id", async (req, res) => {
+// DELETE /lotes/:id/recibos — borrar recibos sueltos del lote (`reciboIds`): los que no van. Sólo los que no salieron a firmar.
+recibosSueldoRoutes.delete("/lotes/:id/recibos", async (req, res) => {
     try {
         const lote = await loteDe(req);
         if (lote.estadoLote === "leyendo")
+            throw new ErrorRecibos("El lote todavía se está leyendo: esperá a que termine.", 409);
+        const reciboIds = Array.isArray(req.body?.reciboIds) ? req.body.reciboIds.map(String) : [];
+        if (reciboIds.length === 0)
+            throw new ErrorRecibos("Elegí los recibos a borrar.");
+        const borrados = await eliminarRecibos(lote, reciboIds);
+        res.json({ borrados, lote: await LoteRecibosSueldo.findById(lote._id).select(SIN_TEXTO).lean() });
+    }
+    catch (e) {
+        responderError(res, e, "eliminar recibos");
+    }
+});
+recibosSueldoRoutes.delete("/lotes/:id", async (req, res) => {
+    try {
+        const lote = await loteDe(req);
+        // Una lectura que quedó colgada (el server se reinició en el medio) no avanza más: pasados unos minutos sin avance, se deja borrar.
+        const sinAvance = Date.now() - new Date(lote.updatedAt || 0).getTime() > 3 * 60_000;
+        if (lote.estadoLote === "leyendo" && !sinAvance)
             throw new ErrorRecibos("El lote todavía se está leyendo: esperá a que termine.", 409);
         await eliminarLote(lote);
         res.json({ ok: true });

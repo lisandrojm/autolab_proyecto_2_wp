@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFilePdf, faFileLines, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
+import { faFilePdf, faFileLines, faCircleCheck, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
-import type { LoteRecibos } from "../../api/recibosSueldo";
+import { reciboSinImportes, type LoteRecibos } from "../../api/recibosSueldo";
 import { fechaHora, periodoTexto } from "./DetalleRecibo";
 
 /*
@@ -17,13 +17,16 @@ export interface ConteoLote {
   sinPersona: number;
   enviados: number;
   firmados: number;
+  /** Listos pero con el bruto y el neto en cero: no se envían a firmar. */
+  sinImportes?: number;
 }
 
 /** Los números de un lote: del resumen del listado o, si no viene, de sus recibos. */
 export const conteoDe = (l: LoteRecibos): ConteoLote =>
   l.resumen ?? {
     total: l.recibos.length,
-    listos: l.recibos.filter((r) => r.estado === "listo").length,
+    listos: l.recibos.filter((r) => r.estado === "listo" && !reciboSinImportes(l, r)).length,
+    sinImportes: l.recibos.filter((r) => r.estado === "listo" && reciboSinImportes(l, r)).length,
     sinPersona: l.recibos.filter((r) => r.estado === "sin_persona").length,
     enviados: l.recibos.filter((r) => r.estado === "enviado").length,
     firmados: l.recibos.filter((r) => r.estado === "firmado").length,
@@ -47,6 +50,11 @@ export const BadgesLote: React.FC<{ lote: LoteRecibos; conteo?: ConteoLote; conF
       {c.enviados > 0 && <Badge clase="border-purple-200 bg-purple-100 text-purple-700 dark:border-purple-800 dark:bg-purple-900/30 dark:text-purple-300">{c.enviados} enviados</Badge>}
       {c.firmados > 0 && <Badge clase="border-green-200 bg-green-100 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300">{c.firmados} firmados</Badge>}
       {c.sinPersona > 0 && <Badge clase="border-amber-200 bg-amber-100 text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300">{c.sinPersona} sin persona</Badge>}
+      {!!c.sinImportes && (
+        <Badge clase="border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300" title="Vienen con el bruto y el neto en cero: no se envían a firmar">
+          {c.sinImportes} sin importes
+        </Badge>
+      )}
       {lote.fuente === "txt" ? (
         <Badge clase="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300" title={lote.nombreTxt || ""}>
           <FontAwesomeIcon icon={faFileLines} className="h-2.5 w-2.5" /> Datos del TXT
@@ -60,7 +68,8 @@ export const BadgesLote: React.FC<{ lote: LoteRecibos; conteo?: ConteoLote; conF
   );
 };
 
-export const ElegirSabana: React.FC<{ lotes: LoteRecibos[]; actual: string | null; onElegir: (id: string) => void; onClose: () => void }> = ({ lotes, actual, onElegir, onClose }) => {
+/** `onBorrar`: borra esa sábana (pide confirmación afuera). El tacho no aparece en las que ya tienen recibos enviados o firmados. */
+export const ElegirSabana: React.FC<{ lotes: LoteRecibos[]; actual: string | null; onElegir: (id: string) => void; onClose: () => void; onBorrar?: (lote: LoteRecibos) => void }> = ({ lotes, actual, onElegir, onClose, onBorrar }) => {
   const [buscar, setBuscar] = useState("");
   const filtrados = useMemo(() => {
     const q = buscar.trim().toLowerCase();
@@ -75,7 +84,7 @@ export const ElegirSabana: React.FC<{ lotes: LoteRecibos[]; actual: string | nul
           {filtrados.map((l) => {
             const elegida = l._id === actual;
             return (
-              <li key={l._id}>
+              <li key={l._id} className="relative">
                 <button
                   type="button"
                   onClick={() => {
@@ -91,12 +100,18 @@ export const ElegirSabana: React.FC<{ lotes: LoteRecibos[]; actual: string | nul
                         <FontAwesomeIcon icon={faFilePdf} className="text-red-500" /> {l.nombreArchivo}
                       </p>
                     </div>
-                    {elegida && <FontAwesomeIcon icon={faCircleCheck} className="mt-1 text-blue-600" title="La que estás viendo" />}
+                    {elegida && <FontAwesomeIcon icon={faCircleCheck} className={`mt-1 text-blue-600 ${onBorrar ? "mr-9" : ""}`} title="La que estás viendo" />}
                   </div>
                   <div className="mt-2">
                     <BadgesLote lote={l} />
                   </div>
                 </button>
+                {/* Fuera del botón de elegir (un botón no va dentro de otro). */}
+                {onBorrar && conteoDe(l).enviados + conteoDe(l).firmados === 0 && (
+                  <button type="button" onClick={() => onBorrar(l)} className="absolute right-2 top-2 rounded-lg p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" title="Borrar esta sábana (sólo si no se envió nada)" aria-label={`Borrar la sábana ${l.nombreArchivo}`}>
+                    <FontAwesomeIcon icon={faTrash} />
+                  </button>
+                )}
               </li>
             );
           })}

@@ -92,7 +92,7 @@ export interface LoteRecibos {
   periodo: string;
   recibos: ReciboDelLote[];
   createdAt: string;
-  resumen?: { total: number; listos: number; sinPersona: number; enviados: number; firmados: number };
+  resumen?: { total: number; listos: number; sinPersona: number; enviados: number; firmados: number; sinImportes?: number };
 }
 
 export interface ResultadoMasivo {
@@ -142,6 +142,13 @@ export interface PersonaBuscada {
   cuil: string;
 }
 
+const numeroDeImporte = (s?: string) => (s ? Number(s.replace(/\./g, "").replace(",", ".")) || 0 : 0);
+/**
+ * RECIBO SIN IMPORTES: el TXT lo trae con el bruto y el neto en cero (liquidación vacía). No se manda a
+ * firmar (la misma regla está en el server). Sólo vale con TXT: el OCR nunca trae importes.
+ */
+export const reciboSinImportes = (lote: Pick<LoteRecibos, "fuente"> | null | undefined, r: Pick<ReciboDelLote, "datos">): boolean => lote?.fuente === "txt" && numeroDeImporte(r.datos.sueldoBruto) === 0 && numeroDeImporte(r.datos.neto) === 0;
+
 export const ETIQUETA_ESTADO_RECIBO: Record<EstadoRecibo, string> = {
   sin_persona: "Sin persona",
   listo: "Listo",
@@ -151,25 +158,38 @@ export const ETIQUETA_ESTADO_RECIBO: Record<EstadoRecibo, string> = {
   error: "Error",
 };
 
+/*
+  LA SUBIDA NO TIENE LÍMITE DE TIEMPO (13/11/2026). El minuto que espera `axiosConfig` cuenta también lo
+  que tarda en VIAJAR el archivo: varias sábanas de muchos MB por una conexión lenta lo pasaban, y la
+  pantalla decía «La solicitud tardó demasiado tiempo» con los archivos a medio subir (o ya subidos y
+  el server todavía armando los lotes). A cambio se muestra el avance, para que se vea que no está colgada.
+*/
+const sinLimiteDeTiempo = (alAvanzar?: (porcentaje: number) => void) => ({
+  timeout: 0,
+  onUploadProgress: (e: { loaded: number; total?: number }) => {
+    if (alAvanzar && e.total) alAvanzar(Math.min(100, Math.round((e.loaded / e.total) * 100)));
+  },
+});
+
 export const recibosSueldoAPI = {
   /** La sábana PDF y, si se tiene, el TXT que MEMOSOFT exporta con ella: con el TXT los datos salen de ahí, sin OCR. */
-  async subir(archivo: File, txt: File | null, paginasPorRecibo = 2): Promise<LoteRecibos> {
+  async subir(archivo: File, txt: File | null, paginasPorRecibo = 2, alAvanzar?: (porcentaje: number) => void): Promise<LoteRecibos> {
     const fd = new FormData();
     fd.append("archivo", archivo);
     if (txt) fd.append("txt", txt);
     fd.append("paginasPorRecibo", String(paginasPorRecibo));
-    const { data } = await axios.post("/recibos-sueldo/lotes", fd, { headers: { "Content-Type": "multipart/form-data" } });
+    const { data } = await axios.post("/recibos-sueldo/lotes", fd, { headers: { "Content-Type": "multipart/form-data" }, ...sinLimiteDeTiempo(alAvanzar) });
     return data;
   },
   /**
    * Subida masiva: todas las sábanas PDF y sus TXT juntos. El server empareja cada TXT con su PDF (por
    * nombre o por cantidad de páginas) y crea un lote por par; lo que no tiene pareja vuelve en `omitidos`.
    */
-  async subirVarios(archivos: File[], paginasPorRecibo = 2): Promise<ResultadoMasivo> {
+  async subirVarios(archivos: File[], paginasPorRecibo = 2, alAvanzar?: (porcentaje: number) => void): Promise<ResultadoMasivo> {
     const fd = new FormData();
     for (const a of archivos) fd.append("archivos", a);
     fd.append("paginasPorRecibo", String(paginasPorRecibo));
-    const { data } = await axios.post("/recibos-sueldo/lotes/masivo", fd, { headers: { "Content-Type": "multipart/form-data" } });
+    const { data } = await axios.post("/recibos-sueldo/lotes/masivo", fd, { headers: { "Content-Type": "multipart/form-data" }, ...sinLimiteDeTiempo(alAvanzar) });
     return data;
   },
   /** El registro de enviados (nunca se borra). Filtros opcionales: período "YYYY-MM", estado y texto. */
@@ -231,6 +251,11 @@ export const recibosSueldoAPI = {
   /** Arranca el envío, que sigue en segundo plano en el server: el avance queda en `lote.envio`. */
   async enviar(loteId: string, reciboIds?: string[]): Promise<{ enEnvio: number; lote: LoteRecibos }> {
     const { data } = await axios.post(`/recibos-sueldo/lotes/${loteId}/enviar`, { reciboIds });
+    return data;
+  },
+  /** Borra recibos sueltos del lote (los que no van). Sólo los que no salieron a firmar. */
+  async eliminarRecibos(loteId: string, reciboIds: string[]): Promise<{ borrados: number; lote: LoteRecibos }> {
+    const { data } = await axios.delete(`/recibos-sueldo/lotes/${loteId}/recibos`, { data: { reciboIds } });
     return data;
   },
   async eliminar(loteId: string): Promise<void> {

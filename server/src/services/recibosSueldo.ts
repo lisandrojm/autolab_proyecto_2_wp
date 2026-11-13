@@ -136,6 +136,9 @@ function distancia1(a: string, b: string): boolean {
  * Crea el lote y guarda la sábana. Con el TXT de MEMOSOFT lee los datos de ahí en el acto y devuelve el
  * lote «listo»; sin TXT dispara la lectura por OCR en segundo plano y lo devuelve «leyendo».
  */
+/** Los armados desde TXT, de a uno: separar PDFs es CPU pura y varios a la vez traban al server entero. */
+let colaDeArmado: Promise<void> = Promise.resolve();
+
 export async function procesarSabana(
   tenantId: Types.ObjectId,
   subidoPor: string | undefined,
@@ -183,14 +186,21 @@ export async function procesarSabana(
   await lote.save();
 
   if (deTxt) {
-    // Sin OCR: unos segundos aunque sean cientos de recibos, así que se hace en el acto.
-    try {
-      const sabana = await PDFDocument.load(buffer, { ignoreEncryption: true });
-      await armarRecibos(lote, sabana, deTxt.recibos.map((r) => ({ paginas: r.hojas, texto: r.texto, datos: r.datos })));
-    } catch (e: any) {
-      await LoteRecibosSueldo.updateOne({ _id: lote._id }, { $set: { estadoLote: "error", error: e?.message || String(e) } }).catch(() => {});
-      throw e;
-    }
+    /*
+      Sin OCR, pero TAMPOCO SE ESPERA (13/11/2026): separar el PDF de cada recibo y buscar a su persona
+      lleva su tiempo con sábanas de cientos de recibos, y con varias sábanas en una misma subida el
+      pedido pasaba el minuto que espera el navegador: la pantalla decía «No se pudieron subir» mientras
+      el server seguía armando los lotes. Ahora la respuesta vuelve apenas quedan guardados los archivos
+      y el armado sigue en segundo plano, una sábana por vez; la pantalla sigue el avance por `progreso`.
+    */
+    lote.$locals.recibosPorArmar = deTxt.recibos.length;
+    const leidos = deTxt.recibos.map((r) => ({ paginas: r.hojas, texto: r.texto, datos: r.datos }));
+    colaDeArmado = colaDeArmado
+      .then(async () => armarRecibos(lote, await PDFDocument.load(buffer, { ignoreEncryption: true }), leidos))
+      .catch(async (e: any) => {
+        console.error(`[RECIBOS-SUELDO] Falló el armado del lote ${lote._id}:`, e);
+        await LoteRecibosSueldo.updateOne({ _id: lote._id }, { $set: { estadoLote: "error", error: e?.message || String(e) } }).catch(() => {});
+      });
     return lote;
   }
 
@@ -247,7 +257,7 @@ export async function procesarVarios(tenantId: Types.ObjectId, subidoPor: string
   for (const par of e.pares) {
     try {
       const lote = await procesarSabana(tenantId, subidoPor, par.pdf, porNombre.get(par.pdf)!, paginasPorRecibo, { nombre: par.txt, buffer: porNombre.get(par.txt)! });
-      lotes.push({ loteId: String(lote._id), pdf: par.pdf, txt: par.txt, recibos: (lote.recibos || []).length, por: par.por });
+      lotes.push({ loteId: String(lote._id), pdf: par.pdf, txt: par.txt, recibos: Number(lote.$locals.recibosPorArmar) || (lote.recibos || []).length, por: par.por });
     } catch (err: any) {
       omitidos.push({ archivo: `${par.pdf} + ${par.txt}`, motivo: err?.message || String(err) });
     }
@@ -314,6 +324,8 @@ async function armarRecibos(lote: ILoteRecibosSueldo, sabana: PDFDocument, leido
       porNombre = !!u;
     }
     const contrato = u ? await contratoDeUsuario(u) : null;
+    // El avance, cada tanto (con TXT son cientos de recibos en pocos segundos: no hace falta uno por uno).
+    if (lote.fuente === "txt" && n % 10 === 9) await LoteRecibosSueldo.updateOne({ _id: lote._id, estadoLote: "leyendo" }, { $set: { "progreso.leidas": Math.min(lote.paginas, (g.paginas[g.paginas.length - 1] ?? 0) + 1) } }).catch(() => {});
     if (g.datos.periodo) periodos.set(g.datos.periodo, (periodos.get(g.datos.periodo) || 0) + 1);
     recibos.push({
       paginas: g.paginas.map((i) => i + 1),
@@ -434,8 +446,8 @@ export async function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: string
   if (!outbox) throw new ErrorRecibos('No hay ninguna carpeta de Dropbox configurada como "Outbox" en Documentos → Configurar transición automática.');
   const carpeta = outbox.replace(/\/$/, "");
 
-  const elegidos: any[] = (lote.recibos as any[]).filter((r) => (!reciboIds || reciboIds.includes(String(r._id))) && r.estado === "listo");
-  if (elegidos.length === 0) throw new ErrorRecibos("No hay recibos listos para enviar entre los elegidos.");
+  const elegidos: any[] = (lote.recibos as any[]).filter((r) => (!reciboIds || reciboIds.includes(String(r._id))) && r.estado === "listo" && !reciboSinImportes(lote, r));
+  if (elegidos.length === 0) throw new ErrorRecibos("No hay recibos listos para enviar entre los elegidos (los que vienen con el bruto y el neto en cero no se envían).");
   const quien: any = enviadoPor && Types.ObjectId.isValid(enviadoPor) ? await User.findById(enviadoPor).select("firstName lastName email").lean() : null;
 
   // Marcar todo de una, condicionado a que siga «listo»: si otra pestaña los tomó, no salen dos veces.
@@ -505,6 +517,38 @@ export async function destrabarEnvio(lote: ILoteRecibosSueldo): Promise<boolean>
     { arrayFilters: [{ "r.estado": "enviando" }] },
   );
   return true;
+}
+
+/**
+ * RECIBO SIN IMPORTES (13/11/2026): el TXT de MEMOSOFT lo trae con el bruto y el neto en cero (una
+ * liquidación vacía). No se manda a firmar. Sólo vale con TXT: el OCR nunca trae importes.
+ */
+const numeroDe = (s: unknown) => (s ? Number(String(s).replace(/\./g, "").replace(",", ".")) || 0 : 0);
+export const reciboSinImportes = (lote: { fuente?: string }, r: any): boolean => lote.fuente === "txt" && numeroDe(r?.datos?.sueldoBruto) === 0 && numeroDe(r?.datos?.neto) === 0;
+
+/**
+ * Borra recibos sueltos del lote (su PDF separado y lo leído): los que no van. Sólo los que todavía no
+ * salieron a firmar; la sábana original y los demás recibos no se tocan.
+ */
+export async function eliminarRecibos(lote: ILoteRecibosSueldo, reciboIds: string[]): Promise<number> {
+  if ((lote as any).envio?.estado === "enviando") throw new ErrorRecibos("Este lote se está enviando: esperá a que termine.", 409);
+  const elegidos: any[] = (lote.recibos as any[]).filter((r) => reciboIds.includes(String(r._id)));
+  if (elegidos.length === 0) throw new ErrorRecibos("No se encontró ninguno de los recibos elegidos.");
+  const yaSalieron = elegidos.filter((r) => !["sin_persona", "listo", "error"].includes(r.estado));
+  if (yaSalieron.length > 0) throw new ErrorRecibos(`${yaSalieron.length === 1 ? "Un recibo ya salió" : `${yaSalieron.length} recibos ya salieron`} a firmar: no se borra${yaSalieron.length === 1 ? "" : "n"}.`, 409);
+  const ids = elegidos.map((r) => r._id);
+  // Condicionado al estado: si entre tanto otro lo mandó a firmar, ese no se borra.
+  await LoteRecibosSueldo.updateOne({ _id: lote._id }, { $pull: { recibos: { _id: { $in: ids }, estado: { $in: ["sin_persona", "listo", "error"] } } } });
+  const quedaron = new Set(((await LoteRecibosSueldo.findById(lote._id).select("recibos._id").lean()) as any)?.recibos?.map((r: any) => String(r._id)) || []);
+  const dir = dirDelLote(lote);
+  let borrados = 0;
+  for (const r of elegidos) {
+    if (quedaron.has(String(r._id))) continue;
+    borrados++;
+    const archivo = path.basename(String(r.archivoUrl || ""));
+    if (/^\d+\.pdf$/.test(archivo)) fs.rmSync(path.join(dir, archivo), { force: true });
+  }
+  return borrados;
 }
 
 /** Borra el lote y sus PDFs. Sólo si ningún recibo salió a firmar. */

@@ -20,10 +20,6 @@ export declare class ErrorRecibos extends Error {
     status: number;
     constructor(msg: string, status?: number);
 }
-/**
- * Crea el lote y guarda la sábana. Con el TXT de MEMOSOFT lee los datos de ahí en el acto y devuelve el
- * lote «listo»; sin TXT dispara la lectura por OCR en segundo plano y lo devuelve «leyendo».
- */
 export declare function procesarSabana(tenantId: Types.ObjectId, subidoPor: string | undefined, nombreArchivo: string, buffer: Buffer, paginasPorRecibo?: number, txt?: {
     nombre: string;
     buffer: Buffer;
@@ -73,6 +69,14 @@ export declare function enviarAFirmar(lote: ILoteRecibosSueldo, reciboIds?: stri
  * marcado: el aviso pide revisar el Outbox antes de reenviar. Se llama al ver el lote.
  */
 export declare function destrabarEnvio(lote: ILoteRecibosSueldo): Promise<boolean>;
+export declare const reciboSinImportes: (lote: {
+    fuente?: string;
+}, r: any) => boolean;
+/**
+ * Borra recibos sueltos del lote (su PDF separado y lo leído): los que no van. Sólo los que todavía no
+ * salieron a firmar; la sábana original y los demás recibos no se tocan.
+ */
+export declare function eliminarRecibos(lote: ILoteRecibosSueldo, reciboIds: string[]): Promise<number>;
 /** Borra el lote y sus PDFs. Sólo si ningún recibo salió a firmar. */
 export declare function eliminarLote(lote: ILoteRecibosSueldo): Promise<void>;
 /** Marca como firmado el recibo cuyo código volvió a la carpeta de firmados. Lo llama el escaneo de Dropbox. */

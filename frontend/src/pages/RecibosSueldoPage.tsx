@@ -5,7 +5,7 @@ import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { Modal } from "../components/ui/Modal";
 import { BotonOrden, useOrdenTabla } from "../components/ui/OrdenTabla";
-import { recibosSueldoAPI, ETIQUETA_ESTADO_RECIBO, type LoteRecibos, type ReciboDelLote, type PersonaBuscada, type ResultadoMasivo } from "../api/recibosSueldo";
+import { recibosSueldoAPI, reciboSinImportes, ETIQUETA_ESTADO_RECIBO, type LoteRecibos, type ReciboDelLote, type PersonaBuscada, type ResultadoMasivo } from "../api/recibosSueldo";
 import { getImageUrl } from "../utils/imageHelpers";
 import { sweetAlert } from "../utils/sweetAlert";
 import { DetalleRecibo, fmtCuil, fechaHora, periodoTexto, importeNumero, pesos } from "../components/recibos/DetalleRecibo";
@@ -45,6 +45,8 @@ export const RecibosSueldoPage: React.FC = () => {
   const [lote, setLote] = useState<LoteRecibos | null>(null);
   const [cargandoLote, setCargandoLote] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
+  /** Cuánto de los archivos ya viajó al server (0-100); `null` cuando no hay una subida en curso. */
+  const [avanceSubida, setAvanceSubida] = useState<number | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [buscar, setBuscar] = useState("");
@@ -115,6 +117,13 @@ export const RecibosSueldoPage: React.FC = () => {
     }
     envioAnterior.current = e?.estado;
   }, [lote?.envio, cargarLotes]);
+  // Las demás sábanas de una subida masiva se arman en fila en el server: la lista se relee hasta que terminen.
+  const hayLotesArmandose = (lotes || []).some((l) => l.estadoLote === "leyendo");
+  useEffect(() => {
+    if (!hayLotesArmandose) return;
+    const t = setInterval(() => void cargarLotes(), 5_000);
+    return () => clearInterval(t);
+  }, [hayLotesArmandose, cargarLotes]);
   // Cuando termina la lectura, el resumen del selector de lotes también cambia.
   const estadoAnterior = useRef<string | undefined>(undefined);
   useEffect(() => {
@@ -142,7 +151,7 @@ export const RecibosSueldoPage: React.FC = () => {
       if (!r.isConfirmed) return;
       setSubiendo(true);
       try {
-        const nuevo = await recibosSueldoAPI.subir(pdfs[0], null, paginasPorRecibo);
+        const nuevo = await recibosSueldoAPI.subir(pdfs[0], null, paginasPorRecibo, setAvanceSubida);
         await cargarLotes();
         setLoteId(nuevo._id);
         sweetAlert.info("Leyendo la sábana", `${nuevo.paginas} página${nuevo.paginas === 1 ? "" : "s"}. Los datos están dibujados en el PDF, así que cada página pasa por OCR en tres pasadas: unos 3 segundos por página. La lista se arma sola cuando termina.`, 6000);
@@ -150,12 +159,13 @@ export const RecibosSueldoPage: React.FC = () => {
         sweetAlert.error("No se pudo leer la sábana", e?.response?.data?.error || e?.message || "");
       } finally {
         setSubiendo(false);
+        setAvanceSubida(null);
       }
       return;
     }
     setSubiendo(true);
     try {
-      const res = await recibosSueldoAPI.subirVarios(archivos, paginasPorRecibo);
+      const res = await recibosSueldoAPI.subirVarios(archivos, paginasPorRecibo, setAvanceSubida);
       setResultado(res);
       await cargarLotes();
       if (res.lotes[0]) setLoteId(res.lotes[0].loteId);
@@ -163,6 +173,7 @@ export const RecibosSueldoPage: React.FC = () => {
       sweetAlert.error("No se pudieron subir", e?.response?.data?.error || e?.message || "");
     } finally {
       setSubiendo(false);
+        setAvanceSubida(null);
     }
   };
 
@@ -191,14 +202,16 @@ export const RecibosSueldoPage: React.FC = () => {
     { columna: "pagina", direccion: "asc" },
   );
   const deTxt = lote?.fuente === "txt";
-  const listos = recibos.filter((r) => r.estado === "listo");
+  /** Los que vienen con el bruto y el neto en cero no se mandan a firmar (13/11/2026): se revisan o se borran. */
+  const sinImportes = (r: ReciboDelLote) => reciboSinImportes(lote, r);
+  const listos = recibos.filter((r) => r.estado === "listo" && !sinImportes(r));
   /** Se puede tildar (y releer) todo lo que todavía no salió a firmar. Enviar toma sólo los listos de entre lo tildado. */
   const sePuedeTildar = (r: ReciboDelLote) => r.estado === "sin_persona" || r.estado === "listo" || r.estado === "error";
   // Con el TXT no hay nada que releer: los datos son los del archivo.
   const sePuedeReleer = (r: ReciboDelLote) => !deTxt && sePuedeTildar(r);
   const tildables = filtrados.filter(sePuedeTildar);
   const tildados = recibos.filter((r) => seleccion.has(r._id) && sePuedeTildar(r));
-  const seleccionados = tildados.filter((r) => r.estado === "listo");
+  const seleccionados = tildados.filter((r) => r.estado === "listo" && !sinImportes(r));
 
   /*
     RELEER EN COLA (pedido del 21/10/2026): las filas tildadas pasan de a una por la relectura, como si se
@@ -254,17 +267,41 @@ export const RecibosSueldoPage: React.FC = () => {
     }
   };
 
-  const eliminarLote = async () => {
-    if (!lote) return;
-    const r = await sweetAlert.confirm("¿Borrar este lote?", "Se borran los PDFs separados y lo leído. La sábana original no se toca. No se puede borrar si ya hay recibos enviados.", "Sí, borrar");
+  /** Borra una sábana subida: la que se está viendo o cualquiera de la lista de «Elegir sábana». */
+  const eliminarLote = async (cual: LoteRecibos | null = lote) => {
+    if (!cual) return;
+    const r = await sweetAlert.confirm("¿Borrar esta sábana?", `«${cual.nombreArchivo}»: se borran la sábana subida, los PDFs separados de cada recibo y lo leído. No se puede borrar si ya hay recibos enviados.`, "Sí, borrar");
     if (!r.isConfirmed) return;
     try {
-      await recibosSueldoAPI.eliminar(lote._id);
-      setLoteId(null);
-      setLote(null);
+      await recibosSueldoAPI.eliminar(cual._id);
+      if (cual._id === loteId) {
+        setLoteId(null);
+        setLote(null);
+      }
       await cargarLotes();
     } catch (e: any) {
       sweetAlert.error("No se pudo borrar", e?.response?.data?.error || e?.message || "");
+    }
+  };
+
+  /** Borra recibos sueltos del lote (los que no van): su PDF separado y lo leído. Sólo los que no salieron a firmar. */
+  const [borrando, setBorrando] = useState(false);
+  const eliminarRecibos = async (items: ReciboDelLote[]) => {
+    if (!lote || items.length === 0) return;
+    const uno = items.length === 1 ? items[0] : null;
+    const r = await sweetAlert.confirm(uno ? "¿Borrar este recibo?" : `¿Borrar ${items.length} recibos?`, `${uno ? `El de ${uno.nombreUsuario || uno.datos.nombre || `las páginas ${uno.paginas.join("-")}`} sale` : "Salen"} de esta sábana y no se ${uno ? "envía" : "envían"} a firmar. Para recuperarlo${uno ? "" : "s"} hay que volver a subir la sábana.`, "Sí, borrar");
+    if (!r.isConfirmed) return;
+    setBorrando(true);
+    try {
+      const res = await recibosSueldoAPI.eliminarRecibos(lote._id, items.map((x) => x._id));
+      setLote(res.lote);
+      setSeleccion(new Set());
+      void cargarLotes();
+    } catch (e: any) {
+      sweetAlert.error("No se pudo borrar", e?.response?.data?.error || e?.message || "");
+      void cargarLote(lote._id);
+    } finally {
+      setBorrando(false);
     }
   };
 
@@ -319,7 +356,7 @@ export const RecibosSueldoPage: React.FC = () => {
           <input ref={inputArchivo} type="file" multiple accept="application/pdf,.pdf,text/plain,.txt" className="hidden" onChange={(e) => e.target.files?.length && subir(e.target.files)} />
           <button type="button" onClick={() => inputArchivo.current?.click()} disabled={subiendo} className="btn-primary flex items-center gap-2 text-sm px-4 py-2" title="Elegí todos juntos (Cmd/Ctrl + clic o Cmd/Ctrl + A): las sábanas PDF y sus TXT. Cada TXT se empareja solo con su PDF, por nombre o por cantidad de páginas">
             <FontAwesomeIcon icon={subiendo ? faSpinner : faUpload} spin={subiendo} />
-            {subiendo ? "Subiendo…" : "Subir sábanas (PDF + TXT)"}
+            {!subiendo ? "Subir sábanas (PDF + TXT)" : avanceSubida === null ? "Subiendo…" : avanceSubida < 100 ? `Subiendo… ${avanceSubida}%` : "Procesando…"}
           </button>
         </div>
       }
@@ -377,7 +414,7 @@ export const RecibosSueldoPage: React.FC = () => {
                     <button type="button" onClick={() => recibosSueldoAPI.descargarExportacion(lote)} className="btn-secondary flex items-center gap-2 text-sm px-3 py-2" title="Bajar un JSON con todo lo que el lector entendió de cada recibo, incluido el texto crudo">
                       <FontAwesomeIcon icon={faFileCode} /> Descargar lo leído (JSON)
                     </button>
-                    <button type="button" onClick={eliminarLote} className="btn-secondary flex items-center gap-2 text-sm px-3 py-2 text-red-600" title="Borrar el lote (sólo si no se envió nada)">
+                    <button type="button" onClick={() => eliminarLote()} className="btn-secondary flex items-center gap-2 text-sm px-3 py-2 text-red-600" title="Borrar el lote (sólo si no se envió nada)">
                       <FontAwesomeIcon icon={faTrash} /> Borrar lote
                     </button>
                   </>
@@ -393,7 +430,7 @@ export const RecibosSueldoPage: React.FC = () => {
                 <div className="rounded-xl border border-blue-200 bg-blue-50 p-6 dark:border-blue-800 dark:bg-blue-900/20">
                   <p className="flex items-center gap-2 text-sm font-semibold text-blue-800 dark:text-blue-200">
                     <FontAwesomeIcon icon={faSpinner} spin />
-                    Leyendo la sábana: página {lote.progreso?.leidas ?? 0} de {lote.progreso?.total || lote.paginas}
+                    {lote.fuente === "txt" ? "Armando los recibos" : "Leyendo la sábana"}: página {lote.progreso?.leidas ?? 0} de {lote.progreso?.total || lote.paginas}
                   </p>
                   <div className="mt-3 h-2 w-full rounded-full bg-blue-100 dark:bg-blue-950">
                     <div
@@ -428,6 +465,9 @@ export const RecibosSueldoPage: React.FC = () => {
                           <FontAwesomeIcon icon={faRotateRight} /> Releer tildados {tildados.length > 0 ? `(${tildados.length})` : ""}
                         </button>
                       )}
+                      <button type="button" disabled={borrando || enviando || enviandoLote || !!cola || tildados.length === 0} onClick={() => eliminarRecibos(tildados)} className="btn-secondary flex items-center gap-2 text-sm px-3 py-2 text-red-600 disabled:opacity-50" title="Saca de esta sábana los recibos tildados (los que no van)">
+                        <FontAwesomeIcon icon={borrando ? faSpinner : faTrash} spin={borrando} /> Borrar tildados {tildados.length > 0 ? `(${tildados.length})` : ""}
+                      </button>
                       <button type="button" disabled={enviando || enviandoLote || !!cola || seleccionados.length === 0} onClick={() => enviar(seleccionados)} className="btn-primary flex items-center gap-2 text-sm px-4 py-2 disabled:opacity-50" title="Manda a firmar los listos de entre los tildados">
                         <FontAwesomeIcon icon={enviando ? faSpinner : faPaperPlane} spin={enviando} /> Enviar a firmar {seleccionados.length > 0 ? `(${seleccionados.length} listo${seleccionados.length === 1 ? "" : "s"})` : ""}
                       </button>
@@ -611,6 +651,7 @@ export const RecibosSueldoPage: React.FC = () => {
                               )}
                               {r.firmadoEl && <span className="text-[11px] text-green-600">Firmado {fechaHora(r.firmadoEl)}</span>}
                               {r.error && <span className="text-[11px] text-red-600 max-w-xs">{r.error}</span>}
+                              {r.estado === "listo" && sinImportes(r) && <span className="text-[11px] font-semibold text-red-600 max-w-xs">Bruto y neto en cero: no se envía a firmar.</span>}
                             </div>
                           </td>
                           <td className="px-4 py-3">
@@ -626,6 +667,11 @@ export const RecibosSueldoPage: React.FC = () => {
                               <button type="button" onClick={() => recibosSueldoAPI.descargarJsonDeRecibo(lote, r)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" title="Bajar el JSON de este recibo (datos, persona y texto leído)">
                                 <FontAwesomeIcon icon={faFileCode} />
                               </button>
+                              {sePuedeTildar(r) && (
+                                <button type="button" disabled={borrando || enviandoLote} onClick={() => eliminarRecibos([r])} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg disabled:opacity-50" title="Borrar este recibo de la sábana (no va)">
+                                  <FontAwesomeIcon icon={faTrash} />
+                                </button>
+                              )}
                               {sePuedeReleer(r) && (
                                 <button type="button" disabled={releyendo === r._id} onClick={() => releer(r)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg disabled:opacity-50" title="Volver a leer el PDF de este recibo (OCR a más resolución)">
                                   <FontAwesomeIcon icon={releyendo === r._id ? faSpinner : faRotateRight} spin={releyendo === r._id} />
@@ -661,7 +707,7 @@ export const RecibosSueldoPage: React.FC = () => {
         </Modal>
       )}
 
-      {eligiendoSabana && lotes && <ElegirSabana lotes={lotes} actual={loteId} onElegir={setLoteId} onClose={() => setEligiendoSabana(false)} />}
+      {eligiendoSabana && lotes && <ElegirSabana lotes={lotes} actual={loteId} onElegir={setLoteId} onClose={() => setEligiendoSabana(false)} onBorrar={(l) => void eliminarLote(l)} />}
 
       {asignando && lote && (
         <AsignarPersona
