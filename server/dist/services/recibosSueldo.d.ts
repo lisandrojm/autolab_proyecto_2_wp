@@ -22,7 +22,7 @@ export declare class ErrorRecibos extends Error {
 }
 /**
  * Los recibos que quedaron «Sin persona» sólo porque la persona no tenía contrato vigente (lotes subidos
- * antes del 13/11/2026): se les busca el último contrato y pasan a «Listo». Se llama al ver el lote.
+ * antes del 13/11/2026): se les busca el último contrato y pasan a «Listo», lo encuentren o no. Se llama al ver el lote.
  */
 export declare function completarContratos(lote: ILoteRecibosSueldo): Promise<boolean>;
 export declare function procesarSabana(tenantId: Types.ObjectId, subidoPor: string | undefined, nombreArchivo: string, buffer: Buffer, paginasPorRecibo?: number, txt?: {

@@ -13,7 +13,8 @@ import { DocumentoGenerado } from "../models/DocumentoGenerado.js";
 import { ReciboSueldoEnviado } from "../models/ReciboSueldoEnviado.js";
 import { agruparPaginas, leerRecibo, normalizarNombre } from "../utils/reciboDeSueldo.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
-import { getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
+import { Company } from "../models/Company.js";
+import { fechaISO, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
 import { nombreArchivoDocumento } from "./nomenclaturaService.js";
 import { getTenantDropboxConfig, uploadFile } from "./dropboxService.js";
 import { resolverCarpetaPorProposito } from "../utils/estadoCarpetas.js";
@@ -61,13 +62,15 @@ async function extraerPaginas(sabana, indices) {
         doc.addPage(p);
     return Buffer.from(await doc.save());
 }
-const SIN_CONTRATO = "La persona no tiene ningún contrato en ningún proyecto: no hay con qué nombrar el archivo. Cargale un contrato o elegí otra persona.";
+const SIN_CONTRATO = "Sin ningún contrato en ningún proyecto: se envía igual, pero el archivo sale sin proyecto ni fechas de contrato.";
 const fechaCorta = (iso) => (/^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : iso);
 /*
   SIN CONTRATO VIGENTE SE ENVÍA IGUAL (13/11/2026). El recibo de un mes llega cuando el contrato de esa
   persona ya terminó (jornaleros, contratos de un mes): antes quedaba «Sin persona» y no se podía enviar.
   Ahora va con su ÚLTIMO contrato (el de alta más reciente, en cualquier proyecto), que es el que da la
-  nomenclatura del archivo, y la fila lo avisa. Sólo queda sin enviar quien no tiene ningún contrato.
+  nomenclatura del archivo, y la fila lo avisa. Quien no tiene NINGÚN contrato también se envía: basta con
+  que el recibo tenga su persona (el nombre del archivo sale sin proyecto ni fechas, y la empresa se
+  toma del CUIT del empleador que trae el recibo). «Sin persona» queda sólo para eso: sin persona.
 */
 async function personaYContrato(tenantId, userId) {
     const vinculos = await UserProject.find({ userId }).lean();
@@ -86,39 +89,33 @@ async function personaYContrato(tenantId, userId) {
     if (!mejor) {
         for (const up of vinculos) {
             for (const [idx, c] of (up.contracts || []).entries()) {
-                const alta = String(c?.fecha_alta_contrato || "");
-                if (alta && (!mejor || alta > mejor.alta))
+                // Con `fechaISO`: hay altas guardadas como DD/MM/YYYY. Un contrato sin alta también sirve, si es lo único que hay.
+                const alta = fechaISO(c?.fecha_alta_contrato);
+                if (c && (!mejor || alta > mejor.alta))
                     mejor = { up, idx, alta };
             }
         }
         if (!mejor)
             return { userProjectId: null, projectId: null, contractIndex: null, nombreProyecto: "", aviso: SIN_CONTRATO };
         const baja = String(mejor.up.contracts[mejor.idx]?.fecha_baja_contrato || "");
-        aviso = `Sin contrato vigente: va con su último contrato${baja ? ` (terminó el ${fechaCorta(baja)})` : ""}.`;
+        aviso = `Sin contrato vigente: va con su último contrato${fechaISO(baja) ? ` (terminó el ${fechaCorta(fechaISO(baja))})` : ""}.`;
     }
     const proyecto = await Project.findOne({ _id: mejor.up.projectId, tenantId }).select("name").lean();
     return { userProjectId: mejor.up._id, projectId: mejor.up.projectId, contractIndex: mejor.idx, nombreProyecto: proyecto?.name || mejor.up.nombre_proyecto || "", aviso };
 }
 /**
  * Los recibos que quedaron «Sin persona» sólo porque la persona no tenía contrato vigente (lotes subidos
- * antes del 13/11/2026): se les busca el último contrato y pasan a «Listo». Se llama al ver el lote.
+ * antes del 13/11/2026): se les busca el último contrato y pasan a «Listo», lo encuentren o no. Se llama al ver el lote.
  */
 export async function completarContratos(lote) {
-    const pendientes = lote.recibos.filter((r) => r.estado === "sin_persona" && r.userId && !r.userProjectId);
+    const pendientes = lote.recibos.filter((r) => r.estado === "sin_persona" && r.userId);
     if (pendientes.length === 0 || lote.estadoLote === "leyendo")
         return false;
     let cambio = false;
     for (const r of pendientes) {
         const { aviso, ...contrato } = await personaYContrato(lote.tenantId, r.userId);
-        if (!contrato.userProjectId) {
-            if (r.error === aviso)
-                continue;
-            await LoteRecibosSueldo.updateOne({ _id: lote._id, "recibos._id": r._id, "recibos.estado": "sin_persona" }, { $set: { "recibos.$.error": aviso } });
-        }
-        else {
-            // Posicional y condicionado al estado: no pisa un recibo que entre tanto cambió.
-            await LoteRecibosSueldo.updateOne({ _id: lote._id, recibos: { $elemMatch: { _id: r._id, estado: "sin_persona" } } }, { $set: { "recibos.$.userProjectId": contrato.userProjectId, "recibos.$.projectId": contrato.projectId, "recibos.$.contractIndex": contrato.contractIndex, "recibos.$.nombreProyecto": contrato.nombreProyecto, "recibos.$.estado": "listo", "recibos.$.error": aviso } });
-        }
+        // Posicional y condicionado al estado: no pisa un recibo que entre tanto cambió.
+        await LoteRecibosSueldo.updateOne({ _id: lote._id, recibos: { $elemMatch: { _id: r._id, estado: "sin_persona" } } }, { $set: { "recibos.$.userProjectId": contrato.userProjectId, "recibos.$.projectId": contrato.projectId, "recibos.$.contractIndex": contrato.contractIndex, "recibos.$.nombreProyecto": contrato.nombreProyecto, "recibos.$.estado": "listo", "recibos.$.error": aviso } });
         cambio = true;
     }
     return cambio;
@@ -372,8 +369,8 @@ async function armarRecibos(lote, sabana, leidos) {
             contractIndex: contrato?.contractIndex ?? null,
             nombreProyecto: contrato?.nombreProyecto || "",
             asociadoPorNombre: porNombre,
-            estado: u && contrato?.userProjectId ? "listo" : "sin_persona",
-            error: u && !contrato?.userProjectId ? contrato?.aviso || SIN_CONTRATO : porNombre ? `${fuente} no trajo el CUIL: se asoció por apellido y nombre. Revisá que sea la persona antes de enviar.${contrato?.aviso ? ` ${contrato.aviso}` : ""}` : u && contrato?.aviso ? contrato.aviso : !g.datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "",
+            estado: u ? "listo" : "sin_persona",
+            error: porNombre ? `${fuente} no trajo el CUIL: se asoció por apellido y nombre. Revisá que sea la persona antes de enviar.${contrato?.aviso ? ` ${contrato.aviso}` : ""}` : u && contrato?.aviso ? contrato.aviso : !g.datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "",
         });
     }
     const periodo = [...periodos.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
@@ -431,8 +428,8 @@ export async function releerRecibo(lote, reciboId) {
         r.contractIndex = contrato?.contractIndex ?? null;
         r.nombreProyecto = contrato?.nombreProyecto || "";
         r.asociadoPorNombre = porNombre;
-        r.estado = u && contrato?.userProjectId ? "listo" : "sin_persona";
-        r.error = u && !contrato?.userProjectId ? contrato?.aviso || SIN_CONTRATO : porNombre ? `El OCR no leyó el CUIL: se asoció por apellido y nombre. Revisá que sea la persona antes de enviar.${contrato?.aviso ? ` ${contrato.aviso}` : ""}` : u && contrato?.aviso ? contrato.aviso : !datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "";
+        r.estado = u ? "listo" : "sin_persona";
+        r.error = porNombre ? `El OCR no leyó el CUIL: se asoció por apellido y nombre. Revisá que sea la persona antes de enviar.${contrato?.aviso ? ` ${contrato.aviso}` : ""}` : u && contrato?.aviso ? contrato.aviso : !datos.cuil ? "No se encontró un CUIL en el texto del recibo." : !u ? "No hay ninguna persona con ese CUIL en la plataforma." : "";
     }
     lote.markModified("recibos");
     await lote.save();
@@ -457,7 +454,7 @@ export async function asignarPersona(lote, reciboId, userId) {
     r.contractIndex = contrato.contractIndex;
     r.nombreProyecto = contrato.nombreProyecto;
     r.asignadoAMano = true;
-    r.estado = contrato.userProjectId ? "listo" : "sin_persona";
+    r.estado = "listo";
     r.error = contrato.aviso;
     lote.markModified("recibos");
     await lote.save();
@@ -504,16 +501,32 @@ export async function enviarAFirmar(lote, reciboIds, enviadoPor) {
     });
     return { enEnvio: ids.length };
 }
+/** La empresa empleadora por el CUIT que trae el recibo, para nombrar el archivo de quien no tiene contrato. */
+async function empresaDelRecibo(cuit) {
+    const d = String(cuit || "").replace(/\D/g, "");
+    if (d.length !== 11)
+        return null;
+    try {
+        return await Company.findOne({ cuit: { $in: [d, `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}`] } }).lean();
+    }
+    catch {
+        return null;
+    }
+}
 async function enviarEnSegundoPlano(lote, elegidos, cfg, carpeta, quien) {
     for (const r of elegidos) {
         const set = {};
         let ok = false;
         try {
-            const [user, up] = await Promise.all([User.findOne({ _id: r.userId, tenantId: lote.tenantId }).lean(), UserProject.findById(r.userProjectId).lean()]);
-            const contract = up?.contracts?.[r.contractIndex ?? -1];
-            if (!user || !up || !contract)
-                throw new Error("La persona o su contrato ya no están.");
-            const nombre = `${await nombreArchivoDocumento({ tenantId: lote.tenantId, tipo: "ReciboSueldo", user, up, contract, periodo: r.datos?.periodo || lote.periodo || undefined })}.pdf`;
+            const [user, up] = await Promise.all([User.findOne({ _id: r.userId, tenantId: lote.tenantId }).lean(), r.userProjectId ? UserProject.findById(r.userProjectId).lean() : null]);
+            // Sin contrato también sale (ver `personaYContrato`): el nombre queda sin proyecto ni fechas.
+            const contract = up?.contracts?.[r.contractIndex ?? -1] || null;
+            if (!user)
+                throw new Error("La persona ya no está.");
+            if (r.userProjectId && !contract)
+                throw new Error("El contrato de la persona ya no está: elegí de nuevo la persona del recibo.");
+            const empresa = contract ? undefined : await empresaDelRecibo(r.datos?.empleadorCuit);
+            const nombre = `${await nombreArchivoDocumento({ tenantId: lote.tenantId, tipo: "ReciboSueldo", user, up, contract, periodo: r.datos?.periodo || lote.periodo || undefined, ...(empresa ? { empresa } : {}) })}.pdf`;
             const buffer = fs.readFileSync(path.join(RAIZ_STORAGE, r.archivoUrl.replace(/^\/storage\//, "")));
             await uploadFile(String(lote.tenantId), cfg, `${carpeta}/${nombre}`, buffer);
             const codigo = leerAnclas(nombre).codigo;
