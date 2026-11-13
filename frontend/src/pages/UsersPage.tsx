@@ -28,7 +28,7 @@ import { UserFormModal } from '../components/users/UserFormModal';
 import { Card } from '../components/ui/Card';
 import { sweetAlert } from '../utils/sweetAlert';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faUserShield, faEdit, faTrash, faKey, faPlus, faLayerGroup, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faStethoscope, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faCheck, faBell, faSort, faSortUp, faSortDown, faLandmark, faCircleCheck, faTriangleExclamation, faSpinner, faPeopleGroup, faFileSignature, faStar } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faUserShield, faEdit, faTrash, faKey, faPlus, faLayerGroup, faCalendar, faBriefcase, faChevronLeft, faChevronRight, faBuilding, faIdCard, faTable, faGrip, faClock, faFileContract, faChevronDown, faChevronUp, faMapMarkerAlt, faUniversity, faPassport, faVenusMars, faGraduationCap, faCreditCard, faLock, faUmbrellaBeach, faInfoCircle, faLink, faCheck, faBell, faSort, faSortUp, faSortDown, faLandmark, faCircleCheck, faTriangleExclamation, faSpinner, faPeopleGroup, faFileSignature, faStar } from '@fortawesome/free-solid-svg-icons';
 import { RichTextViewer } from '../components/ui/RichTextEditor';
 import { terminosCondicionesAPI } from '../api/terminosCondiciones';
 import { getHelp, hasHelp } from '../data/help/helpContent';
@@ -189,7 +189,6 @@ export const UsersPage: React.FC = () => {
   const [nationalities, setNationalities] = useState<InfoItem[]>([]);
   const [educationLevels, setEducationLevels] = useState<InfoItem[]>([]);
   const [banks, setBanks] = useState<InfoItem[]>([]);
-  const [insuranceCompanies, setInsuranceCompanies] = useState<InfoItem[]>([]);
   /** Para resolver `metadata.sindicatoIds` a nombres en la ficha. */
   const [sindicatos, setSindicatos] = useState<SimpleCatalogItem[]>([]);
   const [contractTypes, setContractTypes] = useState<InfoItem[]>([]);
@@ -318,14 +317,13 @@ export const UsersPage: React.FC = () => {
 
   const fetchInfo = async () => {
     try {
-      const [g, dt, c, n, el, b, ic, ct, es] = await Promise.all([infoAPI.listByType('genero'), infoAPI.listByType('tipo-documento'), infoAPI.listByType('pais'), infoAPI.listByType('nacionalidad'), infoAPI.listByType('nivel-estudio'), infoAPI.listByType('banco'), infoAPI.listByType('obra-social'), infoAPI.listByType('contrato'), infoAPI.listByType('estado-empleado')]);
+      const [g, dt, c, n, el, b, ct, es] = await Promise.all([infoAPI.listByType('genero'), infoAPI.listByType('tipo-documento'), infoAPI.listByType('pais'), infoAPI.listByType('nacionalidad'), infoAPI.listByType('nivel-estudio'), infoAPI.listByType('banco'), infoAPI.listByType('contrato'), infoAPI.listByType('estado-empleado')]);
       setGenders(g);
       setDocumentTypes(dt);
       setCountries(c);
       setNationalities(n);
       setEducationLevels(el);
       setBanks(b);
-      setInsuranceCompanies(ic);
       /*
         Aparte del `Promise.all` de arriba y con su propio catch: es el único catálogo que puede no
         existir del otro lado —es nuevo—, y si entrara en el `all` un 404 suyo dejaría la pantalla de
@@ -1251,20 +1249,7 @@ export const UsersPage: React.FC = () => {
                       </div>
                     )}
 
-                    {/*
-                      SIEMPRE, con «Sin asignar» si no tiene. Estaba condicionado a `osId &&`, y con
-                      `osId: 0` —sin obra social— React dibujaba el 0 suelto, sin rótulo.
-                    */}
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                        <FontAwesomeIcon icon={faStethoscope} className="text-gray-300" />
-                        Obra Social
-                      </label>
-                      {(() => {
-                        const nombre = viewUser.metadata?.osId ? insuranceCompanies.find((ic) => ic.data.id === viewUser.metadata?.osId)?.name : '';
-                        return nombre ? <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{nombre}</p> : <p className="text-sm font-semibold text-gray-400 dark:text-gray-500">Sin asignar</p>;
-                      })()}
-                    </div>
+                    {/* Sin «Obra Social» (13/11/2026): se declara en el CONTRATO, no en la persona; el formulario ya no la pide. */}
 
                     {!!viewUser.metadata?.cuit && (
                       <div className="space-y-1">
