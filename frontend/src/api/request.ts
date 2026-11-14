@@ -10,6 +10,11 @@ export interface AttendanceRecordInput {
   replacementInTime?: string;
   replacementOutTime?: string;
   notes?: string;
+  scheduleInTime?: string;
+  scheduleOutTime?: string;
+  /** De qué área y turno es la fila: sólo cuando la persona va más de una vez en el parte (dos contratos vigentes en turnos distintos). */
+  areaId?: any;
+  shiftId?: any;
 }
 
 export interface AttendanceRecord extends AttendanceRecordInput {

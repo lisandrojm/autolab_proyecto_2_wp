@@ -187,6 +187,22 @@ export interface AreaShiftMember {
   estadoContrato: string;
   fechaAlta: string;
   fechaBaja: string;
+  /**
+   * Sólo quien tiene MÁS DE UN CONTRATO VIGENTE A LA VEZ EN TURNOS DISTINTOS (14/11/2026): qué combinaciones
+   * área × turno × sede pone cada contrato, con su nombre, fechas y horario. El reporte de asistencia lista a
+   * la persona una vez por contrato, y Equipos muestra en cada turno el contrato que corresponde.
+   */
+  porContrato?: TurnosDeUnContrato[];
+}
+
+export interface TurnosDeUnContrato {
+  claves: string[];
+  nombreContrato: string;
+  estadoContrato: string;
+  fechaAlta: string;
+  fechaBaja: string;
+  horaInicio: string;
+  horaFin: string;
 }
 
 export interface AreaShiftCountsResponse {

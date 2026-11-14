@@ -297,7 +297,9 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
     for (const persona of personas || []) {
       for (const clave of persona.claves || []) {
         const lista = m.get(clave) || [];
-        lista.push(persona);
+        // Quien tiene dos contratos vigentes en turnos distintos: en cada turno, el contrato que lo pone ahí (14/11/2026).
+        const delTurno = persona.porContrato?.find((c) => c.claves.includes(clave));
+        lista.push(delTurno ? { ...persona, nombreContrato: delTurno.nombreContrato, estadoContrato: delTurno.estadoContrato, fechaAlta: delTurno.fechaAlta, fechaBaja: delTurno.fechaBaja } : persona);
         m.set(clave, lista);
       }
     }

@@ -77,6 +77,9 @@ const attendanceSchema = z.object({
     outTime: z.string().optional(),
     scheduleInTime: z.string().optional(),
     scheduleOutTime: z.string().optional(),
+    // De qué área y turno es la fila: sólo cuando la persona va más de una vez en el parte (ver el modelo).
+    areaId: z.string().refine((v) => mongoose.Types.ObjectId.isValid(v)).optional(),
+    shiftId: z.string().refine((v) => mongoose.Types.ObjectId.isValid(v)).optional(),
 });
 const createReportSchema = z.object({
     date: z.string(),
@@ -514,7 +517,7 @@ router.get("/asistencias-del-periodo", async (req, res) => {
             "comments " +
             "attendance.employeeId attendance.status attendance.absenceReason attendance.notes " +
             "attendance.overtimeHours attendance.overtimeHours50 attendance.overtimeHours100 " +
-            "attendance.inTime attendance.outTime attendance.scheduleInTime attendance.scheduleOutTime")
+            "attendance.inTime attendance.outTime attendance.scheduleInTime attendance.scheduleOutTime attendance.shiftId")
             .lean();
         /*
           Los nombres se resuelven con un `find` aparte y no con un `populate`: son unas pocas decenas de
@@ -599,7 +602,8 @@ router.get("/asistencias-del-periodo", async (req, res) => {
                     ...(() => {
                         if (p.shiftId)
                             return {};
-                        const t = turnoPorHorario(p, a);
+                        // La fila que dice su turno (quien va dos veces en el parte) no necesita deducirlo del horario.
+                        const t = (a.shiftId && turnoPorId.get(String(a.shiftId))) || turnoPorHorario(p, a);
                         if (t)
                             return { turnoPorHorario: { name: t.name, startTime: t.startTime || "", endTime: t.endTime || "" } };
                         return a.scheduleInTime && a.scheduleOutTime ? { horario: `${a.scheduleInTime} - ${a.scheduleOutTime}` } : {};

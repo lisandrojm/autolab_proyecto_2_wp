@@ -22,6 +22,13 @@ const attendanceRecordSchema = new Schema({
     replacementOutTime: { type: String }, // Real Exit Time for Replacement
     scheduleInTime: { type: String }, // Expected Entry
     scheduleOutTime: { type: String }, // Expected Exit
+    /*
+      DE QUÉ ÁREA Y TURNO ES ESTA FILA (14/11/2026). Opcionales: sólo las lleva quien figura más de una vez
+      en el mismo parte —dos contratos vigentes a la vez, uno a la Mañana y otro a la Tarde—, para saber
+      cuál es cuál. El resto de las filas sigue como siempre (el turno es el del parte, o sale del horario).
+    */
+    areaId: { type: Schema.Types.ObjectId, ref: "Area" },
+    shiftId: { type: Schema.Types.ObjectId, ref: "Shift" },
     notes: { type: String },
 }, { _id: true });
 const requestSchema = new Schema({

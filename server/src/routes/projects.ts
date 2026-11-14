@@ -44,7 +44,7 @@ import { claveAreaTurnoDelMiembro } from "../utils/areaTurno.js";
 import { partirClaveAreaTurno, sedeDe, sedePrincipalDe, pendientesDeSede, idDe as idDeArea } from "../compartido/areaTurno.js";
 import { ponerSedeEnArea } from "../services/sedeDeArea.js";
 import { llevarAreasAlContratoQueRige } from "../services/areasDelContratoQueRige.js";
-import { equipoSegunContratos, superponerContratos } from "../services/equipoSegunContratos.js";
+import { equipoSegunContratos, superponerContratos, turnosPorContrato } from "../services/equipoSegunContratos.js";
 import { FRECUENCIAS_MINUTOS, MAX_INTENTOS_AUTOMATICOS, configDe, proximaDeLaCola, validarConfig, yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { Tenant } from "../models/Tenant.js";
 import { LoteAltasError, bloqueadasPorVigencia } from "../services/arca/validarLoteAltas.js";
@@ -1345,6 +1345,11 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
         sedeContrato: sedeDe(contratoActivo?.sede_id),
         // Áreas donde la persona está asignada pero FALTA ELEGIR SEDE (el área tiene varias): la Jerarquía las muestra aparte.
         pendientesSede: pendientesDeSede(assignments, ctxSede),
+        // Sólo quien tiene varios contratos vigentes en turnos distintos: qué turnos pone cada uno (14/11/2026).
+        ...(() => {
+          const porContrato = turnosPorContrato(contratoActivo, (filas) => claveAreaTurnoDelMiembro(filas, ctxSede));
+          return porContrato ? { porContrato } : {};
+        })(),
       });
     }
 

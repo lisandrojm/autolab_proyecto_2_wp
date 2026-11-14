@@ -173,3 +173,47 @@ export function repartirAreas(nuevas: any[], vigentes: any[][], iRige: number): 
     return combinacionesDe(vigentes[i]).length > 0 ? aFilas(quedan[iRige]) : [];
   });
 }
+
+/** Lo que se sabe de uno de los contratos vigentes a la vez, con las combinaciones área × turno × sede que pone. */
+export interface TurnosDeUnContrato {
+  claves: string[];
+  nombreContrato: string;
+  estadoContrato: string;
+  fechaAlta: string;
+  fechaBaja: string;
+  horaInicio: string;
+  horaFin: string;
+}
+
+/**
+ * POR CONTRATO, QUÉ TURNOS PONE (14/11/2026). Para quien tiene más de un contrato vigente a la vez EN
+ * TURNOS DISTINTOS: el reporte de asistencia lo lista una vez por contrato —a la Mañana con el plazo fijo y
+ * a la Tarde con el adicional, cada uno con su horario— y Equipos muestra en cada turno el contrato que
+ * corresponde. `clavesDe` arma las claves de las filas de un contrato (la pantalla pasa `clavesDelMiembro`
+ * con las sedes del proyecto).
+ *
+ * Devuelve `null` cuando no hay nada que separar: un solo vigente, o varios que dicen el mismo turno (ahí la
+ * persona va una sola vez, como siempre). Los contratos con exactamente las mismas combinaciones se juntan
+ * en uno (manda el que rige, que va primero). Los que no tienen área no cuentan.
+ */
+export function turnosPorContrato(contrato: any, clavesDe: (filas: any[]) => Iterable<string>): TurnosDeUnContrato[] | null {
+  const varios = vigentesALaVez(contrato);
+  if (!varios) return null;
+  const grupos = new Map<string, TurnosDeUnContrato>();
+  for (const v of varios) {
+    const claves = [...clavesDe(filasDeArea(v))].sort();
+    if (!claves.length) continue;
+    const firma = claves.join("|");
+    if (grupos.has(firma)) continue;
+    grupos.set(firma, {
+      claves,
+      nombreContrato: String(v?.nombre_contrato || ""),
+      estadoContrato: String(v?.nombre_estado_empleado || ""),
+      fechaAlta: String(v?.fecha_alta_contrato || ""),
+      fechaBaja: String(v?.fecha_baja_contrato || ""),
+      horaInicio: String(v?.hora_inicio || ""),
+      horaFin: String(v?.hora_fin || ""),
+    });
+  }
+  return grupos.size > 1 ? [...grupos.values()] : null;
+}

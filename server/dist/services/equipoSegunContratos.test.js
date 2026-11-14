@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { superponerContratos, filaSegunContratos, areasDelContrato, repartirAreas, unirAreas } from "./equipoSegunContratos.js";
+import { superponerContratos, filaSegunContratos, areasDelContrato, repartirAreas, unirAreas, turnosPorContrato } from "./equipoSegunContratos.js";
+import { clavesDelMiembro } from "../compartido/areaTurno.js";
 const TECNICA = "64a000000000000000000001";
 const MANANA = "64b000000000000000000001";
 const TARDE = "64b000000000000000000002";
@@ -99,5 +100,27 @@ describe("varios contratos vigentes a la vez: el área del equipo es la suma", (
         const pedido = [fila(TECNICA, [MANANA, NOCHE]), fila(EDICION, [TARDE], 2)];
         const firma = (filas) => filas.flatMap((x) => x.shiftIds.map((t) => `${x.areaId}|${t}|${x.sedeId}`)).sort();
         assert.deepEqual(firma(unirAreas(repartirAreas(pedido, vigentes, 0))), firma(pedido));
+    });
+});
+// El reporte de asistencia lista a la persona una vez por contrato, y Equipos muestra en cada turno el suyo.
+describe("qué turnos pone cada contrato vigente", () => {
+    const claves = (filas) => clavesDelMiembro(filas);
+    const plazoFijo = { _indice: 0, nombre_contrato: "Plazo fijo 6x6", nombre_estado_empleado: "Firma enviada", fecha_alta_contrato: "2026-11-01", fecha_baja_contrato: "2026-11-30", hora_inicio: "06:00", hora_fin: "12:00", areaShiftAssignments: [{ areaId: TECNICA, shiftIds: [MANANA], sedeId: 1 }] };
+    const adicional = { _indice: 1, nombre_contrato: "Servicios Adicional", nombre_estado_empleado: "Disponible", fecha_alta_contrato: "2026-11-01", fecha_baja_contrato: "2026-11-23", hora_inicio: "12:00", hora_fin: "18:00", areaShiftAssignments: [{ areaId: TECNICA, shiftIds: [TARDE], sedeId: 1 }] };
+    it("Mañana con el plazo fijo y Tarde con el adicional → uno por contrato, con su horario; primero el que rige", () => {
+        const r = turnosPorContrato({ ...adicional, _vigentes: [plazoFijo, adicional] }, claves);
+        assert.deepEqual(r.map((c) => [c.nombreContrato, c.claves, c.horaInicio, c.horaFin]), [
+            ["Servicios Adicional", [`${TECNICA}::${TARDE}::s1`], "12:00", "18:00"],
+            ["Plazo fijo 6x6", [`${TECNICA}::${MANANA}::s1`], "06:00", "12:00"],
+        ]);
+        assert.equal(r[1].estadoContrato, "Firma enviada");
+        assert.equal(r[1].fechaBaja, "2026-11-30");
+    });
+    it("un solo vigente, o dos que dicen el mismo turno → nada que separar: va una vez, como siempre", () => {
+        assert.equal(turnosPorContrato(adicional, claves), null);
+        assert.equal(turnosPorContrato({ ...adicional, _vigentes: [{ ...plazoFijo, areaShiftAssignments: adicional.areaShiftAssignments }, adicional] }, claves), null);
+    });
+    it("un vigente sin área no cuenta", () => {
+        assert.equal(turnosPorContrato({ ...adicional, _vigentes: [{ _indice: 0, nombre_contrato: "Viejo" }, adicional] }, claves), null);
     });
 });

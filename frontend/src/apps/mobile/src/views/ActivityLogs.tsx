@@ -27,6 +27,7 @@ import { esContratoVigente, esFechaBajaVigente, getContratoActivo } from "../../
 import { fechaDeCalendario } from "../../../../utils/fechas";
 import { coordinaAreas, MOBILE_ACTIVITY_COMPLIANCE } from "../../../../utils/permisosMobile";
 import { useAuthStore } from "../../../../stores/authStore";
+import { filasPorContrato, idReal, novedadesASuFila, type TurnoDeFila } from "../utils/filasPorContrato";
 import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
 
 /** De quién son las novedades del historial: las que cargó la persona, o las de su equipo. */
@@ -63,6 +64,12 @@ interface EmployeeOption {
     /** Fecha de inicio del contrato que rige hoy (YYYY-MM-DD): es lo que ordena el reporte. */
     contractStartDate?: string;
   }>;
+  /**
+   * Sólo en las filas de quien va MÁS DE UNA VEZ en el reporte (dos contratos vigentes en turnos distintos,
+   * ver `utils/filasPorContrato.ts`): el área y turno de ESTA fila y el horario del contrato que la pone.
+   * Esas filas llevan un id propio; `idReal` da el de la persona.
+   */
+  turnoDeFila?: TurnoDeFila;
 }
 
 /** Normaliza `contract.areaShiftAssignments` (poblado o no) a `{areaId, shiftIds}[]` de strings. */
@@ -117,6 +124,9 @@ const idDe = (ref: unknown): string | undefined => {
 };
 
 interface LocalAttendanceRecord {
+  /** De un parte guardado: el turno y el horario de la fila, para devolverla a la fila que corresponde (ver `utils/filasPorContrato.ts`). */
+  filaShiftId?: string;
+  filaScheduleIn?: string;
   tempId: string;
   employeeId: string;
   employeeName: string;
@@ -219,6 +229,8 @@ const getProjectEndTime = (project: Project, dateStr: string): string => {
 };
 
 const getEmployeeEndTime = (project: Project, employeeId: string, dateStr: string, employee?: EmployeeOption): string => {
+  // La fila de quien va más de una vez: el horario de ESE contrato (ver `utils/filasPorContrato.ts`).
+  if (employee?.turnoDeFila?.endTime) return employee.turnoDeFila.endTime;
   if (employee && employee.metadataProjects) {
     const projMeta = employee.metadataProjects.find((m) => String(m.projectId) === String(project._id));
     if (projMeta && projMeta.contractEndTime) {
@@ -240,7 +252,7 @@ const getEmployeeEndTime = (project: Project, employeeId: string, dateStr: strin
   const userConfig = project.teamConfig.find((c) => {
     // Mismo caso: un `teamConfig` que referencia a alguien borrado llega poblado en null.
     const configUserId = idDe(c.userId);
-    return String(configUserId) === String(employeeId);
+    return String(configUserId) === idReal(employeeId);
   });
 
   if (userConfig && userConfig.useProjectSchedule === false && userConfig.endTime) {
@@ -300,6 +312,8 @@ const getProjectStartTime = (project: Project, dateStr: string): string => {
 };
 
 const getEmployeeStartTime = (project: Project, employeeId: string, dateStr: string, employee?: EmployeeOption): string => {
+  // La fila de quien va más de una vez: el horario de ESE contrato (ver `utils/filasPorContrato.ts`).
+  if (employee?.turnoDeFila?.startTime) return employee.turnoDeFila.startTime;
   if (employee && employee.metadataProjects) {
     const projMeta = employee.metadataProjects.find((m) => String(m.projectId) === String(project._id));
     if (projMeta && projMeta.contractStartTime) {
@@ -321,7 +335,7 @@ const getEmployeeStartTime = (project: Project, employeeId: string, dateStr: str
   const userConfig = project.teamConfig.find((c) => {
     // Mismo caso: un `teamConfig` que referencia a alguien borrado llega poblado en null.
     const configUserId = idDe(c.userId);
-    return String(configUserId) === String(employeeId);
+    return String(configUserId) === idReal(employeeId);
   });
 
   if (userConfig && userConfig.useProjectSchedule === false && userConfig.startTime) {
@@ -435,6 +449,16 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
   const [showForm, setShowForm] = useState(false);
 
   const resolveEmployeeAreaAndShift = (emp: EmployeeOption) => {
+    // La fila de quien va más de una vez ya sabe de qué área y turno es (ver `utils/filasPorContrato.ts`).
+    if (emp.turnoDeFila) {
+      const { areaId: aId, shiftId: sId } = emp.turnoDeFila;
+      return {
+        areaId: aId,
+        shiftId: sId,
+        areaName: allAreas.find((a) => String(a._id || (a as any).id) === aId)?.name || "",
+        shiftName: allShifts.find((t) => String(t._id || (t as any).id) === sId)?.name || "",
+      };
+    }
     let areaId = selectedAreaId || "";
     let shiftId = selectedShiftId || "";
 
@@ -1002,6 +1026,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
   };
 
   const showVacationInfo = (empId: string, empName: string, e?: React.MouseEvent) => {
+    empId = idReal(empId);
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -1013,6 +1038,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
   };
 
   const renderVacationBadge = (empId: string, empName: string) => {
+    empId = idReal(empId);
     const activeVac = getUserActiveVacation(empId);
     if (!activeVac) return null;
     const dateRangeStr = `Vac: desde ${formatDateString(activeVac.startDate)} hasta ${formatDateString(activeVac.endDate)}`;
@@ -1591,7 +1617,36 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
     // Pre-compute sort keys for all filtered employees (avoids calling resolveEmployeeAreaAndShift in comparator)
     const empSortKeys = new Map<string, { shiftOrder: number; shiftName: string }>();
     
-    for (const emp of filtered) {
+    /*
+      UNA FILA POR CONTRATO para quien tiene varios vigentes a la vez en turnos distintos (ver `utils/filasPorContrato.ts`).
+      El server dice qué turnos pone cada contrato (`porContrato`); acá va una fila por cada uno que entra en
+      lo que se está reportando —el área/turno elegido, o los que coordino—, con el horario de ese contrato.
+      El id de la fila no depende de lo elegido arriba: cambiar de «Todas» a un turno no pierde lo cargado.
+    */
+    const enAlcance = (k: string): boolean => {
+      if (selectedAreaId) {
+        const c = partirClaveAreaTurno(k);
+        return c.areaId === String(selectedAreaId) && (!selectedShiftId || c.shiftId === String(selectedShiftId)) && (!acotadoAMisFilas || misClaves.has(k));
+      }
+      return !acotadoAMisFilas || misClaves.has(k);
+    };
+    const filas: EmployeeOption[] = filtered.flatMap((e) => {
+      const propias = filasPorContrato(String(e.id), estadoEquipo?.get(String(e.id))?.porContrato, enAlcance, (shiftId) => allShifts.find((t) => String(t._id || (t as any).id) === shiftId));
+      if (propias.length === 0) return [e];
+      return propias.map(({ id, turnoDeFila, contrato: c }): EmployeeOption => ({
+        ...e,
+        id,
+        turnoDeFila,
+        // Lo que la pantalla muestra del contrato (nombre, inicio, horario) es lo de ESE contrato.
+        metadataProjects: e.metadataProjects?.map((m) =>
+          String(m.projectId) === String(selectedProjectId)
+            ? { ...m, nombreContrato: c.nombreContrato || m.nombreContrato, contractStartDate: String(c.fechaAlta || "").slice(0, 10) || m.contractStartDate, contractStartTime: turnoDeFila.startTime || m.contractStartTime, contractEndTime: turnoDeFila.endTime || m.contractEndTime }
+            : m,
+        ),
+      }));
+    });
+
+    for (const emp of filas) {
       const resolved = resolveEmployeeAreaAndShift(emp);
       let shiftOrder = 99999;
       let shiftName = resolved.shiftName || "";
@@ -1643,7 +1698,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
       empSortKeys.set(emp.id, { shiftOrder, shiftName });
     }
 
-    const sorted = [...filtered].sort((a, b) => {
+    const sorted = [...filas].sort((a, b) => {
       const keyA = empSortKeys.get(a.id) || { shiftOrder: 99999, shiftName: "" };
       const keyB = empSortKeys.get(b.id) || { shiftOrder: 99999, shiftName: "" };
 
@@ -1671,6 +1726,17 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
 
     return sorted;
   }, [employees, selectedProjectId, selectedAreaId, selectedShiftId, myCoordinatedCombinations, profile, selectedProject, allShifts, estadoEquipo, isMyAssignment]);
+
+  /*
+    AL EDITAR UN PARTE GUARDADO, las novedades llegan con el id de la persona. Si esa persona va más de una
+    vez (ver `utils/filasPorContrato.ts`), cada novedad se devuelve a su fila: la del turno que dice la fila guardada, o la
+    del horario; si el parte es de antes de este cambio y no dice nada, a la primera.
+  */
+  useEffect(() => {
+    if (entries.length === 0) return;
+    const nuevas = novedadesASuFila(entries, projectEmployees);
+    if (nuevas) setEntries(nuevas);
+  }, [projectEmployees, entries]);
 
   const isWorkDay = useMemo(() => {
     if (!selectedProject) return true;
@@ -1976,7 +2042,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
     if (!selectedProjectId) return [];
     return employees.filter((e) => {
       // Exclude if already in the checklist (projectEmployees)
-      const isAlreadyChecklist = projectEmployees.some((pe) => pe.id === e.id);
+      const isAlreadyChecklist = projectEmployees.some((pe) => idReal(pe.id) === e.id);
       if (isAlreadyChecklist) return false;
       return true;
     });
@@ -2410,11 +2476,14 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
         // Calculate schedule times for THIS day
         const schedIn = proj ? getEmployeeStartTime(proj, emp.id, reportDate, emp) : undefined;
         const schedOut = proj ? getEmployeeEndTime(proj, emp.id, reportDate, emp) : undefined;
+        // De qué área y turno es la fila: sólo para quien va más de una vez (ver `utils/filasPorContrato.ts`).
+        const deLaFila = emp.turnoDeFila ? { areaId: emp.turnoDeFila.areaId || undefined, shiftId: emp.turnoDeFila.shiftId || undefined } : {};
 
         if (entry) {
           // It's an anomaly or overtime
           attendance.push({
-            employeeId: entry.employeeId,
+            ...deLaFila,
+            employeeId: idReal(entry.employeeId),
             status: entry.typeName.toLowerCase().includes("horas extra") ? "present" : "absent",
             absenceReason: entry.typeName.toLowerCase().includes("horas extra") ? undefined : entry.typeName,
             replacementId: entry.replacementId,
@@ -2436,7 +2505,8 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
           // It's a standard present day (Virtual became Real/Persisted)
           if (hasActivity === false || (hasActivity === true && !entries.find((e) => e.employeeId === emp.id))) {
             attendance.push({
-              employeeId: emp.id,
+              ...deLaFila,
+              employeeId: idReal(emp.id),
               status: "present",
               overtimeHours: 0,
               overtimeHours50: 0,
@@ -2456,7 +2526,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
         const schedOut = proj && emp ? getEmployeeEndTime(proj, entry.employeeId, reportDate, emp) : undefined;
 
         attendance.push({
-          employeeId: entry.employeeId,
+          employeeId: idReal(entry.employeeId),
           status: "present",
           absenceReason: entry.typeName || "Presente (Adicional)",
           replacementId: entry.replacementId,
@@ -2587,6 +2657,8 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
             replacementInTime: att.replacementInTime,
             replacementOutTime: att.replacementOutTime,
             notes: att.notes,
+            filaShiftId: idDe(att.shiftId) || undefined,
+            filaScheduleIn: att.scheduleInTime || undefined,
           };
         })
         .filter((entry) => entry.typeName !== "Presente" || (entry.overtimeHours || 0) > 0);
@@ -5799,7 +5871,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
                 return matchesStatus && matchesContract;
               })
             : [];
-          const availableEmployees = filteredByProject.filter((e) => (replacementTargetEmpId !== null ? e.id !== replacementTargetEmpId : selectedEmployee ? e.id !== selectedEmployee.id : true));
+          const availableEmployees = filteredByProject.filter((e) => (replacementTargetEmpId !== null ? e.id !== idReal(replacementTargetEmpId) : selectedEmployee ? e.id !== idReal(selectedEmployee.id) : true));
 
           let results = availableEmployees;
 
@@ -5918,7 +5990,7 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
                     return matchesStatus && matchesContract;
                   })
                 : [];
-              const availableEmployees = filteredByProject.filter((e) => (replacementTargetEmpId !== null ? e.id !== replacementTargetEmpId : selectedEmployee ? e.id !== selectedEmployee.id : true));
+              const availableEmployees = filteredByProject.filter((e) => (replacementTargetEmpId !== null ? e.id !== idReal(replacementTargetEmpId) : selectedEmployee ? e.id !== idReal(selectedEmployee.id) : true));
 
               let results = availableEmployees;
 
