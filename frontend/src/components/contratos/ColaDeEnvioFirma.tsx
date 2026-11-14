@@ -111,6 +111,21 @@ export const ColaDeEnvioFirma: React.FC<{ vista: BotCola; actual: string | null;
     else n.add(codigo);
     return n;
   });
+  /*
+    MARCAR TODO (14/11/2026): la casilla del encabezado marca TODA la cola —las páginas que no se ven
+    también—, o sólo lo que coincide con el filtro si hay uno escrito. Con todo marcado, desmarca eso mismo
+    y deja lo demás como estaba. A medias (algunos sí, otros no) se ve con la raya.
+  */
+  const marcadosDeLaLista = useMemo(() => filtrados.filter((x) => marcados.has(x.codigo)).length, [filtrados, marcados]);
+  const todosMarcados = filtrados.length > 0 && marcadosDeLaLista === filtrados.length;
+  const alternarTodos = () => setMarcados((s) => {
+    const n = new Set(s);
+    for (const x of filtrados) {
+      if (todosMarcados) n.delete(x.codigo);
+      else n.add(x.codigo);
+    }
+    return n;
+  });
 
   if (!r) return null;
   const btn = "inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40";
@@ -150,13 +165,34 @@ export const ColaDeEnvioFirma: React.FC<{ vista: BotCola; actual: string | null;
             )}
             {moviendo && <FontAwesomeIcon icon={faSpinner} spin className="text-gray-400" />}
           </div>
+          {/* Lo marcado puede estar en otra página o fuera del filtro: se dice cuánto hay, para no enviar de más sin verlo. */}
+          {marcados.size > 0 && (
+            <p className="text-[11px] text-gray-600 dark:text-gray-300">
+              <strong>{marcados.size}</strong> marcado{marcados.size === 1 ? "" : "s"} de {items.length}
+              {marcados.size > marcadosDeLaLista || paginas > 1 ? " (incluye los que no se ven en esta página)" : ""} ·{" "}
+              <button type="button" disabled={bloqueada} onClick={() => setMarcados(new Set())} className="font-semibold text-blue-600 hover:underline disabled:opacity-40 dark:text-blue-400">
+                Desmarcar todo
+              </button>
+            </p>
+          )}
           {items.length === 0 ? (
             <p className="py-2 text-xs text-gray-500">La cola está vacía. Se arma desde la lista: tildá y «Enviar a la firma», o «Encolar todo lo elegible».</p>
           ) : (
             <TablaConEncabezadoFijo className="rounded border border-gray-200 dark:border-gray-700" tabla="min-w-full text-xs">
               <thead className="bg-gray-50 text-[10px] uppercase text-gray-500 dark:bg-gray-900/40">
                 <tr>
-                  <th className="w-6 px-2 py-1.5" />
+                  <th className="w-6 px-2 py-1.5 text-left">
+                    <input
+                      type="checkbox"
+                      disabled={bloqueada || filtrados.length === 0}
+                      checked={todosMarcados}
+                      ref={(el) => { if (el) el.indeterminate = marcadosDeLaLista > 0 && !todosMarcados; }}
+                      onChange={alternarTodos}
+                      title={`${todosMarcados ? "Desmarcar" : "Marcar"} ${filtro.trim() ? `los ${filtrados.length} que coinciden con el filtro` : `los ${filtrados.length} de la cola`}${paginas > 1 ? " (todas las páginas)" : ""}`}
+                      aria-label={todosMarcados ? "Desmarcar todos" : "Marcar todos"}
+                      className="rounded border-gray-300"
+                    />
+                  </th>
                   <th className="w-8 px-2 py-1.5 text-left">#</th>
                   <th className="px-2 py-1.5 text-left">Documento</th>
                   <th className="px-2 py-1.5 text-left">Firmante</th>
