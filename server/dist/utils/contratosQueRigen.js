@@ -65,6 +65,11 @@ const CAMPOS_BASE = ["fecha_alta_contrato", "fecha_baja_contrato", "nombre_estad
  *
  * `_indice` es la posición en el array del UserProject —la que esperan editar y descargar— y `_total`
  * cuántos contratos tiene la persona en ese proyecto, que es lo que muestra la columna CONTRATOS.
+ *
+ * `_vigentes` (14/11/2026) viaja SÓLO cuando la persona tiene más de un contrato vigente hoy en el proyecto:
+ * de cada uno, su posición, sus fechas, su nombre y su área/turno. El área del equipo es la suma de todos
+ * (ver `services/equipoSegunContratos.ts`): con «el que rige» solo, quien tenía un contrato a la Mañana y
+ * otro a la Tarde desaparecía de uno de los dos turnos. Son pocos (22 personas el 14/11), así que no pesa.
  */
 export async function contratosQueRigenDelProyecto(projectId, hoy, camposExtra = []) {
     const campos = [...new Set([...CAMPOS_BASE, ...camposExtra])];
@@ -132,6 +137,32 @@ export async function contratosQueRigenDelProyecto(projectId, hoy, camposExtra =
                 userId: 1,
                 indice: "$elegido.i",
                 total: { $size: { $ifNull: ["$contracts", []] } },
+                vigentes: {
+                    $cond: [
+                        { $gt: [{ $size: "$vigentes" }, 1] },
+                        {
+                            $map: {
+                                input: "$vigentes",
+                                as: "k",
+                                in: {
+                                    $let: {
+                                        vars: { c: { $arrayElemAt: ["$contracts", "$$k.i"] } },
+                                        in: {
+                                            _indice: "$$k.i",
+                                            fecha_alta_contrato: "$$c.fecha_alta_contrato",
+                                            fecha_baja_contrato: "$$c.fecha_baja_contrato",
+                                            nombre_contrato: "$$c.nombre_contrato",
+                                            areaShiftAssignments: "$$c.areaShiftAssignments",
+                                            areaId: "$$c.areaId",
+                                            shiftId: "$$c.shiftId",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        "$$REMOVE",
+                    ],
+                },
                 contrato: {
                     $cond: [
                         { $eq: ["$elegido", null] },
@@ -147,7 +178,7 @@ export async function contratosQueRigenDelProyecto(projectId, hoy, camposExtra =
             },
         },
     ]);
-    return new Map(filas.map((f) => [String(f.userId), f.contrato ? { ...f.contrato, _indice: f.indice, _total: f.total } : null]));
+    return new Map(filas.map((f) => [String(f.userId), f.contrato ? { ...f.contrato, _indice: f.indice, _total: f.total, ...(Array.isArray(f.vigentes) && f.vigentes.length > 1 ? { _vigentes: f.vigentes } : {}) } : null]));
 }
 /**
  * EL CONTRATO QUE RIGE DE CADA PERSONA, MIRANDO TODOS SUS PROYECTOS.

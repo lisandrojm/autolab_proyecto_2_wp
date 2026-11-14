@@ -3,6 +3,7 @@ import { User } from "../models/User.js";
 import { idDe, sedeDe } from "../compartido/areaTurno.js";
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { hoyArgentina } from "../utils/contratoVigencia.js";
+import { areasDelContrato } from "./equipoSegunContratos.js";
 /**
  * PONERLE LA SEDE A LAS ASIGNACIONES DE UN ÁREA (área × sede explícita, 18/10/2026).
  *
@@ -27,14 +28,17 @@ export async function ponerSedeEnArea(tenantObjectId, project, areaId, sedeId, o
         return 0;
     const config = project.teamConfig || [];
     const porUsuario = new Map(config.map((c) => [String(c.userId), c]));
-    // Sólo hace falta el contrato de quien no tiene fila en `teamConfig` (una fila vacía es «sin área»).
-    const sinPropias = ids.filter((id) => !porUsuario.get(id));
-    const contratoDe = sinPropias.length > 0 ? await contratosQueRigenDelProyecto(String(project._id), hoyArgentina()) : new Map();
+    /*
+      Se parte del área que el equipo MUESTRA: la de los contratos vigentes de cada uno (14/11/2026, ver
+      `services/equipoSegunContratos.ts`), y la fila guardada sólo para quien no tiene área en ningún contrato.
+      Partiendo de la fila guardada, a quien tiene dos contratos vigentes en turnos distintos se le perdía uno.
+    */
+    const contratoDe = await contratosQueRigenDelProyecto(String(project._id), hoyArgentina());
     let cambiadas = 0;
     for (const id of ids) {
         const entrada = porUsuario.get(id);
         const propias = entrada?.areaShiftAssignments || [];
-        const base = entrada ? propias : contratoDe.get(id)?.areaShiftAssignments || [];
+        const base = areasDelContrato(contratoDe.get(id)) || propias;
         if (!base.some((a) => idDe(a?.areaId) === areaId))
             continue;
         let cambio = false;

@@ -12,6 +12,10 @@ import { Types } from "mongoose";
  * domicilio de ARCA). Los contratos no tienen `_id` en los viejos, así que se escribe por posición, pero
  * condicionado a que en esa posición siga estando el mismo contrato (misma alta y baja).
  *
+ * VARIOS CONTRATOS VIGENTES A LA VEZ (14/11/2026): el equipo muestra la suma de todos, así que lo que llega
+ * de ahí se reparte entre ellos con `repartirAreas` —cada uno conserva lo suyo, lo nuevo va al que rige— en
+ * vez de copiarle la suma entera al que rige (un contrato de la Tarde terminaría diciendo Mañana y Tarde).
+ *
  * Devuelve cuántos contratos cambió.
  */
 export declare function llevarAreasAlContratoQueRige(projectId: string | Types.ObjectId, asignacionesPorUsuario: Map<string, any[]>): Promise<number>;

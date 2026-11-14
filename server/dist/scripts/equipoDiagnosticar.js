@@ -5,6 +5,9 @@ import UserProject from "../models/UserProject.js";
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { esContratoVigente, hoyArgentina } from "../utils/contratoVigencia.js";
 import { firmaDeAreas, tieneRol } from "../compartido/configDelEquipo.js";
+import { areasDelContrato, vigentesALaVez } from "../services/equipoSegunContratos.js";
+/** El área que el equipo muestra: la del contrato que rige o, con varios vigentes a la vez, la suma de todos (14/11/2026). */
+const areasQueCuentan = (contrato) => (vigentesALaVez(contrato) ? areasDelContrato(contrato) || [] : contrato?.areaShiftAssignments || []);
 /**
  * QUÉ ESTÁ DESALINEADO HOY ENTRE EL EQUIPO Y LOS CONTRATOS (fase 3, 30/10/2026). Sólo lectura.
  *
@@ -42,7 +45,7 @@ async function main() {
             const c = contratoDe.get(uid);
             if (!c || !esContratoVigente(c, hoy))
                 continue;
-            const fe = firmaDeAreas(f.areaShiftAssignments), fc = firmaDeAreas(c.areaShiftAssignments);
+            const fe = firmaDeAreas(f.areaShiftAssignments), fc = firmaDeAreas(areasQueCuentan(c));
             if (fe !== "[]" && fc !== "[]" && fe !== fc) {
                 tot.area++;
                 lineas.push(`  área: ${uid} equipo ${fe} · contrato vigente ${fc}`);

@@ -113,6 +113,11 @@ export declare const fechaISOExpr: (campo: string) => {
  *
  * `_indice` es la posición en el array del UserProject —la que esperan editar y descargar— y `_total`
  * cuántos contratos tiene la persona en ese proyecto, que es lo que muestra la columna CONTRATOS.
+ *
+ * `_vigentes` (14/11/2026) viaja SÓLO cuando la persona tiene más de un contrato vigente hoy en el proyecto:
+ * de cada uno, su posición, sus fechas, su nombre y su área/turno. El área del equipo es la suma de todos
+ * (ver `services/equipoSegunContratos.ts`): con «el que rige» solo, quien tenía un contrato a la Mañana y
+ * otro a la Tarde desaparecía de uno de los dos turnos. Son pocos (22 personas el 14/11), así que no pesa.
  */
 export declare function contratosQueRigenDelProyecto(projectId: string, hoy: string, camposExtra?: string[]): Promise<Map<string, any>>;
 /**

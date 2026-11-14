@@ -3,6 +3,10 @@ import { Project } from "../models/Project.js";
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { hoyArgentina } from "../utils/contratoVigencia.js";
 import { firmaDeAreas } from "../compartido/configDelEquipo.js";
+import { areasDelContrato, vigentesALaVez } from "../services/equipoSegunContratos.js";
+
+/** El área que el equipo muestra: la del contrato que rige o, con varios vigentes a la vez, la suma de todos (14/11/2026). */
+const areasQueCuentan = (contrato: any): any[] => (vigentesALaVez(contrato) ? areasDelContrato(contrato) || [] : contrato?.areaShiftAssignments || []);
 import { registrarCambiosDelEquipo } from "../services/historialEquipo.js";
 
 /**
@@ -48,7 +52,7 @@ async function main() {
     const lineas: string[] = [];
     const cambios: any[] = [];
     for (const [userId, contrato] of contratoDe) {
-      const nuevas = plano(contrato?.areaShiftAssignments || []);
+      const nuevas = plano(areasQueCuentan(contrato));
       const fila = filaDe.get(userId);
       if (!nuevas.length) {
         if (fila?.areaShiftAssignments?.length) contratoSinArea++;
