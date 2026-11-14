@@ -72,6 +72,8 @@ const CLAVE_CACHE_CONVENIOS = claveCacheCatalogo('/convenios');
  * tres pestañas de una.
  */
 const CONTRACTS_OVERVIEW_CACHE = 'contracts-overview:';
+/** Cuántos contratos (los más recientes) muestra el padrón apenas entra, mientras baja la lista completa. Dos páginas de la tabla. */
+const PRIMEROS_DEL_PADRON = 50;
 /** Clave de los contratos en el estado de envío de documentación (pestaña Generar Documentos). */
 /*
   EL ÁMBITO ES PARTE DE LA CLAVE.
@@ -4228,24 +4230,68 @@ export const ContractBulkContratadosTab: React.FC<{
       .catch(() => setTiposContrato([]));
   }, []);
 
+  /*
+    LO MÁS RECIENTE PRIMERO, EL RESTO POR DETRÁS (14/11/2026: «la carga de contratos está muy lenta»).
+    El padrón baja TODOS los contratos de una vez —522 filas enteras, casi 2 MB medidos— porque los filtros,
+    el orden y los contadores se resuelven acá, sobre la lista completa. Eso no cambia; lo que cambia es que
+    ya no hay que esperarlo para ver algo: al entrar se piden aparte los `PRIMEROS_DEL_PADRON` contratos más
+    recientes (el orden por defecto, un pedido diez veces más chico) y se muestran apenas llegan, con las
+    solicitudes pendientes arriba. Cuando llega la lista completa los reemplaza. Mientras tanto se avisa:
+    hasta entonces los filtros y el orden miran sólo esas filas.
+
+    Sólo al entrar (o al cambiar de cliente/proyecto). «Volver a leer» y las recargas después de una acción
+    esperan la lista completa como siempre: mostrar un rato una lista recortada sacaría de la vista la fila
+    que se acaba de tocar. Si la lista completa ya está en el caché, llega en el momento y lo parcial ni se pide.
+  */
+  const [completando, setCompletando] = useState(false);
+  const turnoDeCarga = useRef(0);
   const load = useCallback((force = false) => {
     if (force) invalidateRefCache(CONTRACTS_OVERVIEW_CACHE);
+    const turno = ++turnoDeCarga.current;
+    const vigente = () => turno === turnoDeCarga.current;
     setLoading(true);
+    setCompletando(false);
     const ambitoPedido = { clientId: filterClientId || undefined, projectId: filterProjectId || undefined };
-    return Promise.all([
-      cachedFetch(claveCacheContratados(filterClientId, filterProjectId), () => usersAPI.listContractsOverview({ limit: 10000, origen: 'sistema', todosLosContratos: true, ...ambitoPedido })),
-      cachedFetch(`${claveCacheContratados(filterClientId, filterProjectId)}:pendientes`, () => usersAPI.listSolicitudesPendientes(ambitoPedido)),
-    ])
+    const base = { origen: 'sistema' as const, todosLosContratos: true, ...ambitoPedido };
+    const estadoSolicitud = allEstados.find((e) => e.data?.esSolicitud)?.name || 'Solicitud pendiente';
+    const armar = (contratos: ContractOverviewRow[], pendientes: SolicitudPendienteDeContrato[]): FilaPadron[] => [...contratos, ...pendientes.map((s) => filaDeSolicitud(s, estadoSolicitud))];
+    const pendientesP = cachedFetch(`${claveCacheContratados(filterClientId, filterProjectId)}:pendientes`, () => usersAPI.listSolicitudesPendientes(ambitoPedido));
+    const todoP = cachedFetch(claveCacheContratados(filterClientId, filterProjectId), () => usersAPI.listContractsOverview({ limit: 10000, ...base }));
+    let llegoTodo = false;
+    if (!force) {
+      // En el próximo turno del reloj: si la lista completa estaba en el caché, para entonces ya llegó.
+      setTimeout(() => {
+        if (llegoTodo || !vigente()) return;
+        // Por el caché, como la lista completa: esta carga se dispara más de una vez al entrar (llegan los estados, los filtros) y así comparten un solo pedido.
+        Promise.all([cachedFetch(`${claveCacheContratados(filterClientId, filterProjectId)}:primeros`, () => usersAPI.listContractsOverview({ page: 1, limit: PRIMEROS_DEL_PADRON, sort: 'fechaCarga', dir: 'desc', ...base })), pendientesP])
+          .then(([primeros, pendientes]) => {
+            if (llegoTodo || !vigente()) return;
+            setRows(armar(primeros.rows, pendientes));
+            setLoading(false);
+            // Si entraron todos en el primer pedido no hay «resto» que esperar a la vista.
+            setCompletando(primeros.total > primeros.rows.length);
+          })
+          .catch(() => {
+            /* Si falla, se sigue esperando la lista completa como antes. */
+          });
+      }, 0);
+    }
+    return Promise.all([todoP, pendientesP])
       .then(([res, pendientes]) => {
-        const estadoSolicitud = allEstados.find((e) => e.data?.esSolicitud)?.name || 'Solicitud pendiente';
-        const filas: FilaPadron[] = [...res.rows, ...pendientes.map((s) => filaDeSolicitud(s, estadoSolicitud))];
+        llegoTodo = true;
+        if (!vigente()) return;
+        const filas = armar(res.rows, pendientes);
         setRows(filas);
         if (!filterClientId && !filterProjectId) onCount?.(filas.length);
       })
       .catch(() => {
-        /* noop */
+        llegoTodo = true;
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!vigente()) return;
+        setLoading(false);
+        setCompletando(false);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterClientId, filterProjectId, allEstados]);
 
@@ -4376,8 +4422,21 @@ export const ContractBulkContratadosTab: React.FC<{
           <LoadingSpinner message="Cargando contratos..." />
         </div>
       ) : filtered.length === 0 ? (
-        <EmptyState icon={faUser} title="Sin contratos" description={rows.length === 0 ? 'Todavía no hay contratos ni solicitudes pendientes.' : 'No hay resultados con los filtros aplicados.'} />
+        completando ? (
+          <div className="flex items-center justify-center py-20">
+            <LoadingSpinner message="Buscando en el resto de los contratos..." />
+          </div>
+        ) : (
+          <EmptyState icon={faUser} title="Sin contratos" description={rows.length === 0 ? 'Todavía no hay contratos ni solicitudes pendientes.' : 'No hay resultados con los filtros aplicados.'} />
+        )
       ) : (
+        <>
+        {completando && (
+          <p className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-300">
+            <FontAwesomeIcon icon={faSpinner} spin className="h-3.5 w-3.5" />
+            Se ven los contratos más recientes. Cargando el resto: hasta que termine, los filtros, el orden y las cantidades miran sólo estas filas.
+          </p>
+        )}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-clip">
           <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0 min-w-[1950px]">
             <thead className="bg-gray-50 dark:bg-gray-900 shadow-sm">
@@ -4510,6 +4569,7 @@ export const ContractBulkContratadosTab: React.FC<{
           </TablaConEncabezadoFijo>
           <Paginador pagina={pag.pagina} totalPaginas={pag.totalPaginas} total={pag.total} desde={pag.desde} mostrados={pag.visibles.length} onPagina={pag.setPagina} />
         </div>
+        </>
       )}
     </div>
   );
