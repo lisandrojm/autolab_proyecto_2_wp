@@ -7,8 +7,11 @@ import { IInfo } from "../models/Info.js";
 export declare function estadoContratado(): Promise<IInfo | null>;
 /**
  * TIPOS QUE NO PASAN POR EL CIRCUITO (28/10/2026): un contrato nuevo de un tipo que no manda nada a
- * firmar y no genera alta temprana de ARCA no tiene nada que hacer en los pasos 1 a 5. Queda
+ * firmar y no lleva trámite impositivo no tiene nada que hacer en los pasos 1 a 5. Queda
  * contratado al crearse. Devuelve ese estado, o null si el contrato sigue el circuito normal.
+ *
+ * DESDE EL 14/11/2026 LOS DE SERVICIOS (constancia de CUIT) NO: aunque no firmen nada pasan por Trámite
+ * impositivo › Constancia de CUIT, y recién con el CUIT validado van a Contratos (`destinoSiNoSeFirma`).
  *
  * Si genera alta lo dice el estado impositivo que ya trae el contrato (el de su plantilla): el
  * `generaAlta` guardado en el tipo quedó viejo, ahora lo decide ese estado (ver ContractTypesTab).

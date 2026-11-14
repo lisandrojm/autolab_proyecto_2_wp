@@ -4468,7 +4468,27 @@ export const ContractBulkContratadosTab: React.FC<{
                     <td className="px-4 py-3">
                       <CeldaSolicito solicitante={r.solicitante} />
                     </td>
-                    <td className="px-4 py-3">{situacionDe.get(r) && <CeldaArca r={r} s={situacionDe.get(r)!} lleva={llevaDe.get(r)} />}</td>
+                    <td className="px-4 py-3">
+                      {situacionDe.get(r) && (
+                        <CeldaArca
+                          r={r}
+                          s={situacionDe.get(r)!}
+                          lleva={llevaDe.get(r)}
+                          /*
+                            UN SERVICIOS SIN EL CUIT VALIDADO SE VALIDA DESDE ACÁ (14/11/2026, pedido del usuario). Desde hoy
+                            los contratos nuevos no llegan a Contratos sin validar, pero los que ya llegaron (nacían
+                            contratados) no tienen otra pantalla donde hacerlo. Es el mismo botón de Constancia de CUIT.
+                          */
+                          accion={
+                            !pendiente && situacionDe.get(r)!.grupo === 'servicios_sin_validar' ? (
+                              <span className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                <BotonValidarCuit row={r} onConsultado={() => load(true)} compacto />
+                              </span>
+                            ) : undefined
+                          }
+                        />
+                      )}
+                    </td>
                     <td className="px-4 py-3"><CeldaDocumentosGenerados r={r} lleva={llevaDe.get(r)} esSolicitud={pendiente} /></td>
                     <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap font-mono">{cuitDisplay(r.cuit, r.sinCuit)}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">{r.clientName || '—'}</td>

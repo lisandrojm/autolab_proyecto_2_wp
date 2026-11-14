@@ -16,6 +16,19 @@ export interface TipoParaFirma {
 }
 /** ¿El tipo manda a firmar algo? La firma del alta sólo cuenta si el tipo genera alta (como se muestra el check). */
 export declare function tipoEnviaAFirmar(t: TipoParaFirma | null | undefined): boolean;
+/**
+ * ¿UN CONTRATO NUEVO QUEDA CONTRATADO AL CREARSE, sin pasar por el circuito? Sólo si no tiene NADA que
+ * hacer en él: su tipo no manda nada a firmar y no lleva trámite impositivo.
+ *
+ * `tipoImpositivo` es el del estado con el que nace el contrato (el de su plantilla):
+ *   · «alta_temprana_afip» → lleva el alta en ARCA: sigue el circuito (regla del 28/10/2026);
+ *   · «constancia_cuit» (Servicios) → TIENE QUE VALIDARSE EL CUIT (14/11/2026, pedido del usuario): aunque
+ *     no se firme nada, pasa por Trámite impositivo › Constancia de CUIT y no llega a Contratos hasta que
+ *     el Padrón de ARCA diga que el CUIT está activo. A un CUIT que da mal no se le puede facturar. Antes
+ *     estos contratos nacían contratados y el CUIT no lo validaba nadie.
+ * Validada la constancia, lo que no se firma va a Contratos sin pasar por Generar Documentos (eso no cambia).
+ */
+export declare function quedaContratadoAlCrearse(tipo: TipoParaFirma | null | undefined, tipoImpositivo: string | null | undefined): boolean;
 export interface EstadoParaFirma {
     data?: {
         vinculadoAFirma?: boolean | null;

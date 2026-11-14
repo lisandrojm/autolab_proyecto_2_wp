@@ -11,7 +11,11 @@ import type { ConstanciaArcaEnPantalla } from "../../api/projects";
      activo, archivado en Dropbox al validar.
 */
 
-export type GrupoArca = "con_alta" | "sin_alta" | "sin_confirmar" | "servicios" | "no_corresponde";
+/*
+  «servicios_sin_validar» (14/11/2026): un Servicios al que todavía no se le validó el CUIT, o que dio
+  inactivo. Va aparte de «servicios» (CUIT validado) para poder filtrarlos: a ésos no se les puede facturar.
+*/
+export type GrupoArca = "con_alta" | "sin_alta" | "sin_confirmar" | "servicios" | "servicios_sin_validar" | "no_corresponde";
 
 /** Lo que la columna necesita de la fila: la del padrón trae además la constancia del ciclo. */
 export type FilaConArca = ContractOverviewRow & { constanciaArca?: ConstanciaArcaEnPantalla | null };
@@ -50,8 +54,8 @@ export function situacionArca(r: FilaConArca, tipo: string | undefined, o: { pen
   if (r.sinCuit) return { ...nada, grupo: "no_corresponde", texto: "Sin CUIT", titulo: "La persona no tiene CUIT/CUIL argentino: no va por ARCA", clase: GRIS };
   if (tipo === "constancia_cuit") {
     if (r.constanciaAfipDropboxSubidaAt) return { ...nada, grupo: "servicios", texto: "CUIT validado", titulo: "Servicios no lleva alta en ARCA. El CUIT figura activo en el Padrón y el JSON quedó archivado en Dropbox.", clase: VERDE };
-    if (r.constanciaAfipEstado === "inactivo") return { ...nada, grupo: "servicios", texto: "CUIT inactivo", titulo: "Servicios no lleva alta en ARCA, pero el Padrón dice que el CUIT está inactivo.", clase: ROJO };
-    return { ...nada, grupo: "servicios", texto: "CUIT sin validar", titulo: "Servicios no lleva alta en ARCA. Falta validar el CUIT en el Padrón (Trámite impositivo → Constancia de CUIT).", clase: GRIS };
+    if (r.constanciaAfipEstado === "inactivo") return { ...nada, grupo: "servicios_sin_validar", texto: "CUIT inactivo", titulo: "Servicios no lleva alta en ARCA, pero el Padrón dice que el CUIT está inactivo.", clase: ROJO };
+    return { ...nada, grupo: "servicios_sin_validar", texto: "CUIT sin validar", titulo: "Servicios no lleva alta en ARCA. Falta validar el CUIT en el Padrón: sin eso no se le puede facturar. Se valida con «Validar ARCA», acá o en Trámite impositivo → Constancia de CUIT.", clase: AMBAR };
   }
   if (tipo !== "alta_temprana_afip") return { ...nada, grupo: "no_corresponde", texto: "", titulo: "Este tipo de contrato no tiene trámite en ARCA", clase: "" };
 
@@ -71,12 +75,13 @@ export function situacionArca(r: FilaConArca, tipo: string | undefined, o: { pen
 }
 
 /** El orden de la columna al ordenar: primero lo que falta. */
-export const ORDEN_GRUPO_ARCA: Record<GrupoArca, number> = { sin_alta: 0, sin_confirmar: 1, con_alta: 2, servicios: 3, no_corresponde: 4 };
+export const ORDEN_GRUPO_ARCA: Record<GrupoArca, number> = { sin_alta: 0, servicios_sin_validar: 1, sin_confirmar: 2, con_alta: 3, servicios: 4, no_corresponde: 5 };
 
 export const OPCIONES_FILTRO_ARCA: { label: string; value: "" | GrupoArca }[] = [
   { label: "Todos", value: "" },
   { label: "Con alta en ARCA", value: "con_alta" },
   { label: "Sin alta en ARCA", value: "sin_alta" },
   { label: "Alta sin confirmar", value: "sin_confirmar" },
-  { label: "Servicios (no llevan alta)", value: "servicios" },
+  { label: "Servicios: CUIT validado", value: "servicios" },
+  { label: "Servicios: CUIT sin validar", value: "servicios_sin_validar" },
 ];

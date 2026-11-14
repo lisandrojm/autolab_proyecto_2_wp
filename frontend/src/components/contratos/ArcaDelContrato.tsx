@@ -24,7 +24,13 @@ export interface DocumentosQueLleva {
 }
 
 /** La celda «ARCA» del padrón: la situación y, debajo, el archivo que la prueba. */
-export const CeldaArca: React.FC<{ r: FilaConArca; s: SituacionArca; lleva?: DocumentosQueLleva }> = ({ r, s, lleva }) => {
+export const CeldaArca: React.FC<{
+  r: FilaConArca;
+  s: SituacionArca;
+  lleva?: DocumentosQueLleva;
+  /** Lo que se puede hacer desde acá con lo que falta (p. ej. validar el CUIT de un Servicios que quedó sin validar). */
+  accion?: React.ReactNode;
+}> = ({ r, s, lleva, accion }) => {
   const [abriendo, setAbriendo] = useState(false);
   if (!s.texto) return <span className="text-xs text-gray-300 dark:text-gray-600" title={s.titulo}>—</span>;
 
@@ -68,6 +74,7 @@ export const CeldaArca: React.FC<{ r: FilaConArca; s: SituacionArca; lleva?: Doc
           JSON del Padrón
         </button>
       )}
+      {accion}
     </div>
   );
 };

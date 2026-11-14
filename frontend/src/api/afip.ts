@@ -69,6 +69,10 @@ export interface ResultadoConsultaPadron {
   raw?: any;
   /** El estado al que pasó el contrato al quedar archivada la constancia («Envío de documentación» = Generar Documentos). */
   estadoNuevo?: string;
+  /** El contrato no fue a Generar Documentos sino a Contratos, porque su tipo no manda nada a firmar. */
+  directoAContratos?: boolean;
+  /** El contrato ya estaba más adelante en el circuito (validado desde Contratos): su estado no cambia. */
+  estadoSinCambio?: boolean;
   /**
    * Presente SOLO si el nombre que había cargado no coincidía con el del Padrón y se reemplazó por
    * el de ARCA. Ausente cuando ya coincidía: ahí no hay nada que avisar.

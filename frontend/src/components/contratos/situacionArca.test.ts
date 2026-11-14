@@ -40,6 +40,9 @@ describe("situacionArca: Servicios, Sin CUIT y solicitudes", () => {
     assert.deepEqual([situacionArca(fila({ constanciaAfipDropboxSubidaAt: "2026-11-02" }), "constancia_cuit").grupo, situacionArca(fila({ constanciaAfipDropboxSubidaAt: "2026-11-02" }), "constancia_cuit").texto], ["servicios", "CUIT validado"]);
     assert.equal(situacionArca(fila({ constanciaAfipEstado: "inactivo" }), "constancia_cuit").texto, "CUIT inactivo");
     assert.equal(situacionArca(fila({}), "constancia_cuit").texto, "CUIT sin validar");
+    // Lo que falta validar va en su propio grupo, para filtrarlo: a ésos no se les puede facturar (14/11/2026).
+    assert.equal(situacionArca(fila({}), "constancia_cuit").grupo, "servicios_sin_validar");
+    assert.equal(situacionArca(fila({ constanciaAfipEstado: "inactivo" }), "constancia_cuit").grupo, "servicios_sin_validar");
   });
   it("sin CUIT no va por ARCA, aunque el tipo sea de alta temprana", () => {
     assert.equal(situacionArca(fila({ sinCuit: true }), AFIP).grupo, "no_corresponde");

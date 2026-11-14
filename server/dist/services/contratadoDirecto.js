@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { Info } from "../models/Info.js";
 import { Contrato } from "../models/Contrato.js";
 import { resolverEstadoPorPropositos } from "../utils/estadoCarpetas.js";
-import { tipoEnviaAFirmar } from "../compartido/estadosFirma.js";
+import { quedaContratadoAlCrearse, tipoEnviaAFirmar } from "../compartido/estadosFirma.js";
 import { Project } from "../models/Project.js";
 import { Tenant } from "../models/Tenant.js";
 import { getTenantDropboxConfig, copyEntry } from "./dropboxService.js";
@@ -19,8 +19,11 @@ export async function estadoContratado() {
 }
 /**
  * TIPOS QUE NO PASAN POR EL CIRCUITO (28/10/2026): un contrato nuevo de un tipo que no manda nada a
- * firmar y no genera alta temprana de ARCA no tiene nada que hacer en los pasos 1 a 5. Queda
+ * firmar y no lleva trámite impositivo no tiene nada que hacer en los pasos 1 a 5. Queda
  * contratado al crearse. Devuelve ese estado, o null si el contrato sigue el circuito normal.
+ *
+ * DESDE EL 14/11/2026 LOS DE SERVICIOS (constancia de CUIT) NO: aunque no firmen nada pasan por Trámite
+ * impositivo › Constancia de CUIT, y recién con el CUIT validado van a Contratos (`destinoSiNoSeFirma`).
  *
  * Si genera alta lo dice el estado impositivo que ya trae el contrato (el de su plantilla): el
  * `generaAlta` guardado en el tipo quedó viejo, ahora lo decide ese estado (ver ContractTypesTab).
@@ -74,8 +77,8 @@ export async function estadoDirectoAContratado(contratoId, estadoId) {
     if (!tipo)
         return null;
     const estadoActual = Number.isFinite(Number(estadoId)) && estadoId !== "" && estadoId != null ? await Info.findOne({ type: ESTADO_TYPE, "data.id": Number(estadoId) }).select("data.tipoImpositivo").lean() : null;
-    const generaAlta = estadoActual?.data?.tipoImpositivo === "alta_temprana_afip";
-    if (generaAlta || tipoEnviaAFirmar({ ...(tipo.data || {}), generaAlta }))
+    // Servicios (constancia de CUIT) no nace contratado aunque no firme nada: primero se valida el CUIT (ver `quedaContratadoAlCrearse`).
+    if (!quedaContratadoAlCrearse(tipo.data || {}, estadoActual?.data?.tipoImpositivo))
         return null;
     return estadoContratado();
 }

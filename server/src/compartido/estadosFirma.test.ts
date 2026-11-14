@@ -3,7 +3,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { estadoPermitidoParaTipo, esEstadoDeFirma, pareceEstadoDeFirma, tipoEnviaAFirmar } from "./estadosFirma.js";
+import { estadoPermitidoParaTipo, esEstadoDeFirma, pareceEstadoDeFirma, quedaContratadoAlCrearse, tipoEnviaAFirmar } from "./estadosFirma.js";
 
 const SIN_FIRMA = { requiereFirma: false, requiereFirmaRelease: false, requiereFirmaAlta: false };
 const FIRMA = { data: { vinculadoAFirma: true } };
@@ -38,5 +38,26 @@ describe("estados de firma", () => {
     assert.equal(pareceEstadoDeFirma("FIRMA ENVIADA"), true);
     assert.equal(pareceEstadoDeFirma("Firmado", [{ proposito: "firmados" }]), true);
     assert.equal(pareceEstadoDeFirma("DISPONIBLE", [{ proposito: "outbox" }]), false);
+  });
+});
+
+describe("un contrato nuevo queda contratado al crearse sólo si no tiene nada que hacer en el circuito", () => {
+  const NADA_A_FIRMAR = { requiereFirma: false, requiereFirmaRelease: false, requiereFirmaAlta: false };
+  it("Servicios (constancia de CUIT) que no manda nada a firmar → NO: tiene que validarse el CUIT antes de llegar a Contratos", () => {
+    assert.equal(quedaContratadoAlCrearse(NADA_A_FIRMAR, "constancia_cuit"), false);
+  });
+  it("con alta temprana de ARCA → no (lleva el alta), firme o no la constancia", () => {
+    assert.equal(quedaContratadoAlCrearse(NADA_A_FIRMAR, "alta_temprana_afip"), false);
+  });
+  it("sin trámite impositivo y sin nada a firmar → sí, como desde el 28/10", () => {
+    assert.equal(quedaContratadoAlCrearse(NADA_A_FIRMAR, undefined), true);
+    assert.equal(quedaContratadoAlCrearse(NADA_A_FIRMAR, ""), true);
+    // La firma del alta no cuenta si el contrato no lleva alta.
+    assert.equal(quedaContratadoAlCrearse({ requiereFirma: false, requiereFirmaRelease: false }, null), true);
+  });
+  it("manda a firmar el contrato o el release → no; sin tipo → no (sigue el circuito)", () => {
+    assert.equal(quedaContratadoAlCrearse({ ...NADA_A_FIRMAR, requiereFirma: true }, undefined), false);
+    assert.equal(quedaContratadoAlCrearse({ ...NADA_A_FIRMAR, requiereFirmaRelease: true }, undefined), false);
+    assert.equal(quedaContratadoAlCrearse(null, undefined), false);
   });
 });

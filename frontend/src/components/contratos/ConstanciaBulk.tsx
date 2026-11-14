@@ -551,7 +551,7 @@ export const BotonValidarCuit: React.FC<{ row: ContractOverviewRow; onConsultado
       } else if (resultado?.estado === "activo" && resultado.dropboxSubido) {
         await sweetAlert.successAlert(
           "CUIT validado y archivado",
-          `${cuit} figura activo en el Padrón de ARCA y el comprobante quedó archivado en Dropbox (ARCA → Constancia de cuit).${resultado.estadoNuevo ? " El contrato pasó a Generar Documentos." : " El contrato pasa a Generar Documentos en la próxima pasada del escaneo de carpetas."}`,
+          `${cuit} figura activo en el Padrón de ARCA y el comprobante quedó archivado en Dropbox (ARCA → Constancia de cuit).${resultado.estadoSinCambio ? " El contrato ya estaba más adelante en el circuito: su estado no cambia." : resultado.directoAContratos ? " Como este tipo de contrato no manda nada a firmar, el contrato pasó a Contratos." : resultado.estadoNuevo ? " El contrato pasó a Generar Documentos." : " El contrato pasa a Generar Documentos en la próxima pasada del escaneo de carpetas."}`,
         );
       } else if (resultado?.estado === "activo") {
         sweetAlert.warningAlert("Activo, pero falta archivar", `${cuit} figura activo en el Padrón de ARCA, pero no se pudo archivar el resultado en Dropbox. El trámite sigue pendiente.\n\nMotivo: ${resultado.dropboxError || "no se informó (revisá los Logs de ARCA)."}`);

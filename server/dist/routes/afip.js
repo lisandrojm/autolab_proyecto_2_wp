@@ -688,7 +688,17 @@ router.post("/consulta-padron/bulk", async (req, res) => {
                         if (r.aplicada)
                             avanzados++;
                         const res_ = resultados.find((x) => x.cuit === a.cuit);
-                        if (res_)
+                        if (!res_)
+                            continue;
+                        // A dónde fue de verdad: lo que no se firma va a Contratos, y lo que ya estaba más adelante no se mueve.
+                        if (r.aplicada) {
+                            res_.estadoNuevo = r.estadoNuevo?.nombre || destino.name;
+                            if (r.estadoNuevo && r.estadoNuevo.nombre !== destino.name)
+                                res_.directoAContratos = true;
+                        }
+                        else if (r.motivo === "no_es_hacia_adelante")
+                            res_.estadoSinCambio = true;
+                        else
                             res_.estadoNuevo = destino.name;
                     }
                 }
