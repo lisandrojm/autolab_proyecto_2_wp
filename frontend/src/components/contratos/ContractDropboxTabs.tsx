@@ -51,12 +51,24 @@ const fmtFecha = (iso?: string): string => {
 export type TipoBandejaDropbox = "para_firmar" | "enviado_firma" | "firmados";
 
 /*
-  LOS RECIBOS DE SUELDO NO SON DE CONTRATOS (pedido del 08/11/2026). Pasan por las mismas carpetas
-  (Outbox, Pendbox, Requested signatures) y el bot los envía igual, pero no salen de una Solicitud: se
-  ven sólo en Contratación › Recibos de sueldo. Se reconocen por la nomenclatura «Recibos de sueldo»
-  (`_REC_SUELDO_`), la misma que usa la regla del bot para ubicar su firma.
+  LOS RECIBOS DE SUELDO NO SALEN DE UNA SOLICITUD. Pasan por las mismas carpetas (Outbox, Pendbox,
+  Requested signatures) y el bot los envía igual, pero no son parte del flujo de contratación. Se
+  reconocen por la nomenclatura «Recibos de sueldo» (`REC_SUELDO_`).
+
+  SE MUESTRAN, MARCADOS (13/11/2026, pedido del usuario). Desde el 08/11 estas bandejas los escondían y
+  sólo se veían en Contratación › Recibos de sueldo; ahora aparecen en la lista con su marca «Recibo de
+  sueldo · no es solicitud», y arriba se puede elegir ver todo, sólo lo de solicitudes o sólo los recibos.
+  El número de la bandeja (en el menú y en el título) sigue contando sólo lo que sale de una Solicitud:
+  es lo que hay para resolver en el flujo.
+
+  El nombre puede EMPEZAR con «REC_SUELDO_»: el patrón es «{{centroDeCosto}}_{{proyecto}}_REC_SUELDO_…» y
+  un recibo sin centro de costo ni proyecto queda sin nada adelante. Con el «_» obligatorio esos recibos
+  no se reconocían y aparecían mezclados entre los contratos, sin marca.
 */
-export const esReciboDeSueldo = (nombre: string): boolean => /_REC_SUELDO_/i.test(nombre);
+export const esReciboDeSueldo = (nombre: string): boolean => /(?:^|_)REC_SUELDO_/i.test(nombre);
+
+/** Qué se ve en la bandeja: todo, sólo lo que sale de una Solicitud, o sólo los recibos de sueldo. */
+type VerEnBandeja = "todo" | "solicitudes" | "recibos";
 const esDeContratos = (e: DropboxEntry): boolean => e.tag === "file" && !esReciboDeSueldo(e.name);
 
 /**
@@ -115,8 +127,8 @@ export { InstructivoParaFirmar } from "./FirmaBotParaFirmar";
  */
 export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: (n: number) => void }> = ({ tipo, onCount }) => {
   const [entries, setEntries] = useState<DropboxEntry[]>([]);
-  /** Recibos de sueldo de la carpeta, que acá no se muestran (ver `esReciboDeSueldo`). */
-  const [recibosOcultos, setRecibosOcultos] = useState(0);
+  /** Qué se muestra: todo (por defecto), sólo lo de solicitudes o sólo los recibos de sueldo (ver `esReciboDeSueldo`). */
+  const [ver, setVer] = useState<VerEnBandeja>("todo");
   const [carpeta, setCarpeta] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -165,10 +177,8 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
         return;
       }
       const res = await dropboxAPI.list(path, true);
-      // Solo archivos: las subcarpetas que arma Dropbox Sign no son contratos. Y sin los recibos de sueldo.
-      const archivos = (res.entries || []).filter((e) => e.tag === "file");
-      setEntries(archivos.filter(esDeContratos));
-      setRecibosOcultos(archivos.length - archivos.filter(esDeContratos).length);
+      // Solo archivos: las subcarpetas que arma Dropbox Sign no son contratos. Los recibos de sueldo entran, marcados.
+      setEntries((res.entries || []).filter((e) => e.tag === "file"));
     } catch (e: any) {
       setEntries([]);
       setError(e?.response?.data?.error || e?.message || "No se pudo leer la carpeta de Dropbox.");
@@ -181,10 +191,17 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
     load();
   }, [load]);
 
+  // Cuántos hay de cada cosa en la carpeta (sin el filtro de texto): los números de «Todo / De solicitudes / Recibos».
+  const cantidadDeSolicitudes = useMemo(() => entries.filter(esDeContratos).length, [entries]);
+  const cantidadDeRecibos = entries.length - cantidadDeSolicitudes;
+  // Sin recibos en la carpeta no hay nada que elegir: se ve todo.
+  const verEfectivo: VerEnBandeja = cantidadDeRecibos > 0 ? ver : "todo";
+
   const filtradas = useMemo(() => {
     const q = filtro.trim().toLowerCase();
-    return q ? entries.filter((e) => e.name.toLowerCase().includes(q)) : entries;
-  }, [entries, filtro]);
+    const delTipo = verEfectivo === "todo" ? entries : entries.filter((e) => esReciboDeSueldo(e.name) === (verEfectivo === "recibos"));
+    return q ? delTipo.filter((e) => e.name.toLowerCase().includes(q)) : delTipo;
+  }, [entries, filtro, verEfectivo]);
 
   /**
    * Peso de lo tildado, sumado a medida que se selecciona. Sobre `entries` y no sobre lo filtrado: el
@@ -208,10 +225,10 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
   const bytesSeleccionados = useMemo(() => entries.reduce((acc, e) => (selected.has(e.path) ? acc + (e.size || 0) : acc), 0), [entries, selected]);
   const excedePeso = bytesSeleccionados > ZIP_MAX_BYTES;
 
-  // El padre muestra la cantidad en la pestaña.
+  // El padre muestra la cantidad en la pestaña: lo que sale de una Solicitud, sin los recibos (igual que `fetchDropboxCounts`).
   useEffect(() => {
-    onCount?.(entries.length);
-  }, [entries.length, onCount]);
+    onCount?.(cantidadDeSolicitudes);
+  }, [cantidadDeSolicitudes, onCount]);
 
   const descargar = async (entry: DropboxEntry) => {
     setDescargando(entry.path);
@@ -480,13 +497,34 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
         </div>
       )}
 
-      {!loading && recibosOcultos > 0 && (
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          {recibosOcultos} recibo{recibosOcultos === 1 ? "" : "s"} de sueldo de esta carpeta no {recibosOcultos === 1 ? "se muestra" : "se muestran"} acá: no salen de una Solicitud.{" "}
-          <Link to="/admin/recibos-sueldo" className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400">
-            Verlos en Recibos de sueldo
-          </Link>
-        </p>
+      {!loading && cantidadDeRecibos > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
+          <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden" role="group" aria-label="Qué mostrar">
+            {(
+              [
+                ["todo", "Todo", entries.length],
+                ["solicitudes", "De solicitudes", cantidadDeSolicitudes],
+                ["recibos", "Recibos de sueldo", cantidadDeRecibos],
+              ] as Array<[VerEnBandeja, string, number]>
+            ).map(([clave, rotulo, cantidad]) => (
+              <button
+                key={clave}
+                type="button"
+                onClick={() => setVer(clave)}
+                aria-pressed={verEfectivo === clave}
+                className={`px-3 py-1.5 font-semibold transition-colors border-l first:border-l-0 border-gray-300 dark:border-gray-600 ${verEfectivo === clave ? "bg-blue-600 text-white" : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
+              >
+                {rotulo} ({cantidad})
+              </button>
+            ))}
+          </div>
+          <span>
+            Los recibos de sueldo no salen de una Solicitud: van marcados y no cuentan en el número de la bandeja.{" "}
+            <Link to="/admin/recibos-sueldo" className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400">
+              Ir a Recibos de sueldo
+            </Link>
+          </span>
+        </div>
       )}
 
       {loading ? (
@@ -566,10 +604,19 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
                   <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtFecha(e.serverModified)}</td>
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-                      <FontAwesomeIcon icon={faFilePdf} className="h-4 w-4 text-violet-600 shrink-0" />
+                      <FontAwesomeIcon icon={faFilePdf} className={`h-4 w-4 shrink-0 ${esReciboDeSueldo(e.name) ? "text-amber-500" : "text-violet-600"}`} />
                       <span className="truncate max-w-[520px]" title={e.name}>
                         {e.name}
                       </span>
+                      {/* No sale de una Solicitud: se dice en la fila, para no confundirlo con un contrato del flujo. */}
+                      {esReciboDeSueldo(e.name) && (
+                        <span
+                          title="Es un recibo de sueldo: no sale de una Solicitud de contratación ni cuenta en el número de la bandeja. Se gestiona en Contratación › Recibos de sueldo."
+                          className="shrink-0 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-tight whitespace-nowrap border bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800"
+                        >
+                          Recibo de sueldo · no es solicitud
+                        </span>
+                      )}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtTamanio(e.size)}</td>
