@@ -7,7 +7,8 @@
 export interface EmpresaComputo {
   cuit: string;
   nombre: string;
-  motivo: "vigente" | "unica" | "precedencia";
+  /** «suma»: se sumaron todas (la configuración lo pide o el período ya cerró). */
+  motivo: "vigente" | "unica" | "precedencia" | "suma";
   fuente: "arca" | "contratos";
   dias: number;
   primeraAlta: string;
@@ -19,6 +20,7 @@ export const MOTIVO_EMPRESA_COMPUTO: Record<EmpresaComputo["motivo"], string> = 
   vigente: "empresa vigente",
   unica: "única empresa",
   precedencia: "precedencia manual",
+  suma: "suma de todas las empresas",
 };
 
 const fecha = (iso: string): string => {
@@ -27,8 +29,15 @@ const fecha = (iso: string): string => {
 };
 
 /** Las tres líneas: de qué empresa, en cuáles trabajó, y la antigüedad en ella. */
-export const explicacionDeEmpresaComputo = (e: EmpresaComputo, total: number, persona: string): string[] => {
+export const explicacionDeEmpresaComputo = (e: EmpresaComputo, total: number, persona: string, razonSuma?: "config" | "periodoCerrado" | null): string[] => {
   const anios = (e.dias / 365.25).toLocaleString("es-AR", { maximumFractionDigits: 2 });
+  const empresas = e.empresasConsideradas.map((x) => x.nombre).join(", ").replace(/\.$/, "");
+  if (e.motivo === "suma")
+    return [
+      `Los ${total} días se calculan sumando la antigüedad de todas las empresas (${razonSuma === "periodoCerrado" ? "período cerrado: conserva el cálculo con que se liquidó" : "la configuración de Vacaciones lo pide"}).`,
+      ...(empresas ? [`${persona} trabajó en: ${empresas}.`] : []),
+      `Antigüedad sumada: ${anios} años / ${e.dias.toLocaleString("es-AR")} días${e.primeraAlta ? ` desde ${fecha(e.primeraAlta)}` : ""}.`,
+    ];
   return [
     `Los ${total} días se calculan con la antigüedad en ${e.nombre} (${MOTIVO_EMPRESA_COMPUTO[e.motivo]}).`,
     // Sin doble punto cuando la última termina en «S.R.L.».

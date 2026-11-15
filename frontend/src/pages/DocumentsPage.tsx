@@ -17,7 +17,8 @@ export function DocumentsPage() {
   const [params] = useSearchParams();
   const carpetaInicial = params.get("carpeta") || undefined;
   const busquedaInicial = params.get("buscar") || undefined;
-  const [activeTab, setActiveTab] = useState<TabKey>(carpetaInicial?.startsWith("/WEPRODU/ARCA") ? "afip" : "dropbox");
+  // `?tab=antiguedad`: el link de Vacaciones › Gestión por Usuario (modal de antigüedad) abre directo en Antigüedad ARCA.
+  const [activeTab, setActiveTab] = useState<TabKey>(params.get("tab") === "antiguedad" ? "antiguedad" : carpetaInicial?.startsWith("/WEPRODU/ARCA") ? "afip" : "dropbox");
   const [itemCount, setItemCount] = useState<number | undefined>(undefined);
   const [showInfo, setShowInfo] = useState(false);
   const helpEntry = getHelp("documents");
