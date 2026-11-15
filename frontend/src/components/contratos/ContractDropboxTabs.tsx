@@ -57,7 +57,7 @@ export type TipoBandejaDropbox = "para_firmar" | "enviado_firma" | "firmados";
 
   SE MUESTRAN, MARCADOS (13/11/2026, pedido del usuario). Desde el 08/11 estas bandejas los escondían y
   sólo se veían en Contratación › Recibos de sueldo; ahora aparecen en la lista con su marca «Recibo de
-  sueldo · no es solicitud», y arriba se puede elegir ver todo, sólo lo de solicitudes o sólo los recibos.
+  sueldo» (hasta el 15/11 decía también «· no es solicitud»; se sacó a pedido del usuario), y arriba se puede elegir ver todo, sólo lo de solicitudes o sólo los recibos.
   El número de la bandeja (en el menú y en el título) sigue contando sólo lo que sale de una Solicitud:
   es lo que hay para resolver en el flujo.
 
@@ -613,7 +613,7 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
                           title="Es un recibo de sueldo: no sale de una Solicitud de contratación ni cuenta en el número de la bandeja. Se gestiona en Contratación › Recibos de sueldo."
                           className="shrink-0 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-tight whitespace-nowrap border bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800"
                         >
-                          Recibo de sueldo · no es solicitud
+                          Recibo de sueldo
                         </span>
                       )}
                     </span>
