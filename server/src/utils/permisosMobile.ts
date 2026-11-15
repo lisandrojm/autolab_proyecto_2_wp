@@ -37,8 +37,10 @@ export const MOBILE_USERS = "mobile_users:view"; // Contratación (solicitudes d
 export const MOBILE_HIRING_TEMPLATES = "mobile_hiring_templates:view";
 /** Registro: generar el link de registro (7 días, se renueva solo) y ver, sin editar, quiénes se registraron. */
 export const MOBILE_REGISTRO = "mobile_registro:view";
+/** Aprobaciones (15/11/2026): aprobar las vacaciones de su gente (supervisor → coordinador → admin); después, los pedidos. */
+export const MOBILE_APPROVALS = "mobile_approvals:view";
 
-export const ALL_MOBILE_PERMISSIONS = [MOBILE_ACTIVITY_LOGS, MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_ORDERS, MOBILE_VACATIONS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO];
+export const ALL_MOBILE_PERMISSIONS = [MOBILE_ACTIVITY_LOGS, MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_ORDERS, MOBILE_VACATIONS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, MOBILE_APPROVALS];
 
 /** Lo que veía un Colaborador: sus pedidos y sus vacaciones. Es el piso de cualquier alta. */
 export const MOBILE_BASE_PERMISSIONS = [MOBILE_ORDERS, MOBILE_VACATIONS];
@@ -79,8 +81,8 @@ export const ALL_CAPACIDADES = [PROJECT_SUPERVISOR, PROJECT_COORDINATOR];
  *                       capacidad «Coordinador del Proyecto» = `PROJECT_SUPERVISOR`.
  * Las etiquetas de `CAPACIDAD_ITEMS` (frontend) son las que ve la gente y las que mandan.
  */
-export const PERMISOS_ROL_SUPERVISOR = [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, MOBILE_ORDERS, MOBILE_VACATIONS, PROJECT_COORDINATOR];
-export const PERMISOS_ROL_COORDINADOR = [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, PROJECT_SUPERVISOR];
+export const PERMISOS_ROL_SUPERVISOR = [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, MOBILE_ORDERS, MOBILE_VACATIONS, MOBILE_APPROVALS, PROJECT_COORDINATOR];
+export const PERMISOS_ROL_COORDINADOR = [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, MOBILE_APPROVALS, PROJECT_SUPERVISOR];
 
 export const esCapacidad = (permiso: string): boolean => permiso.endsWith(":eligible");
 

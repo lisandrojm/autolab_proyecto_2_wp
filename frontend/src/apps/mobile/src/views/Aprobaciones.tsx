@@ -1,0 +1,205 @@
+import { useCallback, useEffect, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBellConcierge, faBriefcase, faCalendarAlt, faCheck, faCircleCheck, faClock, faHourglassHalf, faUmbrellaBeach, faUserCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
+import { vacationsAPI, type ItemDeAprobacion } from "../../../../api/vacations";
+import { fechaCorta } from "@compartido/planVacaciones/fechas";
+import SectionHeader from "../components/SectionHeader";
+import MenuDeTarjetas, { type OpcionDeMenu } from "../components/MenuDeTarjetas";
+import { useRefrescoEnFoco } from "../hooks/useRefrescoEnFoco";
+import { sweetAlert } from "../utils/sweetAlert";
+import { ViewType } from "../types";
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * APROBACIONES (15/11/2026, pedido del usuario)
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Lo que la gente de su equipo pide y espera SU aprobación. Arranca con las vacaciones; después entran
+ * los pedidos (por eso es un menú de tarjetas desde ya: en la app nunca van pestañas).
+ *
+ * La solicitud de vacaciones sube Supervisor → Coordinador → Admin:
+ *   · El supervisor aprueba lo de su área y turno.
+ *   · El coordinador aprueba lo que ya aprobó el supervisor (o lo de un área sin supervisor). Además ve lo
+ *     que el supervisor todavía no aprobó y puede pedírselo; no aprobarlo por él.
+ *   · Después la aprueba el admin, desde la web.
+ *
+ * Las reglas están en el server (`services/vacaciones/aprobacionPorEtapas.ts`): acá se muestra lo que
+ * devuelve la bandeja.
+ */
+
+type ParteVacaciones = "para_aprobar" | "esperando";
+
+const INFO = {
+  vacaciones:
+    "Las vacaciones suben por la jerarquía del proyecto: primero las aprueba el supervisor del área y turno, después el coordinador del proyecto y al final el administrador. Si en el proyecto no hay supervisor o coordinador, ese paso se saltea.\n\n«Para aprobar» es lo que espera tu respuesta. «Esperando al supervisor» (sólo coordinadores) es lo que el supervisor todavía no aprobó: podés pedirle que lo revise.",
+};
+
+const periodo = (i: ItemDeAprobacion) => `${fechaCorta(String(i.startDate).slice(0, 10))} → ${fechaCorta(String(i.endDate).slice(0, 10))}`;
+
+export default function Aprobaciones({ onNavigate }: { onNavigate: (view: ViewType) => void }) {
+  const [datos, setDatos] = useState<{ paraAprobar: ItemDeAprobacion[]; esperandoSupervisor: ItemDeAprobacion[] } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [procesando, setProcesando] = useState<string | null>(null);
+  /*
+    Hoy hay una sola sección (Vacaciones), así que el menú «Vacaciones / Pedidos» se saltea, como hace
+    Novedades cuando hay una sola opción. Cuando entren los pedidos, va un MenuDeTarjetas más arriba.
+  */
+  const [parte, setParte] = useState<ParteVacaciones | "menu">("menu");
+
+  const cargar = useCallback(() => {
+    vacationsAPI
+      .aprobaciones()
+      .then((d) => {
+        setDatos(d);
+        setError(null);
+      })
+      .catch((e) => setError(e?.response?.data?.error || "No se pudieron cargar las aprobaciones."));
+  }, []);
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+  useRefrescoEnFoco(cargar);
+
+  const paraAprobar = datos?.paraAprobar || [];
+  const esperando = datos?.esperandoSupervisor || [];
+  // «Esperando al supervisor» es sólo del coordinador: si no hay nada ahí, no hace falta el menú.
+  const opciones: OpcionDeMenu<ParteVacaciones>[] = [
+    { id: "para_aprobar", label: "Para aprobar", icon: faUserCheck, contador: paraAprobar.length },
+    ...(esperando.length ? [{ id: "esperando" as const, label: "Esperando al supervisor", icon: faHourglassHalf, contador: esperando.length }] : []),
+  ];
+  const conMenu = opciones.length > 1;
+  const activa: ParteVacaciones = !conMenu ? "para_aprobar" : parte === "menu" ? "para_aprobar" : parte;
+  const enMenu = conMenu && parte === "menu";
+
+  const sacar = (id: string) => setDatos((d) => (d ? { paraAprobar: d.paraAprobar.filter((x) => x._id !== id), esperandoSupervisor: d.esperandoSupervisor.filter((x) => x._id !== id) } : d));
+
+  const aprobar = async (i: ItemDeAprobacion) => {
+    const r = await sweetAlert.confirm("¿Aprobar las vacaciones?", `${i.persona.nombre} · ${periodo(i)} (${i.daysRequested} días).${i.etapa === "supervisor" ? " Después las revisa el coordinador (si el proyecto tiene) y el administrador." : " Después las aprueba el administrador."}`, "Aprobar");
+    if (!r.isConfirmed) return;
+    setProcesando(i._id);
+    try {
+      await vacationsAPI.aprobarEtapa(i._id);
+      sacar(i._id);
+      sweetAlert.success("Aprobadas", "Pasan al siguiente paso.");
+    } catch (e: any) {
+      sweetAlert.error("No se pudo aprobar", e?.response?.data?.error || "Probá de nuevo.");
+      cargar();
+    } finally {
+      setProcesando(null);
+    }
+  };
+
+  const rechazar = async (i: ItemDeAprobacion) => {
+    const r = await sweetAlert.motivo("¿Rechazar las vacaciones?", `Contale a ${i.persona.nombre} por qué no se aprueban.`, { placeholder: "Ej.: se superponen con el cierre del proyecto", confirmText: "Rechazar", mensajeVacio: "Escribí el motivo del rechazo." });
+    if (!r.isConfirmed) return;
+    setProcesando(i._id);
+    try {
+      await vacationsAPI.rechazarEtapa(i._id, String(r.value || "").trim());
+      sacar(i._id);
+      sweetAlert.success("Rechazadas", `Le avisamos a ${i.persona.nombre}.`);
+    } catch (e: any) {
+      sweetAlert.error("No se pudo rechazar", e?.response?.data?.error || "Probá de nuevo.");
+      cargar();
+    } finally {
+      setProcesando(null);
+    }
+  };
+
+  const recordar = async (i: ItemDeAprobacion) => {
+    setProcesando(i._id);
+    try {
+      await vacationsAPI.recordarSupervisor(i._id);
+      setDatos((d) => (d ? { ...d, esperandoSupervisor: d.esperandoSupervisor.map((x) => (x._id === i._id ? { ...x, recordadaHoy: true } : x)) } : d));
+      sweetAlert.success("Listo", "Le avisamos al supervisor.");
+    } catch (e: any) {
+      sweetAlert.error("No se pudo avisar", e?.response?.data?.error || "Probá de nuevo.");
+    } finally {
+      setProcesando(null);
+    }
+  };
+
+  const tarjeta = (i: ItemDeAprobacion, acciones: React.ReactNode) => (
+    <div key={i._id} className="rounded-xl border bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h4 className="truncate font-bold text-slate-900 dark:text-slate-100">{i.persona.nombre}</h4>
+          <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{i.vacationNumber}</p>
+        </div>
+        <span className="shrink-0 whitespace-nowrap rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">{i.daysRequested} días</span>
+      </div>
+      <div className="mt-3 grid grid-cols-1 gap-1.5 border-t border-slate-100 pt-2 text-[11px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <FontAwesomeIcon icon={faCalendarAlt} className="h-3 w-3 text-primary opacity-70" />
+          <span className="truncate">{periodo(i)}</span>
+        </div>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <FontAwesomeIcon icon={faBriefcase} className="h-3 w-3 text-primary opacity-70" />
+          <span className="truncate">{i.proyectos.filter(Boolean).join(" · ") || "Sin proyecto"}</span>
+        </div>
+        {i.aprobadoPorSupervisor && (
+          <div className="flex min-w-0 items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+            <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" />
+            <span className="truncate">Aprobó el supervisor: {i.aprobadoPorSupervisor}</span>
+          </div>
+        )}
+        {i.reason && i.reason !== "Solicitud de vacaciones" && <p className="italic">«{i.reason}»</p>}
+      </div>
+      <div className="mt-3">{acciones}</div>
+    </div>
+  );
+
+  const lista = () => {
+    if (error) return <p className="rounded-xl border p-6 text-center text-sm text-red-600 dark:border-slate-700 dark:text-red-400">{error}</p>;
+    if (!datos) return <LoadingSpinner message="Cargando aprobaciones..." />;
+    const items = activa === "para_aprobar" ? paraAprobar : esperando;
+    if (items.length === 0)
+      return (
+        <div className="flex flex-col items-center justify-center rounded-xl border bg-slate-50 p-10 text-center dark:bg-slate-800/50">
+          <FontAwesomeIcon icon={faUmbrellaBeach} className="mb-3 h-10 w-10 text-slate-300" />
+          <p className="text-sm text-slate-500 dark:text-slate-400">{activa === "para_aprobar" ? "No hay vacaciones esperando tu aprobación" : "El supervisor no tiene vacaciones pendientes"}</p>
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Cuando alguien de tu equipo pida vacaciones y te toque aprobarlas, aparecen acá.</p>
+        </div>
+      );
+    return (
+      <div className="space-y-3">
+        {items.map((i) =>
+          tarjeta(
+            i,
+            activa === "para_aprobar" ? (
+              // Los colores y los íconos del tilde y la cruz de la web; Aprobar es el grande.
+              <div className="grid grid-cols-3 gap-2">
+                <button type="button" onClick={() => rechazar(i)} disabled={procesando === i._id} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-100 py-2 text-xs font-bold text-red-700 active:bg-red-200 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-900/30 dark:text-red-400">
+                  <FontAwesomeIcon icon={faXmark} />
+                  Rechazar
+                </button>
+                <button type="button" onClick={() => aprobar(i)} disabled={procesando === i._id} className="col-span-2 inline-flex items-center justify-center gap-1.5 rounded-lg border border-green-200 bg-green-100 py-2 text-xs font-bold text-green-700 active:bg-green-200 disabled:opacity-50 dark:border-green-900/60 dark:bg-green-900/30 dark:text-green-400">
+                  <FontAwesomeIcon icon={procesando === i._id ? faClock : faCheck} />
+                  {procesando === i._id ? "Guardando..." : "Aprobar"}
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => recordar(i)} disabled={procesando === i._id || i.recordadaHoy} className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 py-2 text-xs font-bold text-slate-600 active:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:active:bg-slate-800">
+                <FontAwesomeIcon icon={faBellConcierge} />
+                {i.recordadaHoy ? "Avisado hoy" : procesando === i._id ? "Avisando..." : "Solicitar aprobación al supervisor"}
+              </button>
+            ),
+          ),
+        )}
+      </div>
+    );
+  };
+
+  const opcionActiva = opciones.find((o) => o.id === activa);
+  return (
+    <div className="flex-1 pb-24">
+      <SectionHeader
+        icon={enMenu || !conMenu ? faCircleCheck : opcionActiva?.icon ?? faCircleCheck}
+        titulo={enMenu || !conMenu ? "Aprobaciones · Vacaciones" : opcionActiva?.label ?? "Aprobaciones"}
+        onBack={() => (enMenu || !conMenu ? onNavigate("home") : setParte("menu"))}
+        info={INFO.vacaciones}
+      />
+      <div className="space-y-3 px-4 pt-4">{enMenu ? <MenuDeTarjetas opciones={opciones} onElegir={setParte} /> : lista()}</div>
+    </div>
+  );
+}

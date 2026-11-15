@@ -17,13 +17,14 @@ import UserHistory from "./views/UserHistory";
 import MyTeams from "./views/MyTeams";
 import Registro from "./views/Registro";
 import Notificaciones from "./views/Notificaciones";
+import Aprobaciones from "./views/Aprobaciones";
 import { useAuthStore } from "../../../stores/authStore";
 import { useThemeStore } from "../../../stores/themeStore";
 import { usePermisoInactivo } from "../../../stores/permisosInactivosStore";
 import { useNotifications } from "./hooks/useNotifications";
 import { useRefrescoEnFoco } from "./hooks/useRefrescoEnFoco";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
-import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_HIRING_TEMPLATES, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../utils/permisosMobile";
+import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_APPROVALS, MOBILE_HIRING_TEMPLATES, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_TEAMS, MOBILE_USERS, MOBILE_VACATIONS } from "../../../utils/permisosMobile";
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
@@ -147,6 +148,9 @@ function App() {
         return puede(MOBILE_ACTIVITY_COMPLIANCE) ? <Novedades onNavigate={setCurrentView} pestanaInicial="cumplimiento" /> : inicio;
       case "registro":
         return puede(MOBILE_REGISTRO) ? <Registro onNavigate={setCurrentView} /> : inicio;
+      // Las vacaciones de su gente que esperan su aprobación (supervisor y coordinador, 15/11/2026).
+      case "approvals":
+        return puede(MOBILE_APPROVALS) ? <Aprobaciones onNavigate={setCurrentView} /> : inicio;
       // Las notificaciones son de cualquiera que entre a la app: avisan sobre lo que ya puede ver.
       case "notifications":
         return <Notificaciones onNavigate={setCurrentView} />;

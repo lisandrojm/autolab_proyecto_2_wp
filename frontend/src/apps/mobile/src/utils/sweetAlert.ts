@@ -135,6 +135,24 @@ export const sweetAlert = {
     });
   },
 
+  /** Pide un texto obligatorio (un motivo de rechazo, por ejemplo). `value` trae lo escrito si se confirma. */
+  motivo: (title: string, text: string, opts: { placeholder?: string; confirmText?: string; mensajeVacio?: string } = {}) => {
+    return Swal.fire({
+      title,
+      text,
+      input: "textarea",
+      inputPlaceholder: opts.placeholder,
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: opts.confirmText || "Confirmar",
+      cancelButtonText: "Cancelar",
+      reverseButtons: true,
+      inputValidator: (valor: string) => (String(valor || "").trim() ? null : opts.mensajeVacio || "Escribí el motivo."),
+      customClass: { popup: "mobile-swal-popup", title: "mobile-swal-title" },
+    });
+  },
+
   confirm: (title: string, text: string, confirmText = "Confirmar", cancelText = "Cancelar") => {
     return Swal.fire({
       title,

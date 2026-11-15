@@ -28,6 +28,8 @@ export declare const MOBILE_USERS = "mobile_users:view";
 export declare const MOBILE_HIRING_TEMPLATES = "mobile_hiring_templates:view";
 /** Registro: generar el link de registro (7 días, se renueva solo) y ver, sin editar, quiénes se registraron. */
 export declare const MOBILE_REGISTRO = "mobile_registro:view";
+/** Aprobaciones (15/11/2026): aprobar las vacaciones de su gente (supervisor → coordinador → admin); después, los pedidos. */
+export declare const MOBILE_APPROVALS = "mobile_approvals:view";
 export declare const ALL_MOBILE_PERMISSIONS: string[];
 /** Lo que veía un Colaborador: sus pedidos y sus vacaciones. Es el piso de cualquier alta. */
 export declare const MOBILE_BASE_PERMISSIONS: string[];

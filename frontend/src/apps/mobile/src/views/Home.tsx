@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
   hace que la tarjeta y la pantalla se lean como la misma cosa; con íconos elegidos aparte, entrar a
   «Contratación» llevaba a una pantalla que arriba mostraba otro dibujo.
 */
-import { faBell, faCalendar, faLink, faShoppingCart, faSignOutAlt, faUmbrellaBeach, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faCalendar, faCircleCheck, faLink, faShoppingCart, faSignOutAlt, faUmbrellaBeach, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
@@ -16,7 +16,8 @@ import { usePermisoInactivo } from "../../../../stores/permisosInactivosStore";
 import { NOVEDADES_CONTRATACION, NOVEDAD_REGISTRO, ProfileData } from "../../../../api/personnel";
 import { contratosPorVencerAPI } from "../../../../api/contratosPorVencer";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
-import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
+import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_APPROVALS, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
+import { vacationsAPI } from "../../../../api/vacations";
 import { esFechaBajaVigente } from "../../../../utils/contratoVigencia";
 
 /** La notificación destacada arriba de las tarjetas, apagada hasta que vivan en la campanita. Ver el render. */
@@ -29,7 +30,8 @@ const MOSTRAR_NOTIFICACION_DESTACADA = false;
  */
 // Registro va pegado a Contratación: son las dos formas de sumar gente.
 // «Mis equipos» no está: vive en la barra de abajo (ver `components/BottomNav`), no en una tarjeta.
-const ORDEN_DE_TARJETAS: ViewType[] = ["user_history", "registro", "activity_logs", "orders", "vacations"];
+// «Aprobaciones» va después de Vacaciones: lo propio y, al lado, lo de su gente (15/11/2026).
+const ORDEN_DE_TARJETAS: ViewType[] = ["user_history", "registro", "activity_logs", "orders", "vacations", "approvals"];
 
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
@@ -68,6 +70,22 @@ export default function Home({ onNavigate }: HomeProps) {
     contarPorVencer();
   }, [contarPorVencer]);
   useRefrescoEnFoco(contarPorVencer);
+  /*
+    APROBACIONES (15/11/2026): cuántas vacaciones esperan MI aprobación. Al coordinador no le cuenta lo
+    que todavía espera al supervisor —eso lo ve adentro, pero no es suyo para resolver—.
+  */
+  const [paraAprobar, setParaAprobar] = useState(0);
+  const contarParaAprobar = useCallback(() => {
+    if (!(user?.permissions || []).includes(MOBILE_APPROVALS)) return;
+    vacationsAPI
+      .contarParaAprobar()
+      .then(setParaAprobar)
+      .catch(() => undefined);
+  }, [user]);
+  useEffect(() => {
+    contarParaAprobar();
+  }, [contarParaAprobar]);
+  useRefrescoEnFoco(contarParaAprobar);
   const { profile, loading: profileLoading } = useProfile();
 
   /*
@@ -207,6 +225,11 @@ export default function Home({ onNavigate }: HomeProps) {
     quickActions.push({ icon: faLink, title: "Registro", view: "registro" as ViewType, disabled: false, nuevos: nuevosRegistros });
   }
 
+  // Aprobaciones: las vacaciones de su gente que esperan su aprobación (supervisor y coordinador).
+  if (puede(MOBILE_APPROVALS)) {
+    quickActions.push({ icon: faCircleCheck, title: "Aprobaciones", view: "approvals" as ViewType, disabled: false, nuevos: paraAprobar });
+  }
+
   /*
     LEGAJOS, RECIBOS, GESTIÓN DE EQUIPO Y REPORTES NO SE MUESTRAN.
 
@@ -238,6 +261,7 @@ export default function Home({ onNavigate }: HomeProps) {
     vacations: MOBILE_VACATIONS,
     user_history: MOBILE_USERS,
     registro: MOBILE_REGISTRO,
+    approvals: MOBILE_APPROVALS,
   };
   const posicion = (vista: ViewType) => {
     const i = ORDEN_DE_TARJETAS.indexOf(vista);

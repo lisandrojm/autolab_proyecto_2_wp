@@ -34,6 +34,12 @@ export const MOBILE_USERS = "mobile_users:view"; // Contratación (solicitudes d
 /** Plantillas de equipo: una pestaña más de Contratación para contratar a un equipo fijo de una vez. */
 export const MOBILE_HIRING_TEMPLATES = "mobile_hiring_templates:view";
 export const MOBILE_REGISTRO = "mobile_registro:view"; // Registro: link de registro y registrados
+/**
+ * APROBACIONES (15/11/2026): lo que la gente de su equipo pide y espera su aprobación. Arranca con las
+ * vacaciones (supervisor → coordinador → admin); después entran los pedidos. «Vacaciones» es otra cosa:
+ * las propias.
+ */
+export const MOBILE_APPROVALS = "mobile_approvals:view";
 
 /**
  * En el orden en que se muestran, tanto en el editor de roles como en la ficha del usuario.
@@ -57,6 +63,7 @@ export const MOBILE_ITEMS = [
   { permiso: MOBILE_REGISTRO, label: "Registro", grupo: "Contratación", ayuda: "Compartir el link para que la gente se registre (vence según lo configurado en Usuarios → Link y se renueva solo) y ver, sin editar, quiénes se registraron." },
   { permiso: MOBILE_ORDERS, label: "Pedidos", grupo: "Personal", ayuda: "Sus propios pedidos." },
   { permiso: MOBILE_VACATIONS, label: "Vacaciones", grupo: "Personal", ayuda: "Sus propias vacaciones." },
+  { permiso: MOBILE_APPROVALS, label: "Aprobaciones", grupo: "Aprobaciones", ayuda: "Aprobar las vacaciones de su gente. El supervisor aprueba lo de su área y turno; el coordinador, lo que ya aprobó el supervisor (y ve lo que el supervisor todavía no aprobó, para pedírselo). Después la aprueba el admin." },
 ];
 
 export const MOBILE_GRUPOS = [...new Set(MOBILE_ITEMS.map((i) => i.grupo))];
@@ -91,8 +98,8 @@ export const CAPACIDAD_PERMISSIONS = CAPACIDAD_ITEMS.map((i) => i.permiso);
  */
 export const PLANTILLAS_ROL = [
   { nombre: "Colaborador", descripcion: "Carga lo suyo: pedidos y vacaciones.", permisos: [MOBILE_ORDERS, MOBILE_VACATIONS] },
-  { nombre: "Supervisor", descripcion: "Supervisa áreas y turnos y carga las novedades de su gente.", permisos: [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, MOBILE_ORDERS, MOBILE_VACATIONS, PROJECT_COORDINATOR] },
-  { nombre: "Coordinador", descripcion: "Coordina a los supervisores: sigue su cumplimiento y pide altas.", permisos: [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, PROJECT_SUPERVISOR] },
+  { nombre: "Supervisor", descripcion: "Supervisa áreas y turnos, carga las novedades de su gente y aprueba sus vacaciones.", permisos: [MOBILE_ACTIVITY_LOGS, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, MOBILE_ORDERS, MOBILE_VACATIONS, MOBILE_APPROVALS, PROJECT_COORDINATOR] },
+  { nombre: "Coordinador", descripcion: "Coordina a los supervisores: sigue su cumplimiento, pide altas y aprueba lo que ellos aprobaron.", permisos: [MOBILE_ACTIVITY_COMPLIANCE, MOBILE_TEAMS, MOBILE_USERS, MOBILE_HIRING_TEMPLATES, MOBILE_REGISTRO, MOBILE_APPROVALS, PROJECT_SUPERVISOR] },
 ];
 
 /**
