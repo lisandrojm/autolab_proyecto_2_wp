@@ -126,3 +126,9 @@ export declare function baseDeAntiguedad(a: {
         consideradas: FilaEmpresaConDias[];
     } | null;
 };
+/**
+ * El CUIT de la empleadora cuya antigüedad cuenta (la forma corta de `empresaDeComputo`): con precedencia
+ * manual, la primera de `precedenciaCuits` que la persona tenga; si no, la vigente (abierta → última
+ * fecha → primera alta). `null` si no hay filas. `hoy` por defecto, el día UTC.
+ */
+export declare function empresaVigenteCuit(filasPorEmpresa: FilaEmpresaParaComputo[], modo?: ModoComputoAntiguedad, precedenciaCuits?: string[], hoy?: string): string | null;

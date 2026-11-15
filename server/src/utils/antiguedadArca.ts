@@ -218,3 +218,12 @@ export function baseDeAntiguedad(a: {
   if (!r) return { dias: a.diasSumados, elegida: null };
   return { dias: r.fila.dias, elegida: { fila: r.fila, motivo: r.motivo, fuente: a.hayArca ? "arca" : "contratos", consideradas: filas } };
 }
+
+/**
+ * El CUIT de la empleadora cuya antigüedad cuenta (la forma corta de `empresaDeComputo`): con precedencia
+ * manual, la primera de `precedenciaCuits` que la persona tenga; si no, la vigente (abierta → última
+ * fecha → primera alta). `null` si no hay filas. `hoy` por defecto, el día UTC.
+ */
+export function empresaVigenteCuit(filasPorEmpresa: FilaEmpresaParaComputo[], modo: ModoComputoAntiguedad = "empresaVigente", precedenciaCuits: string[] = [], hoy: string = new Date().toISOString().slice(0, 10)): string | null {
+  return empresaDeComputo(filasPorEmpresa, hoy, { modo, precedencia: precedenciaCuits })?.fila.empleadoraCuit ?? null;
+}

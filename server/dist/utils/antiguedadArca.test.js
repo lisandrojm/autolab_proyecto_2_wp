@@ -3,7 +3,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { antiguedadDe, antiguedadesDe, baseDeAntiguedad, diasEntre, empresaDeComputo, empresaVigenteDe, fusionarTramos, tramoTrabajado } from "./antiguedadArca.js";
+import { antiguedadDe, antiguedadesDe, baseDeAntiguedad, diasEntre, empresaDeComputo, empresaVigenteCuit, empresaVigenteDe, fusionarTramos, tramoTrabajado } from "./antiguedadArca.js";
 const HOY = "2026-10-12";
 const FZERO = "30710295839";
 const DOS_MIL_TREINTA = "30717068374";
@@ -164,4 +164,13 @@ describe("la base de antigüedad de las vacaciones (15/11/2026)", () => {
         assert.equal(r.dias, 400);
         assert.equal(r.elegida, null);
     });
+});
+describe("empresaVigenteCuit (la forma corta)", () => {
+    const GRINI = "33717673749";
+    const f = (empleadoraCuit, primeraAlta, ultimaFecha, tieneRelacionAbierta = false) => ({ empleadoraCuit, primeraAlta, ultimaFecha, tieneRelacionAbierta });
+    it("abierta gana", () => assert.equal(empresaVigenteCuit([f(FZERO, "2015-01-01", "2026-03-31"), f(DOS_MIL_TREINTA, "2026-04-01", HOY, true)], "empresaVigente", [], HOY), DOS_MIL_TREINTA));
+    it("sin abiertas, la última fecha mayor", () => assert.equal(empresaVigenteCuit([f(DOS_MIL_TREINTA, "2025-01-01", "2026-05-31"), f(GRINI, "2024-01-01", "2026-08-31")], "empresaVigente", [], HOY), GRINI));
+    it("empate de última fecha: la primera alta mayor", () => assert.equal(empresaVigenteCuit([f(FZERO, "2015-01-01", "2026-08-31"), f(GRINI, "2024-01-01", "2026-08-31")], "empresaVigente", [], HOY), GRINI));
+    it("precedencia manual", () => assert.equal(empresaVigenteCuit([f(FZERO, "2015-01-01", "2026-03-31"), f(DOS_MIL_TREINTA, "2026-04-01", HOY, true)], "precedenciaManual", [FZERO], HOY), FZERO));
+    it("sin filas", () => assert.equal(empresaVigenteCuit([]), null));
 });
