@@ -76,8 +76,9 @@ export function antiguedadDe(relaciones, hoy) {
 }
 /**
  * Las filas que van a `AntiguedadArca` para un CUIL: una por empleadora y la global (todas juntas,
- * `empleadoraCuit: null`). Si la persona tiene una sola empleadora, la global es igual a la de ella
- * y se guarda también: la pantalla lee siempre la global para el total.
+ * `empleadoraCuit: null`). Si la persona tiene una sola empleadora, la global es igual a la de ella.
+ * Desde el 15/11/2026 la global queda para auditar: las vacaciones toman la antigüedad de UNA
+ * empleadora (`empresaDeComputo`), no la suma de todas.
  */
 export function antiguedadesDe(relaciones, hoy) {
     const global = antiguedadDe(relaciones, hoy);
@@ -87,4 +88,51 @@ export function antiguedadesDe(relaciones, hoy) {
     for (const cuit of global.empresas)
         out.push({ empleadoraCuit: cuit, metricas: antiguedadDe(relaciones.filter((r) => r.empleadoraCuit === cuit), hoy) });
     return out;
+}
+/** Fecha guardada (Date o string) a "YYYY-MM-DD"; "" si no hay. */
+export const isoDia = (v) => {
+    if (!v)
+        return "";
+    if (typeof v === "string")
+        return v.slice(0, 10);
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+};
+/** Vigente hoy: relación abierta, o una que termina hoy o después. */
+const esVigente = (f, hoy) => f.tieneRelacionAbierta || (!!f.ultimaFecha && f.ultimaFecha >= hoy);
+/** La empleadora vigente (ver la regla arriba). `null` si no hay filas. */
+export function empresaVigenteDe(filas, hoy) {
+    if (filas.length === 0)
+        return null;
+    const orden = [...filas].sort((a, b) => {
+        const va = esVigente(a, hoy) ? 1 : 0;
+        const vb = esVigente(b, hoy) ? 1 : 0;
+        if (va !== vb)
+            return vb - va;
+        if (a.ultimaFecha !== b.ultimaFecha)
+            return a.ultimaFecha < b.ultimaFecha ? 1 : -1;
+        if (a.primeraAlta !== b.primeraAlta)
+            return a.primeraAlta < b.primeraAlta ? 1 : -1;
+        return a.empleadoraCuit.localeCompare(b.empleadoraCuit);
+    });
+    return orden[0];
+}
+/**
+ * La empleadora cuya antigüedad cuenta y por qué. `precedencia`: CUITs en orden, la primera presente
+ * gana (sólo en modo manual). Una sola empleadora es «unica» sea cual sea el modo.
+ */
+export function empresaDeComputo(filas, hoy, config = {}) {
+    if (filas.length === 0)
+        return null;
+    if (new Set(filas.map((f) => f.empleadoraCuit)).size === 1)
+        return { fila: filas[0], motivo: "unica" };
+    if (config.modo === "precedenciaManual") {
+        for (const cuit of config.precedencia || []) {
+            const fila = filas.find((f) => f.empleadoraCuit === cuit);
+            if (fila)
+                return { fila, motivo: "precedencia" };
+        }
+    }
+    const fila = empresaVigenteDe(filas, hoy);
+    return fila ? { fila, motivo: "vigente" } : null;
 }

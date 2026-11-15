@@ -60,10 +60,38 @@ export declare function tramoTrabajado(r: RelacionParaAntiguedad, hoy: string): 
 export declare function antiguedadDe(relaciones: RelacionParaAntiguedad[], hoy: string): MetricasAntiguedad | null;
 /**
  * Las filas que van a `AntiguedadArca` para un CUIL: una por empleadora y la global (todas juntas,
- * `empleadoraCuit: null`). Si la persona tiene una sola empleadora, la global es igual a la de ella
- * y se guarda también: la pantalla lee siempre la global para el total.
+ * `empleadoraCuit: null`). Si la persona tiene una sola empleadora, la global es igual a la de ella.
+ * Desde el 15/11/2026 la global queda para auditar: las vacaciones toman la antigüedad de UNA
+ * empleadora (`empresaDeComputo`), no la suma de todas.
  */
 export declare function antiguedadesDe(relaciones: RelacionParaAntiguedad[], hoy: string): Array<{
     empleadoraCuit: string | null;
     metricas: MetricasAntiguedad;
 }>;
+/** Lo mínimo de cada empleadora para elegir: sale de las filas de `AntiguedadArca` o de los contratos de WeProdu. */
+export interface FilaEmpresaParaComputo {
+    /** CUIT de 11 dígitos (o el id de la empresa si no tiene CUIT cargado). */
+    empleadoraCuit: string;
+    tieneRelacionAbierta: boolean;
+    /** ISO YYYY-MM-DD: el último día de la relación (hoy si está abierta). */
+    ultimaFecha: string;
+    /** ISO YYYY-MM-DD: la primera alta con esa empleadora. */
+    primeraAlta: string;
+}
+/** Fecha guardada (Date o string) a "YYYY-MM-DD"; "" si no hay. */
+export declare const isoDia: (v: unknown) => string;
+/** La empleadora vigente (ver la regla arriba). `null` si no hay filas. */
+export declare function empresaVigenteDe<T extends FilaEmpresaParaComputo>(filas: T[], hoy: string): T | null;
+export type ModoComputoAntiguedad = "empresaVigente" | "precedenciaManual";
+export type MotivoEmpresaComputo = "vigente" | "unica" | "precedencia";
+/**
+ * La empleadora cuya antigüedad cuenta y por qué. `precedencia`: CUITs en orden, la primera presente
+ * gana (sólo en modo manual). Una sola empleadora es «unica» sea cual sea el modo.
+ */
+export declare function empresaDeComputo<T extends FilaEmpresaParaComputo>(filas: T[], hoy: string, config?: {
+    modo?: ModoComputoAntiguedad;
+    precedencia?: string[];
+}): {
+    fila: T;
+    motivo: MotivoEmpresaComputo;
+} | null;

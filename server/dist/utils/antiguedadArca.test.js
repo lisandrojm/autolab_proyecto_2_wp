@@ -3,7 +3,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { antiguedadDe, antiguedadesDe, diasEntre, fusionarTramos, tramoTrabajado } from "./antiguedadArca.js";
+import { antiguedadDe, antiguedadesDe, diasEntre, empresaDeComputo, empresaVigenteDe, fusionarTramos, tramoTrabajado } from "./antiguedadArca.js";
 const HOY = "2026-10-12";
 const FZERO = "30710295839";
 const DOS_MIL_TREINTA = "30717068374";
@@ -75,5 +75,51 @@ describe("una fila por empleadora más la global", () => {
     it("correr el cálculo dos veces da lo mismo (no infla nada)", () => {
         const rel = [r("2021-03-31", "2021-04-02"), r("2021-03-31", "2021-04-02")];
         assert.equal(antiguedadDe(rel, HOY).diasTrabajados, 3);
+    });
+});
+describe("de qué empleadora se toma la antigüedad (vacaciones, 15/11/2026)", () => {
+    const GRINI = "33717673749";
+    const f = (empleadoraCuit, primeraAlta, ultimaFecha, tieneRelacionAbierta = false) => ({ empleadoraCuit, primeraAlta, ultimaFecha, tieneRelacionAbierta });
+    it("la abierta gana aunque la otra tenga más días", () => {
+        const filas = [f(FZERO, "2015-01-01", "2026-03-31"), f(DOS_MIL_TREINTA, "2026-04-01", HOY, true)];
+        assert.equal(empresaVigenteDe(filas, HOY).empleadoraCuit, DOS_MIL_TREINTA);
+    });
+    it("sin abiertas, la de última fecha mayor", () => {
+        const filas = [f(DOS_MIL_TREINTA, "2025-01-01", "2026-05-31"), f(GRINI, "2024-01-01", "2026-08-31")];
+        assert.equal(empresaVigenteDe(filas, HOY).empleadoraCuit, GRINI);
+    });
+    it("un fin futuro cuenta como vigente", () => {
+        const filas = [f(FZERO, "2020-01-01", "2026-12-31"), f(GRINI, "2026-01-01", HOY, true)];
+        // Las dos vigentes: gana la de última fecha mayor (FZERO termina el 31/12).
+        assert.equal(empresaVigenteDe(filas, HOY).empleadoraCuit, FZERO);
+    });
+    it("dos abiertas el mismo día: desempata la primera alta mayor (la nueva)", () => {
+        const filas = [f(FZERO, "2015-01-01", HOY, true), f(DOS_MIL_TREINTA, "2026-04-01", HOY, true)];
+        assert.equal(empresaVigenteDe(filas, HOY).empleadoraCuit, DOS_MIL_TREINTA);
+    });
+    it("sin filas no hay empresa", () => assert.equal(empresaVigenteDe([], HOY), null));
+    it("sólo FZERO: FZERO, motivo «unica»", () => {
+        const r = empresaDeComputo([f(FZERO, "2015-01-01", "2026-03-31")], HOY);
+        assert.equal(r.fila.empleadoraCuit, FZERO);
+        assert.equal(r.motivo, "unica");
+    });
+    it("FZERO vieja + 2030 nueva: 2030, motivo «vigente»", () => {
+        const r = empresaDeComputo([f(FZERO, "2015-01-01", "2026-03-31"), f(DOS_MIL_TREINTA, "2026-04-01", HOY, true)], HOY);
+        assert.equal(r.fila.empleadoraCuit, DOS_MIL_TREINTA);
+        assert.equal(r.motivo, "vigente");
+    });
+    it("precedencia manual: la primera de la lista que tenga, aunque no sea la vigente", () => {
+        const filas = [f(FZERO, "2015-01-01", "2026-03-31"), f(DOS_MIL_TREINTA, "2026-04-01", HOY, true)];
+        const r = empresaDeComputo(filas, HOY, { modo: "precedenciaManual", precedencia: [GRINI, FZERO, DOS_MIL_TREINTA] });
+        assert.equal(r.fila.empleadoraCuit, FZERO);
+        assert.equal(r.motivo, "precedencia");
+    });
+    it("precedencia manual sin ninguna de la lista: la vigente", () => {
+        const filas = [f(FZERO, "2015-01-01", "2026-03-31"), f(DOS_MIL_TREINTA, "2026-04-01", HOY, true)];
+        assert.equal(empresaDeComputo(filas, HOY, { modo: "precedenciaManual", precedencia: [GRINI] }).motivo, "vigente");
+    });
+    it("la precedencia sólo vale en modo manual", () => {
+        const filas = [f(FZERO, "2015-01-01", "2026-03-31"), f(DOS_MIL_TREINTA, "2026-04-01", HOY, true)];
+        assert.equal(empresaDeComputo(filas, HOY, { modo: "empresaVigente", precedencia: [FZERO] }).fila.empleadoraCuit, DOS_MIL_TREINTA);
     });
 });

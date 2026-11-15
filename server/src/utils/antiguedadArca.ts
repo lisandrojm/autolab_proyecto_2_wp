@@ -109,8 +109,9 @@ export function antiguedadDe(relaciones: RelacionParaAntiguedad[], hoy: string):
 
 /**
  * Las filas que van a `AntiguedadArca` para un CUIL: una por empleadora y la global (todas juntas,
- * `empleadoraCuit: null`). Si la persona tiene una sola empleadora, la global es igual a la de ella
- * y se guarda también: la pantalla lee siempre la global para el total.
+ * `empleadoraCuit: null`). Si la persona tiene una sola empleadora, la global es igual a la de ella.
+ * Desde el 15/11/2026 la global queda para auditar: las vacaciones toman la antigüedad de UNA
+ * empleadora (`empresaDeComputo`), no la suma de todas.
  */
 export function antiguedadesDe(relaciones: RelacionParaAntiguedad[], hoy: string): Array<{ empleadoraCuit: string | null; metricas: MetricasAntiguedad }> {
   const global = antiguedadDe(relaciones, hoy);
@@ -118,4 +119,73 @@ export function antiguedadesDe(relaciones: RelacionParaAntiguedad[], hoy: string
   const out: Array<{ empleadoraCuit: string | null; metricas: MetricasAntiguedad }> = [{ empleadoraCuit: null, metricas: global }];
   for (const cuit of global.empresas) out.push({ empleadoraCuit: cuit, metricas: antiguedadDe(relaciones.filter((r) => r.empleadoraCuit === cuit), hoy)! });
   return out;
+}
+
+/*
+  ─── DE QUÉ EMPLEADORA SE TOMA LA ANTIGÜEDAD PARA LAS VACACIONES (15/11/2026) ───
+
+  Se sumaban los días de todas las empleadoras del tenant (la fila global). Ya no: la antigüedad es la
+  de UNA empresa. Quien pasó de FZERO (vieja) a 2030 (nueva) arranca en 2030 de cero; no arrastra lo
+  de FZERO. Sirve para N empresas, identificadas por CUIT (nada fijo en el código).
+
+  Regla (`empresaVigenteDe`): gana la empleadora con la relación vigente —abierta, o con fin después de
+  hoy—; entre varias vigentes, o si no hay ninguna, la de `ultimaFecha` mayor (la más reciente); si
+  empatan, la de `primeraAlta` mayor (la que empezó después, o sea la nueva). Con precedencia manual,
+  la primera de la lista que la persona tenga; si no tiene ninguna de la lista, la vigente.
+*/
+
+/** Lo mínimo de cada empleadora para elegir: sale de las filas de `AntiguedadArca` o de los contratos de WeProdu. */
+export interface FilaEmpresaParaComputo {
+  /** CUIT de 11 dígitos (o el id de la empresa si no tiene CUIT cargado). */
+  empleadoraCuit: string;
+  tieneRelacionAbierta: boolean;
+  /** ISO YYYY-MM-DD: el último día de la relación (hoy si está abierta). */
+  ultimaFecha: string;
+  /** ISO YYYY-MM-DD: la primera alta con esa empleadora. */
+  primeraAlta: string;
+}
+
+/** Fecha guardada (Date o string) a "YYYY-MM-DD"; "" si no hay. */
+export const isoDia = (v: unknown): string => {
+  if (!v) return "";
+  if (typeof v === "string") return v.slice(0, 10);
+  const d = new Date(v as any);
+  return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+};
+
+/** Vigente hoy: relación abierta, o una que termina hoy o después. */
+const esVigente = (f: FilaEmpresaParaComputo, hoy: string) => f.tieneRelacionAbierta || (!!f.ultimaFecha && f.ultimaFecha >= hoy);
+
+/** La empleadora vigente (ver la regla arriba). `null` si no hay filas. */
+export function empresaVigenteDe<T extends FilaEmpresaParaComputo>(filas: T[], hoy: string): T | null {
+  if (filas.length === 0) return null;
+  const orden = [...filas].sort((a, b) => {
+    const va = esVigente(a, hoy) ? 1 : 0;
+    const vb = esVigente(b, hoy) ? 1 : 0;
+    if (va !== vb) return vb - va;
+    if (a.ultimaFecha !== b.ultimaFecha) return a.ultimaFecha < b.ultimaFecha ? 1 : -1;
+    if (a.primeraAlta !== b.primeraAlta) return a.primeraAlta < b.primeraAlta ? 1 : -1;
+    return a.empleadoraCuit.localeCompare(b.empleadoraCuit);
+  });
+  return orden[0];
+}
+
+export type ModoComputoAntiguedad = "empresaVigente" | "precedenciaManual";
+export type MotivoEmpresaComputo = "vigente" | "unica" | "precedencia";
+
+/**
+ * La empleadora cuya antigüedad cuenta y por qué. `precedencia`: CUITs en orden, la primera presente
+ * gana (sólo en modo manual). Una sola empleadora es «unica» sea cual sea el modo.
+ */
+export function empresaDeComputo<T extends FilaEmpresaParaComputo>(filas: T[], hoy: string, config: { modo?: ModoComputoAntiguedad; precedencia?: string[] } = {}): { fila: T; motivo: MotivoEmpresaComputo } | null {
+  if (filas.length === 0) return null;
+  if (new Set(filas.map((f) => f.empleadoraCuit)).size === 1) return { fila: filas[0], motivo: "unica" };
+  if (config.modo === "precedenciaManual") {
+    for (const cuit of config.precedencia || []) {
+      const fila = filas.find((f) => f.empleadoraCuit === cuit);
+      if (fila) return { fila, motivo: "precedencia" };
+    }
+  }
+  const fila = empresaVigenteDe(filas, hoy);
+  return fila ? { fila, motivo: "vigente" } : null;
 }
