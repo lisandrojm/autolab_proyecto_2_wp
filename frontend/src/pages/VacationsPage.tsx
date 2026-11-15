@@ -25,6 +25,14 @@ import { aprobadoresDe, etapaDe } from '@compartido/vacaciones/etapaDeAprobacion
 
 const HELP_KEY = 'vacations' as const;
 
+/**
+ * La línea y la sombra que marcan dónde termina la columna fija (Solicitante). La línea es una sombra
+ * interna y no un `border-r`: la tabla tiene `border-collapse`, y ahí el borde de una celda sticky se queda
+ * en su lugar cuando la tabla se corre. Va en `-left-px` y no en `left-0`: con el zoom de Windows al 125 %
+ * quedaba una astilla de 1 px de lo que pasa por debajo.
+ */
+const FIN_COL_FIJA = 'shadow-[inset_-2px_0_0_0_#d1d5db,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-2px_0_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.5)]';
+
 interface VacationRequestMock {
   id: string;
   numeroPedido: string;
@@ -933,10 +941,12 @@ export const VacationsPage: React.FC = () => {
                   <TablaConEncabezadoFijo className="rounded border dark:border-slate-800" tabla="w-full dark:bg-slate-800/80 table-auto">
                     <thead>
                       <tr>
+                        {/* Solicitante primero y fija a la izquierda: es lo que identifica la fila al correr la tabla. */}
+                        <th className={`text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 sticky -left-px z-[15] bg-white dark:bg-gray-800 ${FIN_COL_FIJA}`}>Solicitante</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Período</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha</th>
                         <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Solicitud</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha Sol.</th>
                         {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Regla/s</th> */}
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Solicitante</th>
                         {/*<th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cliente</th>*/}
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Role Frame</th>
@@ -945,18 +955,33 @@ export const VacationsPage: React.FC = () => {
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Supervisor</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Coordinador</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Período</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
                       </tr>
                     </thead>
 
                     <tbody>
                       {filteredVacations.map((vacation) => (
-                        <tr key={vacation.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleOpenModal(vacation)}>
+                        <tr key={vacation.id} className="group border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleOpenModal(vacation)}>
+                          {/* Fondo opaco: la celda fija tapa lo que pasa por debajo al correr la tabla. */}
+                          <td className={`py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap sticky -left-px z-[5] bg-white dark:bg-[#1b2637] group-hover:bg-gray-50 dark:group-hover:bg-[#293344] ${FIN_COL_FIJA}`}>{getUserName(vacation.solicitante)}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">
+                            {vacation.startDate && vacation.endDate ? (
+                              <div className="flex flex-col gap-0.5">
+                                <span>
+                                  <span className="text-gray-400 dark:text-gray-500">Desde:</span> {formatDateShort(vacation.startDate)}
+                                </span>
+                                <span>
+                                  <span className="text-gray-400 dark:text-gray-500">Hasta:</span> {formatDateShort(vacation.endDate)}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 dark:text-gray-500">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</td>
                           <td className="py-3 px-4">
                             <span className="bg-gray-50 dark:bg-gray-600/20 text-xs text-nowrap text-gray-600 dark:text-gray-400 px-2 rounded">{getFormattedVacationNumber(vacation.numeroPedido)}</span>
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</td>
                           {/*                         <td className="py-3 px-4">
                         <div className="flex flex-col gap-2">
                           {vacation.reglas.map((regla, index) => (
@@ -966,7 +991,6 @@ export const VacationsPage: React.FC = () => {
                           ))}
                         </div>
                       </td> */}
-                          <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap">{getUserName(vacation.solicitante)}</td>
                           {/* <td className="py-3 px-4">
                           {(() => {
                             // Calculate client from project
@@ -1040,15 +1064,6 @@ export const VacationsPage: React.FC = () => {
                             <NivelDeAprobacion vacation={{ status: vacation.estado, cadena: vacation.cadena as any, aprobaciones: vacation.aprobaciones as any, nombresAprobadores: vacation.nombresAprobadores }} nivel="coordinador" />
                           </td>
                           <td className="py-3 px-4">{renderSignatureStatus(vacation)}</td>
-                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">
-                            {vacation.startDate && vacation.endDate ? (
-                              <>
-                                {formatDateShort(vacation.startDate)} - {formatDateShort(vacation.endDate)}
-                              </>
-                            ) : (
-                              <span className="text-gray-400 dark:text-gray-500">-</span>
-                            )}
-                          </td>
                           <td className="py-3 px-4 text-center">
                             <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, e)} className="text-gray-400 dark:text-gray-400 hover:text-gray-300 dark:hover:text-gray-300 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
                               <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
