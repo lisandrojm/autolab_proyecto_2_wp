@@ -827,12 +827,14 @@ export const MobileNavbar: React.FC = () => {
         cinco rótulos tranquilos y una mancha de color que se llevaba toda la atención, todo el
         tiempo, por algo que no es urgente sino pendiente.
 
-        En cero no se dibuja: un «(0)» ocupa el mismo lugar que un «(12)» y dice lo mismo que no
-        tener nada, que es justo lo que se quiere leer de un vistazo.
+        LAS BANDEJAS DEL FLUJO DICEN «(0)» (14/11/2026, pedido del usuario): sin número no se sabía si
+        estaba vacía o si todavía no se había contado, y confundía. Sin número = todavía no se contó.
+        El grupo cerrado («Contratación») sigue sin dibujar el cero.
       */
       const bandeja = (item as any).pendientes as number | undefined;
+      const esBandejaDelFlujo = (item as any).paso !== undefined;
       const pill =
-        bandeja && bandeja > 0 ? (
+        bandeja !== undefined && (bandeja > 0 || esBandejaDelFlujo) ? (
           <span title={(item as any).accionable === false ? `${bandeja} en esta bandeja` : `${bandeja} ${bandeja === 1 ? 'cosa' : 'cosas'} para resolver`} className="!ml-1.5 shrink-0 text-xs lg:text-[11px] font-semibold text-gray-500 dark:text-gray-400">
             ({bandeja})
           </span>

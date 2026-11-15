@@ -85,8 +85,7 @@ export const useContadoresContratacionStore = create<Estado>((set, get) => ({
     carosPedidosAt = ahora;
     // Import dinámico: el menú no tiene por qué cargar las pantallas de Contratos para contar.
     import("../components/contratos/ContractDropboxTabs")
-      .then((m) => m.fetchDropboxCounts())
-      .then((dropbox) => set((s) => ({ contadores: { ...s.contadores, dropbox } })))
+      .then((m) => m.contarCarpetasDropbox((tipo, cantidad) => get().informar({ carpeta: { clave: tipo, cantidad } })))
       .catch(() => {});
     import("../components/contratos/ContractBulkTabs")
       .then((m) => m.contarContratados())
@@ -106,8 +105,8 @@ export const useContadoresContratacionStore = create<Estado>((set, get) => ({
         ...(parte.solicitudes !== undefined ? { solicitudes: parte.solicitudes } : {}),
         ...(parte.contratos !== undefined ? { contratos: parte.contratos } : {}),
         ...(parte.generarDocumentos !== undefined ? { generarDocumentos: parte.generarDocumentos } : {}),
-        // Sin las tres carpetas leídas todavía no se inventan ceros para las otras dos: ya llegan (`asegurarCaros`).
-        ...(parte.carpeta && c.dropbox ? { dropbox: { ...c.dropbox, [parte.carpeta.clave]: parte.carpeta.cantidad } } : {}),
+        // Sólo esa carpeta: las otras dos siguen sin número hasta que se cuenten (`asegurarCaros`).
+        ...(parte.carpeta ? { dropbox: { ...c.dropbox, [parte.carpeta.clave]: parte.carpeta.cantidad } } : {}),
       },
     });
   },

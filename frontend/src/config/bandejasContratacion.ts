@@ -189,11 +189,15 @@ export interface ContadoresContratacion {
   solicitudes: number | null;
   tramite: { alta: number; cuit: number; sinCuit: number } | null;
   generarDocumentos: number | null;
-  dropbox: Record<CarpetaFirma, number> | null;
+  /**
+   * Cada carpeta por su cuenta (14/11/2026): con las tres juntas, si el conteo de una no llegaba no
+   * había número para ninguna, ni siquiera para la bandeja que se acababa de abrir y leer.
+   */
+  dropbox: Partial<Record<CarpetaFirma, number>>;
   contratos: number | null;
 }
 
-export const CONTADORES_VACIOS: ContadoresContratacion = { solicitudes: null, tramite: null, generarDocumentos: null, dropbox: null, contratos: null };
+export const CONTADORES_VACIOS: ContadoresContratacion = { solicitudes: null, tramite: null, generarDocumentos: null, dropbox: {}, contratos: null };
 
 /** El número de una bandeja, con el mismo corte que la pantalla (el trámite suma sus tres variantes). */
 export const contadorDeBandeja = (c: ContadoresContratacion, clave: ClaveBandeja): number | null => {
@@ -206,7 +210,7 @@ export const contadorDeBandeja = (c: ContadoresContratacion, clave: ClaveBandeja
     case 'generar':
       return c.generarDocumentos;
     case 'dropbox':
-      return c.dropbox ? c.dropbox[b.contenido.carpeta] : null;
+      return c.dropbox[b.contenido.carpeta] ?? null;
     case 'padron':
       return c.contratos;
   }

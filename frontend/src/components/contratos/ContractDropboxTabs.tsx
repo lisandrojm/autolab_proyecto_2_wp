@@ -72,31 +72,30 @@ type VerEnBandeja = "todo" | "solicitudes" | "recibos";
 const esDeContratos = (e: DropboxEntry): boolean => e.tag === "file" && !esReciboDeSueldo(e.name);
 
 /**
- * Cuenta los archivos de las 3 carpetas de Dropbox de una sola vez, para mostrar el número en las
- * pestañas apenas se entra a "Gestión de Contratos" (sin esperar a que el usuario abra cada una).
- * Cada carpeta que falle (sin config, sin conexión, etc.) cuenta como 0 en vez de tirar la página abajo.
+ * Cuenta los archivos de las 3 carpetas de Dropbox para el número del menú, sin esperar a que se abra
+ * cada bandeja. Cada carpeta avisa su número apenas lo tiene (`alContar`): Requested signatures es
+ * mucho más grande que Outbox y no tiene por qué demorar a las otras. Una carpeta sin configurar o que
+ * no se pudo leer no avisa nada (sin número, que no es lo mismo que «0»).
  */
-export const fetchDropboxCounts = async (): Promise<Record<TipoBandejaDropbox, number>> => {
+export const contarCarpetasDropbox = async (alContar: (tipo: TipoBandejaDropbox, cantidad: number) => void): Promise<void> => {
   const cfg = await firmaDigitalAPI.config();
   const carpetas: Record<TipoBandejaDropbox, string | null | undefined> = {
     para_firmar: cfg?.outboxCarpeta,
     enviado_firma: cfg?.pendienteFirmaCarpeta,
     firmados: cfg?.firmadosCarpeta,
   };
-  const tipos = Object.keys(carpetas) as TipoBandejaDropbox[];
-  const counts = await Promise.all(
-    tipos.map(async (tipo) => {
+  await Promise.all(
+    (Object.keys(carpetas) as TipoBandejaDropbox[]).map(async (tipo) => {
       const path = carpetas[tipo];
-      if (!path) return 0;
+      if (!path) return;
       try {
         const res = await dropboxAPI.list(path, true);
-        return (res.entries || []).filter(esDeContratos).length;
+        alContar(tipo, (res.entries || []).filter(esDeContratos).length);
       } catch {
-        return 0;
+        /* sin número */
       }
     }),
   );
-  return Object.fromEntries(tipos.map((tipo, i) => [tipo, counts[i]])) as Record<TipoBandejaDropbox, number>;
 };
 
 /**
@@ -225,7 +224,7 @@ export const ContractDropboxTab: React.FC<{ tipo: TipoBandejaDropbox; onCount?: 
   const bytesSeleccionados = useMemo(() => entries.reduce((acc, e) => (selected.has(e.path) ? acc + (e.size || 0) : acc), 0), [entries, selected]);
   const excedePeso = bytesSeleccionados > ZIP_MAX_BYTES;
 
-  // El padre muestra la cantidad en la pestaña: lo que sale de una Solicitud, sin los recibos (igual que `fetchDropboxCounts`).
+  // El padre muestra la cantidad en la pestaña: lo que sale de una Solicitud, sin los recibos (igual que `contarCarpetasDropbox`).
   useEffect(() => {
     onCount?.(cantidadDeSolicitudes);
   }, [cantidadDeSolicitudes, onCount]);
