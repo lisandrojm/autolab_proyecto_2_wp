@@ -90,7 +90,8 @@ const gruposDeValidacion = (items: { nombre: string; os: ObraSocialDeSolicitud }
 export const SolicitudesPage: React.FC = () => {
   const catalogos = useCatalogosDeSolicitudes();
   /** Qué solicitud se está aprobando: abre el wizard del proyecto encima de esta pantalla. */
-  const [aprobando, setAprobando] = useState<{ projectId: string; solicitudId: string; editarContrato?: { userId: string; contractIndex: number } } | null>(null);
+  /** `solicitud`: la que se está aprobando (no al editar una aprobada), para poder rechazarla desde el modal. */
+  const [aprobando, setAprobando] = useState<{ projectId: string; solicitudId: string; editarContrato?: { userId: string; contractIndex: number }; solicitud?: SolicitudVista } | null>(null);
   /** Las recién aprobadas que se están deslizando fuera de la tabla, rumbo a Contratos. */
   const [saliendo, setSaliendo] = useState<Set<string>>(new Set());
   /** La solicitud que se está revisando: el detalle completo, antes de decidir. */
@@ -204,15 +205,17 @@ export const SolicitudesPage: React.FC = () => {
   }, [cargar, busqueda]);
 
   /** Cambiar de estado no necesita el wizard: es un cambio de status y se resuelve acá mismo. */
-  const cambiarEstado = async (s: SolicitudVista, status: "rechazada" | "pendiente", motivo?: string) => {
+  const cambiarEstado = async (s: SolicitudVista, status: "rechazada" | "pendiente", motivo?: string): Promise<boolean> => {
     try {
       await usersAPI.setSolicitudStatus(s._id, status, motivo);
       setRevisando(null);
       sweetAlert.success(status === "rechazada" ? "Solicitud rechazada" : "Solicitud reabierta", status === "rechazada" ? "La solicitud quedó marcada como rechazada." : "Volvió a quedar pendiente de aprobación.");
       emitPendientesChanged();
       cargar(page);
+      return true;
     } catch (error: any) {
       sweetAlert.error("Error", error.response?.data?.error || "No se pudo cambiar el estado de la solicitud.");
+      return false;
     }
   };
 
@@ -223,7 +226,7 @@ export const SolicitudesPage: React.FC = () => {
     la pregunta se termina haciendo por teléfono y la solicitud se vuelve a mandar igual. Queda
     guardado en la solicitud y se ve en la tabla y en el detalle.
   */
-  const pedirMotivoYRechazar = async (s: SolicitudVista) => {
+  const pedirMotivoYRechazar = async (s: SolicitudVista): Promise<boolean> => {
     const r = await sweetAlert.prompt("¿Rechazar solicitud?", {
       text: `Contale a quien pidió el alta de ${s.nombre} por qué no se aprueba.`,
       placeholder: "Ej.: falta el CUIT, o la categoría no corresponde al rol",
@@ -231,8 +234,8 @@ export const SolicitudesPage: React.FC = () => {
       confirmText: "Rechazar",
       mensajeVacio: "Escribí el motivo del rechazo.",
     });
-    if (!r.isConfirmed) return;
-    await cambiarEstado(s, "rechazada", String(r.value || "").trim());
+    if (!r.isConfirmed) return false;
+    return cambiarEstado(s, "rechazada", String(r.value || "").trim());
   };
 
   const eliminar = async (s: SolicitudVista) => {
@@ -282,7 +285,7 @@ export const SolicitudesPage: React.FC = () => {
       return;
     }
     setRevisando(null);
-    setAprobando({ projectId: destino._id, solicitudId: s._id });
+    setAprobando({ projectId: destino._id, solicitudId: s._id, solicitud: s });
   };
 
   /** Las filas del server ya vienen con la forma que espera la tabla. */
@@ -728,6 +731,12 @@ export const SolicitudesPage: React.FC = () => {
                   setAprobando(null);
                   cargar(page);
                 },
+                // Rechazar sin salir del modal: el mismo rechazo de la tabla (pide el motivo); si se rechazó, el modal se cierra.
+                onRechazar: aprobando.solicitud
+                  ? async () => {
+                      if (aprobando.solicitud && (await pedirMotivoYRechazar(aprobando.solicitud))) setAprobando(null);
+                    }
+                  : undefined,
                 onAprobada: () => {
                   const id = aprobando.solicitudId;
                   const nombre = (rows.find((r: any) => r._id === id) as any)?.nombre || "La persona";

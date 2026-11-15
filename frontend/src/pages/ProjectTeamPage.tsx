@@ -21,7 +21,7 @@ import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { getHelp } from '../data/help/helpContent';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRotateRight, faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight, faSitemap, faCommentDots , faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faRotateRight, faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight, faSitemap, faCommentDots , faSpinner, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { vacationsAPI, VacationRequest } from '../api/vacations';
 import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
 import { TeamVacacionesTab } from '../components/team/TeamVacacionesTab';
@@ -232,6 +232,8 @@ export interface AprobacionEnModal {
   onCerrar: () => void;
   /** Se guardó: la solicitud quedó aprobada, o el contrato corregido. */
   onAprobada: () => void;
+  /** Rechazar la solicitud desde «Editar y Aprobar» (pide el motivo). Sin esto no hay botón «Rechazar». */
+  onRechazar?: () => void | Promise<void>;
 }
 
 /** A dónde lleva «Contratos» desde el equipo de un proyecto: la bandeja de trabajo, filtrada por él. */
@@ -2842,6 +2844,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   */
   const guardandoWizardRef = useRef(false);
   const [guardandoWizard, setGuardandoWizard] = useState(false);
+
+  /** Cerrar el wizard sin guardar: la cruz, el fondo o «Cancelar». */
+  const cerrarWizard = () => {
+    setSelectedUserForWizard(null);
+    setRenovando(false);
+    // El oficio agregado a mano es de ESTA carga: si se cierra sin guardar, no queda nada.
+    setRolFrameAgregado(null);
+    setRolFrameBusqueda('');
+    // Abierto desde Solicitudes no hay pantalla atrás: cerrarlo es cerrar el modo entero.
+    soloAprobacion?.onCerrar();
+  };
+
   const handleSaveWizard = async () => {
     if (guardandoWizardRef.current) return;
     guardandoWizardRef.current = true;
@@ -4493,15 +4507,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       {/* Wizard Modal */}
       <Modal
         isOpen={!!selectedUserForWizard}
-        onClose={() => {
-          setSelectedUserForWizard(null);
-          setRenovando(false);
-          // El oficio agregado a mano es de ESTA carga: si se cierra sin guardar, no queda nada.
-          setRolFrameAgregado(null);
-          setRolFrameBusqueda('');
-          // Abierto desde Solicitudes no hay pantalla atrás: cerrarlo es cerrar el modo entero.
-          soloAprobacion?.onCerrar();
-        }}
+        onClose={cerrarWizard}
         // Aprobando una solicitud (desde Solicitudes o desde la pestaña del equipo) es «Editar y Aprobar», como el botón que lo abre (01/11/2026).
         // Editando un contrato encima de otra pantalla (Contratos, una solicitud aprobada) es «Editar Miembro».
         title={renovando ? 'Renovar contrato' : approvingSolicitudId ? 'Editar y Aprobar' : soloAprobacion?.editarContrato ? 'Editar Miembro' : esEdicionMiembro ? 'Configurar Miembro' : 'Agregar Miembro'}
@@ -4527,23 +4533,57 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         size="xl"
         footer={
           <div className="flex gap-3 w-full">
-            {/* Una sola acción: el formulario es uno solo y se guarda desde cualquier punto. */}
-            <button
-              type="button"
-              onClick={handleSaveWizard}
-              disabled={guardandoWizard}
-              aria-busy={guardandoWizard}
-              className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider disabled:opacity-60 disabled:cursor-wait disabled:active:scale-100"
-            >
-              {guardandoWizard ? (
-                <>
-                  <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
-                  GUARDANDO…
-                </>
-              ) : (
-                'GUARDAR'
-              )}
-            </button>
+            {approvingSolicitudId ? (
+              /*
+                EDITAR Y APROBAR: CANCELAR, RECHAZAR Y APROBAR (15/11/2026, pedido del usuario). Guardar acá es
+                aprobar, así que el botón lo dice. Aprobar es el grande; los colores y los íconos son los del
+                tilde y la cruz de la columna de acciones de Solicitudes. Rechazar pide el motivo, como en la tabla.
+              */
+              <>
+                <button type="button" onClick={cerrarWizard} disabled={guardandoWizard} className="btn-secondary !py-3 !px-6 !rounded-xl uppercase tracking-wider font-bold">
+                  Cancelar
+                </button>
+                {soloAprobacion?.onRechazar && (
+                  <button
+                    type="button"
+                    onClick={() => void soloAprobacion.onRechazar?.()}
+                    disabled={guardandoWizard}
+                    className="inline-flex items-center justify-center gap-2 py-3 px-6 rounded-xl border font-bold uppercase tracking-wider transition-colors bg-red-100 text-red-700 border-red-200 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-900/60 dark:hover:bg-red-900/50 disabled:opacity-60"
+                  >
+                    <FontAwesomeIcon icon={faXmark} />
+                    Rechazar
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSaveWizard}
+                  disabled={guardandoWizard}
+                  aria-busy={guardandoWizard}
+                  className="flex-1 inline-flex items-center justify-center gap-2 py-3 rounded-xl border font-bold uppercase tracking-wider transition-all active:scale-95 bg-green-100 text-green-700 border-green-200 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/60 dark:hover:bg-green-900/50 disabled:opacity-60 disabled:cursor-wait disabled:active:scale-100"
+                >
+                  <FontAwesomeIcon icon={guardandoWizard ? faSpinner : faCheck} spin={guardandoWizard} />
+                  {guardandoWizard ? 'Aprobando…' : 'Aprobar'}
+                </button>
+              </>
+            ) : (
+              /* Una sola acción: el formulario es uno solo y se guarda desde cualquier punto. */
+              <button
+                type="button"
+                onClick={handleSaveWizard}
+                disabled={guardandoWizard}
+                aria-busy={guardandoWizard}
+                className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-wider disabled:opacity-60 disabled:cursor-wait disabled:active:scale-100"
+              >
+                {guardandoWizard ? (
+                  <>
+                    <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                    GUARDANDO…
+                  </>
+                ) : (
+                  'GUARDAR'
+                )}
+              </button>
+            )}
           </div>
         }
       >
