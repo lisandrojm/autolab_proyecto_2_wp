@@ -17,6 +17,14 @@ export interface AvailableContract {
   name: string;
 }
 
+export interface ComputoAntiguedad {
+  modo: "empresaVigente" | "precedenciaManual";
+  /** Ids de empresas (Company), en orden: la primera que la persona tenga gana. Sólo en modo manual. */
+  precedencia: string[];
+  /** El cálculo viejo: todas las empleadoras sumadas. */
+  sumarEntreEmpresas: boolean;
+}
+
 export interface VacationConfig {
   _id?: string;
   tenantId: string;
@@ -35,6 +43,8 @@ export interface VacationConfig {
   diasCorridos: boolean;
   /** Ventana anual de goce: el tramo del año en que se pueden tomar vacaciones, sin año ("MM-DD"). Ver `@compartido/ventanaGoce`. */
   ventanaGoce?: { enabled: boolean; inicio: string; fin: string };
+  /** De qué empleadora se toma la antigüedad (15/11/2026): ya no se suman. Ver `AntiguedadPorEmpresaConfig`. */
+  computoAntiguedad?: ComputoAntiguedad;
   requiereFirma: boolean;
   pdfId?: string;
   contractRules?: ContractRule[];

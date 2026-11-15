@@ -11,6 +11,7 @@ import { vacationConfigAPI, VacationConfig } from "../../api/vacationConfig";
 import { LinkSiPuede } from "../LinkSiPuede";
 import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 
+import { AntiguedadPorEmpresaConfig } from "./AntiguedadPorEmpresaConfig";
 export const VacationConfigTab: React.FC = () => {
   const [config, setConfig] = useState<VacationConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -168,6 +169,8 @@ export const VacationConfigTab: React.FC = () => {
               <p className="text-xs text-gray-500 mt-1">Días adicionales que la empresa otorga por encima de la ley.</p>
             </div>
           </div>
+
+          <AntiguedadPorEmpresaConfig valor={config.computoAntiguedad} onChange={(v) => updateConfig("computoAntiguedad", v)} />
 
           <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Límites y restricciones</h3>
