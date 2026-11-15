@@ -1780,37 +1780,23 @@ const revisarValoracion = async (args) => {
     const catId = Number(args.categoriaSatId);
     // Una categoría puede tener VARIAS valoraciones en la función (Oro y Plata a la vez).
     let nivelesDeLaCategoria = [];
-    let nombreFuncion = "";
     if (Number.isFinite(rolId) && Number.isFinite(catId)) {
-        const rol = await RoleFrame.findOne({ "data.rol.id": rolId }).select("name data.categoriasSat").lean();
+        const rol = await RoleFrame.findOne({ "data.rol.id": rolId }).select("data.categoriasSat").lean();
         const asociada = (rol?.data?.categoriasSat || []).find((c) => Number(c?.id) === catId);
         nivelesDeLaCategoria = valoracionesDeCategoria(asociada);
-        if (nivelesDeLaCategoria.length > 0)
-            nombreFuncion = String(rol?.name || "");
     }
-    // Desalineada = NINGUNA de las de la categoría es de las aceptadas (ver `reglaDeValoracion`). Al
-    // contrato va la que rige si la categoría la tiene; si no, la primera.
+    // Al contrato va la valoración que rige si la categoría la tiene (ver `reglaDeValoracion`); si no, la primera.
     const aceptadas = args.regla.aceptadas?.length ? args.regla.aceptadas : [delProyectoId].filter(Boolean);
     const deLaCategoriaId = nivelesDeLaCategoria.find((id) => aceptadas.includes(id)) || nivelesDeLaCategoria[0] || "";
-    const desalineada = aceptadas.length > 0 && nivelesDeLaCategoria.length > 0 && !nivelesDeLaCategoria.some((id) => aceptadas.includes(id));
     // El nombre se busca acá, donde se puede esperar: `aGuardar` es sincrónico a propósito, para que
     // el que llama no tenga que acordarse de un `await` más en medio del armado del contrato.
     const nombreDeLaCategoria = deLaCategoriaId ? String((await Valoracion.findById(deLaCategoriaId).select("name").lean())?.name || "") : "";
-    if (desalineada && !motivo) {
-        const [delProyecto, nombresCat] = await Promise.all([Valoracion.findById(delProyectoId).select("name").lean(), Valoracion.find({ _id: { $in: nivelesDeLaCategoria } }).select("name").lean()]);
-        const deLaCategoria = { name: nombresCat.map((v) => v.name).join(" / ") };
-        return {
-            rechazo: {
-                error: esExcepcionDelRol
-                    ? `La categoría es de valoración «${deLaCategoria?.name || "?"}» y en este proyecto ese rol, con ese tipo de contrato, va siempre «${delProyecto?.name || "?"}». Si corresponde igual, hay que elegirla a mano y dejar el motivo.`
-                    : `La categoría es de valoración «${deLaCategoria?.name || "?"}» y el proyecto es «${delProyecto?.name || "?"}». Si corresponde igual, hay que elegirla a mano y dejar el motivo.`,
-                valoracionProyecto: delProyecto?.name || null,
-                valoracionCategoria: deLaCategoria?.name || null,
-                funcion: nombreFuncion,
-            },
-            aGuardar: () => ({}),
-        };
-    }
+    /*
+      SIN MOTIVO OBLIGATORIO (15/11/2026, pedido del usuario). Una categoría de otra valoración que la que
+      rige se respondía con 422 si no traía motivo; ya no se pide. El contrato igual guarda de qué
+      valoración es la categoría, así que el informe de desalineados de la valoración del proyecto la sigue
+      mostrando. Si viene un motivo (el de un contrato viejo al editarlo), se guarda como antes.
+    */
     /* Lo que se escribe EN EL CONTRATO: el id para cruzarlo después, y el nombre CONGELADO al momento
        del alta — misma convención que `nombre_categoria_sat`, para que el contrato pueda explicarse a
        sí mismo aunque la valoración se renombre o se apague. */

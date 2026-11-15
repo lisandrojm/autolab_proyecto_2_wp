@@ -21,7 +21,7 @@ import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { getHelp } from '../data/help/helpContent';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRotateRight, faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight, faSitemap, faCommentDots , faSpinner, faCheck } from '@fortawesome/free-solid-svg-icons';
+import { faRotateRight, faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight, faSitemap, faCommentDots , faSpinner, faCheck, faMedal } from '@fortawesome/free-solid-svg-icons';
 import { vacationsAPI, VacationRequest } from '../api/vacations';
 import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
 import { TeamVacacionesTab } from '../components/team/TeamVacacionesTab';
@@ -2615,9 +2615,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     setConvenioFiltro(String((catDeSolicitud || catInicial)?.data?.convenio || '').trim());
     setVerTodasDelConvenio(false);
     setVerTodasLasValoraciones(false);
-    // Al editar un contrato que ya se eligió de otra valoración, su motivo viene cargado: el server lo
-    // vuelve a pedir en cada guardado, y hacerlo tipear de nuevo para cambiar un horario no aporta nada.
-    // Sólo con un contrato puntual de ESTE proyecto: el de otro proyecto no justifica nada acá.
+    // El motivo de otra valoración ya no se pide (15/11/2026); el que un contrato viejo tenga cargado se
+    // conserva al editarlo. Sólo con un contrato puntual de ESTE proyecto: el de otro no justifica nada acá.
     setMotivoValoracion(String((contratoPorIndice as any)?.valoracionOverride?.motivo || ''));
     // El contrato de ESTE proyecto que se va a editar (el del índice, o el último): su regla de nacimiento.
     const contratosDelProyecto = (currentProjectMeta?.contracts as any[]) || [];
@@ -2817,8 +2816,6 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     if (horarioExcedidoWizard) faltan.push(`Horario dentro de las ${limiteHorasWizard} h por jornada del contrato`);
     if (erroresJornadasWizard.jornadas) faltan.push('Cantidad de jornadas');
     if (erroresJornadasWizard.motivo || erroresJornadasWizard.nota) faltan.push('Motivo del ajuste de jornadas');
-    // Lo exige el server; frenarlo acá dice QUÉ falta en vez de mostrar el 422 después de guardar.
-    if (categoriaElegidaDeOtraValoracion && !motivoValoracion.trim()) faltan.push('Motivo de la categoría de otra valoración');
     // Igual que en la app: un reemplazo dice a quién y por qué.
     if (wizardData.reemplazo && motivosReemplazo.length > 0 && !wizardData.motivoReemplazoId) faltan.push('Motivo del reemplazo');
     /*
@@ -2981,9 +2978,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           nombre_rol_frame: rfSel?.name || '',
           rol_frame_id: Number(wizardData.rol_frame_id),
           /*
-            El salteo de valoración, con su motivo. Sólo viaja si se abrió el escape manual: el
-            server lo EXIGE cuando la categoría no es de la valoración del proyecto (contesta 422
-            sin él) y lo guarda con quién y cuándo. Sin escape abierto no hay nada que justificar.
+            El motivo de una categoría de otra valoración ya no se pide (15/11/2026, pedido del usuario).
+            Sólo viaja el que traía un contrato viejo al editarlo, para no borrarlo.
           */
           valoracionOverride: categoriaElegidaDeOtraValoracion && motivoValoracion.trim() ? { motivo: motivoValoracion.trim() } : undefined,
           empleado_id_reemplezado: wizardData.empleado_id_reemplezado ? Number(wizardData.empleado_id_reemplezado) : null,
@@ -5401,7 +5397,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                                 {coincide
                                   ? `coincide con la valoración del proyecto${delMismoNivel > 1 ? ` · la función tiene ${delMismoNivel} de este nivel, revisá que sea la correcta` : ''}`
                                   : rolNoTieneCategoriasDeLaValoracion
-                                    ? `la función no tiene categorías ${valoracionDelRol?.nombre || 'de la valoración del proyecto'}: ésta difiere y hay que explicar por qué`
+                                    ? `la función no tiene categorías ${valoracionDelRol?.nombre || 'de la valoración del proyecto'}: ésta difiere`
                                     : `difiere de ${rolConValoracionPropia ? 'la valoración de este rol en el proyecto' : 'la valoración del proyecto'} (${valoracionDelRol?.nombre || 'otra'})`}
                               </span>
                             ) : (
@@ -5413,20 +5409,6 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       {/* La categoría que se limpió sola tiene que decirlo acá y no descubrirse al guardar. */}
                       {avisoConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">{avisoConvenio}</p>}
 
-                      {/*
-                    El escape hatch del filtro por función Frame.
-
-                    Solo aparece con un convenio elegido, porque sin convenio «todas las del
-                    convenio» no quiere decir nada. Cuando la función no tiene NINGUNA categoría de
-                    ese convenio se prende solo y queda fijo: apagarlo dejaría el select vacío, que
-                    es el estado sin explicación que esto viene a sacar.
-                  */}
-                      {convenioFiltro && wizardData.rol_frame_id && (
-                        <label className="flex items-start gap-2 ml-1 text-[11px] text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-                          <input type="checkbox" checked={verTodasDelConvenio || rolNoTieneCategoriasDelConvenio} disabled={rolNoTieneCategoriasDelConvenio} onChange={(e) => setVerTodasDelConvenio(e.target.checked)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5 cursor-pointer disabled:cursor-not-allowed" />
-                          <span>Ver todas las categorías de este convenio (ignora las de la función Frame)</span>
-                        </label>
-                      )}
                       {rolNoTieneCategoriasDelConvenio && <p className="text-[11px] text-amber-700 dark:text-amber-400 ml-1">La función Frame «{allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id))?.name || wizardData.rol_frame_id}» no tiene categorías de este convenio; se muestran todas las del convenio.</p>}
 
                       {/*
@@ -5471,21 +5453,42 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                         </p>
                       )}
 
-                      {ocultasPorValoracion > 0 && !verTodasLasValoraciones && (
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">
-                          Se ocultaron {ocultasPorValoracion} de otra valoración.{' '}
-                          <button type="button" onClick={() => setVerTodasLasValoraciones(true)} className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 underline underline-offset-2">
-                            Elegir de todas formas
-                          </button>
-                        </p>
-                      )}
+                      {/*
+                    LOS DOS ESCAPES DE LOS FILTROS, COMO BOTONES (15/11/2026, pedido del usuario): eran un
+                    checkbox y un link sueltos entre los avisos y no se veían. Botones claros, cada uno de
+                    su color: celeste el del convenio, violeta el de la valoración. Los dos van y vuelven.
 
-                      {(verTodasLasValoraciones || categoriaElegidaDeOtraValoracion) && (
-                        <div className="ml-1 mt-1 rounded-md border border-amber-300 bg-amber-50 p-2 dark:border-amber-800 dark:bg-amber-950/30">
-                          <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">{categoriaElegidaDeOtraValoracion ? `La categoría elegida no es de ${rolConValoracionPropia ? 'la valoración de este rol en el proyecto' : 'la valoración del proyecto'}${valoracionDelRol ? ` (${valoracionDelRol.nombre})` : ''}: contá por qué.` : 'Estás viendo categorías de otras valoraciones.'}</p>
-                          {/* El motivo es OBLIGATORIO y lo exige el server (422 sin él): un salteo sin
-                          explicación es justo lo que después nadie puede reconstruir. */}
-                          <input type="text" value={motivoValoracion} onChange={(e) => setMotivoValoracion(e.target.value)} maxLength={200} placeholder="Motivo (obligatorio si elegís una de otra valoración)" className="mt-1.5 w-full rounded border border-amber-300 bg-white px-2 py-1 text-[11px] text-gray-800 dark:border-amber-800 dark:bg-gray-900 dark:text-gray-100" />
+                    · Convenio: sólo con un convenio elegido (sin convenio «todas las del convenio» no quiere
+                      decir nada). Si la función no tiene NINGUNA categoría de ese convenio queda prendido y
+                      fijo: apagarlo dejaría el select vacío.
+                    · Valoración: sin motivo desde el 15/11/2026; la leyenda de la categoría ya dice que difiere.
+                  */}
+                      {((convenioFiltro && wizardData.rol_frame_id) || ocultasPorValoracion > 0 || verTodasLasValoraciones) && (
+                        <div className="ml-1 mt-1 flex flex-wrap gap-2">
+                          {convenioFiltro && wizardData.rol_frame_id && (
+                            <button
+                              type="button"
+                              aria-pressed={verTodasDelConvenio || rolNoTieneCategoriasDelConvenio}
+                              disabled={rolNoTieneCategoriasDelConvenio}
+                              onClick={() => setVerTodasDelConvenio((v) => !v)}
+                              title="Ignora las categorías de la función Frame y muestra todas las del convenio"
+                              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-800/60 dark:bg-sky-900/20 dark:text-sky-300 dark:hover:bg-sky-900/40 disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3" />
+                              {verTodasDelConvenio || rolNoTieneCategoriasDelConvenio ? 'Ver sólo las de la función' : 'Ver todas las del convenio'}
+                            </button>
+                          )}
+                          {(ocultasPorValoracion > 0 || verTodasLasValoraciones) && (
+                            <button
+                              type="button"
+                              aria-pressed={verTodasLasValoraciones}
+                              onClick={() => setVerTodasLasValoraciones((v) => !v)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 dark:border-violet-800/60 dark:bg-violet-900/20 dark:text-violet-300 dark:hover:bg-violet-900/40"
+                            >
+                              <FontAwesomeIcon icon={faMedal} className="h-3 w-3" />
+                              {verTodasLasValoraciones ? `Ver sólo las ${valoracionDelRol?.nombre ? `de ${valoracionDelRol.nombre}` : 'de la valoración del proyecto'}` : `Elegir otra valoración (${ocultasPorValoracion})`}
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
