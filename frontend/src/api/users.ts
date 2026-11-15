@@ -30,6 +30,8 @@ export interface SolicitudPendienteDeContrato {
   horario?: string;
   /** Quién la cargó, para la columna «Solicitó». */
   solicitante?: { nombre: string; roles: string[] } | null;
+  /** Las áreas y turnos que pidió (con la sede, si la eligió), para la columna «Área / Turno». */
+  areasTurnos?: { area: string; turnos: string[]; sede?: string }[];
 }
 
 /* ---------- Tipos base ---------- */

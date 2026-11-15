@@ -1039,7 +1039,7 @@ router.get("/solicitudes-pendientes", requireTenant, authenticateToken, requireP
         else if (clientId)
             and.push({ "metadata.projectIds": { $in: await Project.find({ tenantId: req.tenantObjectId, clientId }).distinct("_id") } });
         const docs = await User.find({ $and: and })
-            .select("firstName lastName email createdAt metadata.fullName metadata.cuit metadata.solicitudUserId metadata.projectIds metadata.startDate metadata.dueDate metadata.nombre_contrato metadata.esRenovacion metadata.comentarios metadata.schedule metadata.solicitudCreadaPor")
+            .select("firstName lastName email createdAt metadata.fullName metadata.cuit metadata.solicitudUserId metadata.projectIds metadata.startDate metadata.dueDate metadata.nombre_contrato metadata.esRenovacion metadata.comentarios metadata.schedule metadata.solicitudCreadaPor metadata.areaShiftAssignments")
             .populate({ path: "metadata.projectIds", select: "name clientId metadata.centroCostoId metadata.centroCostoEmpresaTangoId", model: Project, populate: { path: "clientId", select: "name", model: Client } })
             .sort({ createdAt: -1 })
             .lean();
@@ -1050,6 +1050,25 @@ router.get("/solicitudes-pendientes", requireTenant, authenticateToken, requireP
         const personaDe = new Map(personas.map((p) => [String(p._id), p]));
         // «Horario» y «Solicitó» del padrón (11/11/2026), como en Solicitudes.
         const solicitantes = await solicitantesDe(req.tenantObjectId, docs);
+        /*
+          «ÁREA / TURNO» TAMBIÉN EN LA SOLICITUD (15/11/2026, pedido del usuario): se eligen al pedirla
+          (`metadata.areaShiftAssignments`), así que el padrón los muestra antes de aprobar, igual que en un
+          contrato (`areasTurnos` de contracts-overview). Tres consultas para todas las solicitudes.
+        */
+        const asignacionesDe = (s) => (s.metadata?.areaShiftAssignments || []).filter((a) => a?.areaId).map((a) => ({ areaId: String(a.areaId), shiftIds: (a.shiftIds || []).map(String), sedeId: Number(a.sedeId) > 0 ? Number(a.sedeId) : null }));
+        const todasLasAsignaciones = docs.flatMap(asignacionesDe);
+        const idsArea = [...new Set(todasLasAsignaciones.map((a) => a.areaId).filter((id) => Types.ObjectId.isValid(id)))];
+        const idsTurno = [...new Set(todasLasAsignaciones.flatMap((a) => a.shiftIds).filter((id) => Types.ObjectId.isValid(id)))];
+        const idsSede = [...new Set(todasLasAsignaciones.map((a) => a.sedeId).filter((id) => id !== null))];
+        const [areasSol, turnosSol, sedesSol] = await Promise.all([
+            idsArea.length ? Area.find({ _id: { $in: idsArea.map((id) => new Types.ObjectId(id)) } }).select("name").lean() : [],
+            idsTurno.length ? Shift.find({ _id: { $in: idsTurno.map((id) => new Types.ObjectId(id)) } }).select("name").lean() : [],
+            idsSede.length ? Info.find({ type: "sede", "data.id": { $in: idsSede } }).select("name data.id").lean() : [],
+        ]);
+        const nombreArea = new Map(areasSol.map((a) => [String(a._id), String(a.name || "")]));
+        const nombreTurno = new Map(turnosSol.map((t) => [String(t._id), String(t.name || "")]));
+        const nombreSede = new Map(sedesSol.map((sd) => [Number(sd.data?.id), String(sd.name || "")]));
+        const areasTurnosDe = (s) => asignacionesDe(s).map((a) => ({ area: nombreArea.get(a.areaId) || "Área", turnos: a.shiftIds.map((id) => nombreTurno.get(id) || "").filter(Boolean), sede: a.sedeId !== null ? nombreSede.get(a.sedeId) || "" : "" }));
         res.json({
             solicitudes: docs.map((s) => {
                 const proyectos = (s.metadata?.projectIds || []).filter((p) => p && typeof p === "object");
@@ -1074,6 +1093,7 @@ router.get("/solicitudes-pendientes", requireTenant, authenticateToken, requireP
                     comentarios: s.metadata?.comentarios || "",
                     horario: s.metadata?.schedule || "",
                     solicitante: s.metadata?.solicitudCreadaPor ? solicitantes.get(String(s.metadata.solicitudCreadaPor)) || null : null,
+                    areasTurnos: areasTurnosDe(s),
                 };
             }),
         });

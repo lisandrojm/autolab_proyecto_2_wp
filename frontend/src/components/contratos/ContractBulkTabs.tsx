@@ -4259,6 +4259,8 @@ const filaDeSolicitud = (s: SolicitudPendienteDeContrato, estado: string): FilaP
     solicitudComentarios: s.comentarios,
     horarioSolicitud: s.horario || '',
     solicitante: s.solicitante || null,
+    // Se eligen al pedirla: el padrón los muestra antes de aprobar (15/11/2026, pedido del usuario).
+    areasTurnos: s.areasTurnos || [],
   }) as unknown as FilaPadron;
 
 /**
