@@ -6,7 +6,6 @@ import { vacationsAPI, type VacationRequest } from '../api/vacations';
 import { projectsAPI, Project } from '../api/projects';
 import { clientsAPI, Client } from '../api/clients';
 import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
-import { companiesAPI, Company } from '../api/companies';
 import { PageLayout } from '../components/ui/PageLayout';
 import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { UserVacationManagementTab } from '../components/vacations/UserVacationManagementTab';
@@ -22,6 +21,7 @@ import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 import { NivelDeAprobacion } from '../components/vacations/NivelDeAprobacion';
 import { NombreArca, estadoNombreArca } from '../components/arca/NombreArca';
+import { etiquetaCentroCosto } from '../utils/centroCosto';
 import { aprobadoresDe, etapaDe } from '@compartido/vacaciones/etapaDeAprobacion';
 
 const HELP_KEY = 'vacations' as const;
@@ -156,7 +156,6 @@ export const VacationsPage: React.FC = () => {
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allClients, setAllClients] = useState<Client[]>([]);
   const [allRoleFrames, setAllRoleFrames] = useState<RoleFrameItem[]>([]);
-  const [companiesList, setCompaniesList] = useState<Company[]>([]);
 
   useEffect(() => {
     let timeoutId: any;
@@ -251,12 +250,11 @@ export const VacationsPage: React.FC = () => {
       setHasLoadedOnce(true);
 
       // Load vacations, projects, and clients in parallel
-      const [data, projectsData, clientsData, roleFramesData, companiesData] = await Promise.all([vacationsAPI.getAll(), projectsAPI.listAll({ limit: 500 }), clientsAPI.listAll(), roleFrameAPI.list(), companiesAPI.list()]);
+      const [data, projectsData, clientsData, roleFramesData] = await Promise.all([vacationsAPI.getAll(), projectsAPI.listAll({ limit: 500 }), clientsAPI.listAll(), roleFrameAPI.list()]);
 
       setAllProjects(Array.isArray(projectsData) ? projectsData : (projectsData as any).data || []);
       setAllClients(Array.isArray(clientsData) ? clientsData : (clientsData as any).data || []);
       setAllRoleFrames(roleFramesData);
-      setCompaniesList(companiesData);
       // Transform API data to match VacationRequestMock interface
       const transformedRecords: VacationRequestMock[] = data.map(aSolicitud);
       setMockVacations(transformedRecords);
@@ -295,6 +293,24 @@ export const VacationsPage: React.FC = () => {
       }),
     );
     setQuedan(nuevos);
+  };
+
+  /** Los roles empresa de la persona, por nombre y separados por coma (los ids sin nombre no se muestran). */
+  const rolesEmpresaDe = (v: VacationRequestMock): string => {
+    const ids = v.userSnapshot?.rolesFrameIds || [];
+    const nombres = ids.length ? ids.map((id) => allRoleFrames.find((r) => r._id === id)?.name).filter(Boolean) : v.userSnapshot?.rolFrames || [];
+    return [...new Set(nombres as string[])].join(", ");
+  };
+
+  /** El centro de costo de un proyecto (por nombre, que es lo que trae la solicitud), como en Solicitudes. */
+  const centroCostoDe = (nombreProyecto: string): string => etiquetaCentroCosto((allProjects.find((p: any) => p.name === nombreProyecto) as any)?.metadataResolutions?.centroCosto);
+
+  /** El cliente de un proyecto: el que guardó la solicitud o, si no lo trae, el del proyecto en la lista. */
+  const clienteDe = (p: { name: string; clientName?: string }): string => {
+    if (p.clientName) return p.clientName;
+    const proyecto: any = allProjects.find((x: any) => x.name === p.name);
+    const cid = typeof proyecto?.clientId === 'object' ? proyecto?.clientId?._id : proyecto?.clientId;
+    return (typeof proyecto?.clientId === 'object' && proyecto?.clientId?.name) || allClients.find((c) => c._id === cid)?.name || '';
   };
 
   const getFormattedVacationNumber = (vacationNumber: string): string => {
@@ -433,10 +449,12 @@ export const VacationsPage: React.FC = () => {
     y el coordinador desde la app («Aprobaciones»). Acá sólo se aprueba lo que llegó a `pre_approved`
     («Para aprobar») y se rechaza en cualquier momento.
   */
-  const handleApprove = async () => {
-    if (!selectedVacation || updating) return;
+  /** Desde el modal (la abierta) o desde la columna Acciones de la fila (`objetivo`). */
+  const handleApprove = async (objetivo?: VacationRequestMock) => {
+    const v = objetivo ?? selectedVacation;
+    if (!v || updating) return;
 
-    const requiresSignature = selectedVacation.requiresSignature || selectedVacation.firmaEstado !== 'not_required';
+    const requiresSignature = v.requiresSignature || v.firmaEstado !== 'not_required';
     const message = requiresSignature ? 'Al aprobarse la solicitud, se enviará una notificación para informar que el documento ya se encuentra cargado en la plataforma y listo para su firma.' : 'El usuario será notificado';
 
     const result = await sweetAlert.confirm('¿Aprobar esta solicitud?', message, 'Sí, Aprobar', 'Cancelar');
@@ -444,10 +462,10 @@ export const VacationsPage: React.FC = () => {
 
     setUpdating(true);
     try {
-      await vacationsAPI.approve(selectedVacation.id);
+      await vacationsAPI.approve(v.id);
 
       setSelectedVacation((prev) =>
-        prev
+        prev && prev.id === v.id
           ? {
               ...prev,
               estado: 'approved',
@@ -469,12 +487,13 @@ export const VacationsPage: React.FC = () => {
     }
   };
 
-  const handleReject = async () => {
-    if (!selectedVacation || updating) return;
+  const handleReject = async (objetivo?: VacationRequestMock) => {
+    const v = objetivo ?? selectedVacation;
+    if (!v || updating) return;
 
     // Con motivo, como el rechazo de Solicitudes: le llega a quien pidió las vacaciones.
     const result = await sweetAlert.prompt('¿Rechazar esta solicitud?', {
-      text: `Contale a ${getUserName(selectedVacation.solicitante)} por qué no se aprueban sus vacaciones.`,
+      text: `Contale a ${getUserName(v.solicitante)} por qué no se aprueban sus vacaciones.`,
       placeholder: 'Ej.: se superpone con el cierre del proyecto',
       multilinea: true,
       confirmText: 'Rechazar',
@@ -484,10 +503,10 @@ export const VacationsPage: React.FC = () => {
 
     setUpdating(true);
     try {
-      await vacationsAPI.reject(selectedVacation.id, String(result.value || '').trim());
+      await vacationsAPI.reject(v.id, String(result.value || '').trim());
 
       setSelectedVacation((prev) =>
-        prev
+        prev && prev.id === v.id
           ? {
               ...prev,
               estado: 'rejected',
@@ -635,41 +654,6 @@ export const VacationsPage: React.FC = () => {
     calculateStats(filteredVacations);
   }, [filteredVacations]);
 
-  const companyNameById = React.useMemo(() => {
-    const m = new Map<string, string>();
-    companiesList.forEach((c) => m.set(String(c._id), c.razonSocial));
-    return m;
-  }, [companiesList]);
-
-  // El snapshot de la vacación guarda NOMBRES de proyecto (no ids), así que mapeamos por nombre.
-  const projectEmpresasByName = React.useMemo(() => {
-    const m = new Map<string, string[]>();
-    allProjects.forEach((p: any) => {
-      const labels = ((p.contratoEmpresas as any[]) || []).map((id) => companyNameById.get(String(id))).filter((n): n is string => Boolean(n));
-      if (p.name) m.set(String(p.name), labels);
-    });
-    return m;
-  }, [allProjects, companyNameById]);
-
-  /** Badges con las empresas del proyecto de la vacación (o "Sin empresa" si el proyecto no tiene). */
-  const renderVacationProjectEmpresas = (vacation: VacationRequestMock) => {
-    const projs = vacation.userSnapshot?.projects || [];
-    if (projs.length === 0) return null; // sin proyecto → no mostramos nada
-    const labels = projectEmpresasByName.get(String(projs[0]?.name)) || [];
-    if (labels.length === 0) {
-      return <span className="text-[10px] text-gray-400 italic">Sin empresa</span>;
-    }
-    return (
-      <div className="flex flex-wrap gap-1">
-        {labels.map((n, i) => (
-          <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/50 w-fit">
-            {n}
-          </span>
-        ))}
-      </div>
-    );
-  };
-
   const renderModalFooter = () => {
     if (updating) {
       return (
@@ -693,7 +677,7 @@ export const VacationsPage: React.FC = () => {
       </button>
     );
     const botonRechazar = (
-      <button type="button" onClick={handleReject} disabled={updating} className="inline-flex items-center justify-center gap-2 py-2.5 px-6 rounded border font-bold uppercase tracking-wider transition-colors bg-red-100 text-red-700 border-red-200 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-900/60 dark:hover:bg-red-900/50 disabled:opacity-60">
+      <button type="button" onClick={() => handleReject()} disabled={updating} className="inline-flex items-center justify-center gap-2 py-2.5 px-6 rounded border font-bold uppercase tracking-wider transition-colors bg-red-100 text-red-700 border-red-200 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-900/60 dark:hover:bg-red-900/50 disabled:opacity-60">
         <FontAwesomeIcon icon={faTimes} />
         Rechazar
       </button>
@@ -718,7 +702,7 @@ export const VacationsPage: React.FC = () => {
           {botonCancelar}
           {botonRechazar}
           {!nivel && (
-            <button type="button" onClick={handleApprove} disabled={updating} className="flex-1 min-w-[10rem] inline-flex items-center justify-center gap-2 py-2.5 rounded border font-bold uppercase tracking-wider transition-all active:scale-95 bg-green-100 text-green-700 border-green-200 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/60 dark:hover:bg-green-900/50 disabled:opacity-60">
+            <button type="button" onClick={() => handleApprove()} disabled={updating} className="flex-1 min-w-[10rem] inline-flex items-center justify-center gap-2 py-2.5 rounded border font-bold uppercase tracking-wider transition-all active:scale-95 bg-green-100 text-green-700 border-green-200 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/60 dark:hover:bg-green-900/50 disabled:opacity-60">
               <FontAwesomeIcon icon={faCheck} />
               Aprobar
             </button>
@@ -732,7 +716,7 @@ export const VacationsPage: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3 w-full">
           {botonCancelar}
           {botonRechazar}
-          <button type="button" onClick={handleApprove} disabled={updating} className="flex-1 min-w-[10rem] inline-flex items-center justify-center gap-2 py-2.5 rounded border font-bold uppercase tracking-wider transition-all active:scale-95 bg-green-100 text-green-700 border-green-200 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/60 dark:hover:bg-green-900/50 disabled:opacity-60">
+          <button type="button" onClick={() => handleApprove()} disabled={updating} className="flex-1 min-w-[10rem] inline-flex items-center justify-center gap-2 py-2.5 rounded border font-bold uppercase tracking-wider transition-all active:scale-95 bg-green-100 text-green-700 border-green-200 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/60 dark:hover:bg-green-900/50 disabled:opacity-60">
             <FontAwesomeIcon icon={faCheck} />
             Aprobar
           </button>
@@ -743,7 +727,7 @@ export const VacationsPage: React.FC = () => {
     if (selectedVacation.estado === 'approved') {
       return (
         <>
-          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
+          <button onClick={() => handleReject()} disabled={updating} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
             <FontAwesomeIcon icon={faBan} className="text-lg" />
             Rechazar
           </button>
@@ -996,14 +980,16 @@ export const VacationsPage: React.FC = () => {
                         <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Solicitud</th>
                         {/*                       <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Regla/s</th> */}
                         {/*<th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cliente</th>*/}
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Rol/es Empresa</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Cliente</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Role Frame</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
                         {/* La jerarquía que la aprueba (15/11/2026): qué dijo cada nivel, o que el proyecto no lo tiene. */}
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Supervisor</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Coordinador</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
+                        {/* Fija a la derecha, como en Solicitudes: con la tabla ancha, los botones quedaban fuera de la vista. */}
+                        <th className="col-acciones text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Acciones</th>
                       </tr>
                     </thead>
 
@@ -1089,46 +1075,39 @@ export const VacationsPage: React.FC = () => {
                             return <span className="text-xs text-gray-500">-</span>;
                           })()}
                         </td> */}
-                          <td className="py-3 px-4">
-                            <div className="flex flex-col gap-1">
-                              <div className="flex flex-wrap gap-1">
-                                {vacation.userSnapshot?.projects && vacation.userSnapshot.projects.length > 0 ? (
-                                  vacation.userSnapshot.projects.map((p, idx) => (
-                                    <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-600 text-white shadow-sm">
+                          {/* Rol/es Empresa, Cliente y Proyecto con la misma tipografía que Solicitudes de contratación. */}
+                          <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{rolesEmpresaDe(vacation) || <span className="text-xs text-gray-400">-</span>}</td>
+                          {/* Cliente y proyecto en dos columnas, línea a línea: el proyecto queda enfrentado a su cliente. */}
+                          <td className="px-4 py-3">
+                            {vacation.userSnapshot?.projects?.length ? (
+                              <div className="flex flex-col gap-1">
+                                {vacation.userSnapshot.projects.map((p, idx) => (
+                                  <span key={idx} className="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                    {clienteDe(p) || <span className="text-gray-400">-</span>}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {vacation.userSnapshot?.projects?.length ? (
+                              <div className="flex flex-col gap-1">
+                                {vacation.userSnapshot.projects.map((p, idx) => {
+                                  const centro = centroCostoDe(p.name);
+                                  return (
+                                    <span key={idx} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                      {/* El centro de costo, adelante del nombre, con el badge violeta de Solicitudes. */}
+                                      {centro && <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold leading-none bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50">{centro}</span>}
                                       {p.name}
                                     </span>
-                                  ))
-                                ) : (
-                                  <span className="text-xs text-gray-500">-</span>
-                                )}
-                              </div>
-                              {renderVacationProjectEmpresas(vacation)}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex flex-wrap gap-1">
-                              {(() => {
-                                const rfIds = vacation.userSnapshot?.rolesFrameIds || [];
-                                if (rfIds.length === 0) {
-                                  const oldFrames = vacation.userSnapshot?.rolFrames || [];
-                                  if (oldFrames.length === 0) return <span className="text-xs text-gray-500">-</span>;
-                                  return oldFrames.map((rf, idx) => (
-                                    <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
-                                      {rf}
-                                    </span>
-                                  ));
-                                }
-                                return rfIds.map((rfId, idx) => {
-                                  const roleFrameObj = allRoleFrames.find((item) => item._id === rfId);
-                                  const name = roleFrameObj ? roleFrameObj.name : rfId;
-                                  return (
-                                    <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white dark:bg-purple-900 dark:text-purple-300 shadow-sm uppercase tracking-tight">
-                                      {name}
-                                    </span>
                                   );
-                                });
-                              })()}
-                            </div>
+                                })}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400 italic">Sin proyecto</span>
+                            )}
                           </td>
                           <td className="py-3 px-4">
                             <StatusBadge type={mapVacationStatusToStatusType(vacation.estado, etapaDeSolicitud(vacation))} size="sm" />
@@ -1140,10 +1119,38 @@ export const VacationsPage: React.FC = () => {
                             <NivelDeAprobacion vacation={{ status: vacation.estado, cadena: vacation.cadena as any, aprobaciones: vacation.aprobaciones as any, nombresAprobadores: vacation.nombresAprobadores }} nivel="coordinador" />
                           </td>
                           <td className="py-3 px-4">{renderSignatureStatus(vacation)}</td>
-                          <td className="py-3 px-4 text-center">
-                            <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, e)} className="text-gray-400 dark:text-gray-400 hover:text-gray-300 dark:hover:text-gray-300 transition-colors" title="Eliminar solicitud" aria-label="Eliminar solicitud">
-                              <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
-                            </button>
+                          {/*
+                            ACCIONES, COMO EN SOLICITUDES: Aprobar (verde, tilde) arriba de Rechazar (rojo, cruz) y el tacho al
+                            lado. Aprobar sólo se habilita cuando la jerarquía terminó; mientras espera al supervisor o al
+                            coordinador queda apagado y el hover dice a quién (el admin no se adelanta). Rechazar, siempre que
+                            siga en juego.
+                          */}
+                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-center gap-2">
+                              {(vacation.estado === 'pending' || vacation.estado === 'pre_approved') && (() => {
+                                const etapa = etapaDeSolicitud(vacation);
+                                const espera = vacation.estado === 'pending' && (etapa === 'supervisor' || etapa === 'coordinador') ? etapa : null;
+                                return (
+                                  <div className="flex flex-col items-stretch gap-2">
+                                    <button
+                                      onClick={() => handleApprove(vacation)}
+                                      disabled={!!espera || updating}
+                                      className="h-8 w-8 rounded transition-colors flex items-center justify-center bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-green-100 dark:disabled:hover:bg-green-900/30"
+                                      title={espera ? `Espera la aprobación del ${espera}` : 'Aprobar'}
+                                      aria-label="Aprobar"
+                                    >
+                                      <FontAwesomeIcon icon={faCheck} className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button onClick={() => handleReject(vacation)} disabled={updating} className="h-8 w-8 rounded transition-colors flex items-center justify-center bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 disabled:opacity-40" title="Rechazar" aria-label="Rechazar">
+                                      <FontAwesomeIcon icon={faTimes} className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                );
+                              })()}
+                              <button onClick={(e) => handleDelete(vacation.id, vacation.numeroPedido, e)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar" aria-label="Eliminar">
+                                <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
