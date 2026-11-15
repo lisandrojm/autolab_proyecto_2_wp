@@ -136,10 +136,16 @@ export default function Vacations({ onNavigate }: VacationsProps) {
       0,
     );
   }, [profile]);
-  const lctDays = totalSeniorityDays > 0 ? calculateLCTDaysFromSeniority(totalSeniorityDays) : profile?.hireDate ? calculateLCTVacationDays(profile.hireDate) : 0;
+  /*
+    EL SALDO LO CALCULA EL SERVER (15/11/2026): el perfil trae `saldoVacaciones`, la misma cuenta que
+    «Gestión por Usuario» y que la solicitud (antigüedad de UNA empresa, no la suma de todas). La cuenta
+    local queda sólo para un server que todavía no lo manda.
+  */
+  const saldo = profile?.saldoVacaciones;
+  const lctDays = saldo ? saldo.diasLey : totalSeniorityDays > 0 ? calculateLCTDaysFromSeniority(totalSeniorityDays) : profile?.hireDate ? calculateLCTVacationDays(profile.hireDate) : 0;
   const carryOver = profile?.carryOverVacationDays || 0;
   const isArrastreEnabled = globalConfig?.permiteArrastre ?? false;
-  const calculatedTotal = lctDays + (globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0) + (isArrastreEnabled ? carryOver : 0);
+  const calculatedTotal = saldo ? saldo.totalAnnual : lctDays + (globalConfig?.diasBeneficio || 0) + (profile?.extraVacationDays || 0) + (isArrastreEnabled ? carryOver : 0);
   const calculatedAvailable = calculatedTotal - (availableDays?.used || 0) - (availableDays?.pending || 0);
 
   const hasNoDays = calculatedAvailable <= 0;
@@ -332,6 +338,8 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   };
 
   const calculateAntiguedad = () => {
+    // La del server: la de la empresa de la que salen los días, y cuál es.
+    if (saldo) return saldo.empresaComputo ? `${saldo.antiguedad} (en ${saldo.empresaComputo.nombre})` : saldo.antiguedad;
     if (profile?.antiguedadArca) return `${profile.antiguedadArca.texto} (según ARCA)`;
     if (totalSeniorityDays === 0) {
       if (!profile?.hireDate) return '0 días';

@@ -8,6 +8,13 @@ export const LCT_RULES = [
   { label: "Más de 20 años", days: "35 días" },
 ];
 
+/*
+  SÓLO DE RESPALDO (15/11/2026). Los días por ley que se muestran salen del server
+  (`services/vacaciones/saldos.ts`: antigüedad de UNA empresa, no la suma de todas), que es la base de
+  «Gestión por Usuario», de la solicitud y de la app (`saldoVacaciones` del perfil). Estas funciones
+  quedan para un server que todavía no lo manda: no usarlas para un número nuevo.
+*/
+
 /**
  * Calcula los días de vacaciones correspondientes por Ley de Contrato de Trabajo (LCT) Argentina.
  * @param hireDate Fecha de ingreso del empleado

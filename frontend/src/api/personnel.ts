@@ -7,6 +7,11 @@ export interface ProfileData {
   userId: string;
   /** La antigüedad según ARCA (relaciones laborales de Simplificación Registral), si la persona está ahí. */
   antiguedadArca?: AntiguedadArcaResumen | null;
+  /**
+   * El saldo de vacaciones del año, calculado en el server con la misma cuenta que «Gestión por
+   * Usuario» y la solicitud (15/11/2026): antigüedad de UNA empresa, no la suma de todas.
+   */
+  saldoVacaciones?: { anio: number; totalAnnual: number; calculado: number; diasLey: number; antiguedad: string; empresaComputo?: { nombre: string; cuit: string; motivo: string } | null; sumaEntreEmpresas?: string | null } | null;
   email: string;
   firstName: string;
   lastName: string;
