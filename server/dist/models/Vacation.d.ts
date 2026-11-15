@@ -71,6 +71,43 @@ export interface IVacation extends Document {
      * temporada: un bloque de enero de 2027 planificado en la temporada 2026/27 descuenta de 2026.
      */
     periodoSaldo?: number;
+    /**
+     * LA JERARQUÍA QUE LA APRUEBA (15/11/2026): quién podía aprobar cada nivel al pedirla (una foto, por
+     * proyecto) y quién aprobó cada uno. Ver `compartido/vacaciones/etapaDeAprobacion.ts`. Las anteriores
+     * a la jerarquía no tienen `cadena`: si siguen `pending`, son del admin.
+     */
+    cadena?: {
+        proyectos: {
+            projectId: Types.ObjectId;
+            supervisores: Types.ObjectId[];
+            coordinadores: Types.ObjectId[];
+        }[];
+        calculadaAt?: Date;
+    };
+    aprobaciones?: {
+        supervisor?: {
+            userId: Types.ObjectId;
+            projectId?: Types.ObjectId;
+            at: Date;
+        };
+        coordinador?: {
+            userId: Types.ObjectId;
+            projectId?: Types.ObjectId;
+            at: Date;
+        };
+    };
+    /** Los avisos del coordinador al supervisor («Solicitar aprobación»), uno por día como mucho. */
+    recordatorios?: {
+        porUserId: Types.ObjectId;
+        at: Date;
+    }[];
+    /** Quién la rechazó y en qué nivel (`admin` = desde la bandeja web). */
+    rechazo?: {
+        userId?: Types.ObjectId;
+        nivel: "supervisor" | "coordinador" | "admin";
+        motivo?: string;
+        at: Date;
+    };
     createdAt: Date;
     updatedAt: Date;
 }

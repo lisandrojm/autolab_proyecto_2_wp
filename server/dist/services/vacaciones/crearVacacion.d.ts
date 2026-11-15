@@ -63,4 +63,4 @@ export declare function crearVacacionParaPersona(o: PedidoDeVacacion): Promise<I
  * o, si no hay, la plantilla activa de código «vacaciones». Un problema con el PDF no deshace la
  * pre-aprobación: se loguea y la vacación queda sin `pdfPreAprobacionUrl` (se puede regenerar).
  */
-export declare function preAprobarVacacion(vacation: IVacation, actorId: string, tenantObjectId: any): Promise<IVacation>;
+export declare function preAprobarVacacion(vacation: IVacation, actorId: string | null, tenantObjectId: any): Promise<IVacation>;

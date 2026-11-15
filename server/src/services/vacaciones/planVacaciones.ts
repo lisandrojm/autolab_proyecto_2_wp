@@ -27,6 +27,7 @@ import { normalizarVentana, ventanaEfectiva, type VentanaEfectiva } from "../../
 import { coberturaDelMes } from "../../compartido/planVacaciones/cobertura.js";
 import { llevarTemporadaAlProyecto } from "./ventanaYPlanes.js";
 import { estadoDerivado, esEditable } from "../../compartido/planVacaciones/estado.js";
+import { cadenaDeAprobacion } from "./cadenaDeAprobacion.js";
 
 /**
  * EL PLAN DE VACACIONES POR PROYECTO: lo que hace cada endpoint de `routes/planVacaciones.ts`.
@@ -737,6 +738,14 @@ export async function aprobarItem(tenantObjectId: Types.ObjectId, tenantId: stri
       periodoSaldo: plan.anioDeSaldo,
       vacacionesVirtuales: virtuales,
     });
+    /*
+      JERARQUÍA (15/11/2026): aprobar el bloque del plan ES la aprobación del coordinador, así que la
+      vacación queda con su cadena (para las columnas de la bandeja del admin) y el nivel coordinador
+      aprobado, y pasa directo al admin. El supervisor no interviene: el plan lo arma y lo aprueba el
+      proyecto entero.
+    */
+    vacation.cadena = (await cadenaDeAprobacion(tenantObjectId, userId)) as any;
+    vacation.aprobaciones = { coordinador: { userId: oid(actorId), projectId: plan.projectId, at: new Date() } } as any;
     vacation = await preAprobarVacacion(vacation, actorId, tenantObjectId);
   } catch (e: any) {
     if (e instanceof ErrorVacacion) throw new ErrorPlan(e.message, e.status === 404 ? 404 : 409);

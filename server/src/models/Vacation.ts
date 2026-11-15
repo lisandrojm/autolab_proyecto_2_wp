@@ -76,6 +76,20 @@ export interface IVacation extends Document {
    * temporada: un bloque de enero de 2027 planificado en la temporada 2026/27 descuenta de 2026.
    */
   periodoSaldo?: number;
+  /**
+   * LA JERARQUÍA QUE LA APRUEBA (15/11/2026): quién podía aprobar cada nivel al pedirla (una foto, por
+   * proyecto) y quién aprobó cada uno. Ver `compartido/vacaciones/etapaDeAprobacion.ts`. Las anteriores
+   * a la jerarquía no tienen `cadena`: si siguen `pending`, son del admin.
+   */
+  cadena?: { proyectos: { projectId: Types.ObjectId; supervisores: Types.ObjectId[]; coordinadores: Types.ObjectId[] }[]; calculadaAt?: Date };
+  aprobaciones?: {
+    supervisor?: { userId: Types.ObjectId; projectId?: Types.ObjectId; at: Date };
+    coordinador?: { userId: Types.ObjectId; projectId?: Types.ObjectId; at: Date };
+  };
+  /** Los avisos del coordinador al supervisor («Solicitar aprobación»), uno por día como mucho. */
+  recordatorios?: { porUserId: Types.ObjectId; at: Date }[];
+  /** Quién la rechazó y en qué nivel (`admin` = desde la bandeja web). */
+  rechazo?: { userId?: Types.ObjectId; nivel: "supervisor" | "coordinador" | "admin"; motivo?: string; at: Date };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -127,6 +141,35 @@ const vacationSchema = new Schema<IVacation>(
     planVacacionesId: { type: Schema.Types.ObjectId, ref: "PlanVacaciones" },
     projectId: { type: Schema.Types.ObjectId, ref: "Project" },
     periodoSaldo: { type: Number },
+    cadena: {
+      type: new Schema(
+        {
+          proyectos: {
+            type: [
+              {
+                _id: false,
+                projectId: { type: Schema.Types.ObjectId, ref: "Project" },
+                supervisores: [{ type: Schema.Types.ObjectId, ref: "User" }],
+                coordinadores: [{ type: Schema.Types.ObjectId, ref: "User" }],
+              },
+            ],
+            default: [],
+          },
+          calculadaAt: { type: Date },
+        },
+        { _id: false },
+      ),
+      required: false,
+    },
+    aprobaciones: {
+      supervisor: { type: new Schema({ userId: { type: Schema.Types.ObjectId, ref: "User" }, projectId: { type: Schema.Types.ObjectId, ref: "Project" }, at: Date }, { _id: false }), required: false },
+      coordinador: { type: new Schema({ userId: { type: Schema.Types.ObjectId, ref: "User" }, projectId: { type: Schema.Types.ObjectId, ref: "Project" }, at: Date }, { _id: false }), required: false },
+    },
+    recordatorios: { type: [{ _id: false, porUserId: { type: Schema.Types.ObjectId, ref: "User" }, at: Date }], default: undefined },
+    rechazo: {
+      type: new Schema({ userId: { type: Schema.Types.ObjectId, ref: "User" }, nivel: { type: String, enum: ["supervisor", "coordinador", "admin"] }, motivo: String, at: Date }, { _id: false }),
+      required: false,
+    },
     rules: {
       type: {
         diasAnuales: { type: Number, required: true },
@@ -170,7 +213,6 @@ vacationSchema.index({ tenantId: 1, status: 1, createdAt: -1 });
 vacationSchema.index({ tenantId: 1, startDate: 1, endDate: 1 });
 vacationSchema.index({ tenantId: 1, vacationNumber: 1 }, { unique: true });
 vacationSchema.index({ tenantId: 1, planVacacionesId: 1 }, { sparse: true });
-
 vacationSchema.pre("validate", async function (next) {
   if (!this.isNew || this.vacationNumber) {
     return next();

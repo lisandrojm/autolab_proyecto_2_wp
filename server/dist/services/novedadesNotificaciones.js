@@ -43,6 +43,13 @@ export const NOVEDAD_PLAN_VACACIONES_RESUELTO = "plan_vacaciones_resuelto";
   proyecto. No se cuenta en ninguna tarjeta: se ve en Notificaciones.
 */
 export const NOVEDAD_ALTA_ARCA_EXTERNA = "alta_arca_externa";
+/*
+  APROBACIÓN DE VACACIONES POR JERARQUÍA (15/11/2026): al supervisor o coordinador cuando le toca
+  aprobar una solicitud (`para_aprobar`), y al supervisor cuando el coordinador le pide que la revise
+  (`recordatorio`). Ver `services/vacaciones/aprobacionPorEtapas.ts`.
+*/
+export const NOVEDAD_VACACION_PARA_APROBAR = "vacacion_para_aprobar";
+export const NOVEDAD_VACACION_RECORDATORIO = "vacacion_recordatorio";
 /** Los tipos que la app cuenta por tarjeta. Agregar uno acá sin tocar la app lo deja sin contar. */
 export const TIPOS_NOVEDAD = [NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA, NOVEDAD_PLAN_VACACIONES_ENVIADO, NOVEDAD_PLAN_VACACIONES_RESUELTO];
 const idValido = (x) => !!x && Types.ObjectId.isValid(String(x));

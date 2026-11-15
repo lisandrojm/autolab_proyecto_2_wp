@@ -257,7 +257,8 @@ export async function preAprobarVacacion(vacation, actorId, tenantObjectId) {
     if (vacation.status !== "pending")
         throw new ErrorVacacion("Solo las solicitudes pendientes pueden ser preaprobadas");
     vacation.status = "pre_approved";
-    vacation.preApprovedBy = new Types.ObjectId(actorId);
+    // Sin actor: nació sin jerarquía (proyecto sin supervisor ni coordinador) y va directo al admin.
+    vacation.preApprovedBy = actorId ? new Types.ObjectId(actorId) : undefined;
     vacation.preApprovedAt = new Date();
     await vacation.save();
     let templateId = vacation.rules?.pdfId;

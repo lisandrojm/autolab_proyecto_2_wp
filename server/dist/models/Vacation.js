@@ -46,6 +46,32 @@ const vacationSchema = new Schema({
     planVacacionesId: { type: Schema.Types.ObjectId, ref: "PlanVacaciones" },
     projectId: { type: Schema.Types.ObjectId, ref: "Project" },
     periodoSaldo: { type: Number },
+    cadena: {
+        type: new Schema({
+            proyectos: {
+                type: [
+                    {
+                        _id: false,
+                        projectId: { type: Schema.Types.ObjectId, ref: "Project" },
+                        supervisores: [{ type: Schema.Types.ObjectId, ref: "User" }],
+                        coordinadores: [{ type: Schema.Types.ObjectId, ref: "User" }],
+                    },
+                ],
+                default: [],
+            },
+            calculadaAt: { type: Date },
+        }, { _id: false }),
+        required: false,
+    },
+    aprobaciones: {
+        supervisor: { type: new Schema({ userId: { type: Schema.Types.ObjectId, ref: "User" }, projectId: { type: Schema.Types.ObjectId, ref: "Project" }, at: Date }, { _id: false }), required: false },
+        coordinador: { type: new Schema({ userId: { type: Schema.Types.ObjectId, ref: "User" }, projectId: { type: Schema.Types.ObjectId, ref: "Project" }, at: Date }, { _id: false }), required: false },
+    },
+    recordatorios: { type: [{ _id: false, porUserId: { type: Schema.Types.ObjectId, ref: "User" }, at: Date }], default: undefined },
+    rechazo: {
+        type: new Schema({ userId: { type: Schema.Types.ObjectId, ref: "User" }, nivel: { type: String, enum: ["supervisor", "coordinador", "admin"] }, motivo: String, at: Date }, { _id: false }),
+        required: false,
+    },
     rules: {
         type: {
             diasAnuales: { type: Number, required: true },

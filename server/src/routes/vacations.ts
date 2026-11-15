@@ -21,17 +21,32 @@ import path from "path";
 import { Client } from "../models/Client.js";
 import { saldosDeVacaciones } from "../services/vacaciones/saldos.js";
 import { fechasBloqueadas } from "../services/vacaciones/solapamiento.js";
-import { ErrorVacacion, adjustBalanceOnRequestChange, crearVacacionParaPersona, preAprobarVacacion } from "../services/vacaciones/crearVacacion.js";
+import { ErrorVacacion, adjustBalanceOnRequestChange, crearVacacionParaPersona } from "../services/vacaciones/crearVacacion.js";
+import { aprobarEtapa, bandejaDeAprobaciones, contarParaAprobar, iniciarAprobacion, rechazarEtapa, rechazarVacacion, recordarAlSupervisor } from "../services/vacaciones/aprobacionPorEtapas.js";
+import { requirePermission, tienePermiso } from "../middleware/permissions.js";
 
 const router = express.Router();
 
 // Apply authentication to all routes
 router.use(authenticateToken);
 
+/*
+  QUIÉN PUEDE QUÉ (15/11/2026). Hasta acá este router sólo pedía estar logueado: cualquiera podía
+  pre-aprobar, aprobar o rechazar cualquier vacación. Con la aprobación por jerarquía entran supervisores
+  y coordinadores, así que se cierra:
+    · Lo del admin (aprobar, rechazar desde la bandeja, entregar, firma, editar, PDF, saldos): `admin_vacations:view`.
+    · Aprobar/rechazar un paso de la jerarquía: quien está en ese paso de la cadena (`aprobar-etapa`).
+    · Cancelar, borrar o avisar la firma de una solicitud: quien la pidió, o el admin.
+  Las lecturas siguen como estaban (varias pantallas listan vacaciones para marcar quién no está).
+*/
+const PERMISO_ADMIN_VACACIONES = "admin_vacations:view";
+const soloAdminVacaciones = requirePermission(PERMISO_ADMIN_VACACIONES);
+const esDuenaOAdmin = async (req: any, vacation: any): Promise<boolean> => String(vacation.userId?._id ?? vacation.userId) === String(req.user?.userId) || (await tienePermiso(req, PERMISO_ADMIN_VACACIONES));
+
 
 
 // POST /api/vacations/:id/regenerate-pdf - Regenerate a vacation PDF
-router.post("/:id/regenerate-pdf", async (req: any, res) => {
+router.post("/:id/regenerate-pdf", soloAdminVacaciones, async (req: any, res) => {
   console.log("[VACATIONS] Regenerate PDF request for ID:", req.params.id);
   try {
     const tenantId = req.tenantId;
@@ -173,7 +188,7 @@ router.get("/users-balance", async (req: any, res) => {
 });
 
 // POST /api/vacations/users-balance - Save/override user vacation balances
-router.post("/users-balance", async (req: any, res) => {
+router.post("/users-balance", soloAdminVacaciones, async (req: any, res) => {
   try {
     const tenantId = req.tenantId;
     const { updates } = req.body;
@@ -386,6 +401,29 @@ router.get("/", async (req, res) => {
   }
 });
 
+/*
+  LA BANDEJA «APROBACIONES» DE LA APP (15/11/2026): lo que espera mi aprobación como supervisor o
+  coordinador y, para el coordinador, lo que todavía espera al supervisor. Ver `aprobacionPorEtapas.ts`.
+  Van antes de `/:id` para que «aprobaciones» no se lea como un id.
+*/
+router.get("/aprobaciones", async (req: any, res) => {
+  try {
+    res.json(await bandejaDeAprobaciones(req.tenantObjectId, String(req.user!.userId)));
+  } catch (error: any) {
+    console.error("Error en la bandeja de aprobaciones de vacaciones:", error);
+    res.status(500).json({ error: "Error al obtener las vacaciones para aprobar" });
+  }
+});
+
+router.get("/aprobaciones/contar", async (req: any, res) => {
+  try {
+    res.json({ total: await contarParaAprobar(req.tenantObjectId, String(req.user!.userId)) });
+  } catch (error: any) {
+    console.error("Error contando vacaciones para aprobar:", error);
+    res.status(500).json({ error: "Error al contar las vacaciones para aprobar" });
+  }
+});
+
 // GET /api/vacations/:id - Get a single vacation request
 router.get("/:id", async (req, res) => {
   try {
@@ -411,7 +449,16 @@ router.post("/", async (req, res) => {
     // Todo el cálculo (fechas, solapamiento, días, saldo, snapshot de reglas) vive en `services/vacaciones/crearVacacion.ts`:
     // es el mismo camino por el que el plan de vacaciones por proyecto crea la vacación de un tercero.
     const { startDate, endDate, reason } = req.body;
-    const newVacation = await crearVacacionParaPersona({ tenantId: req.tenantId, userId: req.user!.userId, startDate, endDate, reason, extra: req.body, origen: "solicitud" });
+    let newVacation = await crearVacacionParaPersona({ tenantId: req.tenantId, userId: req.user!.userId, startDate, endDate, reason, extra: req.body, origen: "solicitud" });
+    /*
+      Sube por la jerarquía: supervisor → coordinador → admin (sin ninguno, directo al admin). Si armar la
+      cadena falla, la solicitud ya quedó guardada y `pending` sin cadena: la bandeja del admin la toma.
+    */
+    try {
+      newVacation = await iniciarAprobacion(newVacation, (req as any).tenantObjectId);
+    } catch (e) {
+      console.error("[VACATIONS] No se pudo iniciar la aprobación por jerarquía:", e);
+    }
     res.status(201).json(newVacation);
   } catch (error: any) {
     if (error instanceof ErrorVacacion) return res.status(error.status).json({ error: error.message });
@@ -424,7 +471,7 @@ router.post("/", async (req, res) => {
 });
 
 // PATCH /api/vacations/:id - Update a vacation request
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", soloAdminVacaciones, async (req, res) => {
   try {
     const tenantId = req.tenantId;
     const { id } = req.params;
@@ -448,11 +495,12 @@ router.delete("/:id", async (req, res) => {
     const tenantId = req.tenantId;
     const { id } = req.params;
 
-    const deletedVacation = await Vacation.findOneAndDelete({ _id: id, tenantId });
-
-    if (!deletedVacation) {
+    const existente = await Vacation.findOne({ _id: id, tenantId }).select("userId").lean();
+    if (!existente) {
       return res.status(404).json({ error: "Solicitud no encontrada" });
     }
+    if (!(await esDuenaOAdmin(req, existente))) return res.status(403).json({ error: "Sólo quien la pidió o el administrador pueden eliminarla" });
+    await Vacation.deleteOne({ _id: id, tenantId });
 
     res.json({ message: "Solicitud eliminada correctamente" });
   } catch (error: any) {
@@ -461,15 +509,59 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// PUT /api/vacations/:id/pre-approve - Pre-approve a vacation request
+/*
+  APROBAR / RECHAZAR UN PASO DE LA JERARQUÍA (15/11/2026): el supervisor o el coordinador, cuando le
+  toca. Cuando no falta nadie, la solicitud pasa a `pre_approved` (con su PDF) y espera al admin.
+*/
+router.put("/:id/aprobar-etapa", async (req: any, res) => {
+  try {
+    const vacation = await Vacation.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
+    if (!vacation) return res.status(404).json({ error: "Solicitud de vacaciones no encontrada" });
+    res.json(await aprobarEtapa(vacation, String(req.user!.userId), req.tenantObjectId));
+  } catch (error: any) {
+    if (error instanceof ErrorVacacion) return res.status(error.status).json({ error: error.message });
+    console.error("Aprobar etapa de vacación:", error);
+    res.status(500).json({ error: "Error al aprobar la solicitud de vacaciones" });
+  }
+});
+
+router.put("/:id/rechazar-etapa", async (req: any, res) => {
+  try {
+    const vacation = await Vacation.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
+    if (!vacation) return res.status(404).json({ error: "Solicitud de vacaciones no encontrada" });
+    res.json(await rechazarEtapa(vacation, String(req.user!.userId), req.body?.reason));
+  } catch (error: any) {
+    if (error instanceof ErrorVacacion) return res.status(error.status).json({ error: error.message });
+    console.error("Rechazar etapa de vacación:", error);
+    res.status(500).json({ error: "Error al rechazar la solicitud de vacaciones" });
+  }
+});
+
+// El coordinador le pide al supervisor que apruebe (no aprueba por él). Uno por día.
+router.post("/:id/recordar-supervisor", async (req: any, res) => {
+  try {
+    const vacation = await Vacation.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
+    if (!vacation) return res.status(404).json({ error: "Solicitud de vacaciones no encontrada" });
+    await recordarAlSupervisor(vacation, String(req.user!.userId));
+    res.json({ ok: true });
+  } catch (error: any) {
+    if (error instanceof ErrorVacacion) return res.status(error.status).json({ error: error.message });
+    console.error("Recordar al supervisor:", error);
+    res.status(500).json({ error: "Error al avisar al supervisor" });
+  }
+});
+
+/*
+  PRE-APROBAR YA NO ES DEL ADMIN (15/11/2026): la pre-aprobación es la jerarquía. Queda el endpoint por
+  compatibilidad (una app vieja), y hace lo mismo que `aprobar-etapa`: sólo pasa si le toca a quien llama.
+*/
 router.put("/:id/pre-approve", async (req: any, res) => {
   try {
-    const vacation = await Vacation.findOne({ _id: req.params.id, tenantId: req.tenantId }).populate("userId");
+    const vacation = await Vacation.findOne({ _id: req.params.id, tenantId: req.tenantObjectId });
     if (!vacation) {
       return res.status(404).json({ error: "Solicitud de vacaciones no encontrada" });
     }
-    // Estado + PDF en `services/vacaciones/crearVacacion.ts` (lo mismo que hace el plan al aprobar un bloque).
-    res.json(await preAprobarVacacion(vacation, req.user!.userId, req.tenantObjectId));
+    res.json(await aprobarEtapa(vacation, String(req.user!.userId), req.tenantObjectId));
   } catch (error: any) {
     if (error instanceof ErrorVacacion) return res.status(error.status).json({ error: error.message });
     console.error("Pre-approve vacation error:", error);
@@ -478,7 +570,8 @@ router.put("/:id/pre-approve", async (req: any, res) => {
 });
 
 // PUT /api/vacations/:id/approve - Approve a vacation request
-router.put("/:id/approve", async (req: any, res) => {
+// El admin aprueba recién cuando la jerarquía terminó (`pre_approved`): decisión del usuario, 15/11/2026.
+router.put("/:id/approve", soloAdminVacaciones, async (req: any, res) => {
   try {
     const approverId = req.user!.userId;
     const tenantId = req.tenantId;
@@ -493,7 +586,7 @@ router.put("/:id/approve", async (req: any, res) => {
     }
 
     if (vacation.status !== "pre_approved") {
-      return res.status(400).json({ error: "Solo las solicitudes preaprobadas pueden ser aprobadas" });
+      return res.status(400).json({ error: vacation.status === "pending" ? "Todavía espera la aprobación del supervisor o del coordinador" : "Solo las solicitudes preaprobadas pueden ser aprobadas" });
     }
 
     vacation.status = "approved";
@@ -541,39 +634,16 @@ router.put("/:id/approve", async (req: any, res) => {
 });
 
 // PUT /api/vacations/:id/reject - Reject a vacation request
-router.put("/:id/reject", async (req: any, res) => {
+// El admin rechaza en cualquier paso (decisión del usuario, 15/11/2026). Mismo cierre que el rechazo de la jerarquía.
+router.put("/:id/reject", soloAdminVacaciones, async (req: any, res) => {
   try {
-    const tenantId = req.tenantId;
-
-    const vacation = await Vacation.findOne({
-      _id: req.params.id,
-      tenantId,
-    });
-
+    const vacation = await Vacation.findOne({ _id: req.params.id, tenantId: req.tenantId });
     if (!vacation) {
       return res.status(404).json({ error: "Solicitud de vacaciones no encontrada" });
     }
-
-    if (!["pending", "pre_approved", "approved"].includes(vacation.status)) {
-      return res.status(400).json({ error: "Solo las solicitudes pendientes, preaprobadas o aprobadas pueden ser rechazadas" });
-    }
-
-    vacation.status = "rejected";
-    await vacation.save();
-
-    await adjustBalanceOnRequestChange(tenantId, vacation.userId, vacation.startDate.getFullYear(), vacation.daysRequested, "reject");
-
-    await Notification.create({
-      tenantId,
-      userId: vacation.userId,
-      type: "vacation",
-      title: "Solicitud de Vacaciones Rechazada",
-      message: `Tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido rechazada.`,
-      linkUrl: `/vacations`,
-    });
-
-    res.json(vacation);
+    res.json(await rechazarVacacion(vacation, { userId: String(req.user!.userId), nivel: "admin", motivo: req.body?.reason }));
   } catch (error: any) {
+    if (error instanceof ErrorVacacion) return res.status(error.status).json({ error: error.message });
     console.error("Reject vacation error:", error);
     res.status(500).json({ error: "Error al rechazar la solicitud de vacaciones" });
   }
@@ -593,6 +663,7 @@ router.put("/:id/cancel", async (req: any, res) => {
       return res.status(404).json({ error: "Solicitud de vacaciones no encontrada" });
     }
 
+    if (!(await esDuenaOAdmin(req, vacation))) return res.status(403).json({ error: "Sólo quien la pidió o el administrador pueden cancelarla" });
     if (!["pending", "pre_approved", "approved", "delivered"].includes(vacation.status)) {
       return res.status(400).json({ error: "Esta solicitud no puede ser cancelada" });
     }
@@ -611,7 +682,7 @@ router.put("/:id/cancel", async (req: any, res) => {
 });
 
 // PUT /api/vacations/:id/deliver - Mark vacation as delivered
-router.put("/:id/deliver", async (req: any, res) => {
+router.put("/:id/deliver", soloAdminVacaciones, async (req: any, res) => {
   try {
     const tenantId = req.tenantId;
 
@@ -651,7 +722,7 @@ router.put("/:id/deliver", async (req: any, res) => {
 });
 
 // PUT /api/vacations/:id/send-signature - Send vacation for signature
-router.put("/:id/send-signature", async (req: any, res) => {
+router.put("/:id/send-signature", soloAdminVacaciones, async (req: any, res) => {
   try {
     const tenantId = req.tenantId;
 
@@ -702,6 +773,7 @@ router.put("/:id/notify-signature", async (req: any, res) => {
       return res.status(404).json({ error: "Solicitud de vacaciones no encontrada" });
     }
 
+    if (!(await esDuenaOAdmin(req, vacation))) return res.status(403).json({ error: "Sólo quien la pidió puede avisar que la firmó" });
     if (vacation.signatureStatus !== "sent") {
       // Allow re-notifying? Or fail? Better fail if not in sent state.
       return res.status(400).json({ error: "Solo las solicitudes enviadas para firma pueden ser notificadas" });
@@ -731,7 +803,7 @@ router.put("/:id/notify-signature", async (req: any, res) => {
 });
 
 // PUT /api/vacations/:id/mark-signed - Mark vacation as signed
-router.put("/:id/mark-signed", async (req: any, res) => {
+router.put("/:id/mark-signed", soloAdminVacaciones, async (req: any, res) => {
   try {
     const signerId = req.user!.userId;
     const tenantId = req.tenantId;

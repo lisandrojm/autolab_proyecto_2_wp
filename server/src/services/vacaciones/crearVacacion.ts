@@ -272,10 +272,11 @@ export async function crearVacacionParaPersona(o: PedidoDeVacacion): Promise<IVa
  * o, si no hay, la plantilla activa de código «vacaciones». Un problema con el PDF no deshace la
  * pre-aprobación: se loguea y la vacación queda sin `pdfPreAprobacionUrl` (se puede regenerar).
  */
-export async function preAprobarVacacion(vacation: IVacation, actorId: string, tenantObjectId: any): Promise<IVacation> {
+export async function preAprobarVacacion(vacation: IVacation, actorId: string | null, tenantObjectId: any): Promise<IVacation> {
   if (vacation.status !== "pending") throw new ErrorVacacion("Solo las solicitudes pendientes pueden ser preaprobadas");
   vacation.status = "pre_approved";
-  vacation.preApprovedBy = new Types.ObjectId(actorId);
+  // Sin actor: nació sin jerarquía (proyecto sin supervisor ni coordinador) y va directo al admin.
+  vacation.preApprovedBy = actorId ? new Types.ObjectId(actorId) : undefined;
   vacation.preApprovedAt = new Date();
   await vacation.save();
 
