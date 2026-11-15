@@ -273,6 +273,23 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const [teamTotal, setTeamTotal] = useState(0);
   const [teamTotalPages, setTeamTotalPages] = useState(1);
   const [teamFetching, setTeamFetching] = useState(false);
+  /*
+    LOS TÍTULOS DE LA TABLA DEL EQUIPO, FIJOS DEBAJO DE LAS PESTAÑAS. La barra de pestañas (Equipo,
+    Supervisores…) es sticky en 144px y tapaba el encabezado fijo de la tabla, que se pegaba a la
+    altura del encabezado de la página. Se mide la barra (cambia de alto si las pestañas pasan a dos
+    renglones) y el encabezado de la tabla se pega justo debajo.
+  */
+  const [altoBarraTabs, setAltoBarraTabs] = useState(0);
+  const observadorBarraTabs = useRef<ResizeObserver | null>(null);
+  const barraTabsRef = React.useCallback((el: HTMLDivElement | null) => {
+    observadorBarraTabs.current?.disconnect();
+    observadorBarraTabs.current = null;
+    if (!el) return;
+    const medir = () => setAltoBarraTabs(el.getBoundingClientRect().height);
+    medir();
+    observadorBarraTabs.current = new ResizeObserver(medir);
+    observadorBarraTabs.current.observe(el);
+  }, []);
   const teamReqIdRef = React.useRef(0);
   const [candidateUsers, setCandidateUsers] = useState<User[]>([]);
   const [searchingCandidates, setSearchingCandidates] = useState(false);
@@ -6073,7 +6090,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       ) : project ? (
         <div className="flex flex-col gap-6">
           {/* TABS */}
-          <div className="sticky top-[144px] pb-1 pt-3 z-[40] bg-[#f3f4f6] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 flex items-center justify-between shadow-sm lg:shadow-none hover:shadow-md transition-shadow">
+          <div ref={barraTabsRef} className="sticky top-[144px] pb-1 pt-3 z-[40] bg-[#f3f4f6] dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 flex items-center justify-between shadow-sm lg:shadow-none hover:shadow-md transition-shadow">
             <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar flex-nowrap">
               <button onClick={() => setActiveTab('equipo')} className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 whitespace-nowrap ${activeTab === 'equipo' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
                 <FontAwesomeIcon icon={faUsers} className="text-xs" />
@@ -6251,7 +6268,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
                   return effectiveViewMode === 'table' ? (
                     <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-clip transition-opacity ${teamFetching ? 'opacity-60' : ''}`}>
-                      <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0">
+                      <TablaConEncabezadoFijo tabla="w-full text-left border-separate border-spacing-0" top={altoBarraTabs ? `${144 + altoBarraTabs}px` : undefined}>
                       {/*
                         `border-separate` Y NO `border-collapse`, PARA PODER FIJAR «Usuario».
 
