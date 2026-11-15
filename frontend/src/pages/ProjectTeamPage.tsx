@@ -5465,6 +5465,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                   */}
                       {((convenioFiltro && wizardData.rol_frame_id) || ocultasPorValoracion > 0 || verTodasLasValoraciones) && (
                         <div className="ml-1 mt-1 flex flex-wrap gap-2">
+                          {/* Primero la valoración, después el convenio (15/11/2026, pedido del usuario). */}
+                          {(ocultasPorValoracion > 0 || verTodasLasValoraciones) && (
+                            <button
+                              type="button"
+                              aria-pressed={verTodasLasValoraciones}
+                              onClick={() => setVerTodasLasValoraciones((v) => !v)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 dark:border-violet-800/60 dark:bg-violet-900/20 dark:text-violet-300 dark:hover:bg-violet-900/40"
+                            >
+                              <FontAwesomeIcon icon={faMedal} className="h-3 w-3" />
+                              {verTodasLasValoraciones ? `Ver sólo las ${valoracionDelRol?.nombre ? `de ${valoracionDelRol.nombre}` : 'de la valoración del proyecto'}` : `Elegir otra valoración (${ocultasPorValoracion})`}
+                            </button>
+                          )}
                           {convenioFiltro && wizardData.rol_frame_id && (
                             <button
                               type="button"
@@ -5476,17 +5488,6 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                             >
                               <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3" />
                               {verTodasDelConvenio || rolNoTieneCategoriasDelConvenio ? 'Ver sólo las de la función' : 'Ver todas las del convenio'}
-                            </button>
-                          )}
-                          {(ocultasPorValoracion > 0 || verTodasLasValoraciones) && (
-                            <button
-                              type="button"
-                              aria-pressed={verTodasLasValoraciones}
-                              onClick={() => setVerTodasLasValoraciones((v) => !v)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 dark:border-violet-800/60 dark:bg-violet-900/20 dark:text-violet-300 dark:hover:bg-violet-900/40"
-                            >
-                              <FontAwesomeIcon icon={faMedal} className="h-3 w-3" />
-                              {verTodasLasValoraciones ? `Ver sólo las ${valoracionDelRol?.nombre ? `de ${valoracionDelRol.nombre}` : 'de la valoración del proyecto'}` : `Elegir otra valoración (${ocultasPorValoracion})`}
                             </button>
                           )}
                         </div>
