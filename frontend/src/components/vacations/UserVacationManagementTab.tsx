@@ -986,22 +986,27 @@ export const UserVacationManagementTab: React.FC = () => {
                   </td>
                   {/* Total Annual */}
                   <td className="px-4 py-4 text-center">
-                    <input
-                      type="number"
-                      min="0"
-                      value={totalValue}
-                      onChange={(e) => handleFieldChange(balance.userId, "totalAnnual", e.target.value)}
-                      className={claseCampo("total", edits.totalAnnual !== undefined && edits.totalAnnual !== balance.display.totalAnnual)}
-                    />
-                    {/* DE QUÉ EMPRESA SALE EL TOTAL (15/11/2026): ya no se suman. La (i) abre la cuenta entera. */}
-                    {balance.antiguedad?.empresaComputo && (
-                      <div className="mt-1 flex items-center justify-center gap-1" title={explicacionDeEmpresaComputo(balance.antiguedad.empresaComputo, balance.display.totalAnnual, `${balance.firstName} ${balance.lastName}`.trim(), balance.antiguedad.sumaEntreEmpresas).join("\n")}>
-                        <span className="inline-flex max-w-[9rem] truncate px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800">{balance.antiguedad.empresaComputo.motivo === "suma" ? "vía todas (suma)" : `vía ${balance.antiguedad.empresaComputo.nombre}`}</span>
-                        <button type="button" onClick={() => setAntiguedadDe(balance)} aria-label="De qué empresa se tomaron los días" className="text-gray-400 hover:text-violet-600 dark:hover:text-violet-300">
-                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                    {/* DE QUÉ EMPRESA SALE EL TOTAL (15/11/2026): sólo la (i) a la derecha del input; el texto al pasar el mouse, el click abre la cuenta. */}
+                    <div className="inline-flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min="0"
+                        value={totalValue}
+                        onChange={(e) => handleFieldChange(balance.userId, "totalAnnual", e.target.value)}
+                        className={claseCampo("total", edits.totalAnnual !== undefined && edits.totalAnnual !== balance.display.totalAnnual)}
+                      />
+                      {balance.antiguedad?.empresaComputo && (
+                        <button
+                          type="button"
+                          onClick={() => setAntiguedadDe(balance)}
+                          title={explicacionDeEmpresaComputo(balance.antiguedad.empresaComputo, balance.display.totalAnnual, `${balance.firstName} ${balance.lastName}`.trim(), balance.antiguedad.sumaEntreEmpresas).join("\n")}
+                          aria-label="De qué empresa se tomaron los días"
+                          className={`shrink-0 ${balance.antiguedad.empresaComputo.motivo === "suma" ? "text-amber-500 hover:text-amber-600" : "text-gray-400 hover:text-violet-600 dark:hover:text-violet-300"}`}
+                        >
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </td>
                   {/* Tomados */}
                   <td className="px-4 py-4 text-center">
@@ -1187,8 +1192,8 @@ export const UserVacationManagementTab: React.FC = () => {
               <p className="font-semibold">Días por ley para {selectedYear}</p>
               <p>
                 {antiguedadDe.antiguedad.proyectadoHasta
-                  ? `A los ${antiguedadDe.antiguedad.dias.toLocaleString("es-AR")} días trabajados se les suma lo que falta hasta el ${formatDate(antiguedadDe.antiguedad.proyectadoHasta)}${antiguedadDe.antiguedad.arca ? ((antiguedadDe.antiguedad.empresaComputo ?? antiguedadDe.antiguedad.arca).tieneRelacionAbierta ? " (tiene una relación abierta)" : " (su última relación termina ese día)") : " (está activo, se supone que sigue hasta fin de año)"}: `
-                  : `No se proyecta nada: ${antiguedadDe.antiguedad.arca ? "su última relación en ARCA ya terminó" : "no está activo"}. Antigüedad al 31/12/${selectedYear}: `}
+                  ? `A los ${antiguedadDe.antiguedad.dias.toLocaleString("es-AR")} días trabajados se les suma lo que falta hasta el ${formatDate(antiguedadDe.antiguedad.proyectadoHasta)}${antiguedadDe.antiguedad.arca ? ((antiguedadDe.antiguedad.empresaComputo ?? antiguedadDe.antiguedad.arca).tieneRelacionAbierta ? " (tiene una relación abierta)" : " (su última relación termina ese día)") : antiguedadDe.antiguedad.empresaComputo && antiguedadDe.antiguedad.empresaComputo.motivo !== "suma" ? ` (tiene un contrato abierto con ${antiguedadDe.antiguedad.empresaComputo.nombre})` : " (está activo, se supone que sigue hasta fin de año)"}: `
+                  : `No se proyecta nada: ${antiguedadDe.antiguedad.arca ? "su última relación en ARCA ya terminó" : antiguedadDe.antiguedad.empresaComputo && antiguedadDe.antiguedad.empresaComputo.motivo !== "suma" ? `sus contratos con ${antiguedadDe.antiguedad.empresaComputo.nombre} tienen fecha de baja y ya cuentan hasta ese día` : "no está activo"}. Antigüedad al 31/12/${selectedYear}: `}
                 {antiguedadDe.antiguedad.diasProyectadosAl31.toLocaleString("es-AR")} días ≈ {antiguedadDe.antiguedad.aniosAl31} años → <span className="font-semibold text-violet-600 dark:text-violet-400">{antiguedadDe.antiguedad.diasLey} días</span> (LCT: 14 hasta 5 años, 21 hasta 10, 28 hasta 20, 35 después; menos de 6 meses, 1 cada 20 trabajados).</p>
               <p>Total anual = días por ley + días extra{antiguedadDe.extraVacationDays ? ` (${antiguedadDe.extraVacationDays})` : ""} + beneficio de la compañía (+ arrastre si está habilitado) = <span className="font-semibold">{antiguedadDe.calculated.totalAnnual}</span>{antiguedadDe.override?.totalAnnual !== undefined && antiguedadDe.override.totalAnnual !== antiguedadDe.calculated.totalAnnual ? `, editado a mano a ${antiguedadDe.override.totalAnnual}` : ""}.</p>
             </div>

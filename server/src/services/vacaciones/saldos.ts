@@ -409,6 +409,15 @@ export async function saldosDeVacaciones(tenantId: any, tenantObjectId: any, sel
       if (arcaBase) {
         if (arcaBase.tieneRelacionAbierta) hasta = yearEnd;
         else if (arcaBase.ultimaFecha && new Date(arcaBase.ultimaFecha) > now) hasta = new Date(Math.min(new Date(arcaBase.ultimaFecha).getTime(), yearEnd.getTime()));
+      } else if (empresaComputo && empresaComputo.motivo !== "suma" && empresaComputo.fuente === "contratos") {
+        /*
+          Por los contratos de la empresa de cómputo: LA MISMA REGLA QUE SU COLUMNA (porEmpresa), para que
+          el total y la columna de esa empresa no digan cosas distintas (15/11/2026). Un contrato con baja ya
+          cuenta sus días hasta esa fecha: no se proyecta. Sólo uno abierto, con la persona activa, se
+          proyecta al 31/12. La regla vieja («activo → hasta fin de año») le sumaba a una jornada del 12 al
+          27/11 los días hasta el 31/12: 3 días por ley donde la columna decía 0.
+        */
+        if (empresaComputo.tieneRelacionAbierta && user.metadata?.activo !== false) hasta = yearEnd;
       } else if (contractsDays > 0 && user.metadata?.activo !== false) {
         hasta = yearEnd;
       }
