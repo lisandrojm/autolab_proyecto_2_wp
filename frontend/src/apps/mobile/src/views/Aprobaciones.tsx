@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBellConcierge, faBriefcase, faCalendarAlt, faCheck, faCircleCheck, faClock, faHourglassHalf, faUmbrellaBeach, faUserCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faBellConcierge, faBriefcase, faCartShopping, faCalendarAlt, faCheck, faCircleCheck, faClock, faHourglassHalf, faUmbrellaBeach, faUserCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { vacationsAPI, type ItemDeAprobacion } from "../../../../api/vacations";
 import { fechaCorta } from "@compartido/planVacaciones/fechas";
@@ -15,8 +15,8 @@ import { ViewType } from "../types";
  * APROBACIONES (15/11/2026, pedido del usuario)
  * ═══════════════════════════════════════════════════════════════════════
  *
- * Lo que la gente de su equipo pide y espera SU aprobación. Arranca con las vacaciones; después entran
- * los pedidos (por eso es un menú de tarjetas desde ya: en la app nunca van pestañas).
+ * Lo que la gente de su equipo pide y espera SU aprobación: Vacaciones y Pedidos, cada una en su tarjeta
+ * con contador (en la app nunca van pestañas). Pedidos todavía no tiene aprobación: se ve apagada.
  *
  * La solicitud de vacaciones sube Supervisor → Coordinador → Admin:
  *   · El supervisor aprueba lo de su área y turno.
@@ -28,9 +28,11 @@ import { ViewType } from "../types";
  * devuelve la bandeja.
  */
 
+type Seccion = "vacaciones" | "pedidos";
 type ParteVacaciones = "para_aprobar" | "esperando";
 
 const INFO = {
+  menu: "Lo que la gente de tu equipo pide y espera tu aprobación, separado en Vacaciones y Pedidos. El número de cada tarjeta es cuántas cosas esperan tu respuesta.\n\nLos pedidos todavía no pasan por acá: la tarjeta queda apagada hasta que se sumen.",
   vacaciones:
     "Las vacaciones suben por la jerarquía del proyecto: primero las aprueba el supervisor del área y turno, después el coordinador del proyecto y al final el administrador. Si en el proyecto no hay supervisor o coordinador, ese paso se saltea.\n\n«Para aprobar» es lo que espera tu respuesta. «Esperando al supervisor» (sólo coordinadores) es lo que el supervisor todavía no aprobó: podés pedirle que lo revise.",
 };
@@ -42,9 +44,11 @@ export default function Aprobaciones({ onNavigate }: { onNavigate: (view: ViewTy
   const [error, setError] = useState<string | null>(null);
   const [procesando, setProcesando] = useState<string | null>(null);
   /*
-    Hoy hay una sola sección (Vacaciones), así que el menú «Vacaciones / Pedidos» se saltea, como hace
-    Novedades cuando hay una sola opción. Cuando entren los pedidos, va un MenuDeTarjetas más arriba.
+    Dos niveles de tarjetas, como el resto de la app: primero Vacaciones / Pedidos (con su contador, como
+    Contratos o Registro en la home) y, dentro de Vacaciones, «Para aprobar» / «Esperando al supervisor»
+    cuando hay algo en la segunda. Pedidos se ve apagada: su aprobación todavía no existe.
   */
+  const [seccion, setSeccion] = useState<Seccion | "menu">("menu");
   const [parte, setParte] = useState<ParteVacaciones | "menu">("menu");
 
   const cargar = useCallback(() => {
@@ -190,13 +194,36 @@ export default function Aprobaciones({ onNavigate }: { onNavigate: (view: ViewTy
     );
   };
 
+  const secciones: OpcionDeMenu<Seccion>[] = [
+    { id: "vacaciones", label: "Vacaciones", icon: faUmbrellaBeach, contador: paraAprobar.length },
+    { id: "pedidos", label: "Pedidos", icon: faCartShopping, disabled: true },
+  ];
+
+  if (seccion === "menu")
+    return (
+      <div className="flex-1 pb-24">
+        <SectionHeader icon={faCircleCheck} titulo="Aprobaciones" onBack={() => onNavigate("home")} info={INFO.menu} />
+        <div className="space-y-3 px-4 pt-4">
+          {error && <p className="rounded-xl border p-3 text-center text-sm text-red-600 dark:border-slate-700 dark:text-red-400">{error}</p>}
+          <MenuDeTarjetas
+            opciones={secciones}
+            onElegir={(id) => {
+              setSeccion(id);
+              setParte("menu");
+            }}
+          />
+        </div>
+      </div>
+    );
+
   const opcionActiva = opciones.find((o) => o.id === activa);
+  const enLista = conMenu && !enMenu;
   return (
     <div className="flex-1 pb-24">
       <SectionHeader
-        icon={enMenu || !conMenu ? faCircleCheck : opcionActiva?.icon ?? faCircleCheck}
-        titulo={enMenu || !conMenu ? "Aprobaciones · Vacaciones" : opcionActiva?.label ?? "Aprobaciones"}
-        onBack={() => (enMenu || !conMenu ? onNavigate("home") : setParte("menu"))}
+        icon={enLista ? opcionActiva?.icon ?? faUmbrellaBeach : faUmbrellaBeach}
+        titulo={enLista ? opcionActiva?.label ?? "Vacaciones" : "Aprobaciones · Vacaciones"}
+        onBack={() => (enLista ? setParte("menu") : setSeccion("menu"))}
         info={INFO.vacaciones}
       />
       <div className="space-y-3 px-4 pt-4">{enMenu ? <MenuDeTarjetas opciones={opciones} onElegir={setParte} /> : lista()}</div>
