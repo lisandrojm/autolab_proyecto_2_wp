@@ -21,7 +21,7 @@ import { SearchAndFilters } from '../components/ui/SearchAndFilters';
 import { getHelp } from '../data/help/helpContent';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRotateRight, faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight, faSitemap, faCommentDots , faSpinner, faCheck, faMedal } from '@fortawesome/free-solid-svg-icons';
+import { faRotateRight, faUsers, faSearch, faFilter, faTrash, faBriefcase, faClock, faGrip, faTable, faPlus, faEdit, faIdCard, faUmbrellaBeach, faClipboardList, faUserTie, faLayerGroup, faUserShield, faUserGraduate, faBuilding, faFileContract, faInfoCircle, faTriangleExclamation, faChevronDown, faXmark, faChevronLeft, faChevronRight, faSitemap, faCommentDots , faSpinner, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { vacationsAPI, VacationRequest } from '../api/vacations';
 import { TeamSolicitudesTab } from '../components/team/TeamSolicitudesTab';
 import { TeamVacacionesTab } from '../components/team/TeamVacacionesTab';
@@ -70,7 +70,7 @@ import { fuzzyMatch } from '../utils/searchHelpers';
 import { categoriaPorDefecto, categoriasOfrecidas, codigosDeConveniosDeLaEmpleadora, codigosDeConveniosDelProyecto, conveniosOfrecidos, proporcionNetoDeCategoria, importePorJornadaDeCategoria } from '../utils/seleccionConvenioCategoria';
 import { tramiteSinConvenioNiCategoria } from '@compartido/tramiteSinEscala';
 import { ChipValoracion, idValoracionDe, useValoraciones, useValoracionDelProyecto } from '../components/proyectos/ChipValoracion';
-import { SelectorCategoria } from '../components/contratos/SelectorCategoria';
+import { SelectorCategoria, ModalCategorias } from '../components/contratos/SelectorCategoria';
 import { valoracionParaRol, excepcionDelRol } from '@compartido/valoracionPorRol';
 import { sedeElegida, sedesDelContrato } from '../utils/sedesProyecto';
 import { cachedFetch } from '../utils/refCache';
@@ -407,17 +407,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
    * `""` = todos los convenios de la empleadora.
    */
   const [convenioFiltro, setConvenioFiltro] = useState<string>('');
-  /** Ignora el filtro por función Frame y ofrece TODAS las categorías del convenio elegido. */
-  const [verTodasDelConvenio, setVerTodasDelConvenio] = useState(false);
   /*
-    EL ESCAPE MANUAL de la valoración, con su motivo.
+    «VER TODAS LAS DEL CONVENIO» ABRE UN MODAL (15/11/2026, pedido del usuario) con todas las categorías
+    del convenio elegido, sin el filtro por función Frame. Antes cambiaba lo que ofrecía el desplegable
+    y había que volver a subir a abrirlo.
 
-    El filtro es estricto: sin esto, una categoría de otro nivel no se puede elegir ni cuando
-    corresponde —un acuerdo puntual, un puesto que se paga distinto—. Se abre a pedido, y lo que se
-    elija así viaja con el motivo y queda auditado en el contrato (el server lo exige: sin motivo
-    contesta 422).
+    Y LA VALORACIÓN YA NO FILTRA: el desplegable ofrece las categorías de la función de TODAS las
+    valoraciones, con su tag y «corresponde» en las del nivel que rige. Se elige igual sola la que
+    corresponde (`categoriaPorDefecto`), y la leyenda dice si la elegida difiere.
   */
-  const [verTodasLasValoraciones, setVerTodasLasValoraciones] = useState(false);
+  const [modalCategoriasConvenio, setModalCategoriasConvenio] = useState(false);
   const [motivoValoracion, setMotivoValoracion] = useState('');
   /** Aviso inline cuando el cambio de convenio dejó sin efecto la categoría que estaba elegida. */
   const [avisoConvenio, setAvisoConvenio] = useState('');
@@ -1658,8 +1657,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const cambiarConvenioFiltro = (nuevo: string) => {
     setConvenioFiltro(nuevo);
     // El escape hatch es por convenio: al cambiar de convenio vuelve a su default.
-    setVerTodasDelConvenio(false);
-    setVerTodasLasValoraciones(false);
+    setModalCategoriasConvenio(false);
     setMotivoValoracion('');
     setAvisoConvenio('');
     if (!nuevo || !wizardData.categoria_sat_id) return;
@@ -1719,7 +1717,6 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     ocultasPorConvenio: categoriasOcultasPorConvenio,
     ocultasPorFiltroConvenio,
     rolNoTieneCategoriasDelConvenio,
-    ocultasPorValoracion,
     rolNoTieneCategoriasDeLaValoracion,
     rolSinValorar,
   } = useMemo(
@@ -1730,13 +1727,30 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         convenioElegido: convenioFiltro,
         codigosEmpleadora: conveniosDeLaEmpleadora,
         categorias: allCategoriasSat,
-        verTodasDelConvenio,
+        verTodasDelConvenio: false,
         categoriaElegidaId: wizardData.categoria_sat_id,
         // La del ROL en este proyecto (la del proyecto, o su excepción): define qué categorías corresponden.
         valoracionProyecto: valoracionProyectoId,
-        verTodasLasValoraciones,
+        // Todas las valoraciones, siempre (ver `modalCategoriasConvenio`).
+        verTodasLasValoraciones: true,
       }),
-    [allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, wizardData.categoria_sat_id, conveniosDeLaEmpleadora, convenioFiltro, verTodasDelConvenio, valoracionProyectoId, verTodasLasValoraciones],
+    [allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, wizardData.categoria_sat_id, conveniosDeLaEmpleadora, convenioFiltro, valoracionProyectoId],
+  );
+  /** Lo que muestra el modal «Ver todas las del convenio»: todas las del convenio elegido, sin el filtro por función. Sólo se arma abierto. */
+  const categoriasDelConvenioEntero = useMemo(
+    () =>
+      modalCategoriasConvenio && convenioFiltro
+        ? categoriasOfrecidas({
+            rolesFrame: allRoleFrames.filter((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id)),
+            convenioElegido: convenioFiltro,
+            codigosEmpleadora: conveniosDeLaEmpleadora,
+            categorias: allCategoriasSat,
+            verTodasDelConvenio: true,
+            valoracionProyecto: valoracionProyectoId,
+            verTodasLasValoraciones: true,
+          }).categorias
+        : [],
+    [modalCategoriasConvenio, allRoleFrames, allCategoriasSat, wizardData.rol_frame_id, conveniosDeLaEmpleadora, convenioFiltro, valoracionProyectoId],
   );
 
   /*
@@ -1780,7 +1794,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const categoriaAutomatica = useRef<{ id: string; valoracion: string } | null>(null);
   useEffect(() => {
     // Con un tipo de Servicios no hay categoría (otro efecto la suelta): elegir una armaba un rebote.
-    if (verTodasLasValoraciones || esServicios) return;
+    if (esServicios) return;
     const auto = categoriaAutomatica.current;
     const esLaAutomatica = !!auto && auto.id === String(wizardData.categoria_sat_id);
     if (wizardData.categoria_sat_id && !(esLaAutomatica && auto!.valoracion !== valoracionProyectoId)) return;
@@ -1791,7 +1805,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     if (!porDefecto) return;
     categoriaAutomatica.current = { id: String(porDefecto.id), valoracion: valoracionProyectoId };
     if (String(porDefecto.id) !== String(wizardData.categoria_sat_id)) setWizardData((prev) => ({ ...prev, categoria_sat_id: porDefecto.id }));
-  }, [availableCategoriasSat, verTodasLasValoraciones, wizardData.categoria_sat_id, valoracionProyectoId, valoraciones, esServicios]);
+  }, [availableCategoriasSat, wizardData.categoria_sat_id, valoracionProyectoId, valoraciones, esServicios]);
 
   /*
     EL OFICIO QUE SE AGREGA DESDE EL BUSCADOR, y que la persona todavía no tiene en su ficha.
@@ -2613,8 +2627,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
 
     const catInicial = initialCatId ? allCategoriasSat.find((c) => String(c.data?.id) === String(initialCatId)) : undefined;
     setConvenioFiltro(String((catDeSolicitud || catInicial)?.data?.convenio || '').trim());
-    setVerTodasDelConvenio(false);
-    setVerTodasLasValoraciones(false);
+    setModalCategoriasConvenio(false);
     // El motivo de otra valoración ya no se pide (15/11/2026); el que un contrato viejo tenga cargado se
     // conserva al editarlo. Sólo con un contrato puntual de ESTE proyecto: el de otro no justifica nada acá.
     setMotivoValoracion(String((contratoPorIndice as any)?.valoracionOverride?.motivo || ''));
@@ -5454,42 +5467,35 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       )}
 
                       {/*
-                    LOS DOS ESCAPES DE LOS FILTROS, COMO BOTONES (15/11/2026, pedido del usuario): eran un
-                    checkbox y un link sueltos entre los avisos y no se veían. Botones claros, cada uno de
-                    su color: celeste el del convenio, violeta el de la valoración. Los dos van y vuelven.
-
-                    · Convenio: sólo con un convenio elegido (sin convenio «todas las del convenio» no quiere
-                      decir nada). Si la función no tiene NINGUNA categoría de ese convenio queda prendido y
-                      fijo: apagarlo dejaría el select vacío.
-                    · Valoración: sin motivo desde el 15/11/2026; la leyenda de la categoría ya dice que difiere.
+                    «VER TODAS LAS DEL CONVENIO»: abre el modal con la lista completa (ver `modalCategoriasConvenio`).
+                    Sólo con un convenio elegido y una función: sin convenio no quiere decir nada, y si la
+                    función no tiene ninguna categoría del convenio el desplegable ya las muestra todas.
                   */}
-                      {((convenioFiltro && wizardData.rol_frame_id) || ocultasPorValoracion > 0 || verTodasLasValoraciones) && (
-                        <div className="ml-1 mt-1 flex flex-wrap gap-2">
-                          {/* Primero la valoración, después el convenio (15/11/2026, pedido del usuario). */}
-                          {(ocultasPorValoracion > 0 || verTodasLasValoraciones) && (
-                            <button
-                              type="button"
-                              aria-pressed={verTodasLasValoraciones}
-                              onClick={() => setVerTodasLasValoraciones((v) => !v)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 dark:border-violet-800/60 dark:bg-violet-900/20 dark:text-violet-300 dark:hover:bg-violet-900/40"
-                            >
-                              <FontAwesomeIcon icon={faMedal} className="h-3 w-3" />
-                              {verTodasLasValoraciones ? `Ver sólo las ${valoracionDelRol?.nombre ? `de ${valoracionDelRol.nombre}` : 'de la valoración del proyecto'}` : `Elegir otra valoración (${ocultasPorValoracion})`}
-                            </button>
-                          )}
-                          {convenioFiltro && wizardData.rol_frame_id && (
-                            <button
-                              type="button"
-                              aria-pressed={verTodasDelConvenio || rolNoTieneCategoriasDelConvenio}
-                              disabled={rolNoTieneCategoriasDelConvenio}
-                              onClick={() => setVerTodasDelConvenio((v) => !v)}
-                              title="Ignora las categorías de la función Frame y muestra todas las del convenio"
-                              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-800/60 dark:bg-sky-900/20 dark:text-sky-300 dark:hover:bg-sky-900/40 disabled:opacity-60 disabled:cursor-not-allowed"
-                            >
-                              <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3" />
-                              {verTodasDelConvenio || rolNoTieneCategoriasDelConvenio ? 'Ver sólo las de la función' : 'Ver todas las del convenio'}
-                            </button>
-                          )}
+                      {convenioFiltro && wizardData.rol_frame_id && !rolNoTieneCategoriasDelConvenio && (
+                        <div className="ml-1 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => setModalCategoriasConvenio(true)}
+                            title="Todas las categorías del convenio, aunque no sean de la función Frame"
+                            className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 dark:border-sky-800/60 dark:bg-sky-900/20 dark:text-sky-300 dark:hover:bg-sky-900/40"
+                          >
+                            <FontAwesomeIcon icon={faLayerGroup} className="h-3 w-3" />
+                            Ver todas las del convenio
+                          </button>
+                          <ModalCategorias
+                            abierto={modalCategoriasConvenio}
+                            onCerrar={() => setModalCategoriasConvenio(false)}
+                            titulo={`Categorías del convenio ${convenioFiltro}`}
+                            subtitulo={conveniosDisponibles.find((c) => c.externalId === convenioFiltro)?.name || undefined}
+                            opciones={categoriasDelConvenioEntero as any[]}
+                            valor={wizardData.categoria_sat_id}
+                            onChange={(id) => {
+                              setAvisoConvenio('');
+                              setWizardData((prev) => ({ ...prev, categoria_sat_id: id }));
+                            }}
+                            valoraciones={valoraciones}
+                            valoracionQueRige={valoracionProyectoId}
+                          />
                         </div>
                       )}
                     </div>
