@@ -18,6 +18,7 @@ import { useEmpresaContextStore } from '../stores/empresaContextStore';
 import { createNavbarEventListener } from '../utils/navbarEvents';
 import { BANDEJAS, contadorDeBandeja, sumaAccionable } from '../config/bandejasContratacion';
 import { useContadoresContratacionStore } from '../stores/contadoresContratacionStore';
+import { RUTAS_REGLAS_VACACIONES, SECCIONES_REGLAS_VACACIONES } from '../config/seccionesReglasVacaciones';
 
 interface AdminCounts {
   clients: number;
@@ -209,6 +210,14 @@ const DOCUMENTOS_PATHS = ["/escaneo-dropbox", "/dropbox-sign"];
 const DDBB_PATHS = ["/ddbb/mongodb"];
 
 /**
+ * Subgrupo «Vacaciones» (dentro de Configuración): las reglas de vacaciones, una sección por ítem.
+ *
+ * Eran siete pestañas en una pantalla y ya no entraban a lo ancho (15/11/2026, pedido del usuario).
+ * La lista y sus rutas viven en `config/seccionesReglasVacaciones.ts`. Alfabético, como Plantillas.
+ */
+const VACACIONES_PATHS = RUTAS_REGLAS_VACACIONES;
+
+/**
  * Subgrupos colapsables de Configuración. `storageKey` persiste el abierto/cerrado y
  * `paths` decide qué items se sacan del listado plano para meterlos adentro del grupo.
  */
@@ -217,6 +226,7 @@ const CONFIG_GROUPS = [
   { key: 'arca', storageKey: 'configArcaOpen', paths: ARCA_PATHS },
   { key: 'documentos', storageKey: 'configDocumentosOpen', paths: DOCUMENTOS_PATHS },
   { key: 'ddbb', storageKey: 'configDdbbOpen', paths: DDBB_PATHS },
+  { key: 'vacacionesReglas', storageKey: 'configVacacionesOpen', paths: VACACIONES_PATHS },
   /*
     Los dos «Usuarios». El primero NO está en Configuración sino en Admin GENERAL — esta lista dejó de
     ser solo de esa sección y pasó a ser el registro de todos los grupos plegables del menú, que es lo
@@ -487,7 +497,10 @@ export const MobileNavbar: React.FC = () => {
 
       if (puedeAbrir('/order-types')) base.push({ permiso: 'config_orders:view', path: '/order-types', icon: faShoppingCart, label: 'Pedidos', scope: 'global' });
       if (puedeAbrir('/shifts')) base.push({ permiso: 'config_shifts:view', path: '/shifts', icon: faClock, label: 'Turnos', scope: 'global' });
-      if (puedeAbrir('/vacations-rules')) base.push({ permiso: 'config_vacations:view', path: '/vacations-rules', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
+      // Las secciones de Vacaciones: cada una es un ítem del subgrupo «Vacaciones» (ver VACACIONES_PATHS).
+      for (const s of SECCIONES_REGLAS_VACACIONES) {
+        if (puedeAbrir(s.ruta)) base.push({ permiso: 'config_vacations:view', path: s.ruta, icon: faUmbrellaBeach, label: s.label, scope: 'global' });
+      }
       if (puedeAbrir('/holidays')) base.push({ permiso: 'config_holidays:view', path: '/holidays', icon: faCalendar, label: 'Feriados', scope: 'global' });
       // Junto a Feriados por el orden alfabético. Las usan los tipos de contrato (cuáles habilita cada uno).
       if (puedeAbrir('/formas-de-pago')) base.push({ path: '/formas-de-pago', icon: faMoneyBillTransfer, label: 'Formas de pago', scope: 'global' });
@@ -697,7 +710,7 @@ export const MobileNavbar: React.FC = () => {
     // Ojo: los paths de los grupos (Plantillas, ARCA, Documentos, Usuarios) NO van acá: se sacan
     // del listado plano para meterlos adentro de su subgrupo, y dejarlos también acá los duplicaría.
     // «/clients» y «/centros-costo» ya NO están acá: se mudaron a Admin GENERAL (ver `generalAlFinal`).
-    const configPaths = ['/requests/config', '/order-types', '/vacations-rules', '/holidays', '/formas-de-pago', '/bancos', '/sindicatos', '/paises-residencia', '/contratos', '/releases-tipos', '/admin/sedes'];
+    const configPaths = ['/requests/config', '/order-types', '/holidays', '/formas-de-pago', '/bancos', '/sindicatos', '/paises-residencia', '/contratos', '/releases-tipos', '/admin/sedes'];
     // "Mi Perfil" está en los DOS lados a propósito: como atajo en la barra de arriba (junto al
     // usuario) y acá, para quien lo busca recorriendo el menú. Entra en el orden alfabético.
     const profileItem = { path: '/mi-perfil', icon: faIdCard, label: 'Mi Perfil', scope: 'global' as const, permiso: 'config_profile:view' };
@@ -746,6 +759,10 @@ export const MobileNavbar: React.FC = () => {
       ...arcaResto,
     ];
     const arcaGroup = { path: '#arca', groupKey: 'arca', icon: faLandmark, label: 'ARCA', scope: 'global' as const, children: arcaChildren };
+
+    // Subgrupo «Vacaciones»: las secciones de las reglas, alfabético (ver VACACIONES_PATHS).
+    const vacacionesChildren = (VACACIONES_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems).sort(byLabel);
+    const vacacionesGroup = { path: '#vacaciones-reglas', groupKey: 'vacacionesReglas', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' as const, children: vacacionesChildren };
 
     // Subgrupo «DDBB»: la configuración de la base (ver DDBB_PATHS).
     const ddbbChildren = (DDBB_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems).sort(byLabel);
@@ -797,6 +814,7 @@ export const MobileNavbar: React.FC = () => {
       ...(plantillasChildren.length > 0 ? [plantillasGroup] : []),
       ...(arcaChildren.length > 0 ? [arcaGroup] : []),
       ...(ddbbChildren.length > 0 ? [ddbbGroup] : []),
+      ...(vacacionesChildren.length > 0 ? [vacacionesGroup] : []),
       ...(documentosChildren.length > 0 ? [documentosGroup] : []),
       ...(usuariosConfigChildren.length > 0 ? [usuariosConfigGroup] : []),
       ...(empresasChildren.length > 0 ? [empresasGroup] : []),

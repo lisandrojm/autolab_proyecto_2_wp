@@ -47,7 +47,7 @@ export const explicacionDeEmpresaComputo = (e: EmpresaComputo, total: number, pe
 };
 
 /** La ruta de la configuración «Antigüedad por empresa», con la pestaña ya abierta. */
-export const RUTA_CONFIG_ANTIGUEDAD = "/vacations-rules?tab=company_seniority";
+export const RUTA_CONFIG_ANTIGUEDAD = "/vacations-rules/antiguedad-por-empresa";
 
 /**
  * POR QUÉ ESA EMPRESA, en una o dos líneas (15/11/2026): el (i) de «Antigüedad» en Gestión por Usuario y

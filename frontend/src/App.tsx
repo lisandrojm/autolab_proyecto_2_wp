@@ -573,6 +573,15 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              {/* Cada sección de Configuración › Vacaciones (ver config/seccionesReglasVacaciones.ts). */}
+              <Route
+                path="/vacations-rules/:seccion"
+                element={
+                  <ProtectedRoute>
+                    <VacationsRulesPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/ddbb/mongodb"
                 element={

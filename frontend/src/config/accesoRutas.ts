@@ -1,6 +1,7 @@
 import { matchPath } from "react-router-dom";
 import { esPermisoMobile, esPermisoPlataforma } from "../utils/permisosMobile";
 import { BANDEJAS, RUTA_CONTRATACION } from "./bandejasContratacion";
+import { RUTAS_REGLAS_VACACIONES } from "./seccionesReglasVacaciones";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -97,7 +98,8 @@ export const REGLAS_RUTAS: ReglaRuta[] = [
   // --- Configuración ---------------------------------------------------------------------------
   { path: "/requests/config", permisos: ["config_activity_logs:view"] },
   { path: "/order-types", permisos: ["config_orders:view"] },
-  { path: "/vacations-rules", permisos: ["config_vacations:view"] },
+  // Configuración Global (`/vacations-rules`) y cada sección del subgrupo Vacaciones, con el mismo permiso.
+  ...RUTAS_REGLAS_VACACIONES.map((path) => ({ path, permisos: ["config_vacations:view"] })),
   { path: "/holidays", permisos: ["config_holidays:view"] },
   { path: "/pdfs", permisos: ["config_pdf_templates:view"] },
   { path: "/pdfs-vacaciones", permisos: ["config_pdf_templates:view"] },
