@@ -19,6 +19,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 import { CLASE_BARRA_FIJA, useBarraFija } from '../ui/BarraFija';
 import { formatCuit } from '../../utils/cuit';
+import { explicacionDeEmpresaComputo, type EmpresaComputo } from "../../utils/explicacionAntiguedad";
 
 type CuentaDeEmpresa = NonNullable<UserVacationBalance['porEmpresa']>[number];
 /** La cuenta de la persona con UNA empleadora (por CUIT); nada si no trabajó para ella. */
@@ -61,6 +62,10 @@ interface UserVacationBalance {
     proyectadoHasta: string | null;
     aniosAl31: number;
     diasLey: number;
+    /** De qué empleadora salió la antigüedad (15/11/2026: ya no se suman). `null` si se sumaron todas. */
+    empresaComputo?: EmpresaComputo | null;
+    /** Por qué se sumaron todas: la configuración lo pide, o el período ya cerró. */
+    sumaEntreEmpresas?: "config" | "periodoCerrado" | null;
     arca: {
       primeraAlta: string | null;
       ultimaFecha: string | null;
@@ -813,7 +818,7 @@ export const UserVacationManagementTab: React.FC = () => {
             {rotulo}
           </button>
         ))}
-        <span className="ml-auto text-[11px] text-gray-500 dark:text-gray-400 pb-1 whitespace-nowrap">{vista === 'acumulado' ? 'Todas las empresas juntas; editable.' : 'Una fila por persona y empresa; sólo lectura. Click en una fila para ver sus contratos.'}</span>
+        <span className="ml-auto text-[11px] text-gray-500 dark:text-gray-400 pb-1 whitespace-nowrap">{vista === 'acumulado' ? 'Total vigente (empresa de cómputo); editable.' :'Una fila por persona y empresa; sólo lectura. Click en una fila para ver sus contratos.'}</span>
       </div>
 
       {esPorEmpresa ? (
@@ -971,6 +976,15 @@ export const UserVacationManagementTab: React.FC = () => {
                       onChange={(e) => handleFieldChange(balance.userId, "totalAnnual", e.target.value)}
                       className={claseCampo("total", edits.totalAnnual !== undefined && edits.totalAnnual !== balance.display.totalAnnual)}
                     />
+                    {/* DE QUÉ EMPRESA SALE EL TOTAL (15/11/2026): ya no se suman. La (i) abre la cuenta entera. */}
+                    {balance.antiguedad?.empresaComputo && (
+                      <div className="mt-1 flex items-center justify-center gap-1" title={explicacionDeEmpresaComputo(balance.antiguedad.empresaComputo, balance.display.totalAnnual, `${balance.firstName} ${balance.lastName}`.trim()).join("\n")}>
+                        <span className="inline-flex max-w-[9rem] truncate px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800">vía {balance.antiguedad.empresaComputo.nombre}</span>
+                        <button type="button" onClick={() => setAntiguedadDe(balance)} aria-label="De qué empresa se tomaron los días" className="text-gray-400 hover:text-violet-600 dark:hover:text-violet-300">
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
                   </td>
                   {/* Tomados */}
                   <td className="px-4 py-4 text-center">
@@ -1079,7 +1093,7 @@ export const UserVacationManagementTab: React.FC = () => {
           <div>
             <p className="font-semibold mb-2">Acumulado y Por empresa</p>
             <p>
-              <strong>Acumulado</strong> es una fila por persona con todas sus empleadoras juntas (hay una columna por empresa: los días que le corresponden por su antigüedad en ella) y es lo que se edita. <strong>Por empresa</strong> abre esa fila en
+              <strong>Acumulado</strong> es una fila por persona (hay una columna por empresa: los días que le corresponden por su antigüedad en ella) y es lo que se edita. Su total sale de la antigüedad en UNA empresa —la «empresa de cómputo», que se ve debajo del total—: no se suman entre empresas (se configura en Configuración Global › Antigüedad por empresa). <strong>Por empresa</strong> abre esa fila en
               una por empleadora: la antigüedad en esa empresa, sus días por ley y las vacaciones tomadas estando contratado por ella (una vacación es de la empresa del contrato que regía el día que
               empezó). Los días extra, el beneficio y el arrastre son de la persona: están sólo en el acumulado.
             </p>
@@ -1088,9 +1102,9 @@ export const UserVacationManagementTab: React.FC = () => {
             <p className="font-semibold mb-2">La antigüedad</p>
             <p>
               Si la persona está en ARCA, la antigüedad es la de sus relaciones laborales registradas en Simplificación Registral (etiqueta{" "}
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ARCA</span>): los días de cada relación sumados, sin
-              contar dos veces los que se solapan, y una relación abierta cuenta hasta hoy. Si no está en ARCA, se suman los contratos cargados en WeProdu, y si tampoco hay, se usa la
-              fecha de ingreso. Con esa antigüedad proyectada al 31 de diciembre del período se fijan los días por ley (LCT: 14 hasta 5 años, 21 hasta 10, 28 hasta 20, 35 después;
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">ARCA</span>): los días de sus relaciones con UNA empleadora —la vigente, o la que diga la precedencia de la
+              configuración—, sin contar dos veces los que se solapan, y una relación abierta cuenta hasta hoy. No se suman entre empresas: quien pasó de una a otra arranca de cero en la nueva. Si no
+              está en ARCA, cuentan los contratos cargados en WeProdu con esa empresa, y si tampoco hay, se usa la fecha de ingreso. Los períodos ya cerrados conservan la antigüedad sumada. Con esa antigüedad proyectada al 31 de diciembre del período se fijan los días por ley (LCT: 14 hasta 5 años, 21 hasta 10, 28 hasta 20, 35 después;
               menos de 6 meses, 1 día cada 20 trabajados). Tocando la etiqueta se ve la cuenta de cada persona; el detalle de las relaciones está en Documentos → Antigüedad ARCA.
             </p>
           </div>
@@ -1102,6 +1116,18 @@ export const UserVacationManagementTab: React.FC = () => {
       <InfoModal isOpen={!!antiguedadDe} onClose={() => setAntiguedadDe(null)} title={`Antigüedad de ${antiguedadDe?.firstName || ""} ${antiguedadDe?.lastName || ""}`} size="md">
         {antiguedadDe?.antiguedad && (
           <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+            {/* DE QUÉ EMPRESA (15/11/2026): el mismo texto que el tooltip del total. */}
+            {antiguedadDe.antiguedad.empresaComputo ? (
+              <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 text-violet-900 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-200 space-y-1">
+                {explicacionDeEmpresaComputo(antiguedadDe.antiguedad.empresaComputo, antiguedadDe.display.totalAnnual, `${antiguedadDe.firstName} ${antiguedadDe.lastName}`.trim()).map((linea) => (
+                  <p key={linea}>{linea}</p>
+                ))}
+              </div>
+            ) : antiguedadDe.antiguedad.sumaEntreEmpresas ? (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                {antiguedadDe.antiguedad.sumaEntreEmpresas === "periodoCerrado" ? `${selectedYear} es un período cerrado: conserva la antigüedad sumada entre empresas con que se calculó.` : "La configuración de Vacaciones pide sumar la antigüedad de todas las empresas (cálculo anterior)."}
+              </p>
+            ) : null}
             {antiguedadDe.antiguedad.arca ? (
               <>
                 <p>
@@ -1112,7 +1138,11 @@ export const UserVacationManagementTab: React.FC = () => {
                   <li>Primera alta: <span className="font-semibold">{formatDate(antiguedadDe.antiguedad.arca.primeraAlta)}</span></li>
                   <li>Última fecha: <span className="font-semibold">{formatDate(antiguedadDe.antiguedad.arca.ultimaFecha)}</span>{antiguedadDe.antiguedad.arca.tieneRelacionAbierta && <span className="ml-1 text-emerald-600">(tiene una relación abierta)</span>}</li>
                   <li>Relaciones registradas: <span className="font-semibold">{antiguedadDe.antiguedad.arca.cantidadContratos}</span> con {antiguedadDe.antiguedad.arca.empresas.length} empleadora(s)</li>
-                  <li>Días trabajados (sin contar dos veces los solapados): <span className="font-semibold">{antiguedadDe.antiguedad.arca.diasTrabajados.toLocaleString("es-AR")}</span> → {antiguedadDe.seniority}</li>
+                  {antiguedadDe.antiguedad.empresaComputo ? (
+                    <li className="text-gray-500">Días trabajados en todas las empleadoras juntas (para auditar, no cuentan): {antiguedadDe.antiguedad.arca.diasTrabajados.toLocaleString("es-AR")}</li>
+                  ) : (
+                    <li>Días trabajados (sin contar dos veces los solapados): <span className="font-semibold">{antiguedadDe.antiguedad.arca.diasTrabajados.toLocaleString("es-AR")}</span> → {antiguedadDe.seniority}</li>
+                  )}
                   <li>Desde la primera alta hasta hoy, con huecos: {antiguedadDe.antiguedad.arca.antiguedadDesdePrimeraAlta.dias.toLocaleString("es-AR")} días ({antiguedadDe.antiguedad.arca.antiguedadDesdePrimeraAlta.anios} años)</li>
                   {antiguedadDe.antiguedad.diasWeProdu > 0 && <li className="text-gray-500">Los contratos cargados en WeProdu suman {antiguedadDe.antiguedad.diasWeProdu.toLocaleString("es-AR")} días; manda ARCA.</li>}
                 </ul>
@@ -1120,14 +1150,18 @@ export const UserVacationManagementTab: React.FC = () => {
             ) : (
               <p>
                 <span className="font-semibold">{antiguedadDe.antiguedad.fuente === "contratos" ? "Según los contratos de WeProdu" : "Según la fecha de ingreso"}</span>: la persona no figura en las relaciones laborales de ARCA (no tiene CUIL cargado, o ARCA no tiene relaciones suyas con estas empleadoras).{" "}
-                {antiguedadDe.antiguedad.fuente === "contratos" ? `Se suman los días de sus contratos: ${antiguedadDe.antiguedad.dias.toLocaleString("es-AR")} días.` : `Ingreso: ${formatDate(antiguedadDe.hireDate)}.`}
+                {antiguedadDe.antiguedad.fuente === "contratos"
+                  ? antiguedadDe.antiguedad.empresaComputo
+                    ? `Cuentan los contratos con ${antiguedadDe.antiguedad.empresaComputo.nombre}: ${antiguedadDe.antiguedad.dias.toLocaleString("es-AR")} días.`
+                    : `Se suman los días de sus contratos: ${antiguedadDe.antiguedad.dias.toLocaleString("es-AR")} días.`
+                  : `Ingreso: ${formatDate(antiguedadDe.hireDate)}.`}
               </p>
             )}
             <div className="rounded-lg bg-gray-50 dark:bg-gray-900/40 p-3 text-xs space-y-1">
               <p className="font-semibold">Días por ley para {selectedYear}</p>
               <p>
                 {antiguedadDe.antiguedad.proyectadoHasta
-                  ? `A los ${antiguedadDe.antiguedad.dias.toLocaleString("es-AR")} días trabajados se les suma lo que falta hasta el ${formatDate(antiguedadDe.antiguedad.proyectadoHasta)}${antiguedadDe.antiguedad.arca ? (antiguedadDe.antiguedad.arca.tieneRelacionAbierta ? " (tiene una relación abierta)" : " (su última relación termina ese día)") : " (está activo, se supone que sigue hasta fin de año)"}: `
+                  ? `A los ${antiguedadDe.antiguedad.dias.toLocaleString("es-AR")} días trabajados se les suma lo que falta hasta el ${formatDate(antiguedadDe.antiguedad.proyectadoHasta)}${antiguedadDe.antiguedad.arca ? ((antiguedadDe.antiguedad.empresaComputo ?? antiguedadDe.antiguedad.arca).tieneRelacionAbierta ? " (tiene una relación abierta)" : " (su última relación termina ese día)") : " (está activo, se supone que sigue hasta fin de año)"}: `
                   : `No se proyecta nada: ${antiguedadDe.antiguedad.arca ? "su última relación en ARCA ya terminó" : "no está activo"}. Antigüedad al 31/12/${selectedYear}: `}
                 {antiguedadDe.antiguedad.diasProyectadosAl31.toLocaleString("es-AR")} días ≈ {antiguedadDe.antiguedad.aniosAl31} años → <span className="font-semibold text-violet-600 dark:text-violet-400">{antiguedadDe.antiguedad.diasLey} días</span> (LCT: 14 hasta 5 años, 21 hasta 10, 28 hasta 20, 35 después; menos de 6 meses, 1 cada 20 trabajados).</p>
               <p>Total anual = días por ley + días extra{antiguedadDe.extraVacationDays ? ` (${antiguedadDe.extraVacationDays})` : ""} + beneficio de la compañía (+ arrastre si está habilitado) = <span className="font-semibold">{antiguedadDe.calculated.totalAnnual}</span>{antiguedadDe.override?.totalAnnual !== undefined && antiguedadDe.override.totalAnnual !== antiguedadDe.calculated.totalAnnual ? `, editado a mano a ${antiguedadDe.override.totalAnnual}` : ""}.</p>
