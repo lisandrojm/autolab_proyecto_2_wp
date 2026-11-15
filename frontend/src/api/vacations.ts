@@ -192,8 +192,9 @@ export const vacationsAPI = {
     return response.data;
   },
 
-  getUsersBalance: async (year: number): Promise<any[]> => {
-    const response = await axios.get("/vacations/users-balance", { params: { year } });
+  /** Con `userIds`, sólo esas personas (un server viejo los ignora y devuelve todas: igual sirve). */
+  getUsersBalance: async (year: number, userIds?: string[]): Promise<any[]> => {
+    const response = await axios.get("/vacations/users-balance", { params: { year, ...(userIds?.length ? { userIds: userIds.join(",") } : {}) } });
     return response.data;
   },
 

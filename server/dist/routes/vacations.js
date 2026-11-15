@@ -148,8 +148,16 @@ router.get("/users-balance", async (req, res) => {
         if (isNaN(selectedYear)) {
             return res.status(400).json({ error: "Año inválido" });
         }
+        /*
+          `userIds` (separados por coma) acota la cuenta a esas personas: la bandeja de Solicitudes la pide
+          para mostrar cuántos días le quedan a cada solicitante, sin calcular el tenant entero.
+        */
+        const userIds = String(req.query.userIds || "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter((s) => Types.ObjectId.isValid(s));
         // La cuenta vive en `services/vacaciones/saldos.ts`: la comparte con el plan de vacaciones por proyecto.
-        res.json(await saldosDeVacaciones(tenantId, req.tenantObjectId, selectedYear));
+        res.json(await saldosDeVacaciones(tenantId, req.tenantObjectId, selectedYear, userIds.length ? { userIds } : {}));
     }
     catch (error) {
         console.error("Error fetching users vacation balance:", error);
@@ -349,6 +357,8 @@ router.get("/", async (req, res) => {
             return {
                 ...v,
                 userId: userObj && userObj._id ? userObj._id : v.userId, // Restore ID if populated
+                // Para el tilde de «nombre validado en ARCA» al lado del colaborador, como en Solicitudes y Contratos.
+                arcaNombre: userObj?.metadata ? { cuit: userObj.metadata.cuit || null, sinCuit: !!userObj.metadata.sinCuit, validadoAt: userObj.metadata.nombreValidadoArcaAt || null } : null,
                 userProject,
                 userRoleFrame,
                 projectsInfo,

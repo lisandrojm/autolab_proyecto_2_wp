@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSpinner, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faFileSignature, faBuilding, faIdCard, faBriefcase, faExclamationTriangle, faRotateRight } from '@fortawesome/free-solid-svg-icons';
+import { faSpinner, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faFileSignature, faBuilding, faIdCard, faBriefcase, faExclamationTriangle, faRotateRight, faCommentDots } from '@fortawesome/free-solid-svg-icons';
 import { vacationsAPI, type VacationRequest } from '../api/vacations';
 import { projectsAPI, Project } from '../api/projects';
 import { clientsAPI, Client } from '../api/clients';
@@ -21,6 +21,7 @@ import { mapVacationStatusToStatusType, mapVacationSignatureStateToStatusType, i
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
 import { NivelDeAprobacion } from '../components/vacations/NivelDeAprobacion';
+import { NombreArca, estadoNombreArca } from '../components/arca/NombreArca';
 import { aprobadoresDe, etapaDe } from '@compartido/vacaciones/etapaDeAprobacion';
 
 const HELP_KEY = 'vacations' as const;
@@ -35,6 +36,13 @@ const FIN_COL_FIJA = 'shadow-[inset_-2px_0_0_0_#d1d5db,4px_0_6px_-4px_rgba(0,0,0
 
 interface VacationRequestMock {
   id: string;
+  userId?: string;
+  /** El año de saldo del que descuenta (si no viene, el del inicio). */
+  periodoSaldo?: number | null;
+  /** CUIT y validación del nombre en ARCA del colaborador (para el tilde). */
+  arcaNombre?: { cuit: string | null; sinCuit: boolean; validadoAt: string | null } | null;
+  /** Lo que escribió al pedirlas, si escribió algo. */
+  comentario?: string | null;
   numeroPedido: string;
   reglas: string[];
   solicitante: {
@@ -70,6 +78,11 @@ interface VacationRequestMock {
 /** La forma de la página a partir de lo que manda el server (la usan la carga y el PDF regenerado). */
 const aSolicitud = (item: any): VacationRequestMock => ({
   id: item._id,
+  userId: item.userId ? String(item.userId?._id ?? item.userId) : undefined,
+  periodoSaldo: item.periodoSaldo ?? null,
+  arcaNombre: item.arcaNombre ?? null,
+  // «Solicitud de vacaciones» es el texto que pone la app cuando no se escribe nada: no es un comentario.
+  comentario: [item.comments, item.reason].map((t) => String(t || '').trim()).find((t) => t && t !== 'Solicitud de vacaciones') || null,
   numeroPedido: item.vacationNumber || item._id,
   reglas: item.vacationRuleIds && Array.isArray(item.vacationRuleIds) ? item.vacationRuleIds.map((rule: any) => (typeof rule === 'object' && rule.name ? rule.name : '')).filter((name: string) => name !== '') : [],
   solicitante: {
@@ -94,6 +107,12 @@ const aSolicitud = (item: any): VacationRequestMock => ({
   rechazo: item.rechazo,
   nombresAprobadores: item.nombresAprobadores,
 });
+
+/** «2026-09-28T…» → «28/09/2026», como las fechas de Alta / Baja de los contratos. */
+const fechaDMA = (iso?: string) => (iso ? String(iso).slice(0, 10).split('-').reverse().join('/') : '—');
+
+/** El año de saldo de una solicitud: el que tiene anotado o, si no, el de su inicio (como `saldosDeVacaciones`). */
+const anioDeSaldo = (v: VacationRequestMock) => v.periodoSaldo ?? (v.startDate ? Number(String(v.startDate).slice(0, 4)) : null);
 
 /** En qué paso está (para el estado y el pie del modal). Las viejas sin cadena, `pending`, son del admin. */
 const etapaDeSolicitud = (v: VacationRequestMock) => etapaDe({ status: v.estado, cadena: v.cadena as any, aprobaciones: v.aprobaciones as any });
@@ -242,11 +261,40 @@ export const VacationsPage: React.FC = () => {
       const transformedRecords: VacationRequestMock[] = data.map(aSolicitud);
       setMockVacations(transformedRecords);
       calculateStats(transformedRecords);
+      void cargarSaldos(transformedRecords);
     } catch (error) {
       console.error('Error loading vacation records:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  /*
+    CUÁNTOS DÍAS LE QUEDAN A CADA SOLICITANTE: el «Disponible» de Gestión por Usuario (total del año menos
+    lo tomado y lo pendiente, esta solicitud incluida), por año de saldo y sólo para quienes están en la
+    lista. Se pide aparte y después de la tabla, para no demorarla: hasta que llega, la celda dice «…».
+  */
+  const [quedan, setQuedan] = useState<Record<string, number>>({});
+  const cargarSaldos = async (solicitudes: VacationRequestMock[]) => {
+    const porAnio = new Map<number, Set<string>>();
+    for (const v of solicitudes) {
+      const anio = anioDeSaldo(v);
+      if (!anio || !v.userId) continue;
+      if (!porAnio.has(anio)) porAnio.set(anio, new Set());
+      porAnio.get(anio)!.add(v.userId);
+    }
+    const nuevos: Record<string, number> = {};
+    await Promise.all(
+      [...porAnio].map(async ([anio, ids]) => {
+        try {
+          const filas = await vacationsAPI.getUsersBalance(anio, [...ids]);
+          for (const f of filas) if (ids.has(String(f.userId))) nuevos[`${f.userId}|${anio}`] = Number(f.display?.available ?? 0);
+        } catch {
+          /* sin saldo: la celda queda en «—» */
+        }
+      }),
+    );
+    setQuedan(nuevos);
   };
 
   const getFormattedVacationNumber = (vacationNumber: string): string => {
@@ -941,8 +989,8 @@ export const VacationsPage: React.FC = () => {
                   <TablaConEncabezadoFijo className="rounded border dark:border-slate-800" tabla="w-full dark:bg-slate-800/80 table-auto">
                     <thead>
                       <tr>
-                        {/* Solicitante primero y fija a la izquierda: es lo que identifica la fila al correr la tabla. */}
-                        <th className={`text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 sticky -left-px z-[15] bg-white dark:bg-gray-800 ${FIN_COL_FIJA}`}>Solicitante</th>
+                        {/* Colaborador primero y fija a la izquierda: es lo que identifica la fila al correr la tabla. */}
+                        <th className={`text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 sticky -left-px z-[15] bg-white dark:bg-gray-800 ${FIN_COL_FIJA}`}>Colaborador</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Período</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Fecha</th>
                         <th className="text-left text-nowrap py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">N° Solicitud</th>
@@ -963,19 +1011,47 @@ export const VacationsPage: React.FC = () => {
                       {filteredVacations.map((vacation) => (
                         <tr key={vacation.id} className="group border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => handleOpenModal(vacation)}>
                           {/* Fondo opaco: la celda fija tapa lo que pasa por debajo al correr la tabla. */}
-                          <td className={`py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-nowrap sticky -left-px z-[5] bg-white dark:bg-[#1b2637] group-hover:bg-gray-50 dark:group-hover:bg-[#293344] ${FIN_COL_FIJA}`}>{getUserName(vacation.solicitante)}</td>
-                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">
+                          {/*
+                            Como el Colaborador de Solicitudes y Contratos: el nombre, el tilde si ya se validó
+                            contra el Padrón de ARCA y el globo si dejó un comentario (en el hover; el click abre el detalle).
+                          */}
+                          <td className={`py-3 px-4 sticky -left-px z-[5] bg-white dark:bg-[#1b2637] group-hover:bg-gray-50 dark:group-hover:bg-[#293344] ${FIN_COL_FIJA}`}>
+                            <p className="flex items-center gap-1.5 font-medium text-gray-900 dark:text-white text-sm whitespace-nowrap">
+                              <span>{getUserName(vacation.solicitante)}</span>
+                              {vacation.arcaNombre && <NombreArca estado={estadoNombreArca({ cuit: vacation.arcaNombre.cuit || undefined, sinCuit: vacation.arcaNombre.sinCuit, validadoAt: vacation.arcaNombre.validadoAt })} fecha={vacation.arcaNombre.validadoAt} rotuloEnTooltip />}
+                              {vacation.comentario && (
+                                <span title={vacation.comentario} aria-label="Tiene un comentario" className="shrink-0 text-amber-500 dark:text-amber-400">
+                                  <FontAwesomeIcon icon={faCommentDots} className="h-3.5 w-3.5" />
+                                </span>
+                              )}
+                            </p>
+                          </td>
+                          {/* Mismo formato que Alta / Baja en Equipo del proyecto; abajo los días pedidos y los que le quedan. */}
+                          <td className="py-3 px-4">
                             {vacation.startDate && vacation.endDate ? (
-                              <div className="flex flex-col gap-0.5">
+                              <div className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
                                 <span>
-                                  <span className="text-gray-400 dark:text-gray-500">Desde:</span> {formatDateShort(vacation.startDate)}
+                                  <span className="text-gray-400">Desde:</span> {fechaDMA(vacation.startDate)}
                                 </span>
                                 <span>
-                                  <span className="text-gray-400 dark:text-gray-500">Hasta:</span> {formatDateShort(vacation.endDate)}
+                                  <span className="text-gray-400">Hasta:</span> {fechaDMA(vacation.endDate)}
                                 </span>
+                                <span>
+                                  <span className="text-gray-400">Días:</span> {vacation.diasSolicitados}
+                                </span>
+                                {(() => {
+                                  const anio = anioDeSaldo(vacation);
+                                  const clave = `${vacation.userId}|${anio}`;
+                                  const valor = clave in quedan ? quedan[clave] : Object.keys(quedan).length ? null : undefined;
+                                  return (
+                                    <span title={anio ? `Lo que le queda del saldo ${anio}, contando esta solicitud y las demás pendientes (Gestión por Usuario › Disponible)` : undefined}>
+                                      <span className="text-gray-400">Le quedan:</span> {valor === undefined ? '…' : valor === null ? '—' : valor}
+                                    </span>
+                                  );
+                                })()}
                               </div>
                             ) : (
-                              <span className="text-gray-400 dark:text-gray-500">-</span>
+                              <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
                             )}
                           </td>
                           <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">{vacation.fechaSolicitud ? new Date(vacation.fechaSolicitud).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</td>
