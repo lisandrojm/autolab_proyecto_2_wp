@@ -76,6 +76,16 @@ router.put("/", async (req, res) => {
       req.body.ventanaGoce = { enabled, inicio, fin };
     }
 
+    // La antigüedad por empresa: modo conocido, empresas válidas y sin repetir, el flag como booleano.
+    if (req.body?.computoAntiguedad !== undefined) {
+      const c = req.body.computoAntiguedad || {};
+      if (c.modo !== undefined && c.modo !== "empresaVigente" && c.modo !== "precedenciaManual") return res.status(400).json({ error: "Modo de antigüedad desconocido: tiene que ser «empresaVigente» o «precedenciaManual»." });
+      if (c.precedencia !== undefined && !Array.isArray(c.precedencia)) return res.status(400).json({ error: "La precedencia de empresas tiene que ser una lista." });
+      const ids = [...new Set(((c.precedencia || []) as unknown[]).map(String))];
+      if (ids.some((id) => !Types.ObjectId.isValid(id))) return res.status(400).json({ error: "La precedencia tiene una empresa que no existe." });
+      req.body.computoAntiguedad = { modo: c.modo || "empresaVigente", precedencia: ids.map((id) => new Types.ObjectId(id)), sumarEntreEmpresas: c.sumarEntreEmpresas === true };
+    }
+
     let config = await VacationConfig.findOne({ tenantId });
     const ventanaAntes = normalizarVentana((config as any)?.ventanaGoce);
 

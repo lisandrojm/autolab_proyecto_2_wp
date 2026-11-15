@@ -77,6 +77,12 @@ const VacationConfigSchema = new Schema({
         inicio: { type: String, default: "11-01" },
         fin: { type: String, default: "04-30" },
     },
+    // Antigüedad por empresa. Con estos defaults, un tenant que nunca lo tocó lee «empresa vigente».
+    computoAntiguedad: {
+        modo: { type: String, enum: ["empresaVigente", "precedenciaManual"], default: "empresaVigente" },
+        precedencia: { type: [{ type: Schema.Types.ObjectId, ref: "Company" }], default: [] },
+        sumarEntreEmpresas: { type: Boolean, default: false },
+    },
     requiereFirma: {
         type: Boolean,
         required: true,
@@ -122,6 +128,7 @@ VacationConfigSchema.statics.getOrCreateDefault = async function (tenantId) {
             requiereFirma: true,
             overlaps: [],
             vacationSequence: 0,
+            computoAntiguedad: { modo: "empresaVigente", precedencia: [], sumarEntreEmpresas: false },
         });
     }
     return config;

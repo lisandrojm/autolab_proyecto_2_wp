@@ -52,6 +52,14 @@ export interface IVacationConfig extends Document {
    * ("MM-DD"), p. ej. 11-01 → 04-30. Apagada por defecto. Reglas en `compartido/ventanaGoce.ts`.
    */
   ventanaGoce?: { enabled: boolean; inicio: string; fin: string };
+  /**
+   * DE QUÉ EMPLEADORA SE TOMA LA ANTIGÜEDAD (15/11/2026). Ya no se suman los días de todas: cuenta la
+   * de una sola (ver `empresaDeComputo` en utils/antiguedadArca.ts).
+   *  - `modo`: "empresaVigente" (la de la relación vigente o más reciente) o "precedenciaManual".
+   *  - `precedencia`: empresas (ids de Company) en orden; la primera que la persona tenga gana. Sólo en modo manual.
+   *  - `sumarEntreEmpresas`: el comportamiento viejo (todas sumadas). Apagado por defecto.
+   */
+  computoAntiguedad?: { modo: "empresaVigente" | "precedenciaManual"; precedencia: Types.ObjectId[]; sumarEntreEmpresas: boolean };
   requiereFirma: boolean;
   pdfId?: string;
 
@@ -147,6 +155,12 @@ const VacationConfigSchema = new Schema<IVacationConfig>(
       inicio: { type: String, default: "11-01" },
       fin: { type: String, default: "04-30" },
     },
+    // Antigüedad por empresa. Con estos defaults, un tenant que nunca lo tocó lee «empresa vigente».
+    computoAntiguedad: {
+      modo: { type: String, enum: ["empresaVigente", "precedenciaManual"], default: "empresaVigente" },
+      precedencia: { type: [{ type: Schema.Types.ObjectId, ref: "Company" }], default: [] },
+      sumarEntreEmpresas: { type: Boolean, default: false },
+    },
     requiereFirma: {
       type: Boolean,
       required: true,
@@ -199,6 +213,7 @@ VacationConfigSchema.statics.getOrCreateDefault = async function (tenantId: Type
       requiereFirma: true,
       overlaps: [],
       vacationSequence: 0,
+      computoAntiguedad: { modo: "empresaVigente", precedencia: [], sumarEntreEmpresas: false },
     });
   }
 

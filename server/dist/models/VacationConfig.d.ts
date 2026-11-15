@@ -31,6 +31,18 @@ export interface IVacationConfig extends Document {
         inicio: string;
         fin: string;
     };
+    /**
+     * DE QUÉ EMPLEADORA SE TOMA LA ANTIGÜEDAD (15/11/2026). Ya no se suman los días de todas: cuenta la
+     * de una sola (ver `empresaDeComputo` en utils/antiguedadArca.ts).
+     *  - `modo`: "empresaVigente" (la de la relación vigente o más reciente) o "precedenciaManual".
+     *  - `precedencia`: empresas (ids de Company) en orden; la primera que la persona tenga gana. Sólo en modo manual.
+     *  - `sumarEntreEmpresas`: el comportamiento viejo (todas sumadas). Apagado por defecto.
+     */
+    computoAntiguedad?: {
+        modo: "empresaVigente" | "precedenciaManual";
+        precedencia: Types.ObjectId[];
+        sumarEntreEmpresas: boolean;
+    };
     requiereFirma: boolean;
     pdfId?: string;
     overlaps: IEmbeddedOverlap[];
