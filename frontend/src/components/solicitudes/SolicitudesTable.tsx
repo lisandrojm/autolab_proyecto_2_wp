@@ -196,7 +196,7 @@ export const useCatalogosDeSolicitudes = () => {
 };
 
 /** Lo que dice la confirmación de «Eliminar»: en una aprobada se va también el contrato que creó. */
-export const textoEliminarSolicitud = (s: SolicitudVista) =>
+export const textoEliminarSolicitud = (s: Pick<SolicitudVista, "estado" | "nombre">) =>
   s.estado === "aprobada"
     ? `Se eliminará la solicitud de ${s.nombre} y también el contrato que se creó al aprobarla. Los demás contratos de la persona no se tocan. Esta acción no se puede deshacer.`
     : `Se eliminará definitivamente la solicitud de ${s.nombre}. Esta acción no se puede deshacer.`;

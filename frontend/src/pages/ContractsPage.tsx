@@ -17,13 +17,15 @@ import { ContractDropboxTab, InstructivoParaFirmar } from '../components/contrat
 import { AlcanceBanner } from '../components/context/AlcanceBanner';
 import { useEmpresaContextStore } from '../stores/empresaContextStore';
 import { firmaDigitalAPI, FirmaDigitalConfig } from '../api/firmaDigital';
-import { EditarContratoEnModalContext, VerContratoEnModalContext, type ArcaDelContrato, type ContratoAEditar } from '../components/contratos/editarContratoEnModal';
+import { AprobarSolicitudEnModalContext, EditarContratoEnModalContext, VerContratoEnModalContext, type ArcaDelContrato, type ContratoAEditar } from '../components/contratos/editarContratoEnModal';
 import { ContratoDetalleModal } from '../components/contratos/ContratoDetalleModal';
 import { ProjectTeamPage } from './ProjectTeamPage';
 import { invalidateRefCache } from '../utils/refCache';
 import { bandejaPorClave, contadorDeBandeja, varianteDeQuery, VARIANTES_TRAMITE, type CarpetaFirma, type ClaveBandeja, type VarianteTramite } from '../config/bandejasContratacion';
 import { PasoDelFlujo } from '../components/contratos/PasoDelFlujo';
 import { useContadoresContratacionStore } from '../stores/contadoresContratacionStore';
+import { emitPendientesChanged } from '../utils/navbarEvents';
+import { rechazarSolicitudConMotivo } from '../components/solicitudes/accionesSolicitud';
 
 /*
   LA PANTALLA DE UNA BANDEJA DE CONTRATACIÓN (11/11/2026, pedido del usuario).
@@ -163,6 +165,10 @@ export const ContractsPage: React.FC<{ bandeja: Exclude<ClaveBandeja, 'solicitud
   const [editandoContrato, setEditandoContrato] = useState<{ contrato: ContratoAEditar; alGuardar?: () => void } | null>(null);
   const editarContratoEnModal = useCallback((contrato: ContratoAEditar, alGuardar?: () => void) => setEditandoContrato({ contrato, alGuardar }), []);
 
+  /* Aprobar una solicitud pendiente desde el padrón (el ✓ de su fila): el mismo «Editar y Aprobar» de Solicitudes. */
+  const [aprobandoSolicitud, setAprobandoSolicitud] = useState<{ solicitudId: string; projectId: string; nombre: string; alTerminar?: () => void } | null>(null);
+  const aprobarSolicitudEnModal = useCallback((s: { solicitudId: string; projectId: string; nombre: string }, alTerminar?: () => void) => setAprobandoSolicitud({ ...s, alTerminar }), []);
+
   /*
     EL RESUMEN AL TOCAR LA FILA (02/11/2026, pedido del usuario), como en Solicitudes. Lo usan las
     tablas de las bandejas (por contexto). Editar y eliminar desde el resumen refrescan la tabla de
@@ -243,6 +249,31 @@ export const ContractsPage: React.FC<{ bandeja: Exclude<ClaveBandeja, 'solicitud
   return (
     <EditarContratoEnModalContext.Provider value={editarContratoEnModal}>
       <VerContratoEnModalContext.Provider value={verContratoEnModal}>
+      <AprobarSolicitudEnModalContext.Provider value={aprobarSolicitudEnModal}>
+        {aprobandoSolicitud && (
+          <ProjectTeamPage
+            soloAprobacion={{
+              projectId: aprobandoSolicitud.projectId,
+              solicitudId: aprobandoSolicitud.solicitudId,
+              onCerrar: () => setAprobandoSolicitud(null),
+              onAprobada: () => {
+                const { nombre, alTerminar } = aprobandoSolicitud;
+                setAprobandoSolicitud(null);
+                invalidateRefCache('contracts-overview:');
+                emitPendientesChanged();
+                void sweetAlert.successBreve('Solicitud aprobada', `${nombre} pasa a Trámite impositivo.`);
+                alTerminar?.();
+              },
+              onRechazar: async () => {
+                const { solicitudId, nombre, alTerminar } = aprobandoSolicitud;
+                if (await rechazarSolicitudConMotivo({ _id: solicitudId, nombre })) {
+                  setAprobandoSolicitud(null);
+                  alTerminar?.();
+                }
+              },
+            }}
+          />
+        )}
         {editandoContrato && (
           <ProjectTeamPage
             soloAprobacion={{
@@ -319,6 +350,7 @@ export const ContractsPage: React.FC<{ bandeja: Exclude<ClaveBandeja, 'solicitud
             </Modal>
           )}
         </PageLayout>
+      </AprobarSolicitudEnModalContext.Provider>
       </VerContratoEnModalContext.Provider>
     </EditarContratoEnModalContext.Provider>
   );

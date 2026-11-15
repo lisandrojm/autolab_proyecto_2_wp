@@ -56,7 +56,8 @@ import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 import { seSuperpone, ROL_QUE_SOLICITA } from '../solicitudes/SolicitudesTable';
 import { useAnchoAcciones } from '../ui/useAnchoAcciones';
 import { avisoForzarAlta, libreDesdeTrasAlta } from '@compartido/arca/vigenciaAltaPresentada';
-import { esClicDeLaFila, useVerContratoEnModal } from './editarContratoEnModal';
+import { esClicDeLaFila, useAprobarSolicitudEnModal, useVerContratoEnModal } from './editarContratoEnModal';
+import { eliminarSolicitudConfirmando, rechazarSolicitudConMotivo } from '../solicitudes/accionesSolicitud';
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 const CLAVE_CACHE_OBRAS_SOCIALES = claveCacheCatalogo('/obras-sociales');
@@ -4188,6 +4189,39 @@ const filaDeSolicitud = (s: SolicitudPendienteDeContrato, estado: string): FilaP
   }) as unknown as FilaPadron;
 
 /**
+ * LAS ACCIONES DE UNA SOLICITUD PENDIENTE EN EL PADRÓN (15/11/2026, pedido del usuario): los mismos botones
+ * que la columna Acciones de Solicitudes —aprobar (tilde verde), rechazar (cruz roja) y eliminar—, para
+ * gestionarla desde acá. Aprobar abre «Editar y Aprobar» encima (lo dibuja `ContractsPage`); sin ese
+ * proveedor el tilde lleva a Solicitudes con la persona buscada, como tocar la fila.
+ */
+const AccionesSolicitudPendiente: React.FC<{ r: FilaPadron; onCambio: () => void }> = ({ r, onCambio }) => {
+  const aprobarEnModal = useAprobarSolicitudEnModal();
+  const navigate = useNavigate();
+  const id = r.solicitudPendienteId!;
+  const aprobar = () => {
+    if (aprobarEnModal && r.projectId) aprobarEnModal({ solicitudId: id, projectId: r.projectId, nombre: r.userName }, onCambio);
+    else navigate(`/admin/solicitudes?buscar=${encodeURIComponent(r.userName)}`);
+  };
+  return (
+    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-center gap-2">
+        <div className="flex flex-col items-stretch gap-2">
+          <button type="button" onClick={aprobar} className="h-8 w-8 rounded transition-colors flex items-center justify-center bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50" title="Editar y aprobar" aria-label="Editar y aprobar">
+            <FontAwesomeIcon icon={faCheck} className="h-3.5 w-3.5" />
+          </button>
+          <button type="button" onClick={async () => (await rechazarSolicitudConMotivo({ _id: id, nombre: r.userName })) && onCambio()} className="h-8 w-8 rounded transition-colors flex items-center justify-center bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50" title="Rechazar" aria-label="Rechazar">
+            <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        <button type="button" onClick={async () => (await eliminarSolicitudConfirmando({ _id: id, nombre: r.userName, estado: 'pendiente' })) && onCambio()} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Eliminar" aria-label="Eliminar">
+          <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+        </button>
+      </div>
+    </td>
+  );
+};
+
+/**
  * La bandeja «Contratos» (antes el paso «Contratados»): EL PADRÓN. Desde el 11/11/2026 reemplaza también al
  * viejo listado «Contratos», que mostraba estos mismos contratos (sólo el que rige de cada persona): por eso
  * suma sus filtros —estado de usuarios, novedades, reemplazo— y acepta el proyecto con el que se llega.
@@ -4561,7 +4595,7 @@ export const ContractBulkContratadosTab: React.FC<{
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato sin fecha de carga">—</span>} />
                     </td>
-                    {pendiente ? <td className="px-4 py-3" /> : <ContractActionsCell record={r} onDeleted={() => load(true)} />}
+                    {pendiente ? <AccionesSolicitudPendiente r={r} onCambio={() => load(true)} /> : <ContractActionsCell record={r} onDeleted={() => load(true)} />}
                   </tr>
                 );
               })}

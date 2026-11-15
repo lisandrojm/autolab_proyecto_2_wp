@@ -46,6 +46,17 @@ export interface ArcaDelContrato {
   presentarDeshabilitado?: string;
 }
 
+/**
+ * APROBAR UNA SOLICITUD DESDE EL PADRÓN DE CONTRATOS (15/11/2026, pedido del usuario): el mismo «Editar y
+ * Aprobar» de Solicitudes, abierto encima. Lo dibuja `ContractsPage`. `alTerminar` refresca el padrón
+ * cuando se aprobó o se rechazó.
+ */
+export type AprobarSolicitudEnModal = (solicitud: { solicitudId: string; projectId: string; nombre: string }, alTerminar?: () => void) => void;
+
+export const AprobarSolicitudEnModalContext = createContext<AprobarSolicitudEnModal | null>(null);
+
+export const useAprobarSolicitudEnModal = (): AprobarSolicitudEnModal | null => useContext(AprobarSolicitudEnModalContext);
+
 export const VerContratoEnModalContext = createContext<VerContratoEnModal | null>(null);
 
 export const useVerContratoEnModal = (): VerContratoEnModal | null => useContext(VerContratoEnModalContext);

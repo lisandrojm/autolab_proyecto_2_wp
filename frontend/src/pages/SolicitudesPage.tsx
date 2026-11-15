@@ -24,7 +24,8 @@ import { cuitEsValido } from "../utils/cuit";
 import { sweetAlert } from "../utils/sweetAlert";
 import { emitPendientesChanged } from "../utils/navbarEvents";
 import { getHelp, hasHelp } from "../data/help/helpContent";
-import { SolicitudVista, SolicitudesTable, resultadoEliminarSolicitud, textoEliminarSolicitud, useCatalogosDeSolicitudes, MS_SALIDA_FILA } from "../components/solicitudes/SolicitudesTable";
+import { SolicitudVista, SolicitudesTable, useCatalogosDeSolicitudes, MS_SALIDA_FILA } from "../components/solicitudes/SolicitudesTable";
+import { eliminarSolicitudConfirmando, rechazarSolicitudConMotivo } from "../components/solicitudes/accionesSolicitud";
 import { SolicitudDetalleModal } from "../components/solicitudes/SolicitudDetalleModal";
 import { CalificacionesModal } from "../components/calificaciones/CalificacionesModal";
 import { calificacionesAPI } from "../api/calificaciones";
@@ -219,36 +220,18 @@ export const SolicitudesPage: React.FC = () => {
     }
   };
 
-  /*
-    RECHAZAR PIDE EL MOTIVO, y es obligatorio.
-
-    Una solicitud rechazada vuelve a quien la cargó, que tiene que saber qué corregir: sin el motivo,
-    la pregunta se termina haciendo por teléfono y la solicitud se vuelve a mandar igual. Queda
-    guardado en la solicitud y se ve en la tabla y en el detalle.
-  */
+  /* Rechazar (pide el motivo, obligatorio) y eliminar: los mismos que el padrón de Contratos (`accionesSolicitud`). */
   const pedirMotivoYRechazar = async (s: SolicitudVista): Promise<boolean> => {
-    const r = await sweetAlert.prompt("¿Rechazar solicitud?", {
-      text: `Contale a quien pidió el alta de ${s.nombre} por qué no se aprueba.`,
-      placeholder: "Ej.: falta el CUIT, o la categoría no corresponde al rol",
-      multilinea: true,
-      confirmText: "Rechazar",
-      mensajeVacio: "Escribí el motivo del rechazo.",
-    });
-    if (!r.isConfirmed) return false;
-    return cambiarEstado(s, "rechazada", String(r.value || "").trim());
+    const hecho = await rechazarSolicitudConMotivo(s);
+    if (hecho) {
+      setRevisando(null);
+      cargar(page);
+    }
+    return hecho;
   };
 
   const eliminar = async (s: SolicitudVista) => {
-    const r = await sweetAlert.confirm("¿Eliminar solicitud?", textoEliminarSolicitud(s), "Sí, eliminar");
-    if (!r.isConfirmed) return;
-    try {
-      const resultado = resultadoEliminarSolicitud(await usersAPI.eliminarSolicitud(s._id));
-      if (resultado.encontrado) sweetAlert.success("Solicitud eliminada", resultado.texto);
-      else sweetAlert.warning("Solicitud eliminada", resultado.texto);
-      cargar(page);
-    } catch (error: any) {
-      sweetAlert.error("Error", error.response?.data?.error || "No se pudo eliminar la solicitud.");
-    }
+    if (await eliminarSolicitudConfirmando(s)) cargar(page);
   };
 
   /**
