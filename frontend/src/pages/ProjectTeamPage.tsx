@@ -37,7 +37,8 @@ import { horarioDentroDelTurno, horasDelHorario, sumarMinutos } from '../utils/h
 import { numeroALetras } from '../utils/numeroALetras';
 import { avisoIndeterminado, erroresDeJornadas, hayAjuste, sueldosDelContrato, jornadasCalculadasDelPedido, jornadasFijadasPorElTipo, mesesEquivalentes, periodoDeCalculo } from '../utils/jornadas';
 import { CustomMultiDatePicker } from '../apps/mobile/src/components/CustomMultiDatePicker';
-import { EstadoBadge, EstadoSecundarioBadge, estadoLabel } from '../components/EstadoSelect';
+import { EstadoBadge, EstadoSecundarioBadge, estadoLabel, claveEstado } from '../components/EstadoSelect';
+import { noPoseeCuit } from '../components/contratos/ConstanciaBulk';
 import { estadoImpositivoDelContrato, formatDate as fechaDDMMAAAA } from '../components/team/ContractCard';
 import { esContratoVigente, getContratoActivo } from '../utils/contratoVigencia';
 import { copiaParaOtroProyecto } from '../utils/copiaContratoVigente';
@@ -230,8 +231,8 @@ export interface AprobacionEnModal {
    */
   renovarContrato?: { userId: string; contractIndex: number };
   onCerrar: () => void;
-  /** Se guardó: la solicitud quedó aprobada, o el contrato corregido. */
-  onAprobada: () => void;
+  /** Se guardó: la solicitud quedó aprobada, o el contrato corregido. `destino`: al aprobar, la bandeja a la que fue el contrato. */
+  onAprobada: (destino?: string) => void;
   /** Rechazar la solicitud desde «Editar y Aprobar» (pide el motivo). Sin esto no hay botón «Rechazar». */
   onRechazar?: () => void | Promise<void>;
 }
@@ -2955,7 +2956,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       // mandamos el nombre elegido para que no quede "Sin rol frame".
       const rfSel = allRoleFrames.find((rf) => String(rf.data?.rol?.id) === String(wizardData.rol_frame_id));
 
-      await projectsAPI.assignMember(project._id, {
+      const respuestaAlta = await projectsAPI.assignMember(project._id, {
         userId: selectedUserForWizard._id,
         // Aprobar SIEMPRE agrega un contrato, aunque la persona ya esté en el equipo: una renovación
         // es un contrato nuevo y el anterior tiene que seguir estando (es el historial de la persona).
@@ -3048,7 +3049,21 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
         setRolFrameAgregado(null);
         setRolFrameBusqueda('');
         setShowAddModal(false);
-        soloAprobacion.onAprobada();
+        /*
+          A QUÉ BANDEJA FUE EL CONTRATO NUEVO (15/11/2026): el aviso de Solicitudes decía siempre «pasa a
+          Contratos», y casi siempre va a Trámite impositivo. Sale del estado con que lo guardó el server
+          (que lo manda directo a Contratos si el tipo no firma nada) y del CUIT de la persona.
+        */
+        let destinoAlta: string | undefined;
+        if (wasApproving) {
+          const nuevo = (respuestaAlta?.userProject?.contracts || []).find((c: any) => String(c?.solicitudId || '') === String(approvingSolicitudId));
+          const est = nuevo ? allEstados.find((e) => claveEstado(e.name) === claveEstado(String(nuevo.nombre_estado_empleado || ''))) : undefined;
+          if (est?.data?.esImpositivo) {
+            const sinCuit = noPoseeCuit(selectedUserForWizard.metadata?.cuit, selectedUserForWizard.metadata?.sinCuit);
+            destinoAlta = `Trámite impositivo › ${sinCuit ? 'Sin CUIT' : est.data?.tipoImpositivo === 'alta_temprana_afip' ? 'Alta temprana de ARCA' : 'Constancia de CUIT'}`;
+          } else if (est) destinoAlta = 'Contratos';
+        }
+        soloAprobacion.onAprobada(destinoAlta);
         return;
       }
 

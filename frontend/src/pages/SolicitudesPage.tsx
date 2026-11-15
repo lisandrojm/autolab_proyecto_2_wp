@@ -720,7 +720,7 @@ export const SolicitudesPage: React.FC = () => {
                       if (aprobando.solicitud && (await pedirMotivoYRechazar(aprobando.solicitud))) setAprobando(null);
                     }
                   : undefined,
-                onAprobada: () => {
+                onAprobada: (destino) => {
                   const id = aprobando.solicitudId;
                   const nombre = (rows.find((r: any) => r._id === id) as any)?.nombre || "La persona";
                   setAprobando(null);
@@ -731,7 +731,7 @@ export const SolicitudesPage: React.FC = () => {
                     centrado; al cerrarse, la fila se desliza hacia la izquierda y recién ahí sale de la lista
                     y se recarga. Una aprobada ya no es de esta pantalla (sigue en Contratos).
                   */
-                  void sweetAlert.successBreve("Solicitud aprobada", `${nombre} pasa a Contratos.`).then(() => {
+                  void sweetAlert.successBreve("Solicitud aprobada", `${nombre} pasa a ${destino || "Trámite impositivo"}.`).then(() => {
                     setSaliendo((prev) => new Set(prev).add(id));
                     window.setTimeout(() => {
                       setRows((prev) => prev.filter((r: any) => r._id !== id));

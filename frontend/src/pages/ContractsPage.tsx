@@ -256,12 +256,12 @@ export const ContractsPage: React.FC<{ bandeja: Exclude<ClaveBandeja, 'solicitud
               projectId: aprobandoSolicitud.projectId,
               solicitudId: aprobandoSolicitud.solicitudId,
               onCerrar: () => setAprobandoSolicitud(null),
-              onAprobada: () => {
+              onAprobada: (destino) => {
                 const { nombre, alTerminar } = aprobandoSolicitud;
                 setAprobandoSolicitud(null);
                 invalidateRefCache('contracts-overview:');
                 emitPendientesChanged();
-                void sweetAlert.successBreve('Solicitud aprobada', `${nombre} pasa a Trámite impositivo.`);
+                void sweetAlert.successBreve('Solicitud aprobada', `${nombre} pasa a ${destino || 'Trámite impositivo'}.`);
                 alTerminar?.();
               },
               onRechazar: async () => {

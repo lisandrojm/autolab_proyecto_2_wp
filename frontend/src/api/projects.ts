@@ -712,8 +712,8 @@ class ProjectsAPI {
     return data;
   }
 
-  async assignMember(projectId: string, data: { userId: string; contract: any; isUpdate?: boolean; contractIndex?: number; approveSolicitud?: string | boolean; comentarioRevision?: string; actualizarEquipo?: { areas: boolean; rol: boolean } }): Promise<void> {
-    await axios.post(`/projects/${projectId}/assign-member`, data, {
+  async assignMember(projectId: string, data: { userId: string; contract: any; isUpdate?: boolean; contractIndex?: number; approveSolicitud?: string | boolean; comentarioRevision?: string; actualizarEquipo?: { areas: boolean; rol: boolean } }): Promise<{ userProject?: { contracts?: any[] } }> {
+    const { data: respuesta } = await axios.post(`/projects/${projectId}/assign-member`, data, {
       headers: this.getHeaders(),
     });
     /*
@@ -726,6 +726,8 @@ class ProjectsAPI {
     const project = await this.getProject(projectId, { team: "ids" });
     const clientId = typeof project.clientId === "string" ? project.clientId : project.clientId._id;
     emitProjectsChanged("update", projectId, clientId);
+    // Lo que guardó el server: con el contrato nuevo, quien aprueba sabe a qué bandeja fue (ver ProjectTeamPage).
+    return respuesta || {};
   }
 
   async removeMember(projectId: string, userId: string): Promise<void> {

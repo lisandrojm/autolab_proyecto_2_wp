@@ -50,6 +50,7 @@ import { ConstanciaBadge, ArcaBadge, DropboxBadge, BotonArca, BotonConsultarAfip
 import { NombreArca, estadoNombreArca } from '../arca/NombreArca';
 import { sweetAlert } from '../../utils/sweetAlert';
 import { cachedFetch, invalidateRefCache, updateRefCache } from '../../utils/refCache';
+import { CLASE_SALIENDO, estiloDeSalida, useSalidaDeFilas } from '../ui/salidaDeFilas';
 import { arcaDefaultsAPI, ArcaDefaults, CLAVE_CACHE_DEFAULTS_ARCA } from "../../api/arcaDefaults";
 import { LinkSiPuede } from '../LinkSiPuede';
 import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
@@ -1130,7 +1131,7 @@ export const ContractBulkAfipTab: React.FC<{
   const handleDownloadRelease = (record: ContractOverviewRow, release: Release, empresaId?: string) => downloadReleaseRow(record, release, empresaId);
   const handleUploadAlta = async (record: ContractOverviewRow, file: File) => {
     await uploadAltaRow(record, file);
-    load(true);
+    void recargarDespidiendo();
   };
 
   // Genera el TXT de Alta masiva de ARCA para los contratos con datos completos del conjunto dado;
@@ -1463,6 +1464,61 @@ export const ContractBulkAfipTab: React.FC<{
   // Selección de filas para armar el TXT. Solo se pueden marcar los contratos con datos ARCA completos.
   const rowKey = (r: ContractOverviewRow) => `${r._id}-${r.contractIndex}`;
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  /*
+    LO QUE SE VA DE LA BANDEJA, SE VE IRSE (15/11/2026, pedido del usuario), como en Solicitudes al aprobar.
+
+    Después de una acción que puede mover contratos (validar CUIT, la corrida de altas de ARCA, enviar a
+    Generar documentos) se vuelve a leer SIN el spinner y se compara con lo que había: los que estaban en
+    esta variante y ya no, se despiden con el aviso de a dónde pasaron y se deslizan a la izquierda. La
+    consulta trae también los de «Envío de documentación», así que se sabe el destino: si siguen y son de
+    ese estado, pasaron a Generar documentos; si no vinieron, a Contratos (un tipo que no manda nada a
+    firmar). Sólo para acciones que mueven: borrar un contrato también lo saca, y no «pasa» a ningún lado.
+  */
+  const salida = useSalidaDeFilas();
+  const enEstaVariante = (r: ContractOverviewRow): boolean => {
+    const imp = impositivoPorClave.get(claveEstado(r.nombre_estado_empleado || ''));
+    if (!imp) return false;
+    if (filterTipo === 'sin_cuit') return noPoseeCuit(r.cuit, r.sinCuit);
+    return !noPoseeCuit(r.cuit, r.sinCuit) && (!filterTipo || imp.tipo === filterTipo);
+  };
+  const destinoDe = (n: ContractOverviewRow | undefined): string => {
+    if (!n) return 'Contratos';
+    if (claveEnvioDoc && claveEstado(n.nombre_estado_empleado || '') === claveEnvioDoc) return 'Generar documentos';
+    const imp = impositivoPorClave.get(claveEstado(n.nombre_estado_empleado || ''));
+    if (!imp) return 'Contratos';
+    return `Trámite impositivo › ${noPoseeCuit(n.cuit, n.sinCuit) ? 'Sin CUIT' : imp.tipo === 'alta_temprana_afip' ? 'Alta temprana de ARCA' : 'Constancia de CUIT'}`;
+  };
+  const recargarDespidiendo = async () => {
+    if (estadoEnvioDoc === null || estadosImpositivos.length === 0) return load(true);
+    const antes = rows.filter(enEstaVariante);
+    invalidateRefCache(CONTRACTS_OVERVIEW_CACHE);
+    const key = `${CONTRACTS_OVERVIEW_CACHE}impositivos:${estadosPedidos.join(',')}:${ambito(filterClientId, filterProjectId)}`;
+    let nuevas: ContractOverviewRow[];
+    try {
+      nuevas = (await cachedFetch(key, () => usersAPI.listContractsOverview({ limit: 5000, origen: 'sistema', estados: estadosPedidos, clientId: filterClientId || undefined, projectId: filterProjectId || undefined }))).rows;
+    } catch {
+      return load(true);
+    }
+    const porClave = new Map(nuevas.map((n) => [rowKey(n), n]));
+    const seVan = antes.filter((r) => {
+      const n = porClave.get(rowKey(r));
+      return !n || !enEstaVariante(n);
+    });
+    if (seVan.length === 0) {
+      setRows(nuevas);
+      return;
+    }
+    const claves = seVan.map(rowKey);
+    await salida.despedir(
+      claves,
+      seVan.map((r) => ({ nombre: r.userName, destino: destinoDe(porClave.get(rowKey(r))) })),
+      () => {
+        setRows(nuevas);
+        setSelected((prev) => new Set([...prev].filter((k) => !claves.includes(k))));
+      },
+    );
+  };
   /** Pestaña "Sin CUIT": fila cuyo modal de documentación de respaldo está abierto. */
   const [validacionRow, setValidacionRow] = useState<ContractOverviewRow | null>(null);
   /** Refresca la validación de UNA fila (y del modal abierto) sin recargar toda la tabla. */
@@ -2097,7 +2153,7 @@ export const ContractBulkAfipTab: React.FC<{
             </button>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <BotonConsultarAfipBulk rows={seleccionados.map((x) => x.row)} onConsultado={() => load(true)} />
+            <BotonConsultarAfipBulk rows={seleccionados.map((x) => x.row)} onConsultado={() => void recargarDespidiendo()} />
           </div>
         </div>
       )}
@@ -2123,7 +2179,7 @@ export const ContractBulkAfipTab: React.FC<{
           {pag.visibles.map(({ row: r, result }) => {
             const cuil = cuitEsValido(r.cuit) ? fmtCuit(r.cuit) : '';
             return (
-              <div key={`${r._id}-${r.contractIndex}`} onClick={(e) => esClicDeLaFila(e) && abrirResumen(r, result)} className={`bg-white dark:bg-gray-800 rounded-xl border p-4 flex flex-col gap-3 ${verContrato ? 'cursor-pointer' : ''} ${selected.has(rowKey(r)) ? 'border-emerald-400 dark:border-emerald-700' : 'border-gray-200 dark:border-gray-700'}`}>
+              <div key={`${r._id}-${r.contractIndex}`} onClick={(e) => esClicDeLaFila(e) && abrirResumen(r, result)} style={estiloDeSalida(salida.saliendo.has(rowKey(r)))} className={`${salida.saliendo.has(rowKey(r)) ? CLASE_SALIENDO : "bg-white"} dark:bg-gray-800 dark:bg-gray-800 rounded-xl border p-4 flex flex-col gap-3 ${verContrato ? 'cursor-pointer' : ''} ${selected.has(rowKey(r)) ? 'border-emerald-400 dark:border-emerald-700' : 'border-gray-200 dark:border-gray-700'}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
                     <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={tituloCheck(r)} className={`rounded border-gray-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ${omitidaEnValidacion(r) ? 'text-amber-500 focus:ring-amber-500' : 'text-emerald-600 focus:ring-emerald-500'}`} />
@@ -2183,7 +2239,7 @@ export const ContractBulkAfipTab: React.FC<{
                         </button>
                       )}
                       <ConstanciaBadge row={r} />
-                      <BotonValidarCuit row={r} onConsultado={() => load(true)} compacto />
+                      <BotonValidarCuit row={r} onConsultado={() => void recargarDespidiendo()} compacto />
                     </>
                   )}
                   {filterTipo === 'alta_temprana_afip' && (
@@ -2371,7 +2427,7 @@ export const ContractBulkAfipTab: React.FC<{
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {pag.visibles.map(({ row: r, result }) => (
-                <tr key={`${r._id}-${r.contractIndex}`} onClick={(e) => esClicDeLaFila(e) && abrirResumen(r, result)} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${verContrato ? 'cursor-pointer' : ''} ${selected.has(rowKey(r)) ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}>
+                <tr key={`${r._id}-${r.contractIndex}`} onClick={(e) => esClicDeLaFila(e) && abrirResumen(r, result)} style={estiloDeSalida(salida.saliendo.has(rowKey(r)))} className={`group ${salida.saliendo.has(rowKey(r)) ? CLASE_SALIENDO : ""} hover:bg-gray-50 dark:hover:bg-gray-900/20 ${verContrato ? 'cursor-pointer' : ''} ${selected.has(rowKey(r)) ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}>
                   <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f6fefa] dark:!bg-[#1d2d37]' : ''}`}>
                     <input type="checkbox" checked={selected.has(rowKey(r))} disabled={!esSeleccionable(r, result)} onChange={() => toggleSel(rowKey(r))} title={tituloCheck(r)} className={`rounded border-gray-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${omitidaEnValidacion(r) ? 'text-amber-500 focus:ring-amber-500' : 'text-emerald-600 focus:ring-emerald-500'}`} />
                   </td>
@@ -2508,10 +2564,10 @@ export const ContractBulkAfipTab: React.FC<{
                       </div>
                     ) : noPoseeCuit(r.cuit, r.sinCuit) ? (
                       // Sin CUIT los trámites de ARCA no aplican: la salida es generar los documentos.
-                      <BotonHabilitarFirma row={r} tramite={r._tipo || 'constancia_cuit'} validado={!!r.sinCuitValidacion?.validado} onHabilitado={() => load(true)} />
+                      <BotonHabilitarFirma row={r} tramite={r._tipo || 'constancia_cuit'} validado={!!r.sinCuitValidacion?.validado} onHabilitado={() => void recargarDespidiendo()} />
                     ) : (
                       <div className="flex items-center gap-1.5 whitespace-nowrap">
-                        <BotonValidarCuit row={r} onConsultado={() => load(true)} compacto />
+                        <BotonValidarCuit row={r} onConsultado={() => void recargarDespidiendo()} compacto />
                       </div>
                     )}
                   </td>
@@ -2673,7 +2729,7 @@ export const ContractBulkAfipTab: React.FC<{
         </Modal>
       )}
 
-      {corridaAltasOpen && <CorridaAltasArca isOpen={corridaAltasOpen} onClose={() => setCorridaAltasOpen(false)} lote={loteAltas} onTerminado={() => load(true)} />}
+      {corridaAltasOpen && <CorridaAltasArca isOpen={corridaAltasOpen} onClose={() => setCorridaAltasOpen(false)} lote={loteAltas} onTerminado={() => void recargarDespidiendo()} />}
 
       {historialAltasOpen && <HistorialAltasArca isOpen={historialAltasOpen} onClose={() => setHistorialAltasOpen(false)} empresaId={empresaDeLaPestana?._id} />}
 
@@ -3481,7 +3537,6 @@ const FirmaEnviarCell: React.FC<{
         sweetAlert.error('No se pudo enviar', resultado.error || 'Error desconocido.');
         onEnviado();
       } else {
-        sweetAlert.success('Enviado', 'Se envió a firmar correctamente.');
         // Se marca acá mismo: con `firmaEnviadaAt` la fila sale de la bandeja sin esperar la relectura.
         onEnviado({ firmaEnviadaAt: new Date().toISOString() });
       }
@@ -3681,6 +3736,8 @@ export const ContractBulkFirmaTab: React.FC<{
   const empresaOptions = useMemo(() => companies.map((c) => ({ value: c._id, label: c.razonSocial })).sort((a, b) => a.label.localeCompare(b.label)), [companies]);
 
   const rowKey = (r: ContractOverviewRow) => `${r._id}-${r.contractIndex}`;
+  /** Las filas que se envían a firmar se despiden antes de salir (ver `sacarEnviadas`). */
+  const salida = useSalidaDeFilas();
   const toggleSel = (k: string) =>
     setSelected((prev) => {
       const n = new Set(prev);
@@ -3810,15 +3867,28 @@ export const ContractBulkFirmaTab: React.FC<{
     }
   };
 
-  /** Marca como enviadas las filas que el server confirmó: salen de la bandeja sin esperar la relectura. */
-  const sacarEnviadas = (res: { resultados: { projectId: string; userId: string; contractIndex: number; ok: boolean }[] }) => {
+  /*
+    Marca como enviadas las filas que el server confirmó: salen de la bandeja sin esperar la relectura.
+    Antes, SE DESPIDEN (15/11/2026, pedido del usuario): el aviso «pasa a Para Firmar» y la fila a la
+    izquierda, como en Solicitudes al aprobar (ver `useSalidaDeFilas`).
+  */
+  const sacarEnviadas = async (res: { resultados: { projectId: string; userId: string; contractIndex: number; ok: boolean }[] }) => {
     const ok = new Set(res.resultados.filter((x) => x.ok).map((x) => `${x.projectId}:${x.userId}:${x.contractIndex}`));
     if (ok.size === 0) return;
-    onEnviados?.(ok.size);
-    const ahora = new Date().toISOString();
-    const marcar = (r: ContractOverviewRow) => (ok.has(`${r.projectId}:${r.userId}:${r.contractIndex}`) ? { ...r, firmaEnviadaAt: ahora } : r);
-    setRows((prev) => prev.map(marcar));
-    if (config?.estadoEnvioDocNombre) updateRefCache<{ rows: ContractOverviewRow[] }>(claveCacheEnvio(config.estadoEnvioDocNombre, filterClientId, filterProjectId), (data) => ({ ...data, rows: (data.rows || []).map(marcar) }));
+    const esEnviada = (r: ContractOverviewRow) => ok.has(`${r.projectId}:${r.userId}:${r.contractIndex}`);
+    const seVan = rows.filter(esEnviada);
+    await salida.despedir(
+      seVan.map(rowKey),
+      seVan.map((r) => ({ nombre: r.userName, destino: 'Para Firmar' })),
+      () => {
+        onEnviados?.(ok.size);
+        const ahora = new Date().toISOString();
+        const marcar = (r: ContractOverviewRow) => (esEnviada(r) ? { ...r, firmaEnviadaAt: ahora } : r);
+        setRows((prev) => prev.map(marcar));
+        if (config?.estadoEnvioDocNombre) updateRefCache<{ rows: ContractOverviewRow[] }>(claveCacheEnvio(config.estadoEnvioDocNombre, filterClientId, filterProjectId), (data) => ({ ...data, rows: (data.rows || []).map(marcar) }));
+      },
+      'Enviado a firmar',
+    );
   };
 
   /** Sube a Outbox las filas que tienen todo generado. Devuelve el resultado del server. */
@@ -3838,12 +3908,17 @@ export const ContractBulkFirmaTab: React.FC<{
     return firmaDigitalAPI.enviar(targets);
   };
 
-  const avisarEnvio = (res: { enviados: number; resultados: { ok: boolean; error?: string }[] }, afuera: { nombre: string; motivo: string }[]) => {
+  /**
+   * Lo que no salió bien se dice primero (y se espera que lo cierren: el aviso de la despedida lo taparía);
+   * lo que salió, se despide (`sacarEnviadas`), que ya dice a dónde pasa.
+   */
+  const avisarEnvio = async (res: { enviados: number; resultados: { projectId: string; userId: string; contractIndex: number; ok: boolean; error?: string }[] }, afuera: { nombre: string; motivo: string }[]) => {
     const fallidos = res.resultados.filter((x) => !x.ok);
     const extra = afuera.length ? ` No se enviaron ${afuera.length}: ${listaDeMotivos(afuera)}.` : '';
-    if (fallidos.length > 0) sweetAlert.error('Algunos envíos fallaron', `${res.enviados} enviado(s) correctamente. ${fallidos.length} fallaron: ${fallidos.map((f) => f.error).slice(0, 3).join(' · ')}.${extra}`);
-    else if (afuera.length > 0) sweetAlert.error('Enviado, con filas afuera', `${res.enviados} contrato(s) enviado(s) a firmar.${extra}`);
-    else sweetAlert.success('Enviado', `${res.enviados} contrato(s) enviado(s) a firmar.`);
+    if (fallidos.length > 0) await sweetAlert.error('Algunos envíos fallaron', `${res.enviados} enviado(s) correctamente. ${fallidos.length} fallaron: ${fallidos.map((f) => f.error).slice(0, 3).join(' · ')}.${extra}`);
+    else if (afuera.length > 0) await sweetAlert.error('Enviado, con filas afuera', `${res.enviados} contrato(s) enviado(s) a firmar.${extra}`);
+    else if (!res.resultados.some((x) => x.ok)) sweetAlert.success('Enviado', `${res.enviados} contrato(s) enviado(s) a firmar.`);
+    await sacarEnviadas(res);
   };
 
   /** «Enviar a firmar»: sólo las filas con todo generado. */
@@ -3856,8 +3931,7 @@ export const ContractBulkFirmaTab: React.FC<{
     try {
       sweetAlert.loading('Enviando a firmar…', `${fuenteEnvio.length} contrato(s)`);
       const res = await enviarFilas(fuenteEnvio);
-      sacarEnviadas(res);
-      avisarEnvio(res, []);
+      await avisarEnvio(res, []);
       setSelected(new Set());
       load(true);
     } catch (e: any) {
@@ -3887,8 +3961,7 @@ export const ContractBulkFirmaTab: React.FC<{
       }
       sweetAlert.loading('Enviando a firmar…', `${aEnviar.length} contrato(s)`);
       const res = await enviarFilas(aEnviar);
-      sacarEnviadas(res);
-      avisarEnvio(res, [...afuera, ...errores]);
+      await avisarEnvio(res, [...afuera, ...errores]);
       setSelected(new Set());
     } catch (e: any) {
       sweetAlert.error('Error', e?.response?.data?.error || 'No se pudo enviar a firmar.');
@@ -4068,12 +4141,12 @@ export const ContractBulkFirmaTab: React.FC<{
                 const releasesFila = releasesDeLaFila(template, releasesQueFirman, r, tiposContrato, activeReleases);
                 const enviable = calcularEnviable(r, contratoFrames, releasesQueFirman, tipo, tiposContrato, activeReleases);
                 return (
-                  <tr key={rowKey(r)} onClick={(e) => verContrato && esClicDeLaFila(e) && verContrato(r, () => load(true))} className={`group hover:bg-gray-50 dark:hover:bg-gray-900/20 ${verContrato ? 'cursor-pointer' : ''} ${selected.has(rowKey(r)) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+                  <tr key={rowKey(r)} onClick={(e) => verContrato && esClicDeLaFila(e) && verContrato(r, () => load(true))} style={estiloDeSalida(salida.saliendo.has(rowKey(r)))} className={`group ${salida.saliendo.has(rowKey(r)) ? CLASE_SALIENDO : ""} hover:bg-gray-50 dark:hover:bg-gray-900/20 ${verContrato ? 'cursor-pointer' : ''} ${selected.has(rowKey(r)) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
                     <td className={`sticky left-0 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${ANCHO_COL_CHECK} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
                       <input type="checkbox" checked={selected.has(rowKey(r))} disabled={r.firmaEnviadaAt ? true : !pendientePorFila.get(rowKey(r))?.algoAplica} onChange={() => toggleSel(rowKey(r))} title={r.firmaEnviadaAt ? 'Ya se envió a firmar' : enviable ? 'Incluir en el envío a firmar' : pendientePorFila.get(rowKey(r))?.motivo ? `No se puede generar solo: ${pendientePorFila.get(rowKey(r))!.motivo}` : 'Seleccionar: el contrato y/o el release que falten se generan con «Generar contratos» / «Generar releases»'} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" />
                     </td>
                     <td className={`sticky left-12 z-[5] px-4 py-3 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_ACCIONES} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
-                      <FirmaEnviarCell record={r} contratoAplica={contratoAplica} releasesAplicables={releasesFila} altaAplica={altaVaAFirma(r, template, tipo)} tipoImpositivo={tipo} onEnviado={(patch) => aplicarCambio(r, patch)} />
+                      <FirmaEnviarCell record={r} contratoAplica={contratoAplica} releasesAplicables={releasesFila} altaAplica={altaVaAFirma(r, template, tipo)} tipoImpositivo={tipo} onEnviado={(patch) => (patch?.firmaEnviadaAt ? void salida.despedir([rowKey(r)], [{ nombre: r.userName, destino: 'Para Firmar' }], () => aplicarCambio(r, patch), 'Enviado a firmar') : aplicarCambio(r, patch))} />
                     </td>
                     <td className={`sticky ${FIRMA_IZQ_FECHA} z-[5] px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#1c2634] border-r border-gray-200 dark:border-gray-700 ${FIRMA_ANCHO_FECHA} ${selected.has(rowKey(r)) ? '!bg-[#f7faff] dark:!bg-[#1f2b3f]' : ''}`}>
                       <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato importado sin fecha de carga">—</span>} />
