@@ -81,6 +81,7 @@ import { useContratoEnFechas } from '../hooks/useContratoEnFechas';
 import { ContratoDeLaPersona } from '../components/contratos/ContratoDeLaPersona';
 import { LinkSiPuede } from '../components/LinkSiPuede';
 import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
+import { NombreArca, estadoNombreArca } from '../components/arca/NombreArca';
 
 const HELP_KEY = 'projectTeam' as const;
 
@@ -3343,7 +3344,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
               y solo corría el nombre —lo único que sí identifica— hacia la derecha. */}
           <div className="flex items-center gap-3">
             <div className="min-w-0">
-              <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}` : user.email}</p>
+              {/*
+                El tilde de «nombre validado en ARCA», como en Solicitudes y Contratos. El estado lo resuelve el
+                server (`nombreArca`): en la tabla del equipo el CUIL no viaja.
+              */}
+              <p className="flex items-center gap-1.5 font-medium text-gray-900 dark:text-white text-sm min-w-0">
+                <span className="truncate">{user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}` : user.email}</span>
+                <NombreArca estado={(user as any).nombreArca ?? estadoNombreArca({ cuit: user.metadata?.cuit, sinCuit: user.metadata?.sinCuit, validadoAt: user.metadata?.nombreValidadoArcaAt })} fecha={user.metadata?.nombreValidadoArcaAt} rotuloEnTooltip />
+              </p>
               <div className="flex flex-col gap-1.5 mt-0.5 min-w-0">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <p className="text-xs text-gray-500 truncate">{user.email}</p>
@@ -6291,7 +6299,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                               fila: por una celda fija translúcida se ve pasar lo que scrollea.
                               `#18202f` es ese mismo gris ya mezclado sobre el fondo del panel.
                             */}
-                            <th className="sticky left-0 z-[15] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]"><BotonOrden columna="name" {...ordenEquipoProps}>Usuario</BotonOrden></th>
+                            <th className="sticky left-0 z-[15] px-4 py-3 font-semibold bg-gray-50 dark:bg-[#18202f] border-r-2 border-gray-300 dark:border-gray-600 shadow-[4px_0_6px_-4px_rgba(0,0,0,0.25)]"><BotonOrden columna="name" {...ordenEquipoProps}>Colaborador</BotonOrden></th>
                             {/*
                               «Último Contrato», y no «Alta / Baja».
 

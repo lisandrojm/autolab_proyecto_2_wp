@@ -888,6 +888,19 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
         // La antigüedad según ARCA (Documentos → Antigüedad ARCA), por CUIL: la ficha la prefiere a la suma
         // de jornadas de WeProdu. En modo tabla no viaja el CUIL (ni hace falta la antigüedad).
         const antiguedadArca = teamTable ? new Map() : await antiguedadArcaPorCuil(req.tenantObjectId, enrichedUsers.map((u) => String(u.metadata?.cuit || "")));
+        /*
+          EL TILDE DE «NOMBRE VALIDADO EN ARCA» EN LA TABLA DEL EQUIPO (15/11/2026). En modo tabla el CUIL no
+          viaja (se excluye a propósito), y sin él el tilde no puede decidir: se resuelve acá con la misma regla
+          que `estadoNombreArca` del front y se manda sólo el resultado.
+        */
+        const nombreArcaDe = new Map();
+        if (teamTable && idsPagina.length > 0) {
+            const conCuit = await User.find({ _id: { $in: idsPagina } }).select("metadata.cuit metadata.sinCuit metadata.nombreValidadoArcaAt").lean();
+            for (const p of conCuit) {
+                const cuit = String(p.metadata?.cuit || "");
+                nombreArcaDe.set(String(p._id), !cuit || p.metadata?.sinCuit || !cuitEsValido(cuit) ? "no_aplica" : p.metadata?.nombreValidadoArcaAt ? "validado" : "sin_validar");
+            }
+        }
         res.json({
             users: enrichedUsers.map((u) => {
                 const totales = totalesPorUsuario.get(String(u._id));
@@ -899,6 +912,7 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
                     // que esperan editar, descargar y subir documentación.
                     ...(teamTable
                         ? {
+                            nombreArca: nombreArcaDe.get(String(u._id)) || "no_aplica",
                             contractCount: rige?._total ?? 0,
                             // El que rige es el último: para un contrato viejo no hay posterior; para uno del sistema,
                             // es renovación si la persona tiene más de un contrato en el proyecto.
