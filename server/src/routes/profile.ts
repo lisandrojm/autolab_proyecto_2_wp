@@ -9,6 +9,8 @@ import { RoleFrame } from '../models/RoleFrame.js';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js';
 import { requireTenant, TenantRequest } from '../middleware/tenant.js';
 import { antiguedadArcaPorCuil } from '../services/arca/relacionesArcaStore.js';
+import { saldosDeVacaciones } from '../services/vacaciones/saldos.js';
+import { hoyArgentina } from '../utils/contratoVigencia.js';
 
 const router = Router();
 
@@ -291,7 +293,22 @@ router.get('/', async (req: AuthenticatedRequest & TenantRequest, res) => {
     // vez de sumar sus contratos de WeProdu (que cuentan dos veces los días solapados).
     const antiguedadArca = (await antiguedadArcaPorCuil(req.tenantObjectId as mongoose.Types.ObjectId, [String((user as any)?.metadata?.cuit || "")])).get(String((user as any)?.metadata?.cuit || "").replace(/\D/g, "")) || null;
 
-    res.json({ ...profile, areaName, areaMembers, positionName, levelName, roleNames, extraVacationDays, carryOverVacationDays, projectIds, externalInfo, metadata, vacationsEnabled, antiguedadArca });
+    /*
+      EL SALDO DE VACACIONES DEL AÑO, YA CALCULADO (15/11/2026): la app lo mostraba sumando por su cuenta
+      la antigüedad de todas las empleadoras. Ahora usa la misma cuenta que «Gestión por Usuario» y que
+      la solicitud (`saldosDeVacaciones`): antigüedad de la empresa de cómputo, días por ley, extras,
+      beneficio y arrastre, con el override de la grilla si lo hay.
+    */
+    let saldoVacaciones: unknown = null;
+    try {
+      const anio = Number(hoyArgentina().slice(0, 4));
+      const [s]: any[] = await saldosDeVacaciones(req.tenantId, req.tenantObjectId, anio, { userIds: [String((user as any)._id)] });
+      if (s) saldoVacaciones = { anio, totalAnnual: s.display.totalAnnual, calculado: s.calculated.totalAnnual, diasLey: s.antiguedad.diasLey, antiguedad: s.seniority, empresaComputo: s.antiguedad.empresaComputo, sumaEntreEmpresas: s.antiguedad.sumaEntreEmpresas };
+    } catch (e: any) {
+      console.error("[PERFIL] No se pudo calcular el saldo de vacaciones:", e?.message || e);
+    }
+
+    res.json({ ...profile, areaName, areaMembers, positionName, levelName, roleNames, extraVacationDays, carryOverVacationDays, projectIds, externalInfo, metadata, vacationsEnabled, antiguedadArca, saldoVacaciones });
   } catch (error) {
     console.error('Get profile error:', error);
     if (error instanceof Error) {

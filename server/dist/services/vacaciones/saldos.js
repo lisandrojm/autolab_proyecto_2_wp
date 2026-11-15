@@ -9,6 +9,7 @@ import { Company } from "../../models/Company.js";
 import { textoAntiguedad } from "../../compartido/antiguedadTexto.js";
 import { hoyArgentina } from "../../utils/contratoVigencia.js";
 import { contratosQueRigenDeLasPersonas } from "../../utils/contratosQueRigen.js";
+import { baseDeAntiguedad, isoDia } from "../../utils/antiguedadArca.js";
 export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear, opciones = {}) {
     /*
       LOS USUARIOS, SIN SUS VÍNCULOS POBLADOS.
@@ -123,7 +124,9 @@ export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear,
     const rolEmpresaDe = (misVinculos, rolesPropios) => rolesEmpresaDe(misVinculos, rolesPropios).join(", ") || "Sin rol empresa";
     // 2. Fetch all overrides for the selected year
     const { UserVacationBalance } = await import("../../models/UserVacationBalance.js");
-    const overrides = await UserVacationBalance.find({ tenantId, year: selectedYear }).lean();
+    // Con `userIds` (el perfil de la app, una solicitud, el plan) sólo los de esas personas, no los de todo el tenant.
+    const filtroDePersonas = opciones.userIds ? { userId: { $in: idsUsuarios } } : {};
+    const overrides = await UserVacationBalance.find({ tenantId, year: selectedYear, ...filtroDePersonas }).lean();
     const overridesMap = new Map(overrides.map((o) => [o.userId.toString(), o]));
     /*
       LAS VACACIONES QUE DESCUENTAN DE ESTE PERÍODO. Una vacación cuenta en el año de su `periodoSaldo`
@@ -134,6 +137,7 @@ export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear,
     const endOfYear = new Date(selectedYear, 11, 31, 23, 59, 59, 999);
     const allVacations = await Vacation.find({
         tenantId,
+        ...filtroDePersonas,
         status: { $nin: ["rejected", "cancelled"] },
         $or: [{ periodoSaldo: selectedYear }, { periodoSaldo: null, startDate: { $gte: startOfYear, $lte: endOfYear } }],
     }).lean();
@@ -200,7 +204,7 @@ export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear,
         const cuils = users.map(cuilDe).filter((c) => c.length === 11);
         if (cuils.length) {
             const filas = await AntiguedadArca.find({ tenantId: tenantObjectId || tenantId, empleadoraCuit: { $ne: null }, cuil: { $in: cuils } })
-                .select("cuil empleadoraCuit diasTrabajados ultimaFecha tieneRelacionAbierta cantidadContratos")
+                .select("cuil empleadoraCuit diasTrabajados primeraAlta ultimaFecha tieneRelacionAbierta cantidadContratos")
                 .lean();
             for (const f of filas) {
                 if (!arcaPorEmpresa.has(f.cuil))
@@ -209,6 +213,23 @@ export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear,
             }
         }
     }
+    /*
+      LA ANTIGÜEDAD ES DE UNA SOLA EMPRESA (15/11/2026, pedido del usuario). Ya no se suman los días de
+      todas las empleadoras: cuenta la de la «empresa de cómputo» (`empresaDeComputo`): la vigente, o la
+      primera de la precedencia manual que la persona tenga. Quien pasó de FZERO a 2030 tiene la
+      antigüedad de 2030, sin arrastrar FZERO. La fila global de ARCA queda para auditar.
+  
+      Se sigue sumando (lo de antes) si la configuración lo pide (`sumarEntreEmpresas`) o si el período ya
+      cerró: un año pasado conserva el número con que se liquidó.
+    */
+    const computo = globalConfig?.computoAntiguedad || {};
+    const hoyISO = hoyArgentina();
+    const periodoCerrado = selectedYear < Number(hoyISO.slice(0, 4));
+    const motivoSuma = computo.sumarEntreEmpresas === true ? "config" : periodoCerrado ? "periodoCerrado" : null;
+    const modoComputo = computo.modo === "precedenciaManual" ? "precedenciaManual" : "empresaVigente";
+    // La precedencia se guarda por id de empresa; se compara por CUIT (ARCA) o por id (contratos sin CUIT cargado).
+    const precedenciaClaves = (computo.precedencia || []).map((id) => empresaPorId.get(String(id))?.cuit || String(id));
+    const nombreDeEmpresa = (clave) => empresaPorCuit.get(clave)?.nombre || empresaPorId.get(clave)?.nombre || clave;
     /** Los días por ley (LCT) para `dias` trabajados, proyectados hasta `hasta` si la relación sigue. Misma regla que la fila acumulada. */
     const diasPorLeyDe = (dias, hasta) => {
         const now = new Date();
@@ -310,6 +331,52 @@ export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear,
         const diasDeContratosWeProdu = contractsDays;
         if (arca)
             contractsDays = arca.diasTrabajados;
+        /*
+          LA EMPRESA DE CÓMPUTO (ver arriba): sus días reemplazan a la suma, y su relación decide hasta cuándo
+          se proyecta. Con ARCA, de las filas por empleadora; sin ARCA, de los contratos de WeProdu agrupados
+          por su empleadora —sólo si TODOS los contratos la tienen: los días de uno sin empresa no se sabe de
+          quién son, y descartarlos achicaría la antigüedad—.
+        */
+        let arcaBase = arca;
+        let empresaComputo = null;
+        {
+            // ARCA: sus filas por empleadora. Sin ARCA: los contratos agrupados por empresa (null si alguno no tiene).
+            const porArca = (arcaPorEmpresa.get(cuilDe(user)) || []).map((f) => ({ empleadoraCuit: String(f.empleadoraCuit), dias: Number(f.diasTrabajados) || 0, tieneRelacionAbierta: !!f.tieneRelacionAbierta, ultimaFecha: isoDia(f.ultimaFecha), primeraAlta: isoDia(f.primeraAlta) }));
+            let porContratos = null;
+            const fechados = misVinculos.flatMap((v) => (v.contracts || []).filter((ct) => ct.fecha_alta_contrato));
+            if (!arca && fechados.length > 0 && fechados.every((ct) => ct.empresaContratoId)) {
+                const grupos = new Map();
+                for (const ct of fechados) {
+                    const clave = empresaPorId.get(String(ct.empresaContratoId))?.cuit || String(ct.empresaContratoId);
+                    // Los días como la suma de contratos de arriba, para que una sola empresa dé el mismo número.
+                    const start = new Date(ct.fecha_alta_contrato);
+                    const end = ct.fecha_baja_contrato ? new Date(ct.fecha_baja_contrato) : new Date();
+                    end.setHours(23, 59, 59, 999);
+                    const alta = isoDia(ct.fecha_alta_contrato);
+                    const fin = ct.fecha_baja_contrato ? isoDia(ct.fecha_baja_contrato) : hoyISO;
+                    const g = grupos.get(clave) || { empleadoraCuit: clave, dias: 0, tieneRelacionAbierta: false, primeraAlta: alta, ultimaFecha: fin };
+                    g.dias += Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+                    if (!ct.fecha_baja_contrato)
+                        g.tieneRelacionAbierta = true;
+                    if (alta < g.primeraAlta)
+                        g.primeraAlta = alta;
+                    if (fin > g.ultimaFecha)
+                        g.ultimaFecha = fin;
+                    grupos.set(clave, g);
+                }
+                porContratos = [...grupos.values()];
+            }
+            const base = baseDeAntiguedad({ diasSumados: contractsDays, hayArca: !!arca, porArca, porContratos, motivoSuma, modo: modoComputo, precedencia: precedenciaClaves, hoy: hoyISO });
+            contractsDays = base.dias;
+            if (base.elegida) {
+                const { fila, motivo, fuente, consideradas } = base.elegida;
+                // La proyección al 31/12 sigue la relación de ESA empresa.
+                if (arca)
+                    arcaBase = { tieneRelacionAbierta: fila.tieneRelacionAbierta, ultimaFecha: fila.ultimaFecha };
+                const cuitDe = (clave) => (empresaPorCuit.has(clave) ? clave : "");
+                empresaComputo = { cuit: cuitDe(fila.empleadoraCuit), nombre: nombreDeEmpresa(fila.empleadoraCuit), motivo, fuente, dias: fila.dias, primeraAlta: fila.primeraAlta, tieneRelacionAbierta: fila.tieneRelacionAbierta, empresasConsideradas: consideradas.map((c) => ({ cuit: cuitDe(c.empleadoraCuit), nombre: nombreDeEmpresa(c.empleadoraCuit), dias: c.dias })) };
+            }
+        }
         const fuenteAntiguedad = arca ? "arca" : contractsDays > 0 ? "contratos" : user.hireDate ? "ingreso" : "ninguna";
         // B. Seniority Text (relative to today)
         const seniorityText = calculateSeniorityText(user.hireDate, contractsDays);
@@ -328,11 +395,12 @@ export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear,
             const now = new Date();
             const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59, 999);
             let hasta = null;
-            if (arca) {
-                if (arca.tieneRelacionAbierta)
+            // Con ARCA, la relación de la empresa de cómputo (o la global, si se suma).
+            if (arcaBase) {
+                if (arcaBase.tieneRelacionAbierta)
                     hasta = yearEnd;
-                else if (arca.ultimaFecha && new Date(arca.ultimaFecha) > now)
-                    hasta = new Date(Math.min(new Date(arca.ultimaFecha).getTime(), yearEnd.getTime()));
+                else if (arcaBase.ultimaFecha && new Date(arcaBase.ultimaFecha) > now)
+                    hasta = new Date(Math.min(new Date(arcaBase.ultimaFecha).getTime(), yearEnd.getTime()));
             }
             else if (contractsDays > 0 && user.metadata?.activo !== false) {
                 hasta = yearEnd;
@@ -475,6 +543,12 @@ export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear,
                 proyectadoHasta,
                 aniosAl31: Math.round(seniorityYears * 100) / 100,
                 diasLey: lawDays,
+                /*
+                  De qué empleadora salió la antigüedad (15/11/2026). `null` cuando se sumaron todas
+                  (`sumaEntreEmpresas` dice por qué) o cuando no hay empresas para elegir.
+                */
+                empresaComputo,
+                sumaEntreEmpresas: motivoSuma,
                 arca: arca
                     ? {
                         primeraAlta: isoDe(arca.primeraAlta),

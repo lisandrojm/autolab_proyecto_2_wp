@@ -136,3 +136,21 @@ export function empresaDeComputo(filas, hoy, config = {}) {
     const fila = empresaVigenteDe(filas, hoy);
     return fila ? { fila, motivo: "vigente" } : null;
 }
+/**
+ * LA BASE DE ANTIGÜEDAD DE LAS VACACIONES (la usa `services/vacaciones/saldos.ts`). Devuelve los días que
+ * cuentan y de qué empleadora salen:
+ *  - Si hay que sumar (`motivoSuma`: la config lo pide o el período ya cerró): los días de siempre
+ *    (`diasSumados`: la fila global de ARCA o la suma de contratos) y ninguna empresa.
+ *  - Con ARCA: la fila de la empresa de cómputo. Sin ARCA: el grupo de contratos de esa empresa
+ *    (`porContratos` es `null` cuando algún contrato no tiene empresa: no se puede repartir).
+ *  - Si no hay de dónde elegir: los días de siempre.
+ */
+export function baseDeAntiguedad(a) {
+    if (a.motivoSuma)
+        return { dias: a.diasSumados, elegida: null };
+    const filas = a.hayArca ? a.porArca : a.porContratos || [];
+    const r = empresaDeComputo(filas, a.hoy, { modo: a.modo, precedencia: a.precedencia });
+    if (!r)
+        return { dias: a.diasSumados, elegida: null };
+    return { dias: r.fila.dias, elegida: { fila: r.fila, motivo: r.motivo, fuente: a.hayArca ? "arca" : "contratos", consideradas: filas } };
+}

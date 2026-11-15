@@ -3,7 +3,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { antiguedadDe, antiguedadesDe, diasEntre, empresaDeComputo, empresaVigenteDe, fusionarTramos, tramoTrabajado } from "./antiguedadArca.js";
+import { antiguedadDe, antiguedadesDe, baseDeAntiguedad, diasEntre, empresaDeComputo, empresaVigenteDe, fusionarTramos, tramoTrabajado } from "./antiguedadArca.js";
 const HOY = "2026-10-12";
 const FZERO = "30710295839";
 const DOS_MIL_TREINTA = "30717068374";
@@ -121,5 +121,47 @@ describe("de qué empleadora se toma la antigüedad (vacaciones, 15/11/2026)", (
     it("la precedencia sólo vale en modo manual", () => {
         const filas = [f(FZERO, "2015-01-01", "2026-03-31"), f(DOS_MIL_TREINTA, "2026-04-01", HOY, true)];
         assert.equal(empresaDeComputo(filas, HOY, { modo: "empresaVigente", precedencia: [FZERO] }).fila.empleadoraCuit, DOS_MIL_TREINTA);
+    });
+});
+describe("la base de antigüedad de las vacaciones (15/11/2026)", () => {
+    const GRINI = "33717673749";
+    const e = (empleadoraCuit, dias, primeraAlta, ultimaFecha, tieneRelacionAbierta = false) => ({ empleadoraCuit, dias, primeraAlta, ultimaFecha, tieneRelacionAbierta });
+    const FZERO_VIEJA = e(FZERO, 3000, "2018-01-01", "2026-03-31");
+    const DOSMIL_NUEVA = e(DOS_MIL_TREINTA, 195, "2026-04-01", HOY, true);
+    const base = { hayArca: true, porContratos: null, motivoSuma: null, hoy: HOY };
+    it("FZERO + 2030 (ARCA): usa los días de 2030 e ignora los de FZERO", () => {
+        const r = baseDeAntiguedad({ ...base, diasSumados: 3195, porArca: [FZERO_VIEJA, DOSMIL_NUEVA] });
+        assert.equal(r.dias, 195);
+        assert.equal(r.elegida.fila.empleadoraCuit, DOS_MIL_TREINTA);
+        assert.equal(r.elegida.motivo, "vigente");
+        assert.equal(r.elegida.consideradas.length, 2);
+    });
+    it("sólo FZERO: FZERO, y el número no cambia respecto de la suma", () => {
+        const r = baseDeAntiguedad({ ...base, diasSumados: 3000, porArca: [FZERO_VIEJA] });
+        assert.equal(r.dias, 3000);
+        assert.equal(r.elegida.motivo, "unica");
+    });
+    it("2030 + GRINI: la vigente", () => {
+        const r = baseDeAntiguedad({ ...base, diasSumados: 500, porArca: [e(DOS_MIL_TREINTA, 300, "2025-01-01", "2026-06-30"), e(GRINI, 200, "2026-07-01", HOY, true)] });
+        assert.equal(r.dias, 200);
+        assert.equal(r.elegida.fila.empleadoraCuit, GRINI);
+    });
+    it("sumarEntreEmpresas = true reproduce el número viejo (la suma)", () => {
+        const r = baseDeAntiguedad({ ...base, diasSumados: 3195, porArca: [FZERO_VIEJA, DOSMIL_NUEVA], motivoSuma: "config" });
+        assert.equal(r.dias, 3195);
+        assert.equal(r.elegida, null);
+    });
+    it("un período cerrado conserva la suma", () => {
+        assert.equal(baseDeAntiguedad({ ...base, diasSumados: 3195, porArca: [FZERO_VIEJA, DOSMIL_NUEVA], motivoSuma: "periodoCerrado" }).dias, 3195);
+    });
+    it("sin ARCA: los contratos de WeProdu agrupados por empresa, misma regla", () => {
+        const r = baseDeAntiguedad({ ...base, hayArca: false, diasSumados: 400, porArca: [], porContratos: [e(FZERO, 350, "2025-01-01", "2026-02-28"), e(DOS_MIL_TREINTA, 50, "2026-09-01", HOY, true)] });
+        assert.equal(r.dias, 50);
+        assert.equal(r.elegida.fuente, "contratos");
+    });
+    it("sin ARCA y con un contrato sin empresa: se suma como antes", () => {
+        const r = baseDeAntiguedad({ ...base, hayArca: false, diasSumados: 400, porArca: [], porContratos: null });
+        assert.equal(r.dias, 400);
+        assert.equal(r.elegida, null);
     });
 });

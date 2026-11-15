@@ -95,3 +95,34 @@ export declare function empresaDeComputo<T extends FilaEmpresaParaComputo>(filas
     fila: T;
     motivo: MotivoEmpresaComputo;
 } | null;
+/** Una empleadora con sus días: fila de ARCA por empleadora, o los contratos de WeProdu agrupados. */
+export type FilaEmpresaConDias = FilaEmpresaParaComputo & {
+    dias: number;
+};
+/**
+ * LA BASE DE ANTIGÜEDAD DE LAS VACACIONES (la usa `services/vacaciones/saldos.ts`). Devuelve los días que
+ * cuentan y de qué empleadora salen:
+ *  - Si hay que sumar (`motivoSuma`: la config lo pide o el período ya cerró): los días de siempre
+ *    (`diasSumados`: la fila global de ARCA o la suma de contratos) y ninguna empresa.
+ *  - Con ARCA: la fila de la empresa de cómputo. Sin ARCA: el grupo de contratos de esa empresa
+ *    (`porContratos` es `null` cuando algún contrato no tiene empresa: no se puede repartir).
+ *  - Si no hay de dónde elegir: los días de siempre.
+ */
+export declare function baseDeAntiguedad(a: {
+    diasSumados: number;
+    hayArca: boolean;
+    porArca: FilaEmpresaConDias[];
+    porContratos: FilaEmpresaConDias[] | null;
+    motivoSuma: "config" | "periodoCerrado" | null;
+    modo?: ModoComputoAntiguedad;
+    precedencia?: string[];
+    hoy: string;
+}): {
+    dias: number;
+    elegida: {
+        fila: FilaEmpresaConDias;
+        motivo: MotivoEmpresaComputo;
+        fuente: "arca" | "contratos";
+        consideradas: FilaEmpresaConDias[];
+    } | null;
+};

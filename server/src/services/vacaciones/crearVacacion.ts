@@ -13,6 +13,7 @@ import { Tenant } from "../../models/Tenant.js";
 import { UserVacationBalance } from "../../models/UserVacationBalance.js";
 import { generateVacationPDF } from "../../utils/pdfGenerator.js";
 import { violaSolapamiento, type VacacionVirtual } from "./solapamiento.js";
+import { saldosDeVacaciones } from "./saldos.js";
 
 /**
  * CREAR Y PRE-APROBAR UNA VACACIÓN, PARA CUALQUIER PERSONA.
@@ -205,7 +206,18 @@ export async function crearVacacionParaPersona(o: PedidoDeVacacion): Promise<IVa
   }
   const requestYear = o.periodoSaldo ?? start.getFullYear();
   const override = await UserVacationBalance.findOne({ tenantId, userId, year: requestYear }).lean();
+  /*
+    LA MISMA BASE QUE «GESTIÓN POR USUARIO» (15/11/2026): los días del período salen de `saldosDeVacaciones`
+    —antigüedad de la empresa de cómputo, días por ley, extras, beneficio y arrastre—, no del campo
+    `vacationDays.totalDays` de la ficha, que nadie mantenía. Si la cuenta falla, queda el campo viejo.
+  */
   let totalAnnualDays = user.vacationDays?.totalDays || 0;
+  try {
+    const [saldo] = await saldosDeVacaciones(tenantId, Types.ObjectId.isValid(String(tenantId)) ? new Types.ObjectId(String(tenantId)) : tenantId, requestYear, { userIds: [String(userId)] });
+    if (saldo) totalAnnualDays = saldo.calculated.totalAnnual;
+  } catch (e: any) {
+    console.error("[VACACIONES] No se pudo calcular el saldo de la persona; se usa vacationDays.totalDays:", e?.message || e);
+  }
   let currentAvailable = totalAnnualDays - daysUsed - daysPending;
   if (override && override.available !== undefined) {
     currentAvailable = override.available;
