@@ -1012,7 +1012,7 @@ export const VacationsPage: React.FC = () => {
                               )}
                             </p>
                           </td>
-                          {/* Mismo formato que Alta / Baja en Equipo del proyecto; abajo los días pedidos y los que le quedan. */}
+                          {/* Mismo formato que Alta / Baja en Equipo del proyecto. Los días y el saldo están en el detalle. */}
                           <td className="py-3 px-4">
                             {vacation.startDate && vacation.endDate ? (
                               <div className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
@@ -1022,19 +1022,6 @@ export const VacationsPage: React.FC = () => {
                                 <span>
                                   <span className="text-gray-400">Hasta:</span> {fechaDMA(vacation.endDate)}
                                 </span>
-                                <span>
-                                  <span className="text-gray-400">Días:</span> {vacation.diasSolicitados}
-                                </span>
-                                {(() => {
-                                  const anio = anioDeSaldo(vacation);
-                                  const clave = `${vacation.userId}|${anio}`;
-                                  const valor = clave in quedan ? quedan[clave] : Object.keys(quedan).length ? null : undefined;
-                                  return (
-                                    <span title={anio ? `Lo que le queda del saldo ${anio}, contando esta solicitud y las demás pendientes (Gestión por Usuario › Disponible)` : undefined}>
-                                      <span className="text-gray-400">Le quedan:</span> {valor === undefined ? '…' : valor === null ? '—' : valor}
-                                    </span>
-                                  );
-                                })()}
                               </div>
                             ) : (
                               <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
@@ -1458,7 +1445,7 @@ export const VacationsPage: React.FC = () => {
                     </div>
                   )}
 
-              <div className="flex gap-10">
+              <div className="flex flex-wrap gap-x-10 gap-y-4">
                 {selectedVacation.startDate && (
                   <div>
                     <p className="text-sm text-slate-500 dark:text-slate-400">Fecha de Inicio</p>
@@ -1477,6 +1464,18 @@ export const VacationsPage: React.FC = () => {
                     {selectedVacation.diasSolicitados} día{selectedVacation.diasSolicitados > 1 ? 's' : ''}
                   </p>
                 </div>
+                {/* El «Disponible» de Gestión por Usuario para su año de saldo, con esta solicitud ya descontada. */}
+                {(() => {
+                  const anio = anioDeSaldo(selectedVacation);
+                  const clave = `${selectedVacation.userId}|${anio}`;
+                  const valor = clave in quedan ? quedan[clave] : null;
+                  return (
+                    <div title={anio ? `Lo que le queda del saldo ${anio}, contando esta solicitud y las demás pendientes (Gestión por Usuario › Disponible)` : undefined}>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Le quedan</p>
+                      <p className="font-medium text-slate-800 dark:text-slate-100">{valor === null ? (Object.keys(quedan).length ? '—' : '…') : `${valor} día${valor === 1 ? '' : 's'}`}</p>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
