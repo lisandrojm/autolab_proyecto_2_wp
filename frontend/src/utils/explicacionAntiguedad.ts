@@ -45,3 +45,22 @@ export const explicacionDeEmpresaComputo = (e: EmpresaComputo, total: number, pe
     `Antigüedad en ${e.nombre}: ${anios} años / ${e.dias.toLocaleString("es-AR")} días desde ${fecha(e.primeraAlta)}.`,
   ];
 };
+
+/** La ruta de la configuración «Antigüedad por empresa», con la pestaña ya abierta. */
+export const RUTA_CONFIG_ANTIGUEDAD = "/vacations-rules?tab=company_seniority";
+
+/**
+ * POR QUÉ ESA EMPRESA, en una o dos líneas (15/11/2026): el (i) de «Antigüedad» en Gestión por Usuario y
+ * el modal. `empresas`: las empleadoras en que trabajó (se nombran sólo si son más de una).
+ */
+export const porQueDeLaEmpresa = (e: Pick<EmpresaComputo, "nombre" | "motivo">, empresas: string[] = []): string[] => {
+  const motivo =
+    e.motivo === "vigente"
+      ? `Se toma la antigüedad de ${e.nombre}: es su empresa vigente (su relación más reciente/activa). No se suman las demás.`
+      : e.motivo === "unica"
+        ? `Se toma la antigüedad de ${e.nombre}: es la única empresa en la que trabajó.`
+        : e.motivo === "precedencia"
+          ? `Se toma la antigüedad de ${e.nombre}: quedó primera en la precedencia configurada. No se suman las demás.`
+          : "Se están SUMANDO todas las empresas (cálculo anterior).";
+  return empresas.length > 1 ? [motivo, `Trabajó en: ${empresas.join(", ")}.`] : [motivo];
+};

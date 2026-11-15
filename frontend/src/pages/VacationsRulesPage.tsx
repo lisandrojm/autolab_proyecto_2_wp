@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGear, faFilePdf } from '@fortawesome/free-solid-svg-icons';
 import { PageLayout } from '../components/ui/PageLayout';
@@ -17,12 +17,22 @@ import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 
 const HELP_KEY = 'vacationsRules' as const;
 
+const PESTANAS_REGLAS = ['global', 'overlap', 'projects', 'consecutive_days', 'annual_window', 'contracts', 'company_seniority'] as const;
+type PestanaReglas = (typeof PESTANAS_REGLAS)[number];
+
 export function VacationsRulesPage() {
   const navigate = useNavigate();
   const puedeAbrir = usePuedeAbrir();
   const helpEntry = getHelp(HELP_KEY);
   const [openInfo, setOpenInfo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'global' | 'overlap' | 'projects' | 'consecutive_days' | 'annual_window' | 'contracts' | 'antiguedad'>('global');
+  /*
+    LA PESTAÑA VA EN LA URL (?tab=…, 15/11/2026): Gestión por Usuario linkea a «Antigüedad por empresa»
+    (?tab=company_seniority) y tiene que abrirse en esa pestaña. Cambiar de pestaña escribe la URL, así
+    el «atrás» del navegador vuelve a la anterior.
+  */
+  const [params, setParams] = useSearchParams();
+  const activeTab: PestanaReglas = (PESTANAS_REGLAS as readonly string[]).includes(params.get('tab') || '') ? (params.get('tab') as PestanaReglas) : 'global';
+  const setActiveTab = (tab: PestanaReglas) => setParams(tab === 'global' ? {} : { tab });
 
   return (
     <PageLayout
@@ -55,7 +65,7 @@ export function VacationsRulesPage() {
               Ventana Anual
             </button>
             {/* De qué empleadora se toma la antigüedad (15/11/2026): ya no se suman. */}
-            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'antiguedad' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('antiguedad')}>
+            <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'company_seniority' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('company_seniority')}>
               Antigüedad por empresa
             </button>
             <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'overlap' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('overlap')}>
@@ -72,7 +82,7 @@ export function VacationsRulesPage() {
             {activeTab === 'projects' && <ProjectVacationConfigTab />}
             {activeTab === 'consecutive_days' && <ConsecutiveDaysConfigTab />}
             {activeTab === 'annual_window' && <AnnualWindowConfigTab />}
-            {activeTab === 'antiguedad' && <AntiguedadPorEmpresaTab />}
+            {activeTab === 'company_seniority' && <AntiguedadPorEmpresaTab />}
             {activeTab === 'overlap' && <VacationOverlapRules />}
             {/* «Gestión por Usuario» se mudó a Vacaciones (Admin General): los saldos se miran junto a
                 las solicitudes, no acá, que es donde se configuran las reglas. */}

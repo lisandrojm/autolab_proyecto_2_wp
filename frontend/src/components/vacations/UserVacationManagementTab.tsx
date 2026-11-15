@@ -19,7 +19,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { TablaConEncabezadoFijo } from '../ui/TablaConEncabezadoFijo';
 import { CLASE_BARRA_FIJA, useBarraFija } from '../ui/BarraFija';
 import { formatCuit } from '../../utils/cuit';
-import { explicacionDeEmpresaComputo, type EmpresaComputo } from "../../utils/explicacionAntiguedad";
+import { explicacionDeEmpresaComputo, porQueDeLaEmpresa, RUTA_CONFIG_ANTIGUEDAD, type EmpresaComputo } from "../../utils/explicacionAntiguedad";
 import { LinkSiPuede } from "../LinkSiPuede";
 
 type CuentaDeEmpresa = NonNullable<UserVacationBalance['porEmpresa']>[number];
@@ -892,6 +892,22 @@ export const UserVacationManagementTab: React.FC = () => {
                     </div>
                     <div className="mt-0.5 flex items-center gap-1.5">
                       Antigüedad: <span className="font-semibold text-gray-750 dark:text-gray-300">{balance.seniority}</span>
+                      {/*
+                        DE QUÉ EMPRESA Y POR QUÉ (15/11/2026, pedido del usuario): el texto al pasar el mouse; el
+                        click abre la cuenta, que tiene el link a la configuración. Con una sola empresa no hay nada
+                        que explicar. Sumando todas, en ámbar.
+                      */}
+                      {balance.antiguedad?.empresaComputo && balance.antiguedad.empresaComputo.motivo !== "unica" && (
+                        <button
+                          type="button"
+                          onClick={() => setAntiguedadDe(balance)}
+                          title={porQueDeLaEmpresa(balance.antiguedad.empresaComputo, balance.empresas).join("\n")}
+                          aria-label="De qué empresa se tomó la antigüedad"
+                          className={balance.antiguedad.empresaComputo.motivo === "suma" ? "text-amber-500 hover:text-amber-600" : "text-violet-500 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"}
+                        >
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                        </button>
+                      )}
                       {/* De dónde salió: ARCA (el registro oficial) o lo de WeProdu. El click abre la cuenta. */}
                       {balance.antiguedad && balance.antiguedad.fuente !== "ninguna" && (
                         <button
@@ -1119,10 +1135,19 @@ export const UserVacationManagementTab: React.FC = () => {
           <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
             {/* DE QUÉ EMPRESA (15/11/2026): el mismo texto que el tooltip del total. */}
             {antiguedadDe.antiguedad.empresaComputo ? (
-              <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 text-violet-900 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-200 space-y-1">
+              <div className={`rounded-lg border p-3 space-y-1 ${antiguedadDe.antiguedad.empresaComputo.motivo === "suma" ? "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200" : "border-violet-200 bg-violet-50 text-violet-900 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-200"}`}>
+                {/* Por qué esa empresa (el mismo texto que el (i) de la fila) y la cuenta. */}
+                {antiguedadDe.antiguedad.empresaComputo.motivo !== "unica" && porQueDeLaEmpresa(antiguedadDe.antiguedad.empresaComputo, antiguedadDe.empresas).map((linea) => (
+                  <p key={linea} className="font-semibold">{linea}</p>
+                ))}
                 {explicacionDeEmpresaComputo(antiguedadDe.antiguedad.empresaComputo, antiguedadDe.display.totalAnnual, `${antiguedadDe.firstName} ${antiguedadDe.lastName}`.trim(), antiguedadDe.antiguedad.sumaEntreEmpresas).map((linea) => (
                   <p key={linea}>{linea}</p>
                 ))}
+                {antiguedadDe.antiguedad.empresaComputo.motivo !== "unica" && (
+                  <LinkSiPuede to={RUTA_CONFIG_ANTIGUEDAD} className="inline-block pt-1 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400">
+                    ¿Por qué? Configurar en Antigüedad por empresa
+                  </LinkSiPuede>
+                )}
               </div>
             ) : antiguedadDe.antiguedad.sumaEntreEmpresas ? (
               <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
