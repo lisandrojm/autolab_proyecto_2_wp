@@ -4410,6 +4410,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                 <div className="flex flex-col min-w-0 gap-1">
                   <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{m.firstName || m.lastName ? `${m.firstName} ${m.lastName}`.trim() : m.email}</span>
                   <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{m.email}</span>
+                  {/* El tipo del contrato que rige (Jornada, Tiempo Indeterminado…), con el ícono de la columna Contrato del equipo. */}
+                  <span className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
+                    <FontAwesomeIcon icon={faFileContract} className="h-3 w-3 text-blue-500 dark:text-blue-400 shrink-0" />
+                    {m.nombreContrato || <span className="text-gray-400">Sin contrato</span>}
+                  </span>
                   {mostrarTurnos && (m.shiftIds || []).length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {(m.shiftIds || []).map((sid) => {
