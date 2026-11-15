@@ -5617,23 +5617,30 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       <span className={`flex h-6 w-10 shrink-0 items-center rounded-full p-1 duration-300 ease-in-out ${wizardData.reemplazo ? 'bg-blue-500 dark:bg-blue-600' : 'bg-gray-300 dark:bg-gray-700'}`}>
                         <span className={`h-4 w-4 transform rounded-full bg-white shadow-md duration-300 ease-in-out ${wizardData.reemplazo ? 'translate-x-4' : ''}`} />
                       </span>
-                      <span className="flex flex-col">
+                      {/*
+                        El período a la vista al decidir si es reemplazo (al aprobar, el de la solicitud); también en
+                        «Agregar Miembro». En la misma línea, a la derecha (15/11/2026, pedido del usuario):
+                        «Es reemplazo | Alta: 14/11/2026 | Baja: 15/11/2026».
+                      */}
+                      <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         Es reemplazo
-                        {/* El período a la vista al decidir si es reemplazo (al aprobar, el de la solicitud); también en «Agregar Miembro». */}
-                        <span className="flex flex-col text-[11px] font-normal text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                          {periodoAltaBajaWizard ? (
-                            <>
-                              <span>
-                                <span className="text-gray-400 dark:text-gray-500">Alta:</span> {periodoAltaBajaWizard.desde}
-                              </span>
-                              <span>
-                                <span className="text-gray-400 dark:text-gray-500">Baja:</span> {periodoAltaBajaWizard.hasta}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="italic">sin fechas cargadas</span>
-                          )}
-                        </span>
+                        {periodoAltaBajaWizard ? (
+                          <>
+                            <span className="text-gray-300 dark:text-gray-600" aria-hidden="true">|</span>
+                            <span className="whitespace-nowrap">
+                              <span className="font-normal text-gray-400 dark:text-gray-500">Alta:</span> {periodoAltaBajaWizard.desde}
+                            </span>
+                            <span className="text-gray-300 dark:text-gray-600" aria-hidden="true">|</span>
+                            <span className="whitespace-nowrap">
+                              <span className="font-normal text-gray-400 dark:text-gray-500">Baja:</span> {periodoAltaBajaWizard.hasta}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-gray-300 dark:text-gray-600" aria-hidden="true">|</span>
+                            <span className="text-[11px] font-normal italic text-gray-500 dark:text-gray-400">sin fechas cargadas</span>
+                          </>
+                        )}
                       </span>
                     </label>
                   </div>
