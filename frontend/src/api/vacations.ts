@@ -1,5 +1,6 @@
 // Frontend API client for vacation system
 import axios from "./axiosConfig";
+import type { AprobacionDeNivel, CadenaDeAprobacion } from "@compartido/vacaciones/etapaDeAprobacion";
 
 interface AntiguedadTramo {
   desde: number;
@@ -60,8 +61,30 @@ export interface VacationRequest {
   projectId?: string;
   /** De qué año descuenta (el plan lo fija al año de saldo de la temporada); sin él, el año en que empieza. */
   periodoSaldo?: number;
+  /** Quién aprueba cada nivel y quién aprobó (15/11/2026). Ver `@compartido/vacaciones/etapaDeAprobacion`. */
+  cadena?: CadenaDeAprobacion | null;
+  aprobaciones?: { supervisor?: AprobacionDeNivel | null; coordinador?: AprobacionDeNivel | null } | null;
+  rechazo?: { userId?: string; nivel: "supervisor" | "coordinador" | "admin"; motivo?: string; at: string } | null;
+  /** id → nombre de los que aparecen en la cadena, las aprobaciones y el rechazo (lo manda `GET /vacations`). */
+  nombresAprobadores?: Record<string, string>;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Una solicitud en la bandeja «Aprobaciones» de la app (ver `aprobacionPorEtapas.ts` del server). */
+export interface ItemDeAprobacion {
+  _id: string;
+  vacationNumber: string;
+  persona: { _id: string; nombre: string };
+  proyectos: string[];
+  startDate: string;
+  endDate: string;
+  daysRequested: number;
+  reason?: string;
+  createdAt: string;
+  etapa: "supervisor" | "coordinador";
+  aprobadoPorSupervisor?: string | null;
+  recordadaHoy: boolean;
 }
 
 // VACATION REQUESTS API
@@ -95,9 +118,32 @@ export const vacationsAPI = {
     return response.data;
   },
 
-  preApprove: async (id: string): Promise<VacationRequest> => {
-    const response = await axios.put(`/vacations/${id}/pre-approve`);
+  /*
+    APROBACIÓN POR JERARQUÍA (15/11/2026): el supervisor y el coordinador aprueban su paso desde la app;
+    el admin ya no pre-aprueba (sólo `approve` cuando la jerarquía terminó).
+  */
+  aprobaciones: async (): Promise<{ paraAprobar: ItemDeAprobacion[]; esperandoSupervisor: ItemDeAprobacion[] }> => {
+    const response = await axios.get("/vacations/aprobaciones");
     return response.data;
+  },
+
+  contarParaAprobar: async (): Promise<number> => {
+    const response = await axios.get("/vacations/aprobaciones/contar");
+    return Number(response.data?.total || 0);
+  },
+
+  aprobarEtapa: async (id: string): Promise<VacationRequest> => {
+    const response = await axios.put(`/vacations/${id}/aprobar-etapa`);
+    return response.data;
+  },
+
+  rechazarEtapa: async (id: string, reason?: string): Promise<VacationRequest> => {
+    const response = await axios.put(`/vacations/${id}/rechazar-etapa`, { reason });
+    return response.data;
+  },
+
+  recordarSupervisor: async (id: string): Promise<void> => {
+    await axios.post(`/vacations/${id}/recordar-supervisor`);
   },
 
   approve: async (id: string): Promise<VacationRequest> => {

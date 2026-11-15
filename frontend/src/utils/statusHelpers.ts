@@ -95,7 +95,10 @@ export interface VacationRequest {
   [key: string]: any;
 }
 
-export function mapVacationStatusToStatusType(status: string): StatusType {
+/** `etapa` (de `etapaDe`, @compartido/vacaciones/etapaDeAprobacion): una pendiente dice a quién espera. */
+export function mapVacationStatusToStatusType(status: string, etapa?: string | null): StatusType {
+  if (status === "pending" && etapa === "supervisor") return "vacaciones_esperando_supervisor";
+  if (status === "pending" && etapa === "coordinador") return "vacaciones_esperando_coordinador";
   const statusMap: Record<string, StatusType> = {
     pending: "vacaciones_pendiente",
     pre_approved: "vacaciones_preaprobada",

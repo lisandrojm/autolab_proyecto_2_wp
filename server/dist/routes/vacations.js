@@ -11,7 +11,8 @@ import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { saldosDeVacaciones } from "../services/vacaciones/saldos.js";
 import { fechasBloqueadas } from "../services/vacaciones/solapamiento.js";
-import { ErrorVacacion, adjustBalanceOnRequestChange, crearVacacionParaPersona } from "../services/vacaciones/crearVacacion.js";
+import { ErrorVacacion, adjustBalanceOnRequestChange, crearVacacionParaPersona, preAprobarVacacion } from "../services/vacaciones/crearVacacion.js";
+import { etapaDe } from "../compartido/vacaciones/etapaDeAprobacion.js";
 import { aprobarEtapa, bandejaDeAprobaciones, contarParaAprobar, iniciarAprobacion, rechazarEtapa, rechazarVacacion, recordarAlSupervisor } from "../services/vacaciones/aprobacionPorEtapas.js";
 import { requirePermission, tienePermiso } from "../middleware/permissions.js";
 const router = express.Router();
@@ -226,6 +227,25 @@ router.get("/", async (req, res) => {
                 .lean(),
             Vacation.countDocuments(query),
         ]);
+        /*
+          Los nombres de quienes aprueban (columnas Supervisor y Coordinador de la bandeja, 15/11/2026): todos
+          los de la cadena y las aprobaciones de la página, en una sola consulta.
+        */
+        const idsAprobadores = new Set();
+        for (const v of vacations) {
+            for (const p of v.cadena?.proyectos || [])
+                for (const u of [...(p.supervisores || []), ...(p.coordinadores || [])])
+                    idsAprobadores.add(String(u));
+            for (const a of [v.aprobaciones?.supervisor, v.aprobaciones?.coordinador, v.rechazo])
+                if (a?.userId)
+                    idsAprobadores.add(String(a.userId));
+        }
+        const nombresAprobadores = {};
+        if (idsAprobadores.size) {
+            const gente = await User.find({ _id: { $in: [...idsAprobadores].filter((id) => Types.ObjectId.isValid(id)).map((id) => new Types.ObjectId(id)) } }).select("firstName lastName metadata.fullName").lean();
+            for (const g of gente)
+                nombresAprobadores[String(g._id)] = g.metadata?.fullName || `${g.firstName || ""} ${g.lastName || ""}`.trim();
+        }
         const mappedVacations = vacations.map((v) => {
             const userObj = v.userId;
             let projectsInfo = [];
@@ -332,6 +352,7 @@ router.get("/", async (req, res) => {
                 userProject,
                 userRoleFrame,
                 projectsInfo,
+                nombresAprobadores: Object.fromEntries([...new Set([...(v.cadena?.proyectos || []).flatMap((p) => [...(p.supervisores || []), ...(p.coordinadores || [])]), v.aprobaciones?.supervisor?.userId, v.aprobaciones?.coordinador?.userId, v.rechazo?.userId].filter(Boolean).map(String))].map((id) => [id, nombresAprobadores[id] || ""])),
                 userSnapshot: {
                     sedes: Array.from(userSnapshot.sedes),
                     rolFrames: Array.from(userSnapshot.rolFrames),
@@ -531,6 +552,12 @@ router.put("/:id/approve", soloAdminVacaciones, async (req, res) => {
         if (!vacation) {
             return res.status(404).json({ error: "Solicitud de vacaciones no encontrada" });
         }
+        /*
+          Una `pending` que no espera a nadie (anterior a la jerarquía, sin cadena) es del admin: se pre-aprueba
+          (con su PDF, como antes) y se aprueba. Si espera al supervisor o al coordinador, no se adelanta.
+        */
+        if (vacation.status === "pending" && etapaDe(vacation) === "admin")
+            await preAprobarVacacion(vacation, approverId, req.tenantObjectId);
         if (vacation.status !== "pre_approved") {
             return res.status(400).json({ error: vacation.status === "pending" ? "Todavía espera la aprobación del supervisor o del coordinador" : "Solo las solicitudes preaprobadas pueden ser aprobadas" });
         }

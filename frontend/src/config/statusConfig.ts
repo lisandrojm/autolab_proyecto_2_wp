@@ -1,7 +1,7 @@
 import { faCheck, faClock, faTimes, faUpload, faFile, faExclamationTriangle, faCheckCircle, faTruck, faBan, faTimesCircle, faPenToSquare, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
-export type StatusType = "pendiente" | "preaprobado" | "aprobado" | "rechazado" | "entregado" | "cancelado" | "doc_pendiente" | "doc_subido" | "doc_vencido" | "firma_pendiente" | "firma_enviado_a_firmar" | "firma_firmado" | "vacaciones_pendiente" | "vacaciones_preaprobada" | "vacaciones_aprobada" | "vacaciones_rechazada" | "vacaciones_entregada" | "vacaciones_cancelada";
+export type StatusType = "pendiente" | "preaprobado" | "aprobado" | "rechazado" | "entregado" | "cancelado" | "doc_pendiente" | "doc_subido" | "doc_vencido" | "firma_pendiente" | "firma_enviado_a_firmar" | "firma_firmado" | "vacaciones_pendiente" | "vacaciones_preaprobada" | "vacaciones_esperando_supervisor" | "vacaciones_esperando_coordinador" | "vacaciones_aprobada" | "vacaciones_rechazada" | "vacaciones_entregada" | "vacaciones_cancelada";
 
 export interface StatusConfig {
   icon: IconDefinition;
@@ -105,12 +105,31 @@ export const STATUS_CONFIG: Record<StatusType, StatusConfig> = {
     bgClass: "bg-yellow-50 dark:bg-yellow-900/20",
     textClass: "text-yellow-600 dark:text-yellow-400",
   },
+  /*
+    APROBACIÓN POR JERARQUÍA (15/11/2026): `pre_approved` ya no lo pone el admin. Quiere decir que el
+    supervisor y el coordinador terminaron y le toca al admin: «Para aprobar». Mientras tanto, `pending`
+    dice a quién espera.
+  */
   vacaciones_preaprobada: {
     icon: faCheck,
     prefix: null,
-    label: "Preaprobada",
+    label: "Para aprobar",
     bgClass: "bg-cyan-50 dark:bg-cyan-900/20",
     textClass: "text-cyan-600 dark:text-cyan-400",
+  },
+  vacaciones_esperando_supervisor: {
+    icon: faClock,
+    prefix: "Espera",
+    label: "Supervisor",
+    bgClass: "bg-yellow-50 dark:bg-yellow-900/20",
+    textClass: "text-yellow-600 dark:text-yellow-400",
+  },
+  vacaciones_esperando_coordinador: {
+    icon: faClock,
+    prefix: "Espera",
+    label: "Coordinador",
+    bgClass: "bg-yellow-50 dark:bg-yellow-900/20",
+    textClass: "text-yellow-600 dark:text-yellow-400",
   },
   vacaciones_aprobada: {
     icon: faCheckCircle,

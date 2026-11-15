@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faCalendar, faClock, faCheckCircle, faTimesCircle, faBan, faChartSimple, faTrash, faCheck, faTruck, faFilePdf, faDownload, faFileArrowUp, faTimes, faTable, faGrip, faFileSignature, faBuilding, faIdCard, faBriefcase, faExclamationTriangle, faRotateRight } from '@fortawesome/free-solid-svg-icons';
-import { vacationsAPI } from '../api/vacations';
+import { vacationsAPI, type VacationRequest } from '../api/vacations';
 import { projectsAPI, Project } from '../api/projects';
 import { clientsAPI, Client } from '../api/clients';
 import { roleFrameAPI, RoleFrameItem } from '../api/roleFrames';
@@ -20,6 +20,8 @@ import { getHelp, hasHelp } from '../data/help/helpContent';
 import { mapVacationStatusToStatusType, mapVacationSignatureStateToStatusType, isVacationInFinalState } from '../utils/statusHelpers';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
+import { NivelDeAprobacion } from '../components/vacations/NivelDeAprobacion';
+import { aprobadoresDe, etapaDe } from '@compartido/vacaciones/etapaDeAprobacion';
 
 const HELP_KEY = 'vacations' as const;
 
@@ -50,7 +52,43 @@ interface VacationRequestMock {
     projects: { name: string; clientName?: string }[];
     rolesFrameIds?: string[];
   };
+  /** La jerarquía que la aprueba (15/11/2026): ver `@compartido/vacaciones/etapaDeAprobacion`. */
+  cadena?: VacationRequest['cadena'];
+  aprobaciones?: VacationRequest['aprobaciones'];
+  rechazo?: VacationRequest['rechazo'];
+  nombresAprobadores?: Record<string, string>;
 }
+
+/** La forma de la página a partir de lo que manda el server (la usan la carga y el PDF regenerado). */
+const aSolicitud = (item: any): VacationRequestMock => ({
+  id: item._id,
+  numeroPedido: item.vacationNumber || item._id,
+  reglas: item.vacationRuleIds && Array.isArray(item.vacationRuleIds) ? item.vacationRuleIds.map((rule: any) => (typeof rule === 'object' && rule.name ? rule.name : '')).filter((name: string) => name !== '') : [],
+  solicitante: {
+    nombre: item.userName || 'Usuario',
+    cargo: item.position || '-',
+  },
+  estado: item.status || 'pending',
+  firmaEstado: item.signatureStatus || 'not_required',
+  fechaSolicitud: item.createdAt,
+  startDate: item.startDate,
+  endDate: item.endDate,
+  diasSolicitados: item.daysRequested || 0,
+  requiresSignature: item.requiresSignature || false,
+  signatureNotifiedAt: item.signatureNotifiedAt,
+  pdfPreAprobacionUrl: item.pdfPreAprobacionUrl,
+  userProject: item.userProject || '-',
+  userRoleFrame: item.userRoleFrame || '-',
+  projectsInfo: item.projectsInfo || [],
+  userSnapshot: item.userSnapshot || { sedes: [], rolFrames: [], clients: [], projects: [], rolesFrameIds: [] },
+  cadena: item.cadena,
+  aprobaciones: item.aprobaciones,
+  rechazo: item.rechazo,
+  nombresAprobadores: item.nombresAprobadores,
+});
+
+/** En qué paso está (para el estado y el pie del modal). Las viejas sin cadena, `pending`, son del admin. */
+const etapaDeSolicitud = (v: VacationRequestMock) => etapaDe({ status: v.estado, cadena: v.cadena as any, aprobaciones: v.aprobaciones as any });
 
 // Mock vacation data removed - now using API
 
@@ -193,28 +231,7 @@ export const VacationsPage: React.FC = () => {
       setAllRoleFrames(roleFramesData);
       setCompaniesList(companiesData);
       // Transform API data to match VacationRequestMock interface
-      const transformedRecords: VacationRequestMock[] = data.map((item: any) => ({
-        id: item._id,
-        numeroPedido: item.vacationNumber || item._id,
-        reglas: item.vacationRuleIds && Array.isArray(item.vacationRuleIds) ? item.vacationRuleIds.map((rule: any) => (typeof rule === 'object' && rule.name ? rule.name : '')).filter((name: string) => name !== '') : [],
-        solicitante: {
-          nombre: item.userName || 'Usuario',
-          cargo: item.position || '-',
-        },
-        estado: item.status || 'pending',
-        firmaEstado: item.signatureStatus || 'not_required',
-        fechaSolicitud: item.createdAt,
-        startDate: item.startDate,
-        endDate: item.endDate,
-        diasSolicitados: item.daysRequested || 0,
-        requiresSignature: item.requiresSignature || false,
-        signatureNotifiedAt: item.signatureNotifiedAt,
-        pdfPreAprobacionUrl: item.pdfPreAprobacionUrl,
-        userProject: item.userProject || '-',
-        userRoleFrame: item.userRoleFrame || '-',
-        projectsInfo: item.projectsInfo || [],
-        userSnapshot: item.userSnapshot || { sedes: [], rolFrames: [], clients: [], projects: [], rolesFrameIds: [] },
-      }));
+      const transformedRecords: VacationRequestMock[] = data.map(aSolicitud);
       setMockVacations(transformedRecords);
       calculateStats(transformedRecords);
     } catch (error) {
@@ -337,29 +354,10 @@ export const VacationsPage: React.FC = () => {
       setIsRegeneratingPdf(true);
       const item = await vacationsAPI.regeneratePDF(id);
 
-      // Transform API response
-      const transformed: VacationRequestMock = {
-        id: item._id,
-        numeroPedido: item.vacationNumber || item._id,
-        reglas: item.vacationRuleIds && Array.isArray(item.vacationRuleIds) ? item.vacationRuleIds.map((rule: any) => (typeof rule === 'object' && rule.name ? rule.name : '')).filter((name: string) => name !== '') : [],
-        solicitante: {
-          nombre: item.userName || 'Usuario',
-          cargo: item.position || '-',
-        },
-        estado: item.status || 'pending',
-        firmaEstado: item.signatureStatus || 'not_required',
-        fechaSolicitud: item.createdAt,
-        startDate: item.startDate,
-        endDate: item.endDate,
-        diasSolicitados: item.daysRequested || 0,
-        requiresSignature: item.requiresSignature || false,
-        signatureNotifiedAt: item.signatureNotifiedAt,
-        pdfPreAprobacionUrl: item.pdfPreAprobacionUrl,
-        userProject: item.userProject || '-',
-        userRoleFrame: item.userRoleFrame || '-',
-        projectsInfo: item.projectsInfo || [],
-        userSnapshot: item.userSnapshot || { sedes: [], rolFrames: [], clients: [], projects: [], rolesFrameIds: [] },
-      };
+      // Transform API response (el regenerate-pdf no trae el snapshot ni los nombres: se conservan los de la fila).
+      const previa = mockVacations.find((v) => v.id === id);
+      const nueva = aSolicitud(item);
+      const transformed: VacationRequestMock = previa ? { ...nueva, userSnapshot: previa.userSnapshot, projectsInfo: previa.projectsInfo, nombresAprobadores: previa.nombresAprobadores } : nueva;
 
       // Update state
       setMockVacations((prev) => prev.map((v) => (v.id === id ? transformed : v)));
@@ -374,46 +372,11 @@ export const VacationsPage: React.FC = () => {
     }
   };
 
-  const handlePreApprove = async () => {
-    if (!selectedVacation || updating) return;
-
-    const result = await sweetAlert.confirm('¿Pre-aprobar esta solicitud?', `La solicitud ${getFormattedVacationNumber(selectedVacation.numeroPedido)} será preaprobada.`, 'Sí, Pre-Aprobar', 'Cancelar');
-    if (!result.isConfirmed) return;
-
-    setUpdating(true);
-    try {
-      const updatedVacationRaw = await vacationsAPI.preApprove(selectedVacation.id);
-
-      // Update local selectedVacation state immediately with new status and PDF url
-      setSelectedVacation((prev) =>
-        prev
-          ? {
-              ...prev,
-              estado: 'pre_approved', // We know it's pre_approved now
-              pdfPreAprobacionUrl: updatedVacationRaw.pdfPreAprobacionUrl,
-              requiresSignature: updatedVacationRaw.requiresSignature,
-              signatureNotifiedAt: updatedVacationRaw.signatureNotifiedAt, // though pre-approve usually doesn't notify signature yet
-            }
-          : null,
-      );
-
-      await loadRecords(); // Refresh list in background
-
-      await sweetAlert.success('Preaprobada', updatedVacationRaw.pdfPreAprobacionUrl ? 'La solicitud ha sido preaprobada y se ha generado el PDF' : 'La solicitud ha sido preaprobada correctamente');
-    } catch (error: any) {
-      await sweetAlert.error('Error', error?.response?.data?.error || 'No se pudo pre-aprobar la solicitud');
-      // If error (e.g. already pre-approved), allow loadRecords to refresh the UI to correct state
-      await loadRecords();
-      // Close modal if there's a serious sync error or let user see updated state?
-      // Let's close it if we can't recover context, but refreshing list might be enough if we re-select?
-      // Actually if we errored, selectedVacation is still "pending" in UI.
-      // We should close modal or refresh selectedVacation from server.
-      setShowDetailModal(false);
-    } finally {
-      setUpdating(false);
-    }
-  };
-
+  /*
+    EL ADMIN YA NO PRE-APRUEBA (15/11/2026, pedido del usuario): la pre-aprobación la hacen el supervisor
+    y el coordinador desde la app («Aprobaciones»). Acá sólo se aprueba lo que llegó a `pre_approved`
+    («Para aprobar») y se rechaza en cualquier momento.
+  */
   const handleApprove = async () => {
     if (!selectedVacation || updating) return;
 
@@ -453,12 +416,19 @@ export const VacationsPage: React.FC = () => {
   const handleReject = async () => {
     if (!selectedVacation || updating) return;
 
-    const result = await sweetAlert.confirm('¿Rechazar esta solicitud?', 'El usuario será notificado del rechazo', 'Sí, Rechazar', 'Cancelar');
+    // Con motivo, como el rechazo de Solicitudes: le llega a quien pidió las vacaciones.
+    const result = await sweetAlert.prompt('¿Rechazar esta solicitud?', {
+      text: `Contale a ${getUserName(selectedVacation.solicitante)} por qué no se aprueban sus vacaciones.`,
+      placeholder: 'Ej.: se superpone con el cierre del proyecto',
+      multilinea: true,
+      confirmText: 'Rechazar',
+      mensajeVacio: 'Escribí el motivo del rechazo.',
+    });
     if (!result.isConfirmed) return;
 
     setUpdating(true);
     try {
-      await vacationsAPI.reject(selectedVacation.id);
+      await vacationsAPI.reject(selectedVacation.id, String(result.value || '').trim());
 
       setSelectedVacation((prev) =>
         prev
@@ -656,33 +626,61 @@ export const VacationsPage: React.FC = () => {
 
     if (!selectedVacation) return null;
 
+    /*
+      CANCELAR, RECHAZAR Y APROBAR, como «Editar y Aprobar» de Solicitudes: Aprobar es el grande, verde con
+      el tilde; Rechazar, rojo con la cruz. Aprobar sólo aparece cuando la jerarquía terminó; mientras tanto
+      el pie dice a quién espera (decisión del usuario, 15/11/2026: el admin no se adelanta).
+    */
+    const botonCancelar = (
+      <button type="button" onClick={() => setShowDetailModal(false)} className="btn-secondary !py-2.5 !px-6 uppercase tracking-wider font-bold">
+        Cancelar
+      </button>
+    );
+    const botonRechazar = (
+      <button type="button" onClick={handleReject} disabled={updating} className="inline-flex items-center justify-center gap-2 py-2.5 px-6 rounded border font-bold uppercase tracking-wider transition-colors bg-red-100 text-red-700 border-red-200 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-900/60 dark:hover:bg-red-900/50 disabled:opacity-60">
+        <FontAwesomeIcon icon={faTimes} />
+        Rechazar
+      </button>
+    );
+
     if (selectedVacation.estado === 'pending') {
+      const etapa = etapaDeSolicitud(selectedVacation);
+      const nivel = etapa === 'supervisor' || etapa === 'coordinador' ? etapa : null;
+      const quien = nivel ? aprobadoresDe(selectedVacation.cadena as any, nivel).map((id) => selectedVacation.nombresAprobadores?.[id]).filter(Boolean).join(', ') : '';
       return (
-        <>
-          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
-            <FontAwesomeIcon icon={faBan} className="text-lg" />
-            Rechazar
-          </button>
-          <button onClick={handlePreApprove} disabled={updating} className="px-6 py-2.5 rounded bg-cyan-500 text-white font-semibold text-sm hover:bg-cyan-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
-            <FontAwesomeIcon icon={faCheck} className="text-lg" />
-            Pre-Aprobar
-          </button>
-        </>
+        <div className="flex flex-wrap items-center gap-3 w-full">
+          {nivel ? (
+            <span className="flex-1 min-w-[12rem] inline-flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+              <FontAwesomeIcon icon={faClock} />
+              Espera la aprobación del {nivel}
+              {quien ? ` (${quien})` : ''}
+            </span>
+          ) : (
+            // Pendiente sin jerarquía que esperar (anterior al 15/11 o sin cadena): la aprueba el admin.
+            <span className="flex-1" />
+          )}
+          {botonCancelar}
+          {botonRechazar}
+          {!nivel && (
+            <button type="button" onClick={handleApprove} disabled={updating} className="flex-1 min-w-[10rem] inline-flex items-center justify-center gap-2 py-2.5 rounded border font-bold uppercase tracking-wider transition-all active:scale-95 bg-green-100 text-green-700 border-green-200 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/60 dark:hover:bg-green-900/50 disabled:opacity-60">
+              <FontAwesomeIcon icon={faCheck} />
+              Aprobar
+            </button>
+          )}
+        </div>
       );
     }
 
     if (selectedVacation.estado === 'pre_approved') {
       return (
-        <>
-          <button onClick={handleReject} disabled={updating} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
-            <FontAwesomeIcon icon={faBan} className="text-lg" />
-            Rechazar
-          </button>
-          <button onClick={handleApprove} disabled={updating} className="px-6 py-2.5 rounded bg-blue-500 text-white font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex gap-1">
-            <FontAwesomeIcon icon={faCheck} className="text-lg" />
+        <div className="flex flex-wrap items-center gap-3 w-full">
+          {botonCancelar}
+          {botonRechazar}
+          <button type="button" onClick={handleApprove} disabled={updating} className="flex-1 min-w-[10rem] inline-flex items-center justify-center gap-2 py-2.5 rounded border font-bold uppercase tracking-wider transition-all active:scale-95 bg-green-100 text-green-700 border-green-200 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900/60 dark:hover:bg-green-900/50 disabled:opacity-60">
+            <FontAwesomeIcon icon={faCheck} />
             Aprobar
           </button>
-        </>
+        </div>
       );
     }
 
@@ -742,7 +740,7 @@ export const VacationsPage: React.FC = () => {
             <span key="vacation-number" className="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-gray-50 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400">
               {getFormattedVacationNumber(vacation.numeroPedido)}
             </span>,
-            <StatusBadge key="status" type={mapVacationStatusToStatusType(vacation.estado)} size="sm" />,
+            <StatusBadge key="status" type={mapVacationStatusToStatusType(vacation.estado, etapaDeSolicitud(vacation))} size="sm" />,
             <StatusBadge
               key="signature"
               type={mapVacationSignatureStateToStatusType({
@@ -891,7 +889,8 @@ export const VacationsPage: React.FC = () => {
                   onChange: (v) => setStatusFilter(v || 'all'),
                   placeholder: 'Todos los estados',
                   options: [
-                    { value: 'pending', label: 'Pendientes' },
+                    { value: 'pending', label: 'Pendientes (en la jerarquía)' },
+                    { value: 'pre_approved', label: 'Para aprobar' },
                     { value: 'approved', label: 'Aprobadas' },
                     { value: 'rejected', label: 'Rechazadas' },
                     { value: 'cancelled', label: 'Canceladas' },
@@ -942,6 +941,9 @@ export const VacationsPage: React.FC = () => {
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Proyecto</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Role Frame</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Estado</th>
+                        {/* La jerarquía que la aprueba (15/11/2026): qué dijo cada nivel, o que el proyecto no lo tiene. */}
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Supervisor</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Coordinador</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Firma</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300 text-nowrap">Período</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300"></th>
@@ -1029,7 +1031,13 @@ export const VacationsPage: React.FC = () => {
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            <StatusBadge type={mapVacationStatusToStatusType(vacation.estado)} size="sm" />
+                            <StatusBadge type={mapVacationStatusToStatusType(vacation.estado, etapaDeSolicitud(vacation))} size="sm" />
+                          </td>
+                          <td className="py-3 px-4">
+                            <NivelDeAprobacion vacation={{ status: vacation.estado, cadena: vacation.cadena as any, aprobaciones: vacation.aprobaciones as any, nombresAprobadores: vacation.nombresAprobadores }} nivel="supervisor" />
+                          </td>
+                          <td className="py-3 px-4">
+                            <NivelDeAprobacion vacation={{ status: vacation.estado, cadena: vacation.cadena as any, aprobaciones: vacation.aprobaciones as any, nombresAprobadores: vacation.nombresAprobadores }} nivel="coordinador" />
                           </td>
                           <td className="py-3 px-4">{renderSignatureStatus(vacation)}</td>
                           <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 text-nowrap">
@@ -1107,7 +1115,7 @@ export const VacationsPage: React.FC = () => {
                 <p className="text-sm px-2 text-gray-600 dark:bg-gray-600/20 dark:text-gray-400 rounded">Nº Solicitud: {getFormattedVacationNumber(selectedVacation.numeroPedido)}</p>
               </span>
               <div className="flex flex-wrap gap-2">
-                <StatusBadge type={mapVacationStatusToStatusType(selectedVacation.estado)} size="sm" />
+                <StatusBadge type={mapVacationStatusToStatusType(selectedVacation.estado, etapaDeSolicitud(selectedVacation))} size="sm" />
                 <div className="flex items-center gap-1.5">
                   {selectedVacation.firmaEstado !== 'not_required' && (
                     <StatusBadge
