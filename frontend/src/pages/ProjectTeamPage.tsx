@@ -48,7 +48,7 @@ import { contratoFrameAPI, ContratoFrameItem, plantillaEsDeContrato, plantillaAc
 import { activityLogTypesAPI, RequestConfig } from '../api/requestConfig';
 import { TipoImpositivo, esTipoImpositivo, estadosImpositivos, estadoImpositivoDePlantilla, estadoImpositivoPorTipo, tipoImpositivoDeContrato } from '../utils/tramiteImpositivo';
 // «Coordinador» pasó a ser un permiso (cargar novedades), no el nombre de un rol. Ver ese módulo.
-import { coordinaAreas, PROJECT_COORDINATOR } from '../utils/permisosMobile';
+import { coordinaAreas, PROJECT_COORDINATOR, PROJECT_SUPERVISOR } from '../utils/permisosMobile';
 import { contratosAPI, ContratoItem, tiposDeContratoActivos } from '../api/contratos';
 import { formasPagoAPI, FormaPagoItem } from '../api/formasPago';
 import { claveCacheCatalogo } from '../api/simpleCatalog';
@@ -197,9 +197,15 @@ const ContratoDeOtroProyecto: React.FC<{ contrato: { nombre_contrato?: string | 
   vaciaba el filtro sin decir por qué. Lo que se quiere separar es quién carga las novedades del
   equipo, y eso es un permiso.
 */
+/*
+  Rol/es, con los nombres de negocio (15/11/2026): Supervisor/es (capacidad `project_coordinator:eligible`),
+  Coordinador/es (`project_supervisor:eligible`; los nombres están cruzados, ver `utils/permisosMobile`) y
+  Colaboradores, que son los que no tienen ninguna de las dos.
+*/
 const MOBILE_ROLE_OPTIONS = [
-  { value: 'con', label: 'Supervisa áreas' },
-  { value: 'sin', label: 'No supervisa' },
+  { value: 'supervisor', label: 'Supervisor/es' },
+  { value: 'coordinador', label: 'Coordinador/es' },
+  { value: 'colaborador', label: 'Colaboradores' },
 ];
 
 
@@ -778,7 +784,9 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       if (search) params.email = search; // el backend busca fuzzy en nombre/email
       if (status === 'active') params.metadataActivo = 'true';
       if (status === 'inactive') params.metadataActivo = 'false';
-      if (rolMobile === 'con') params.permission = PROJECT_COORDINATOR;
+      if (rolMobile === 'supervisor' || rolMobile === 'con') params.permission = PROJECT_COORDINATOR;
+      if (rolMobile === 'coordinador') params.permission = PROJECT_SUPERVISOR;
+      if (rolMobile === 'colaborador') params.notPermission = `${PROJECT_COORDINATOR},${PROJECT_SUPERVISOR}`;
       if (rolMobile === 'sin') params.notPermission = PROJECT_COORDINATOR;
       if (vigencia) params.vigencia = vigencia;
       if (tipoContrato) params.tipoContrato = tipoContrato;
@@ -6175,14 +6183,16 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                           label: 'Rol/es',
                           value: filterRolMobile,
                           onChange: setFilterRolMobile,
-                          placeholder: 'Todos los roles',
+                          placeholder: 'Todos',
                           options: MOBILE_ROLE_OPTIONS,
+                          enModal: true,
                         },
                         {
                           label: 'Tipo de contrato',
                           value: filterTipoContrato,
                           onChange: setFilterTipoContrato,
                           placeholder: 'Todos los tipos',
+                          enModal: true,
                           options: contratoFrames.filter(plantillaActivaParaFiltrar).map((cf) => ({ value: cf.name, label: cf.name })),
                         },
                         {
@@ -6190,6 +6200,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                           value: filterAreaTurno,
                           onChange: setFilterAreaTurno,
                           placeholder: 'Todas las áreas/turnos',
+                          enModal: true,
                           options: [{ value: '__none__', label: 'Sin área/turno' }, ...areaTurnoOptions],
                         },
                         {
@@ -6197,6 +6208,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                           value: filterEstadoContrato,
                           onChange: setFilterEstadoContrato,
                           placeholder: 'Todos los estados',
+                          enModal: true,
                           options: estadoContratoOptions,
                           renderOption: (opt) => <EstadoBadge name={opt.label} />,
                         },

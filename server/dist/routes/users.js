@@ -356,8 +356,10 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
           Con `notPermission` se pide el complemento —los que NO lo tienen—, que es la otra mitad de ese
           mismo filtro y no se puede expresar con `$in`.
         */
+        // Varios separados por coma (15/11/2026): `notPermission=a,b` = «ni a ni b» (Colaboradores = ni supervisor ni coordinador).
         const filtroPorPermiso = async (permiso) => {
-            const roleFilter = { permissions: permiso };
+            const permisos = permiso.split(",").map((p) => p.trim()).filter(Boolean);
+            const roleFilter = { permissions: { $in: permisos } };
             if (!isSuperAdmin)
                 roleFilter.tenantId = req.tenantObjectId;
             return Role.find(roleFilter).distinct("_id");

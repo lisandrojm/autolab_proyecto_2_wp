@@ -36,6 +36,12 @@ export interface SelectFilter {
    * un dropdown propio en vez del <select> nativo, que no permite colorear sus <option>.
    */
   renderOption?: (option: FilterOption) => React.ReactNode;
+  /**
+   * Se elige en un modal propio (15/11/2026): el campo es un botón que abre la lista de opciones como
+   * tarjetas, con buscador, y tocar una la elige y cierra. Para listas largas (tipos de contrato,
+   * áreas y turnos) donde el <select> nativo no se lee.
+   */
+  enModal?: boolean;
 }
 
 /**
@@ -179,6 +185,8 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
   const [showFilterModal, setShowFilterModal] = useState(false);
   /** El filtro múltiple que tiene abierto su modal de casillas, y lo que se va marcando hasta «Aplicar». */
   const [eligiendo, setEligiendo] = useState<{ idx: number; marcados: string[]; busqueda?: string } | null>(null);
+  /** El filtro de UNA opción (`enModal`) que tiene abierto su modal, con lo que se va buscando. */
+  const [eligiendoUno, setEligiendoUno] = useState<{ idx: number; busqueda: string } | null>(null);
 
   const hasDateFilters = dateFilter && (dateFilter.startDate || dateFilter.endDate);
   const hasSelectFilters = selectFilters.some((sf) => sf.value !== "");
@@ -486,7 +494,19 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
                 {selectFiltersUI.map((sf, idx) => (
                   <div key={idx}>
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{sf.label}</label>
-                    {sf.renderOption ? (
+                    {sf.enModal ? (
+                      <button
+                        type="button"
+                        onClick={() => setEligiendoUno({ idx, busqueda: "" })}
+                        className="relative w-full px-3 py-2 pr-8 text-left border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white text-sm"
+                      >
+                        {(() => {
+                          const elegida = sf.options.find((o) => o.value === sf.value);
+                          return elegida ? (sf.renderOption ? sf.renderOption(elegida) : elegida.label) : sf.placeholder || "Todos";
+                        })()}
+                        <FontAwesomeIcon icon={faChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      </button>
+                    ) : sf.renderOption ? (
                       <RenderedSelect {...sf} />
                     ) : (
                     <div className="relative">
@@ -581,6 +601,58 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
         la grilla de casillas en tres columnas, y «Limpiar» / «Listo». Era una lista vertical sin
         buscador, y con decenas de proyectos no se encontraba nada.
       */}
+      {/*
+        EL MODAL DE UN FILTRO DE UNA OPCIÓN (`enModal`), ARRIBA DEL DE FILTROS: la primera tarjeta es
+        «Todos» (sin filtrar), la elegida queda marcada, y tocar cualquiera la aplica y cierra.
+      */}
+      {eligiendoUno && selectFiltersUI[eligiendoUno.idx] && (() => {
+        const sf = selectFiltersUI[eligiendoUno.idx];
+        const busqueda = eligiendoUno.busqueda;
+        const todas: FilterOption[] = [{ value: "", label: sf.placeholder || "Todos" }, ...sf.options];
+        const visibles = todas.filter((o) => !busqueda || o.value === "" || fuzzyMatch(o.label, busqueda));
+        const elegir = (v: string) => {
+          if (v !== sf.value) sf.onChange(v);
+          setEligiendoUno(null);
+        };
+        return (
+          <Modal isOpen zIndex={70} onClose={() => setEligiendoUno(null)} title={sf.label} subtitle="Tocá una opción para filtrar" size="lg">
+            {/* Alto fijo sólo con listas largas (el buscador encoge la lista y «mover» el modal molesta); con pocas, lo justo. */}
+            <div className={`flex flex-col ${sf.options.length > 8 ? "h-[60vh]" : ""}`}>
+              {sf.options.length > 8 && (
+                <div className="relative mb-3 shrink-0">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <FontAwesomeIcon icon={faMagnifyingGlass} className="h-3.5 w-3.5 text-gray-400" />
+                  </div>
+                  <input type="text" autoFocus value={busqueda} onChange={(e) => setEligiendoUno({ ...eligiendoUno, busqueda: e.target.value })} placeholder={`Buscar ${sf.label.toLowerCase()}...`} className="input-field pl-9 pr-8" />
+                  {busqueda && (
+                    <button type="button" onClick={() => setEligiendoUno({ ...eligiendoUno, busqueda: "" })} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                      <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
+              <div className="grid flex-1 grid-cols-1 content-start gap-2 overflow-y-auto pr-1 sm:grid-cols-2 md:grid-cols-3">
+                {visibles.map((o) => {
+                  const elegida = o.value === sf.value;
+                  return (
+                    <button
+                      key={o.value || "__todos__"}
+                      type="button"
+                      onClick={() => elegir(o.value)}
+                      title={o.label}
+                      className={`flex items-center gap-3 rounded-lg border p-2.5 text-left transition-all ${elegida ? "border-blue-200 bg-blue-50 ring-2 ring-blue-500/20 dark:border-blue-800 dark:bg-blue-900/20" : "border-gray-100 bg-white hover:border-gray-300 dark:border-gray-700 dark:bg-gray-800"}`}
+                    >
+                      <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${elegida ? "border-blue-500" : "border-gray-300 dark:border-gray-600"}`}>{elegida && <span className="h-2 w-2 rounded-full bg-blue-500" />}</span>
+                      {o.value && sf.renderOption ? <span className="min-w-0 truncate">{sf.renderOption(o)}</span> : <span className={`truncate text-xs ${o.value ? "font-medium text-gray-700 dark:text-gray-300" : "font-bold text-gray-900 dark:text-white"}`}>{o.label}</span>}
+                    </button>
+                  );
+                })}
+                {visibles.length <= 1 && busqueda && <div className="col-span-full py-8 text-center text-xs italic text-gray-500">No hay coincidencias con «{busqueda}»</div>}
+              </div>
+            </div>
+          </Modal>
+        );
+      })()}
       {eligiendo && multiSelectFilters[eligiendo.idx] && (() => {
         const mf = multiSelectFilters[eligiendo.idx];
         const busqueda = eligiendo.busqueda || "";
