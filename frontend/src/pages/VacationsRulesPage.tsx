@@ -13,6 +13,7 @@ import { AnnualWindowConfigTab } from '../components/vacations/AnnualWindowConfi
 import { AntiguedadPorEmpresaTab } from '../components/vacations/AntiguedadPorEmpresaTab';
 
 import { ContractConfigTab } from '../components/vacations/ContractConfigTab';
+import { CampaniaGoceConfigTab } from '../components/vacations/CampaniaGoceConfigTab';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { RUTA_REGLAS_VACACIONES, seccionDeRuta, seccionDeTabViejo, type ClaveSeccionVacaciones } from '../config/seccionesReglasVacaciones';
 
@@ -26,6 +27,7 @@ const CONTENIDO: Record<ClaveSeccionVacaciones, ComponentType> = {
   'antiguedad-por-empresa': AntiguedadPorEmpresaTab,
   solapamiento: VacationOverlapRules,
   'visibilidad-por-contrato': ContractConfigTab,
+  campania: CampaniaGoceConfigTab,
 };
 
 /*

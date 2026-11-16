@@ -3,6 +3,7 @@ import { VacationConfig } from "../models/VacationConfig.js";
 import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { errorDeVentana, normalizarVentana } from "../compartido/ventanaGoce.js";
+import { normalizarConfigCampania } from "../compartido/vacaciones/campania.js";
 import { Types } from "mongoose";
 import { llevarVentanaGlobalALosPlanes } from "../services/vacaciones/ventanaYPlanes.js";
 const router = express.Router();
@@ -68,6 +69,9 @@ router.put("/", async (req, res) => {
             const { enabled, inicio, fin } = req.body.ventanaGoce;
             req.body.ventanaGoce = { enabled, inicio, fin };
         }
+        // La campaña de goce: números en rango (lo que venga mal cae al de por defecto) y nada más que esos cuatro campos.
+        if (req.body?.campania !== undefined)
+            req.body.campania = normalizarConfigCampania(req.body.campania);
         // La antigüedad por empresa: modo conocido, empresas válidas y sin repetir, el flag como booleano.
         if (req.body?.computoAntiguedad !== undefined) {
             const c = req.body.computoAntiguedad || {};

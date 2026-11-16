@@ -32,6 +32,17 @@ export interface IVacationConfig extends Document {
         fin: string;
     };
     /**
+     * CAMPAÑA DE GOCE (15/11/2026): invitar a elegir fechas dentro de la ventana, con fecha límite, y si no
+     * eligen, que la empresa asigne un tramo único. Reglas en `compartido/vacaciones/campania.ts`. No hay
+     * opción de pagar en lugar de gozar: no es configurable porque no existe.
+     */
+    campania?: {
+        activa: boolean;
+        plazoParaDefinirDias: number;
+        avisoMinimoDias: number;
+        minDiasPorTramo: number;
+    };
+    /**
      * DE QUÉ EMPLEADORA SE TOMA LA ANTIGÜEDAD (15/11/2026). Ya no se suman los días de todas: cuenta la
      * de una sola (ver `empresaDeComputo` en utils/antiguedadArca.ts).
      *  - `modo`: "empresaVigente" (la de la relación vigente o más reciente) o "precedenciaManual".

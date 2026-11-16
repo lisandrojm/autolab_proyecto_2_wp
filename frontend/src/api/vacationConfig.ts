@@ -43,6 +43,8 @@ export interface VacationConfig {
   diasCorridos: boolean;
   /** Ventana anual de goce: el tramo del año en que se pueden tomar vacaciones, sin año ("MM-DD"). Ver `@compartido/ventanaGoce`. */
   ventanaGoce?: { enabled: boolean; inicio: string; fin: string };
+  /** Campaña de goce (15/11/2026): plazos. Ver `@compartido/vacaciones/campania`. */
+  campania?: { activa: boolean; plazoParaDefinirDias: number; avisoMinimoDias: number; minDiasPorTramo: number };
   /** De qué empleadora se toma la antigüedad (15/11/2026): ya no se suman. Ver `AntiguedadPorEmpresaConfig`. */
   computoAntiguedad?: ComputoAntiguedad;
   requiereFirma: boolean;

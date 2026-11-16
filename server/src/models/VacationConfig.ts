@@ -53,6 +53,12 @@ export interface IVacationConfig extends Document {
    */
   ventanaGoce?: { enabled: boolean; inicio: string; fin: string };
   /**
+   * CAMPAÑA DE GOCE (15/11/2026): invitar a elegir fechas dentro de la ventana, con fecha límite, y si no
+   * eligen, que la empresa asigne un tramo único. Reglas en `compartido/vacaciones/campania.ts`. No hay
+   * opción de pagar en lugar de gozar: no es configurable porque no existe.
+   */
+  campania?: { activa: boolean; plazoParaDefinirDias: number; avisoMinimoDias: number; minDiasPorTramo: number };
+  /**
    * DE QUÉ EMPLEADORA SE TOMA LA ANTIGÜEDAD (15/11/2026). Ya no se suman los días de todas: cuenta la
    * de una sola (ver `empresaDeComputo` en utils/antiguedadArca.ts).
    *  - `modo`: "empresaVigente" (la de la relación vigente o más reciente) o "precedenciaManual".
@@ -154,6 +160,13 @@ const VacationConfigSchema = new Schema<IVacationConfig>(
       enabled: { type: Boolean, default: false },
       inicio: { type: String, default: "11-01" },
       fin: { type: String, default: "04-30" },
+    },
+    // Campaña de goce. Con estos defaults, un tenant que nunca la tocó la lee apagada.
+    campania: {
+      activa: { type: Boolean, default: false },
+      plazoParaDefinirDias: { type: Number, default: 14, min: 1, max: 120 },
+      avisoMinimoDias: { type: Number, default: 30, min: 0, max: 180 },
+      minDiasPorTramo: { type: Number, default: 7, min: 1, max: 60 },
     },
     // Antigüedad por empresa. Con estos defaults, un tenant que nunca lo tocó lee «empresa vigente».
     computoAntiguedad: {

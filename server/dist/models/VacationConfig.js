@@ -77,6 +77,13 @@ const VacationConfigSchema = new Schema({
         inicio: { type: String, default: "11-01" },
         fin: { type: String, default: "04-30" },
     },
+    // Campaña de goce. Con estos defaults, un tenant que nunca la tocó la lee apagada.
+    campania: {
+        activa: { type: Boolean, default: false },
+        plazoParaDefinirDias: { type: Number, default: 14, min: 1, max: 120 },
+        avisoMinimoDias: { type: Number, default: 30, min: 0, max: 180 },
+        minDiasPorTramo: { type: Number, default: 7, min: 1, max: 60 },
+    },
     // Antigüedad por empresa. Con estos defaults, un tenant que nunca lo tocó lee «empresa vigente».
     computoAntiguedad: {
         modo: { type: String, enum: ["empresaVigente", "precedenciaManual"], default: "empresaVigente" },

@@ -11,7 +11,7 @@
  */
 export const RUTA_REGLAS_VACACIONES = "/vacations-rules";
 
-export type ClaveSeccionVacaciones = "global" | "fraccionamiento" | "dias-corridos" | "ventana-anual" | "antiguedad-por-empresa" | "solapamiento" | "visibilidad-por-contrato";
+export type ClaveSeccionVacaciones = "global" | "fraccionamiento" | "dias-corridos" | "ventana-anual" | "antiguedad-por-empresa" | "solapamiento" | "visibilidad-por-contrato" | "campania";
 
 export interface SeccionReglasVacaciones {
   clave: ClaveSeccionVacaciones;
@@ -29,6 +29,8 @@ export const SECCIONES_REGLAS_VACACIONES: SeccionReglasVacaciones[] = [
   { clave: "antiguedad-por-empresa", ruta: `${RUTA_REGLAS_VACACIONES}/antiguedad-por-empresa`, label: "Antigüedad por empresa", tabViejo: "company_seniority" },
   { clave: "solapamiento", ruta: `${RUTA_REGLAS_VACACIONES}/solapamiento`, label: "Solapamiento", tabViejo: "overlap" },
   { clave: "visibilidad-por-contrato", ruta: `${RUTA_REGLAS_VACACIONES}/visibilidad-por-contrato`, label: "Visibilidad por contrato", tabViejo: "contracts" }, // «…por tipo de Contrato» salía cortado en el sidebar
+  // Campaña de goce (15/11/2026): plazos para elegir, aviso por escrito y tramo mínimo.
+  { clave: "campania", ruta: `${RUTA_REGLAS_VACACIONES}/campania`, label: "Campaña de goce", tabViejo: "campania" },
 ];
 
 export const RUTAS_REGLAS_VACACIONES = SECCIONES_REGLAS_VACACIONES.map((s) => s.ruta);
