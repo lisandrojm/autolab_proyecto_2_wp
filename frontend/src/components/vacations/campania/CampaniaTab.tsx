@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faBell, faCheck, faCircleCheck, faCircleExclamation, faClockRotateLeft, faDownload, faEdit, faFilePdf, faLock, faPaperPlane, faPlus, faScaleBalanced, faSpinner, faTriangleExclamation, faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faBell, faCheck, faCircleCheck, faCircleExclamation, faClockRotateLeft, faDownload, faEdit, faFilePdf, faLock, faMagnifyingGlass, faPaperPlane, faXmark, faPlus, faScaleBalanced, faSpinner, faTriangleExclamation, faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
 import { campaniasVacacionesAPI, errorDeCampania, type Alerta, type Campania, type EstadoVisible, type Invitacion, type Tablero, type VistaPreviaDeInvitacion } from "../../../api/campaniasVacaciones";
 import { vacationConfigAPI, type AvailableContract } from "../../../api/vacationConfig";
 import { SelectorTiposContrato } from "./SelectorTiposContrato";
@@ -11,6 +11,7 @@ import { ETIQUETA_ESTADO, contarDiasTramo, resumenDeInvitables } from "@comparti
 import { TablaConEncabezadoFijo } from "../../ui/TablaConEncabezadoFijo";
 import { Modal } from "../../ui/Modal";
 import { LoadingSpinner } from "../../ui/LoadingSpinner";
+import { fuzzyMatch } from "../../../utils/searchHelpers";
 import { getImageUrl } from "../../../utils/imageHelpers";
 
 /**
@@ -157,6 +158,8 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
   const [datos, setDatos] = useState<Tablero | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<EstadoVisible | "">("");
+  // El buscador: por nombre, sin importar mayúsculas ni acentos. Se suma al filtro por estado.
+  const [busqueda, setBusqueda] = useState("");
   const [editando, setEditando] = useState<Invitacion | null>(null);
   const [historial, setHistorial] = useState<Invitacion | null>(null);
   // A quién se invita (sólo en borrador): la selección de tipos y la gente con días por tipo, para la vista previa.
@@ -220,7 +223,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
     }
   };
 
-  const filas = useMemo(() => (datos?.invitaciones || []).filter((i) => !filtro || i.estadoVisible === filtro), [datos, filtro]);
+  const filas = useMemo(() => (datos?.invitaciones || []).filter((i) => (!filtro || i.estadoVisible === filtro) && fuzzyMatch(i.nombre, busqueda.trim())), [datos, filtro, busqueda]);
   if (!datos) return <LoadingSpinner message="Cargando campaña..." />;
   const { campania: c, conteos } = datos;
   const vencidas = datos.invitaciones.filter((i) => i.estado === "vencido_sin_definir");
@@ -324,9 +327,18 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
           })}
       </div>
 
-      {/* Cuántas hay en cada estado; tocar una filtra la tabla. */}
+      {/* El buscador y cuántas hay en cada estado; tocar un estado filtra la tabla. */}
       {datos.invitaciones.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-full sm:w-72">
+            <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+            <input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar colaborador..." aria-label="Buscar colaborador" className="input-field w-full pl-9 pr-8" />
+            {busqueda && (
+              <button type="button" onClick={() => setBusqueda("")} title="Limpiar búsqueda" className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
           <button type="button" onClick={() => setFiltro("")} className={`px-3 py-1.5 rounded-lg border text-xs font-semibold ${!filtro ? "border-blue-500 ring-2 ring-blue-500/20" : "border-gray-200 dark:border-gray-700"} text-gray-700 dark:text-gray-200`}>
             Todas · {datos.invitaciones.length}
           </button>
@@ -335,6 +347,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
               {ETIQUETA_ESTADO[e]} · {conteos[e]}
             </button>
           ))}
+          {(busqueda.trim() || filtro) && <span className="text-xs text-gray-500 dark:text-gray-400">Mostrando {filas.length} de {datos.invitaciones.length}</span>}
         </div>
       )}
 
@@ -382,6 +395,13 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
             </tr>
           </thead>
           <tbody>
+            {filas.length === 0 && (
+              <tr>
+                <td colSpan={8} className="py-8 px-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                  Nadie coincide con {busqueda.trim() ? `«${busqueda.trim()}»` : "el filtro"}{busqueda.trim() && filtro ? ` en «${ETIQUETA_ESTADO[filtro]}»` : ""}.
+                </td>
+              </tr>
+            )}
             {filas.map((i) => (
               <tr key={i._id} className="group border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 align-top">
                 <td className={`py-3 px-4 sticky -left-px z-[5] bg-white dark:bg-[#1b2637] group-hover:bg-gray-50 dark:group-hover:bg-[#293344] ${FIN_COL_FIJA}`}>
