@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
   hace que la tarjeta y la pantalla se lean como la misma cosa; con íconos elegidos aparte, entrar a
   «Contratación» llevaba a una pantalla que arriba mostraba otro dibujo.
 */
-import { faBell, faCalendar, faCircleCheck, faLink, faShoppingCart, faSignOutAlt, faUmbrellaBeach, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faCalendar, faCalendarCheck, faCircleCheck, faLink, faShoppingCart, faSignOutAlt, faUmbrellaBeach, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
@@ -18,6 +18,7 @@ import { contratosPorVencerAPI } from "../../../../api/contratosPorVencer";
 // Una tarjeta = un permiso. El porqué y la contraparte del server están en ese módulo.
 import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_APPROVALS, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
 import { vacationsAPI } from "../../../../api/vacations";
+import { campaniasVacacionesAPI, type MiInvitacion } from "../../../../api/campaniasVacaciones";
 import { esFechaBajaVigente } from "../../../../utils/contratoVigencia";
 
 /** La notificación destacada arriba de las tarjetas, apagada hasta que vivan en la campanita. Ver el render. */
@@ -31,7 +32,8 @@ const MOSTRAR_NOTIFICACION_DESTACADA = false;
 // Registro va pegado a Contratación: son las dos formas de sumar gente.
 // «Mis equipos» no está: vive en la barra de abajo (ver `components/BottomNav`), no en una tarjeta.
 // «Aprobaciones» va después de Vacaciones: lo propio y, al lado, lo de su gente (15/11/2026).
-const ORDEN_DE_TARJETAS: ViewType[] = ["user_history", "registro", "activity_logs", "orders", "vacations", "approvals"];
+// «Elegí tus vacaciones» (campaña de goce, 15/11/2026) va justo antes de Vacaciones: es lo mismo, con fecha límite.
+const ORDEN_DE_TARJETAS: ViewType[] = ["user_history", "registro", "activity_logs", "orders", "campania", "vacations", "approvals"];
 
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
@@ -86,6 +88,23 @@ export default function Home({ onNavigate }: HomeProps) {
     contarParaAprobar();
   }, [contarParaAprobar]);
   useRefrescoEnFoco(contarParaAprobar);
+  /*
+    CAMPAÑA DE GOCE (15/11/2026): la tarjeta «Elegí tus vacaciones» aparece sólo mientras hay algo que
+    hacer (elegir, esperar la aprobación, acusar recibo del aviso). Su número son los días que faltan
+    para la fecha límite.
+  */
+  const [campania, setCampania] = useState<MiInvitacion | null>(null);
+  const cargarCampania = useCallback(() => {
+    if (!(user?.permissions || []).includes(MOBILE_VACATIONS)) return;
+    campaniasVacacionesAPI
+      .mia()
+      .then(setCampania)
+      .catch(() => undefined);
+  }, [user]);
+  useEffect(() => {
+    cargarCampania();
+  }, [cargarCampania]);
+  useRefrescoEnFoco(cargarCampania);
   const { profile, loading: profileLoading } = useProfile();
 
   /*
@@ -207,6 +226,10 @@ export default function Home({ onNavigate }: HomeProps) {
     quickActions.push(sinContrato ? { ...ordersAction, disabled: true } : ordersAction);
   }
 
+  if (puede(MOBILE_VACATIONS) && campania?.pendienteDeAccion) {
+    quickActions.push({ icon: faCalendarCheck, title: "Elegí tus vacaciones", view: "campania" as ViewType, disabled: false, badge: campania.puedeProponer ? `${Math.max(0, campania.diasParaLaFechaLimite)} d` : undefined });
+  }
+
   if (puede(MOBILE_VACATIONS)) {
     const vacacionesDeshabilitadas = sinContrato || profile?.vacationsEnabled === false;
     quickActions.push(
@@ -262,6 +285,7 @@ export default function Home({ onNavigate }: HomeProps) {
     user_history: MOBILE_USERS,
     registro: MOBILE_REGISTRO,
     approvals: MOBILE_APPROVALS,
+    campania: MOBILE_VACATIONS,
   };
   const posicion = (vista: ViewType) => {
     const i = ORDEN_DE_TARJETAS.indexOf(vista);
@@ -356,7 +380,7 @@ export default function Home({ onNavigate }: HomeProps) {
               */}
               <FontAwesomeIcon icon={action.icon} className={`h-4 w-4 shrink-0 ${action.disabled ? "text-slate-400 dark:text-slate-500" : "text-primary"}`} />
               {/* Con contador, el título deja libre la esquina: si no, un nombre largo le pasa por debajo. */}
-              <h2 className={`min-w-0 break-words text-[15px] font-bold leading-tight sm:text-base text-slate-900 dark:text-slate-100 ${(action as any).nuevos > 0 ? "pr-5" : ""}`}>{action.title}</h2>
+              <h2 className={`min-w-0 break-words text-[15px] font-bold leading-tight sm:text-base text-slate-900 dark:text-slate-100 ${(action as any).badge ? "pr-8" : (action as any).nuevos > 0 ? "pr-5" : ""}`}>{action.title}</h2>
 
               {/*
                 CUÁNTO HAY SIN MIRAR: EN LA ESQUINA, CHICO Y VERDE.
@@ -370,7 +394,11 @@ export default function Home({ onNavigate }: HomeProps) {
                 el globo pese más que el nombre de la tarjeta; el color fuerte lo pone el texto, que
                 es lo que hay que leer.
               */}
-              {(action as any).nuevos > 0 && (
+              {/* Un texto en vez de un número (los días a la fecha límite de la campaña): mismo globo. */}
+              {(action as any).badge && (
+                <span className="absolute right-2 top-2 flex h-[18px] items-center justify-center rounded-full bg-amber-500/20 px-1.5 text-[10px] font-black leading-none text-amber-700 dark:bg-amber-400/20 dark:text-amber-300">{(action as any).badge}</span>
+              )}
+              {!(action as any).badge && (action as any).nuevos > 0 && (
                 <span className="absolute right-2 top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-emerald-500/20 px-1 text-[10px] font-black leading-none text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-300">
                   {(action as any).nuevos > 9 ? "9+" : (action as any).nuevos}
                 </span>

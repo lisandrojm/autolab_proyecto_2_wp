@@ -18,6 +18,7 @@ import MyTeams from "./views/MyTeams";
 import Registro from "./views/Registro";
 import Notificaciones from "./views/Notificaciones";
 import Aprobaciones from "./views/Aprobaciones";
+import Campania from "./views/Campania";
 import { useAuthStore } from "../../../stores/authStore";
 import { useThemeStore } from "../../../stores/themeStore";
 import { usePermisoInactivo } from "../../../stores/permisosInactivosStore";
@@ -151,6 +152,9 @@ function App() {
       // Las vacaciones de su gente que esperan su aprobación (supervisor y coordinador, 15/11/2026).
       case "approvals":
         return puede(MOBILE_APPROVALS) ? <Aprobaciones onNavigate={setCurrentView} /> : inicio;
+      // «Elegí tus vacaciones»: la campaña de goce (15/11/2026), con el mismo permiso que Vacaciones.
+      case "campania":
+        return puede(MOBILE_VACATIONS) ? <Campania onNavigate={setCurrentView} /> : inicio;
       // Las notificaciones son de cualquiera que entre a la app: avisan sobre lo que ya puede ver.
       case "notifications":
         return <Notificaciones onNavigate={setCurrentView} />;

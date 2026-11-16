@@ -148,6 +148,10 @@ export const NOVEDAD_ALTA_ARCA_EXTERNA = "alta_arca_externa";
 /** Vacaciones por jerarquía (15/11/2026): te toca aprobar, y el coordinador te pide que revises. Abren «Aprobaciones». */
 export const NOVEDAD_VACACION_PARA_APROBAR = "vacacion_para_aprobar";
 export const NOVEDAD_VACACION_RECORDATORIO = "vacacion_recordatorio";
+// Campaña de goce (15/11/2026): invitación, recordatorio y aviso del otorgamiento. Abren «Elegí tus vacaciones».
+export const NOVEDAD_CAMPANIA_INVITACION = "campania_invitacion";
+export const NOVEDAD_CAMPANIA_RECORDATORIO = "campania_recordatorio";
+export const NOVEDAD_VACACION_OTORGADA = "vacacion_otorgada";
 
 /**
  * Todo lo que se cuenta en la tarjeta Contratación: la solicitud que entra y cada decisión posterior.

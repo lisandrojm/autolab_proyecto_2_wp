@@ -5,7 +5,7 @@ import { faBell, faCheckDouble, faEnvelope, faEnvelopeOpen, faLink, faUserPlus, 
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import SectionHeader from "../components/SectionHeader";
 import { useNotifications } from "../hooks/useNotifications";
-import { NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA, NOVEDAD_SOLICITUD_RECHAZADA, NOVEDAD_PLAN_VACACIONES_ENVIADO, NOVEDAD_PLAN_VACACIONES_RESUELTO, NOVEDAD_ALTA_ARCA_EXTERNA, NOVEDAD_VACACION_PARA_APROBAR, NOVEDAD_VACACION_RECORDATORIO } from "../../../../api/personnel";
+import { NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA, NOVEDAD_SOLICITUD_RECHAZADA, NOVEDAD_PLAN_VACACIONES_ENVIADO, NOVEDAD_PLAN_VACACIONES_RESUELTO, NOVEDAD_ALTA_ARCA_EXTERNA, NOVEDAD_VACACION_PARA_APROBAR, NOVEDAD_VACACION_RECORDATORIO, NOVEDAD_CAMPANIA_INVITACION, NOVEDAD_CAMPANIA_RECORDATORIO, NOVEDAD_VACACION_OTORGADA } from "../../../../api/personnel";
 import { ViewType } from "../types";
 
 /*
@@ -35,6 +35,10 @@ const NOVEDADES: Record<string, { icono: IconDefinition; vista?: ViewType }> = {
   // Te toca aprobar unas vacaciones (o el coordinador te pide que las revises): abre «Aprobaciones».
   [NOVEDAD_VACACION_PARA_APROBAR]: { icono: faUmbrellaBeach, vista: "approvals" },
   [NOVEDAD_VACACION_RECORDATORIO]: { icono: faUmbrellaBeach, vista: "approvals" },
+  // Campaña de goce: elegir, el recordatorio y el aviso del otorgamiento (para acusar recibo) abren «Elegí tus vacaciones».
+  [NOVEDAD_CAMPANIA_INVITACION]: { icono: faUmbrellaBeach, vista: "campania" },
+  [NOVEDAD_CAMPANIA_RECORDATORIO]: { icono: faUmbrellaBeach, vista: "campania" },
+  [NOVEDAD_VACACION_OTORGADA]: { icono: faCircleCheck, vista: "campania" },
 };
 
 const cuando = (iso: string) => {
