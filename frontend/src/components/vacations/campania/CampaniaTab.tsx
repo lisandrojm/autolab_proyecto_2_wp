@@ -368,7 +368,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
           )}
         </div>
       ) : (
-        <TablaConEncabezadoFijo className="rounded border dark:border-slate-800" tabla="w-full dark:bg-slate-800/80 table-auto">
+        <TablaConEncabezadoFijo sinExportar className="rounded border dark:border-slate-800" tabla="w-full dark:bg-slate-800/80 table-auto">
           <thead>
             <tr>
               <th className={`${th} sticky -left-px z-[15] bg-white dark:bg-gray-800 ${FIN_COL_FIJA}`}>Colaborador</th>
