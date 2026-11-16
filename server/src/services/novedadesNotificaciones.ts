@@ -55,6 +55,14 @@ export const NOVEDAD_ALTA_ARCA_EXTERNA = "alta_arca_externa";
 export const NOVEDAD_VACACION_PARA_APROBAR = "vacacion_para_aprobar";
 export const NOVEDAD_VACACION_RECORDATORIO = "vacacion_recordatorio";
 
+/*
+  CAMPAÑA DE GOCE (15/11/2026): la invitación a elegir fechas, el recordatorio (manual o 2 días antes de la
+  fecha límite) y el aviso por escrito del otorgamiento. Abren «Elegí tus vacaciones» en la app.
+*/
+export const NOVEDAD_CAMPANIA_INVITACION = "campania_invitacion";
+export const NOVEDAD_CAMPANIA_RECORDATORIO = "campania_recordatorio";
+export const NOVEDAD_VACACION_OTORGADA = "vacacion_otorgada";
+
 /** Los tipos que la app cuenta por tarjeta. Agregar uno acá sin tocar la app lo deja sin contar. */
 export const TIPOS_NOVEDAD = [NOVEDAD_REGISTRO, NOVEDAD_SOLICITUD, NOVEDAD_SOLICITUD_APROBADA, NOVEDAD_SOLICITUD_RECHAZADA, NOVEDAD_SOLICITUD_CANCELADA, NOVEDAD_SOLICITUD_REABIERTA, NOVEDAD_PLAN_VACACIONES_ENVIADO, NOVEDAD_PLAN_VACACIONES_RESUELTO];
 

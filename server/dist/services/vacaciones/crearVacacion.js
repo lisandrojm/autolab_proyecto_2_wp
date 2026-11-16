@@ -69,23 +69,38 @@ export async function adjustBalanceOnRequestChange(tenantId, userId, year, days,
         console.error("Error adjusting overridden user vacation balance:", error);
     }
 }
-/**
- * La configuración que rige para la persona, resuelta entre todos sus proyectos (regla de siempre
- * para multiproyecto): fraccionar gana si ALGUNO lo permite (y con el menor mínimo), y días hábiles
- * gana sobre corridos si ALGUNO los usa.
- *
- * LA VENTANA ANUAL DE GOCE (10/11/2026) sigue el mismo criterio —lo más flexible—: si ALGÚN proyecto
- * no tiene ventana, no se aplica; si todos la tienen, vale la unión. Y el Área de la persona, si tiene
- * configuración propia, manda sobre los proyectos (`areaNombre` es el `department` del perfil). La
- * cuenta está en `compartido/ventanaGoce.ts`; la app muestra la misma, pedida por `/profile/stats`.
- */
 export async function configEfectivaDe(tenantId, user, globalConfig, opciones = {}) {
+    const projects = user.projectIds && user.projectIds.length > 0 ? await Project.find({ _id: { $in: user.projectIds }, tenantId }) : [];
+    const area = opciones.areaNombre ? await Area.findOne({ tenantId, name: opciones.areaNombre }).select("vacationConfig").lean() : null;
+    return combinarConfigEfectiva(globalConfig, projects, area);
+}
+/**
+ * LA MISMA CUENTA, PARA MUCHOS (campaña de goce, 15/11/2026): los proyectos y las áreas se leen una vez
+ * y se combinan en memoria, en vez de dos consultas por persona. `personas` trae de cada una sus
+ * `projectIds` y el nombre de su área (`department` del perfil).
+ */
+export async function configsEfectivasEnLote(tenantId, personas, globalConfig) {
+    const idsProyectos = [...new Set(personas.flatMap((p) => (p.projectIds || []).map(String)))].filter((id) => Types.ObjectId.isValid(id));
+    const nombresArea = [...new Set(personas.map((p) => p.areaNombre).filter((n) => !!n))];
+    const [proyectos, areas] = await Promise.all([
+        idsProyectos.length ? Project.find({ _id: { $in: idsProyectos }, tenantId }).select("vacationConfig").lean() : Promise.resolve([]),
+        nombresArea.length ? Area.find({ tenantId, name: { $in: nombresArea } }).select("name vacationConfig").lean() : Promise.resolve([]),
+    ]);
+    const proyectoPorId = new Map(proyectos.map((p) => [String(p._id), p]));
+    const areaPorNombre = new Map(areas.map((a) => [String(a.name), a]));
+    const r = new Map();
+    for (const p of personas) {
+        const suyos = (p.projectIds || []).map((id) => proyectoPorId.get(String(id))).filter(Boolean);
+        r.set(p.userId, combinarConfigEfectiva(globalConfig, suyos, p.areaNombre ? areaPorNombre.get(p.areaNombre) || null : null));
+    }
+    return r;
+}
+/** La combinación, sin base: la más flexible entre los proyectos, y el Área manda en la ventana. */
+export function combinarConfigEfectiva(globalConfig, projects, area) {
     let permiteFraccionadas = globalConfig.permiteFraccionadas;
     let minDiasFraccion = globalConfig.minDiasFraccion || 7;
     let diasCorridos = globalConfig.diasCorridos;
-    let projects = [];
-    if (user.projectIds && user.projectIds.length > 0) {
-        projects = await Project.find({ _id: { $in: user.projectIds }, tenantId });
+    if (projects.length > 0) {
         const projectConfigs = projects.map((p) => p.vacationConfig && !p.vacationConfig.useGlobalConfig
             ? { permiteFraccionadas: p.vacationConfig.permiteFraccionadas, minDiasFraccion: p.vacationConfig.minDiasFraccion, diasCorridos: p.vacationConfig.diasCorridos }
             : { permiteFraccionadas: globalConfig.permiteFraccionadas, minDiasFraccion: globalConfig.minDiasFraccion, diasCorridos: globalConfig.diasCorridos });
@@ -99,7 +114,6 @@ export async function configEfectivaDe(tenantId, user, globalConfig, opciones = 
             diasCorridos = corridosValues.every((v) => v === true);
         }
     }
-    const area = opciones.areaNombre ? await Area.findOne({ tenantId, name: opciones.areaNombre }).select("vacationConfig").lean() : null;
     const ventanaGoce = ventanaEfectiva({ global: normalizarVentana(globalConfig.ventanaGoce), area: area?.vacationConfig, proyectos: projects.map((p) => p.vacationConfig) });
     return { permiteFraccionadas, minDiasFraccion, diasCorridos, ventanaGoce };
 }
@@ -144,7 +158,7 @@ export async function crearVacacionParaPersona(o) {
         throw new ErrorVacacion("La fecha de inicio no puede ser posterior a la fecha de fin");
     const existingVacation = await Vacation.findOne({ tenantId, userId, status: { $nin: ["rejected", "cancelled"] }, $or: [{ startDate: { $lte: end }, endDate: { $gte: start } }] });
     if (existingVacation)
-        throw new ErrorVacacion(o.origen === "plan" ? "La persona ya tiene una solicitud de vacaciones activa en ese rango de fechas." : "Ya tienes una solicitud de vacaciones activa en este rango de fechas.");
+        throw new ErrorVacacion(o.origen !== "solicitud" ? "La persona ya tiene una solicitud de vacaciones activa en ese rango de fechas." : "Ya tienes una solicitud de vacaciones activa en este rango de fechas.");
     const choque = await violaSolapamiento(tenantId, String(userId), start, end, { vacacionesVirtuales: o.vacacionesVirtuales });
     if (choque.viola)
         throw new ErrorVacacion(choque.mensaje || "Conflicto de solapamiento.");
@@ -224,6 +238,8 @@ export async function crearVacacionParaPersona(o) {
         requiresSignature: globalConfig.requiereFirma,
         origen: o.origen,
         planVacacionesId: o.planVacacionesId ? new Types.ObjectId(String(o.planVacacionesId)) : undefined,
+        campaniaId: o.campaniaId ? new Types.ObjectId(String(o.campaniaId)) : undefined,
+        asignadaPorEmpresa: o.asignadaPorEmpresa || undefined,
         projectId: o.projectId ? new Types.ObjectId(String(o.projectId)) : undefined,
         periodoSaldo: o.periodoSaldo,
         rules: {

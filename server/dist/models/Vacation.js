@@ -42,8 +42,10 @@ const vacationSchema = new Schema({
     signedAt: { type: Date },
     signedBy: { type: Schema.Types.ObjectId, ref: "User" },
     pdfPreAprobacionUrl: { type: String },
-    origen: { type: String, enum: ["solicitud", "plan"], default: "solicitud" },
+    origen: { type: String, enum: ["solicitud", "plan", "campania"], default: "solicitud" },
     planVacacionesId: { type: Schema.Types.ObjectId, ref: "PlanVacaciones" },
+    campaniaId: { type: Schema.Types.ObjectId, ref: "CampaniaVacaciones" },
+    asignadaPorEmpresa: { type: Boolean },
     projectId: { type: Schema.Types.ObjectId, ref: "Project" },
     periodoSaldo: { type: Number },
     cadena: {

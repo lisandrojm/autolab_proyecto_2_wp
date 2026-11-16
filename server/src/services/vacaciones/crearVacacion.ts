@@ -82,13 +82,47 @@ export async function adjustBalanceOnRequestChange(tenantId: any, userId: any, y
  * configuración propia, manda sobre los proyectos (`areaNombre` es el `department` del perfil). La
  * cuenta está en `compartido/ventanaGoce.ts`; la app muestra la misma, pedida por `/profile/stats`.
  */
-export async function configEfectivaDe(tenantId: any, user: any, globalConfig: any, opciones: { areaNombre?: string | null } = {}): Promise<{ permiteFraccionadas: boolean; minDiasFraccion: number; diasCorridos: boolean; ventanaGoce: VentanaEfectiva }> {
+export interface ConfigEfectiva {
+  permiteFraccionadas: boolean;
+  minDiasFraccion: number;
+  diasCorridos: boolean;
+  ventanaGoce: VentanaEfectiva;
+}
+
+export async function configEfectivaDe(tenantId: any, user: any, globalConfig: any, opciones: { areaNombre?: string | null } = {}): Promise<ConfigEfectiva> {
+  const projects: any[] = user.projectIds && user.projectIds.length > 0 ? await Project.find({ _id: { $in: user.projectIds }, tenantId }) : [];
+  const area: any = opciones.areaNombre ? await Area.findOne({ tenantId, name: opciones.areaNombre }).select("vacationConfig").lean() : null;
+  return combinarConfigEfectiva(globalConfig, projects, area);
+}
+
+/**
+ * LA MISMA CUENTA, PARA MUCHOS (campaña de goce, 15/11/2026): los proyectos y las áreas se leen una vez
+ * y se combinan en memoria, en vez de dos consultas por persona. `personas` trae de cada una sus
+ * `projectIds` y el nombre de su área (`department` del perfil).
+ */
+export async function configsEfectivasEnLote(tenantId: any, personas: { userId: string; projectIds: any[]; areaNombre?: string | null }[], globalConfig: any): Promise<Map<string, ConfigEfectiva>> {
+  const idsProyectos = [...new Set(personas.flatMap((p) => (p.projectIds || []).map(String)))].filter((id) => Types.ObjectId.isValid(id));
+  const nombresArea = [...new Set(personas.map((p) => p.areaNombre).filter((n): n is string => !!n))];
+  const [proyectos, areas]: any[][] = await Promise.all([
+    idsProyectos.length ? Project.find({ _id: { $in: idsProyectos }, tenantId }).select("vacationConfig").lean() : Promise.resolve([]),
+    nombresArea.length ? Area.find({ tenantId, name: { $in: nombresArea } }).select("name vacationConfig").lean() : Promise.resolve([]),
+  ]);
+  const proyectoPorId = new Map(proyectos.map((p: any) => [String(p._id), p]));
+  const areaPorNombre = new Map(areas.map((a: any) => [String(a.name), a]));
+  const r = new Map<string, ConfigEfectiva>();
+  for (const p of personas) {
+    const suyos = (p.projectIds || []).map((id) => proyectoPorId.get(String(id))).filter(Boolean);
+    r.set(p.userId, combinarConfigEfectiva(globalConfig, suyos, p.areaNombre ? areaPorNombre.get(p.areaNombre) || null : null));
+  }
+  return r;
+}
+
+/** La combinación, sin base: la más flexible entre los proyectos, y el Área manda en la ventana. */
+export function combinarConfigEfectiva(globalConfig: any, projects: any[], area: any): ConfigEfectiva {
   let permiteFraccionadas = globalConfig.permiteFraccionadas;
   let minDiasFraccion = globalConfig.minDiasFraccion || 7;
   let diasCorridos = globalConfig.diasCorridos;
-  let projects: any[] = [];
-  if (user.projectIds && user.projectIds.length > 0) {
-    projects = await Project.find({ _id: { $in: user.projectIds }, tenantId });
+  if (projects.length > 0) {
     const projectConfigs = projects.map((p: any) =>
       p.vacationConfig && !p.vacationConfig.useGlobalConfig
         ? { permiteFraccionadas: p.vacationConfig.permiteFraccionadas, minDiasFraccion: p.vacationConfig.minDiasFraccion, diasCorridos: p.vacationConfig.diasCorridos }
@@ -104,7 +138,6 @@ export async function configEfectivaDe(tenantId: any, user: any, globalConfig: a
       diasCorridos = corridosValues.every((v) => v === true);
     }
   }
-  const area: any = opciones.areaNombre ? await Area.findOne({ tenantId, name: opciones.areaNombre }).select("vacationConfig").lean() : null;
   const ventanaGoce = ventanaEfectiva({ global: normalizarVentana(globalConfig.ventanaGoce), area: area?.vacationConfig, proyectos: projects.map((p: any) => p.vacationConfig) });
   return { permiteFraccionadas, minDiasFraccion, diasCorridos, ventanaGoce };
 }
@@ -134,8 +167,11 @@ export interface PedidoDeVacacion {
   reason?: string;
   /** Lo demás que vino en el body de la app (se guarda como antes, debajo de los campos calculados). */
   extra?: Record<string, unknown>;
-  origen: "solicitud" | "plan";
+  origen: "solicitud" | "plan" | "campania";
   planVacacionesId?: Types.ObjectId | string;
+  /** Campaña de goce: de cuál, y si las fijó la empresa porque la persona no eligió. */
+  campaniaId?: Types.ObjectId | string;
+  asignadaPorEmpresa?: boolean;
   projectId?: Types.ObjectId | string;
   /** De qué año descuenta. Sin él, el año en que empieza. */
   periodoSaldo?: number;
@@ -164,7 +200,7 @@ export async function crearVacacionParaPersona(o: PedidoDeVacacion): Promise<IVa
   if (start > end) throw new ErrorVacacion("La fecha de inicio no puede ser posterior a la fecha de fin");
 
   const existingVacation = await Vacation.findOne({ tenantId, userId, status: { $nin: ["rejected", "cancelled"] }, $or: [{ startDate: { $lte: end }, endDate: { $gte: start } }] });
-  if (existingVacation) throw new ErrorVacacion(o.origen === "plan" ? "La persona ya tiene una solicitud de vacaciones activa en ese rango de fechas." : "Ya tienes una solicitud de vacaciones activa en este rango de fechas.");
+  if (existingVacation) throw new ErrorVacacion(o.origen !== "solicitud" ? "La persona ya tiene una solicitud de vacaciones activa en ese rango de fechas." : "Ya tienes una solicitud de vacaciones activa en este rango de fechas.");
 
   const choque = await violaSolapamiento(tenantId, String(userId), start, end, { vacacionesVirtuales: o.vacacionesVirtuales });
   if (choque.viola) throw new ErrorVacacion(choque.mensaje || "Conflicto de solapamiento.");
@@ -242,6 +278,8 @@ export async function crearVacacionParaPersona(o: PedidoDeVacacion): Promise<IVa
     requiresSignature: globalConfig.requiereFirma,
     origen: o.origen,
     planVacacionesId: o.planVacacionesId ? new Types.ObjectId(String(o.planVacacionesId)) : undefined,
+    campaniaId: o.campaniaId ? new Types.ObjectId(String(o.campaniaId)) : undefined,
+    asignadaPorEmpresa: o.asignadaPorEmpresa || undefined,
     projectId: o.projectId ? new Types.ObjectId(String(o.projectId)) : undefined,
     periodoSaldo: o.periodoSaldo,
     rules: {

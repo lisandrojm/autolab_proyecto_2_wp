@@ -81,6 +81,8 @@ export async function rechazarVacacion(v: IVacation, rechazo: { userId: string; 
   if (motivo) v.managerComment = motivo;
   await v.save();
   await adjustBalanceOnRequestChange(v.tenantId, v.userId, v.startDate.getFullYear(), v.daysRequested, "reject");
+  // Si era parte de una propuesta de la campaña de goce, la persona vuelve a elegir esos días.
+  if (v.campaniaId) await import("./campaniaVacaciones.js").then((m) => m.alSalirDeLaCampania(v, motivo || "Rechazada")).catch((e) => console.error("[CAMPANIA] rechazo:", e?.message || e));
   await notificar({
     tenantId: v.tenantId,
     destinatarios: [String(v.userId)],
@@ -90,6 +92,35 @@ export async function rechazarVacacion(v: IVacation, rechazo: { userId: string; 
     refId: v._id as any,
   });
   return v;
+}
+
+/**
+ * LA APROBACIÓN FINAL DEL ADMIN (lo que hacía `PUT /:id/approve`, 15/11/2026: lo usa también la campaña de
+ * goce al confirmar lo que asigna la empresa). Espera una `pre_approved`. Firma, saldo y aviso como siempre.
+ */
+export async function aprobarComoAdmin(vacation: IVacation, approverId: string): Promise<IVacation> {
+  if (vacation.status !== "pre_approved") throw new ErrorVacacion(vacation.status === "pending" ? "Todavía espera la aprobación del supervisor o del coordinador" : "Solo las solicitudes preaprobadas pueden ser aprobadas");
+  vacation.status = "approved";
+  vacation.approvedBy = new Types.ObjectId(approverId);
+  vacation.approvedAt = new Date();
+  const requiresSignature = vacation.rules?.requiereFirma || false;
+  vacation.requiresSignature = requiresSignature;
+  if (requiresSignature) {
+    vacation.signatureStatus = "sent";
+    vacation.signatureSentAt = new Date();
+  }
+  await vacation.save();
+  await adjustBalanceOnRequestChange(vacation.tenantId, vacation.userId, vacation.startDate.getFullYear(), vacation.daysRequested, "approve");
+  await notificar({
+    tenantId: vacation.tenantId,
+    destinatarios: [String(vacation.userId)],
+    type: "vacation",
+    title: requiresSignature ? "Documento enviado para firma" : "Solicitud de vacaciones aprobada",
+    message: requiresSignature ? `Tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido aprobada. Revisá tu casilla de email para firmar el documento.` : `Tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido aprobada.`,
+    linkUrl: "/vacations",
+    refId: vacation._id as any,
+  });
+  return vacation;
 }
 
 export async function rechazarEtapa(v: IVacation, userId: string, motivo?: string): Promise<IVacation> {

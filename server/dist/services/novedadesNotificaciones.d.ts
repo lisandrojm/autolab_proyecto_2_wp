@@ -10,6 +10,9 @@ export declare const NOVEDAD_PLAN_VACACIONES_RESUELTO = "plan_vacaciones_resuelt
 export declare const NOVEDAD_ALTA_ARCA_EXTERNA = "alta_arca_externa";
 export declare const NOVEDAD_VACACION_PARA_APROBAR = "vacacion_para_aprobar";
 export declare const NOVEDAD_VACACION_RECORDATORIO = "vacacion_recordatorio";
+export declare const NOVEDAD_CAMPANIA_INVITACION = "campania_invitacion";
+export declare const NOVEDAD_CAMPANIA_RECORDATORIO = "campania_recordatorio";
+export declare const NOVEDAD_VACACION_OTORGADA = "vacacion_otorgada";
 /** Los tipos que la app cuenta por tarjeta. Agregar uno acá sin tocar la app lo deja sin contar. */
 export declare const TIPOS_NOVEDAD: string[];
 interface Aviso {

@@ -13,7 +13,7 @@ import { saldosDeVacaciones } from "../services/vacaciones/saldos.js";
 import { fechasBloqueadas } from "../services/vacaciones/solapamiento.js";
 import { ErrorVacacion, adjustBalanceOnRequestChange, crearVacacionParaPersona, preAprobarVacacion } from "../services/vacaciones/crearVacacion.js";
 import { etapaDe } from "../compartido/vacaciones/etapaDeAprobacion.js";
-import { aprobarEtapa, bandejaDeAprobaciones, contarParaAprobar, iniciarAprobacion, rechazarEtapa, rechazarVacacion, recordarAlSupervisor } from "../services/vacaciones/aprobacionPorEtapas.js";
+import { aprobarComoAdmin, aprobarEtapa, bandejaDeAprobaciones, contarParaAprobar, iniciarAprobacion, rechazarEtapa, rechazarVacacion, recordarAlSupervisor } from "../services/vacaciones/aprobacionPorEtapas.js";
 import { requirePermission, tienePermiso } from "../middleware/permissions.js";
 const router = express.Router();
 // Apply authentication to all routes
@@ -566,43 +566,25 @@ router.put("/:id/approve", soloAdminVacaciones, async (req, res) => {
           Una `pending` que no espera a nadie (anterior a la jerarquía, sin cadena) es del admin: se pre-aprueba
           (con su PDF, como antes) y se aprueba. Si espera al supervisor o al coordinador, no se adelanta.
         */
+        /*
+          CAMPAÑA DE GOCE: otorgarla es avisar por escrito HOY, así que antes se mira que el aviso llegue
+          (avisoMinimoDias antes del inicio) y que el goce termine dentro de la ventana de la campaña.
+        */
+        if (vacation.campaniaId) {
+            const { erroresDeOtorgamiento } = await import("../services/vacaciones/campaniaVacaciones.js");
+            const errores = await erroresDeOtorgamiento(vacation);
+            if (errores.length)
+                return res.status(400).json({ error: errores.join(" ") });
+        }
         if (vacation.status === "pending" && etapaDe(vacation) === "admin")
             await preAprobarVacacion(vacation, approverId, req.tenantObjectId);
         if (vacation.status !== "pre_approved") {
             return res.status(400).json({ error: vacation.status === "pending" ? "Todavía espera la aprobación del supervisor o del coordinador" : "Solo las solicitudes preaprobadas pueden ser aprobadas" });
         }
-        vacation.status = "approved";
-        vacation.approvedBy = new Types.ObjectId(approverId);
-        vacation.approvedAt = new Date();
-        // Check if rules requires signature
-        const requiresSignature = vacation.rules?.requiereFirma || false;
-        vacation.requiresSignature = requiresSignature;
-        if (requiresSignature) {
-            vacation.signatureStatus = "sent";
-            vacation.signatureSentAt = new Date();
-        }
-        await vacation.save();
-        await adjustBalanceOnRequestChange(tenantId, vacation.userId, vacation.startDate.getFullYear(), vacation.daysRequested, "approve");
-        if (requiresSignature) {
-            await Notification.create({
-                tenantId,
-                userId: vacation.userId,
-                type: "vacation",
-                title: "Documento enviado para firma",
-                message: `Tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido aprobada. Revisá tu casilla de email para firmar el documento.`,
-                linkUrl: `/vacations`,
-            });
-        }
-        else {
-            await Notification.create({
-                tenantId,
-                userId: vacation.userId,
-                type: "vacation",
-                title: "Solicitud de vacaciones aprobada",
-                message: `Tu solicitud de vacaciones N°: ${vacation.vacationNumber} ha sido aprobada.`,
-                linkUrl: `/vacations`,
-            });
-        }
+        await aprobarComoAdmin(vacation, String(approverId));
+        // Si cierra la propuesta de una campaña (todos sus tramos aprobados), queda el aviso por escrito y se avisa a la persona.
+        if (vacation.campaniaId)
+            await import("../services/vacaciones/campaniaVacaciones.js").then((m) => m.alAprobarseEnLaCampania(vacation)).catch((e) => console.error("[CAMPANIA] aprobación:", e?.message || e));
         res.json(vacation);
     }
     catch (error) {
@@ -647,6 +629,9 @@ router.put("/:id/cancel", async (req, res) => {
         vacation.cancelledAt = new Date();
         await vacation.save();
         await adjustBalanceOnRequestChange(tenantId, vacation.userId, vacation.startDate.getFullYear(), vacation.daysRequested, "cancel");
+        // Una vacación de la campaña de goce que se cancela: la persona (o la empresa) vuelve a fijar esos días.
+        if (vacation.campaniaId)
+            await import("../services/vacaciones/campaniaVacaciones.js").then((m) => m.alSalirDeLaCampania(vacation, "Cancelada")).catch((e) => console.error("[CAMPANIA] cancelación:", e?.message || e));
         res.json(vacation);
     }
     catch (error) {

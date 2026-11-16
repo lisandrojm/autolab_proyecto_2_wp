@@ -36,6 +36,7 @@ import { initPresentacionAutomaticaScheduler } from "./services/presentacionAuto
 import { initDescargaConstanciasScheduler } from "./services/descargaConstanciasCronService.js";
 import { initBarridoObrasSocialesScheduler } from "./services/barridoObrasSocialesCronService.js";
 import { initSincronizacionRelacionesScheduler } from "./services/arca/sincronizacionRelacionesCronService.js";
+import { initCampaniaVacacionesScheduler } from "./services/campaniaVacacionesCronService.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
 import { authRoutes } from "./routes/auth.js";
 import { secureRoutes } from "./routes/secure.js";
@@ -106,6 +107,7 @@ import { pdfTemplatePreviewRoutes } from "./routes/pdfPreview.js";
 import { vacationConfigRoutes } from "./routes/vacationConfig.js";
 import { vacationsRoutes } from "./routes/vacations.js";
 import { planVacacionesRoutes } from "./routes/planVacaciones.js";
+import { campaniasVacacionesRoutes } from "./routes/campaniasVacaciones.js";
 import { vacationOverlapRoutes } from "./routes/vacationOverlaps.js";
 import { RequestConfigRoutes } from "./routes/requestConfig.js";
 import { RequestRoutes } from "./routes/activityReports.js";
@@ -325,6 +327,8 @@ app.use("/api/v1/vacation-overlaps", vacationOverlapRoutes);
 app.use("/api/v1/vacations", vacationsRoutes);
 // Plan de vacaciones por proyecto (router propio: ver routes/planVacaciones.ts).
 app.use("/api/v1/planes-vacaciones", planVacacionesRoutes);
+// Campaña de goce de vacaciones (15/11/2026): ver routes/campaniasVacaciones.ts.
+app.use("/api/v1/campanias-vacaciones", campaniasVacacionesRoutes);
 app.use("/api/v1/request-config", RequestConfigRoutes);
 app.use("/api/v1/activity-reports", RequestRoutes);
 app.use("/api/v1/shifts", shiftRoutes);
@@ -480,6 +484,13 @@ connectDB()
         }
         catch (error) {
             console.error("❌ Failed to initialize sincronizacion-relaciones scheduler:", error);
+        }
+        // Campaña de goce: vencimientos y recordatorios de las campañas lanzadas (una vez por hora).
+        try {
+            initCampaniaVacacionesScheduler();
+        }
+        catch (error) {
+            console.error("❌ Failed to initialize campania-vacaciones scheduler:", error);
         }
     }
     // «Contrato custom» y «Release custom» son del sistema: se crean solos para cada tenant (en

@@ -26,14 +26,27 @@ export declare function adjustBalanceOnRequestChange(tenantId: any, userId: any,
  * configuración propia, manda sobre los proyectos (`areaNombre` es el `department` del perfil). La
  * cuenta está en `compartido/ventanaGoce.ts`; la app muestra la misma, pedida por `/profile/stats`.
  */
-export declare function configEfectivaDe(tenantId: any, user: any, globalConfig: any, opciones?: {
-    areaNombre?: string | null;
-}): Promise<{
+export interface ConfigEfectiva {
     permiteFraccionadas: boolean;
     minDiasFraccion: number;
     diasCorridos: boolean;
     ventanaGoce: VentanaEfectiva;
-}>;
+}
+export declare function configEfectivaDe(tenantId: any, user: any, globalConfig: any, opciones?: {
+    areaNombre?: string | null;
+}): Promise<ConfigEfectiva>;
+/**
+ * LA MISMA CUENTA, PARA MUCHOS (campaña de goce, 15/11/2026): los proyectos y las áreas se leen una vez
+ * y se combinan en memoria, en vez de dos consultas por persona. `personas` trae de cada una sus
+ * `projectIds` y el nombre de su área (`department` del perfil).
+ */
+export declare function configsEfectivasEnLote(tenantId: any, personas: {
+    userId: string;
+    projectIds: any[];
+    areaNombre?: string | null;
+}[], globalConfig: any): Promise<Map<string, ConfigEfectiva>>;
+/** La combinación, sin base: la más flexible entre los proyectos, y el Área manda en la ventana. */
+export declare function combinarConfigEfectiva(globalConfig: any, projects: any[], area: any): ConfigEfectiva;
 /** Cuántos días pide un rango: corridos inclusive, o hábiles de lunes a viernes (los feriados no se descuentan, como siempre). */
 export declare function contarDias(start: Date, end: Date, diasCorridos: boolean): number;
 export interface PedidoDeVacacion {
@@ -44,8 +57,11 @@ export interface PedidoDeVacacion {
     reason?: string;
     /** Lo demás que vino en el body de la app (se guarda como antes, debajo de los campos calculados). */
     extra?: Record<string, unknown>;
-    origen: "solicitud" | "plan";
+    origen: "solicitud" | "plan" | "campania";
     planVacacionesId?: Types.ObjectId | string;
+    /** Campaña de goce: de cuál, y si las fijó la empresa porque la persona no eligió. */
+    campaniaId?: Types.ObjectId | string;
+    asignadaPorEmpresa?: boolean;
     projectId?: Types.ObjectId | string;
     /** De qué año descuenta. Sin él, el año en que empieza. */
     periodoSaldo?: number;

@@ -231,6 +231,7 @@ export const ETIQUETA_ESTADO = {
     aprobado_notificado: "Otorgadas y notificadas",
     vencido_sin_definir: "Venció sin elegir",
     asignado_por_empresa_notificado: "Asignadas por la empresa",
+    sin_dias_pendientes: "Sin días pendientes",
     en_curso: "De vacaciones",
     gozado: "Gozadas",
 };
@@ -238,6 +239,8 @@ export const ETIQUETA_ESTADO = {
 export const PUEDE_PROPONER = ["invitado", "acuso_recibo", "rechazada"];
 /** Los estados ya otorgados: hubo aviso por escrito. */
 export const OTORGADOS = ["aprobado_notificado", "asignado_por_empresa_notificado"];
+/** Los que ya no deben nada: otorgados con aviso, o sin días que otorgar. La campaña cierra sólo si todos están acá. */
+export const RESUELTOS = [...OTORGADOS, "sin_dias_pendientes"];
 /** «En curso» o «gozado» según las fechas otorgadas; si no, el estado guardado. */
 export function estadoVisible(estado, otorgados, hoy) {
     if (!OTORGADOS.includes(estado) || otorgados.length === 0)

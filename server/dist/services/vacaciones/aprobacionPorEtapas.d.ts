@@ -18,6 +18,11 @@ export declare function rechazarVacacion(v: IVacation, rechazo: {
     nivel: Nivel | "admin";
     motivo?: string;
 }): Promise<IVacation>;
+/**
+ * LA APROBACIÓN FINAL DEL ADMIN (lo que hacía `PUT /:id/approve`, 15/11/2026: lo usa también la campaña de
+ * goce al confirmar lo que asigna la empresa). Espera una `pre_approved`. Firma, saldo y aviso como siempre.
+ */
+export declare function aprobarComoAdmin(vacation: IVacation, approverId: string): Promise<IVacation>;
 export declare function rechazarEtapa(v: IVacation, userId: string, motivo?: string): Promise<IVacation>;
 /** ¿Ya se le recordó hoy al supervisor? (uno por día, para no llenarle la campanita). */
 export declare const recordadaHoy: (v: Pick<IVacation, "recordatorios">, hoy?: string) => boolean;

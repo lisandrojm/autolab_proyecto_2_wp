@@ -68,8 +68,14 @@ export interface IVacation extends Document {
    * DE DÓNDE SALIÓ. `solicitud` (la persona la pidió desde la app) o `plan` (la creó el plan de
    * vacaciones por proyecto al aprobarla el coordinador; `planVacacionesId` y `projectId` dicen cuál).
    */
-  origen?: "solicitud" | "plan";
+  origen?: "solicitud" | "plan" | "campania";
   planVacacionesId?: Types.ObjectId;
+  /**
+   * CAMPAÑA DE GOCE (15/11/2026): `origen: "campania"` y de qué campaña. `asignadaPorEmpresa` = la persona
+   * no eligió a tiempo y la empresa le fijó un tramo único (si no, lo propuso ella y subió por la jerarquía).
+   */
+  campaniaId?: Types.ObjectId;
+  asignadaPorEmpresa?: boolean;
   projectId?: Types.ObjectId;
   /**
    * DE QUÉ AÑO DESCUENTA. Sin este campo, del año en que empieza. El plan lo fija al año de saldo de la
@@ -137,8 +143,10 @@ const vacationSchema = new Schema<IVacation>(
     signedAt: { type: Date },
     signedBy: { type: Schema.Types.ObjectId, ref: "User" },
     pdfPreAprobacionUrl: { type: String },
-    origen: { type: String, enum: ["solicitud", "plan"], default: "solicitud" },
+    origen: { type: String, enum: ["solicitud", "plan", "campania"], default: "solicitud" },
     planVacacionesId: { type: Schema.Types.ObjectId, ref: "PlanVacaciones" },
+    campaniaId: { type: Schema.Types.ObjectId, ref: "CampaniaVacaciones" },
+    asignadaPorEmpresa: { type: Boolean },
     projectId: { type: Schema.Types.ObjectId, ref: "Project" },
     periodoSaldo: { type: Number },
     cadena: {

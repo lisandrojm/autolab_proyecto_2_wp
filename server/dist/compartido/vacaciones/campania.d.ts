@@ -106,7 +106,9 @@ export declare function sugerirTramoUnico(o: {
     ventanaPersona?: VentanaEfectiva | null;
     bloqueadas?: Iterable<string>;
 }): Tramo | null;
-export type EstadoInvitacion = "pendiente_de_invitar" | "invitado" | "acuso_recibo" | "propuso_fechas" | "rechazada" | "aprobado_notificado" | "vencido_sin_definir" | "asignado_por_empresa_notificado";
+export type EstadoInvitacion = "pendiente_de_invitar" | "invitado" | "acuso_recibo" | "propuso_fechas" | "rechazada" | "aprobado_notificado" | "vencido_sin_definir" | "asignado_por_empresa_notificado"
+/** Ya no le quedan días de ese año (los tomó por otra vía): no hay nada que otorgar. */
+ | "sin_dias_pendientes";
 /** Lo que se muestra: el estado guardado, o «en curso» / «gozado» cuando las vacaciones otorgadas ya empezaron. */
 export type EstadoVisible = EstadoInvitacion | "en_curso" | "gozado";
 export declare const ETIQUETA_ESTADO: Record<EstadoVisible, string>;
@@ -114,6 +116,8 @@ export declare const ETIQUETA_ESTADO: Record<EstadoVisible, string>;
 export declare const PUEDE_PROPONER: EstadoInvitacion[];
 /** Los estados ya otorgados: hubo aviso por escrito. */
 export declare const OTORGADOS: EstadoInvitacion[];
+/** Los que ya no deben nada: otorgados con aviso, o sin días que otorgar. La campaña cierra sólo si todos están acá. */
+export declare const RESUELTOS: EstadoInvitacion[];
 /** «En curso» o «gozado» según las fechas otorgadas; si no, el estado guardado. */
 export declare function estadoVisible(estado: EstadoInvitacion, otorgados: Tramo[], hoy: string): EstadoVisible;
 /**

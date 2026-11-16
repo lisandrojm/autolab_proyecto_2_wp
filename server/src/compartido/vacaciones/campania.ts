@@ -270,7 +270,9 @@ export type EstadoInvitacion =
   | "rechazada"
   | "aprobado_notificado"
   | "vencido_sin_definir"
-  | "asignado_por_empresa_notificado";
+  | "asignado_por_empresa_notificado"
+  /** Ya no le quedan días de ese año (los tomó por otra vía): no hay nada que otorgar. */
+  | "sin_dias_pendientes";
 
 /** Lo que se muestra: el estado guardado, o «en curso» / «gozado» cuando las vacaciones otorgadas ya empezaron. */
 export type EstadoVisible = EstadoInvitacion | "en_curso" | "gozado";
@@ -284,6 +286,7 @@ export const ETIQUETA_ESTADO: Record<EstadoVisible, string> = {
   aprobado_notificado: "Otorgadas y notificadas",
   vencido_sin_definir: "Venció sin elegir",
   asignado_por_empresa_notificado: "Asignadas por la empresa",
+  sin_dias_pendientes: "Sin días pendientes",
   en_curso: "De vacaciones",
   gozado: "Gozadas",
 };
@@ -292,6 +295,8 @@ export const ETIQUETA_ESTADO: Record<EstadoVisible, string> = {
 export const PUEDE_PROPONER: EstadoInvitacion[] = ["invitado", "acuso_recibo", "rechazada"];
 /** Los estados ya otorgados: hubo aviso por escrito. */
 export const OTORGADOS: EstadoInvitacion[] = ["aprobado_notificado", "asignado_por_empresa_notificado"];
+/** Los que ya no deben nada: otorgados con aviso, o sin días que otorgar. La campaña cierra sólo si todos están acá. */
+export const RESUELTOS: EstadoInvitacion[] = [...OTORGADOS, "sin_dias_pendientes"];
 
 /** «En curso» o «gozado» según las fechas otorgadas; si no, el estado guardado. */
 export function estadoVisible(estado: EstadoInvitacion, otorgados: Tramo[], hoy: string): EstadoVisible {
