@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClockRotateLeft, faFileContract, faFileLines, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faFileLines, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
 import { User, Contract, usersAPI } from "../../api/users";
 import { contratoFrameAPI, ContratoFrameItem } from "../../api/contratosFrame";
@@ -8,7 +8,6 @@ import { releasesAPI, Release } from "../../api/release";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { getContratoActivo, ordenarContratosDesc } from "../../utils/contratoVigencia";
 import { ContractCard, EmpresaOption, findTemplate, templateHasContent } from "./ContractCard";
-import { ContractFiltersBar, ContractFilterState, emptyContractFilters, matchesContractFilters } from "./ContractFilters";
 
 // La UI de la tarjeta y sus helpers viven en ContractCard (compartidos con MemberContractsManagerModal).
 // Se re-exportan para no romper los imports existentes (ContractsPage, etc.).
@@ -88,9 +87,6 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
     return rige ? [conParche(rige, typeof user?.lastContractIndex === "number" ? user.lastContractIndex : -1)] : [];
   }, [historial, contratosEmbebidos, user, altaSubida]);
 
-  /** Cuántos contratos tiene en total, aunque estén sin traer (lo cuenta el server). */
-  const totalContratos = historial ? historial.length : contratosEmbebidos.length > 0 ? contratosEmbebidos.length : (user?.contractCount ?? conIndice.length);
-  const faltaElHistorial = !historial && contratosEmbebidos.length === 0 && totalContratos > conIndice.length;
 
   const verHistorial = async () => {
     if (!user || cargandoHistorial) return;
@@ -98,7 +94,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
     try {
       setHistorial(await usersAPI.contratosDelProyecto(user._id, projectId));
     } catch {
-      sweetAlert.error("Error", "No se pudo traer el historial de contratos.");
+      /* Sin los contratos completos queda el de la fila: se ve igual, con los releases sin afinar por el texto custom. */
     } finally {
       setCargandoHistorial(false);
     }
@@ -128,24 +124,25 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
 
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
 
-  // Filtros: los mismos que la gestión cross-proyecto, sin cliente/proyecto (acá son fijos).
-  const [filters, setFilters] = useState<ContractFilterState>(emptyContractFilters);
+  /*
+    SÓLO EL ÚLTIMO CONTRATO (pedido del usuario, 15/11/2026): el que rige y nada más; el historial está en
+    Contratos. Al abrir se piden los contratos de ESTA persona en el proyecto: la fila de la tabla trae el
+    que rige recortado, y para saber qué releases le tocan hacen falta su tipo y sus textos custom.
+    Mientras llegan se muestra el de la fila.
+  */
   useEffect(() => {
     if (!isOpen) return;
-    setFilters(emptyContractFilters);
     // El historial es de una persona y un proyecto: si cambia cualquiera de los dos, se pide de nuevo.
     setHistorial(null);
     setAltaSubida({});
+    if (user && contratosEmbebidos.length === 0) void verHistorial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, user?._id, projectId]);
 
-  const tipos = useMemo(() => [...new Set(contracts.map((c) => c.nombre_contrato).filter((t): t is string => !!t))], [contracts]);
-
-  // Se filtra conservando el índice de la tarjeta en la lista completa: de él dependen el índice original
-  // en BD (edición/descarga) y el resaltado del último contrato.
-  const visible = useMemo(
-    () => contracts.map((contract, idx) => ({ contract, idx })).filter(({ contract, idx }) => matchesContractFilters(filters, { contract, isLatest: idx === idxQueRige })),
-    [contracts, filters, idxQueRige],
-  );
+  const visible = useMemo(() => {
+    const idx = idxQueRige >= 0 ? idxQueRige : contracts.length > 0 ? 0 : -1;
+    return idx >= 0 ? [{ contract: contracts[idx], idx }] : [];
+  }, [contracts, idxQueRige]);
 
   const handleDownloadContract = async (contract: Contract, empresaId?: string) => {
     const template = findTemplate(contract, contratoFrames);
@@ -175,21 +172,19 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={fullName || "Empleado"} subtitle="Contratos en el proyecto" size="lg" zIndex={60}>
       <div className="space-y-4">
-        <ContractFiltersBar value={filters} onChange={setFilters} tipos={tipos} />
-
         {/* Pestaña Contratos */}
         <div className="flex items-end justify-between border-b border-gray-200 dark:border-gray-700">
           <span className="inline-flex items-center gap-2 px-1 pb-2 text-sm font-semibold text-blue-600 dark:text-blue-400 border-b-2 border-blue-500">
             <FontAwesomeIcon icon={faFileContract} className="h-4 w-4" />
-            Contratos
+            Último contrato
           </span>
-          <span className="pb-2 text-xs text-gray-500">{visible.length} de {totalContratos}</span>
+          {cargandoHistorial && <FontAwesomeIcon icon={faSpinner} className="mb-2 h-3.5 w-3.5 animate-spin text-gray-400" />}
         </div>
 
         {visible.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center gap-3 py-10">
             <FontAwesomeIcon icon={faFileLines} className="h-10 w-10 text-gray-300 dark:text-gray-600" />
-            <p className="text-sm text-gray-500">{totalContratos === 0 ? "Este empleado no tiene contratos en el proyecto." : "Ningún contrato coincide con los filtros."}</p>
+            <p className="text-sm text-gray-500">Este empleado no tiene contratos en el proyecto.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -228,18 +223,6 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
           </div>
         )}
 
-        {/* El historial no viaja con la tabla: se pide acá, para esta persona, y sólo si lo piden. */}
-        {faltaElHistorial && (
-          <button
-            type="button"
-            onClick={verHistorial}
-            disabled={cargandoHistorial}
-            className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/40 disabled:opacity-60"
-          >
-            <FontAwesomeIcon icon={cargandoHistorial ? faSpinner : faClockRotateLeft} className={`h-4 w-4 ${cargandoHistorial ? "animate-spin" : ""}`} />
-            {cargandoHistorial ? "Trayendo el historial…" : `Ver historial (${totalContratos - conIndice.length} contrato${totalContratos - conIndice.length === 1 ? "" : "s"} anterior${totalContratos - conIndice.length === 1 ? "" : "es"})`}
-          </button>
-        )}
       </div>
     </Modal>
   );

@@ -6,6 +6,8 @@ import { Contract } from "../../api/users";
 import { ContratoFrameItem } from "../../api/contratosFrame";
 import { plantillaDelContrato } from "@compartido/plantillaDelContrato";
 import { Release } from "../../api/release";
+import { releasesDelTipo } from "../../api/contratos";
+import { textoCustomDeRelease, textoCustomUsable } from "@compartido/textoCustom";
 import { InfoItem } from "../../api/info";
 import { EstadoBadge, estadoImpositivoDe, EstadoSecundarioBadge, claveEstado } from "../EstadoSelect";
 import { useEstadoCatalogStore } from "../../stores/estadoCatalogStore";
@@ -244,6 +246,22 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   const contratoRequiereFirma = typeof template?.contratoId === "object" ? template.contratoId?.data?.requiereFirma !== false : true;
   // «Se envía a firmar el release» del Tipo de Contrato: el release se descarga para firma sólo si lo piden su tipo de release Y este.
   const tipoPideFirmaRelease = typeof template?.contratoId === "object" ? template.contratoId?.data?.requiereFirmaRelease !== false : true;
+
+  /*
+    LOS RELEASES DE ESTE CONTRATO, NO TODOS LOS DEL TENANT (15/11/2026). Misma regla que Generar Documentos:
+    si su tipo de contrato tiene releases asignados, sólo esos (`releasesDelTipo`); y un release custom
+    sólo si este contrato tiene su texto escrito. El texto se mira cuando el contrato lo trae: la tabla
+    del equipo no lo manda (pesa), y ahí el custom del tipo se deja, como antes.
+  */
+  const tipoDelContrato: { _id?: string } | null = (contract as any).contrato_id
+    ? { _id: String((contract as any).contrato_id) }
+    : typeof template?.contratoId === "object" && template?.contratoId
+      ? { _id: String((template.contratoId as { _id?: string })._id || "") }
+      : typeof template?.contratoId === "string"
+        ? { _id: template.contratoId }
+        : null;
+  const textosCustom = (contract as any).contenidoCustomReleases as { releaseId: string; content: string }[] | undefined;
+  const releasesDelContrato = releasesDelTipo(activeReleases, tipoDelContrato).filter((r) => !r.esCustom || !Array.isArray(textosCustom) || textoCustomUsable(textoCustomDeRelease(textosCustom, r._id)));
 
   // Empresa efectiva por-contrato: si el contrato tiene una empresa guardada, se usa SOLO esa
   // (descarga directa con ella); si no, se ofrecen todas las empresas del proyecto para elegir.
@@ -484,11 +502,11 @@ export const ContractCard: React.FC<ContractCardProps> = ({
             {/* Releases: lista con descarga directa */}
             <div className={`mt-3 pt-3 border-t ${dividerClass}`}>
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Release | Empresa</p>
-              {activeReleases.length === 0 ? (
+              {releasesDelContrato.length === 0 ? (
                 <p className="text-xs text-gray-500">No hay releases disponibles.</p>
               ) : (
                 <div className="space-y-1.5">
-                  {activeReleases.map((r) => {
+                  {releasesDelContrato.map((r) => {
                     const releaseEmpresa = effectiveReleaseEmpresas.map((e) => e.label).join(" | ");
                     // Sin ReleaseTipo vinculado (aún no populado) se asume que sí se envía, para no ocultar la descarga de golpe.
                     const releaseRequiereFirma = tipoPideFirmaRelease && (typeof r.releaseTipoId === "object" ? r.releaseTipoId?.requiereFirma !== false : true);
