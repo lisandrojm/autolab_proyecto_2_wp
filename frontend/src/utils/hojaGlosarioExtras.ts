@@ -41,6 +41,7 @@ export function filasGlosarioExtras(g: OvertimeSettings, feriados: { fecha: stri
     ["2. El horario del turno es el que quedó cargado en la novedad de ese día; si no hay, el del contrato."],
     [`3. Cada tramo extra se reparte según el rango: lo que cae dentro del rango del día va al ${pct50}, lo que cae fuera va al ${pct100}.`],
     ["4. Por eso un mismo día puede tener horas al 50% y al 100% a la vez."],
+    [`5. Si llegó antes y se fue antes, el tiempo que se fue antes se descuenta primero de lo que cae al ${pct50}: lo trabajado fuera del rango se paga entero al ${pct100}.`],
     [],
     ["EJEMPLO"],
     ["Turno de 06:00 a 12:00, un viernes. Trabajó de 05:30 a 12:30: 1 hora extra en total, media hora antes de entrar y media después de salir."],
