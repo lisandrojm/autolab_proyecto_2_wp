@@ -113,11 +113,17 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
             </div>
             <span className="shrink-0 rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">{ETIQUETA_ESTADO[datos.estadoVisible]}</span>
           </div>
+          {/* El recordatorio es siempre ámbar, aunque falten pocos días: informa, no alarma. */}
           {datos.puedeProponer && (
-            <p className={`mt-3 flex items-center gap-2 text-sm font-semibold ${faltan <= 2 ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
-              <FontAwesomeIcon icon={faHourglassHalf} />
-              {faltan === 0 ? "Hoy es el último día para elegir" : `Te quedan ${faltan} día(s) para elegir (hasta el ${fechaCorta(c.fechaLimite)})`}
-            </p>
+            <div className="mt-3 rounded-lg bg-amber-50 p-3 dark:bg-amber-950/20">
+              <p className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400">
+                <FontAwesomeIcon icon={faHourglassHalf} />
+                {faltan === 0 ? "Hoy es el último día para elegir" : `Te quedan ${faltan} día(s) para elegir (hasta el ${fechaCorta(c.fechaLimite)})`}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                Si para esa fecha todavía no elegiste, no te preocupes: la empresa te propone unas fechas para que no te quedes sin organizarlas.
+              </p>
+            </div>
           )}
         </div>
 
@@ -232,6 +238,10 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
               <FontAwesomeIcon icon={enviando ? faClock : faCheck} />
               {enviando ? "Enviando..." : "Enviar propuesta"}
             </button>
+            <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
+              <span aria-hidden="true">🌴</span>
+              {faltan === 0 ? "Todavía estás a tiempo: hoy podés elegir con calma." : "Podés tomarte tu tiempo, estás a tiempo de elegir."}
+            </p>
           </div>
         )}
       </div>
