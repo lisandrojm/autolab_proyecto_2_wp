@@ -1,5 +1,5 @@
 import axios from "./axiosConfig";
-import type { Alerta, EstadoInvitacion, EstadoVisible, Tramo } from "@compartido/vacaciones/campania";
+import type { Alerta, EstadoInvitacion, EstadoVisible, PoblacionPorTipo, Tramo } from "@compartido/vacaciones/campania";
 
 /**
  * CAMPAÑA DE GOCE DE VACACIONES: `/api/v1/campanias-vacaciones` (ver `routes/campaniasVacaciones.ts` en el
@@ -18,11 +18,27 @@ export interface Campania {
   avisoMinimoDias: number;
   minDiasPorTramo: number;
   fechaLimite?: string | null;
+  /** Los `tipo_contrato_id` que invita (vacío = todos los habilitados). Se elige en borrador. */
+  tiposContratoInvitar?: number[];
+  /** Lo que se usó al lanzar: los tipos que entraron y cuántas personas con días quedaron afuera. */
+  lanzamiento?: { todosLosTipos: boolean; tipos: { id: number; nombre: string; invitadas: number }[]; excluidas: Excluidas } | null;
   estado: "borrador" | "lanzada" | "cerrada";
   lanzadaAt?: string;
   cerradaAt?: string;
   createdAt: string;
   invitaciones?: { total: number; resueltas: number };
+}
+
+export interface Excluidas {
+  tipoDeshabilitado: number;
+  tipoNoIncluido: number;
+  sinContrato: number;
+}
+
+/** La vista previa del borrador: la gente con días por tipo de contrato, los tipos sin vacaciones y la selección guardada. */
+export interface VistaPreviaDeInvitacion extends PoblacionPorTipo {
+  deshabilitados: number[];
+  tiposContratoInvitar: number[];
 }
 
 export interface VacacionDeTramo {
@@ -97,8 +113,16 @@ class CampaniasVacacionesAPI {
     const { data } = await axios.get(`${BASE}/${id}`);
     return data;
   }
-  async lanzar(id: string): Promise<{ invitadas: number; alertas: Alerta[] }> {
-    const { data } = await axios.post(`${BASE}/${id}/lanzar`);
+  async lanzar(id: string, tiposContratoInvitar?: number[]): Promise<{ invitadas: number; excluidas?: Excluidas; alertas: Alerta[] }> {
+    const { data } = await axios.post(`${BASE}/${id}/lanzar`, tiposContratoInvitar ? { tiposContratoInvitar } : {});
+    return data;
+  }
+  async vistaPrevia(id: string): Promise<VistaPreviaDeInvitacion> {
+    const { data } = await axios.get(`${BASE}/${id}/vista-previa`);
+    return data;
+  }
+  async guardarTiposContrato(id: string, tiposContratoInvitar: number[]): Promise<{ tiposContratoInvitar: number[] }> {
+    const { data } = await axios.put(`${BASE}/${id}/tipos-contrato`, { tiposContratoInvitar });
     return data;
   }
   async recordatorio(id: string): Promise<{ recordadas: number }> {

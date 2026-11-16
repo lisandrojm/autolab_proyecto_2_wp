@@ -1,11 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { alertasDeInvitacion, alertasDeLanzamiento, contarDiasTramo, estadoVisible, hastaParaDias, normalizarConfigCampania, sugerirTramoUnico, validarOtorgamiento, validarPropuesta, ventanaDeLaTemporada } from "./campania.js";
+import { motivoDeNoInvitar, normalizarTiposContrato, resumenDeInvitables, alertasDeInvitacion, alertasDeLanzamiento, contarDiasTramo, estadoVisible, hastaParaDias, normalizarConfigCampania, sugerirTramoUnico, validarOtorgamiento, validarPropuesta, ventanaDeLaTemporada } from "./campania.js";
 const VENTANA = { desde: "2026-11-01", hasta: "2027-04-30" };
 const base = { ventana: VENTANA, hoy: "2026-11-15", avisoDias: 30, minPorTramo: 7, diasCorridos: true };
 test("config: lo que falta o viene mal cae al de por defecto", () => {
-    assert.deepEqual(normalizarConfigCampania(undefined), { activa: false, plazoParaDefinirDias: 14, avisoMinimoDias: 30, minDiasPorTramo: 7 });
-    assert.deepEqual(normalizarConfigCampania({ activa: true, plazoParaDefinirDias: "20", avisoMinimoDias: -3, minDiasPorTramo: 0 }), { activa: true, plazoParaDefinirDias: 20, avisoMinimoDias: 30, minDiasPorTramo: 7 });
+    assert.deepEqual(normalizarConfigCampania(undefined), { activa: false, plazoParaDefinirDias: 14, avisoMinimoDias: 30, minDiasPorTramo: 7, tiposContratoInvitar: [] });
+    assert.deepEqual(normalizarConfigCampania({ activa: true, plazoParaDefinirDias: "20", avisoMinimoDias: -3, minDiasPorTramo: 0 }), { activa: true, plazoParaDefinirDias: 20, avisoMinimoDias: 30, minDiasPorTramo: 7, tiposContratoInvitar: [] });
+    assert.deepEqual(normalizarConfigCampania({ tiposContratoInvitar: [3, "1", 3, null, "x"] }).tiposContratoInvitar, [1, 3]);
 });
 test("días: corridos o de lunes a viernes", () => {
     // 16/11/2026 es lunes.
@@ -83,4 +84,40 @@ test("estado visible y alertas de seguimiento", () => {
     assert.deepEqual(a.map((x) => x.codigo).sort(), ["limite_por_vencer", "sin_acuse"]);
     const b = alertasDeInvitacion({ estado: "propuso_fechas", fechaLimite: "2026-11-29", tramos: [{ desde: "2026-12-10", hasta: "2026-12-23" }], hoy: "2026-11-15", avisoDias: 30 });
     assert.ok(b.some((x) => x.codigo === "aviso_insuficiente"));
+});
+/* ─────────────────────────── A quién se invita, por tipo de contrato ─────────────────────────── */
+const INDETERMINADO = 1;
+const PLAZO_FIJO = 2;
+const EVENTUAL = 3; // deshabilitado en «Visibilidad por tipo de Contrato»
+const POBLACION = { porTipo: [{ id: INDETERMINADO, nombre: "Tiempo Indeterminado", personas: 40 }, { id: PLAZO_FIJO, nombre: "Plazo fijo 6x6", personas: 25 }, { id: EVENTUAL, nombre: "Eventual", personas: 10 }], sinContrato: 4 };
+test("tipos: la lista se guarda como números, sin repetir y ordenada", () => {
+    assert.deepEqual(normalizarTiposContrato([2, "1", 2, "", null, "abc", true]), [1, 2]);
+    assert.deepEqual(normalizarTiposContrato(undefined), []);
+    assert.deepEqual(normalizarTiposContrato("1,2"), []);
+});
+test("tipos: sin selección se invita a todos (la población de siempre)", () => {
+    assert.equal(motivoDeNoInvitar({ tipoContratoId: INDETERMINADO, seleccion: [], deshabilitados: [] }), null);
+    assert.equal(motivoDeNoInvitar({ tipoContratoId: null, seleccion: [], deshabilitados: [] }), null);
+    assert.deepEqual(resumenDeInvitables(POBLACION, [], []), { invitar: 79, tipoDeshabilitado: 0, tipoNoIncluido: 0, sinContrato: 0 });
+});
+test("tipos: con un solo tipo, sólo quien tiene el contrato vigente de cómputo de ese tipo", () => {
+    assert.equal(motivoDeNoInvitar({ tipoContratoId: PLAZO_FIJO, seleccion: [PLAZO_FIJO], deshabilitados: [] }), null);
+    assert.equal(motivoDeNoInvitar({ tipoContratoId: INDETERMINADO, seleccion: [PLAZO_FIJO], deshabilitados: [] }), "tipo_no_incluido");
+    assert.deepEqual(resumenDeInvitables(POBLACION, [PLAZO_FIJO], []), { invitar: 25, tipoDeshabilitado: 0, tipoNoIncluido: 50, sinContrato: 4 });
+});
+test("tipos: con selección, quien no tiene contrato vigente en su empresa de cómputo queda afuera", () => {
+    assert.equal(motivoDeNoInvitar({ tipoContratoId: null, seleccion: [INDETERMINADO], deshabilitados: [] }), "sin_contrato_vigente");
+});
+test("tipos: uno deshabilitado nunca se invita, ni tildado ni sin selección", () => {
+    assert.equal(motivoDeNoInvitar({ tipoContratoId: EVENTUAL, seleccion: [EVENTUAL], deshabilitados: [EVENTUAL] }), "tipo_deshabilitado");
+    assert.equal(motivoDeNoInvitar({ tipoContratoId: EVENTUAL, seleccion: [], deshabilitados: [EVENTUAL] }), "tipo_deshabilitado");
+    assert.deepEqual(resumenDeInvitables(POBLACION, [INDETERMINADO, EVENTUAL], [EVENTUAL]), { invitar: 40, tipoDeshabilitado: 10, tipoNoIncluido: 25, sinContrato: 4 });
+    assert.deepEqual(resumenDeInvitables(POBLACION, [], [EVENTUAL]), { invitar: 69, tipoDeshabilitado: 10, tipoNoIncluido: 0, sinContrato: 0 });
+});
+test("tipos: la vista previa da lo mismo que decidir persona por persona (lo que hace el lanzamiento)", () => {
+    const personas = [...POBLACION.porTipo.flatMap((t) => Array(t.personas).fill(t.id)), ...Array(POBLACION.sinContrato).fill(null)];
+    for (const seleccion of [[], [INDETERMINADO], [PLAZO_FIJO, EVENTUAL], [INDETERMINADO, PLAZO_FIJO, EVENTUAL]]) {
+        const reales = personas.filter((tipoContratoId) => !motivoDeNoInvitar({ tipoContratoId, seleccion, deshabilitados: [EVENTUAL] })).length;
+        assert.equal(resumenDeInvitables(POBLACION, seleccion, [EVENTUAL]).invitar, reales);
+    }
 });

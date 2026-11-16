@@ -12,6 +12,7 @@ import {
   confirmarAsignaciones,
   crearCampania,
   editarAsignacion,
+  guardarTiposContrato,
   lanzarCampania,
   listarCampanias,
   miInvitacion,
@@ -20,6 +21,7 @@ import {
   reporteCsv,
   sugerirAsignaciones,
   tablero,
+  vistaPreviaDeInvitacion,
 } from "../services/vacaciones/campaniaVacaciones.js";
 
 /*
@@ -62,7 +64,10 @@ campaniasVacacionesRoutes.post("/mia/acuse-otorgamiento", manejar(async (req) =>
 campaniasVacacionesRoutes.get("/", soloAdmin, manejar(async (req) => listarCampanias(tid(req))));
 campaniasVacacionesRoutes.post("/", soloAdmin, manejar(async (req) => crearCampania(tid(req), yo(req), req.body || {})));
 campaniasVacacionesRoutes.get("/:id", soloAdmin, manejar(async (req) => tablero(tid(req), String(req.params.id))));
-campaniasVacacionesRoutes.post("/:id/lanzar", soloAdmin, manejar(async (req) => lanzarCampania(tid(req), String(req.params.id), yo(req))));
+// A quién se invita: cuánta gente con días hay por tipo de contrato (la vista previa) y la selección de la campaña.
+campaniasVacacionesRoutes.get("/:id/vista-previa", soloAdmin, manejar(async (req) => vistaPreviaDeInvitacion(tid(req), String(req.params.id))));
+campaniasVacacionesRoutes.put("/:id/tipos-contrato", soloAdmin, manejar(async (req) => guardarTiposContrato(tid(req), String(req.params.id), req.body?.tiposContratoInvitar)));
+campaniasVacacionesRoutes.post("/:id/lanzar", soloAdmin, manejar(async (req) => lanzarCampania(tid(req), String(req.params.id), yo(req), req.body?.tiposContratoInvitar)));
 campaniasVacacionesRoutes.post(
   "/:id/recordatorio",
   soloAdmin,

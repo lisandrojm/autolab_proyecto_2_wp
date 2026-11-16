@@ -27,12 +27,40 @@ export declare function tablero(tid: Types.ObjectId, id: string): Promise<{
     hoy: string;
 }>;
 /**
- * LANZAR: una invitación por persona ACTIVA con días disponibles del año de la campaña (la misma cuenta
- * que Gestión por Usuario, que ya descuenta lo pendiente: un bloque del plan por proyecto no se invita
- * dos veces). Fecha límite = hoy + plazo. Avisa a cada una por la campanita.
+ * LA VISTA PREVIA DEL BORRADOR: cuánta gente con días hay por tipo de contrato y qué tipos están
+ * deshabilitados. La pantalla hace la cuenta con `resumenDeInvitables` cada vez que cambia la selección,
+ * sin volver a pedir nada: la misma regla (`motivoDeNoInvitar`) que usa el lanzamiento.
  */
-export declare function lanzarCampania(tid: Types.ObjectId, id: string, actorId: string): Promise<{
+export declare function vistaPreviaDeInvitacion(tid: Types.ObjectId, id: string): Promise<{
+    deshabilitados: number[];
+    tiposContratoInvitar: number[];
+    porTipo: {
+        id: number;
+        nombre: string;
+        personas: number;
+    }[];
+    sinContrato: number;
+}>;
+/** A qué tipos de contrato invita la campaña (vacío = todos los habilitados). Sólo en borrador: lanzada, ya se usó. */
+export declare function guardarTiposContrato(tid: Types.ObjectId, id: string, tipos: unknown): Promise<{
+    tiposContratoInvitar: number[];
+}>;
+/**
+ * LANZAR: una invitación por cada persona con días (`personasConDias`) cuyo contrato vigente en la empresa
+ * de cómputo sea de un tipo que la campaña invita (`motivoDeNoInvitar`; sin tipos elegidos, todos los
+ * habilitados). Fecha límite = hoy + plazo. Avisa a cada una por la campanita y deja escrito en la
+ * campaña qué tipos se usaron y cuántas quedaron afuera.
+ *
+ * `tipos`: la selección que tiene la pantalla en ese momento (si viene, se guarda antes de invitar, para
+ * que no se lance con una lista distinta de la que se está viendo).
+ */
+export declare function lanzarCampania(tid: Types.ObjectId, id: string, actorId: string, tipos?: unknown): Promise<{
     invitadas: number;
+    excluidas: {
+        tipoDeshabilitado: number;
+        tipoNoIncluido: number;
+        sinContrato: number;
+    };
     alertas: import("../../compartido/vacaciones/campania.js").Alerta[];
 }>;
 /** Recordatorio a quienes todavía pueden elegir (no propusieron). `automatico`: lo manda el barrido. */

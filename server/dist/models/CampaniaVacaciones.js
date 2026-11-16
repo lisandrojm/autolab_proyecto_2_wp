@@ -9,6 +9,15 @@ const campaniaSchema = new Schema({
     avisoMinimoDias: { type: Number, required: true },
     minDiasPorTramo: { type: Number, required: true },
     fechaLimite: { type: String, default: null },
+    tiposContratoInvitar: { type: [Number], default: [] },
+    lanzamiento: {
+        type: new Schema({
+            todosLosTipos: Boolean,
+            tipos: [{ _id: false, id: Number, nombre: String, invitadas: Number }],
+            excluidas: { tipoDeshabilitado: Number, tipoNoIncluido: Number, sinContrato: Number },
+        }, { _id: false }),
+        default: null,
+    },
     estado: { type: String, enum: ["borrador", "lanzada", "cerrada"], default: "borrador" },
     creadaPor: { type: Schema.Types.ObjectId, ref: "User" },
     lanzadaPor: { type: Schema.Types.ObjectId, ref: "User" },

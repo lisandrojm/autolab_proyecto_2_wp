@@ -233,7 +233,7 @@
     "test:contadores-contratacion": "tsx --test src/utils/contadoresContratacion.test.ts",
     "test:antiguedad-arca": "tsx --test src/utils/antiguedadArca.test.ts",
     "test:etapa-vacaciones": "tsx --test src/compartido/vacaciones/etapaDeAprobacion.test.ts",
-    "test:campania-vacaciones": "tsx --test src/compartido/vacaciones/campania.test.ts"
+    "test:campania-vacaciones": "tsx --test src/compartido/vacaciones/campania.test.ts src/utils/contratoDeComputo.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",

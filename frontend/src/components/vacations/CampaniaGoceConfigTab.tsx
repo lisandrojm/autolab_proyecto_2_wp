@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleExclamation, faInfoCircle, faScaleBalanced, faSpinner, faToggleOff, faToggleOn, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
-import { vacationConfigAPI, VacationConfig } from "../../api/vacationConfig";
+import { vacationConfigAPI, VacationConfig, type AvailableContract } from "../../api/vacationConfig";
+import { SelectorTiposContrato } from "./campania/SelectorTiposContrato";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { hoyISO } from "../../utils/contratoVigencia";
 import { normalizarVentana } from "@compartido/ventanaGoce";
@@ -38,6 +39,15 @@ export const CampaniaGoceConfigTab: React.FC = () => {
   const [borrador, setBorrador] = useState<ConfigCampania>(normalizarConfigCampania(undefined));
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const [tiposDeContrato, setTiposDeContrato] = useState<AvailableContract[]>([]);
+
+  useEffect(() => {
+    // El catálogo de tipos de contrato: si no llega, la sección de tipos no se muestra y el resto funciona igual.
+    vacationConfigAPI
+      .getAvailableContracts()
+      .then((t) => setTiposDeContrato(t.filter((x) => x.id !== null && x.id !== undefined)))
+      .catch(() => setTiposDeContrato([]));
+  }, []);
 
   useEffect(() => {
     vacationConfigAPI
@@ -51,6 +61,7 @@ export const CampaniaGoceConfigTab: React.FC = () => {
   }, []);
 
   const guardado = normalizarConfigCampania(config?.campania);
+  const tiposSinVacaciones = (config?.contractRules || []).filter((r) => r.vacationsEnabled === false).map((r) => r.contractId);
   const cambio = JSON.stringify(guardado) !== JSON.stringify(borrador);
 
   const guardar = async (nueva: ConfigCampania) => {
@@ -121,9 +132,19 @@ export const CampaniaGoceConfigTab: React.FC = () => {
           <Campo etiqueta="Tramo mínimo al fraccionar" ayuda="Cada parte, cuando la persona las divide." value={borrador.minDiasPorTramo} min={1} max={60} onChange={(n) => setBorrador({ ...borrador, minDiasPorTramo: n })} />
         </div>
 
+        {tiposDeContrato.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Tipos de contrato que se invitan</p>
+            <SelectorTiposContrato tipos={tiposDeContrato} deshabilitados={tiposSinVacaciones} seleccion={borrador.tiposContratoInvitar.filter((t) => !tiposSinVacaciones.includes(t))} onChange={(tiposContratoInvitar) => setBorrador({ ...borrador, tiposContratoInvitar })} disabled={guardando} />
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Con qué selección arranca cada campaña nueva (después se puede cambiar en la campaña, antes de lanzarla). Se invita a quien tiene de ese tipo su contrato vigente en la empresa de cómputo. Los tachados no tienen vacaciones (Visibilidad por tipo de Contrato) y no se invitan nunca.
+            </p>
+          </div>
+        )}
+
         <div className="flex items-center gap-3">
           <button type="button" onClick={() => guardar(normalizarConfigCampania(borrador))} disabled={!cambio || guardando} className="btn-primary disabled:opacity-50">
-            {guardando ? "Guardando..." : "Guardar plazos"}
+            {guardando ? "Guardando..." : "Guardar"}
           </button>
           {cambio && (
             <button type="button" onClick={() => setBorrador(guardado)} className="btn-secondary">

@@ -17,12 +17,15 @@ import {
   contarDiasTramo,
   estadoVisible,
   fechaLimite as calcularFechaLimite,
+  motivoDeNoInvitar,
   normalizarConfigCampania,
+  normalizarTiposContrato,
   primerInicioPosible,
   sugerirTramoUnico,
   validarOtorgamiento,
   validarPropuesta,
   ventanaDeLaTemporada,
+  type PoblacionPorTipo,
   type Tramo,
 } from "../../compartido/vacaciones/campania.js";
 import { NOVEDAD_CAMPANIA_INVITACION, NOVEDAD_CAMPANIA_RECORDATORIO, NOVEDAD_VACACION_OTORGADA, notificar } from "../novedadesNotificaciones.js";
@@ -36,8 +39,9 @@ import { fechasBloqueadas } from "./solapamiento.js";
  * CAMPAÑA DE GOCE DE VACACIONES (15/11/2026): el circuito
  * ═══════════════════════════════════════════════════════════════════════
  *
- *  1. El admin crea la campaña (borrador) y ve las alertas de plazo; al lanzarla se invita a cada
- *     persona activa con días disponibles, con fecha límite (hoy + plazo).
+ *  1. El admin crea la campaña (borrador), elige a qué tipos de contrato invita y ve las alertas de
+ *     plazo; al lanzarla se invita a cada persona activa con días disponibles (y con su contrato vigente
+ *     en la empresa de cómputo de uno de esos tipos), con fecha límite (hoy + plazo).
  *  2. La persona acusa recibo y propone uno o más tramos desde la app: cada tramo es una `Vacation`
  *     (`origen: "campania"`) que sube por la jerarquía Supervisor → Coordinador → Admin.
  *  3. Al aprobar el admin el último tramo, queda el aviso por escrito (los PDF) y la persona acusa recibo.
@@ -105,6 +109,7 @@ export async function crearCampania(tid: Types.ObjectId, actorId: string, body: 
     plazoParaDefinirDias: cfg.plazoParaDefinirDias,
     avisoMinimoDias: cfg.avisoMinimoDias,
     minDiasPorTramo: cfg.minDiasPorTramo,
+    tiposContratoInvitar: cfg.tiposContratoInvitar,
     estado: "borrador",
     creadaPor: oid(actorId),
   });
@@ -157,21 +162,95 @@ export async function tablero(tid: Types.ObjectId, id: string): Promise<{ campan
 }
 
 /**
- * LANZAR: una invitación por persona ACTIVA con días disponibles del año de la campaña (la misma cuenta
+ * LAS PERSONAS CON DÍAS: cada persona ACTIVA con días disponibles del año de la campaña (la misma cuenta
  * que Gestión por Usuario, que ya descuenta lo pendiente: un bloque del plan por proyecto no se invita
- * dos veces). Fecha límite = hoy + plazo. Avisa a cada una por la campanita.
+ * dos veces) que todavía no tiene invitación. Es la base del lanzamiento Y de la vista previa: salen de
+ * acá las dos para que el número que se muestra sea el que después se invita.
+ *
+ * De cada una viaja su contrato vigente en la empresa de cómputo (`antiguedad.contratoVigenteComputo`),
+ * que es lo que se compara contra los tipos de la campaña.
  */
-export async function lanzarCampania(tid: Types.ObjectId, id: string, actorId: string) {
+async function personasConDias(tid: Types.ObjectId, c: ICampaniaVacaciones) {
+  const saldos = await saldosDeVacaciones(String(tid), tid, c.anio);
+  const candidatos = saldos.filter((f: any) => f.metadata?.activo === true && Number(f.display?.available) > 0);
+  const ya = new Set((await InvitacionVacaciones.find({ tenantId: tid, campaniaId: c._id }).select("userId").lean()).map((i) => String(i.userId)));
+  return candidatos.filter((f: any) => !ya.has(String(f.userId)));
+}
+
+const tipoDe = (f: any): number | null => f.antiguedad?.contratoVigenteComputo?.tipoContratoId ?? null;
+
+/** Los tipos que «Visibilidad por tipo de Contrato» deja sin vacaciones: no se invitan nunca. */
+const tiposDeshabilitados = (config: any): number[] => normalizarTiposContrato(((config?.contractRules || []) as any[]).filter((r) => r?.vacationsEnabled === false).map((r) => r.contractId));
+
+/** Cuánta gente con días hay en cada tipo de contrato (el nombre, el del contrato de alguna de ellas). */
+function agruparPorTipo(personas: any[]): PoblacionPorTipo {
+  const porTipo = new Map<number, { id: number; nombre: string; personas: number }>();
+  let sinContrato = 0;
+  for (const f of personas) {
+    const id = tipoDe(f);
+    if (id === null) {
+      sinContrato++;
+      continue;
+    }
+    const g = porTipo.get(id) || { id, nombre: "", personas: 0 };
+    g.personas++;
+    if (!g.nombre) g.nombre = String(f.antiguedad?.contratoVigenteComputo?.nombre || "");
+    porTipo.set(id, g);
+  }
+  return { porTipo: [...porTipo.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, "es")), sinContrato };
+}
+
+/**
+ * LA VISTA PREVIA DEL BORRADOR: cuánta gente con días hay por tipo de contrato y qué tipos están
+ * deshabilitados. La pantalla hace la cuenta con `resumenDeInvitables` cada vez que cambia la selección,
+ * sin volver a pedir nada: la misma regla (`motivoDeNoInvitar`) que usa el lanzamiento.
+ */
+export async function vistaPreviaDeInvitacion(tid: Types.ObjectId, id: string) {
   const c = await cargarCampania(tid, id);
   if (c.estado !== "borrador") throw new ErrorVacacion("La campaña ya se lanzó.");
+  const [config, personas] = await Promise.all([VacationConfig.findOne({ tenantId: tid }).select("contractRules").lean(), personasConDias(tid, c)]);
+  return { ...agruparPorTipo(personas), deshabilitados: tiposDeshabilitados(config), tiposContratoInvitar: normalizarTiposContrato(c.tiposContratoInvitar) };
+}
+
+/** A qué tipos de contrato invita la campaña (vacío = todos los habilitados). Sólo en borrador: lanzada, ya se usó. */
+export async function guardarTiposContrato(tid: Types.ObjectId, id: string, tipos: unknown) {
+  const c = await cargarCampania(tid, id);
+  if (c.estado !== "borrador") throw new ErrorVacacion("La campaña ya se lanzó: los tipos de contrato no se pueden cambiar.");
+  if (tipos !== undefined && tipos !== null && !Array.isArray(tipos)) throw new ErrorVacacion("Los tipos de contrato tienen que ser una lista.");
+  c.tiposContratoInvitar = normalizarTiposContrato(tipos);
+  await c.save();
+  return { tiposContratoInvitar: c.tiposContratoInvitar };
+}
+
+/**
+ * LANZAR: una invitación por cada persona con días (`personasConDias`) cuyo contrato vigente en la empresa
+ * de cómputo sea de un tipo que la campaña invita (`motivoDeNoInvitar`; sin tipos elegidos, todos los
+ * habilitados). Fecha límite = hoy + plazo. Avisa a cada una por la campanita y deja escrito en la
+ * campaña qué tipos se usaron y cuántas quedaron afuera.
+ *
+ * `tipos`: la selección que tiene la pantalla en ese momento (si viene, se guarda antes de invitar, para
+ * que no se lance con una lista distinta de la que se está viendo).
+ */
+export async function lanzarCampania(tid: Types.ObjectId, id: string, actorId: string, tipos?: unknown) {
+  const c = await cargarCampania(tid, id);
+  if (c.estado !== "borrador") throw new ErrorVacacion("La campaña ya se lanzó.");
+  if (Array.isArray(tipos)) c.tiposContratoInvitar = normalizarTiposContrato(tipos);
   const hoy = hoyArgentina();
   const limite = calcularFechaLimite(hoy, c.plazoParaDefinirDias);
   const config: any = await VacationConfig.findOne({ tenantId: tid }).lean();
 
-  const saldos = await saldosDeVacaciones(String(tid), tid, c.anio);
-  const candidatos = saldos.filter((f: any) => f.metadata?.activo === true && Number(f.display?.available) > 0);
-  const ya = new Set((await InvitacionVacaciones.find({ tenantId: tid, campaniaId: c._id }).select("userId").lean()).map((i) => String(i.userId)));
-  const nuevos = candidatos.filter((f: any) => !ya.has(String(f.userId)));
+  const seleccion = normalizarTiposContrato(c.tiposContratoInvitar);
+  const deshabilitados = tiposDeshabilitados(config);
+  const conDias = await personasConDias(tid, c);
+  const excluidas = { tipoDeshabilitado: 0, tipoNoIncluido: 0, sinContrato: 0 };
+  const nuevos = conDias.filter((f: any) => {
+    const motivo = motivoDeNoInvitar({ tipoContratoId: tipoDe(f), seleccion, deshabilitados });
+    if (motivo === "tipo_deshabilitado") excluidas.tipoDeshabilitado++;
+    else if (motivo === "tipo_no_incluido") excluidas.tipoNoIncluido++;
+    else if (motivo === "sin_contrato_vigente") excluidas.sinContrato++;
+    return !motivo;
+  });
+  if (seleccion.length > 0 && nuevos.length === 0 && conDias.length > 0) throw new ErrorVacacion("Con los tipos de contrato elegidos no se invitaría a nadie: revisá la selección antes de lanzar.");
 
   const perfiles = nuevos.length ? await UserProfile.find({ tenantId: tid, userId: { $in: nuevos.map((f: any) => oid(f.userId)) } }).select("userId department").lean() : [];
   const areaDe = new Map(perfiles.map((p: any) => [String(p.userId), p.department || null]));
@@ -197,6 +276,7 @@ export async function lanzarCampania(tid: Types.ObjectId, id: string, actorId: s
   if (docs.length) await InvitacionVacaciones.insertMany(docs, { ordered: false });
 
   c.estado = "lanzada";
+  c.lanzamiento = { todosLosTipos: seleccion.length === 0, tipos: agruparPorTipo(nuevos).porTipo.map((t) => ({ id: t.id, nombre: t.nombre, invitadas: t.personas })), excluidas };
   c.fechaLimite = limite;
   c.lanzadaPor = oid(actorId);
   c.lanzadaAt = new Date();
@@ -219,7 +299,7 @@ export async function lanzarCampania(tid: Types.ObjectId, id: string, actorId: s
   }
 
   const diasMasLargo = docs.reduce((m, d) => Math.max(m, d.diasDisponibles), 0);
-  return { invitadas: docs.length, alertas: alertasDeLanzamiento({ hoy, plazoDias: c.plazoParaDefinirDias, avisoDias: c.avisoMinimoDias, ventana: ventanaDe(c), diasMasLargo }) };
+  return { invitadas: docs.length, excluidas, alertas: alertasDeLanzamiento({ hoy, plazoDias: c.plazoParaDefinirDias, avisoDias: c.avisoMinimoDias, ventana: ventanaDe(c), diasMasLargo }) };
 }
 
 /** Recordatorio a quienes todavía pueden elegir (no propusieron). `automatico`: lo manda el barrido. */
