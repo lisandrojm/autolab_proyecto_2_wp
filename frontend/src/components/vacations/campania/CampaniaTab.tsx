@@ -66,10 +66,9 @@ export const CampaniaTab: React.FC = () => {
   const campaniaId = new URLSearchParams(location.search).get("campaniaId") || "";
   const abrir = (id: string) => {
     const q = new URLSearchParams(location.search);
-    q.set("tab", "campania");
     if (id) q.set("campaniaId", id);
     else q.delete("campaniaId");
-    navigate({ search: `?${q.toString()}` });
+    navigate({ search: q.toString() ? `?${q.toString()}` : "" });
   };
   return campaniaId ? <TableroCampania id={campaniaId} onVolver={() => abrir("")} /> : <ListaCampanias onAbrir={abrir} />;
 };
