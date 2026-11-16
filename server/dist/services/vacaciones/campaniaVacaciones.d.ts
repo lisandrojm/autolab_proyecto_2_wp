@@ -364,6 +364,96 @@ export declare function proponerFechas(tid: Types.ObjectId, userId: string, tram
     pendienteDeAccion: boolean;
     hoy: string;
 }>;
+/**
+ * LA PERSONA CANCELA SU PROPUESTA (16/11/2026): mientras no esté aprobada (ningún tramo aprobado ni
+ * entregado) se cancelan todos sus tramos en juego, se devuelven los días y vuelve a poder elegir. No se
+ * edita: para cambiar las fechas, se cancela y se propone de nuevo.
+ */
+export declare function cancelarPropuesta(tid: Types.ObjectId, userId: string): Promise<{
+    invitacion: {
+        tenantId: Types.ObjectId;
+        campaniaId: Types.ObjectId;
+        userId: Types.ObjectId;
+        nombre: string;
+        diasDisponibles: number;
+        diasCorridos: boolean;
+        ventanaPersona?: {
+            enabled: boolean;
+            tramos: {
+                inicio: string;
+                fin: string;
+            }[];
+        };
+        fechaLimite: string;
+        estado: import("../../compartido/vacaciones/campania.js").EstadoInvitacion;
+        invitadoAt?: Date;
+        acuseInvitacionAt?: Date | null;
+        propuestaAt?: Date | null;
+        tramos: import("../../models/CampaniaVacaciones.js").ITramoInvitacion[];
+        rechazo?: {
+            motivo?: string;
+            at: Date;
+        } | null;
+        asignacion?: {
+            desde: string;
+            hasta: string;
+            dias: number;
+            sugeridaAt?: Date;
+            editadaPor?: Types.ObjectId;
+            confirmadaPor?: Types.ObjectId;
+            confirmadaAt?: Date;
+            vacationId?: Types.ObjectId;
+            problema?: string | null;
+        } | null;
+        notificacion?: {
+            enviadaAt: Date;
+            texto: string;
+            pdfUrls: string[];
+        } | null;
+        acuseOtorgamientoAt?: Date | null;
+        recordatorios: {
+            at: Date;
+            porUserId?: Types.ObjectId | null;
+            automatico: boolean;
+        }[];
+        createdAt: Date;
+        updatedAt: Date;
+        _id: Types.ObjectId;
+        $locals: Record<string, unknown>;
+        $op: "save" | "validate" | "remove" | null;
+        $where: Record<string, unknown>;
+        baseModelName?: string;
+        collection: import("mongoose").Collection;
+        db: import("mongoose").Connection;
+        errors?: import("mongoose").Error.ValidationError;
+        id?: any;
+        isNew: boolean;
+        schema: import("mongoose").Schema;
+        __v: number;
+    };
+    campania: {
+        _id: Types.ObjectId;
+        nombre: string;
+        anio: number;
+        ventanaDesde: string;
+        ventanaHasta: string;
+        avisoMinimoDias: number;
+        minDiasPorTramo: number;
+        fechaLimite: string;
+    };
+    estadoVisible: import("../../compartido/vacaciones/campania.js").EstadoVisible;
+    diasDisponibles: number;
+    diasParaLaFechaLimite: number;
+    puedeProponer: boolean;
+    primerInicioPosible: string;
+    vacaciones: (import("mongoose").FlattenMaps<IVacation> & Required<{
+        _id: Types.ObjectId;
+    }> & {
+        __v: number;
+    })[];
+    pendienteDeAccion: boolean;
+    hoy: string;
+}>;
 /** El acuse de recibo del aviso por escrito del otorgamiento. */
 export declare function acusarOtorgamiento(tid: Types.ObjectId, userId: string): Promise<{
     invitacion: {
@@ -458,7 +548,7 @@ export declare function alAprobarseEnLaCampania(v: IVacation): Promise<void>;
  * Rechazada o cancelada una vacación de la campaña: si la había propuesto la persona, vuelve a elegir esos
  * días (los demás tramos siguen); si la había asignado la empresa, vuelve a quedar para asignar.
  */
-export declare function alSalirDeLaCampania(v: IVacation, motivo: string): Promise<void>;
+export declare function alSalirDeLaCampania(v: IVacation, motivo: string, porLaPersona?: boolean): Promise<void>;
 /**
  * Lo que hace el reloj en cada campaña lanzada: la fecha límite vencida pasa a «venció sin elegir» y se
  * le sugiere el tramo único; 2 días antes del vencimiento, un recordatorio automático (uno solo).

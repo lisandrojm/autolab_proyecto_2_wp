@@ -445,6 +445,18 @@ router.get("/aprobaciones", async (req: any, res) => {
   }
 });
 
+// El detalle de una solicitud para quien la aprueba (la tarjeta de «Aprobaciones» en la app). Sin sueldos.
+router.get("/:id/detalle-aprobacion", async (req: any, res) => {
+  try {
+    const { detalleParaAprobar } = await import("../services/vacaciones/detalleParaAprobar.js");
+    res.json(await detalleParaAprobar({ tenantId: req.tenantId, tenantObjectId: req.tenantObjectId, vacationId: String(req.params.id), userId: String(req.user!.userId), esAdmin: await tienePermiso(req, PERMISO_ADMIN_VACACIONES) }));
+  } catch (error: any) {
+    if (error instanceof ErrorVacacion) return res.status(error.status).json({ error: error.message });
+    console.error("Error en el detalle para aprobar:", error);
+    res.status(500).json({ error: "No se pudo cargar el detalle de la solicitud" });
+  }
+});
+
 router.get("/aprobaciones/contar", async (req: any, res) => {
   try {
     res.json({ total: await contarParaAprobar(req.tenantObjectId, String(req.user!.userId)) });
@@ -680,13 +692,20 @@ router.put("/:id/cancel", async (req: any, res) => {
       return res.status(400).json({ error: "Esta solicitud no puede ser cancelada" });
     }
 
+    // Una vacación de la campaña ya aprobada no la cancela la persona: sólo el administrador.
+    const esAdmin = await tienePermiso(req, PERMISO_ADMIN_VACACIONES);
+    if (vacation.campaniaId && ["approved", "delivered"].includes(vacation.status) && !esAdmin) {
+      return res.status(400).json({ error: "Estas vacaciones de la campaña ya fueron aprobadas: no se pueden cancelar desde acá. Si necesitás cambiarlas, hablá con RR.HH." });
+    }
+
     vacation.status = "cancelled";
     vacation.cancelledAt = new Date();
     await vacation.save();
 
     await adjustBalanceOnRequestChange(tenantId, vacation.userId, vacation.startDate.getFullYear(), vacation.daysRequested, "cancel");
     // Una vacación de la campaña de goce que se cancela: la persona (o la empresa) vuelve a fijar esos días.
-    if (vacation.campaniaId) await import("../services/vacaciones/campaniaVacaciones.js").then((m) => m.alSalirDeLaCampania(vacation, "Cancelada")).catch((e) => console.error("[CAMPANIA] cancelación:", e?.message || e));
+    const porLaPersona = String(vacation.userId) === String(req.user?.userId);
+    if (vacation.campaniaId) await import("../services/vacaciones/campaniaVacaciones.js").then((m) => m.alSalirDeLaCampania(vacation, "Cancelada", porLaPersona)).catch((e) => console.error("[CAMPANIA] cancelación:", e?.message || e));
 
     res.json(vacation);
   } catch (error: any) {

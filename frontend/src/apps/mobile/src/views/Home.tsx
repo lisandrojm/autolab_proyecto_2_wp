@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
   hace que la tarjeta y la pantalla se lean como la misma cosa; con íconos elegidos aparte, entrar a
   «Contratación» llevaba a una pantalla que arriba mostraba otro dibujo.
 */
-import { faBell, faCalendar, faCalendarCheck, faCircleCheck, faLink, faShoppingCart, faSignOutAlt, faUmbrellaBeach, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faCalendar, faCircleCheck, faLink, faShoppingCart, faSignOutAlt, faUmbrellaBeach, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
 import { useNotifications } from "../hooks/useNotifications";
@@ -226,11 +226,17 @@ export default function Home({ onNavigate }: HomeProps) {
     quickActions.push(sinContrato ? { ...ordersAction, disabled: true } : ordersAction);
   }
 
-  if (puede(MOBILE_VACATIONS) && campania?.pendienteDeAccion) {
-    quickActions.push({ icon: faCalendarCheck, title: "Elegí tus vacaciones", view: "campania" as ViewType, disabled: false, badge: campania.puedeProponer ? `${Math.max(0, campania.diasParaLaFechaLimite)} d` : undefined });
+  /*
+    UNA SOLA TARJETA «VACACIONES» (16/11/2026, pedido del usuario): con la campaña de goce en curso, la
+    tarjeta abre la campaña (con los días que faltan) y la de siempre no se muestra; desde la campaña se
+    llega a «Mis Vacaciones». Sin campaña, es la de siempre.
+  */
+  const conCampania = puede(MOBILE_VACATIONS) && !!campania?.pendienteDeAccion;
+  if (conCampania) {
+    quickActions.push({ icon: faUmbrellaBeach, title: "Vacaciones", view: "campania" as ViewType, disabled: false, badge: campania!.puedeProponer ? `${Math.max(0, campania!.diasParaLaFechaLimite)} d` : undefined });
   }
 
-  if (puede(MOBILE_VACATIONS)) {
+  if (puede(MOBILE_VACATIONS) && !conCampania) {
     const vacacionesDeshabilitadas = sinContrato || profile?.vacationsEnabled === false;
     quickActions.push(
       vacacionesDeshabilitadas

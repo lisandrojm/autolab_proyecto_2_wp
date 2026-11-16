@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBellConcierge, faBriefcase, faCartShopping, faCalendarAlt, faCheck, faCircleCheck, faClock, faHourglassHalf, faUmbrellaBeach, faUserCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faBellConcierge, faBriefcase, faCartShopping, faCalendarAlt, faCheck, faEye, faCircleCheck, faClock, faHourglassHalf, faUmbrellaBeach, faUserCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { vacationsAPI, type ItemDeAprobacion } from "../../../../api/vacations";
 import { fechaCorta } from "@compartido/planVacaciones/fechas";
 import SectionHeader from "../components/SectionHeader";
 import MenuDeTarjetas, { type OpcionDeMenu } from "../components/MenuDeTarjetas";
+import DetalleAprobacionModal from "../components/DetalleAprobacionModal";
 import { useRefrescoEnFoco } from "../hooks/useRefrescoEnFoco";
 import { sweetAlert } from "../utils/sweetAlert";
 import { ViewType } from "../types";
@@ -40,9 +41,14 @@ const INFO = {
 const periodo = (i: ItemDeAprobacion) => `${fechaCorta(String(i.startDate).slice(0, 10))} → ${fechaCorta(String(i.endDate).slice(0, 10))}`;
 
 export default function Aprobaciones({ onNavigate }: { onNavigate: (view: ViewType) => void }) {
-  const [datos, setDatos] = useState<{ paraAprobar: ItemDeAprobacion[]; esperandoSupervisor: ItemDeAprobacion[] } | null>(null);
+  const [datos, setDatos] = useState<{
+    paraAprobar: ItemDeAprobacion[];
+    esperandoSupervisor: ItemDeAprobacion[];
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [procesando, setProcesando] = useState<string | null>(null);
+  // La solicitud abierta en el detalle (tocando la tarjeta).
+  const [detalle, setDetalle] = useState<ItemDeAprobacion | null>(null);
   /*
     Dos niveles de tarjetas, como el resto de la app: primero Vacaciones / Pedidos (con su contador, como
     Contratos o Registro en la home) y, dentro de Vacaciones, «Para aprobar» / «Esperando al supervisor»
@@ -69,22 +75,49 @@ export default function Aprobaciones({ onNavigate }: { onNavigate: (view: ViewTy
   const esperando = datos?.esperandoSupervisor || [];
   // «Esperando al supervisor» es sólo del coordinador: si no hay nada ahí, no hace falta el menú.
   const opciones: OpcionDeMenu<ParteVacaciones>[] = [
-    { id: "para_aprobar", label: "Para aprobar", icon: faUserCheck, contador: paraAprobar.length },
-    ...(esperando.length ? [{ id: "esperando" as const, label: "Esperando al supervisor", icon: faHourglassHalf, contador: esperando.length }] : []),
+    {
+      id: "para_aprobar",
+      label: "Para aprobar",
+      icon: faUserCheck,
+      contador: paraAprobar.length,
+    },
+    ...(esperando.length
+      ? [
+          {
+            id: "esperando" as const,
+            label: "Esperando al supervisor",
+            icon: faHourglassHalf,
+            contador: esperando.length,
+          },
+        ]
+      : []),
   ];
   const conMenu = opciones.length > 1;
   const activa: ParteVacaciones = !conMenu ? "para_aprobar" : parte === "menu" ? "para_aprobar" : parte;
   const enMenu = conMenu && parte === "menu";
 
-  const sacar = (id: string) => setDatos((d) => (d ? { paraAprobar: d.paraAprobar.filter((x) => x._id !== id), esperandoSupervisor: d.esperandoSupervisor.filter((x) => x._id !== id) } : d));
+  const sacar = (id: string) =>
+    setDatos((d) =>
+      d
+        ? {
+            paraAprobar: d.paraAprobar.filter((x) => x._id !== id),
+            esperandoSupervisor: d.esperandoSupervisor.filter((x) => x._id !== id),
+          }
+        : d,
+    );
 
   const aprobar = async (i: ItemDeAprobacion) => {
-    const r = await sweetAlert.confirm("¿Aprobar las vacaciones?", `${i.persona.nombre} · ${periodo(i)} (${i.daysRequested} días).${i.etapa === "supervisor" ? " Después las revisa el coordinador (si el proyecto tiene) y el administrador." : " Después las aprueba el administrador."}`, "Aprobar");
+    const r = await sweetAlert.confirm(
+      "¿Aprobar las vacaciones?",
+      `${i.persona.nombre} · ${periodo(i)} (${i.daysRequested} días).${i.etapa === "supervisor" ? " Después las revisa el coordinador (si el proyecto tiene) y el administrador." : " Después las aprueba el administrador."}`,
+      "Aprobar",
+    );
     if (!r.isConfirmed) return;
     setProcesando(i._id);
     try {
       await vacationsAPI.aprobarEtapa(i._id);
       sacar(i._id);
+      setDetalle(null);
       sweetAlert.success("Aprobadas", "Pasan al siguiente paso.");
     } catch (e: any) {
       sweetAlert.error("No se pudo aprobar", e?.response?.data?.error || "Probá de nuevo.");
@@ -95,12 +128,17 @@ export default function Aprobaciones({ onNavigate }: { onNavigate: (view: ViewTy
   };
 
   const rechazar = async (i: ItemDeAprobacion) => {
-    const r = await sweetAlert.motivo("¿Rechazar las vacaciones?", `Contale a ${i.persona.nombre} por qué no se aprueban.`, { placeholder: "Ej.: se superponen con el cierre del proyecto", confirmText: "Rechazar", mensajeVacio: "Escribí el motivo del rechazo." });
+    const r = await sweetAlert.motivo("¿Rechazar las vacaciones?", `Contale a ${i.persona.nombre} por qué no se aprueban.`, {
+      placeholder: "Ej.: se superponen con el cierre del proyecto",
+      confirmText: "Rechazar",
+      mensajeVacio: "Escribí el motivo del rechazo.",
+    });
     if (!r.isConfirmed) return;
     setProcesando(i._id);
     try {
       await vacationsAPI.rechazarEtapa(i._id, String(r.value || "").trim());
       sacar(i._id);
+      setDetalle(null);
       sweetAlert.success("Rechazadas", `Le avisamos a ${i.persona.nombre}.`);
     } catch (e: any) {
       sweetAlert.error("No se pudo rechazar", e?.response?.data?.error || "Probá de nuevo.");
@@ -114,7 +152,14 @@ export default function Aprobaciones({ onNavigate }: { onNavigate: (view: ViewTy
     setProcesando(i._id);
     try {
       await vacationsAPI.recordarSupervisor(i._id);
-      setDatos((d) => (d ? { ...d, esperandoSupervisor: d.esperandoSupervisor.map((x) => (x._id === i._id ? { ...x, recordadaHoy: true } : x)) } : d));
+      setDatos((d) =>
+        d
+          ? {
+              ...d,
+              esperandoSupervisor: d.esperandoSupervisor.map((x) => (x._id === i._id ? { ...x, recordadaHoy: true } : x)),
+            }
+          : d,
+      );
       sweetAlert.success("Listo", "Le avisamos al supervisor.");
     } catch (e: any) {
       sweetAlert.error("No se pudo avisar", e?.response?.data?.error || "Probá de nuevo.");
@@ -125,31 +170,38 @@ export default function Aprobaciones({ onNavigate }: { onNavigate: (view: ViewTy
 
   const tarjeta = (i: ItemDeAprobacion, acciones: React.ReactNode) => (
     <div key={i._id} className="rounded-xl border bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h4 className="truncate font-bold text-slate-900 dark:text-slate-100">{i.persona.nombre}</h4>
-          <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{i.vacationNumber}</p>
-        </div>
-        <span className="shrink-0 whitespace-nowrap rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">{i.daysRequested} días</span>
-      </div>
-      <div className="mt-3 grid grid-cols-1 gap-1.5 border-t border-slate-100 pt-2 text-[11px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <FontAwesomeIcon icon={faCalendarAlt} className="h-3 w-3 text-primary opacity-70" />
-          <span className="truncate">{periodo(i)}</span>
-        </div>
-        <div className="flex min-w-0 items-center gap-1.5">
-          <FontAwesomeIcon icon={faBriefcase} className="h-3 w-3 text-primary opacity-70" />
-          <span className="truncate">{i.proyectos.filter(Boolean).join(" · ") || "Sin proyecto"}</span>
-        </div>
-        {i.aprobadoPorSupervisor && (
-          <div className="flex min-w-0 items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-            <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" />
-            <span className="truncate">Aprobó el supervisor: {i.aprobadoPorSupervisor}</span>
+      <div>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h4 className="truncate font-bold text-slate-900 dark:text-slate-100">{i.persona.nombre}</h4>
+            <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{i.vacationNumber}</p>
           </div>
-        )}
-        {i.reason && i.reason !== "Solicitud de vacaciones" && <p className="italic">«{i.reason}»</p>}
+          <span className="shrink-0 whitespace-nowrap rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">{i.daysRequested} días</span>
+        </div>
+        <div className="mt-3 grid grid-cols-1 gap-1.5 border-t border-slate-100 pt-2 text-[11px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <FontAwesomeIcon icon={faCalendarAlt} className="h-3 w-3 text-primary opacity-70" />
+            <span className="truncate">{periodo(i)}</span>
+          </div>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <FontAwesomeIcon icon={faBriefcase} className="h-3 w-3 text-primary opacity-70" />
+            <span className="truncate">{i.proyectos.filter(Boolean).join(" · ") || "Sin proyecto"}</span>
+          </div>
+          {i.aprobadoPorSupervisor && (
+            <div className="flex min-w-0 items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+              <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" />
+              <span className="truncate">Aprobó el supervisor: {i.aprobadoPorSupervisor}</span>
+            </div>
+          )}
+          {i.reason && i.reason !== "Solicitud de vacaciones" && <p className="italic">«{i.reason}»</p>}
+        </div>
       </div>
-      <div className="mt-3">{acciones}</div>
+      {/* El detalle para decidir: rol, turno, contrato, saldo y quién más sale esas fechas. */}
+      <button type="button" onClick={() => setDetalle(i)} className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 py-2 text-xs font-bold text-slate-700 active:bg-slate-100 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200 dark:active:bg-slate-800">
+        <FontAwesomeIcon icon={faEye} />
+        Ver detalle
+      </button>
+      <div className="mt-2">{acciones}</div>
     </div>
   );
 
@@ -165,37 +217,51 @@ export default function Aprobaciones({ onNavigate }: { onNavigate: (view: ViewTy
           <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Cuando alguien de tu equipo pida vacaciones y te toque aprobarlas, aparecen acá.</p>
         </div>
       );
-    return (
-      <div className="space-y-3">
-        {items.map((i) =>
-          tarjeta(
-            i,
-            activa === "para_aprobar" ? (
-              // Los colores y los íconos del tilde y la cruz de la web; Aprobar es el grande.
-              <div className="grid grid-cols-3 gap-2">
-                <button type="button" onClick={() => rechazar(i)} disabled={procesando === i._id} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-100 py-2 text-xs font-bold text-red-700 active:bg-red-200 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-900/30 dark:text-red-400">
-                  <FontAwesomeIcon icon={faXmark} />
-                  Rechazar
-                </button>
-                <button type="button" onClick={() => aprobar(i)} disabled={procesando === i._id} className="col-span-2 inline-flex items-center justify-center gap-1.5 rounded-lg border border-green-200 bg-green-100 py-2 text-xs font-bold text-green-700 active:bg-green-200 disabled:opacity-50 dark:border-green-900/60 dark:bg-green-900/30 dark:text-green-400">
-                  <FontAwesomeIcon icon={procesando === i._id ? faClock : faCheck} />
-                  {procesando === i._id ? "Guardando..." : "Aprobar"}
-                </button>
-              </div>
-            ) : (
-              <button type="button" onClick={() => recordar(i)} disabled={procesando === i._id || i.recordadaHoy} className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 py-2 text-xs font-bold text-slate-600 active:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:active:bg-slate-800">
-                <FontAwesomeIcon icon={faBellConcierge} />
-                {i.recordadaHoy ? "Avisado hoy" : procesando === i._id ? "Avisando..." : "Solicitar aprobación al supervisor"}
-              </button>
-            ),
-          ),
-        )}
-      </div>
-    );
+    return <div className="space-y-3">{items.map((i) => tarjeta(i, accionesDe(i)))}</div>;
   };
 
+  const accionesDe = (i: ItemDeAprobacion) =>
+    activa === "para_aprobar" ? (
+      // Los colores y los íconos del tilde y la cruz de la web; Aprobar es el grande.
+      <div className="grid grid-cols-3 gap-2">
+        <button
+          type="button"
+          onClick={() => rechazar(i)}
+          disabled={procesando === i._id}
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-100 py-2 text-xs font-bold text-red-700 active:bg-red-200 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-900/30 dark:text-red-400"
+        >
+          <FontAwesomeIcon icon={faXmark} />
+          Rechazar
+        </button>
+        <button
+          type="button"
+          onClick={() => aprobar(i)}
+          disabled={procesando === i._id}
+          className="col-span-2 inline-flex items-center justify-center gap-1.5 rounded-lg border border-green-200 bg-green-100 py-2 text-xs font-bold text-green-700 active:bg-green-200 disabled:opacity-50 dark:border-green-900/60 dark:bg-green-900/30 dark:text-green-400"
+        >
+          <FontAwesomeIcon icon={procesando === i._id ? faClock : faCheck} />
+          {procesando === i._id ? "Guardando..." : "Aprobar"}
+        </button>
+      </div>
+    ) : (
+      <button
+        type="button"
+        onClick={() => recordar(i)}
+        disabled={procesando === i._id || i.recordadaHoy}
+        className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 py-2 text-xs font-bold text-slate-600 active:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:active:bg-slate-800"
+      >
+        <FontAwesomeIcon icon={faBellConcierge} />
+        {i.recordadaHoy ? "Avisado hoy" : procesando === i._id ? "Avisando..." : "Solicitar aprobación al supervisor"}
+      </button>
+    );
+
   const secciones: OpcionDeMenu<Seccion>[] = [
-    { id: "vacaciones", label: "Vacaciones", icon: faUmbrellaBeach, contador: paraAprobar.length },
+    {
+      id: "vacaciones",
+      label: "Vacaciones",
+      icon: faUmbrellaBeach,
+      contador: paraAprobar.length,
+    },
     { id: "pedidos", label: "Pedidos", icon: faCartShopping, disabled: true },
   ];
 
@@ -221,12 +287,13 @@ export default function Aprobaciones({ onNavigate }: { onNavigate: (view: ViewTy
   return (
     <div className="flex-1 pb-24">
       <SectionHeader
-        icon={enLista ? opcionActiva?.icon ?? faUmbrellaBeach : faUmbrellaBeach}
-        titulo={enLista ? opcionActiva?.label ?? "Vacaciones" : "Aprobaciones · Vacaciones"}
+        icon={enLista ? (opcionActiva?.icon ?? faUmbrellaBeach) : faUmbrellaBeach}
+        titulo={enLista ? (opcionActiva?.label ?? "Vacaciones") : "Aprobaciones · Vacaciones"}
         onBack={() => (enLista ? setParte("menu") : setSeccion("menu"))}
         info={INFO.vacaciones}
       />
       <div className="space-y-3 px-4 pt-4">{enMenu ? <MenuDeTarjetas opciones={opciones} onElegir={setParte} /> : lista()}</div>
+      <DetalleAprobacionModal vacationId={detalle?._id || null} onClose={() => setDetalle(null)} acciones={detalle ? accionesDe(detalle) : undefined} />
     </div>
   );
 }

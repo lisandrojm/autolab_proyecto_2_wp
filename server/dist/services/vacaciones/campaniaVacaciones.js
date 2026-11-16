@@ -544,6 +544,34 @@ export async function proponerFechas(tid, userId, tramos) {
     await inv.save();
     return miInvitacion(tid, userId);
 }
+/**
+ * LA PERSONA CANCELA SU PROPUESTA (16/11/2026): mientras no esté aprobada (ningún tramo aprobado ni
+ * entregado) se cancelan todos sus tramos en juego, se devuelven los días y vuelve a poder elegir. No se
+ * edita: para cambiar las fechas, se cancela y se propone de nuevo.
+ */
+export async function cancelarPropuesta(tid, userId) {
+    const inv = await invitacionParaAccion(tid, userId);
+    const ids = (inv.tramos || []).map((t) => t.vacationId).filter(Boolean);
+    const vacs = ids.length ? await Vacation.find({ _id: { $in: ids }, tenantId: tid }) : [];
+    const enJuego = vacs.filter((v) => !["rejected", "cancelled"].includes(v.status));
+    if (enJuego.length === 0)
+        throw new ErrorVacacion("No tenés una propuesta para cancelar.");
+    if (enJuego.some((v) => ["approved", "delivered"].includes(v.status)))
+        throw new ErrorVacacion("Tu propuesta ya fue aprobada: no se puede cancelar desde acá. Si necesitás cambiarla, hablá con RR.HH.");
+    for (const v of enJuego) {
+        v.status = "cancelled";
+        v.cancelledAt = new Date();
+        await v.save();
+        await adjustBalanceOnRequestChange(v.tenantId, v.userId, v.startDate.getFullYear(), v.daysRequested, "cancel").catch((e) => console.error("[CAMPANIA] saldo al cancelar:", e?.message || e));
+    }
+    inv.tramos = [];
+    inv.estado = inv.acuseInvitacionAt ? "acuso_recibo" : "invitado";
+    inv.rechazo = null;
+    inv.notificacion = null;
+    inv.historial.push(paso("propuesta_cancelada", userId, `Canceló su propuesta: ${enJuego.map((v) => periodoTexto({ desde: iso(v.startDate), hasta: iso(v.endDate) })).join("; ")}.`));
+    await inv.save();
+    return miInvitacion(tid, userId);
+}
 /** El acuse de recibo del aviso por escrito del otorgamiento. */
 export async function acusarOtorgamiento(tid, userId) {
     const inv = await invitacionParaAccion(tid, userId);
@@ -594,7 +622,7 @@ export async function alAprobarseEnLaCampania(v) {
  * Rechazada o cancelada una vacación de la campaña: si la había propuesto la persona, vuelve a elegir esos
  * días (los demás tramos siguen); si la había asignado la empresa, vuelve a quedar para asignar.
  */
-export async function alSalirDeLaCampania(v, motivo) {
+export async function alSalirDeLaCampania(v, motivo, porLaPersona = false) {
     if (!v.campaniaId)
         return;
     const inv = await InvitacionVacaciones.findOne({ campaniaId: v.campaniaId, userId: v.userId });
@@ -609,6 +637,15 @@ export async function alSalirDeLaCampania(v, motivo) {
     }
     else {
         inv.tramos = (inv.tramos || []).filter((t) => String(t.vacationId) !== String(v._id));
+        // La cancela la persona y no le queda nada propuesto: vuelve a elegir, sin que figure como rechazada.
+        if (porLaPersona && inv.tramos.length === 0 && inv.estado === "propuso_fechas") {
+            inv.estado = inv.acuseInvitacionAt ? "acuso_recibo" : "invitado";
+            inv.rechazo = null;
+            inv.notificacion = null;
+            inv.historial.push(paso("propuesta_cancelada", String(v.userId), `Canceló su propuesta: ${periodo}.`));
+            await inv.save();
+            return;
+        }
         inv.estado = "rechazada";
         inv.rechazo = { motivo, at: new Date() };
         inv.notificacion = null;

@@ -162,6 +162,11 @@ class CampaniasVacacionesAPI {
     const { data } = await axios.post(`${BASE}/mia/proponer`, { tramos });
     return data;
   }
+  /** Cancela la propuesta entera mientras no esté aprobada; después se puede volver a elegir. */
+  async cancelarPropuesta(): Promise<MiInvitacion | null> {
+    const { data } = await axios.post(`${BASE}/mia/cancelar-propuesta`);
+    return data;
+  }
   async acusarOtorgamiento(): Promise<MiInvitacion | null> {
     const { data } = await axios.post(`${BASE}/mia/acuse-otorgamiento`);
     return data;

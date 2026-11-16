@@ -15,6 +15,11 @@ interface VacationDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRefresh?: () => Promise<void>;
+  /**
+   * Para quien la usa con otras reglas (la campaña de goce): si se puede cancelar y cómo. Sin esto, las
+   * de siempre (pendiente, o entregada antes de empezar) con la cancelación común.
+   */
+  cancelacion?: { permitida: boolean; titulo: string; texto: string; cancelar: () => Promise<void> };
 }
 
 // Helper to parse date string as local date (ignoring time/timezone)
@@ -25,7 +30,7 @@ const getLocalDate = (dateString: string | undefined) => {
   return new Date(year, month - 1, day);
 };
 
-export default function VacationDetailModal({ vacation, profile, isOpen, onClose, onRefresh }: VacationDetailModalProps) {
+export default function VacationDetailModal({ vacation, profile, isOpen, onClose, onRefresh, cancelacion }: VacationDetailModalProps) {
   const [viewingFile, setViewingFile] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [notifyingSignature, setNotifyingSignature] = useState(false);
@@ -65,15 +70,16 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
     const title = isDelivered ? "¿Cancelar solicitud entregada?" : "¿Cancelar solicitud?";
     const text = isDelivered ? "Se cancelará la solicitud entregada y se restaurarán los días de vacaciones." : "¿Estás seguro de cancelar esta solicitud de vacaciones?";
 
-    const result = await sweetAlert.confirm(title, text, "Sí, cancelar", "No cancelar");
+    const result = await sweetAlert.confirm(cancelacion?.titulo ?? title, cancelacion?.texto ?? text, "Sí, cancelar", "No cancelar");
 
     if (!result.isConfirmed) return;
 
     try {
       setCancelling(true);
-      await vacationsAPI.cancel(vacation._id);
+      if (cancelacion) await cancelacion.cancelar();
+      else await vacationsAPI.cancel(vacation._id);
       setCancelling(false);
-      await sweetAlert.success("Solicitud cancelada", "La solicitud ha sido cancelada correctamente");
+      await sweetAlert.success("Solicitud cancelada", cancelacion ? "Cancelaste tu propuesta. Podés volver a elegir tus fechas." : "La solicitud ha sido cancelada correctamente");
       if (onRefresh) {
         await onRefresh();
       }
@@ -92,6 +98,15 @@ export default function VacationDetailModal({ vacation, profile, isOpen, onClose
           <FontAwesomeIcon icon={faSpinner} className="w-4 h-4" spin />
           <span className="text-sm">Cancelando...</span>
         </div>
+      );
+    }
+
+    if (cancelacion) {
+      if (!cancelacion.permitida) return null;
+      return (
+        <button onClick={handleCancelVacation} disabled={cancelling} className="px-6 py-2.5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          Cancelar propuesta
+        </button>
       );
     }
 

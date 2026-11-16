@@ -7,6 +7,7 @@ import { ErrorVacacion } from "../services/vacaciones/crearVacacion.js";
 import {
   acusarInvitacion,
   acusarOtorgamiento,
+  cancelarPropuesta,
   cargarCampania,
   cerrarCampania,
   confirmarAsignaciones,
@@ -58,6 +59,7 @@ campaniasVacacionesRoutes.use(requireTenant, authenticateToken);
 campaniasVacacionesRoutes.get("/mia", manejar(async (req) => ({ invitacion: await miInvitacion(tid(req), yo(req)) })));
 campaniasVacacionesRoutes.post("/mia/acuse", manejar(async (req) => acusarInvitacion(tid(req), yo(req))));
 campaniasVacacionesRoutes.post("/mia/proponer", manejar(async (req) => proponerFechas(tid(req), yo(req), req.body?.tramos)));
+campaniasVacacionesRoutes.post("/mia/cancelar-propuesta", manejar(async (req) => cancelarPropuesta(tid(req), yo(req))));
 campaniasVacacionesRoutes.post("/mia/acuse-otorgamiento", manejar(async (req) => acusarOtorgamiento(tid(req), yo(req))));
 
 /* ── El admin ── */

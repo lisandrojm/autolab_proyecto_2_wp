@@ -87,6 +87,50 @@ export interface ItemDeAprobacion {
   recordadaHoy: boolean;
 }
 
+/** El detalle de una solicitud para quien la aprueba (`GET /vacations/:id/detalle-aprobacion`). Sin sueldos. */
+export interface DetalleParaAprobar {
+  solicitud: {
+    _id: string;
+    vacationNumber: string;
+    desde: string;
+    hasta: string;
+    dias: number;
+    diasCorridos: boolean | null;
+    motivo: string;
+    creadaAt: string;
+    status: string;
+    etapa: "supervisor" | "coordinador" | "admin" | null;
+    origen: "solicitud" | "plan" | "campania";
+    campania: { nombre: string; ventanaDesde: string; ventanaHasta: string } | null;
+    asignadaPorEmpresa: boolean;
+    aprobaciones: { supervisor: { nombre: string; at: string | null } | null; coordinador: { nombre: string; at: string | null } | null };
+    recordatorios: number;
+  };
+  persona: {
+    _id: string;
+    nombre: string;
+    email: string;
+    cuil: string;
+    foto: string;
+    rolEmpresa: string;
+    antiguedad: string;
+    empresaComputo: string;
+    saldo: { anio: number; total: number; gozados: number; pendientes: number; disponibles: number } | null;
+  };
+  proyectos: {
+    projectId: string;
+    nombre: string;
+    rolEmpresa: string;
+    contrato: { tipo: string; categoria: string; empresa: string; alta: string; baja: string; horario: string; diasSemana: number[]; diasPorSemana: number | null; sede: string } | null;
+    areasTurnos: { area: string; turnos: string[] }[];
+    supervisores: string[];
+    coordinadores: string[];
+    soyAprobador: boolean;
+    superposiciones: { nombre: string; desde: string; hasta: string; dias: number; status: string; mismaAreaTurno: boolean }[];
+  }[];
+  otrasDelAnio: { vacationNumber: string; desde: string; hasta: string; dias: number; status: string; origen: string }[];
+}
+
 // VACATION REQUESTS API
 export const vacationsAPI = {
   getAll: async (params?: { mine?: boolean }): Promise<VacationRequest[]> => {
@@ -130,6 +174,11 @@ export const vacationsAPI = {
   contarParaAprobar: async (): Promise<number> => {
     const response = await axios.get("/vacations/aprobaciones/contar");
     return Number(response.data?.total || 0);
+  },
+
+  detalleParaAprobar: async (id: string): Promise<DetalleParaAprobar> => {
+    const response = await axios.get(`/vacations/${id}/detalle-aprobacion`);
+    return response.data;
   },
 
   aprobarEtapa: async (id: string): Promise<VacationRequest> => {
