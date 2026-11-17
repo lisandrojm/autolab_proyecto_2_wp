@@ -13,7 +13,7 @@ import { saldosDeVacaciones } from "../services/vacaciones/saldos.js";
 import { fechasBloqueadas } from "../services/vacaciones/solapamiento.js";
 import { ErrorVacacion, adjustBalanceOnRequestChange, crearVacacionParaPersona, preAprobarVacacion } from "../services/vacaciones/crearVacacion.js";
 import { etapaDe } from "../compartido/vacaciones/etapaDeAprobacion.js";
-import { aprobarComoAdmin, aprobarEtapa, bandejaDeAprobaciones, contarParaAprobar, iniciarAprobacion, rechazarEtapa, rechazarVacacion, recordarAlSupervisor } from "../services/vacaciones/aprobacionPorEtapas.js";
+import { aprobarComoAdmin, aprobarEtapa, bandejaDeAprobaciones, contarParaAprobar, historialDeAprobaciones, iniciarAprobacion, rechazarEtapa, rechazarVacacion, recordarAlSupervisor } from "../services/vacaciones/aprobacionPorEtapas.js";
 import { requirePermission, tienePermiso } from "../middleware/permissions.js";
 const router = express.Router();
 // Apply authentication to all routes
@@ -391,6 +391,16 @@ router.get("/aprobaciones", async (req, res) => {
     catch (error) {
         console.error("Error en la bandeja de aprobaciones de vacaciones:", error);
         res.status(500).json({ error: "Error al obtener las vacaciones para aprobar" });
+    }
+});
+// Lo que aprobé o rechacé como supervisor o coordinador (el «Historial» de Aprobaciones en la app).
+router.get("/aprobaciones/historial", async (req, res) => {
+    try {
+        res.json(await historialDeAprobaciones(req.tenantObjectId, String(req.user.userId)));
+    }
+    catch (error) {
+        console.error("Error en el historial de aprobaciones de vacaciones:", error);
+        res.status(500).json({ error: "Error al obtener el historial de aprobaciones" });
     }
 });
 // El detalle de una solicitud para quien la aprueba (la tarjeta de «Aprobaciones» en la app). Sin sueldos.

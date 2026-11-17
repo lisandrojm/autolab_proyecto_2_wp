@@ -203,3 +203,51 @@ export async function contarParaAprobar(tenantObjectId, userId) {
         .lean();
     return candidatas.filter((v) => puedeAprobarEtapa(v, userId)).length;
 }
+/**
+ * EL HISTORIAL DE «APROBACIONES» (17/11/2026, pedido del usuario): lo que aprobé o rechacé como supervisor
+ * o coordinador, lo más nuevo primero. Sale de lo que ya guarda cada solicitud (`aprobaciones.<nivel>` y
+ * `rechazo`), así que incluye lo aprobado antes de que existiera esta pantalla. El rechazo del admin no va:
+ * es de la web.
+ */
+export async function historialDeAprobaciones(tenantObjectId, userId, limite = 200) {
+    const yo = new Types.ObjectId(userId);
+    const vacaciones = await Vacation.find({
+        tenantId: tenantObjectId,
+        $or: [{ "aprobaciones.supervisor.userId": yo }, { "aprobaciones.coordinador.userId": yo }, { "rechazo.userId": yo, "rechazo.nivel": { $in: ["supervisor", "coordinador"] } }],
+    })
+        .select("vacationNumber userId userName startDate endDate daysRequested reason createdAt status cadena aprobaciones rechazo")
+        .lean();
+    const idsProyecto = [...new Set(vacaciones.flatMap((v) => (v.cadena?.proyectos || []).map((p) => String(p.projectId))))].map((id) => new Types.ObjectId(id));
+    const idsPersona = [...new Set(vacaciones.map((v) => String(v.userId)))].map((id) => new Types.ObjectId(id));
+    const [proyectos, personas] = await Promise.all([
+        idsProyecto.length ? Project.find({ _id: { $in: idsProyecto } }).select("name").lean() : [],
+        idsPersona.length ? User.find({ _id: { $in: idsPersona } }).select("firstName lastName metadata.fullName").lean() : [],
+    ]);
+    const nombreProyecto = new Map(proyectos.map((p) => [String(p._id), String(p.name || "")]));
+    const nombre = new Map(personas.map((p) => [String(p._id), nombreDePersona(p)]));
+    const items = [];
+    for (const v of vacaciones) {
+        const base = {
+            _id: String(v._id),
+            vacationNumber: v.vacationNumber,
+            persona: { _id: String(v.userId), nombre: nombre.get(String(v.userId)) || v.userName },
+            proyectos: (v.cadena?.proyectos || []).filter((p) => [...(p.supervisores || []), ...(p.coordinadores || [])].some((u) => String(u) === userId)).map((p) => nombreProyecto.get(String(p.projectId)) || ""),
+            startDate: v.startDate,
+            endDate: v.endDate,
+            daysRequested: v.daysRequested,
+            reason: v.reason,
+            createdAt: v.createdAt,
+            status: v.status,
+            etapaActual: v.status === "pending" ? etapaDe(v) : v.status === "pre_approved" ? "admin" : null,
+        };
+        for (const nivel of ["supervisor", "coordinador"]) {
+            const a = v.aprobaciones?.[nivel];
+            if (a?.userId && String(a.userId) === userId)
+                items.push({ ...base, accion: "aprobada", nivel, at: a.at || v.updatedAt || v.createdAt });
+        }
+        const r = v.rechazo;
+        if (r?.userId && String(r.userId) === userId && (r.nivel === "supervisor" || r.nivel === "coordinador"))
+            items.push({ ...base, accion: "rechazada", nivel: r.nivel, at: r.at || v.rejectedAt, motivo: r.motivo });
+    }
+    return items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, limite);
+}

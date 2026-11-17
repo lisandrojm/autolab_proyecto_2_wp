@@ -56,3 +56,21 @@ export declare function bandejaDeAprobaciones(tenantObjectId: any, userId: strin
 }>;
 /** Cuántas esperan MI aprobación (el número de la tarjeta). No cuenta lo que espera al supervisor. */
 export declare function contarParaAprobar(tenantObjectId: any, userId: string): Promise<number>;
+/** Lo que hice yo con una solicitud: un renglón por cada paso (si aprobé como supervisor y como coordinador, son dos). */
+export interface ItemDeHistorial extends Omit<ItemDeAprobacion, "etapa" | "aprobadoPorSupervisor" | "recordadaHoy"> {
+    accion: "aprobada" | "rechazada";
+    nivel: Nivel;
+    at: Date;
+    motivo?: string;
+    /** Dónde está hoy la solicitud. */
+    status: IVacation["status"];
+    /** Si sigue pendiente, qué nivel falta («admin» = espera al administrador). */
+    etapaActual: Nivel | "admin" | null;
+}
+/**
+ * EL HISTORIAL DE «APROBACIONES» (17/11/2026, pedido del usuario): lo que aprobé o rechacé como supervisor
+ * o coordinador, lo más nuevo primero. Sale de lo que ya guarda cada solicitud (`aprobaciones.<nivel>` y
+ * `rechazo`), así que incluye lo aprobado antes de que existiera esta pantalla. El rechazo del admin no va:
+ * es de la web.
+ */
+export declare function historialDeAprobaciones(tenantObjectId: any, userId: string, limite?: number): Promise<ItemDeHistorial[]>;

@@ -87,6 +87,16 @@ export interface ItemDeAprobacion {
   recordadaHoy: boolean;
 }
 
+/** Lo que hice yo con una solicitud (`GET /vacations/aprobaciones/historial`): un renglón por paso. */
+export interface ItemDeHistorial extends Omit<ItemDeAprobacion, "etapa" | "aprobadoPorSupervisor" | "recordadaHoy"> {
+  accion: "aprobada" | "rechazada";
+  nivel: "supervisor" | "coordinador";
+  at: string;
+  motivo?: string;
+  status: "pending" | "pre_approved" | "approved" | "rejected" | "delivered" | "cancelled";
+  etapaActual: "supervisor" | "coordinador" | "admin" | null;
+}
+
 /** El detalle de una solicitud para quien la aprueba (`GET /vacations/:id/detalle-aprobacion`). Sin sueldos. */
 export interface DetalleParaAprobar {
   solicitud: {
@@ -168,6 +178,11 @@ export const vacationsAPI = {
   */
   aprobaciones: async (): Promise<{ paraAprobar: ItemDeAprobacion[]; esperandoSupervisor: ItemDeAprobacion[] }> => {
     const response = await axios.get("/vacations/aprobaciones");
+    return response.data;
+  },
+
+  historialDeAprobaciones: async (): Promise<ItemDeHistorial[]> => {
+    const response = await axios.get("/vacations/aprobaciones/historial");
     return response.data;
   },
 
