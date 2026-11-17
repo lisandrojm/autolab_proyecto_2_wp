@@ -26,7 +26,8 @@ import { HojaModal } from "./HojaModal";
 import { SelectorPersona } from "./SelectorPersona";
 import { clavePuntual, contratoDelPuesto, EstadoContratar, guardarEstado, leerEstado, pedidosDe, puntualLimpio } from "./estadoContratar";
 import { estadoDe, nombreRoles, proyectoDelEquipo, PuestoDelEquipo, puestosDe, rutas } from "./equipoUtil";
-import { porDiasSueltos } from "./Condiciones";
+import { AvisoSoloServicios, contratosParaElegir, porDiasSueltos } from "./Condiciones";
+import { useContratoEnFechas } from "../../../../../hooks/useContratoEnFechas";
 import { PASOS_CONTRATAR } from "./Pasos";
 import { AIRE, MARGEN, Rotulo, pastillaDe } from "./piezas";
 import { CLASE_HORA, fechaCorta, pesos, Pill, textoHorario } from "./comun";
@@ -322,6 +323,9 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
   const desde = sueltos ? fechas[0] || "" : desdePropio;
   const hasta = sueltos ? fechas[fechas.length - 1] || "" : hastaPropio;
   const periodo = periodoDeCalculo(desde, hasta, indeterminado);
+  // Con un contrato de ARCA en SUS fechas, sólo Servicios (la regla del alta individual; el server la revisa al contratar).
+  const contratoEnFechas = useContratoEnFechas({ activo: !d.excluido, userId: persona?._id, desde, hasta: sueltos ? hasta : indeterminado ? "" : hasta || desde, fechas: sueltos ? fechas : undefined });
+  const soloServicios = contratoEnFechas?.mensaje || "";
   const mult = Number(contratoDoc?.data?.multiplicadorDiario) > 0 ? Number(contratoDoc.data.multiplicadorDiario) : 1;
   const jornadasDelTipo = Number(contratoDoc?.data?.cantidadJornadas) > 0 ? Number(contratoDoc.data.cantidadJornadas) : null;
   const escalaBase = importePorJornadaDeCategoria(categoriaActual || undefined, 1, jornadasDelTipo);
@@ -432,6 +436,7 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
 
               {/* ── Contrato: el campo del alta individual, con el badge de trámite ── */}
               {catalogos.contratos.length > 0 && <CampoTipoContrato contratos={catalogos.contratos} contratoId={contratoRige} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onAbrir={() => setHoja("contrato")} marca={marca(contratoRige !== base.contratoId)} />}
+              <AvisoSoloServicios mensaje={soloServicios} contratoId={contratoRige} catalogos={catalogos} />
 
               {/* ── Fechas: las suyas si son distintas de las del equipo; los mismos campos del individual ── */}
               <section className="space-y-2">
@@ -572,7 +577,7 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
           cambiar({ userId: pe._id });
         }}
       />
-      <ModalTipoContrato abierto={hoja === "contrato"} onCerrar={() => setHoja(null)} contratos={catalogos.contratos} contratoId={contratoRige} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onElegir={(id) => cambiar({ contratoId: id, nombreContrato: cambiosDeContrato(catalogos, id).nombreContrato || undefined, tipoImpositivo: cambiosDeContrato(catalogos, id).tipoImpositivo || undefined })} />
+      <ModalTipoContrato abierto={hoja === "contrato"} onCerrar={() => setHoja(null)} contratos={contratosParaElegir(catalogos, soloServicios)} contratoId={contratoRige} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onElegir={(id) => cambiar({ contratoId: id, nombreContrato: cambiosDeContrato(catalogos, id).nombreContrato || undefined, tipoImpositivo: cambiosDeContrato(catalogos, id).tipoImpositivo || undefined })} />
       <ModalCategoria
         abierto={hoja === "categoria"}
         onCerrar={() => setHoja(null)}

@@ -186,6 +186,9 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
         const sup = ctx.superposiciones.get(integ._id) || [];
         for (const s of sup)
             advertencias.push(s.mensaje);
+        const soloServicios = ctx.soloServicios?.get(integ._id) || "";
+        if (soloServicios && tipoImpositivo === "alta_temprana_afip")
+            errores.push(soloServicios);
         const datos = persona
             ? {
                 fullName: persona.nombre,
@@ -238,6 +241,7 @@ export function planDeLote(plantilla, integrantes, contratacion, puntuales, ctx)
             errores: p.excluido ? [] : errores,
             advertencias: p.excluido ? [] : advertencias,
             superposicionHorario: !p.excluido && sup.some((s) => s.tipo === "horario"),
+            soloServicios: p.excluido ? "" : soloServicios,
             datos,
         };
     });

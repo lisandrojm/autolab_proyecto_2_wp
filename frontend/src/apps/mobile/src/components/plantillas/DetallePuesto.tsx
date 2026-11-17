@@ -9,6 +9,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { usePlantilla, usePlantillas } from "./contexto";
 import { Pantalla, Seccion, Vacio } from "./Pantalla";
 import { FilasCondiciones, HojaCondicion, HojasCondiciones } from "./Condiciones";
+import { useContratoEnFechas } from "../../../../../hooks/useContratoEnFechas";
 import { SelectorPersona } from "./SelectorPersona";
 import { CampoCategoria, ModalCategoria } from "../contratacion/SelectorCategoria";
 import { BloqueReemplazo } from "../contratacion/BloqueReemplazo";
@@ -97,6 +98,13 @@ export default function DetallePuesto() {
   }, [categoriaPorDefecto, numero, equipoId]);
 
   const a = x?.asignacion;
+  /*
+    ¿TIENE UN CONTRATO DE ARCA VIGENTE HOY? Entonces el puesto sólo se ofrece por Servicios (la regla del
+    alta individual). Acá no hay fechas todavía —son de cada contratación—: se mira hoy, y al contratar
+    el server revisa con las fechas de esa vez.
+  */
+  const hoyISO = new Date().toLocaleDateString("en-CA");
+  const contratoVigente = useContratoEnFechas({ activo: !!a?.userId, userId: a?.userId || undefined, desde: hoyISO, hasta: hoyISO });
   useEffect(() => {
     setVerAvisos(false);
     setReemplazoAbierto(!!a?.reemplazo);
@@ -279,7 +287,7 @@ export default function DetallePuesto() {
           justo lo que se viene a mirar. Lo que difiere del equipo se marca en su fila.
         */}
         <div className="space-y-2">
-          <FilasCondiciones valores={efectivo} areas={areas} catalogos={catalogos} onAbrirContrato={() => setHoja("contrato")} onAbrirTurno={() => setHoja("turno")} onCambio={(c) => void cambiar(c)} distintas={distintas} />
+          <FilasCondiciones valores={efectivo} areas={areas} catalogos={catalogos} onAbrirContrato={() => setHoja("contrato")} onAbrirTurno={() => setHoja("turno")} onCambio={(c) => void cambiar(c)} distintas={distintas} soloServicios={contratoVigente?.mensaje} />
           {/* Sólo cuando hay algo que volver: un botón gris, como los demás secundarios de la pantalla. */}
           {x.diferencias.length > 0 && (
             <button type="button" onClick={volverAlEquipo} className="flex min-h-[48px] w-full items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-bold text-slate-800 dark:border-slate-600 dark:text-slate-100">
@@ -409,7 +417,7 @@ export default function DetallePuesto() {
         categoriaId={efectivo.categoriaSatId || ""}
         onElegir={(id) => void cambiar({ categoriaSatId: id || null })}
       />
-      <HojasCondiciones cual={hoja === "contrato" || hoja === "turno" ? hoja : null} onCerrar={() => setHoja(null)} titulo={`Puesto ${numero}`} areas={areas} catalogos={catalogos} valores={efectivo} onCambio={(c) => void cambiar(c)} />
+      <HojasCondiciones cual={hoja === "contrato" || hoja === "turno" ? hoja : null} onCerrar={() => setHoja(null)} titulo={`Puesto ${numero}`} areas={areas} catalogos={catalogos} valores={efectivo} onCambio={(c) => void cambiar(c)} soloServicios={contratoVigente?.mensaje} />
     </Pantalla>
   );
 }

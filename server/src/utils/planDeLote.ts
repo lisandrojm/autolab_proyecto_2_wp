@@ -160,6 +160,12 @@ export interface Contexto {
    * con lo que la persona ya tiene y con sus otros puestos del lote, para ESTAS fechas.
    */
   superposiciones: Map<string, AvisoDeSuperposicionPlan[]>;
+  /**
+   * CON UN CONTRATO DE ARCA EN ESAS FECHAS, SÓLO SERVICIOS (17/11/2026, la regla del alta individual
+   * del 05/11): por PUESTO, el mensaje de `mensajeSoloServicios` si la persona ya tiene uno. Un puesto
+   * que va por ARCA no se contrata; uno de Servicios pasa.
+   */
+  soloServicios?: Map<string, string>;
   /** La sede principal del proyecto (`data.id`): la que lleva cada solicitud del lote, como en el alta individual. */
   sedePrincipal?: number | null;
   /** Las áreas del proyecto (con sus turnos y sedes). Sin esto (pruebas), el área del puesto pasa sin revisar. */
@@ -183,6 +189,8 @@ export interface FilaDelPlan {
   advertencias: string[];
   /** Las que son de horario (la persona ya tiene algo a esa hora): se resaltan. */
   superposicionHorario: boolean;
+  /** La persona ya tiene un contrato de ARCA en estas fechas: sólo se la contrata por Servicios. Vacío si no. */
+  soloServicios: string;
   datos: DatosSolicitud | null;
 }
 
@@ -333,6 +341,8 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
 
     const sup = ctx.superposiciones.get(integ._id) || [];
     for (const s of sup) advertencias.push(s.mensaje);
+    const soloServicios = ctx.soloServicios?.get(integ._id) || "";
+    if (soloServicios && tipoImpositivo === "alta_temprana_afip") errores.push(soloServicios);
 
     const datos: DatosSolicitud | null = persona
       ? {
@@ -387,6 +397,7 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
       errores: p.excluido ? [] : errores,
       advertencias: p.excluido ? [] : advertencias,
       superposicionHorario: !p.excluido && sup.some((s) => s.tipo === "horario"),
+      soloServicios: p.excluido ? "" : soloServicios,
       datos,
     };
   });
