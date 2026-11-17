@@ -1242,6 +1242,10 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
                 estadoContrato: contratoActivo?.nombre_estado_empleado || "",
                 fechaAlta: contratoActivo?.fecha_alta_contrato || "",
                 fechaBaja: contratoActivo?.fecha_baja_contrato || "",
+                // El horario y los días del contrato que rige (Equipos lo muestra en cada persona, 17/11/2026).
+                horaInicio: contratoActivo?.hora_inicio || "",
+                horaFin: contratoActivo?.hora_fin || "",
+                diasSemana: Array.isArray(contratoActivo?.dias_semana) ? contratoActivo.dias_semana : [],
                 // La sede del contrato que rige (sólo informativa: la fila sale de la asignación, ver `sedeEnArea`).
                 sedeContrato: sedeDe(contratoActivo?.sede_id),
                 // Áreas donde la persona está asignada pero FALTA ELEGIR SEDE (el área tiene varias): la Jerarquía las muestra aparte.

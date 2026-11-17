@@ -187,6 +187,10 @@ export interface AreaShiftMember {
   estadoContrato: string;
   fechaAlta: string;
   fechaBaja: string;
+  /** El horario («HH:mm») y los días (0=domingo…6=sábado) del contrato que rige; vacíos si el contrato no los tiene. */
+  horaInicio?: string;
+  horaFin?: string;
+  diasSemana?: number[];
   /**
    * Sólo quien tiene MÁS DE UN CONTRATO VIGENTE A LA VEZ EN TURNOS DISTINTOS (14/11/2026): qué combinaciones
    * área × turno × sede pone cada contrato, con su nombre, fechas y horario. El reporte de asistencia lista a
@@ -203,6 +207,7 @@ export interface TurnosDeUnContrato {
   fechaBaja: string;
   horaInicio: string;
   horaFin: string;
+  diasSemana?: number[];
 }
 
 export interface AreaShiftCountsResponse {

@@ -77,6 +77,7 @@ export interface TurnosDeUnContrato {
     fechaBaja: string;
     horaInicio: string;
     horaFin: string;
+    diasSemana: number[];
 }
 /**
  * POR CONTRATO, QUÉ TURNOS PONE (14/11/2026). Para quien tiene más de un contrato vigente a la vez EN
