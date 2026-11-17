@@ -83,9 +83,22 @@ export const contratoVariables: GrupoVariables[] = [
     vars: ["{{nombreProyecto}}", "{{nombreCliente}}", "{{rolFrame}}", "{{nombreContrato}}", "{{nombreSede}}", "{{nombreCargo}}", "{{nombreNivel}}", "{{nombreArea}}", "{{nombreTurno}}", "{{modalidad}}", "{{fechaAltaContrato}}", "{{fechaBajaContrato}}", "{{horaInicio}}", "{{horaFin}}", "{{horario}}", "{{diasPorSemana}}", "{{diasQueTrabaja}}", "{{fechasTrabajadas}}", "{{cantidadJornadas}}", "{{tramite}}"],
   },
   {
-    nota: "Los «importe…Neto» son los de la solicitud: neto por jornada (jornada bruta × neto/bruto de la escala), por semana, por mes y el total del contrato (neto por jornada × jornadas). «{{sueldoBruto}}» es el del contrato (se copió de la escala al asignar la categoría y no se actualiza); «{{sueldoBrutoCatSatNumero}}» y «{{sueldoBrutoCatSatLetras}}» son el bruto de la escala VIGENTE de la categoría.",
+    /*
+      LOS CAMPOS DE LA SOLICITUD, EN SU ORDEN (17/11/2026, pedido del usuario): lo que ve quien contrata
+      es lo que puede pegar. Salen del server (`employeeDocData.ts`) con las mismas cuentas que el formulario.
+    */
+    nota: "Los mismos campos de la Solicitud de Contratación, en el mismo orden. Básico, adicional y presentismo son los de la escala de la categoría llevados al importe por jornada del contrato; el total es neto por jornada × jornadas del contrato.",
     grupo: "Sueldos",
-    vars: ["{{importeJornadaNeto}}", "{{importeSemanaNeto}}", "{{importeMensualNeto}}", "{{importeTotalNeto}}", "{{importeTotalNetoLetras}}", "{{sueldoJornada}}", "{{sueldoJornadaLetras}}", "{{sueldoMano}}", "{{sueldoManoLetras}}", "{{sueldoNeto}}", "{{sueldoBruto}}", "{{sueldoDiarioNeto}}", "{{sueldoBrutoCatSatNumero}}", "{{sueldoBrutoCatSatLetras}}"],
+    vars: ["{{sueldoBasico}}", "{{adicional}}", "{{porcentajeAdicional}}", "{{presentismo}}", "{{importeJornadaNeto}}", "{{importeJornadaNetoLetras}}", "{{importeJornadaBruto}}", "{{importeSemanaNeto}}", "{{importeSemanaBruto}}", "{{importeMensualNeto}}", "{{importeMensualBruto}}", "{{importeTotalNeto}}", "{{importeTotalNetoLetras}}"],
+  },
+  {
+    /*
+      NO SE BORRAN: hay plantillas vivas que las usan (la de Plazo fijo - Jornada dice
+      «$ {{sueldoJornada}} ({{sueldoJornadaLetras}})»). Si desaparecen, el PDF imprime la variable literal.
+    */
+    nota: "No son campos de la solicitud: quedan para las plantillas que ya las usan. «{{sueldoJornada}}» es lo mismo que «{{importeJornadaBruto}}». «{{sueldoBruto}}» es el que se copió al contrato al asignar la categoría; «{{sueldoBrutoCatSatNumero}}» y «{{sueldoBrutoCatSatLetras}}» son el bruto de la escala VIGENTE.",
+    grupo: "Sueldos (anteriores)",
+    vars: ["{{sueldoJornada}}", "{{sueldoJornadaLetras}}", "{{sueldoMano}}", "{{sueldoManoLetras}}", "{{sueldoNeto}}", "{{sueldoBruto}}", "{{sueldoDiarioNeto}}", "{{sueldoBrutoCatSatNumero}}", "{{sueldoBrutoCatSatLetras}}"],
   },
   {
     grupo: "Categoría",

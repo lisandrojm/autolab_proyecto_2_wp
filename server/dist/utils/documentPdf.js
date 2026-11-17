@@ -1,7 +1,7 @@
 import htmlPdf from "html-pdf-node";
 import path from "path";
 import fs from "fs";
-import { MARCA_FIRMA, brutoDeEscalaEnDocumento, importesNetosDelContrato } from "./employeeDocData.js";
+import { MARCA_FIRMA, brutoDeEscalaEnDocumento, escalaDelContratoEnDocumento, importesNetosDelContrato } from "./employeeDocData.js";
 import { numeroALetras } from "./numeroALetras.js";
 /**
  * Generación del PDF de un documento (Release / Contrato) a partir del contenido redactado en la plataforma.
@@ -231,8 +231,20 @@ function sueldosDeEjemplo() {
         // Los netos de la solicitud, con la misma función que un contrato real (ver `importesNetosDelContrato`).
         ...(() => {
             const netos = importesNetosDelContrato({ jornadaBruto: 72844.87, escalaNeto: 1770130.36, escalaBruto: 2185346.12, diasPorSemana: 5, jornadasPorMes: 30, jornadas: 30 });
-            return { importeJornadaNeto: n(netos.jornada), importeSemanaNeto: n(netos.semana), importeMensualNeto: n(netos.mensual), importeTotalNeto: n(netos.total), importeTotalNetoLetras: numeroALetras(netos.total) };
+            return {
+                importeJornadaNeto: n(netos.jornada),
+                importeJornadaNetoLetras: numeroALetras(netos.jornada),
+                importeJornadaBruto: n(netos.jornadaBruto),
+                importeSemanaNeto: n(netos.semana),
+                importeSemanaBruto: n(netos.semanaBruto),
+                importeMensualNeto: n(netos.mensual),
+                importeMensualBruto: n(netos.mensualBruto),
+                importeTotalNeto: n(netos.total),
+                importeTotalNetoLetras: numeroALetras(netos.total),
+            };
         })(),
+        // Básico, adicional, % adicional y presentismo de una escala 634/11 de ejemplo (35 % de adicional).
+        ...escalaDelContratoEnDocumento({ jornadaBruto: 72844.87, basico: 1235000, adicional: 432250, presentismo: 166725, bruto: 2185346.12, jornadasPorMes: 30 }),
         // El bruto de la ESCALA de la categoría (en un contrato real puede diferir de {{sueldoBruto}}).
         ...brutoDeEscalaEnDocumento(2185346.12),
     };

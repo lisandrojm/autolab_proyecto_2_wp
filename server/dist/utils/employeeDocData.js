@@ -350,6 +350,44 @@ export function importesNetosDelContrato(p) {
         semana: jornada > 0 && dias > 0 ? r2(porJornada * dias) : 0,
         mensual: jornada > 0 ? r2(porJornada * porMes) : 0,
         total: jornada > 0 && jornadas > 0 ? r2(porJornada * jornadas) : 0,
+        // Los mismos, en BRUTO: los pares «bruto» de la solicitud (17/11/2026).
+        jornadaBruto: jornada > 0 ? r2(jornada) : 0,
+        semanaBruto: jornada > 0 && dias > 0 ? r2(jornada * dias) : 0,
+        mensualBruto: jornada > 0 ? r2(jornada * porMes) : 0,
+    };
+}
+/**
+ * LA ESCALA DEL CONTRATO, como la muestra la solicitud (`EscalaDelContrato` en el frontend, 17/11/2026):
+ * sueldo básico, adicional, % adicional y presentismo de la categoría, llevados a lo que se paga en ESTE
+ * contrato. Lo pactado es un factor contra la escala:
+ *
+ *   jornada de escala = (básico + adicional + presentismo, o el bruto) ÷ jornadas del tipo (sin ellas, 30) × multiplicador
+ *   factor            = importe por jornada del contrato ÷ jornada de escala
+ *   cada columna      = su valor de escala × factor
+ *
+ * El % adicional es del grupo (no se escala). Sin categoría o sin escala, todo vacío. Puro.
+ */
+export function escalaDelContratoEnDocumento(p) {
+    const vacio = { sueldoBasico: "", adicional: "", porcentajeAdicional: "", presentismo: "" };
+    const basico = Number(p.basico) || 0;
+    const adicional = Number(p.adicional) || 0;
+    const presentismo = Number(p.presentismo) || 0;
+    const bruto = Number(p.bruto) || 0;
+    const jornadas = Number(p.jornadasPorMes) > 0 ? Number(p.jornadasPorMes) : 30;
+    const mult = Number(p.multiplicador) > 0 ? Number(p.multiplicador) : 1;
+    const mensual = basico + adicional + presentismo > 0 ? basico + adicional + presentismo : bruto;
+    const jornadaDeEscala = (mensual / jornadas) * mult;
+    if (jornadaDeEscala <= 0)
+        return vacio;
+    const jornada = Number(p.jornadaBruto);
+    const factor = Number.isFinite(jornada) && jornada > 0 ? jornada / jornadaDeEscala : 1;
+    const r2 = (n) => Math.round(n * 100) / 100;
+    const columna = (v) => (v > 0 ? num(r2(v * factor)) : "");
+    return {
+        sueldoBasico: columna(basico),
+        adicional: columna(adicional),
+        porcentajeAdicional: basico > 0 && adicional > 0 ? `${((adicional / basico) * 100).toLocaleString("es-AR", { maximumFractionDigits: 2 })} %` : "",
+        presentismo: columna(presentismo),
     };
 }
 export async function buildEmployeeDocData(user, up, contract, empresa) {
@@ -393,6 +431,8 @@ export async function buildEmployeeDocData(user, up, contract, empresa) {
     let catSatCodigoArca = "";
     let catSatBrutoEscala = 0;
     let catSatNetoEscala = 0;
+    // Las columnas de la escala (para {{sueldoBasico}}, {{adicional}}, {{presentismo}}: ver `escalaDelContratoEnDocumento`).
+    let catSatEscala = {};
     if (c.categoria_sat_id != null) {
         try {
             // Resuelve contra el modelo nuevo (Categoria + su grupo) con fallback a la tabla vieja.
@@ -406,6 +446,7 @@ export async function buildEmployeeDocData(user, up, contract, empresa) {
                 catSatCodigoArca = String(cat.data?.codigoArca || "").trim();
                 catSatBrutoEscala = cat.data?.sueldoBruto;
                 catSatNetoEscala = cat.data?.neto;
+                catSatEscala = { basico: cat.data?.sueldoBasico, adicional: cat.data?.sueldoAdicional, presentismo: cat.data?.presentismo };
             }
         }
         catch {
@@ -421,12 +462,14 @@ export async function buildEmployeeDocData(user, up, contract, empresa) {
     */
     let tipoDiasPorSemana = null;
     let tipoJornadasPorMes = null;
+    let tipoMultiplicador = null;
     let tramite = "";
     try {
         if (c.contrato_id) {
-            const tipo = await Contrato.findById(c.contrato_id).select("data.diasPorSemana data.cantidadJornadas").lean();
+            const tipo = await Contrato.findById(c.contrato_id).select("data.diasPorSemana data.cantidadJornadas data.multiplicadorDiario").lean();
             tipoDiasPorSemana = tipo?.data?.diasPorSemana;
             tipoJornadasPorMes = tipo?.data?.cantidadJornadas;
+            tipoMultiplicador = tipo?.data?.multiplicadorDiario;
         }
         if (c.estado_id != null) {
             const estado = await Info.findOne({ type: "estado-empleado", "data.id": c.estado_id }).select("name data.tipoImpositivo").lean();
@@ -565,6 +608,13 @@ export async function buildEmployeeDocData(user, up, contract, empresa) {
         importeMensualNeto: num(netos.mensual || null),
         importeTotalNeto: num(netos.total || null),
         importeTotalNetoLetras: netos.total > 0 ? numeroALetras(netos.total) : "",
+        // Los que faltaban del formulario de la solicitud (17/11/2026): el neto por jornada en letras y los brutos.
+        importeJornadaNetoLetras: netos.jornada > 0 ? numeroALetras(netos.jornada) : "",
+        importeJornadaBruto: num(netos.jornadaBruto || null),
+        importeSemanaBruto: num(netos.semanaBruto || null),
+        importeMensualBruto: num(netos.mensualBruto || null),
+        // Sueldo básico, adicional, % adicional y presentismo, como los muestra la solicitud.
+        ...escalaDelContratoEnDocumento({ jornadaBruto: c.sueldo_jornada, ...catSatEscala, bruto: catSatBrutoEscala, jornadasPorMes: tipoJornadasPorMes, multiplicador: tipoMultiplicador }),
         // El bruto de la ESCALA vigente de la categoría, no el del contrato: ver `brutoDeEscalaEnDocumento`.
         ...brutoDeEscalaEnDocumento(catSatBrutoEscala),
         // ── Otros ──
