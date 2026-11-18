@@ -82,7 +82,8 @@ async function main() {
   const abiertos: any[] = await UserProject.aggregate([
     { $match: { projectId: { $in: proyectos.map((p) => p._id) } } },
     { $unwind: { path: "$contracts", includeArrayIndex: "i" } },
-    { $match: { $or: [{ "contracts.fecha_baja_contrato": null }, { "contracts.fecha_baja_contrato": "" }] } },
+    // Sin las lápidas de los anulados (etapa 2b): no tienen baja ni empresa porque ya no son contratos.
+    { $match: { $or: [{ "contracts.fecha_baja_contrato": null }, { "contracts.fecha_baja_contrato": "" }], "contracts.estadoContrato": { $ne: "ANULADO" } } },
     {
       $project: {
         _id: 0,
