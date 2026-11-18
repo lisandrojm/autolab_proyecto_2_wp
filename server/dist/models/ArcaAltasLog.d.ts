@@ -24,7 +24,8 @@ export interface IArcaAltasLog extends Document {
     enSeco: boolean;
     contratos: Array<{
         userProjectId: Types.ObjectId;
-        contractIndex: number;
+        contractIndex: number; /** Etapa 2c: la identidad del contrato. */
+        contratoKey?: Types.ObjectId | null;
         cuil: string;
         nombre: string; /** El registro de 85 tal cual se mandó a ARCA. */
         registro?: string;

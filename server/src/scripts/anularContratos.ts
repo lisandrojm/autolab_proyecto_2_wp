@@ -44,6 +44,7 @@ import { LoteRecibosSueldo } from "../models/LoteRecibosSueldo.js";
 import { anularContrato } from "../services/anulacionContrato.js";
 import { moverRecibos, referenciasDeContrato } from "../services/referenciasContrato.js";
 import { esLapida, quedanContratosSiSeAnula } from "../utils/anulacionContrato.js";
+import { filtroDeContrato } from "../utils/identidadContrato.js";
 
 type Pedido = { tipo: "anular"; clave: string; motivo: string } | { tipo: "recibos"; de: string; a: string };
 
@@ -119,8 +120,10 @@ async function main() {
       console.log(`  ${await nombreDe(de.up.userId)} · vínculo ${de.up._id}`);
       console.log(`  de  #${de.idx} ${describir(de.up.contracts[de.idx])}`);
       console.log(`  a   #${a.idx} ${describir(a.up.contracts[a.idx])}`);
-      const recibos: any[] = await ReciboSueldoEnviado.find({ userProjectId: de.up._id, contractIndex: de.idx }).select("_id periodo estado").lean();
-      const lotes: any[] = await LoteRecibosSueldo.find({ recibos: { $elemMatch: { userProjectId: de.up._id, contractIndex: de.idx } } }).select("_id").lean();
+      // Etapa 2c: la misma regla que `moverRecibos` (clave del origen, o su posición en lo viejo sin clave).
+      const deEste = filtroDeContrato(de.idx, new Types.ObjectId(p.de));
+      const recibos: any[] = await ReciboSueldoEnviado.find({ userProjectId: de.up._id, ...deEste }).select("_id periodo estado").lean();
+      const lotes: any[] = await LoteRecibosSueldo.find({ recibos: { $elemMatch: { userProjectId: de.up._id, ...deEste } } }).select("_id").lean();
       console.log(`  ${recibos.length} recibos enviados (${recibos.map((r) => `${r.periodo} ${r.estado}`).join(", ") || "—"}) y ${lotes.length} lotes`);
       if (!commit) { recibosMovidosEnSimulacion.add(`${de.up._id}|${de.idx}`); continue; }
       if (!recibos.length && !lotes.length) continue;

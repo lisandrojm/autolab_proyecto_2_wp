@@ -5,6 +5,7 @@ import { ArcaAltasLog } from "../../models/ArcaAltasLog.js";
 import { ArcaVerificacionAlta } from "../../models/ArcaVerificacionAlta.js";
 import { Company } from "../../models/Company.js";
 import { fechaISO } from "../../utils/contratoVigencia.js";
+import { claveEnPosicion } from "../../utils/identidadContrato.js";
 import { abrirSesionArca, credencialesDe, guardarSesion } from "./navegador.js";
 import { MOTOR, MOTOR_ALTAS } from "./motor.js";
 import { quienTiene, soltarCandado, tomarCandado } from "./candadoArca.js";
@@ -240,8 +241,9 @@ export function aplicador(o: {
     if (o.enSeco) return "en_seco";
     const campo = `contracts.${item.contractIndex}`;
     // ¿Sigue siendo ESE contrato y sigue sin presentar? Si no, no se toca nada.
-    const up: any = await UserProject.findById(item.userProjectId).select(`contracts.fecha_alta_contrato contracts.empresaContratoId contracts.altaArcaPresentada contracts.verificacionArca`).lean();
+    const up: any = await UserProject.findById(item.userProjectId).select(`contracts.fecha_alta_contrato contracts.empresaContratoId contracts.altaArcaPresentada contracts.verificacionArca contracts.contratoKey`).lean();
     const c = up?.contracts?.[item.contractIndex];
+    const contratoKey = claveEnPosicion(up?.contracts, item.contractIndex);
     if (o.noRepetirManual && d.accion === "revision_manual" && c?.verificacionArca?.resultado === "revision_manual" && c.verificacionArca.origen === origen && c.verificacionArca.motivo === d.motivo) return "sin_cambios";
     let accion = d.accion === "presentada" ? "marcada_presentada" : d.accion === "sin_alta" ? "sigue_trabada" : "revision_manual";
     if (!c || fechaISO(c.fecha_alta_contrato) !== item.alta || String(c.empresaContratoId || "") !== item.empresaId) accion = "contrato_cambio";
@@ -252,6 +254,7 @@ export function aplicador(o: {
       tenantId: o.tenantObjectId,
       userProjectId: new Types.ObjectId(item.userProjectId),
       contractIndex: item.contractIndex,
+      contratoKey,
       cuil: item.cuil,
       nombre: item.nombre,
       empresaId: Types.ObjectId.isValid(o.empresaId) ? new Types.ObjectId(o.empresaId) : undefined,
@@ -328,7 +331,7 @@ export function aplicador(o: {
     }
     await ArcaAltasLog.updateOne(
       { _id: logId },
-      { $push: { contratos: { userProjectId: new Types.ObjectId(item.userProjectId), contractIndex: item.contractIndex, cuil: item.cuil, nombre: item.nombre, resultado: "presentada", motivo: d.motivo, porConsulta: via === "verificacion" } } },
+      { $push: { contratos: { userProjectId: new Types.ObjectId(item.userProjectId), contractIndex: item.contractIndex, contratoKey, cuil: item.cuil, nombre: item.nombre, resultado: "presentada", motivo: d.motivo, porConsulta: via === "verificacion" } } },
     );
     await avanzarPresentada(item.userProjectId, item.contractIndex);
     return "marcada_presentada";

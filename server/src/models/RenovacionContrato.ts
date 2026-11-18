@@ -31,6 +31,8 @@ export interface IRenovacionContrato {
   fechaBajaContrato: string;
   /** Posición del contrato en `UserProject.contracts`. Lo escrito antes de que esto existiera es 0. */
   indiceContrato: number;
+  /** La `contratoKey` del contrato (etapa 2c): la identidad que no depende de la posición. `null` en lo viejo sin backfill. */
+  contratoKey?: Types.ObjectId | null;
   decision: "renovar" | "dejar_vencer";
   /** La solicitud de renovación, cuando `decision` es "renovar". */
   solicitudId?: Types.ObjectId;
@@ -47,6 +49,7 @@ const renovacionContratoSchema = new Schema<IRenovacionContrato>(
     projectId: { type: Schema.Types.ObjectId, ref: "Project" },
     fechaBajaContrato: { type: String, required: true },
     indiceContrato: { type: Number, required: true, default: 0 },
+    contratoKey: { type: Schema.Types.ObjectId, default: null, index: true },
     decision: { type: String, enum: ["renovar", "dejar_vencer"], required: true },
     solicitudId: { type: Schema.Types.ObjectId, ref: "User" },
     decididoPor: { type: Schema.Types.ObjectId, ref: "User" },

@@ -6,6 +6,7 @@ import { User } from "../models/User.js";
 import { RenovacionContrato } from "../models/RenovacionContrato.js";
 import { calificarFinDeContrato, leerCalificacion } from "../services/calificaciones.js";
 import { DIAS_DE_AVISO, DIAS_DE_AVISO_MAX, listarContratosPorVencer, olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
+import { claveDeContrato } from "../services/claveDeContrato.js";
 /*
   «Por vencer» de Contratación (móvil). Qué contratos entran y quién los ve está en
   `services/contratosPorVencer.ts`; acá sólo se lista y se decide.
@@ -107,6 +108,8 @@ router.post("/dejar-vencer", requireTenant, authenticateToken, async (req, res) 
                 userId: new Types.ObjectId(contrato.userId),
                 projectId: new Types.ObjectId(contrato.projectId),
                 decision: "dejar_vencer",
+                // Etapa 2c: la clave del contrato, al lado de la posición.
+                contratoKey: await claveDeContrato(contrato.userProjectId, contrato.indice),
                 decididoPor: new Types.ObjectId(req.user.userId),
                 decididoPorNombre: `${quien?.firstName || ""} ${quien?.lastName || ""}`.trim(),
                 decididoEl: new Date(),

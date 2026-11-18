@@ -3,6 +3,7 @@ const schema = new Schema({
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject", required: true },
     contractIndex: { type: Number, required: true },
+    contratoKey: { type: Schema.Types.ObjectId, default: null, index: true },
     cuil: String,
     nombre: String,
     empresaId: { type: Schema.Types.ObjectId, ref: "Company" },

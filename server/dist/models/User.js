@@ -156,6 +156,8 @@ const userSchema = new Schema({
             fechaBajaContrato: { type: String },
             /** Posición del contrato en `UserProject.contracts`: la otra mitad de su identidad (ver `RenovacionContrato`). */
             indiceContrato: { type: Number },
+            /** Etapa 2c: la clave del contrato que se renueva (la pone el server al guardar la solicitud). */
+            contratoKey: { type: Schema.Types.ObjectId },
         },
         // Ver el comentario de la interfaz.
         avisosSuperposicion: {

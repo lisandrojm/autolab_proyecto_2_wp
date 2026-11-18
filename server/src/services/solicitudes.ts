@@ -4,6 +4,7 @@ import { Role } from "../models/Role.js";
 import UserProject from "../models/UserProject.js";
 import { fechaISO } from "../utils/contratoVigencia.js";
 import { RenovacionContrato } from "../models/RenovacionContrato.js";
+import { claveEnPosicion } from "../utils/identidadContrato.js";
 import { olvidarContratosPorVencer } from "./contratosPorVencer.js";
 import { guardarSolicitudEnDropbox } from "./espejoDropboxSolicitudes.js";
 import { NOVEDAD_SOLICITUD, nombreDePersona, notificar, responsablesDeProyectos } from "./novedadesNotificaciones.js";
@@ -90,7 +91,7 @@ export async function efectosDeSolicitudNueva(tenantId: Types.ObjectId, creadorI
   const renovacionDe: any = user.metadata?.esRenovacion ? user.metadata?.renovacionDe : null;
   if (renovacionDe?.userProjectId && renovacionDe?.fechaBajaContrato) {
     try {
-      const up: any = await UserProject.findById(renovacionDe.userProjectId).select("userId projectId contracts.fecha_baja_contrato contracts.estadoContrato").lean();
+      const up: any = await UserProject.findById(renovacionDe.userProjectId).select("userId projectId contracts.fecha_baja_contrato contracts.estadoContrato contracts.contratoKey").lean();
       if (up) {
         const quien: any = await User.findById(creadorId).select("firstName lastName").lean();
         /*
@@ -112,6 +113,8 @@ export async function efectosDeSolicitudNueva(tenantId: Types.ObjectId, creadorI
               userId: up.userId,
               projectId: up.projectId,
               decision: "renovar",
+              // Etapa 2c: la clave del contrato que se renueva, en la decisión y en la solicitud.
+              contratoKey: claveEnPosicion(up.contracts, indiceContrato),
               solicitudId: user._id,
               decididoPor: new Types.ObjectId(creadorId),
               decididoPorNombre: `${quien?.firstName || ""} ${quien?.lastName || ""}`.trim(),
@@ -120,6 +123,8 @@ export async function efectosDeSolicitudNueva(tenantId: Types.ObjectId, creadorI
           },
           { upsert: true },
         );
+        const clave = claveEnPosicion(up.contracts, indiceContrato);
+        if (clave) await User.updateOne({ _id: user._id }, { $set: { "metadata.renovacionDe.indiceContrato": indiceContrato, "metadata.renovacionDe.contratoKey": clave } });
         olvidarContratosPorVencer();
       }
     } catch (e) {

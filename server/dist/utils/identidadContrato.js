@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { fechaISO } from "./contratoVigencia.js";
 /**
  * Qué clave le corresponde a cada contrato antes de guardar. Puro.
  *
@@ -74,4 +75,58 @@ export function resolverIndiceContrato(up, param) {
     }
     // Una lápida (contrato anulado, etapa 2b) no es un contrato que se pueda tocar: editarla la «resucitaría».
     return idx >= 0 && contratos[idx]?.estadoContrato === "ANULADO" ? -1 : idx;
+}
+/*
+  ETAPA 2c (18/11/2026): LAS REFERENCIAS DE OTRAS COLECCIONES GUARDAN LA CLAVE, ADEMÁS DE LA POSICIÓN.
+  Recibos, lotes, renovaciones, verificaciones y constancias de ARCA y logs de corridas nombraban al
+  contrato sólo por su posición en `UserProject.contracts`. Desde la 2b la posición ya no se corre (las
+  anulaciones dejan lápida), pero la posición sola no se puede comprobar: con la clave al lado, quien lee
+  sabe si sigue apuntando al mismo contrato.
+
+  Regla de lectura: si la referencia tiene clave, manda la clave; la posición es para lo viejo sin
+  backfill. Una clave que no aparece en el vínculo es una referencia rota (-1), nunca «la posición».
+*/
+/** La clave del contrato en esa posición (también si es una lápida: la referencia apuntaba ahí). */
+export function claveEnPosicion(contratos, idx) {
+    if (idx == null || !Number.isInteger(Number(idx)) || Number(idx) < 0)
+        return null;
+    const k = contratos?.[Number(idx)]?.contratoKey;
+    return k && Types.ObjectId.isValid(String(k)) ? new Types.ObjectId(String(k)) : null;
+}
+/** La posición a la que apunta una referencia: por clave si la tiene, por posición si no. -1 si está rota. */
+export function indiceDeReferencia(contratos, ref) {
+    const lista = contratos || [];
+    if (ref.contratoKey)
+        return lista.findIndex((c) => c?.contratoKey && String(c.contratoKey) === String(ref.contratoKey));
+    const n = Number(ref.indice);
+    return ref.indice != null && Number.isInteger(n) && n >= 0 && n < lista.length ? n : -1;
+}
+/**
+ * Filtro de Mongo para «lo que cuelga de este contrato» en una colección que guarda `{campoIndice, contratoKey}`:
+ * lo que tiene la clave, y lo viejo sin clave que está en esa posición. Lo que tiene OTRA clave no entra
+ * aunque comparta la posición.
+ */
+export function filtroDeContrato(idx, clave, campoIndice = "contractIndex", prefijo = "") {
+    const sinClave = { $or: [{ [`${prefijo}contratoKey`]: null }, { [`${prefijo}contratoKey`]: { $exists: false } }] };
+    if (!clave)
+        return { [`${prefijo}${campoIndice}`]: idx };
+    return { $or: [{ [`${prefijo}contratoKey`]: clave }, { $and: [{ [`${prefijo}${campoIndice}`]: idx }, sinClave] }] };
+}
+/**
+ * LA HUELLA DE UNA REFERENCIA (backfill de la etapa 2c). Antes de la 2b las posiciones se corrían con
+ * cada borrado físico: una referencia vieja puede estar apuntando a OTRO contrato que el que nombró. Lo
+ * que la referencia guardó del contrato (alta, baja, empleadora) tiene que coincidir con el que hoy está
+ * en esa posición; si no, la clave no se pone y la referencia queda para revisar a mano.
+ * `null` = coincide (o la referencia no guardó nada que comparar); si no, el motivo.
+ */
+export function huellaNoCoincide(c, h) {
+    if (!c)
+        return "no hay contrato en esa posición";
+    if (h.alta && fechaISO(String(h.alta)) !== fechaISO(c.fecha_alta_contrato))
+        return `alta ${fechaISO(String(h.alta))} ≠ ${fechaISO(c.fecha_alta_contrato) || "sin alta"}`;
+    if (h.baja && fechaISO(String(h.baja)) !== fechaISO(c.fecha_baja_contrato))
+        return `baja ${fechaISO(String(h.baja))} ≠ ${fechaISO(c.fecha_baja_contrato) || "sin baja"}`;
+    if (h.empresaId && String(h.empresaId) !== String(c.empresaContratoId || ""))
+        return `empleadora ${String(h.empresaId).slice(-6)} ≠ ${String(c.empresaContratoId || "ninguna").slice(-6)}`;
+    return null;
 }

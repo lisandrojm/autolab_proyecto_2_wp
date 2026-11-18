@@ -41,3 +41,28 @@ export declare function conClaveNueva<T extends Record<string, any>>(contratos: 
 export declare function resolverIndiceContrato(up: {
     contracts?: any[];
 }, param: string): number;
+/** La clave del contrato en esa posición (también si es una lápida: la referencia apuntaba ahí). */
+export declare function claveEnPosicion(contratos: any[] | undefined, idx: number | null | undefined): Types.ObjectId | null;
+/** La posición a la que apunta una referencia: por clave si la tiene, por posición si no. -1 si está rota. */
+export declare function indiceDeReferencia(contratos: any[] | undefined, ref: {
+    contratoKey?: unknown;
+    indice?: number | null;
+}): number;
+/**
+ * Filtro de Mongo para «lo que cuelga de este contrato» en una colección que guarda `{campoIndice, contratoKey}`:
+ * lo que tiene la clave, y lo viejo sin clave que está en esa posición. Lo que tiene OTRA clave no entra
+ * aunque comparta la posición.
+ */
+export declare function filtroDeContrato(idx: number, clave: Types.ObjectId | null, campoIndice?: string, prefijo?: string): Record<string, unknown>;
+/**
+ * LA HUELLA DE UNA REFERENCIA (backfill de la etapa 2c). Antes de la 2b las posiciones se corrían con
+ * cada borrado físico: una referencia vieja puede estar apuntando a OTRO contrato que el que nombró. Lo
+ * que la referencia guardó del contrato (alta, baja, empleadora) tiene que coincidir con el que hoy está
+ * en esa posición; si no, la clave no se pone y la referencia queda para revisar a mano.
+ * `null` = coincide (o la referencia no guardó nada que comparar); si no, el motivo.
+ */
+export declare function huellaNoCoincide(c: any, h: {
+    alta?: string | null;
+    baja?: string | null;
+    empresaId?: unknown;
+}): string | null;

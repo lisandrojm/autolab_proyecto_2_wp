@@ -13,6 +13,8 @@ export interface IArcaVerificacionAlta extends Document {
   tenantId: Types.ObjectId;
   userProjectId: Types.ObjectId;
   contractIndex: number;
+  /** La `contratoKey` del contrato (etapa 2c): la identidad que no depende de la posición. `null` en lo viejo sin backfill. */
+  contratoKey?: Types.ObjectId | null;
   cuil: string;
   nombre: string;
   empresaId?: Types.ObjectId;
@@ -47,6 +49,7 @@ const schema = new Schema<IArcaVerificacionAlta>(
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
     userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject", required: true },
     contractIndex: { type: Number, required: true },
+    contratoKey: { type: Schema.Types.ObjectId, default: null, index: true },
     cuil: String,
     nombre: String,
     empresaId: { type: Schema.Types.ObjectId, ref: "Company" },

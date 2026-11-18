@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import { pathToFileURL } from "node:url";
 import UserProject from "../../models/UserProject.js";
 import { ArcaAltasLog } from "../../models/ArcaAltasLog.js";
+import { clavesDeContratos } from "../claveDeContrato.js";
 import { abrirSesionArca, credencialesDe, guardarSesion } from "./navegador.js";
 import { MOTOR_ALTAS } from "./motor.js";
 import { soltarCandado, tomarCandado } from "./candadoArca.js";
@@ -203,6 +204,7 @@ async function correr(o) {
                 return { log: "rechazada", contrato: "fallida", motivo: p.motivo };
             return { log: "indeterminado", contrato: "indeterminado" };
         };
+        const claves = await clavesDeContratos(lote.items).catch(() => new Map());
         const log = await ArcaAltasLog.create({
             tenantId: tenantObjectId,
             tipo: lote.modo,
@@ -213,7 +215,7 @@ async function correr(o) {
             enSeco: corrida.enSeco,
             contratos: lote.items.map((i) => {
                 const x = resultadoDe(i.cuil);
-                return { userProjectId: i.userProjectId, contractIndex: i.contractIndex, cuil: i.cuil, nombre: i.nombre, resultado: x.log, motivo: x.motivo };
+                return { userProjectId: i.userProjectId, contractIndex: i.contractIndex, contratoKey: claves.get(`${i.userProjectId}:${i.contractIndex}`) ?? null, cuil: i.cuil, nombre: i.nombre, resultado: x.log, motivo: x.motivo };
             }),
             codigoNovedad,
             nroTransaccion: r?.nroTransaccion,
@@ -297,9 +299,12 @@ async function correrPorTandas(o) {
     let r = null;
     let resultado = "fallo";
     let error;
+    // Etapa 2c: la clave de cada contrato, una sola consulta antes de presentar (los ítems traen sólo la posición).
+    const claves = await clavesDeContratos(lote.items).catch(() => new Map());
+    const claveDe = (i) => claves.get(`${i.userProjectId}:${i.contractIndex}`) ?? null;
     const contratosParaLog = (resultados) => resultados
-        ? resultados.map((x) => ({ userProjectId: x.item.userProjectId, contractIndex: x.item.contractIndex, cuil: x.item.cuil, nombre: x.item.nombre, registro: x.item.registro, resultado: NOMBRE_EN_LOG[x.estado] || x.estado, motivo: x.motivo, tanda: x.tanda, cat: x.cat, porConsulta: x.porConsulta }))
-        : lote.items.map((i) => ({ userProjectId: i.userProjectId, contractIndex: i.contractIndex, cuil: i.cuil, nombre: i.nombre, registro: i.registro, resultado: "pendiente" }));
+        ? resultados.map((x) => ({ userProjectId: x.item.userProjectId, contractIndex: x.item.contractIndex, contratoKey: claveDe(x.item), cuil: x.item.cuil, nombre: x.item.nombre, registro: x.item.registro, resultado: NOMBRE_EN_LOG[x.estado] || x.estado, motivo: x.motivo, tanda: x.tanda, cat: x.cat, porConsulta: x.porConsulta }))
+        : lote.items.map((i) => ({ userProjectId: i.userProjectId, contractIndex: i.contractIndex, contratoKey: claveDe(i), cuil: i.cuil, nombre: i.nombre, registro: i.registro, resultado: "pendiente" }));
     // El log se crea ANTES de presentar y se va completando por tanda: si el servidor se cae, queda.
     const log = await ArcaAltasLog.create({
         automatica: corrida.automatica || undefined,
