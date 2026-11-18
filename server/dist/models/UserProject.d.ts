@@ -378,6 +378,21 @@ interface IContract {
         firmaAnterior: Record<string, unknown>;
         motivo: string;
     } | null;
+    /**
+     * TERMINÓ EL CIRCUITO SIN FIRMA (18/11/2026, `services/cierreSinFirma.ts`): sus documentos no se mandan
+     * a firmar y quedan como están; el contrato pasó al estado final a mano. Quién, cuándo, por qué y
+     * desde qué estado: para poder explicarlo (y volverlo atrás) después.
+     */
+    cierreSinFirma?: {
+        el: Date;
+        por: Types.ObjectId | null;
+        porNombre: string;
+        motivo: string;
+        estadoAnterior: {
+            id: number | null;
+            nombre: string;
+        };
+    } | null;
     /** Tenía un recibo de sueldo guardado como su contrato (20–24/10/2026); se le quitó (07/11/2026). Lo que tenía. */
     reciboDesvinculado?: {
         el: Date;

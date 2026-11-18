@@ -125,6 +125,7 @@ import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { resolverIndiceContrato } from "../utils/identidadContrato.js";
 import { anularContrato, AnulacionInvalida } from "../services/anulacionContrato.js";
 import { moverRecibos, referenciasDeContrato } from "../services/referenciasContrato.js";
+import { cerrarSinFirma, CierreInvalido } from "../services/cierreSinFirma.js";
 import { esLapida, ultimoNoAnulado } from "../utils/anulacionContrato.js";
 import { modalidadParaGuardar } from "../services/modalidades.js";
 import { Contrato } from "../models/Contrato.js";
@@ -2674,6 +2675,30 @@ router.post("/projects/:projectId/members/:userId/contracts/:index/mover-recibos
     }
     catch (error) {
         console.error("Mover recibos error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/*
+  POST .../contracts/:index/cerrar-sin-firma  { motivo } — TERMINA EL CIRCUITO SIN FIRMA: los documentos
+  no se mandan a firmar y el contrato pasa al estado final así como está (ver `services/cierreSinFirma.ts`).
+*/
+router.post("/projects/:projectId/members/:userId/contracts/:index/cerrar-sin-firma", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const encontrado = await contratoDelPanel(req, res);
+        if (!encontrado)
+            return;
+        try {
+            const r = await cerrarSinFirma({ up: encontrado.up, idx: encontrado.idx, motivo: String(req.body?.motivo || ""), por: req.user?.userId });
+            res.json({ ok: true, ...r });
+        }
+        catch (e) {
+            if (e instanceof CierreInvalido)
+                return res.status(409).json({ error: e.message });
+            throw e;
+        }
+    }
+    catch (error) {
+        console.error("Cerrar sin firma error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });

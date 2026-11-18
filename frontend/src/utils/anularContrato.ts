@@ -106,3 +106,26 @@ export async function anularContratoConRevision(o: { projectId: string; userId: 
     return false;
   }
 }
+
+/**
+ * TERMINAR SIN FIRMA (18/11/2026): los documentos no se mandan a firmar y el contrato pasa al estado
+ * final así como está. Pide el motivo. Devuelve `true` si quedó hecho.
+ */
+export async function cerrarSinFirmaConMotivo(o: { projectId: string; userId: string; contractIndex: number; contexto: string }): Promise<boolean> {
+  const r = await sweetAlert.prompt("¿Terminar sin firma?", {
+    text: `${o.contexto} Sus documentos NO se mandan a firmar: el contrato termina el circuito así como está y queda registrado quién, cuándo y por qué.`,
+    placeholder: "Motivo (p. ej. «no se firma: acuerdo con el cliente»)",
+    confirmText: "Sí, terminar sin firma",
+    multilinea: true,
+    mensajeVacio: "Escribí el motivo.",
+  });
+  if (!r.isConfirmed) return false;
+  try {
+    const hecho = await projectsAPI.cerrarSinFirma(o.projectId, o.userId, o.contractIndex, String(r.value || "").trim());
+    sweetAlert.success("Circuito terminado", `Pasó de «${hecho.estadoAnterior}» a «${hecho.estadoNuevo}».`);
+    return true;
+  } catch (err) {
+    sweetAlert.error("No se pudo terminar sin firma", errorDeAnulacion(err));
+    return false;
+  }
+}

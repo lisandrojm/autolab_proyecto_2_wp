@@ -791,6 +791,12 @@ class ProjectsAPI {
     return data;
   }
 
+  /** Termina el circuito sin firma: el contrato pasa al estado final así como está (sus documentos no se mandan a firmar). */
+  async cerrarSinFirma(projectId: string, userId: string, index: number, motivo: string): Promise<{ estadoAnterior: string; estadoNuevo: string; constancia: string }> {
+    const { data } = await axios.post(`/projects/${projectId}/members/${userId}/contracts/${index}/cerrar-sin-firma`, { motivo }, { headers: this.getHeaders() });
+    return data;
+  }
+
   /** @deprecated Usar `anularMemberContract`. El server ya no borra: anula sin motivo. */
   async deleteMemberContract(projectId: string, userId: string, index: number): Promise<void> {
     await axios.delete(`/projects/${projectId}/members/${userId}/contracts/${index}`, {

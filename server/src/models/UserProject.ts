@@ -370,6 +370,12 @@ interface IContract {
   firmaEnviadaAt?: Date;
   /** Volvió a Generar Documentos porque había salteado el circuito (07/11/2026): cuándo, de qué estado y lo que tenía de firma. */
   circuitoReparado?: { el: Date; estadoAnterior: { id: number | null; nombre: string }; firmaAnterior: Record<string, unknown>; motivo: string } | null;
+  /**
+   * TERMINÓ EL CIRCUITO SIN FIRMA (18/11/2026, `services/cierreSinFirma.ts`): sus documentos no se mandan
+   * a firmar y quedan como están; el contrato pasó al estado final a mano. Quién, cuándo, por qué y
+   * desde qué estado: para poder explicarlo (y volverlo atrás) después.
+   */
+  cierreSinFirma?: { el: Date; por: Types.ObjectId | null; porNombre: string; motivo: string; estadoAnterior: { id: number | null; nombre: string } } | null;
   /** Tenía un recibo de sueldo guardado como su contrato (20–24/10/2026); se le quitó (07/11/2026). Lo que tenía. */
   reciboDesvinculado?: { el: Date; firmaAnterior: Record<string, unknown> } | null;
   // CONTRATO / RELEASE CUSTOM: el cuerpo que se escribió en Firma digital para ESTE trámite, cuando la
@@ -594,6 +600,7 @@ const contractSchema = new Schema<IContract>(
     firmaReleasesGeneradoAt: { type: Date },
     firmaEnviadaAt: { type: Date },
     circuitoReparado: { type: Schema.Types.Mixed, default: undefined },
+    cierreSinFirma: { type: Schema.Types.Mixed, default: undefined },
     reciboDesvinculado: { type: Schema.Types.Mixed, default: undefined },
     contenidoCustomContrato: { type: String, default: null, maxlength: 200000 },
     contenidoCustomReleases: [

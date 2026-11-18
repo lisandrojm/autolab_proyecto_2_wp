@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFilePdf, faUpload, faDownload, faSpinner, faLock, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faFilePdf, faUpload, faDownload, faSpinner, faLock, faEdit, faTrash, faFlagCheckered } from "@fortawesome/free-solid-svg-icons";
 import { ContractOverviewRow, Contract, AltaArcaPresentada } from "../../api/users";
 import { ContratoFrameItem, contratoFrameAPI } from "../../api/contratosFrame";
 import { InfoItem } from "../../api/info";
@@ -15,7 +15,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { AccionesConstanciaArchivada } from "./ConstanciaBulk";
 import { useEditarContratoEnModal } from "./editarContratoEnModal";
 
-import { anularContratoConRevision } from "../../utils/anularContrato";
+import { anularContratoConRevision, cerrarSinFirmaConMotivo } from "../../utils/anularContrato";
 /* --------- Handlers de descarga/subida compartidos (tabla Contratos + Gestión de Contratos) --------- */
 
 
@@ -371,12 +371,27 @@ export const ContractActionsButtons: React.FC<{ record: ContractOverviewRow; onD
     }
   };
 
+  // Terminar el circuito sin mandar a firmar (los documentos quedan como están). El server valida el estado.
+  const [cerrando, setCerrando] = useState(false);
+  const terminarSinFirma = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      setCerrando(true);
+      if (await cerrarSinFirmaConMotivo({ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex, contexto: `Proyecto «${record.projectName}».` })) onDeleted();
+    } finally {
+      setCerrando(false);
+    }
+  };
+
   return (
     <div className="flex items-center justify-end gap-1">
+      <button type="button" onClick={terminarSinFirma} disabled={cerrando} title="Terminar sin firma: no se manda a firmar y pasa al estado final así como está" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-700 dark:hover:text-green-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        <FontAwesomeIcon icon={cerrando ? faSpinner : faFlagCheckered} spin={cerrando} className="h-4 w-4" />
+      </button>
       <button type="button" onClick={editar} title="Editar este contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
         <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
       </button>
-      <button type="button" onClick={eliminar} disabled={borrando} title="Eliminar este contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+      <button type="button" onClick={eliminar} disabled={borrando} title="Anular este contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
         <FontAwesomeIcon icon={borrando ? faSpinner : faTrash} spin={borrando} className="h-4 w-4" />
       </button>
     </div>
