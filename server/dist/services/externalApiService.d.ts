@@ -58,5 +58,6 @@ export declare class ExternalApiService {
         updated: number;
         skipped: number;
         errors: number;
+        discrepanciasFrame: number;
     }>;
 }

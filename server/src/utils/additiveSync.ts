@@ -138,74 +138,174 @@ export function buildContractKey(contract: Record<string, any>): string {
   ].join("|");
 }
 
+/*
+  ¿CUÁNDO UN CONTRATO DE FRAME «YA ESTÁ» EN WEPRODU? (18/11/2026)
+
+  La clave de arriba es demasiado específica. Medido sobre la base (`scripts/diagDuplicadosAppFrame.ts`):
+  372 grupos de contratos duplicados, 267 de ellos porque la copia de FRAME traía OTRA categoría (sobre
+  todo un cambio de id del catálogo en FRAME: «1: Director de Programas» ⇄ «43: Director de Programas»),
+  y 29 porque la fecha venía en otro formato o el tipo con otro id (`unificarTiposDeContrato` pasó
+  los ids locales a uno canónico; FRAME sigue mandando el suyo). Un contrato no deja de ser el mismo
+  porque le cambien la categoría.
+
+  Un contrato de FRAME ya está si coincide con uno existente en CUALQUIERA de dos claves:
+   1. la de siempre (`buildContractKey`), tal cual: lo que antes se reconocía se sigue reconociendo
+      (una lápida, por la `claveFrame` que guardó);
+   2. la de IDENTIDAD: proyecto | empleado | alta normalizada | TIPO por nombre: el del catálogo si el
+      nombre empieza con uno (prefijo exacto normalizado, el más largo, como `unificarTiposDeContrato`:
+      «Servicios - FZERO SRL» es «Servicios»), y si no, el nombre mismo normalizado. Una lápida, por la
+      `claveIdentidad` que guardó al anularse.
+  NO se usa `tipo_contrato_id` sin la categoría: medido sobre la base, juntaría 117 pares de contratos
+  DISTINTOS («Servicios Intercambio» y «Servicios Adicional» del mismo día tienen el mismo id —o
+  ninguno— y sólo los separaba la categoría). Agregar la clave 2 sólo puede hacer que se importe MENOS.
+
+  Si coincide pero con OTRA categoría, no se crea nada y tampoco se calla: sale como DISCREPANCIA (la
+  guarda y la informa el import). Pisar la de WeProdu borraría una edición local; ignorarla en silencio
+  dejaría una categoría vieja sin que nadie lo sepa.
+
+  OJO PARA LO QUE VENGA: cualquier script que cambie un campo que participa de estas claves (proyecto,
+  empleado, alta, tipo) hace que el import deje de reconocer el contrato y lo duplique.
+*/
+
+const normTexto = (s: unknown): string =>
+  String(s ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+/** "YYYY-MM-DD" de una fecha guardada como texto ISO, "DD/MM/YYYY" o Date. */
+export function fechaClave(v: unknown): string {
+  if (v instanceof Date) return isNaN(+v) ? "" : v.toISOString().slice(0, 10);
+  const t = String(v ?? "").trim();
+  const dmy = t.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (dmy) return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
+  return /^\d{4}-\d{2}-\d{2}/.test(t) ? t.slice(0, 10) : t;
+}
+
+/** El tipo del catálogo al que corresponde un nombre escrito a mano (prefijo exacto normalizado, el más largo). */
+export function tipoCanonico(nombre: unknown, catalogo: string[]): string | null {
+  const n = normTexto(nombre);
+  if (!n) return null;
+  let mejor: string | null = null;
+  for (const tipo of catalogo) {
+    const t = normTexto(tipo);
+    if (t && (n === t || n.startsWith(t + " ")) && (!mejor || t.length > mejor.length)) mejor = t;
+  }
+  return mejor;
+}
+
+/**
+ * Proyecto | empleado | alta normalizada | tipo por nombre (el canónico del catálogo, o el nombre
+ * normalizado si no matchea ninguno). `null` sin nombre o sin alta: sin eso no hay identidad.
+ */
+export function claveDeIdentidad(c: Record<string, any>, catalogo: string[]): string | null {
+  const tipo = tipoCanonico(c.nombre_contrato, catalogo) || normTexto(c.nombre_contrato);
+  const alta = fechaClave(c.fecha_alta_contrato);
+  return tipo && alta ? [c.proyecto_id ?? "", c.empleado_id ?? "", alta, tipo].join("|") : null;
+}
+
+/** Las claves con que se reconoce un contrato existente (una lápida, por las que guardó al anularse). */
+export function clavesDeContratoExistente(c: Record<string, any>, catalogo: string[]): string[] {
+  if (c?.estadoContrato === "ANULADO") {
+    const legada = String(c?.anulacion?.claveFrame || "");
+    const ident = String(c?.anulacion?.claveIdentidad || "");
+    return [...(legada ? [`L:${legada}`] : []), ...(ident ? [`I:${ident}`] : [])];
+  }
+  const ident = claveDeIdentidad(c, catalogo);
+  return [`L:${buildContractKey(c)}`, ...(ident ? [`I:${ident}`] : [])];
+}
+
+/** Lo mismo para un contrato que llega de FRAME. */
+const clavesDeContratoDeFrame = (c: Record<string, any>, catalogo: string[]) => clavesDeContratoExistente({ ...c, estadoContrato: undefined }, catalogo);
+
 // ---------------------------------------------------------------------------
 // findNewContracts
 // ---------------------------------------------------------------------------
+
+/** Un contrato de FRAME que coincide con uno de WeProdu pero trae otra categoría. */
+export interface DiscrepanciaDeImport {
+  /** Posición del contrato de WeProdu con el que coincidió. */
+  indice: number;
+  contratoKey: string | null;
+  campo: "categoria_sat_id";
+  weprodu: { id: unknown; nombre: string };
+  frame: { id: unknown; nombre: string };
+  claveFrame: string;
+}
 
 export interface FindNewContractsResult {
   /** Contracts from FRAME that do NOT exist yet in WeProdu. */
   newContracts: Record<string, any>[];
   /** Human-readable warnings for contract-key collisions. */
   collisionWarnings: string[];
+  /** FRAME trae el contrato con otra categoría: no se crea ni se pisa, se informa. */
+  discrepancias: DiscrepanciaDeImport[];
 }
 
 /**
  * Compare FRAME contracts against existing WeProdu contracts and return only
- * the ones that are genuinely new (append-only).
+ * the ones that are genuinely new (see the block above for what «the same» means).
  *
- * Rules:
- * - A contract is "new" when its composite key doesn't appear in `existingContracts`.
- * - If a key appears more than once in `existingContracts` (collision), we log a
- *   warning and treat the whole set as already present (prefer not touching).
- * - If a FRAME contract's key collides with itself (duplicate in incoming batch),
- *   we still only push one copy.
+ * - If a FRAME contract matches itself (duplicate in incoming batch), only one copy is pushed.
+ * - `catalogo`: los nombres de los tipos de contrato (colección `contratos`). Sin él, sólo las claves 1 y 2.
  */
 export function findNewContracts(
   frameContracts: Record<string, any>[],
   existingContracts: Record<string, any>[],
+  catalogo: string[] = [],
 ): FindNewContractsResult {
   const collisionWarnings: string[] = [];
+  const discrepancias: DiscrepanciaDeImport[] = [];
 
-  // Index existing contracts by key, tracking counts for collision detection.
-  const existingKeyCount = new Map<string, number>();
-  for (const c of existingContracts) {
-    /*
-      Un contrato ANULADO deja sólo una lápida sin fechas (etapa 2b): se lo reconoce por la clave que se
-      guardó al anularlo. Sin esto, el import lo vería faltar y lo volvería a agregar.
-    */
-    const key = c?.estadoContrato === "ANULADO" ? String(c?.anulacion?.claveFrame || "") : buildContractKey(c);
-    if (!key) continue;
-    existingKeyCount.set(key, (existingKeyCount.get(key) || 0) + 1);
-  }
-
-  // Report collisions (same key appears >1 time in existing).
-  for (const [key, count] of existingKeyCount.entries()) {
-    if (count > 1) {
-      collisionWarnings.push(
-        `[ADDITIVE SYNC] Contract key collision in existing contracts (count=${count}): ${key}`,
-      );
+  // Cada clave → la posición del contrato existente que la tiene (la primera).
+  const existentes = new Map<string, number>();
+  const legadas = new Map<string, number>();
+  (existingContracts || []).forEach((c, i) => {
+    for (const k of clavesDeContratoExistente(c, catalogo)) {
+      if (k.startsWith("L:")) legadas.set(k, (legadas.get(k) || 0) + 1);
+      if (!existentes.has(k)) existentes.set(k, i);
     }
+  });
+  for (const [k, count] of legadas) {
+    if (count > 1) collisionWarnings.push(`[ADDITIVE SYNC] Contract key collision in existing contracts (count=${count}): ${k.slice(2)}`);
   }
 
-  // Determine which FRAME contracts are new (key not present in existing).
-  // Use a Set to avoid pushing duplicates when FRAME itself has repeated keys.
   const newContracts: Record<string, any>[] = [];
-  const seenFrameKeys = new Set<string>();
+  const vistas = new Set<string>();
 
   for (const fc of frameContracts) {
-    const key = buildContractKey(fc);
-
-    // Already present in WeProdu → skip entirely (never modify).
-    if (existingKeyCount.has(key)) continue;
-
-    // Duplicate within the FRAME batch itself → skip the second copy.
-    if (seenFrameKeys.has(key)) continue;
-    seenFrameKeys.add(key);
-
+    const claves = clavesDeContratoDeFrame(fc, catalogo);
+    const enUnExistente = claves.find((k) => existentes.has(k));
+    if (enUnExistente) {
+      // Coincide sin ser idéntico: ¿trae otra categoría? (el tipo y el formato de fecha no son discrepancias).
+      const i = existentes.get(enUnExistente)!;
+      const ex: any = existingContracts[i];
+      if (ex?.estadoContrato !== "ANULADO" && String(ex?.categoria_sat_id ?? "") !== String(fc.categoria_sat_id ?? "")) {
+        discrepancias.push({
+          indice: i,
+          contratoKey: ex?.contratoKey ? String(ex.contratoKey) : null,
+          campo: "categoria_sat_id",
+          weprodu: { id: ex?.categoria_sat_id ?? null, nombre: String(ex?.nombre_categoria_sat || "") },
+          frame: { id: fc.categoria_sat_id ?? null, nombre: String(fc.nombre_categoria_sat || "") },
+          claveFrame: buildContractKey(fc),
+        });
+      }
+      continue;
+    }
+    // Duplicado dentro de lo que manda FRAME: se agrega una sola vez.
+    if (claves.some((k) => vistas.has(k))) continue;
+    claves.forEach((k) => vistas.add(k));
     newContracts.push(fc);
   }
 
-  return { newContracts, collisionWarnings };
+  return { newContracts, collisionWarnings, discrepancias };
+}
+
+/** Lo que manda FRAME para un vínculo nuevo, sin repetidos (con el mismo criterio que `findNewContracts`). */
+export function sinRepetidosDeFrame(frameContracts: Record<string, any>[], catalogo: string[] = []): Record<string, any>[] {
+  return findNewContracts(frameContracts, [], catalogo).newContracts;
 }
 
 // ---------------------------------------------------------------------------

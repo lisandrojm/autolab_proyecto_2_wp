@@ -17,7 +17,7 @@ interface IContract {
    * VIGENTE y FINALIZADO los completa la etapa 3.
    */
   estadoContrato?: "VIGENTE" | "FINALIZADO" | "ANULADO";
-  anulacion?: { el: Date; por?: Types.ObjectId | null; porNombre?: string; motivo?: string; claveFrame?: string };
+  anulacion?: { el: Date; por?: Types.ObjectId | null; porNombre?: string; motivo?: string; claveFrame?: string; claveIdentidad?: string };
   proyecto_id: number;
   empleado_id: number;
   estado_id: number;
@@ -461,7 +461,7 @@ const contractSchema = new Schema<IContract>(
     contratoKey: { type: Schema.Types.ObjectId },
     estadoContrato: { type: String, enum: ["VIGENTE", "FINALIZADO", "ANULADO"] },
     anulacion: {
-      type: new Schema({ el: Date, por: { type: Schema.Types.ObjectId, ref: "User" }, porNombre: String, motivo: String, claveFrame: String }, { _id: false }),
+      type: new Schema({ el: Date, por: { type: Schema.Types.ObjectId, ref: "User" }, porNombre: String, motivo: String, claveFrame: String, claveIdentidad: String }, { _id: false }),
       default: undefined,
     },
     tipo_contrato_id: { type: Number },

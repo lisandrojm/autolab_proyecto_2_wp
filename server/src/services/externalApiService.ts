@@ -9,6 +9,7 @@ import { Role } from "../models/Role.js";
 import {
     buildAdditiveSet,
     findNewContracts,
+    sinRepetidosDeFrame,
     USER_FRAME_WHITELIST,
     USERPROJECT_FRAME_WHITELIST,
 } from "../utils/additiveSync.js";
@@ -16,6 +17,8 @@ import { resolveRoleFrameRefs, FrameRolFrame } from "../utils/roleFrameSync.js";
 import { valoracionParaMargen } from "./valoracionDelTenant.js";
 
 import { conClaveNueva } from "../utils/identidadContrato.js";
+import { Contrato } from "../models/Contrato.js";
+import { DiscrepanciaFrame } from "../models/DiscrepanciaFrame.js";
 export class ExternalApiService {
     private api: AxiosInstance;
     private token: string | null = null;
@@ -274,7 +277,7 @@ export class ExternalApiService {
         executedBy: mongoose.Types.ObjectId | "system",
         syncProjects: boolean = false,
         sinceDays?: number
-    ): Promise<{ created: number; updated: number; skipped: number; errors: number }> {
+    ): Promise<{ created: number; updated: number; skipped: number; errors: number; discrepanciasFrame: number }> {
         console.log(`[EXTERNAL API] Starting ADDITIVE user import (syncProjects=${syncProjects}, sinceDays=${sinceDays})...`);
 
         const addedUsers: Array<{ name: string; email: string; dni: string }> = [];
@@ -284,7 +287,11 @@ export class ExternalApiService {
         let updated = 0; // Now counts records where ≥1 empty field was filled or ≥1 contract pushed
         let skipped = 0;
         let errors = 0;
+        let discrepanciasFrame = 0;
         let thresholdDate: Date | null = null;
+        // Los tipos de contrato del catálogo: con ellos el import reconoce un contrato aunque FRAME mande
+        // su tipo con otro id o nombre (ver `findNewContracts`).
+        const catalogoTipos: string[] = (await Contrato.find({}).select("name").lean()).map((c: any) => String(c.name || "").trim()).filter(Boolean);
 
         // Se guarda ANTES de recorrer los empleados (puede tardar varios minutos con ~1900+
         // empleados, cada uno con llamadas secuenciales a FRAME) para que el frontend pueda hacer
@@ -516,7 +523,8 @@ export class ExternalApiService {
                                             nombre_proyecto: projectName,
                                             projectId: internalProject._id,
                                             userId: userDoc._id,
-                                            contracts: frameContracts,
+                                            // Sin repetidos: si FRAME manda el mismo contrato dos veces, va una sola.
+                                            contracts: sinRepetidosDeFrame(frameContracts, catalogoTipos),
                                             nombre_rol_frame: frameContracts.length > 0 ? frameContracts[0].nombre_rol_frame : "",
                                         });
                                         addedProjectsMap.set(extProjId, projectName);
@@ -537,14 +545,35 @@ export class ExternalApiService {
                                         );
 
                                         // 2) Append-only contracts
-                                        const { newContracts, collisionWarnings } = findNewContracts(
+                                        const { newContracts, collisionWarnings, discrepancias } = findNewContracts(
                                             frameContracts,
                                             savedProj.contracts as any[] || [],
+                                            catalogoTipos,
                                         );
 
                                         for (const warn of collisionWarnings) {
                                             console.warn(warn);
                                         }
+
+                                        /*
+                                          FRAME manda un contrato que ya está, pero con otra categoría: no se crea uno nuevo
+                                          ni se pisa el de WeProdu. Queda registrado (uno por contrato, campo y valor de FRAME)
+                                          y se cuenta en el historial del import. Lo resuelve una persona.
+                                        */
+                                        for (const d of discrepancias) {
+                                            const ahora = new Date();
+                                            await DiscrepanciaFrame.updateOne(
+                                                { userProjectId: savedProj._id, contratoKey: d.contratoKey ? new Types.ObjectId(d.contratoKey) : null, campo: d.campo, "frame.id": d.frame.id },
+                                                {
+                                                    $set: { weprodu: d.weprodu, frame: d.frame, claveFrame: d.claveFrame, posicion: d.indice, ultimaVezEl: ahora, userId: userDoc._id, tenantId: new mongoose.Types.ObjectId(tenantId) },
+                                                    $setOnInsert: { detectadaEl: ahora, resuelta: false },
+                                                    $inc: { veces: 1 },
+                                                },
+                                                { upsert: true },
+                                            ).catch((e: any) => console.error("[EXTERNAL API] No pude registrar una discrepancia de FRAME:", e?.message || e));
+                                            console.warn(`[EXTERNAL API] Discrepancia FRAME: ${savedProj._id}#${d.indice} (${d.contratoKey}) categoría WeProdu ${d.weprodu.id} «${d.weprodu.nombre}» ≠ FRAME ${d.frame.id} «${d.frame.nombre}». No se crea ni se pisa.`);
+                                        }
+                                        discrepanciasFrame += discrepancias.length;
 
                                         // Build the update operation
                                         const updateOps: any = {};
@@ -638,7 +667,8 @@ export class ExternalApiService {
                     createdUsers: created,
                     updatedUsers: updated,
                     skippedUsers: skipped,
-                    errorsUsers: errors
+                    errorsUsers: errors,
+                    discrepanciasFrame,
                 },
                 addedUsers,
                 addedProjects: Array.from(addedProjectsMap.entries()).map(([externalId, name]) => ({
@@ -668,7 +698,7 @@ export class ExternalApiService {
             throw globalError;
         }
 
-        console.log(`[EXTERNAL API] Import finished. Created: ${created}, Updated (additive): ${updated}, Skipped (no changes): ${skipped}, Errors: ${errors}`);
-        return { created, updated, skipped, errors };
+        console.log(`[EXTERNAL API] Import finished. Created: ${created}, Updated (additive): ${updated}, Skipped (no changes): ${skipped}, Errors: ${errors}, Discrepancias FRAME (categoría): ${discrepanciasFrame}`);
+        return { created, updated, skipped, errors, discrepanciasFrame };
     }
 }

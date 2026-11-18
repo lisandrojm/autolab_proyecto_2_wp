@@ -13,6 +13,7 @@ export declare function lapidaDe(contrato: Record<string, any>, contratoKey: unk
     estadoContrato: "ANULADO";
     anulacion: {
         claveFrame: string;
+        claveIdentidad: string;
         el: Date;
         por: unknown;
         porNombre: string;

@@ -1,4 +1,4 @@
-import { buildContractKey } from "./additiveSync.js";
+import { buildContractKey, claveDeIdentidad } from "./additiveSync.js";
 
 /*
   ANULAR UN CONTRATO EN VEZ DE BORRARLO (etapa 2b, 18/11/2026). Puro: sin base.
@@ -33,7 +33,9 @@ export function lapidaDe(contrato: Record<string, any>, contratoKey: unknown, da
   return {
     contratoKey,
     estadoContrato: ANULADO,
-    anulacion: { ...datos, claveFrame: buildContractKey(contrato) },
+    // `claveIdentidad` (18/11/2026): el import también reconoce por proyecto, persona, alta y tipo por
+    // nombre, así un anulado no vuelve aunque FRAME le cambie la categoría (ver `findNewContracts`).
+    anulacion: { ...datos, claveFrame: buildContractKey(contrato), claveIdentidad: claveDeIdentidad(contrato, []) || "" },
   };
 }
 

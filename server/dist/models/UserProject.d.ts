@@ -19,6 +19,7 @@ interface IContract {
         porNombre?: string;
         motivo?: string;
         claveFrame?: string;
+        claveIdentidad?: string;
     };
     proyecto_id: number;
     empleado_id: number;
