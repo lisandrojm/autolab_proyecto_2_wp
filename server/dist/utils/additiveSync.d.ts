@@ -59,12 +59,12 @@ export declare function tipoCanonico(nombre: unknown, catalogo: string[]): strin
 export declare function claveDeIdentidad(c: Record<string, any>, catalogo: string[]): string | null;
 /** Las claves con que se reconoce un contrato existente (una lápida, por las que guardó al anularse). */
 export declare function clavesDeContratoExistente(c: Record<string, any>, catalogo: string[]): string[];
-/** Un contrato de FRAME que coincide con uno de WeProdu pero trae otra categoría. */
+/** Un contrato de FRAME que coincide con uno de WeProdu pero trae otra categoría u otra baja. */
 export interface DiscrepanciaDeImport {
     /** Posición del contrato de WeProdu con el que coincidió. */
     indice: number;
     contratoKey: string | null;
-    campo: "categoria_sat_id";
+    campo: "categoria_sat_id" | "fecha_baja_contrato";
     weprodu: {
         id: unknown;
         nombre: string;
@@ -80,7 +80,7 @@ export interface FindNewContractsResult {
     newContracts: Record<string, any>[];
     /** Human-readable warnings for contract-key collisions. */
     collisionWarnings: string[];
-    /** FRAME trae el contrato con otra categoría: no se crea ni se pisa, se informa. */
+    /** FRAME trae el contrato con otra categoría u otra baja: no se crea ni se pisa, se informa. */
     discrepancias: DiscrepanciaDeImport[];
 }
 /**

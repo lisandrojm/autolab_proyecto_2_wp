@@ -5,7 +5,7 @@ const schema = new Schema({
     userId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     contratoKey: { type: Schema.Types.ObjectId, default: null },
     posicion: { type: Number, required: true },
-    campo: { type: String, enum: ["categoria_sat_id"], required: true },
+    campo: { type: String, enum: ["categoria_sat_id", "fecha_baja_contrato"], required: true },
     weprodu: { id: Schema.Types.Mixed, nombre: String },
     frame: { id: Schema.Types.Mixed, nombre: String },
     claveFrame: { type: String, default: "" },

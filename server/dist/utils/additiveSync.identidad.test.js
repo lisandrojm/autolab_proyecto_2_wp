@@ -60,3 +60,13 @@ test("identidad: sin nombre o sin alta no hay", () => {
     assert.equal(claveDeIdentidad({ ...base, fecha_alta_contrato: "" }, CAT), null);
     assert.equal(claveDeIdentidad({ ...base, fecha_alta_contrato: "01/05/2026" }, CAT), "705|922|2026-05-01|tiempo indeterminado");
 });
+test("una baja distinta en FRAME se informa y NO se aplica; sin cambios no hay discrepancia", () => {
+    const ex = { ...base, fecha_baja_contrato: null, contratoKey: "k2" };
+    const r = findNewContracts([{ ...base, fecha_baja_contrato: "2026-06-18T00:00:00.000Z" }], [ex], CAT);
+    assert.equal(r.newContracts.length, 0);
+    assert.equal(r.discrepancias.length, 1);
+    assert.equal(r.discrepancias[0].campo, "fecha_baja_contrato");
+    assert.deepEqual([r.discrepancias[0].weprodu.id, r.discrepancias[0].frame.id], [null, "2026-06-18"]);
+    assert.equal(ex.fecha_baja_contrato, null, "no se aplica");
+    assert.equal(findNewContracts([{ ...base, fecha_baja_contrato: "18/06/2026" }], [{ ...base, fecha_baja_contrato: "2026-06-18" }], CAT).discrepancias.length, 0, "mismo día en otro formato");
+});

@@ -159,8 +159,9 @@ export function buildContractKey(contract: Record<string, any>): string {
   DISTINTOS («Servicios Intercambio» y «Servicios Adicional» del mismo día tienen el mismo id —o
   ninguno— y sólo los separaba la categoría). Agregar la clave 2 sólo puede hacer que se importe MENOS.
 
-  Si coincide pero con OTRA categoría, no se crea nada y tampoco se calla: sale como DISCREPANCIA (la
-  guarda y la informa el import). Pisar la de WeProdu borraría una edición local; ignorarla en silencio
+  Si coincide pero con OTRA categoría u OTRA fecha de baja, no se crea nada y tampoco se calla: sale
+  como DISCREPANCIA (la guarda y la informa el import; NUNCA se aplica). La de baja es la más valiosa:
+  una baja que FRAME tiene y WeProdu no es la misma señal que la de ARCA, por otra fuente. Pisar la de WeProdu borraría una edición local; ignorarla en silencio
   dejaría una categoría vieja sin que nadie lo sepa.
 
   OJO PARA LO QUE VENGA: cualquier script que cambie un campo que participa de estas claves (proyecto,
@@ -224,12 +225,12 @@ const clavesDeContratoDeFrame = (c: Record<string, any>, catalogo: string[]) => 
 // findNewContracts
 // ---------------------------------------------------------------------------
 
-/** Un contrato de FRAME que coincide con uno de WeProdu pero trae otra categoría. */
+/** Un contrato de FRAME que coincide con uno de WeProdu pero trae otra categoría u otra baja. */
 export interface DiscrepanciaDeImport {
   /** Posición del contrato de WeProdu con el que coincidió. */
   indice: number;
   contratoKey: string | null;
-  campo: "categoria_sat_id";
+  campo: "categoria_sat_id" | "fecha_baja_contrato";
   weprodu: { id: unknown; nombre: string };
   frame: { id: unknown; nombre: string };
   claveFrame: string;
@@ -240,7 +241,7 @@ export interface FindNewContractsResult {
   newContracts: Record<string, any>[];
   /** Human-readable warnings for contract-key collisions. */
   collisionWarnings: string[];
-  /** FRAME trae el contrato con otra categoría: no se crea ni se pisa, se informa. */
+  /** FRAME trae el contrato con otra categoría u otra baja: no se crea ni se pisa, se informa. */
   discrepancias: DiscrepanciaDeImport[];
 }
 
@@ -279,18 +280,18 @@ export function findNewContracts(
     const claves = clavesDeContratoDeFrame(fc, catalogo);
     const enUnExistente = claves.find((k) => existentes.has(k));
     if (enUnExistente) {
-      // Coincide sin ser idéntico: ¿trae otra categoría? (el tipo y el formato de fecha no son discrepancias).
+      // Coincide: ¿trae otra categoría u otra baja? (el tipo y el formato de fecha no son discrepancias).
       const i = existentes.get(enUnExistente)!;
       const ex: any = existingContracts[i];
-      if (ex?.estadoContrato !== "ANULADO" && String(ex?.categoria_sat_id ?? "") !== String(fc.categoria_sat_id ?? "")) {
-        discrepancias.push({
-          indice: i,
-          contratoKey: ex?.contratoKey ? String(ex.contratoKey) : null,
-          campo: "categoria_sat_id",
-          weprodu: { id: ex?.categoria_sat_id ?? null, nombre: String(ex?.nombre_categoria_sat || "") },
-          frame: { id: fc.categoria_sat_id ?? null, nombre: String(fc.nombre_categoria_sat || "") },
-          claveFrame: buildContractKey(fc),
-        });
+      if (ex?.estadoContrato !== "ANULADO") {
+        const comun = { indice: i, contratoKey: ex?.contratoKey ? String(ex.contratoKey) : null, claveFrame: buildContractKey(fc) };
+        if (String(ex?.categoria_sat_id ?? "") !== String(fc.categoria_sat_id ?? "")) {
+          discrepancias.push({ ...comun, campo: "categoria_sat_id", weprodu: { id: ex?.categoria_sat_id ?? null, nombre: String(ex?.nombre_categoria_sat || "") }, frame: { id: fc.categoria_sat_id ?? null, nombre: String(fc.nombre_categoria_sat || "") } });
+        }
+        const [bajaWp, bajaFr] = [fechaClave(ex?.fecha_baja_contrato), fechaClave(fc.fecha_baja_contrato)];
+        if (bajaWp !== bajaFr) {
+          discrepancias.push({ ...comun, campo: "fecha_baja_contrato", weprodu: { id: bajaWp || null, nombre: bajaWp || "sin baja" }, frame: { id: bajaFr || null, nombre: bajaFr || "sin baja" } });
+        }
       }
       continue;
     }

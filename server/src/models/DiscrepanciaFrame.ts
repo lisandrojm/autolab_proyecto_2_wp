@@ -3,8 +3,8 @@ import mongoose, { Schema, Model, Types } from "mongoose";
 /**
  * UN CONTRATO QUE FRAME MANDA DISTINTO DE COMO ESTÁ EN WEPRODU (18/11/2026; ver `utils/additiveSync.ts`).
  *
- * El import reconoce el contrato (mismo proyecto, persona, alta y tipo) pero FRAME trae otra categoría.
- * No se crea un contrato nuevo ni se pisa la de WeProdu: queda acá, una fila por (contrato, campo, valor
+ * El import reconoce el contrato (mismo proyecto, persona, alta y tipo) pero FRAME trae otra categoría u
+ * otra fecha de baja (`id` = la fecha, o null sin baja). No se crea un contrato nuevo ni se pisa nada de WeProdu: queda acá, una fila por (contrato, campo, valor
  * de FRAME), con cuándo se vio por primera y última vez. Se identifica por `contratoKey`, nunca por
  * posición. Lo resuelve una persona (o la alerta de la etapa 5 cuando exista).
  */
@@ -15,7 +15,7 @@ export interface IDiscrepanciaFrame {
   contratoKey: Types.ObjectId | null;
   /** La posición al detectarla: sólo para leer, la identidad es la clave. */
   posicion: number;
-  campo: "categoria_sat_id";
+  campo: "categoria_sat_id" | "fecha_baja_contrato";
   weprodu: { id: unknown; nombre: string };
   frame: { id: unknown; nombre: string };
   claveFrame: string;
@@ -35,7 +35,7 @@ const schema = new Schema<IDiscrepanciaFrame>(
     userId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     contratoKey: { type: Schema.Types.ObjectId, default: null },
     posicion: { type: Number, required: true },
-    campo: { type: String, enum: ["categoria_sat_id"], required: true },
+    campo: { type: String, enum: ["categoria_sat_id", "fecha_baja_contrato"], required: true },
     weprodu: { id: Schema.Types.Mixed, nombre: String },
     frame: { id: Schema.Types.Mixed, nombre: String },
     claveFrame: { type: String, default: "" },

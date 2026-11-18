@@ -486,7 +486,7 @@ export class ExternalApiService {
                                                 $setOnInsert: { detectadaEl: ahora, resuelta: false },
                                                 $inc: { veces: 1 },
                                             }, { upsert: true }).catch((e) => console.error("[EXTERNAL API] No pude registrar una discrepancia de FRAME:", e?.message || e));
-                                            console.warn(`[EXTERNAL API] Discrepancia FRAME: ${savedProj._id}#${d.indice} (${d.contratoKey}) categoría WeProdu ${d.weprodu.id} «${d.weprodu.nombre}» ≠ FRAME ${d.frame.id} «${d.frame.nombre}». No se crea ni se pisa.`);
+                                            console.warn(`[EXTERNAL API] Discrepancia FRAME (${d.campo}): ${savedProj._id}#${d.indice} (${d.contratoKey}) WeProdu «${d.weprodu.nombre || d.weprodu.id}» ≠ FRAME «${d.frame.nombre || d.frame.id}». No se crea ni se pisa.`);
                                         }
                                         discrepanciasFrame += discrepancias.length;
                                         // Build the update operation
@@ -596,7 +596,7 @@ export class ExternalApiService {
             });
             throw globalError;
         }
-        console.log(`[EXTERNAL API] Import finished. Created: ${created}, Updated (additive): ${updated}, Skipped (no changes): ${skipped}, Errors: ${errors}, Discrepancias FRAME (categoría): ${discrepanciasFrame}`);
+        console.log(`[EXTERNAL API] Import finished. Created: ${created}, Updated (additive): ${updated}, Skipped (no changes): ${skipped}, Errors: ${errors}, Discrepancias FRAME (categoría/baja): ${discrepanciasFrame}`);
         return { created, updated, skipped, errors, discrepanciasFrame };
     }
 }
