@@ -9,7 +9,8 @@ export interface ContractFilterState {
   cliente: string;
   proyecto: string;
   tipo: string;
-  vigencia: "all" | "vigente" | "no_vigente";
+  /** «anulados»: sólo los contratos anulados (que con «Todas» también aparecen, marcados). */
+  vigencia: "all" | "vigente" | "no_vigente" | "anulados";
   ultimo: "all" | "ultimo" | "anteriores";
   desde: string;
   hasta: string;
@@ -37,11 +38,18 @@ const inRange = (fecha?: string, from?: string, to?: string): boolean => {
 /** Aplica los filtros a un contrato. `clientId`/`projectId` solo se usan en la vista cross-proyecto. */
 export const matchesContractFilters = (
   f: ContractFilterState,
-  item: { contract: Contract; clientId?: string; projectId?: string; isLatest?: boolean },
+  item: { contract: Contract; clientId?: string; projectId?: string; isLatest?: boolean; anulado?: boolean },
 ): boolean => {
   if (f.cliente !== "all" && item.clientId !== f.cliente) return false;
   if (f.proyecto !== "all" && item.projectId !== f.proyecto) return false;
   if (f.tipo !== "all" && item.contract?.nombre_contrato !== f.tipo) return false;
+  // Un anulado (con `contract` = lo que era) sólo entra con «Todas» o «Anulados»; nunca es «el último».
+  if (item.anulado) {
+    if (f.vigencia !== "all" && f.vigencia !== "anulados") return false;
+    if (f.ultimo === "ultimo") return false;
+    return !(f.desde || f.hasta) || inRange(item.contract?.fecha_alta_contrato, f.desde, f.hasta);
+  }
+  if (f.vigencia === "anulados") return false;
   if (f.vigencia !== "all") {
     const vig = isContractVigente(item.contract?.fecha_alta_contrato, item.contract?.fecha_baja_contrato);
     if (f.vigencia === "vigente" && !vig) return false;
@@ -89,7 +97,7 @@ const buildChips = (
     chips.push({ key: "proyecto", label: `Proyecto: ${name}`, clear: { proyecto: "all" } });
   }
   if (value.tipo !== "all") chips.push({ key: "tipo", label: `Tipo: ${value.tipo}`, clear: { tipo: "all" } });
-  if (value.vigencia !== "all") chips.push({ key: "vigencia", label: value.vigencia === "vigente" ? "Vigente" : "No vigente", clear: { vigencia: "all" } });
+  if (value.vigencia !== "all") chips.push({ key: "vigencia", label: value.vigencia === "vigente" ? "Vigente" : value.vigencia === "anulados" ? "Anulados" : "No vigente", clear: { vigencia: "all" } });
   if (value.ultimo !== "all") chips.push({ key: "ultimo", label: value.ultimo === "ultimo" ? "Último contrato" : "Contratos anteriores", clear: { ultimo: "all" } });
   if (value.desde) chips.push({ key: "desde", label: `Desde: ${formatDate(value.desde)}`, clear: { desde: "" } });
   if (value.hasta) chips.push({ key: "hasta", label: `Hasta: ${formatDate(value.hasta)}`, clear: { hasta: "" } });
@@ -187,6 +195,7 @@ export const ContractFiltersBar: React.FC<Props> = ({ value, onChange, clientes,
               <option value="all">Todas</option>
               <option value="vigente">Vigente</option>
               <option value="no_vigente">No vigente</option>
+              <option value="anulados">Anulados</option>
             </select>
           </div>
           <div>

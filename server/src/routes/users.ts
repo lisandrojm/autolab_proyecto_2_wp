@@ -3076,7 +3076,11 @@ router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermis
       const contratoEmpresas = toEmpresas(proj?.contratoEmpresas);
       const releaseEmpresas = toEmpresas(proj?.releaseEmpresas);
       (up.contracts || []).forEach((c: any, idx: number) => {
-        if (c?.estadoContrato === "ANULADO") return; // lápida: no es un contrato; `idx` sigue siendo la posición real (etapa 2b)
+        // Lápida (etapa 2b): va en su posición, como ANULADO, con lo que era (más abajo). No es un contrato operable.
+        if (c?.estadoContrato === "ANULADO") {
+          rows.push({ projectId: String(up.projectId), projectName, clientId, clientName, contratoEmpresas: [], releaseEmpresas: [], contractIndex: idx, contract: c, _clave: String(c.contratoKey || "") });
+          return;
+        }
         rows.push({
           projectId: String(up.projectId),
           projectName,
@@ -3090,8 +3094,44 @@ router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermis
       });
     }
 
-    // Más reciente primero (por fecha de alta).
-    rows.sort((a, b) => new Date(b.contract?.fecha_alta_contrato || 0).getTime() - new Date(a.contract?.fecha_alta_contrato || 0).getTime());
+    /*
+      ANULADOS A LA VISTA (18/11/2026). Una anulación invisible se ve igual que el borrado que reemplazó:
+      cada lápida sale con lo que era el contrato, quién lo anuló, cuándo y por qué. También los anulados
+      que se llevaron el vínculo (eran el último contrato): no tienen lápida, sólo su registro.
+      Va en este endpoint —y no en uno aparte con otro permiso— para que quien ve los contratos vea también
+      los anulados.
+    */
+    const anuladas: any[] = await ContratoAnulado.find({ userId: new Types.ObjectId(String(userId)), projectId: { $in: projects.map((p: any) => p._id) } }).lean();
+    const porClave = new Map(anuladas.map((a) => [String(a.contratoKey), a]));
+    const resumenAnulacion = (a: any) => ({
+      el: a.anuladoEl,
+      porNombre: a.anuladoPorNombre || "",
+      motivo: a.motivo || "",
+      origen: a.origen,
+      vinculoEliminado: !!a.vinculoEliminado,
+      contrato: {
+        nombre_contrato: a.contrato?.nombre_contrato || "",
+        fecha_alta_contrato: a.contrato?.fecha_alta_contrato || "",
+        fecha_baja_contrato: a.contrato?.fecha_baja_contrato || "",
+        nombre_empresa_contrato: a.contrato?.nombre_empresa_contrato || "",
+        nombre_estado_empleado: a.contrato?.nombre_estado_empleado || "",
+      },
+    });
+    for (const r of rows) {
+      if (!r._clave) continue;
+      const a = porClave.get(r._clave);
+      r.anulado = a ? resumenAnulacion(a) : { el: null, porNombre: "", motivo: "", origen: "", vinculoEliminado: false, contrato: {} };
+      delete r._clave;
+    }
+    for (const a of anuladas.filter((x) => x.vinculoEliminado)) {
+      const proj: any = projMap.get(String(a.projectId));
+      const clientId = proj?.clientId ? String(proj.clientId) : "";
+      rows.push({ projectId: String(a.projectId), projectName: proj?.name || "", clientId, clientName: clientId ? clientMap.get(clientId) || "" : "", contratoEmpresas: [], releaseEmpresas: [], contractIndex: a.posicion, contract: { contratoKey: a.contratoKey, estadoContrato: "ANULADO" }, anulado: resumenAnulacion(a) });
+    }
+
+    // Más reciente primero (por fecha de alta; la de un anulado, la del contrato que era).
+    const altaDe = (r: any) => new Date((r.anulado ? r.anulado.contrato?.fecha_alta_contrato : r.contract?.fecha_alta_contrato) || 0).getTime();
+    rows.sort((a, b) => altaDe(b) - altaDe(a));
 
     res.json(rows);
   } catch (error) {

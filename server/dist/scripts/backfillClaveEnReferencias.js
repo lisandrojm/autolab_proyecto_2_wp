@@ -26,7 +26,8 @@
  *  - SIN HUELLA (los recibos no guardan nada del contrato): NO, salvo `--incluir-sin-huella`, y aun así
  *    NUNCA en un vínculo sospechoso: uno que tuvo alguna referencia corrida (está en un respaldo de
  *    `reubicarReferencias.ts`) o que todavía tiene alguna de ARCA o de recibos (las renovaciones y
- *    solicitudes de la app vieja no cuentan: no guardaban la posición). Ahí la posición no merece confianza: esos
+ *    solicitudes de la app vieja no cuentan: no guardaban la posición). Si con `--incluir-sin-huella` no
+ *    encuentra ningún respaldo de reubicación, se NIEGA (ver más abajo). Ahí la posición no merece confianza: esos
  *    recibos se miran a mano (el precedente es Hernandez Dunn).
  *  - `--marcar-no-resueltas`: las entradas de log con evidencia débil (su log no quedó en ningún
  *    contrato: lo más probable es que ese contrato ya no exista) quedan con `claveNoResuelta`, para que
@@ -68,13 +69,23 @@ async function main() {
     const refs = await leerReferencias();
     const contratos = await contratosDe(refs.map((r) => r.userProjectId));
     // VÍNCULOS SOSPECHOSOS: los que tuvieron alguna referencia corrida (reubicada) o la tienen todavía.
+    /*
+      Sin los respaldos de las reubicaciones, los vínculos que YA tuvieron referencias corridas se ven sanos
+      (las corridas se arreglaron) y sus recibos recibirían clave por posición. Por eso, para darles clave a
+      los recibos, los respaldos TIENEN que estar (están commiteados en `migraciones-respaldo/`): si no se
+      encuentra ninguno, el script se niega en vez de suponer que no hubo sospechosos.
+      `--sin-reubicaciones-previas` es para una base donde de verdad nunca se reubicó nada.
+    */
     const sospechosos = new Set();
-    if (fs.existsSync(CARPETA_RESPALDOS)) {
-        for (const a of fs.readdirSync(CARPETA_RESPALDOS).filter((n) => /^reubicar-referencias-.*\.json$/.test(n))) {
-            for (const p of JSON.parse(fs.readFileSync(path.join(CARPETA_RESPALDOS, a), "utf8")))
-                sospechosos.add(String(p.userProjectId));
-        }
+    const respaldosReubicacion = fs.existsSync(CARPETA_RESPALDOS) ? fs.readdirSync(CARPETA_RESPALDOS).filter((n) => /^reubicar-referencias-.*\.json$/.test(n)) : [];
+    if (conSinHuella && respaldosReubicacion.length === 0 && !process.argv.includes("--sin-reubicaciones-previas")) {
+        throw new Error(`No encuentro respaldos de reubicación (reubicar-referencias-*.json) en ${CARPETA_RESPALDOS}: sin ellos no sé qué vínculos son sospechosos y les pondría clave por posición a sus recibos. Corré desde la carpeta del server con los respaldos commiteados.`);
     }
+    for (const a of respaldosReubicacion) {
+        for (const p of JSON.parse(fs.readFileSync(path.join(CARPETA_RESPALDOS, a), "utf8")))
+            sospechosos.add(String(p.userProjectId));
+    }
+    console.log(`Respaldos de reubicación leídos: ${respaldosReubicacion.length}`);
     // Las renovaciones y solicitudes de la app vieja no cuentan: no guardaban la posición (quedó en 0 o vacía),
     // así que no coincidir no es señal de un corrimiento.
     for (const r of refs) {

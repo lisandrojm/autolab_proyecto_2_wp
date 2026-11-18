@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBan, faFileContract, faFileLines } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
-import { usersAPI, ManagedContract, ContratoAnuladoFila } from "../../api/users";
+import { usersAPI, ManagedContract } from "../../api/users";
 import { projectsAPI } from "../../api/projects";
 import { companiesAPI } from "../../api/companies";
 import { contratoFrameAPI, ContratoFrameItem } from "../../api/contratosFrame";
@@ -31,10 +31,39 @@ interface Props {
  * Gestión de TODOS los contratos de una persona (cross-proyecto/cliente): lista con formato de tarjetas,
  * filtros (cliente, proyecto, tipo, vigencia, rango de fechas) y descarga de contrato/release por tarjeta.
  */
+/*
+  UN CONTRATO ANULADO EN LA LISTA (18/11/2026): en su lugar, con lo que era, quién lo anuló, cuándo y por
+  qué, y sin ninguna acción (no se edita, no se descarga, no se vuelve a anular). Una anulación que no se
+  ve desde la aplicación se ve igual que el borrado que reemplazó.
+*/
+const TarjetaAnulado: React.FC<{ r: ManagedContract }> = ({ r }) => {
+  const a = r.anulado!;
+  return (
+    <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/60 p-4 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-900">
+          <FontAwesomeIcon icon={faBan} className="h-3 w-3" />
+          ANULADO
+        </span>
+        {r.clientName && <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{r.clientName}</span>}
+        {r.projectName && <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">{r.projectName}</span>}
+        {!a.vinculoEliminado && <span className="text-xs text-gray-500">posición #{r.contractIndex}</span>}
+      </div>
+      <p className="mt-2 text-gray-500 dark:text-gray-400 line-through decoration-gray-400">{etiquetaContrato({ ...a.contrato, nombre_contrato: a.contrato.nombre_contrato || "", nombre_empresa_contrato: a.contrato.nombre_empresa_contrato || "", fecha_alta_contrato: a.contrato.fecha_alta_contrato || "", fecha_baja_contrato: a.contrato.fecha_baja_contrato || "" } as any)}</p>
+      <p className="mt-2 text-gray-800 dark:text-gray-100">
+        <span className="font-semibold">Motivo:</span> {a.motivo || "—"}
+      </p>
+      <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+        Anulado {a.el ? `el ${new Date(a.el).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}` : ""} por {a.porNombre || "—"}
+        {a.vinculoEliminado ? " · era su último contrato en el proyecto: salió del equipo" : ""}
+      </p>
+    </div>
+  );
+};
+
 export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, userId, userName, contratoFrames, releases, proyectoInicial, zIndex = 60 }) => {
+  // Los contratos y, en su lugar, los ANULADOS (etapa 2b; vienen en la misma lista con `anulado`).
   const [rows, setRows] = useState<ManagedContract[]>([]);
-  // Los anulados (etapa 2b): qué eran, quién, cuándo y por qué. `null` = sin permiso para verlos.
-  const [anulados, setAnulados] = useState<ContratoAnuladoFila[] | null>([]);
   const [loading, setLoading] = useState(false);
   // Empresas del ABM: fallback para los proyectos que no tienen ninguna configurada (mismo criterio que
   // el modal de contratos del proyecto). Se resuelve acá y no solo en el backend para no depender de él.
@@ -53,10 +82,6 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
       .then(setRows)
       .catch(() => sweetAlert.error("Error", "No se pudieron cargar los contratos de la persona."))
       .finally(() => setLoading(false));
-    usersAPI
-      .contratosAnulados(userId)
-      .then(setAnulados)
-      .catch(() => setAnulados(null));
   }, [userId]);
 
   useEffect(() => {
@@ -101,7 +126,10 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
 
   const tipos = useMemo(() => {
     const s = new Set<string>();
-    rows.forEach((r) => r.contract?.nombre_contrato && s.add(r.contract.nombre_contrato));
+    rows.forEach((r) => {
+      const n = r.anulado ? r.anulado.contrato.nombre_contrato : r.contract?.nombre_contrato;
+      if (n) s.add(n);
+    });
     return [...s];
   }, [rows]);
 
@@ -110,7 +138,7 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
   // tabla del equipo y que el modal de Gestionar equipo.
   const indiceQueRigePorProyecto = useMemo(() => {
     const porProyecto = new Map<string, ManagedContract[]>();
-    rows.forEach((r) => {
+    rows.filter((r) => !r.anulado).forEach((r) => {
       if (!porProyecto.has(r.projectId)) porProyecto.set(r.projectId, []);
       porProyecto.get(r.projectId)!.push(r);
     });
@@ -125,12 +153,18 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
     return m;
   }, [rows]);
 
-  const isLatest = (r: ManagedContract) => indiceQueRigePorProyecto.get(r.projectId) === r.contractIndex;
+  const isLatest = (r: ManagedContract) => !r.anulado && indiceQueRigePorProyecto.get(r.projectId) === r.contractIndex;
 
   const filtered = useMemo(
-    () => rows.filter((r) => matchesContractFilters(filters, { contract: r.contract, clientId: r.clientId, projectId: r.projectId, isLatest: isLatest(r) })),
+    () =>
+      rows.filter((r) =>
+        matchesContractFilters(filters, { contract: (r.anulado ? r.anulado.contrato : r.contract) as any, clientId: r.clientId, projectId: r.projectId, isLatest: isLatest(r), anulado: !!r.anulado }),
+      ),
     [rows, filters, indiceQueRigePorProyecto],
   );
+  const totalContratos = rows.filter((r) => !r.anulado).length;
+  const totalAnulados = rows.length - totalContratos;
+  const filtradosContratos = filtered.filter((r) => !r.anulado).length;
 
   const handleDownloadContract = async (r: ManagedContract, empresaId?: string) => {
     const template = findTemplate(r.contract, contratoFrames);
@@ -176,7 +210,10 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
             <FontAwesomeIcon icon={faFileContract} className="h-4 w-4" />
             Contratos
           </span>
-          <span className="pb-2 text-xs text-gray-500">{filtered.length} de {rows.length}</span>
+          <span className="pb-2 text-xs text-gray-500">
+            {filtradosContratos} de {totalContratos}
+            {totalAnulados > 0 ? ` · ${filtered.length - filtradosContratos} de ${totalAnulados} ${totalAnulados === 1 ? "anulado" : "anulados"}` : ""}
+          </span>
         </div>
 
         {loading ? (
@@ -188,7 +225,10 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
           </div>
         ) : (
           <div className="space-y-3">
-            {filtered.map((r, idx) => (
+            {filtered.map((r, idx) =>
+              r.anulado ? (
+                <TarjetaAnulado key={`anulado-${r.projectId}-${r.contractIndex}-${idx}`} r={r} />
+              ) : (
               <ContractCard
                 key={`${r.projectId}-${r.contractIndex}-${idx}`}
                 contract={r.contract}
@@ -211,41 +251,11 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
                 onDownloadRelease={(release, empresaId) => handleDownloadRelease(r, release, empresaId)}
                 onUploadAltaDocumento={(file) => handleUploadAltaDocumento(r, file)}
               />
-            ))}
+              ),
+            )}
           </div>
         )}
 
-        {/*
-          ANULADOS (etapa 2b). No se borran: quedan acá con lo que eran, quién los anuló, cuándo y por qué.
-          Respeta el filtro de proyecto; sin permiso de Contratos la sección no aparece.
-        */}
-        {anulados && anulados.filter((a) => filters.proyecto === "all" || a.projectId === filters.proyecto).length > 0 && (
-          <div className="space-y-2 pt-2">
-            <div className="flex items-end justify-between border-b border-gray-200 dark:border-gray-700">
-              <span className="inline-flex items-center gap-2 px-1 pb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">
-                <FontAwesomeIcon icon={faBan} className="h-4 w-4" />
-                Anulados
-              </span>
-              <span className="pb-2 text-xs text-gray-500">{anulados.filter((a) => filters.proyecto === "all" || a.projectId === filters.proyecto).length}</span>
-            </div>
-            {anulados
-              .filter((a) => filters.proyecto === "all" || a.projectId === filters.proyecto)
-              .map((a) => (
-                <div key={a.contratoKey} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3 text-sm">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200">ANULADO</span>
-                    {a.projectName && <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">{a.projectName}</span>}
-                    <span className="text-gray-700 dark:text-gray-200 line-through decoration-gray-400">{etiquetaContrato(a.contrato)}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                    {new Date(a.anuladoEl).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })} · {a.anuladoPorNombre || "—"}
-                    {a.vinculoEliminado ? " · era el último contrato: la persona salió del equipo" : ""}
-                  </p>
-                  <p className="mt-1 text-xs text-gray-800 dark:text-gray-200">Motivo: {a.motivo || "—"}</p>
-                </div>
-              ))}
-          </div>
-        )}
       </div>
     </Modal>
   );

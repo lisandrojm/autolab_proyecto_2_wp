@@ -465,6 +465,18 @@ export interface ManagedContract {
   releaseEmpresas: { id: string; label: string }[];
   contractIndex: number;
   contract: Contract;
+  /**
+   * Contrato ANULADO (etapa 2b): `contract` es la lápida y esto es lo que era, quién lo anuló, cuándo y
+   * por qué. `vinculoEliminado`: era el último contrato y la persona salió del equipo (no hay lápida).
+   */
+  anulado?: {
+    el: string | null;
+    porNombre: string;
+    motivo: string;
+    origen: string;
+    vinculoEliminado: boolean;
+    contrato: { nombre_contrato?: string; fecha_alta_contrato?: string; fecha_baja_contrato?: string; nombre_empresa_contrato?: string; nombre_estado_empleado?: string };
+  };
 }
 
 /* ---------- Normalizadores ---------- */
