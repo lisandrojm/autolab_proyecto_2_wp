@@ -1,0 +1,17 @@
+{
+ "coleccion": "users_&_projects",
+ "userProjectId": "696423965dd723128ad69ed3",
+ "contratoKey": "6afdb3ca0fc132faeab8a5f5",
+ "posicion": 7,
+ "antes": {
+  "empresaContratoId": "6a5fd12244faed2e72669b42",
+  "nombre_empresa_contrato": "2030 S.R.L."
+ },
+ "despues": {
+  "empresaContratoId": "6a5fd1cc44faed2e72669f38",
+  "nombre_empresa_contrato": "FZERO S.R.L"
+ },
+ "motivo": "Empleadora desde ARCA: la única relación del CUIL 20432510558 con inicio 2026-05-01 es con FZERO S.R.L (30-71029583-9), cerrada el 08/06/2026 por renuncia. Tanda del 01/05: se cargó con 2030.",
+ "por": "script corregirEmpleadoraContrato",
+ "el": "2026-11-18T20:17:13.456Z"
+}

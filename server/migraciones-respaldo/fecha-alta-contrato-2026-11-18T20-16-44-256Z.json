@@ -1,0 +1,21 @@
+{
+ "coleccion": "users_&_projects",
+ "userProjectId": "696422645dd723128ad69e0c",
+ "contratoKey": "6afdb3ca0fc132faeab89daf",
+ "posicion": 8,
+ "antes": {
+  "fecha_alta_contrato": "2026-07-01"
+ },
+ "despues": {
+  "fecha_alta_contrato": "2026-05-01"
+ },
+ "arca": {
+  "empleadoraCuit": "30710295839",
+  "fechaInicio": "2026-05-01T00:00:00.000Z",
+  "fechaFin": null,
+  "modalidad": "A tiempo completo indeterminado/Trabajo permanente"
+ },
+ "motivo": "Error de carga (tanda del 01/05): ARCA tiene la relación con FZERO desde el 01/05/2026; se cargó 01/07/2026. La copia duplicada de FRAME (#9) se anuló antes.",
+ "por": "script corregirFechaAltaContrato",
+ "el": "2026-11-18T20:16:44.255Z"
+}
