@@ -85,3 +85,53 @@ for (const s of SITIOS) {
     }
   });
 }
+
+/* ── Referencias corridas (`referenciasCorridas.ts`) ── */
+import { clasificarReferencia, fuerzaDe } from "./referenciasCorridas.js";
+
+const L1 = new Types.ObjectId(), L2 = new Types.ObjectId();
+// Un vínculo después de un borrado físico: el contrato del 10/10 (que estaba en #1) ya no está.
+const vinculo = [
+  { contratoKey: k(), fecha_alta_contrato: "2026-10-03", empresaContratoId: "e1", altaArcaPresentada: { logId: L1 } },
+  { contratoKey: k(), fecha_alta_contrato: "2026-10-17", empresaContratoId: "e1", altaArcaPresentada: { logId: L2 } },
+  { contratoKey: k(), fecha_alta_contrato: "2026-10-17", empresaContratoId: "e2" },
+  { contratoKey: k(), estadoContrato: "ANULADO" },
+];
+
+test("clasificar: consistente, corrida con su candidato, fuera, lápida y sin huella", () => {
+  assert.equal(clasificarReferencia(vinculo, { indice: 0, huella: { alta: "2026-10-03", empresaId: "e1" } }).tipo, "consistente");
+  const c = clasificarReferencia(vinculo, { indice: 2, huella: { alta: "2026-10-17", empresaId: "e1" } });
+  assert.equal(c.tipo, "corrida");
+  assert.deepEqual(c.candidatos, [1], "alta + empleadora distingue los dos del 17/10");
+  assert.equal(c.fuerza, "fuerte");
+  const f = clasificarReferencia(vinculo, { indice: 7, huella: { alta: "2026-10-03", empresaId: "e1" } });
+  assert.equal(f.tipo, "fuera");
+  assert.deepEqual(f.candidatos, [0]);
+  assert.equal(clasificarReferencia(vinculo, { indice: 3, huella: { alta: "2026-10-03" } }).tipo, "lapida");
+  assert.equal(clasificarReferencia(vinculo, { indice: 2, huella: {} }).tipo, "sin_huella");
+});
+
+test("clasificar: el log manda; un log que no quedó en ningún contrato no cuenta", () => {
+  // Un log de corrida corrido una posición: la empleadora sola NO lo detecta, el log sí.
+  const c = clasificarReferencia(vinculo, { indice: 0, huella: { empresaId: "e1", logId: L2 } });
+  assert.equal(c.tipo, "corrida");
+  assert.deepEqual(c.candidatos, [1]);
+  assert.deepEqual(c.evidencia, ["logId", "empresaId"]);
+  const rechazada = clasificarReferencia(vinculo, { indice: 0, huella: { empresaId: "e1", logId: new Types.ObjectId() } });
+  assert.equal(rechazada.tipo, "consistente");
+  assert.equal(rechazada.fuerza, "debil", "sólo la empleadora: consistente pero débil");
+});
+
+test("clasificar: dos candidatos no se resuelven solos; la lápida nunca es candidata", () => {
+  const c = clasificarReferencia(vinculo, { indice: 0, huella: { alta: "2026-10-17" } });
+  assert.deepEqual(c.candidatos, [1, 2]);
+  assert.equal(c.fuerza, "debil");
+});
+
+test("fuerza: log, o alta + empleadora; la baja sola es débil", () => {
+  assert.equal(fuerzaDe(["logId"]), "fuerte");
+  assert.equal(fuerzaDe(["alta", "empresaId"]), "fuerte");
+  assert.equal(fuerzaDe(["alta"]), "debil");
+  assert.equal(fuerzaDe(["baja"]), "debil");
+  assert.equal(fuerzaDe([]), "ninguna");
+});

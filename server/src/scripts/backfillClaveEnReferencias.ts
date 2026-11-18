@@ -19,10 +19,11 @@
  * ataría para siempre al contrato equivocado. Por eso:
  *  - CORRIDA (lo que guardó no coincide con el contrato de su posición) o FUERA (posición inexistente):
  *    NO recibe clave. La resuelve `reubicarReferencias.ts`, aparte, y recién ahí recibe la clave.
- *  - CONSISTENTE: recibe la clave. La columna «débil» cuenta las que coinciden con poca evidencia (p. ej.
- *    un log de una presentación rechazada: sólo la empleadora).
- *  - SIN HUELLA (los recibos no guardan nada del contrato): reciben la clave de su posición; no quedan
- *    peor que hoy. `--sin-huella-no` las deja afuera.
+ *  - CONSISTENTE CON EVIDENCIA FUERTE (log de la corrida, o alta + empleadora): recibe la clave.
+ *  - CONSISTENTE CON EVIDENCIA DÉBIL (sólo la empleadora —un log que no quedó en ningún contrato: en
+ *    seco, rechazado o reemplazado—, o sólo la fecha de baja): NO, salvo `--incluir-debiles`. Coincidir
+ *    en la empleadora no prueba que no esté corrida.
+ *  - SIN HUELLA (los recibos no guardan nada del contrato): NO, salvo `--incluir-sin-huella`.
  *  - LÁPIDA: recibe la clave de la lápida (es el contrato que nombraba; el contenido está en
  *    `contratos_anulados`).
  * Cada escritura además exige que la referencia siga en la misma posición y sin clave.
@@ -53,7 +54,8 @@ async function escribir(e: Escritura): Promise<boolean> {
 async function main() {
   const commit = process.argv.includes("--commit");
   const detalle = process.argv.includes("--detalle");
-  const sinHuellaNo = process.argv.includes("--sin-huella-no");
+  const conDebiles = process.argv.includes("--incluir-debiles");
+  const conSinHuella = process.argv.includes("--incluir-sin-huella");
   const iRevertir = process.argv.indexOf("--revertir");
   await mongoose.connect(env.MONGO_URI, { dbName: env.MONGO_DB_NAME });
   if (iRevertir >= 0) return revertir(process.argv[iRevertir + 1]);
@@ -62,9 +64,9 @@ async function main() {
   const refs = await leerReferencias();
   const contratos = await contratosDe(refs.map((r) => r.userProjectId));
 
-  type Fila = { consistente: number; debil: number; lapida: number; sinHuella: number; corrida: number; fuera: number; sinVinculo: number; contratoSinClave: number };
+  type Fila = { consistente: number; debil: number; lapida: number; sinHuella: number; corrida: number; fuera: number; sinVinculo: number; contratoSinClave: number; debilFuera: number; sinHuellaFuera: number };
   const resumen = new Map<string, Fila>();
-  const fila = (c: string) => resumen.get(c) ?? (resumen.set(c, { consistente: 0, debil: 0, lapida: 0, sinHuella: 0, corrida: 0, fuera: 0, sinVinculo: 0, contratoSinClave: 0 }), resumen.get(c)!);
+  const fila = (c: string) => resumen.get(c) ?? (resumen.set(c, { consistente: 0, debil: 0, lapida: 0, sinHuella: 0, corrida: 0, fuera: 0, sinVinculo: 0, contratoSinClave: 0, debilFuera: 0, sinHuellaFuera: 0 }), resumen.get(c)!);
   const aEscribir: Escritura[] = [];
   const noSeTocan: string[] = [];
 
@@ -79,7 +81,8 @@ async function main() {
       noSeTocan.push(`${r.coleccion} ${r._id} · ${r.texto} · ${k.tipo === "corrida" ? `#${r.indice}: ` : ""}${k.motivo} → ${cand} [evidencia ${k.evidencia.join("+") || "ninguna"}, ${k.fuerza}]`);
       continue;
     }
-    if (k.tipo === "sin_huella" && sinHuellaNo) { f.sinHuella++; continue; }
+    if (k.tipo === "sin_huella" && !conSinHuella) { f.sinHuellaFuera++; continue; }
+    if (k.tipo === "consistente" && k.fuerza !== "fuerte" && !conDebiles) { f.debilFuera++; continue; }
     const c = lista[Number(r.indice)];
     if (!c?.contratoKey) { f.contratoSinClave++; noSeTocan.push(`${r.coleccion} ${r._id} · ${r.texto} · el contrato #${r.indice} no tiene clave`); continue; }
     if (k.tipo === "lapida") f.lapida++;
@@ -88,12 +91,13 @@ async function main() {
     aEscribir.push({ ...r, clave: new Types.ObjectId(String(c.contratoKey)) });
   }
 
-  console.log("Colección                  | RECIBEN CLAVE: consistente (débil) lápida sin-huella | NO: corrida fuera sin-vínculo contrato-sin-clave");
+  console.log(`Colección                  | RECIBEN CLAVE: consistente${conDebiles ? " (débil)" : ""} lápida${conSinHuella ? " sin-huella" : ""} | NO: corrida fuera sin-vínculo contrato-sin-clave${conDebiles ? "" : " débil"}${conSinHuella ? "" : " sin-huella"}`);
   for (const [c, f] of resumen) {
     const p = (n: number, w: number) => String(n).padStart(w);
-    console.log(`${c.padEnd(26)} | ${p(f.consistente, 25)} ${p(f.debil, 8)} ${p(f.lapida, 6)} ${p(f.sinHuella, 10)} | ${p(f.corrida, 11)} ${p(f.fuera, 5)} ${p(f.sinVinculo, 11)} ${p(f.contratoSinClave, 18)}`);
+    console.log(`${c.padEnd(26)} | ${p(f.consistente, 25)}${conDebiles ? ` ${p(f.debil, 8)}` : ""} ${p(f.lapida, 6)}${conSinHuella ? ` ${p(f.sinHuella, 10)}` : ""} | ${p(f.corrida, 11)} ${p(f.fuera, 5)} ${p(f.sinVinculo, 11)} ${p(f.contratoSinClave, 18)}${conDebiles ? "" : ` ${p(f.debilFuera, 5)}`}${conSinHuella ? "" : ` ${p(f.sinHuellaFuera, 10)}`}`);
   }
-  console.log(`\nTotal: ${aEscribir.length} referencias reciben clave, ${noSeTocan.length} quedan sin tocar${sinHuellaNo ? " (más las sin huella, por --sin-huella-no)" : ""}.`);
+  const fuera = [...resumen.values()].reduce((a, f) => a + f.debilFuera + f.sinHuellaFuera, 0);
+  console.log(`\nTotal: ${aEscribir.length} referencias reciben clave; ${noSeTocan.length} corridas/rotas quedan sin tocar (las resuelve reubicarReferencias.ts)${fuera ? `; ${fuera} débiles o sin huella quedan afuera (--incluir-debiles / --incluir-sin-huella)` : ""}.`);
   if (noSeTocan.length) {
     console.log(detalle ? "\nNO SE TOCAN:" : `\nNO SE TOCAN (primeras 30; --detalle para todas):`);
     for (const t of detalle ? noSeTocan : noSeTocan.slice(0, 30)) console.log(`  ${t}`);
