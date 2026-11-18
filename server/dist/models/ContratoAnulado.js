@@ -11,7 +11,7 @@ const contratoAnuladoSchema = new Schema({
     anuladoPor: { type: Schema.Types.ObjectId, ref: "User", default: null },
     anuladoPorNombre: { type: String, default: "" },
     motivo: { type: String, default: "" },
-    origen: { type: String, enum: ["panel", "borrar_solicitud", "delete_deprecado"], required: true },
+    origen: { type: String, enum: ["panel", "borrar_solicitud", "delete_deprecado", "script"], required: true },
     vinculoEliminado: { type: Boolean, default: false },
 }, { timestamps: true, collection: "contratos_anulados", minimize: false });
 // Un contrato se anula una vez: la clave es única. Si una corrida falla a mitad, el reintento choca acá en vez de duplicar.

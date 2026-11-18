@@ -124,6 +124,7 @@ import { cambiosDeAreas, fotoDeAreas, registrarCambiosDelEquipo } from "../servi
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { resolverIndiceContrato } from "../utils/identidadContrato.js";
 import { anularContrato, AnulacionInvalida } from "../services/anulacionContrato.js";
+import { moverRecibos, referenciasDeContrato } from "../services/referenciasContrato.js";
 import { esLapida, ultimoNoAnulado } from "../utils/anulacionContrato.js";
 import { modalidadParaGuardar } from "../services/modalidades.js";
 import { Contrato } from "../models/Contrato.js";
@@ -2590,6 +2591,89 @@ router.post("/projects/:projectId/members/:userId/contracts/:index/anular", requ
     }
     catch (error) {
         console.error("Anular contrato error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/** Lo justo para reconocer un contrato en pantalla. */
+const resumenDeContrato = (c) => ({
+    contratoKey: c?.contratoKey ? String(c.contratoKey) : null,
+    nombre_contrato: c?.nombre_contrato || "",
+    fecha_alta_contrato: c?.fecha_alta_contrato || "",
+    fecha_baja_contrato: c?.fecha_baja_contrato || "",
+    nombre_empresa_contrato: c?.nombre_empresa_contrato || "",
+    nombre_estado_empleado: c?.nombre_estado_empleado || "",
+});
+/** El vínculo y la posición de un contrato del panel (por clave o por posición). Responde el error si no está. */
+async function contratoDelPanel(req, res) {
+    const { projectId, userId, index } = req.params;
+    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+    if (!project) {
+        res.status(404).json({ error: "Project not found" });
+        return null;
+    }
+    const up = await UserProject.findOne({ projectId, userId });
+    if (!up) {
+        res.status(404).json({ error: "No hay contratos para esta persona en el proyecto" });
+        return null;
+    }
+    const idx = resolverIndiceContrato(up, index);
+    if (idx < 0) {
+        res.status(400).json({ error: "Contrato no encontrado (o ya anulado)" });
+        return null;
+    }
+    return { up, idx };
+}
+/*
+  GET .../contracts/:index/referencias — LO QUE HAY QUE SABER ANTES DE ANULAR (la vista previa del panel,
+  el equivalente del dry-run de `anularContratos.ts`): si ARCA lo frena, qué cuelga de su posición, si es
+  el último contrato de la persona en el proyecto, y a qué otros contratos se le pueden mover los recibos.
+*/
+router.get("/projects/:projectId/members/:userId/contracts/:index/referencias", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const encontrado = await contratoDelPanel(req, res);
+        if (!encontrado)
+            return;
+        const { up, idx } = encontrado;
+        const c = up.contracts[idx];
+        const resultadoArca = String(c?.altaArcaPresentada?.resultado || "");
+        const referencias = await referenciasDeContrato(up._id, idx);
+        res.json({
+            posicion: idx,
+            contrato: resumenDeContrato(c),
+            arca: { resultado: resultadoArca, bloquea: ["presentada", "indeterminado", "presentando"].includes(resultadoArca) },
+            referencias,
+            esUltimoContrato: !up.contracts.some((x, i) => i !== idx && !esLapida(x)),
+            // Adónde se pueden mover sus recibos: los otros contratos de verdad del MISMO vínculo.
+            destinosParaRecibos: up.contracts.map((x, i) => ({ index: i, ...resumenDeContrato(x), anulado: esLapida(x) })).filter((x) => x.index !== idx && !x.anulado),
+        });
+    }
+    catch (error) {
+        console.error("Referencias de contrato error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/*
+  POST .../contracts/:index/mover-recibos  { destino: <posición o contratoKey> } — mueve los recibos de
+  sueldo de este contrato a otro de la MISMA persona en el MISMO proyecto (p. ej. quedaron atados al
+  contrato duplicado que hay que anular). Queda en el log con quién y qué.
+*/
+router.post("/projects/:projectId/members/:userId/contracts/:index/mover-recibos", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const encontrado = await contratoDelPanel(req, res);
+        if (!encontrado)
+            return;
+        const { up, idx } = encontrado;
+        const destino = resolverIndiceContrato(up, String(req.body?.destino ?? ""));
+        if (destino < 0)
+            return res.status(400).json({ error: "El contrato de destino no existe (o está anulado)." });
+        if (destino === idx)
+            return res.status(400).json({ error: "El destino es el mismo contrato." });
+        const r = await moverRecibos(up._id, idx, destino);
+        console.log(`[mover-recibos] ${up._id}: ${r.movidos} recibos y ${r.lotesMovidos} lotes de #${idx} (${up.contracts[idx]?.contratoKey}) a #${destino} (${up.contracts[destino]?.contratoKey}) por ${req.user?.userId}. Recibos: ${r.recibos.join(",") || "—"}`);
+        res.json({ ok: true, movidos: r.movidos, lotesMovidos: r.lotesMovidos });
+    }
+    catch (error) {
+        console.error("Mover recibos error:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });

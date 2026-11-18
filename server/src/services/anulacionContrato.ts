@@ -3,6 +3,7 @@ import { ContratoAnulado } from "../models/ContratoAnulado.js";
 import { User } from "../models/User.js";
 import { esLapida, lapidaDe, quedanContratosSiSeAnula } from "../utils/anulacionContrato.js";
 import { eliminarVinculo } from "./contratoDeSolicitud.js";
+import { referenciasDeContrato, type ReferenciasDeContrato } from "./referenciasContrato.js";
 
 /*
   ANULAR UN CONTRATO (etapa 2b, 18/11/2026). Reemplaza al borrado físico: ver `utils/anulacionContrato.ts`.
@@ -24,7 +25,11 @@ export interface QuienAnula {
 
 export class AnulacionInvalida extends Error {}
 
-export async function anularContrato(o: QuienAnula & { up: any; idx: number; motivo: string; origen: "panel" | "borrar_solicitud" | "delete_deprecado" | "script" }): Promise<{ contratoKey: string; vinculoEliminado: boolean }> {
+export async function anularContrato(
+  o: QuienAnula & { up: any; idx: number; motivo: string; origen: "panel" | "borrar_solicitud" | "delete_deprecado" | "script" },
+  /** Inyectable para probar sin base. */
+  deps: { referencias?: (upId: any, idx: number) => Promise<Pick<ReferenciasDeContrato, "totalBloqueantes" | "textoBloqueantes">> } = {},
+): Promise<{ contratoKey: string; vinculoEliminado: boolean }> {
   const { up, idx } = o;
   const contratos: any[] = up.contracts || [];
   if (!Number.isInteger(idx) || idx < 0 || idx >= contratos.length) throw new AnulacionInvalida("Contrato no encontrado");
@@ -42,6 +47,9 @@ export async function anularContrato(o: QuienAnula & { up: any; idx: number; mot
   }
   const motivo = String(o.motivo || "").trim();
   if (!motivo) throw new AnulacionInvalida("Falta el motivo de la anulación.");
+  // Un recibo de sueldo o una renovación no pueden quedar colgados de un contrato anulado (ver `referenciasContrato.ts`).
+  const refs = await (deps.referencias || referenciasDeContrato)(up._id, idx);
+  if (refs.totalBloqueantes > 0) throw new AnulacionInvalida(`Antes de anularlo hay que mover o resolver lo que depende de este contrato: ${refs.textoBloqueantes}.`);
 
   const contrato: Record<string, any> = typeof actual?.toObject === "function" ? actual.toObject() : { ...actual };
   // Un contrato todavía sin clave (antes del backfill) recibe una acá: la lápida y el archivo tienen que compartirla.

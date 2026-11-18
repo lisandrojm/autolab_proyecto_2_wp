@@ -15,7 +15,7 @@ import { ProjectTeamPage } from "./ProjectTeamPage";
 import { TablaConEncabezadoFijo, useAltoDeBarra } from "../components/ui/TablaConEncabezadoFijo";
 import { AccionDelDocumento, BotonRetomarCircuito, BotonVolverABajar, ChipConstancia, esFueraDelCircuito, esNoUbicada } from "../components/contratos/HistorialAltasArca";
 
-import { errorDeAnulacion, pedirMotivoDeAnulacion } from "../utils/anularContrato";
+import { anularContratoConRevision } from "../utils/anularContrato";
 /*
   A.R.C.A ALTAS AUTOMÁTICAS: cada alta temprana se presenta sola a la hora configurada (14:00 argentinas
   por defecto) del día de su alta, o con la anticipación configurada (Configuración → ARCA → Altas Automáticas). Acá se ve qué va a salir y cuándo —con la cuenta regresiva de cada una—, qué todavía
@@ -567,15 +567,9 @@ export const PresentacionesArcaPage: React.FC = () => {
 
   const eliminar = async (c: AltaPendienteArca) => {
     if (!c.projectId) return;
-    const motivo = await pedirMotivoDeAnulacion(`Contrato «${c.tipoContrato || "sin tipo"}» de ${c.nombre} en «${c.proyecto}» (alta ${fechaCorta(c.fechaAlta)}). Sale de la cola y no se presenta. En ARCA no cambia nada.`);
-    if (!motivo) return;
     setBorrando(claveDe(c));
     try {
-      await projectsAPI.anularMemberContract(c.projectId, c.userId, c.contractIndex, motivo);
-      sweetAlert.success("Contrato anulado", `${c.nombre} salió de la cola.`);
-      await cargar();
-    } catch (err: any) {
-      sweetAlert.error("No se pudo anular", errorDeAnulacion(err));
+      if (await anularContratoConRevision({ projectId: c.projectId, userId: c.userId, contractIndex: c.contractIndex, contexto: `${c.nombre} en «${c.proyecto}». Sale de la cola y no se presenta; en ARCA no cambia nada.` })) await cargar();
     } finally {
       setBorrando("");
     }

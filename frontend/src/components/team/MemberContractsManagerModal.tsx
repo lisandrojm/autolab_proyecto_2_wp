@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faFileLines } from "@fortawesome/free-solid-svg-icons";
+import { faBan, faFileContract, faFileLines } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
-import { usersAPI, ManagedContract } from "../../api/users";
+import { usersAPI, ManagedContract, ContratoAnuladoFila } from "../../api/users";
 import { projectsAPI } from "../../api/projects";
 import { companiesAPI } from "../../api/companies";
 import { contratoFrameAPI, ContratoFrameItem } from "../../api/contratosFrame";
@@ -13,7 +13,7 @@ import { ContractCard, EmpresaOption, findTemplate, templateHasContent } from ".
 import { ContractFiltersBar, ContractFilterState, emptyContractFilters, matchesContractFilters } from "./ContractFilters";
 import { getContratoActivo } from "../../utils/contratoVigencia";
 
-import { errorDeAnulacion, pedirMotivoDeAnulacion } from "../../utils/anularContrato";
+import { anularContratoConRevision, etiquetaContrato } from "../../utils/anularContrato";
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -21,14 +21,20 @@ interface Props {
   userName?: string;
   contratoFrames: ContratoFrameItem[];
   releases: Release[];
+  /** Abrir ya filtrado por un proyecto (desde el equipo de ese proyecto). */
+  proyectoInicial?: string;
+  /** Por encima de otro modal (el del equipo). */
+  zIndex?: number;
 }
 
 /**
  * Gestión de TODOS los contratos de una persona (cross-proyecto/cliente): lista con formato de tarjetas,
  * filtros (cliente, proyecto, tipo, vigencia, rango de fechas) y descarga de contrato/release por tarjeta.
  */
-export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, userId, userName, contratoFrames, releases }) => {
+export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, userId, userName, contratoFrames, releases, proyectoInicial, zIndex = 60 }) => {
   const [rows, setRows] = useState<ManagedContract[]>([]);
+  // Los anulados (etapa 2b): qué eran, quién, cuándo y por qué. `null` = sin permiso para verlos.
+  const [anulados, setAnulados] = useState<ContratoAnuladoFila[] | null>([]);
   const [loading, setLoading] = useState(false);
   // Empresas del ABM: fallback para los proyectos que no tienen ninguna configurada (mismo criterio que
   // el modal de contratos del proyecto). Se resuelve acá y no solo en el backend para no depender de él.
@@ -47,13 +53,17 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
       .then(setRows)
       .catch(() => sweetAlert.error("Error", "No se pudieron cargar los contratos de la persona."))
       .finally(() => setLoading(false));
+    usersAPI
+      .contratosAnulados(userId)
+      .then(setAnulados)
+      .catch(() => setAnulados(null));
   }, [userId]);
 
   useEffect(() => {
     if (!isOpen || !userId) return;
-    setFilters(emptyContractFilters);
+    setFilters(proyectoInicial ? { ...emptyContractFilters, proyecto: proyectoInicial } : emptyContractFilters);
     load();
-  }, [isOpen, userId, load]);
+  }, [isOpen, userId, load, proyectoInicial]);
 
   useEffect(() => {
     if (!isOpen || allEmpresas.length > 0) return;
@@ -70,18 +80,10 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
     navigate(`/projects/${r.projectId}/team`, { state: { openWizardFor: { userId, contractIndex: r.contractIndex } } });
   };
 
-  // Eliminar: borra SOLO ese contrato (por índice) del proyecto.
+  // Anular SOLO ese contrato (cualquiera, no sólo el último): revisa, ofrece mover recibos, pide motivo.
   const handleDelete = async (r: ManagedContract) => {
     if (!userId) return;
-    const motivo = await pedirMotivoDeAnulacion(`Contrato de "${r.projectName}".`);
-    if (!motivo) return;
-    try {
-      await projectsAPI.anularMemberContract(r.projectId, userId, r.contractIndex, motivo);
-      sweetAlert.success("Contrato anulado", "El contrato quedó anulado.");
-      load();
-    } catch (err) {
-      sweetAlert.error("No se pudo anular", errorDeAnulacion(err));
-    }
+    if (await anularContratoConRevision({ projectId: r.projectId, userId, contractIndex: r.contractIndex, contexto: `Proyecto «${r.projectName}».` })) load();
   };
 
   // Opciones de filtro derivadas de los contratos
@@ -164,7 +166,7 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={userName || "Empleado"} subtitle="Gestión de contratos (todos los proyectos)" size="lg" zIndex={60}>
+    <Modal isOpen={isOpen} onClose={onClose} title={userName || "Empleado"} subtitle="Gestión de contratos (todos los proyectos)" size="lg" zIndex={zIndex}>
       <div className="space-y-4">
         <ContractFiltersBar value={filters} onChange={setFilters} clientes={clientes} proyectos={proyectos} tipos={tipos} />
 
@@ -204,12 +206,44 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
                 onEdit={() => handleEdit(r)}
                 onDelete={() => handleDelete(r)}
                 editTitle="Editar contrato (ir al equipo del proyecto)"
-                deleteTitle="Eliminar este contrato"
+                deleteTitle="Anular este contrato"
                 onDownloadContract={(empresaId) => handleDownloadContract(r, empresaId)}
                 onDownloadRelease={(release, empresaId) => handleDownloadRelease(r, release, empresaId)}
                 onUploadAltaDocumento={(file) => handleUploadAltaDocumento(r, file)}
               />
             ))}
+          </div>
+        )}
+
+        {/*
+          ANULADOS (etapa 2b). No se borran: quedan acá con lo que eran, quién los anuló, cuándo y por qué.
+          Respeta el filtro de proyecto; sin permiso de Contratos la sección no aparece.
+        */}
+        {anulados && anulados.filter((a) => filters.proyecto === "all" || a.projectId === filters.proyecto).length > 0 && (
+          <div className="space-y-2 pt-2">
+            <div className="flex items-end justify-between border-b border-gray-200 dark:border-gray-700">
+              <span className="inline-flex items-center gap-2 px-1 pb-2 text-sm font-semibold text-gray-600 dark:text-gray-300">
+                <FontAwesomeIcon icon={faBan} className="h-4 w-4" />
+                Anulados
+              </span>
+              <span className="pb-2 text-xs text-gray-500">{anulados.filter((a) => filters.proyecto === "all" || a.projectId === filters.proyecto).length}</span>
+            </div>
+            {anulados
+              .filter((a) => filters.proyecto === "all" || a.projectId === filters.proyecto)
+              .map((a) => (
+                <div key={a.contratoKey} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-3 text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200">ANULADO</span>
+                    {a.projectName && <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">{a.projectName}</span>}
+                    <span className="text-gray-700 dark:text-gray-200 line-through decoration-gray-400">{etiquetaContrato(a.contrato)}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    {new Date(a.anuladoEl).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })} · {a.anuladoPorNombre || "—"}
+                    {a.vinculoEliminado ? " · era el último contrato: la persona salió del equipo" : ""}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-800 dark:text-gray-200">Motivo: {a.motivo || "—"}</p>
+                </div>
+              ))}
           </div>
         )}
       </div>

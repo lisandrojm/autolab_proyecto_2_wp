@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faFileLines, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faFileContract, faFileLines, faListUl, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { MemberContractsManagerModal } from "./MemberContractsManagerModal";
 import { Modal } from "../ui/Modal";
 import { User, Contract, usersAPI } from "../../api/users";
 import { contratoFrameAPI, ContratoFrameItem } from "../../api/contratosFrame";
@@ -60,6 +61,8 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
     y no se pide nada: el modal sigue sirviendo a quien lo abra con un usuario ya hidratado.
   */
   const [historial, setHistorial] = useState<Contract[] | null>(null);
+  // «Todos los contratos»: el gestor completo (anular cualquiera, mover recibos, ver anulados), filtrado por este proyecto.
+  const [verTodos, setVerTodos] = useState(false);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
   /** Documentos de alta subidos con el modal abierto: índice en la BD → campos nuevos del contrato. */
   const [altaSubida, setAltaSubida] = useState<Record<number, { altaDocumentoUrl?: string; altaDocumentoNombre?: string }>>({});
@@ -170,6 +173,7 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
   };
 
   return (
+    <>
     <Modal isOpen={isOpen} onClose={onClose} title={fullName || "Empleado"} subtitle="Contratos en el proyecto" size="lg" zIndex={60}>
       <div className="space-y-4">
         {/* Pestaña Contratos */}
@@ -178,7 +182,20 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
             <FontAwesomeIcon icon={faFileContract} className="h-4 w-4" />
             Último contrato
           </span>
-          {cargandoHistorial && <FontAwesomeIcon icon={faSpinner} className="mb-2 h-3.5 w-3.5 animate-spin text-gray-400" />}
+          <span className="inline-flex items-center gap-3 pb-2">
+            {cargandoHistorial && <FontAwesomeIcon icon={faSpinner} className="h-3.5 w-3.5 animate-spin text-gray-400" />}
+            {user && (
+              <button
+                type="button"
+                onClick={() => setVerTodos(true)}
+                title="Ver y gestionar todos los contratos de la persona: anular cualquiera (no sólo el último), mover recibos, ver los anulados"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400"
+              >
+                <FontAwesomeIcon icon={faListUl} className="h-3.5 w-3.5" />
+                Todos los contratos
+              </button>
+            )}
+          </span>
         </div>
 
         {visible.length === 0 ? (
@@ -204,7 +221,8 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
                 colapsable={idx !== idxQueRige}
                 onEdit={user ? () => onEdit(user, contract, indiceEnBD(contract)) : undefined}
                 onDelete={user ? () => onDelete(user._id) : undefined}
-                deleteTitle="Eliminar del proyecto"
+                // OJO: esto saca a la PERSONA del proyecto, no anula el contrato. Anular un contrato: «Todos los contratos».
+                deleteTitle="Sacar a la persona del proyecto (para anular un contrato: «Todos los contratos»)"
                 onDownloadContract={(empresaId) => handleDownloadContract(contract, empresaId)}
                 onDownloadRelease={(release, empresaId) => handleDownloadRelease(release, contract, empresaId)}
                 /* Se guarda el parche acá también: el modal ya no lee el array del usuario, así que el
@@ -225,5 +243,16 @@ export const EmployeeContractsModal: React.FC<EmployeeContractsModalProps> = ({ 
 
       </div>
     </Modal>
+      <MemberContractsManagerModal
+        isOpen={verTodos}
+        onClose={() => setVerTodos(false)}
+        userId={user?._id || null}
+        userName={fullName}
+        contratoFrames={contratoFrames}
+        releases={releases}
+        proyectoInicial={projectId}
+        zIndex={70}
+      />
+    </>
   );
 };

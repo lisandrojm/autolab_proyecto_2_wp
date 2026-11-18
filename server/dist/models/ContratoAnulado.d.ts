@@ -22,7 +22,7 @@ export interface IContratoAnulado extends Document {
     anuladoPorNombre: string;
     motivo: string;
     /** Desde dónde: el panel, o el borrado de la solicitud aprobada que lo había creado. */
-    origen: "panel" | "borrar_solicitud" | "delete_deprecado";
+    origen: "panel" | "borrar_solicitud" | "delete_deprecado" | "script";
     /** No quedaba ningún contrato de verdad: el vínculo con el proyecto se borró (como hacía el borrado físico). */
     vinculoEliminado: boolean;
     createdAt: Date;

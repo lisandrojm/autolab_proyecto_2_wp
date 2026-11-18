@@ -66,6 +66,7 @@ import { etiquetaCentroCostoDe, resolverCentroCostoDeProyectos } from "../servic
 import { constanciasPorContrato } from "../services/arca/constanciasArca.js";
 
 import { AnulacionInvalida } from "../services/anulacionContrato.js";
+import { ContratoAnulado } from "../models/ContratoAnulado.js";
 const router = Router();
 
 /* ------------------- Filtros del equipo de un proyecto (client-side → server) -------------------
@@ -2998,6 +2999,42 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_us
 
 // GET /users/:id/all-contracts - Todos los contratos de la persona (cross-proyecto/cliente), enriquecidos
 // con proyecto, cliente y empresas de cada proyecto para poder listarlos, filtrarlos y descargarlos.
+/*
+  GET /users/:id/contratos-anulados — LOS CONTRATOS ANULADOS DE LA PERSONA (etapa 2b): qué era cada uno,
+  quién lo anuló, cuándo y por qué. Sólo los proyectos de este tenant.
+*/
+router.get("/:id/contratos-anulados", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: "Id inválido" });
+    const proyectos: any[] = await Project.find({ tenantId: req.tenantObjectId }).select("_id name").lean();
+    const nombreProyecto = new Map(proyectos.map((p) => [String(p._id), p.name]));
+    const filas: any[] = await ContratoAnulado.find({ userId: new Types.ObjectId(req.params.id), projectId: { $in: proyectos.map((p) => p._id) } }).sort({ anuladoEl: -1 }).lean();
+    res.json(
+      filas.map((f) => ({
+        contratoKey: String(f.contratoKey),
+        projectId: String(f.projectId),
+        projectName: nombreProyecto.get(String(f.projectId)) || "",
+        posicion: f.posicion,
+        anuladoEl: f.anuladoEl,
+        anuladoPorNombre: f.anuladoPorNombre || "",
+        motivo: f.motivo || "",
+        origen: f.origen,
+        vinculoEliminado: !!f.vinculoEliminado,
+        contrato: {
+          nombre_contrato: f.contrato?.nombre_contrato || "",
+          fecha_alta_contrato: f.contrato?.fecha_alta_contrato || "",
+          fecha_baja_contrato: f.contrato?.fecha_baja_contrato || "",
+          nombre_empresa_contrato: f.contrato?.nombre_empresa_contrato || "",
+          nombre_estado_empleado: f.contrato?.nombre_estado_empleado || "",
+        },
+      })),
+    );
+  } catch (error) {
+    console.error("Contratos anulados error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.params.id;

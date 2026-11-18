@@ -442,6 +442,20 @@ export interface UsersListResponse {
 }
 
 /** Contrato de una persona enriquecido con su proyecto, cliente y empresas (para gestionarlo cross-proyecto). */
+/** Un contrato anulado de la persona (GET /users/:id/contratos-anulados). */
+export interface ContratoAnuladoFila {
+  contratoKey: string;
+  projectId: string;
+  projectName: string;
+  posicion: number;
+  anuladoEl: string;
+  anuladoPorNombre: string;
+  motivo: string;
+  origen: string;
+  vinculoEliminado: boolean;
+  contrato: { nombre_contrato: string; fecha_alta_contrato: string; fecha_baja_contrato: string; nombre_empresa_contrato: string; nombre_estado_empleado: string };
+}
+
 export interface ManagedContract {
   projectId: string;
   projectName: string;
@@ -807,6 +821,12 @@ class UsersAPI {
   /** Todos los contratos de una persona (cross-proyecto/cliente), enriquecidos para gestionarlos. */
   async getAllContracts(userId: string): Promise<ManagedContract[]> {
     const { data } = await axios.get(`/users/${userId}/all-contracts`, { headers: this.getHeaders() });
+    return Array.isArray(data) ? data : [];
+  }
+
+  /** Los contratos anulados de la persona: qué eran, quién los anuló, cuándo y por qué. */
+  async contratosAnulados(userId: string): Promise<ContratoAnuladoFila[]> {
+    const { data } = await axios.get(`/users/${userId}/contratos-anulados`, { headers: this.getHeaders() });
     return Array.isArray(data) ? data : [];
   }
 

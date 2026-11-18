@@ -3,9 +3,12 @@ import { ContratoAnulado } from "../models/ContratoAnulado.js";
 import { User } from "../models/User.js";
 import { esLapida, lapidaDe, quedanContratosSiSeAnula } from "../utils/anulacionContrato.js";
 import { eliminarVinculo } from "./contratoDeSolicitud.js";
+import { referenciasDeContrato } from "./referenciasContrato.js";
 export class AnulacionInvalida extends Error {
 }
-export async function anularContrato(o) {
+export async function anularContrato(o, 
+/** Inyectable para probar sin base. */
+deps = {}) {
     const { up, idx } = o;
     const contratos = up.contracts || [];
     if (!Number.isInteger(idx) || idx < 0 || idx >= contratos.length)
@@ -26,6 +29,10 @@ export async function anularContrato(o) {
     const motivo = String(o.motivo || "").trim();
     if (!motivo)
         throw new AnulacionInvalida("Falta el motivo de la anulación.");
+    // Un recibo de sueldo o una renovación no pueden quedar colgados de un contrato anulado (ver `referenciasContrato.ts`).
+    const refs = await (deps.referencias || referenciasDeContrato)(up._id, idx);
+    if (refs.totalBloqueantes > 0)
+        throw new AnulacionInvalida(`Antes de anularlo hay que mover o resolver lo que depende de este contrato: ${refs.textoBloqueantes}.`);
     const contrato = typeof actual?.toObject === "function" ? actual.toObject() : { ...actual };
     // Un contrato todavía sin clave (antes del backfill) recibe una acá: la lápida y el archivo tienen que compartirla.
     const contratoKey = contrato.contratoKey ? new Types.ObjectId(String(contrato.contratoKey)) : new Types.ObjectId();

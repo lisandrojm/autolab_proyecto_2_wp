@@ -10,7 +10,10 @@ import UserProject from "../models/UserProject.js";
 import { ContratoAnulado } from "../models/ContratoAnulado.js";
 import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
-import { anularContrato, AnulacionInvalida } from "./anulacionContrato.js";
+import { anularContrato as anularReal, AnulacionInvalida } from "./anulacionContrato.js";
+// Sin base: por defecto no hay referencias; un test las pone.
+let refsDePrueba = { totalBloqueantes: 0, textoBloqueantes: "" };
+const anularContrato = (o) => anularReal(o, { referencias: async () => refsDePrueba });
 import { esLapida, lapidaDe, quedanContratosSiSeAnula, ultimoNoAnulado } from "../utils/anulacionContrato.js";
 import { buildContractKey, findNewContracts } from "../utils/additiveSync.js";
 import { resolverIndiceContrato } from "../utils/identidadContrato.js";
@@ -22,6 +25,7 @@ let archivados = [];
 let borradosDelArchivo = [];
 let pulls = [];
 beforeEach(() => {
+    refsDePrueba = { totalBloqueantes: 0, textoBloqueantes: "" };
     archivados = [];
     borradosDelArchivo = [];
     pulls = [];
@@ -137,5 +141,14 @@ describe("vigencia del server con lápidas", () => {
         const lista = [jornada, lapida];
         assert.equal(lista.indexOf(getContratoActivo(lista, "2026-11-18")), 0);
         assert.equal(getContratoActivo([lapida], "2026-11-18"), null);
+    });
+});
+describe("referencias bloqueantes", () => {
+    it("con recibos de sueldo colgando, no anula ni archiva: primero hay que moverlos", async () => {
+        refsDePrueba = { totalBloqueantes: 2, textoBloqueantes: "2 recibos de sueldo (2026-09 firmado, 2026-10 enviado)" };
+        const up = vinculo([frame("2023-06-01"), frame("2025-07-29")]);
+        await assert.rejects(anularContrato({ up, idx: 0, motivo: "duplicado", origen: "panel" }), /mover o resolver .*2 recibos de sueldo/);
+        assert.equal(archivados.length, 0);
+        assert.ok(!esLapida(up.contracts[0]));
     });
 });
