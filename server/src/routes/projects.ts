@@ -2759,13 +2759,19 @@ router.post("/projects/:projectId/members/:userId/contracts/:index/anular", requ
 /*
   DELETE /projects/:projectId/members/:userId/contracts/:index — DEPRECADO (etapa 2b). Sigue respondiendo
   igual para no romper a los clientes que lo usan, pero ya NO borra: anula (lápida + archivo), porque el
-  borrado físico corría las posiciones. Usar POST .../anular, que pide motivo y permiso.
+  borrado físico corría las posiciones. Usar POST .../anular, que pide motivo.
+  Mismo permiso que POST .../anular: una puerta sin llave al lado de la restringida, haciendo lo mismo,
+  era peor que cualquiera de las dos. Si aparece un 403 inesperado, el aviso de deprecación dice quién llamó.
 */
-router.delete("/projects/:projectId/members/:userId/contracts/:index", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
+/** El aviso va ANTES del permiso: así también queda registrado quién recibe un 403 (un cliente que quedó afuera). */
+const avisoDeleteDeprecado = (req: AuthenticatedRequest & TenantRequest, res: any, next: any) => {
+  res.setHeader("Deprecation", "true");
+  res.setHeader("Link", `</api/v1/projects/${req.params.projectId}/members/${req.params.userId}/contracts/${req.params.index}/anular>; rel="successor-version"`);
+  console.warn(`[DEPRECADO] DELETE de contrato ${req.params.projectId}/${req.params.userId}#${req.params.index} por ${req.user?.userId} (${req.get("user-agent") || "sin user-agent"}): se anula si tiene permiso (usar POST .../anular).`);
+  next();
+};
+router.delete("/projects/:projectId/members/:userId/contracts/:index", requireTenant, authenticateToken, avisoDeleteDeprecado, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    res.setHeader("Deprecation", "true");
-    res.setHeader("Link", `</api/v1/projects/${req.params.projectId}/members/${req.params.userId}/contracts/${req.params.index}/anular>; rel="successor-version"`);
-    console.warn(`[DEPRECADO] DELETE de contrato ${req.params.projectId}/${req.params.userId}#${req.params.index} por ${req.user?.userId}: se anula (usar POST .../anular).`);
     await anularDesdeRuta(req, res, "delete_deprecado", String(req.body?.motivo || req.query?.motivo || "Eliminado desde el panel (DELETE deprecado, sin motivo)"));
   } catch (error) {
     console.error("Delete member contract error:", error);
