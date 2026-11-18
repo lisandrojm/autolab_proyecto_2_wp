@@ -61,7 +61,7 @@ export async function llevarAreasAlContratoQueRige(projectId, asignacionesPorUsu
             const shiftId = primera?.shiftIds?.[0] ?? null;
             const r = await UserProject.updateOne(
             // Sólo si en esa posición sigue el mismo contrato (alguien pudo borrar uno en el medio).
-            { projectId: new Types.ObjectId(String(projectId)), userId: new Types.ObjectId(p.userId), [`contracts.${i}.fecha_alta_contrato`]: e.contrato.fecha_alta_contrato ?? null, [`contracts.${i}.fecha_baja_contrato`]: e.contrato.fecha_baja_contrato ?? null }, {
+            { projectId: new Types.ObjectId(String(projectId)), userId: new Types.ObjectId(p.userId), [`contracts.${i}.fecha_alta_contrato`]: e.contrato.fecha_alta_contrato ?? null, [`contracts.${i}.fecha_baja_contrato`]: e.contrato.fecha_baja_contrato ?? null, [`contracts.${i}.estadoContrato`]: { $ne: "ANULADO" } }, {
                 $set: {
                     [`contracts.${i}.areaShiftAssignments`]: e.asignaciones,
                     [`contracts.${i}.areaId`]: areaId,

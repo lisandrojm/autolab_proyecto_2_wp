@@ -128,6 +128,9 @@ import { filaDelEquipoTrasGuardar, firmaDeAreas, rolDelEquipoTrasGuardar, tieneR
 import { cambiosDeAreas, fotoDeAreas, registrarCambiosDelEquipo, type CambioDelEquipo } from "../services/historialEquipo.js";
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
 import { quitarContrato } from "../services/contratoDeSolicitud.js";
+import { resolverIndiceContrato } from "../utils/identidadContrato.js";
+import { anularContrato, AnulacionInvalida } from "../services/anulacionContrato.js";
+import { esLapida, ultimoNoAnulado } from "../utils/anulacionContrato.js";
 import { modalidadParaGuardar } from "../services/modalidades.js";
 import { Contrato } from "../models/Contrato.js";
 import { FormaPago } from "../models/FormaPago.js";
@@ -1123,7 +1126,7 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
           projectId: project._id,
           userId: { $in: miembros.map((u: any) => u._id) },
         })
-          .select("projectId userId areaId nombre_proyecto nombre_rol_frame contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.hora_inicio contracts.hora_fin contracts.areaId contracts.shiftId contracts.areaShiftAssignments")
+          .select("projectId userId areaId nombre_proyecto nombre_rol_frame contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.hora_inicio contracts.hora_fin contracts.areaId contracts.shiftId contracts.areaShiftAssignments contracts.estadoContrato")
           .lean();
         const porUsuario = new Map(vinculos.map((v: any) => [String(v.userId), v]));
         for (const miembro of miembros) {
@@ -2207,9 +2210,10 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
     const esContratoNuevo = !hayIndice && !isUpdate;
     let contratoPrevio: any = null;
     if (!esContratoNuevo) {
-      const up: any = await UserProject.findOne({ userId, projectId: project._id }).select("contracts.valoracion_regla_id contracts.modalidadId").lean();
+      const up: any = await UserProject.findOne({ userId, projectId: project._id }).select("contracts.valoracion_regla_id contracts.modalidadId contracts.estadoContrato").lean();
       const lista = (up?.contracts as any[]) || [];
-      contratoPrevio = hayIndice ? lista[Number(contractIndex)] : lista[lista.length - 1];
+      // Sin índice, el último de verdad: una lápida no tiene regla de valoración (etapa 2b).
+      contratoPrevio = hayIndice ? lista[Number(contractIndex)] : lista[ultimoNoAnulado(lista)];
     }
     const regla = await reglaDeValoracion({ proyecto: project, contrato: esContratoNuevo ? contract : { ...contract, valoracion_regla_id: contratoPrevio?.valoracion_regla_id }, esNuevo: esContratoNuevo });
     const veredicto = await revisarValoracion({ regla, rolFrameId: contract.rol_frame_id, categoriaSatId: contract.categoria_sat_id, motivo: contract.valoracionOverride?.motivo });
@@ -2399,6 +2403,12 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
 
     const enrichedContract = {
       ...contract,
+      /*
+        La clave del contrato NO viene del cliente (etapa 2): un contrato copiado de otro proyecto la
+        traería repetida. Al editar, el modelo le devuelve la del contrato que reemplaza; uno nuevo recibe
+        una nueva (ver `clavesAPoner`).
+      */
+      contratoKey: undefined,
       empresaContratoId: contract.empresaContratoId || null,
       empresaReleaseId: contract.empresaReleaseId || null,
       nombre_empresa_contrato: (empresaContratoDoc as any)?.razonSocial || "",
@@ -2474,7 +2484,14 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       // así que `enrichedContract` nunca los trae. Como acá se reemplaza el subdocumento ENTERO, hay
       // que arrastrar el valor previo o el upload de "Alta AFIP/Servicios" desaparece en cuanto se
       // edite cualquier otra cosa del contrato.
-      const prevContract = hasExplicitIndex ? userProject.contracts[idxNum] : isUpdate && userProject.contracts.length > 0 ? userProject.contracts[userProject.contracts.length - 1] : null;
+      // Una lápida (contrato anulado) no se edita: guardar encima la «resucitaría» (etapa 2b).
+      if (hasExplicitIndex && esLapida(userProject.contracts[idxNum])) {
+        res.status(409).json({ error: "Ese contrato está anulado: no se puede editar." });
+        return;
+      }
+      // «isUpdate» sin índice reemplaza el ÚLTIMO contrato: el último de verdad, no una lápida.
+      const ultimoReal = ultimoNoAnulado(userProject.contracts as any[]);
+      const prevContract = hasExplicitIndex ? userProject.contracts[idxNum] : isUpdate && ultimoReal >= 0 ? userProject.contracts[ultimoReal] : null;
       if (prevContract) {
         if ((enrichedContract as any).altaDocumentoUrl === undefined) (enrichedContract as any).altaDocumentoUrl = (prevContract as any).altaDocumentoUrl;
         if ((enrichedContract as any).altaDocumentoNombre === undefined) (enrichedContract as any).altaDocumentoNombre = (prevContract as any).altaDocumentoNombre;
@@ -2491,8 +2508,8 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
 
       if (hasExplicitIndex) {
         userProject.contracts[idxNum] = enrichedContract as any;
-      } else if (isUpdate && userProject.contracts.length > 0) {
-        userProject.contracts[userProject.contracts.length - 1] = enrichedContract as any;
+      } else if (isUpdate && ultimoReal >= 0) {
+        userProject.contracts[ultimoReal] = enrichedContract as any;
       } else {
         // Contrato NUEVO desde «Agregar miembro»: se marca, porque Contratos lista sólo los creados en
         // WeProdu (Solicitudes o esto) y no los importados de FRAME/WP. Los de Solicitudes ya traen `solicitudId`.
@@ -2696,42 +2713,60 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
   }
 });
 
-// DELETE /projects/:projectId/members/:userId/contracts/:index - Elimina UN contrato puntual (por índice).
-// Si la persona queda sin contratos en el proyecto, se limpia el UserProject y sus referencias.
+/*
+  ANULAR UN CONTRATO (etapa 2b, 18/11/2026; ver `services/anulacionContrato.ts`). Reemplaza al borrado
+  físico: el contrato queda entero en `contratos_anulados` y en su posición una lápida, así no se corren
+  los demás. Si era el último contrato de verdad de la persona en el proyecto, el vínculo se borra como
+  antes. Motivo obligatorio.
+*/
+async function anularDesdeRuta(req: AuthenticatedRequest & TenantRequest, res: any, origen: "panel" | "delete_deprecado", motivo: string) {
+  const { projectId, userId, index } = req.params;
+  const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+  if (!project) return res.status(404).json({ error: "Project not found" });
+  const up = await UserProject.findOne({ projectId, userId });
+  if (!up) return res.status(404).json({ error: "No hay contratos para esta persona en el proyecto" });
+  // Por clave cuando el cliente la manda: el índice es una posición. Una lápida no se encuentra (ya está anulado).
+  const idx = resolverIndiceContrato(up, index);
+  if (idx < 0) return res.status(400).json({ error: "Contrato no encontrado (o ya anulado)" });
+  // Una presentación de altas en curso marca cada contrato por su POSICIÓN. La lápida no corre a nadie,
+  // pero el contrato que se está presentando no puede desaparecer a mitad: se espera igual.
+  const corrida = quienTiene(String(req.tenantObjectId));
+  if (corrida && (corrida.tipo === "altas_masivas" || corrida.tipo === "carga_masiva")) {
+    return res.status(409).json({ error: "Hay una presentación de altas en ARCA en curso. Esperá a que termine para anular contratos." });
+  }
+  if ((up.contracts?.[idx] as any)?.altaArcaPresentada?.resultado === "presentando") {
+    return res.status(409).json({ error: "Este contrato se está presentando en ARCA ahora mismo: no se puede anular." });
+  }
+  try {
+    const r = await anularContrato({ up, idx, tenantId: req.tenantObjectId, por: req.user?.userId, motivo, origen });
+    return res.json({ message: origen === "delete_deprecado" ? "Contrato eliminado" : "Contrato anulado", anulado: true, ...r });
+  } catch (e) {
+    if (e instanceof AnulacionInvalida) return res.status(400).json({ error: e.message });
+    throw e;
+  }
+}
+
+// POST /projects/:projectId/members/:userId/contracts/:index/anular  { motivo }
+router.post("/projects/:projectId/members/:userId/contracts/:index/anular", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    await anularDesdeRuta(req, res, "panel", String(req.body?.motivo || ""));
+  } catch (error) {
+    console.error("Anular contrato error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/*
+  DELETE /projects/:projectId/members/:userId/contracts/:index — DEPRECADO (etapa 2b). Sigue respondiendo
+  igual para no romper a los clientes que lo usan, pero ya NO borra: anula (lápida + archivo), porque el
+  borrado físico corría las posiciones. Usar POST .../anular, que pide motivo y permiso.
+*/
 router.delete("/projects/:projectId/members/:userId/contracts/:index", requireTenant, authenticateToken, requireAnyRole, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    const { projectId, userId, index } = req.params;
-    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
-    if (!project) {
-      res.status(404).json({ error: "Project not found" });
-      return;
-    }
-    const up = await UserProject.findOne({ projectId, userId });
-    if (!up) {
-      res.status(404).json({ error: "No hay contratos para esta persona en el proyecto" });
-      return;
-    }
-    // Por `_id` cuando el cliente lo manda: el índice es una posición y puede haber cambiado.
-    const idx = resolverIndiceContrato(up, index);
-    if (idx < 0) {
-      res.status(400).json({ error: "Contrato no encontrado" });
-      return;
-    }
-    // Una presentación de altas en curso marca cada contrato por su POSICIÓN: borrar uno corre a los
-    // demás y el resultado quedaría en otro contrato. Se espera a que termine.
-    const corrida = quienTiene(String(req.tenantObjectId));
-    if (corrida && (corrida.tipo === "altas_masivas" || corrida.tipo === "carga_masiva")) {
-      res.status(409).json({ error: "Hay una presentación de altas en ARCA en curso. Esperá a que termine para eliminar contratos." });
-      return;
-    }
-    if ((up.contracts?.[idx] as any)?.altaArcaPresentada?.resultado === "presentando") {
-      res.status(409).json({ error: "Este contrato se está presentando en ARCA ahora mismo: no se puede eliminar." });
-      return;
-    }
-
-    await quitarContrato(up, idx);
-
-    res.json({ message: "Contrato eliminado" });
+    res.setHeader("Deprecation", "true");
+    res.setHeader("Link", `</api/v1/projects/${req.params.projectId}/members/${req.params.userId}/contracts/${req.params.index}/anular>; rel="successor-version"`);
+    console.warn(`[DEPRECADO] DELETE de contrato ${req.params.projectId}/${req.params.userId}#${req.params.index} por ${req.user?.userId}: se anula (usar POST .../anular).`);
+    await anularDesdeRuta(req, res, "delete_deprecado", String(req.body?.motivo || req.query?.motivo || "Eliminado desde el panel (DELETE deprecado, sin motivo)"));
   } catch (error) {
     console.error("Delete member contract error:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -2854,28 +2889,6 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/empresa-cont
   }
 });
 
-/**
- * Resuelve QUÉ contrato del member se está tocando, aceptando su `_id` o su índice.
- *
- * El índice es una POSICIÓN, no una identidad: cambia sola. El escenario real es que alguien abra el
- * contrato en posición 2, se vaya a constatar la obra social en la SSS (hay captcha, tarda), y
- * mientras tanto se elimine el contrato en posición 0. Al volver y guardar, el índice 2 ya apunta a
- * otro contrato: el dato se escribe en el alta equivocada, sin error y sin aviso.
- *
- * Por eso se prefiere el `_id` del subdocumento, que Mongoose genera para cada elemento del array.
- * Se sigue aceptando el índice para no romper a los clientes que todavía lo mandan, pero es el camino
- * viejo: el que manda un id no puede escribir en el contrato equivocado.
- *
- * Devuelve el índice resuelto, porque el resto del código escribe con `up.contracts[idx] = ...`.
- */
-function resolverIndiceContrato(up: any, param: string): number {
-  const esObjectId = /^[a-f\d]{24}$/i.test(String(param || ""));
-  if (esObjectId) {
-    return (up.contracts as any[]).findIndex((c: any) => String(c?._id || "") === String(param));
-  }
-  const idx = Number(param);
-  return Number.isInteger(idx) && idx >= 0 && idx < up.contracts.length ? idx : -1;
-}
 
 /**
  * PATCH /projects/:projectId/members/:userId/contracts/:index/obra-social
@@ -3813,7 +3826,7 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
       Se piden solo esos dos campos; el orden de `contracts` se conserva, así el índice sigue valiendo.
     */
     const idsUp = [...new Set(logs.flatMap((l) => (l.contratos || []).map((c: any) => String(c.userProjectId || ""))).filter((id) => Types.ObjectId.isValid(id)))];
-    const ups: any[] = idsUp.length > 0 ? await UserProject.find({ _id: { $in: idsUp } }).select("contracts.altaConstancia contracts.altaEnviadaAFirmarEl contracts.altaArcaPresentada contracts.fecha_alta_contrato contracts.fecha_baja_contrato").lean() : [];
+    const ups: any[] = idsUp.length > 0 ? await UserProject.find({ _id: { $in: idsUp } }).select("contracts.altaConstancia contracts.altaEnviadaAFirmarEl contracts.altaArcaPresentada contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.estadoContrato").lean() : [];
     const upPorId = new Map(ups.map((u) => [String(u._id), u]));
     /*
       «PRESENTADA DESPUÉS» (pedido del 18/10/2026). Una fila rechazada de una corrida vieja queda rechazada

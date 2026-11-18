@@ -745,7 +745,15 @@ class ProjectsAPI {
     emitProjectsChanged("update", projectId, clientId);
   }
 
-  /** Elimina un contrato puntual (por índice) de la persona en un proyecto. */
+  /**
+   * Anula un contrato puntual (etapa 2b): queda guardado entero con el motivo y en su posición queda una
+   * lápida, así no se corren los demás. Reemplaza a `deleteMemberContract`.
+   */
+  async anularMemberContract(projectId: string, userId: string, index: number, motivo: string): Promise<void> {
+    await axios.post(`/projects/${projectId}/members/${userId}/contracts/${index}/anular`, { motivo }, { headers: this.getHeaders() });
+  }
+
+  /** @deprecated Usar `anularMemberContract`. El server ya no borra: anula sin motivo. */
   async deleteMemberContract(projectId: string, userId: string, index: number): Promise<void> {
     await axios.delete(`/projects/${projectId}/members/${userId}/contracts/${index}`, {
       headers: this.getHeaders(),

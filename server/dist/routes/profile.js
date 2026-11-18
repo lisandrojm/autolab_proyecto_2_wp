@@ -70,6 +70,8 @@ router.get('/', async (req, res) => {
                     const hasActiveContract = !up.contracts ||
                         up.contracts.length === 0 ||
                         up.contracts.some((c) => {
+                            if (c?.estadoContrato === "ANULADO")
+                                return false; // lápida de un contrato anulado (etapa 2b)
                             if (!c.fecha_baja_contrato)
                                 return true;
                             const endDate = new Date(c.fecha_baja_contrato);

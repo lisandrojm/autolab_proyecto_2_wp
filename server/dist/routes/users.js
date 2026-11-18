@@ -61,6 +61,7 @@ import { antiguedadArcaPorCuil } from "../services/arca/relacionesArcaStore.js";
 import { nombreParaSellar } from "../services/arca/nombreArca.js";
 import { etiquetaCentroCostoDe, resolverCentroCostoDeProyectos } from "../services/centroCostoDeProyectos.js";
 import { constanciasPorContrato } from "../services/arca/constanciasArca.js";
+import { AnulacionInvalida } from "../services/anulacionContrato.js";
 const router = Router();
 /* ------------------- Filtros del equipo de un proyecto (client-side → server) -------------------
  * Estos filtros dependen del ÚLTIMO contrato del miembro en el proyecto o de su asignación de
@@ -611,7 +612,7 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
                         localField: "metadata.projects",
                         foreignField: "_id",
                         as: "_ups",
-                        pipeline: [{ $project: { n: { $size: { $ifNull: ["$contracts", []] } } } }],
+                        pipeline: [{ $project: { n: { $size: { $filter: { input: { $ifNull: ["$contracts", []] }, as: "c", cond: { $ne: ["$$c.estadoContrato", "ANULADO"] } } } } } }],
                     },
                 }, { $addFields: { _orden: { $sum: "$_ups.n" } } });
             }
@@ -781,6 +782,7 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
                 ? UserProject.aggregate([
                     { $match: { userId: { $in: idsPagina } } },
                     { $unwind: { path: "$contracts", preserveNullAndEmptyArrays: false } },
+                    { $match: { "contracts.estadoContrato": { $ne: "ANULADO" } } },
                     { $group: { _id: "$userId", jornadas: { $sum: { $ifNull: ["$contracts.cantidad_jornadas_laborales", 0] } }, contratos: { $sum: 1 } } },
                 ])
                 : Promise.resolve([]),
@@ -834,7 +836,7 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
             const sinOrigen = idsPagina.filter((id) => { const r = contratoQueRige.get(String(id)); return r && !r.origenContrato; });
             if (sinOrigen.length > 0) {
                 const vinculos = await UserProject.find({ userId: { $in: sinOrigen }, projectId: { $ne: new Types.ObjectId(String(req.query.projectId)) } })
-                    .select("userId nombre_proyecto contracts.fecha_alta_contrato contracts.nombre_contrato contracts.fecha_carga")
+                    .select("userId nombre_proyecto contracts.fecha_alta_contrato contracts.nombre_contrato contracts.fecha_carga contracts.estadoContrato")
                     .lean();
                 for (const v of vinculos) {
                     const rige = contratoQueRige.get(String(v.userId));
@@ -1205,7 +1207,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         const todosLosContratos = req.query.todosLosContratos === "true";
         /** `renovables=true` (Renovaciones): sólo los vencidos que de verdad están sin renovar. */
         const soloRenovables = req.query.renovables === "true";
-        const camposContrato = { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga" };
+        // `x`: la lápida de un contrato anulado (etapa 2b). Se manda para saltearla sin reindexar.
+        const camposContrato = { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga", x: "$$x.estadoContrato" };
         if (necesitaNombreContrato)
             camposContrato.n = "$$x.nombre_contrato";
         // Si vino por Solicitudes o por «Agregar miembro», siempre: distingue un contrato viejo de una renovación.
@@ -1266,7 +1269,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
             projectId: d.p,
             userId: d.u,
             nombre_rol_frame: d.r,
-            contracts: (d.c || []).map((c) => ({ fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_contrato: c.n, nombre_estado_empleado: c.e, reemplazo: c.m, empresaContratoId: c.q, delSistema: !!c.o })),
+            contracts: (d.c || []).map((c) => ({ estadoContrato: c.x, fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_contrato: c.n, nombre_estado_empleado: c.e, reemplazo: c.m, empresaContratoId: c.q, delSistema: !!c.o })),
         }));
         const msFase1 = Date.now() - tFase1;
         // Usuario, roles y cliente se resuelven con tres consultas en bloque en vez de con populate por
@@ -1384,10 +1387,11 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 if (permisoExcluido && permisos.has(permisoExcluido))
                     continue;
             }
+            // Las lápidas (contratos anulados, etapa 2b) no son filas; `contractIndex` sale de `contratos`, así que la posición no se corre.
             const candidatosDeLaAsignacion = todosLosContratos
-                ? contratos
+                ? contratos.filter((c) => c?.estadoContrato !== "ANULADO")
                 : estadosFiltro.length > 0
-                    ? contratos.filter((c) => enBandeja(c) && (c === contratoActivo || sinVentana || fechaISO(c.fecha_alta_contrato) >= desdeBandeja))
+                    ? contratos.filter((c) => c?.estadoContrato !== "ANULADO" && enBandeja(c) && (c === contratoActivo || sinVentana || fechaISO(c.fecha_alta_contrato) >= desdeBandeja))
                     : [contratoActivo];
             for (const contrato of candidatosDeLaAsignacion) {
                 if (vigencia) {
@@ -1436,7 +1440,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                     projectId: String(project._id),
                     projectName: project.name || "",
                     nombreRolFrame: m.nombre_rol_frame || "",
-                    contractsInProject: contratos.length,
+                    contractsInProject: contratos.filter((c) => c?.estadoContrato !== "ANULADO").length,
                     contractIndex: contratos.indexOf(contrato),
                     renovacion: renovacionDe(contrato),
                     // Los campos del contrato se completan en la FASE 2 (solo para la página devuelta).
@@ -1971,7 +1975,7 @@ router.get("/contratacion/contadores", requireTenant, authenticateToken, require
                         $map: {
                             input: { $ifNull: ["$contracts", []] },
                             as: "x",
-                            in: { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga", e: "$$x.nombre_estado_empleado", o: { $or: [{ $gt: ["$$x.solicitudId", null] }, { $eq: ["$$x.origen", "agregar_miembro"] }] }, f: { $gt: ["$$x.firmaEnviadaAt", null] } },
+                            in: { x: "$$x.estadoContrato", a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga", e: "$$x.nombre_estado_empleado", o: { $or: [{ $gt: ["$$x.solicitudId", null] }, { $eq: ["$$x.origen", "agregar_miembro"] }] }, f: { $gt: ["$$x.firmaEnviadaAt", null] } },
                         },
                     },
                 },
@@ -1979,7 +1983,7 @@ router.get("/contratacion/contadores", requireTenant, authenticateToken, require
         ]);
         const vinculos = filas.map((d) => ({
             userId: String(d.u || ""),
-            contracts: (d.c || []).map((c) => ({ fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_estado_empleado: c.e, delSistema: !!c.o, firmaEnviadaAt: c.f ? true : null })),
+            contracts: (d.c || []).map((c) => ({ estadoContrato: c.x, fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_estado_empleado: c.e, delSistema: !!c.o, firmaEnviadaAt: c.f ? true : null })),
         }));
         const userIds = [...new Set(vinculos.map((v) => v.userId))].filter((id) => Types.ObjectId.isValid(id));
         const usuarios = userIds.length ? await User.find({ _id: { $in: userIds } }).select("metadata.cuit metadata.sinCuit").lean() : [];
@@ -2128,7 +2132,7 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
                 ...(projectIds.length ? { projectId: { $in: projectIds.map((id) => new Types.ObjectId(id)) } } : {}),
                 "contracts.solicitudId": { $in: idsAprobadas },
             })
-                .select("projectId userId contracts._id contracts.solicitudId contracts.empresaContratoId contracts.nombre_empresa_contrato contracts.categoria_sat_id contracts.obraSocialId contracts.obraSocialOrigen contracts.obraSocialNoFigura contracts.obraSocialConstatadaEl")
+                .select("projectId userId contracts._id contracts.solicitudId contracts.empresaContratoId contracts.nombre_empresa_contrato contracts.categoria_sat_id contracts.obraSocialId contracts.obraSocialOrigen contracts.obraSocialNoFigura contracts.obraSocialConstatadaEl contracts.estadoContrato")
                 .lean();
             const pedidas = new Set(idsAprobadas.map(String));
             const contratos = ups.flatMap((up) => (up.contracts || []).filter((c) => pedidas.has(String(c.solicitudId || ""))));
@@ -2234,7 +2238,7 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
         const personasIds = [...new Set([...personaDe.values()].filter((id) => Types.ObjectId.isValid(id)))].map((id) => new Types.ObjectId(id));
         const contratosDe = new Map();
         if (personasIds.length > 0) {
-            const vinculos = await UserProject.find({ userId: { $in: personasIds } }).select("userId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.nombre_contrato contracts.fecha_carga contracts.solicitudId").lean();
+            const vinculos = await UserProject.find({ userId: { $in: personasIds } }).select("userId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.nombre_contrato contracts.fecha_carga contracts.solicitudId contracts.estadoContrato").lean();
             for (const v of vinculos) {
                 const lista = contratosDe.get(String(v.userId)) || [];
                 for (const c of v.contracts || [])
@@ -2677,7 +2681,7 @@ const consultarDirectorio = async (tenantObjectId, status) => {
         select: "projectId areaId nombre_proyecto nombre_rol_frame " +
             "contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga " +
             "contracts.hora_inicio contracts.hora_fin contracts.areaId contracts.shiftId contracts.areaShiftAssignments " +
-            "contracts.nombre_contrato contracts.tipo_contrato_id",
+            "contracts.nombre_contrato contracts.tipo_contrato_id contracts.estadoContrato",
     })
         .sort({ firstName: 1, lastName: 1 })
         .lean();
@@ -2833,7 +2837,7 @@ router.get("/:id/contrato-que-rige", requireTenant, authenticateToken, requireAn
             res.status(404).json({ error: "Persona no encontrada." });
             return;
         }
-        const vinculos = await UserProject.find({ userId: id }).select("projectId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_contrato contracts.tipo_contrato_id").lean();
+        const vinculos = await UserProject.find({ userId: id }).select("projectId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_contrato contracts.tipo_contrato_id contracts.estadoContrato").lean();
         const contratos = vinculos.flatMap((v) => (v.contracts || []).map((c) => ({ ...c, proyecto: String(v.nombre_proyecto || ""), proyectoId: v.projectId })));
         const c = getContratoActivo(contratos);
         const proyecto = c?.proyectoId ? await Project.findById(c.proyectoId).select("metadata.centroCostoId metadata.centroCostoEmpresaTangoId").lean() : null;
@@ -2925,6 +2929,8 @@ router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermis
             const contratoEmpresas = toEmpresas(proj?.contratoEmpresas);
             const releaseEmpresas = toEmpresas(proj?.releaseEmpresas);
             (up.contracts || []).forEach((c, idx) => {
+                if (c?.estadoContrato === "ANULADO")
+                    return; // lápida: no es un contrato; `idx` sigue siendo la posición real (etapa 2b)
                 rows.push({
                     projectId: String(up.projectId),
                     projectName,
@@ -3454,7 +3460,17 @@ router.delete("/:id/solicitud", requireTenant, authenticateToken, permisoSobreSo
         if (m.solicitudStatus === "aprobada") {
             const apuntaAOtraPersona = !!m.solicitudUserId && String(m.solicitudUserId) !== String(id);
             // El contrato primero: si falla, la solicitud sigue ahí y se puede reintentar.
-            contrato = await borrarContratoDeSolicitud(datosDeSolicitud(solicitud));
+            try {
+                contrato = await borrarContratoDeSolicitud(datosDeSolicitud(solicitud), { tenantId: req.tenantObjectId, por: req.user?.userId });
+            }
+            catch (e) {
+                // P. ej. el alta ya está presentada en ARCA (etapa 2b): no se anula, y la solicitud tampoco se borra.
+                if (e instanceof AnulacionInvalida) {
+                    res.status(409).json({ error: `No se puede borrar la solicitud aprobada: ${e.message}` });
+                    return;
+                }
+                throw e;
+            }
             const esLaPersona = !apuntaAOtraPersona || !!(await UserProject.exists({ userId: id }));
             if (esLaPersona) {
                 await Promise.all([
@@ -3815,7 +3831,8 @@ router.get("/import/last-added-details", requireTenant, authenticateToken, requi
             relByUser.get(key).push({
                 nombre_proyecto: r.nombre_proyecto || "",
                 nombre_rol_frame: r.nombre_rol_frame || "",
-                contracts: (r.contracts || []).map((c) => ({
+                // Sin las lápidas de contratos anulados (etapa 2b): acá sólo se muestran, no se direccionan.
+                contracts: (r.contracts || []).filter((c) => c?.estadoContrato !== "ANULADO").map((c) => ({
                     nombre_contrato: c.nombre_contrato || "",
                     nombre_rol_frame: c.nombre_rol_frame || "",
                     fecha_alta_contrato: c.fecha_alta_contrato || "",

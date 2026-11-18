@@ -332,7 +332,7 @@ async function correrPorTandas(o) {
     const previoDe = new Map();
     {
         const ids = [...new Set(lote.items.map((i) => i.userProjectId))];
-        const ups = ids.length > 0 ? await UserProject.find({ _id: { $in: ids } }).select("contracts.altaArcaPresentada").lean() : [];
+        const ups = ids.length > 0 ? await UserProject.find({ _id: { $in: ids } }).select("contracts.altaArcaPresentada contracts.estadoContrato").lean() : [];
         for (const u of ups) {
             (u.contracts || []).forEach((c, idx) => {
                 const a = c?.altaArcaPresentada;

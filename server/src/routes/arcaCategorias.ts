@@ -215,7 +215,7 @@ router.get("/contratos-huerfanos", authenticateToken, async (_req: Authenticated
     const [cats, viejas, ups, roles] = await Promise.all([
       Categoria.find().select("legacyId nombre").lean(),
       CategoriaSat.find().select("data.id data.nombre").lean(),
-      UserProject.find().select("userId nombre_proyecto contracts.categoria_sat_id contracts.nombre_categoria_sat contracts.rol_frame_id").lean(),
+      UserProject.find().select("userId nombre_proyecto contracts.categoria_sat_id contracts.nombre_categoria_sat contracts.rol_frame_id contracts.estadoContrato").lean(),
       RoleFrame.find().select("name data.rol.id").lean(),
     ]);
     const nombrePorRolId = new Map<number, string>((roles as any[]).filter((r) => r.data?.rol?.id != null).map((r) => [Number(r.data.rol.id), String(r.name)]));

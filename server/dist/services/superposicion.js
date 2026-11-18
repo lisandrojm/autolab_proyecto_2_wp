@@ -55,7 +55,7 @@ export async function compromisosDePersona(tenantId, userId, excluirSolicitudId)
     const proyectosDelTenant = await Project.find({ tenantId }).distinct("_id");
     const [asignaciones, pendientes] = await Promise.all([
         UserProject.find({ userId: uid, projectId: { $in: proyectosDelTenant } })
-            .select("projectId nombre_proyecto contracts.empresaContratoId contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.dias_semana contracts.dias_rotativos contracts.fechas_trabajadas contracts.hora_inicio contracts.hora_fin contracts.shiftId contracts.areaShiftAssignments contracts.nombre_turno contracts.nombre_contrato contracts.tipo_contrato_id contracts.contrato_id")
+            .select("projectId nombre_proyecto contracts.empresaContratoId contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.dias_semana contracts.dias_rotativos contracts.fechas_trabajadas contracts.hora_inicio contracts.hora_fin contracts.shiftId contracts.areaShiftAssignments contracts.nombre_turno contracts.nombre_contrato contracts.tipo_contrato_id contracts.contrato_id contracts.estadoContrato")
             .lean(),
         User.find({
             tenantId,

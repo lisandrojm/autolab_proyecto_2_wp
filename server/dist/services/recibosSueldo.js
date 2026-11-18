@@ -90,6 +90,8 @@ async function personaYContrato(tenantId, userId) {
         for (const up of vinculos) {
             for (const [idx, c] of (up.contracts || []).entries()) {
                 // Con `fechaISO`: hay altas guardadas como DD/MM/YYYY. Un contrato sin alta también sirve, si es lo único que hay.
+                if (c?.estadoContrato === "ANULADO")
+                    continue; // lápida de un contrato anulado (etapa 2b)
                 const alta = fechaISO(c?.fecha_alta_contrato);
                 if (c && (!mejor || alta > mejor.alta))
                     mejor = { up, idx, alta };

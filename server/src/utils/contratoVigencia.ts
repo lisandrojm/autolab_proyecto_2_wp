@@ -41,11 +41,18 @@ export function fechaISO(valor?: string | null): string {
 }
 
 /**
+ * ¿Es la LÁPIDA de un contrato anulado? (etapa 2b, ver `utils/anulacionContrato.ts`). No tiene fechas, y
+ * sin esta guarda «sin alta» se leía como «ya arrancó» y «sin baja» como «indeterminado»: la lápida
+ * quedaba vigente para siempre y `getContratoActivo` la elegía.
+ */
+export const esContratoAnulado = (contrato: { estadoContrato?: unknown } | null | undefined): boolean => contrato?.estadoContrato === "ANULADO";
+
+/**
  * Vigente = ya arrancó (Alta <= hoy) y no terminó (sin Baja, o Baja >= hoy). Si la Alta es futura,
  * el contrato todavía no rige, aunque no tenga fecha de baja (tiempo indeterminado).
  */
 export function esContratoVigente(contrato: ContratoVigenciaLike | null | undefined, hoy: string = hoyArgentina()): boolean {
-  if (!contrato) return false;
+  if (!contrato || esContratoAnulado(contrato as any)) return false;
   const alta = fechaISO(contrato.fecha_alta_contrato);
   if (alta && alta > hoy) return false;
   const baja = fechaISO(contrato.fecha_baja_contrato);
@@ -60,7 +67,7 @@ export function esFechaBajaVigente(fechaBaja: string | null | undefined, hoy: st
 
 /** Un contrato es de tiempo indeterminado cuando no tiene fecha de baja: no vence. */
 export function esTiempoIndeterminado(contrato: ContratoVigenciaLike | null | undefined): boolean {
-  return !!contrato && !fechaISO(contrato.fecha_baja_contrato);
+  return !!contrato && !esContratoAnulado(contrato as any) && !fechaISO(contrato.fecha_baja_contrato);
 }
 
 /**
@@ -81,8 +88,10 @@ function claveAntiguedad(contrato: ContratoVigenciaLike): string {
  *  3. Si no hay ninguno vigente (ni siquiera uno que todavía no arrancó), el más reciente de todos
  *     (para seguir mostrando el histórico).
  */
-export function getContratoActivo<T extends ContratoVigenciaLike>(contratos: T[] | null | undefined, hoy: string = hoyArgentina()): T | null {
-  if (!Array.isArray(contratos) || contratos.length === 0) return null;
+export function getContratoActivo<T extends ContratoVigenciaLike>(todos: T[] | null | undefined, hoy: string = hoyArgentina()): T | null {
+  // Las lápidas no compiten, tampoco en el «más reciente de todos». Devuelve el MISMO objeto: la posición se busca por identidad.
+  const contratos = Array.isArray(todos) ? todos.filter((c) => !esContratoAnulado(c as any)) : [];
+  if (contratos.length === 0) return null;
 
   const masReciente = (lista: T[]) => lista.reduce((mejor, actual) => (claveAntiguedad(actual) >= claveAntiguedad(mejor) ? actual : mejor));
 

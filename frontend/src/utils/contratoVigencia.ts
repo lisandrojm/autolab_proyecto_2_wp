@@ -51,11 +51,20 @@ export const fechaISO = (valor?: string | null): string => {
 };
 
 /**
+ * ¿Es la LÁPIDA de un contrato anulado? (etapa 2b, 18/11/2026). Anular un contrato deja en su posición
+ * `{ contratoKey, estadoContrato: "ANULADO", anulacion }`, sin fechas, para que no se corran los índices
+ * de los demás. Sin esta guarda, una lápida sin alta ni baja contaba como VIGENTE e INDETERMINADA y
+ * `getContratoActivo` la elegía como el contrato que rige. Las listas la saltean SIN reindexar: la
+ * posición de cada contrato es la que el server espera.
+ */
+export const esContratoAnulado = (contrato?: ContratoVigenciaLike | null): boolean => contrato?.estadoContrato === "ANULADO";
+
+/**
  * Vigente = ya arrancó (Alta <= hoy) y no terminó (sin Baja, o Baja >= hoy). Si la Alta es futura,
  * el contrato todavía no rige, aunque no tenga fecha de baja (tiempo indeterminado).
  */
 export const esContratoVigente = (contrato?: ContratoVigenciaLike | null): boolean => {
-  if (!contrato) return false;
+  if (!contrato || esContratoAnulado(contrato)) return false;
   const hoy = hoyISO();
   const alta = fechaISO(contrato.fecha_alta_contrato);
   if (alta && alta > hoy) return false;
@@ -70,7 +79,7 @@ export const esFechaBajaVigente = (fechaBaja?: string | null): boolean => {
 };
 
 /** Un contrato es de tiempo indeterminado cuando no tiene fecha de baja: no vence. */
-export const esTiempoIndeterminado = (contrato?: ContratoVigenciaLike | null): boolean => !!contrato && !fechaISO(contrato.fecha_baja_contrato);
+export const esTiempoIndeterminado = (contrato?: ContratoVigenciaLike | null): boolean => !!contrato && !esContratoAnulado(contrato) && !fechaISO(contrato.fecha_baja_contrato);
 
 /**
  * Clave de antigüedad de un contrato: fecha de alta y, para desempatar, cuándo se cargó.
@@ -88,8 +97,10 @@ const claveAntiguedad = (contrato: ContratoVigenciaLike): string => `${fechaISO(
  *  3. Si no hay ninguno vigente (ni siquiera uno que todavía no arrancó), el más reciente de todos,
  *     para mostrar el histórico con su NO VIGENTE.
  */
-export const getContratoActivo = <T extends ContratoVigenciaLike>(contratos?: T[] | null): T | null => {
-  if (!Array.isArray(contratos) || contratos.length === 0) return null;
+export const getContratoActivo = <T extends ContratoVigenciaLike>(todos?: T[] | null): T | null => {
+  // Las lápidas no compiten. Devuelve el MISMO objeto del array: quien necesita la posición la busca por identidad.
+  const contratos = Array.isArray(todos) ? todos.filter((c) => !esContratoAnulado(c)) : [];
+  if (contratos.length === 0) return null;
 
   const masReciente = (lista: T[]) => lista.reduce((mejor, actual) => (claveAntiguedad(actual) >= claveAntiguedad(mejor) ? actual : mejor));
 
@@ -116,6 +127,8 @@ export const ordenarContratosDesc = <T extends ContratoVigenciaLike>(contratos?:
   if (!Array.isArray(contratos)) return [];
   return contratos
     .map((contrato, posicion) => ({ contrato, posicion }))
+    // Sin lápidas (contratos anulados). Quien necesita la posición la busca por identidad en el array original.
+    .filter(({ contrato }) => !esContratoAnulado(contrato))
     .sort((a, b) => {
       const claveA = claveAntiguedad(a.contrato);
       const claveB = claveAntiguedad(b.contrato);

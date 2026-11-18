@@ -27,6 +27,7 @@ import { useContadoresContratacionStore } from '../stores/contadoresContratacion
 import { emitPendientesChanged } from '../utils/navbarEvents';
 import { rechazarSolicitudConMotivo } from '../components/solicitudes/accionesSolicitud';
 
+import { errorDeAnulacion, pedirMotivoDeAnulacion } from '../utils/anularContrato';
 /*
   LA PANTALLA DE UNA BANDEJA DE CONTRATACIÓN (11/11/2026, pedido del usuario).
 
@@ -179,16 +180,16 @@ export const ContractsPage: React.FC<{ bandeja: Exclude<ClaveBandeja, 'solicitud
 
   // Eliminar SOLO ese contrato (por índice) del proyecto.
   const handleDeleteContract = async (record: ContractOverviewRow, alBorrar?: () => void) => {
-    const res = await sweetAlert.confirm('¿Eliminar contrato?', `Se eliminará este contrato de "${record.projectName}". Esta acción no se puede deshacer.`, 'Sí, eliminar');
-    if (!res.isConfirmed) return false;
+    const motivo = await pedirMotivoDeAnulacion(`Contrato de "${record.projectName}".`);
+    if (!motivo) return false;
     try {
-      await projectsAPI.deleteMemberContract(record.projectId, record.userId, record.contractIndex);
+      await projectsAPI.anularMemberContract(record.projectId, record.userId, record.contractIndex, motivo);
       invalidateRefCache('contracts-overview:');
-      sweetAlert.success('Contrato eliminado', 'El contrato fue eliminado.');
+      sweetAlert.success('Contrato anulado', 'El contrato quedó anulado.');
       alBorrar?.();
       return true;
-    } catch {
-      sweetAlert.error('Error', 'No se pudo eliminar el contrato.');
+    } catch (err) {
+      sweetAlert.error('No se pudo anular', errorDeAnulacion(err));
       return false;
     }
   };

@@ -1,7 +1,23 @@
 import { Schema, model, Document, Types } from "mongoose";
+import { clavesAPoner } from "../utils/identidadContrato.js";
+import { camposDeContratoEnLapida } from "../utils/anulacionContrato.js";
 
 // Define interface for a single contract within the project history
 interface IContract {
+  /**
+   * LA IDENTIDAD DEL CONTRATO (etapa 2, 18/11/2026; ver `utils/identidadContrato.ts`). Sin valor por
+   * defecto a propósito: un contrato sin clave todavía se nombra por su posición, como siempre. La ponen
+   * el modelo (contratos nuevos y reemplazos, al validar) y el backfill (los viejos, con huella).
+   */
+  contratoKey?: Types.ObjectId | null;
+  /**
+   * El estado del contrato como relación laboral (NO el del circuito de firma: ése es `estado_id` /
+   * `nombre_estado_empleado`). En la etapa 2b sólo se escribe ANULADO, que marca una LÁPIDA: el contrato
+   * se anuló y está entero en `contratos_anulados`; acá queda sólo su clave (ver `utils/anulacionContrato.ts`).
+   * VIGENTE y FINALIZADO los completa la etapa 3.
+   */
+  estadoContrato?: "VIGENTE" | "FINALIZADO" | "ANULADO";
+  anulacion?: { el: Date; por?: Types.ObjectId | null; porNombre?: string; motivo?: string; claveFrame?: string };
   proyecto_id: number;
   empleado_id: number;
   estado_id: number;
@@ -436,6 +452,12 @@ const contractSchema = new Schema<IContract>(
     categoria_sat_id: { type: Number },
     fecha_alta_contrato: { type: String },
     fecha_baja_contrato: { type: String },
+    contratoKey: { type: Schema.Types.ObjectId },
+    estadoContrato: { type: String, enum: ["VIGENTE", "FINALIZADO", "ANULADO"] },
+    anulacion: {
+      type: new Schema({ el: Date, por: { type: Schema.Types.ObjectId, ref: "User" }, porNombre: String, motivo: String, claveFrame: String }, { _id: false }),
+      default: undefined,
+    },
     tipo_contrato_id: { type: Number },
     contrato_id: { type: Schema.Types.ObjectId, ref: "Contrato" },
     forma_pago_id: { type: Schema.Types.ObjectId, ref: "FormaPago", default: null },
@@ -642,6 +664,48 @@ userProjectSchema.index({ projectId: 1, userId: 1 }, { unique: true });
 
 // Contratos por vencer: busca por fecha de baja en vez de leer todas las asignaciones de un proyecto.
 userProjectSchema.index({ "contracts.fecha_baja_contrato": 1 });
+
+/*
+  LA CLAVE DE CADA CONTRATO (etapa 2). Índice para buscar un contrato por su clave. NO es único a propósito:
+  en un índice único multiclave cada contrato SIN clave cuenta como `null`, y durante la transición dos
+  vínculos con un contrato sin clave cada uno chocarían. Las claves repetidas las reporta el backfill.
+*/
+userProjectSchema.index({ "contracts.contratoKey": 1 }, { partialFilterExpression: { "contracts.contratoKey": { $exists: true } } });
+
+/*
+  QUE NINGÚN CONTRATO PIERDA SU CLAVE (etapa 2). Hay ~30 lugares que reemplazan un contrato entero
+  (asignar un objeto nuevo en una posición del array), y para Mongoose el reemplazo es un subdocumento nuevo, sin la clave del que
+  estaba. En vez de confiar en que cada uno la arrastre —y en que el próximo que se escriba también—, el
+  modelo anota al cargar qué clave tenía cada posición y, antes de guardar, la devuelve al que quedó en
+  ese lugar (`clavesAPoner`). En `validate` y no en `save`: corre igual en los dos, y se puede probar sin base.
+*/
+userProjectSchema.post("init", function (this: any) {
+  this.$locals.clavesAlCargar = (this.contracts || []).map((c: any) => (c?.contratoKey ? String(c.contratoKey) : null));
+});
+userProjectSchema.pre("validate", function (this: any) {
+  const contratos: any[] = this.contracts || [];
+  const decisiones = clavesAPoner(
+    this.$locals?.clavesAlCargar,
+    contratos.map((c: any) => ({ clave: c?.contratoKey ? String(c.contratoKey) : null, nuevo: !!c?.isNew })),
+  );
+  decisiones.forEach((d, i) => {
+    if (d) contratos[i].contratoKey = new Types.ObjectId(d.clave);
+  });
+  /*
+    UNA LÁPIDA NO SE VUELVE A ESCRIBIR (etapa 2b). Hay endpoints que escriben por posición sin pasar por
+    `resolverIndiceContrato` (firma digital, AFIP, transiciones de estado…): si uno apunta a la posición
+    de un contrato anulado, le copiaría datos encima y lo resucitaría a medias. Mejor un error que eso.
+  */
+  contratos.forEach((c: any, i: number) => {
+    if (c?.estadoContrato !== "ANULADO") return;
+    const campos = camposDeContratoEnLapida(typeof c.toObject === "function" ? c.toObject() : c);
+    if (campos.length) throw new Error(`El contrato de la posición ${i} está anulado: no se puede escribir (${campos.slice(0, 5).join(", ")}).`);
+  });
+});
+// Después de guardar, lo guardado es el nuevo punto de partida (un segundo `save` del mismo documento).
+userProjectSchema.post("save", function (this: any) {
+  this.$locals.clavesAlCargar = (this.contracts || []).map((c: any) => (c?.contratoKey ? String(c.contratoKey) : null));
+});
 
 // Formas de pago: contar los contratos que usan una antes de dejar borrarla. Sólo los que tienen una.
 userProjectSchema.index({ "contracts.forma_pago_id": 1 }, { partialFilterExpression: { "contracts.forma_pago_id": { $type: "objectId" } } });

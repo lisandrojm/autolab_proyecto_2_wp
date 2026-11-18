@@ -67,6 +67,7 @@ export async function resolveContractEmpresa(userId: string, empresaIdOverride?:
 
   for (const up of ups) {
     for (const c of up.contracts || []) {
+      if (c?.estadoContrato === "ANULADO") continue; // lápida de un contrato anulado (etapa 2b)
       // fallback = el contrato más reciente sin importar vigencia
       if (!fallback || altaTime(c) >= altaTime(fallback.contract)) fallback = { contract: c, projectId: up.projectId };
       // best = el contrato vigente más reciente

@@ -82,7 +82,7 @@ export async function efectosDeSolicitudNueva(tenantId, creadorId, user) {
     const renovacionDe = user.metadata?.esRenovacion ? user.metadata?.renovacionDe : null;
     if (renovacionDe?.userProjectId && renovacionDe?.fechaBajaContrato) {
         try {
-            const up = await UserProject.findById(renovacionDe.userProjectId).select("userId projectId contracts.fecha_baja_contrato").lean();
+            const up = await UserProject.findById(renovacionDe.userProjectId).select("userId projectId contracts.fecha_baja_contrato contracts.estadoContrato").lean();
             if (up) {
                 const quien = await User.findById(creadorId).select("firstName lastName").lean();
                 /*

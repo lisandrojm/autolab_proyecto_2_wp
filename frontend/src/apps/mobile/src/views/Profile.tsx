@@ -129,6 +129,8 @@ export default function Profile({ onChangePersonalData, onBack }: { onChangePers
       (acc: number, p: any) =>
         acc +
         (p.contracts || []).reduce((cAcc: number, c: any) => {
+          // Un contrato anulado no suma antigüedad, y su lápida no tiene fechas (etapa 2b).
+          if (c?.estadoContrato === "ANULADO" || !fechaDeCalendario(c.fecha_alta_contrato)) return cAcc;
           // Días de calendario, no instantes (ver `fechaDeCalendario`).
           const start = fechaDeCalendario(c.fecha_alta_contrato) || new Date(c.fecha_alta_contrato);
           const end = fechaDeCalendario(c.fecha_baja_contrato) || new Date();

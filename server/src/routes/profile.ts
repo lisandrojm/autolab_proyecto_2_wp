@@ -81,6 +81,7 @@ router.get('/', async (req: AuthenticatedRequest & TenantRequest, res) => {
             !up.contracts ||
             up.contracts.length === 0 ||
             up.contracts.some((c: any) => {
+              if (c?.estadoContrato === "ANULADO") return false; // lápida de un contrato anulado (etapa 2b)
               if (!c.fecha_baja_contrato) return true;
               const endDate = new Date(c.fecha_baja_contrato);
               endDate.setHours(23, 59, 59, 999);

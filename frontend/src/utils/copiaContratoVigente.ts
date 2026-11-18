@@ -24,6 +24,10 @@ export const NO_SE_COPIAN = [
   "fecha_carga",
   "solicitudId",
   "origen",
+  // la identidad es de ESE contrato: la copia es otro (etapa 2)
+  "contratoKey",
+  "estadoContrato",
+  "anulacion",
   // de un documento puntual
   "firmaContratoUrl",
   "firmaContratoNombre",

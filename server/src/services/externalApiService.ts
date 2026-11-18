@@ -15,6 +15,7 @@ import {
 import { resolveRoleFrameRefs, FrameRolFrame } from "../utils/roleFrameSync.js";
 import { valoracionParaMargen } from "./valoracionDelTenant.js";
 
+import { conClaveNueva } from "../utils/identidadContrato.js";
 export class ExternalApiService {
     private api: AxiosInstance;
     private token: string | null = null;
@@ -554,7 +555,8 @@ export class ExternalApiService {
                                         }
 
                                         if (newContracts.length > 0) {
-                                            updateOps.$push = { contracts: { $each: newContracts } };
+                                            // `updateOne` no pasa por los hooks del modelo: la clave de cada contrato nuevo va acá (etapa 2).
+                                            updateOps.$push = { contracts: { $each: conClaveNueva(newContracts) } };
                                             upChanged = true;
                                             console.log(`[EXTERNAL API] Appending ${newContracts.length} new contract(s) to UserProject ${savedProj._id} (emp ${emp.email}, proj ${extProjId}).`);
                                         }

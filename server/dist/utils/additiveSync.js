@@ -139,7 +139,13 @@ export function findNewContracts(frameContracts, existingContracts) {
     // Index existing contracts by key, tracking counts for collision detection.
     const existingKeyCount = new Map();
     for (const c of existingContracts) {
-        const key = buildContractKey(c);
+        /*
+          Un contrato ANULADO deja sólo una lápida sin fechas (etapa 2b): se lo reconoce por la clave que se
+          guardó al anularlo. Sin esto, el import lo vería faltar y lo volvería a agregar.
+        */
+        const key = c?.estadoContrato === "ANULADO" ? String(c?.anulacion?.claveFrame || "") : buildContractKey(c);
+        if (!key)
+            continue;
         existingKeyCount.set(key, (existingKeyCount.get(key) || 0) + 1);
     }
     // Report collisions (same key appears >1 time in existing).

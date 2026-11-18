@@ -15,6 +15,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { AccionesConstanciaArchivada } from "./ConstanciaBulk";
 import { useEditarContratoEnModal } from "./editarContratoEnModal";
 
+import { errorDeAnulacion, pedirMotivoDeAnulacion } from "../../utils/anularContrato";
 /* --------- Handlers de descarga/subida compartidos (tabla Contratos + Gestión de Contratos) --------- */
 
 
@@ -362,15 +363,15 @@ export const ContractActionsButtons: React.FC<{ record: ContractOverviewRow; onD
 
   const eliminar = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const res = await sweetAlert.confirm("¿Eliminar contrato?", `Se eliminará este contrato de "${record.projectName}". Esta acción no se puede deshacer.`, "Sí, eliminar");
-    if (!res.isConfirmed) return;
+    const motivo = await pedirMotivoDeAnulacion(`Contrato de "${record.projectName}".`);
+    if (!motivo) return;
     try {
       setBorrando(true);
-      await projectsAPI.deleteMemberContract(record.projectId, record.userId, record.contractIndex);
-      sweetAlert.success("Contrato eliminado", "El contrato fue eliminado.");
+      await projectsAPI.anularMemberContract(record.projectId, record.userId, record.contractIndex, motivo);
+      sweetAlert.success("Contrato anulado", "El contrato quedó anulado.");
       onDeleted();
-    } catch {
-      sweetAlert.error("Error", "No se pudo eliminar el contrato.");
+    } catch (err) {
+      sweetAlert.error("No se pudo anular", errorDeAnulacion(err));
     } finally {
       setBorrando(false);
     }

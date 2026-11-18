@@ -35,11 +35,17 @@ export function fechaISO(valor) {
     return "";
 }
 /**
+ * ¿Es la LÁPIDA de un contrato anulado? (etapa 2b, ver `utils/anulacionContrato.ts`). No tiene fechas, y
+ * sin esta guarda «sin alta» se leía como «ya arrancó» y «sin baja» como «indeterminado»: la lápida
+ * quedaba vigente para siempre y `getContratoActivo` la elegía.
+ */
+export const esContratoAnulado = (contrato) => contrato?.estadoContrato === "ANULADO";
+/**
  * Vigente = ya arrancó (Alta <= hoy) y no terminó (sin Baja, o Baja >= hoy). Si la Alta es futura,
  * el contrato todavía no rige, aunque no tenga fecha de baja (tiempo indeterminado).
  */
 export function esContratoVigente(contrato, hoy = hoyArgentina()) {
-    if (!contrato)
+    if (!contrato || esContratoAnulado(contrato))
         return false;
     const alta = fechaISO(contrato.fecha_alta_contrato);
     if (alta && alta > hoy)
@@ -54,7 +60,7 @@ export function esFechaBajaVigente(fechaBaja, hoy = hoyArgentina()) {
 }
 /** Un contrato es de tiempo indeterminado cuando no tiene fecha de baja: no vence. */
 export function esTiempoIndeterminado(contrato) {
-    return !!contrato && !fechaISO(contrato.fecha_baja_contrato);
+    return !!contrato && !esContratoAnulado(contrato) && !fechaISO(contrato.fecha_baja_contrato);
 }
 /**
  * Clave de antigüedad de un contrato: fecha de alta y, para desempatar, cuándo se cargó.
@@ -73,8 +79,10 @@ function claveAntiguedad(contrato) {
  *  3. Si no hay ninguno vigente (ni siquiera uno que todavía no arrancó), el más reciente de todos
  *     (para seguir mostrando el histórico).
  */
-export function getContratoActivo(contratos, hoy = hoyArgentina()) {
-    if (!Array.isArray(contratos) || contratos.length === 0)
+export function getContratoActivo(todos, hoy = hoyArgentina()) {
+    // Las lápidas no compiten, tampoco en el «más reciente de todos». Devuelve el MISMO objeto: la posición se busca por identidad.
+    const contratos = Array.isArray(todos) ? todos.filter((c) => !esContratoAnulado(c)) : [];
+    if (contratos.length === 0)
         return null;
     const masReciente = (lista) => lista.reduce((mejor, actual) => (claveAntiguedad(actual) >= claveAntiguedad(mejor) ? actual : mejor));
     const vigentes = contratos.filter((c) => esContratoVigente(c, hoy));

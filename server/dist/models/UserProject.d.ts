@@ -1,5 +1,25 @@
 import { Document, Types } from "mongoose";
 interface IContract {
+    /**
+     * LA IDENTIDAD DEL CONTRATO (etapa 2, 18/11/2026; ver `utils/identidadContrato.ts`). Sin valor por
+     * defecto a propósito: un contrato sin clave todavía se nombra por su posición, como siempre. La ponen
+     * el modelo (contratos nuevos y reemplazos, al validar) y el backfill (los viejos, con huella).
+     */
+    contratoKey?: Types.ObjectId | null;
+    /**
+     * El estado del contrato como relación laboral (NO el del circuito de firma: ése es `estado_id` /
+     * `nombre_estado_empleado`). En la etapa 2b sólo se escribe ANULADO, que marca una LÁPIDA: el contrato
+     * se anuló y está entero en `contratos_anulados`; acá queda sólo su clave (ver `utils/anulacionContrato.ts`).
+     * VIGENTE y FINALIZADO los completa la etapa 3.
+     */
+    estadoContrato?: "VIGENTE" | "FINALIZADO" | "ANULADO";
+    anulacion?: {
+        el: Date;
+        por?: Types.ObjectId | null;
+        porNombre?: string;
+        motivo?: string;
+        claveFrame?: string;
+    };
     proyecto_id: number;
     empleado_id: number;
     estado_id: number;

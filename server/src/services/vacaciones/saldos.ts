@@ -88,7 +88,7 @@ export async function saldosDeVacaciones(tenantId: any, tenantObjectId: any, sel
             input: { $ifNull: ["$contracts", []] },
             as: "c",
             in: {
-              fecha_alta_contrato: "$$c.fecha_alta_contrato",
+              estadoContrato: "$$c.estadoContrato", fecha_alta_contrato: "$$c.fecha_alta_contrato",
               fecha_baja_contrato: "$$c.fecha_baja_contrato",
               nombre_rol_frame: "$$c.nombre_rol_frame",
               // La empleadora del contrato: con ella se discriminan las vacaciones y la antigüedad por empresa.

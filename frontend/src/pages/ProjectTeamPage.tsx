@@ -126,7 +126,8 @@ function indiceDelContratoQueRige(user: any, projectId?: string): number | null 
 /** Cuántos contratos tiene la persona en el proyecto: lo cuenta el server, o el array si vino. */
 function cantidadDeContratos(user: any, projectId?: string): number {
   if (typeof user?.contractCount === 'number') return user.contractCount;
-  return vinculoConElProyecto(user, projectId)?.contracts?.length || 0;
+  // Sin las lápidas de los contratos anulados (etapa 2b).
+  return (vinculoConElProyecto(user, projectId)?.contracts || []).filter((c: any) => c?.estadoContrato !== 'ANULADO').length;
 }
 
 // Formatea una fecha de contrato (ISO "YYYY-MM-DD...") a d/m/yyyy sin corrimiento de zona horaria.
@@ -2660,7 +2661,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     setMotivoValoracion(String((contratoPorIndice as any)?.valoracionOverride?.motivo || ''));
     // El contrato de ESTE proyecto que se va a editar (el del índice, o el último): su regla de nacimiento.
     const contratosDelProyecto = (currentProjectMeta?.contracts as any[]) || [];
-    const editado = contratoPorIndice || contratosDelProyecto[contratosDelProyecto.length - 1] || null;
+    // El último de verdad: una lápida (contrato anulado) no tiene regla (etapa 2b).
+    const editado = contratoPorIndice || [...contratosDelProyecto].reverse().find((c: any) => c?.estadoContrato !== 'ANULADO') || null;
     setReglaContratoEditado(String(editado?.valoracion_regla_id?._id || editado?.valoracion_regla_id || ''));
     setAvisoConvenio('');
 

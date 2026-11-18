@@ -120,6 +120,7 @@ export default function Home({ onNavigate }: HomeProps) {
     p.metadata.projects.forEach((proj: any) => {
       if (proj.contracts) {
         proj.contracts.forEach((c: any) => {
+          if (c?.estadoContrato === "ANULADO") return; // lápida de un contrato anulado (etapa 2b)
           // Por fecha de calendario: `new Date("2026-10-13")` es el 12 a las 21 en Argentina, y el
           // contrato dejaba de contar como activo antes de que terminara su último día.
           const isActive = esFechaBajaVigente(c.fecha_baja_contrato);

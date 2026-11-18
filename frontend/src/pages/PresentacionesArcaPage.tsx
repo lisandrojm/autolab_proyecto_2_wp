@@ -15,6 +15,7 @@ import { ProjectTeamPage } from "./ProjectTeamPage";
 import { TablaConEncabezadoFijo, useAltoDeBarra } from "../components/ui/TablaConEncabezadoFijo";
 import { AccionDelDocumento, BotonRetomarCircuito, BotonVolverABajar, ChipConstancia, esFueraDelCircuito, esNoUbicada } from "../components/contratos/HistorialAltasArca";
 
+import { errorDeAnulacion, pedirMotivoDeAnulacion } from "../utils/anularContrato";
 /*
   A.R.C.A ALTAS AUTOMÁTICAS: cada alta temprana se presenta sola a la hora configurada (14:00 argentinas
   por defecto) del día de su alta, o con la anticipación configurada (Configuración → ARCA → Altas Automáticas). Acá se ve qué va a salir y cuándo —con la cuenta regresiva de cada una—, qué todavía
@@ -566,19 +567,15 @@ export const PresentacionesArcaPage: React.FC = () => {
 
   const eliminar = async (c: AltaPendienteArca) => {
     if (!c.projectId) return;
-    const r = await sweetAlert.confirm(
-      "¿Eliminar contrato?",
-      `Se eliminará el contrato «${c.tipoContrato || "sin tipo"}» de ${c.nombre} en «${c.proyecto}» (alta ${fechaCorta(c.fechaAlta)}). Sale de la cola y no se presenta. En ARCA no cambia nada. No se puede deshacer.`,
-      "Sí, eliminar",
-    );
-    if (!r.isConfirmed) return;
+    const motivo = await pedirMotivoDeAnulacion(`Contrato «${c.tipoContrato || "sin tipo"}» de ${c.nombre} en «${c.proyecto}» (alta ${fechaCorta(c.fechaAlta)}). Sale de la cola y no se presenta. En ARCA no cambia nada.`);
+    if (!motivo) return;
     setBorrando(claveDe(c));
     try {
-      await projectsAPI.deleteMemberContract(c.projectId, c.userId, c.contractIndex);
-      sweetAlert.success("Contrato eliminado", `${c.nombre} salió de la cola.`);
+      await projectsAPI.anularMemberContract(c.projectId, c.userId, c.contractIndex, motivo);
+      sweetAlert.success("Contrato anulado", `${c.nombre} salió de la cola.`);
       await cargar();
     } catch (err: any) {
-      sweetAlert.error("No se pudo eliminar", err?.response?.data?.error || err?.message || "");
+      sweetAlert.error("No se pudo anular", errorDeAnulacion(err));
     } finally {
       setBorrando("");
     }

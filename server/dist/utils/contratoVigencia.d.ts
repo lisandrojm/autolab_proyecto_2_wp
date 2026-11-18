@@ -25,6 +25,14 @@ export declare function hoyArgentina(): string;
  */
 export declare function fechaISO(valor?: string | null): string;
 /**
+ * ¿Es la LÁPIDA de un contrato anulado? (etapa 2b, ver `utils/anulacionContrato.ts`). No tiene fechas, y
+ * sin esta guarda «sin alta» se leía como «ya arrancó» y «sin baja» como «indeterminado»: la lápida
+ * quedaba vigente para siempre y `getContratoActivo` la elegía.
+ */
+export declare const esContratoAnulado: (contrato: {
+    estadoContrato?: unknown;
+} | null | undefined) => boolean;
+/**
  * Vigente = ya arrancó (Alta <= hoy) y no terminó (sin Baja, o Baja >= hoy). Si la Alta es futura,
  * el contrato todavía no rige, aunque no tenga fecha de baja (tiempo indeterminado).
  */
@@ -42,4 +50,4 @@ export declare function esTiempoIndeterminado(contrato: ContratoVigenciaLike | n
  *  3. Si no hay ninguno vigente (ni siquiera uno que todavía no arrancó), el más reciente de todos
  *     (para seguir mostrando el histórico).
  */
-export declare function getContratoActivo<T extends ContratoVigenciaLike>(contratos: T[] | null | undefined, hoy?: string): T | null;
+export declare function getContratoActivo<T extends ContratoVigenciaLike>(todos: T[] | null | undefined, hoy?: string): T | null;

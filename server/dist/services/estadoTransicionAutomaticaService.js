@@ -24,7 +24,8 @@ async function ordenDependenciaDelEstado(estadoId) {
  */
 export async function aplicarTransicion(up, contractIndex, estadoPedido) {
     const contrato = up.contracts[contractIndex];
-    if (!contrato)
+    // Una lápida (contrato anulado, etapa 2b) no avanza de estado: sería escribirle encima.
+    if (!contrato || contrato.estadoContrato === "ANULADO")
         return { aplicada: false, motivo: "contrato_inexistente" };
     // Un tipo que no manda nada a firmar no pasa por Generar Documentos: va a Contratados (ver `destinoSiNoSeFirma`).
     const estadoDestino = await destinoSiNoSeFirma(contrato, estadoPedido);

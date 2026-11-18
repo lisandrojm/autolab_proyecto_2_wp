@@ -135,7 +135,7 @@ router.get("/rotas", requireTenant, authenticateToken, async (_req: Authenticate
     const [roles, categorias, ups] = await Promise.all([
       RoleFrame.find().lean(),
       Categoria.find().select("legacyId nombre convenio codigoArca isActive").lean(),
-      UserProject.find().select("contracts.rol_frame_id").lean(),
+      UserProject.find().select("contracts.rol_frame_id contracts.estadoContrato").lean(),
     ]);
 
     // A cuántos contratos alcanza cada función: es lo que dice si urge o si puede esperar.

@@ -82,21 +82,30 @@ export async function contratosQueRigenDelProyecto(projectId: string, hoy: strin
       $project: {
         userId: 1,
         contracts: 1,
+        // Sin las lápidas de contratos anulados (etapa 2b): sin fechas parecían vigentes e indeterminadas.
+        // Se filtran DESPUÉS de numerar: `i` sigue siendo la posición real en el array.
         claves: {
-          $map: {
-            input: { $range: [0, { $size: { $ifNull: ["$contracts", []] } }] },
-            as: "i",
-            in: {
-              $let: {
-                vars: { c: { $arrayElemAt: ["$contracts", "$$i"] } },
+          $filter: {
+            input: {
+              $map: {
+                input: { $range: [0, { $size: { $ifNull: ["$contracts", []] } }] },
+                as: "i",
                 in: {
-                  i: "$$i",
-                  alta: fechaISOExpr("$$c.fecha_alta_contrato"),
-                  baja: fechaISOExpr("$$c.fecha_baja_contrato"),
-                  carga: { $toString: { $ifNull: ["$$c.fecha_carga", ""] } },
+                  $let: {
+                    vars: { c: { $arrayElemAt: ["$contracts", "$$i"] } },
+                    in: {
+                      i: "$$i",
+                      anulado: { $eq: ["$$c.estadoContrato", "ANULADO"] },
+                      alta: fechaISOExpr("$$c.fecha_alta_contrato"),
+                      baja: fechaISOExpr("$$c.fecha_baja_contrato"),
+                      carga: { $toString: { $ifNull: ["$$c.fecha_carga", ""] } },
+                    },
+                  },
                 },
               },
             },
+            as: "x",
+            cond: { $not: ["$$x.anulado"] },
           },
         },
       },
@@ -139,7 +148,8 @@ export async function contratosQueRigenDelProyecto(projectId: string, hoy: strin
         _id: 0,
         userId: 1,
         indice: "$elegido.i",
-        total: { $size: { $ifNull: ["$contracts", []] } },
+        // Cuántos contratos de verdad: sin lápidas.
+        total: { $size: { $filter: { input: { $ifNull: ["$contracts", []] }, as: "c", cond: { $ne: ["$$c.estadoContrato", "ANULADO"] } } } },
         vigentes: {
           $cond: [
             { $gt: [{ $size: "$vigentes" }, 1] },
@@ -152,7 +162,7 @@ export async function contratosQueRigenDelProyecto(projectId: string, hoy: strin
                     vars: { c: { $arrayElemAt: ["$contracts", "$$k.i"] } },
                     in: {
                       _indice: "$$k.i",
-                      fecha_alta_contrato: "$$c.fecha_alta_contrato",
+                      estadoContrato: "$$c.estadoContrato", fecha_alta_contrato: "$$c.fecha_alta_contrato",
                       fecha_baja_contrato: "$$c.fecha_baja_contrato",
                       nombre_contrato: "$$c.nombre_contrato",
                       nombre_estado_empleado: "$$c.nombre_estado_empleado",
@@ -227,6 +237,8 @@ export async function contratosQueRigenDeLasPersonas(
       tres strings cortos.
     */
     { $unwind: { path: "$contracts", preserveNullAndEmptyArrays: false } },
+    // Sin las lápidas de contratos anulados (etapa 2b).
+    { $match: { "contracts.estadoContrato": { $ne: "ANULADO" } } },
     {
       $project: {
         _id: 0,

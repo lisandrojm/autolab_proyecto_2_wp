@@ -1144,7 +1144,8 @@ export default function ActivityLogs({ onNavigate, embebido, alcanceFijo }: Acti
             roles: u.roles,
             isActive: (u.metadata as any)?.activo !== false,
             hasActiveContract: !!u.metadata?.projects?.some((p) =>
-              p.contracts?.some((c) => isContractVigente(c.fecha_baja_contrato)),
+              // Una lápida (contrato anulado, sin fechas) no es un contrato activo (etapa 2b).
+              p.contracts?.some((c: any) => c?.estadoContrato !== "ANULADO" && isContractVigente(c.fecha_baja_contrato)),
             ),
             metadataProjects:
               u.metadata?.projects?.map((p: any) => {

@@ -13,6 +13,7 @@ import { ContractCard, EmpresaOption, findTemplate, templateHasContent } from ".
 import { ContractFiltersBar, ContractFilterState, emptyContractFilters, matchesContractFilters } from "./ContractFilters";
 import { getContratoActivo } from "../../utils/contratoVigencia";
 
+import { errorDeAnulacion, pedirMotivoDeAnulacion } from "../../utils/anularContrato";
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -72,14 +73,14 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
   // Eliminar: borra SOLO ese contrato (por índice) del proyecto.
   const handleDelete = async (r: ManagedContract) => {
     if (!userId) return;
-    const res = await sweetAlert.confirm("¿Eliminar contrato?", `Se eliminará este contrato de "${r.projectName}". Esta acción no se puede deshacer.`, "Sí, eliminar");
-    if (!res.isConfirmed) return;
+    const motivo = await pedirMotivoDeAnulacion(`Contrato de "${r.projectName}".`);
+    if (!motivo) return;
     try {
-      await projectsAPI.deleteMemberContract(r.projectId, userId, r.contractIndex);
-      sweetAlert.success("Contrato eliminado", "El contrato fue eliminado.");
+      await projectsAPI.anularMemberContract(r.projectId, userId, r.contractIndex, motivo);
+      sweetAlert.success("Contrato anulado", "El contrato quedó anulado.");
       load();
-    } catch {
-      sweetAlert.error("Error", "No se pudo eliminar el contrato.");
+    } catch (err) {
+      sweetAlert.error("No se pudo anular", errorDeAnulacion(err));
     }
   };
 

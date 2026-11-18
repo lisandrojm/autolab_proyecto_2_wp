@@ -263,7 +263,7 @@ export async function bloqueadasPorVigencia(tenantObjectId, empresaId, items) {
     if (empresaCuit.length !== 11)
         return [];
     const ups = await UserProject.find({ _id: { $in: [...new Set(validos.map((i) => i.userProjectId))] } })
-        .select("projectId userId contracts.fecha_alta_contrato contracts.fecha_baja_contrato")
+        .select("projectId userId contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.estadoContrato")
         .lean();
     const upPorId = new Map(ups.map((u) => [String(u._id), u]));
     const proyectos = new Set((await Project.find({ _id: { $in: ups.map((u) => u.projectId) }, tenantId: tenantObjectId }).select("_id").lean()).map((p) => String(p._id)));
