@@ -5,6 +5,8 @@ import { Project } from "../models/Project.js";
 import { Shift } from "../models/Shift.js";
 import { Info } from "../models/Info.js";
 import { ContratoFrame } from "../models/ContratoFrame.js";
+import { Company } from "../models/Company.js";
+import { bajaDeArcaQueAplica, relacionesArcaDe, type RelacionArcaResumida } from "./arca/altasVigentes.js";
 import { plantillaDelContrato } from "../compartido/plantillaDelContrato.js";
 // El `populate("clientId")` necesita el modelo registrado; no se depende de que otro archivo lo haya cargado.
 import "../models/Client.js";
@@ -49,9 +51,14 @@ export function pedidoDesdeSolicitud(m: any): PedidoDeAlta {
 export async function compromisosDePersona(tenantId: Types.ObjectId, userId: string, excluirSolicitudId?: string): Promise<CompromisoExistente[]> {
   if (!Types.ObjectId.isValid(userId)) return [];
   const uid = new Types.ObjectId(userId);
+  /*
+    SÓLO LOS PROYECTOS DEL TENANT (18/11/2026). `UserProject` no tiene `tenantId`: se acota por los
+    proyectos del tenant. Antes se buscaba por `userId` solo.
+  */
+  const proyectosDelTenant = await Project.find({ tenantId }).distinct("_id");
   const [asignaciones, pendientes] = await Promise.all([
-    UserProject.find({ userId: uid })
-      .select("projectId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.dias_semana contracts.dias_rotativos contracts.fechas_trabajadas contracts.hora_inicio contracts.hora_fin contracts.shiftId contracts.areaShiftAssignments contracts.nombre_turno contracts.nombre_contrato contracts.tipo_contrato_id contracts.contrato_id")
+    UserProject.find({ userId: uid, projectId: { $in: proyectosDelTenant } })
+      .select("projectId nombre_proyecto contracts.empresaContratoId contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.dias_semana contracts.dias_rotativos contracts.fechas_trabajadas contracts.hora_inicio contracts.hora_fin contracts.shiftId contracts.areaShiftAssignments contracts.nombre_turno contracts.nombre_contrato contracts.tipo_contrato_id contracts.contrato_id")
       .lean() as Promise<any[]>,
     User.find({
       tenantId,
@@ -87,7 +94,7 @@ export async function compromisosDePersona(tenantId: Types.ObjectId, userId: str
 
   const compromisos: CompromisoExistente[] = [];
   for (const a of asignaciones) {
-    for (const c of a.contracts || []) {
+    for (const [contractIndex, c] of (a.contracts || []).entries()) {
       const desde = fechaISO(c.fecha_alta_contrato);
       if (!desde) continue;
       compromisos.push({
@@ -104,6 +111,8 @@ export async function compromisosDePersona(tenantId: Types.ObjectId, userId: str
         shiftIds: idsDeTurno(c.areaShiftAssignments, c.shiftId),
         turnoNombre: c.nombre_turno || "",
         tipo: { nombre_contrato: c.nombre_contrato, tipo_contrato_id: c.tipo_contrato_id, contrato_id: c.contrato_id },
+        ref: { userProjectId: String(a._id), contractIndex },
+        empresaId: c.empresaContratoId ? String(c.empresaContratoId) : "",
       });
     }
   }
@@ -135,13 +144,53 @@ async function lectorDeTramites(): Promise<(tipo: CompromisoExistente["tipo"]) =
   };
 }
 
+/**
+ * LAS BAJAS DE ARCA SOBRE LOS CONTRATOS (18/11/2026). Un contrato a tiempo indeterminado sin fecha de baja
+ * en WeProdu cubre cualquier fecha futura, aunque en ARCA la relación ya terminó: la baja llega al espejo
+ * (`RelacionLaboralArca`) pero no al contrato. Antes de mirar si se pisa, cada contrato toma la baja de
+ * ARCA con el MISMO match de la presentación de altas (`bajaDeArcaQueAplica`: CUIL + CUIT de la empresa
+ * del contrato + fecha de alta exacta). Sin empresa, sin CUIT o sin relación en ARCA queda como está.
+ * `cuitDe`: `empresaId` → CUIT. Puro.
+ */
+export function compromisosConBajasDeArca(compromisos: CompromisoExistente[], relaciones: RelacionArcaResumida[], cuil: string, cuitDe: (empresaId: string) => string): CompromisoExistente[] {
+  return compromisos.map((c) => {
+    if (c.origen !== "contrato") return c;
+    const cuit = c.empresaId ? cuitDe(c.empresaId) : "";
+    const r = bajaDeArcaQueAplica({ cuil, cuit, alta: c.desde, baja: c.hasta }, relaciones);
+    return r ? { ...c, hasta: r.fin, bajaSegunArca: { hastaContrato: c.hasta, empleadoraCuit: cuit } } : c;
+  });
+}
+
+const digitos = (v: unknown) => String(v ?? "").replace(/\D/g, "");
+
+/** Los contratos de la persona con las bajas de ARCA aplicadas (ver `compromisosConBajasDeArca`). */
+async function contratosConBajasDeArca(tenantId: Types.ObjectId, userId: string, compromisos: CompromisoExistente[]): Promise<CompromisoExistente[]> {
+  const empresaIds = [...new Set(compromisos.map((c) => c.empresaId || "").filter((id) => Types.ObjectId.isValid(id)))];
+  if (empresaIds.length === 0) return compromisos;
+  const [usuario, empresas]: [any, any[]] = await Promise.all([User.findById(userId).select("metadata.cuit").lean(), Company.find({ _id: { $in: empresaIds } }).select("cuit").lean()]);
+  const cuil = digitos(usuario?.metadata?.cuit);
+  if (cuil.length !== 11) return compromisos;
+  const cuitDe = new Map(empresas.map((e) => [String(e._id), digitos(e.cuit)]));
+  return compromisosConBajasDeArca(compromisos, await relacionesArcaDe(tenantId, [cuil]), cuil, (id) => cuitDe.get(id) || "");
+}
+
 /** El contrato DE ARCA que la persona ya tiene en esas fechas, si tiene. Uno de Servicios no traba nada. */
 export async function contratoDePersonaEnFechas(tenantId: Types.ObjectId, userId: string | undefined, pedido: Pick<PedidoDeAlta, "desde" | "hasta" | "fechas">): Promise<CompromisoExistente | null> {
   if (!userId) return null;
-  const enFechas = (await compromisosDePersona(tenantId, userId)).filter((c) => contratoEnLasFechas(pedido, [c]));
-  if (enFechas.length === 0) return null;
-  const tramiteDe = await lectorDeTramites();
-  return enFechas.find((c) => tramiteDe(c.tipo) === "alta_temprana_afip") || null;
+  const contratos = await contratosConBajasDeArca(tenantId, userId, await compromisosDePersona(tenantId, userId));
+  const enFechas = contratos.filter((c) => contratoEnLasFechas(pedido, [c]));
+  const tramiteDe = enFechas.length ? await lectorDeTramites() : null;
+  const bloquea = enFechas.find((c) => tramiteDe!(c.tipo) === "alta_temprana_afip") || null;
+  // Rastro de cada baja de ARCA que se aplicó: qué contrato, qué baja tenía, cuál puso ARCA y si al final bloqueó.
+  for (const c of contratos) {
+    if (!c.bajaSegunArca) continue;
+    const pedidoTexto = pedido.fechas?.length ? `${pedido.fechas.length} día(s) desde ${pedido.fechas[0]}` : `${pedido.desde} → ${pedido.hasta || "sin fin"}`;
+    console.log(
+      `[solo-servicios] user ${userId}: contrato ${c.ref?.userProjectId}#${c.ref?.contractIndex} (${c.proyectoNombre || "?"}, alta ${c.desde}, baja en el contrato ${c.bajaSegunArca.hastaContrato || "ninguna"}) ` +
+        `→ baja de ARCA ${c.hasta} (empleadora ${c.bajaSegunArca.empleadoraCuit}); pedido ${pedidoTexto}: ${bloquea === c ? "BLOQUEA igual (la baja de ARCA es posterior)" : enFechas.includes(c) ? "se pisa pero no es de ARCA" : "ya no se pisa"}`,
+    );
+  }
+  return bloquea;
 }
 
 /** Por qué este alta ante ARCA no se puede hacer, o `null`. Sólo frena el trámite de ARCA, no el de Servicios. */

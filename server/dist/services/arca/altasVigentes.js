@@ -106,17 +106,26 @@ export async function ultimaSyncOkPorCuit(tenantId) {
  */
 export function aplicarBajasDeArca(presentadas, relaciones, cuilDe, cuitDe) {
     return presentadas.map((p) => {
-        const cuil = cuilDe(p);
-        const cuit = cuitDe(p);
-        if (!cuil || !cuit || !p.alta)
-            return p;
-        const r = relaciones.find((x) => x.cuil === cuil && x.empleadoraCuit === cuit && x.inicio === p.alta);
-        if (!r || !r.fin)
-            return p;
-        if (p.baja && p.baja <= r.fin)
-            return p;
-        return { ...p, baja: r.fin, bajaSegunArca: true };
+        const r = bajaDeArcaQueAplica({ cuil: cuilDe(p), cuit: cuitDe(p), alta: p.alta, baja: p.baja }, relaciones);
+        return r ? { ...p, baja: r.fin, bajaSegunArca: true } : p;
     });
+}
+/**
+ * EL MATCH, SOLO (extraído el 18/11/2026 para que lo use también «sólo Servicios», ver
+ * `services/superposicion.ts`): la relación de ARCA de la misma persona (CUIL), misma empleadora (CUIT)
+ * y misma fecha de inicio EXACTA, si tiene una baja que el contrato no tiene o que es más temprana que la
+ * del contrato. `null` = queda lo del contrato (sin CUIL, sin CUIT, sin relación, relación abierta, o el
+ * contrato ya termina antes). Puro.
+ */
+export function bajaDeArcaQueAplica(c, relaciones) {
+    if (!c.cuil || !c.cuit || !c.alta)
+        return null;
+    const r = relaciones.find((x) => x.cuil === c.cuil && x.empleadoraCuit === c.cuit && x.inicio === c.alta);
+    if (!r || !r.fin)
+        return null;
+    if (c.baja && c.baja <= r.fin)
+        return null;
+    return r;
 }
 /**
  * El alta ya presentada que se superpone con este contrato, si hay. Dos períodos se pisan si cada uno

@@ -53,6 +53,18 @@ export interface CompromisoExistente {
         tipo_contrato_id?: unknown;
         contrato_id?: unknown;
     };
+    /** Qué contrato es (sólo `origen: "contrato"`): para el log. Los contratos no tienen `_id`, van por posición. */
+    ref?: {
+        userProjectId: string;
+        contractIndex: number;
+    };
+    /** La empresa del contrato (`empresaContratoId`): con su CUIT se busca la relación en ARCA. */
+    empresaId?: string;
+    /** `hasta` es la baja de ARCA, no la del contrato (ver `compromisosConBajasDeArca`); `hastaContrato` es la del contrato. */
+    bajaSegunArca?: {
+        hastaContrato: string;
+        empleadoraCuit: string;
+    };
 }
 export interface Superposicion {
     tipo: "horario" | "fechas";
@@ -77,7 +89,7 @@ export interface Superposicion {
  */
 export declare function contratoEnLasFechas<T extends CompromisoExistente>(pedido: Pick<PedidoDeAlta, "desde" | "hasta" | "fechas">, existentes: T[]): T | null;
 /** El mensaje de la regla, igual en el formulario y en el rechazo del server. */
-export declare function mensajeSoloServicios(c: Pick<CompromisoExistente, "proyectoNombre" | "desde" | "hasta">): string;
+export declare function mensajeSoloServicios(c: Pick<CompromisoExistente, "proyectoNombre" | "desde" | "hasta" | "bajaSegunArca">): string;
 /**
  * ¿Se pisan dos horarios de un mismo día? Un turno que cruza la medianoche (18:00 a 00:00, 22:00 a 06:00)
  * termina al día siguiente: se lo compara también corrido un día para cada lado. Tocarse en el borde

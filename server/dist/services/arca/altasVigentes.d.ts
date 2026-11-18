@@ -64,6 +64,19 @@ export declare function ultimaSyncOkPorCuit(tenantId: Types.ObjectId | string): 
  */
 export declare function aplicarBajasDeArca(presentadas: AltaPresentada[], relaciones: RelacionArcaResumida[], cuilDe: (p: AltaPresentada) => string, cuitDe: (p: AltaPresentada) => string): AltaPresentada[];
 /**
+ * EL MATCH, SOLO (extraído el 18/11/2026 para que lo use también «sólo Servicios», ver
+ * `services/superposicion.ts`): la relación de ARCA de la misma persona (CUIL), misma empleadora (CUIT)
+ * y misma fecha de inicio EXACTA, si tiene una baja que el contrato no tiene o que es más temprana que la
+ * del contrato. `null` = queda lo del contrato (sin CUIL, sin CUIT, sin relación, relación abierta, o el
+ * contrato ya termina antes). Puro.
+ */
+export declare function bajaDeArcaQueAplica(c: {
+    cuil: string;
+    cuit: string;
+    alta: string;
+    baja: string;
+}, relaciones: RelacionArcaResumida[]): RelacionArcaResumida | null;
+/**
  * El alta ya presentada que se superpone con este contrato, si hay. Dos períodos se pisan si cada uno
  * empieza antes de que termine el otro. El mismo contrato no cuenta (es el que se está presentando).
  */

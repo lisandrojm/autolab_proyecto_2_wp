@@ -51,6 +51,12 @@ export interface CompromisoExistente {
   turnoNombre?: string;
   /** De qué tipo es el contrato (sólo `origen: "contrato"`): de ahí sale su trámite, ver `services/superposicion.ts`. */
   tipo?: { nombre_contrato?: string; tipo_contrato_id?: unknown; contrato_id?: unknown };
+  /** Qué contrato es (sólo `origen: "contrato"`): para el log. Los contratos no tienen `_id`, van por posición. */
+  ref?: { userProjectId: string; contractIndex: number };
+  /** La empresa del contrato (`empresaContratoId`): con su CUIT se busca la relación en ARCA. */
+  empresaId?: string;
+  /** `hasta` es la baja de ARCA, no la del contrato (ver `compromisosConBajasDeArca`); `hastaContrato` es la del contrato. */
+  bajaSegunArca?: { hastaContrato: string; empleadoraCuit: string };
 }
 
 export interface Superposicion {
@@ -112,8 +118,8 @@ export function contratoEnLasFechas<T extends CompromisoExistente>(pedido: Pick<
 }
 
 /** El mensaje de la regla, igual en el formulario y en el rechazo del server. */
-export function mensajeSoloServicios(c: Pick<CompromisoExistente, "proyectoNombre" | "desde" | "hasta">): string {
-  const periodo = c.hasta ? `del ${corta(c.desde)} al ${corta(c.hasta)}` : `desde el ${corta(c.desde)}, sin fecha de baja`;
+export function mensajeSoloServicios(c: Pick<CompromisoExistente, "proyectoNombre" | "desde" | "hasta" | "bajaSegunArca">): string {
+  const periodo = c.hasta ? `del ${corta(c.desde)} al ${corta(c.hasta)}${c.bajaSegunArca ? " (baja según ARCA)" : ""}` : `desde el ${corta(c.desde)}, sin fecha de baja`;
   return `Tiene un contrato de ARCA en esas fechas (${c.proyectoNombre || "otro proyecto"}, ${periodo}): sólo se puede contratar con un tipo de contrato de Servicios.`;
 }
 
