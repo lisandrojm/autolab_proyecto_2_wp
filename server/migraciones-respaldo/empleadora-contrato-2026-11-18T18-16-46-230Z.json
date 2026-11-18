@@ -1,0 +1,17 @@
+{
+ "coleccion": "users_&_projects",
+ "userProjectId": "696423e95dd723128ad69f1f",
+ "contratoKey": "6afdb3ca0fc132faeab8a5f9",
+ "posicion": 1,
+ "antes": {
+  "empresaContratoId": "6a5fd1cc44faed2e72669f38",
+  "nombre_empresa_contrato": "FZERO S.R.L"
+ },
+ "despues": {
+  "empresaContratoId": "6a5fd12244faed2e72669b42",
+  "nombre_empresa_contrato": "2030 S.R.L."
+ },
+ "motivo": "ARCA no tiene relación con FZERO que empiece el 07/01/2026; FZERO vino del nombre en texto libre de FRAME (unificarTiposDeContrato)",
+ "por": "script corregirEmpleadoraContrato",
+ "el": "2026-11-18T18:16:46.229Z"
+}
