@@ -24,7 +24,7 @@ export interface QuienAnula {
 
 export class AnulacionInvalida extends Error {}
 
-export async function anularContrato(o: QuienAnula & { up: any; idx: number; motivo: string; origen: "panel" | "borrar_solicitud" | "delete_deprecado" }): Promise<{ contratoKey: string; vinculoEliminado: boolean }> {
+export async function anularContrato(o: QuienAnula & { up: any; idx: number; motivo: string; origen: "panel" | "borrar_solicitud" | "delete_deprecado" | "script" }): Promise<{ contratoKey: string; vinculoEliminado: boolean }> {
   const { up, idx } = o;
   const contratos: any[] = up.contracts || [];
   if (!Number.isInteger(idx) || idx < 0 || idx >= contratos.length) throw new AnulacionInvalida("Contrato no encontrado");

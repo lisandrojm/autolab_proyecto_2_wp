@@ -23,7 +23,7 @@ export interface IContratoAnulado extends Document {
   anuladoPorNombre: string;
   motivo: string;
   /** Desde dónde: el panel, o el borrado de la solicitud aprobada que lo había creado. */
-  origen: "panel" | "borrar_solicitud" | "delete_deprecado";
+  origen: "panel" | "borrar_solicitud" | "delete_deprecado" | "script";
   /** No quedaba ningún contrato de verdad: el vínculo con el proyecto se borró (como hacía el borrado físico). */
   vinculoEliminado: boolean;
   createdAt: Date;
@@ -43,7 +43,7 @@ const contratoAnuladoSchema = new Schema<IContratoAnulado>(
     anuladoPor: { type: Schema.Types.ObjectId, ref: "User", default: null },
     anuladoPorNombre: { type: String, default: "" },
     motivo: { type: String, default: "" },
-    origen: { type: String, enum: ["panel", "borrar_solicitud", "delete_deprecado"], required: true },
+    origen: { type: String, enum: ["panel", "borrar_solicitud", "delete_deprecado", "script"], required: true },
     vinculoEliminado: { type: Boolean, default: false },
   },
   { timestamps: true, collection: "contratos_anulados", minimize: false },
