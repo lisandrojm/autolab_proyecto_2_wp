@@ -1,0 +1,1722 @@
+[
+ {
+  "coleccion": "arca_verificaciones_altas",
+  "_id": "6aeb71a67f40d438c43e8698",
+  "userProjectId": "696423455dd723128ad69e92",
+  "campoIndice": "contractIndex",
+  "texto": "LEONARDO THOMAS AQUINO · alta 2026-10-25",
+  "antes": {
+   "indice": 111,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab89ece"
+  },
+  "despues": {
+   "indice": 109,
+   "clave": "6afdb3ca0fc132faeab89ecc"
+  },
+  "evidencia": {
+   "campos": [
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-25",
+    "empresaId": "6a5fd12244faed2e72669b42"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-25",
+    "baja": "2026-10-25",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aeaa10cdd5e6e23cbb1e715"
+   },
+   "motivoPosicionVieja": "alta 2026-10-25 ≠ 2026-10-24",
+   "candidatos": [
+    109
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_verificaciones_altas",
+  "_id": "6aeb71a67f40d438c43e869c",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "DANIEL JEREMIAS REPETTI · alta 2026-10-30",
+  "antes": {
+   "indice": 26,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b074"
+  },
+  "despues": {
+   "indice": 24,
+   "clave": "6afdb3ca0fc132faeab8b072"
+  },
+  "evidencia": {
+   "campos": [
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-30",
+    "empresaId": "6a5fd12244faed2e72669b42"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-30",
+    "baja": "2026-10-30",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae8763271265108aa71c4d3"
+   },
+   "motivoPosicionVieja": "alta 2026-10-30 ≠ 2026-10-31",
+   "candidatos": [
+    24
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_verificaciones_altas",
+  "_id": "6aeee997e40216eb5f133e65",
+  "userProjectId": "6a2eb9cdfeba0437c8a9b892",
+  "campoIndice": "contractIndex",
+  "texto": "LUCIANO MARTIN ZALAZAR LENCINA · alta 2026-11-07",
+  "antes": {
+   "indice": 48,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8aeed"
+  },
+  "despues": {
+   "indice": 47,
+   "clave": "6afdb3ca0fc132faeab8aeec"
+  },
+  "evidencia": {
+   "campos": [
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-11-07",
+    "empresaId": "6a5fd12244faed2e72669b42"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-07",
+    "baja": "2026-11-07",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aee9564e40216eb5f12e769"
+   },
+   "motivoPosicionVieja": "alta 2026-11-07 ≠ 2026-11-14",
+   "candidatos": [
+    47
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036dd5b",
+  "userProjectId": "696423455dd723128ad69e92",
+  "campoIndice": "contractIndex",
+  "texto": "LEONARDO THOMAS AQUINO · alta 2026-11-03",
+  "antes": {
+   "indice": 114,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab89ed1"
+  },
+  "despues": {
+   "indice": 112,
+   "clave": "6afdb3ca0fc132faeab89ecf"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-11-03",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aee9588e40216eb5f12e834"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-03",
+    "baja": "2026-11-03",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aee9588e40216eb5f12e834"
+   },
+   "motivoPosicionVieja": "alta 2026-11-03 ≠ 2026-10-31",
+   "candidatos": [
+    112
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036dd5c",
+  "userProjectId": "696423455dd723128ad69e92",
+  "campoIndice": "contractIndex",
+  "texto": "LEONARDO THOMAS AQUINO · alta 2026-11-01",
+  "antes": {
+   "indice": 115,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab89ed2"
+  },
+  "despues": {
+   "indice": 113,
+   "clave": "6afdb3ca0fc132faeab89ed0"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-11-01",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aed443314198dcf20e32b1c"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-01",
+    "baja": "2026-11-01",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aed443314198dcf20e32b1c"
+   },
+   "motivoPosicionVieja": "alta 2026-11-01 ≠ 2026-11-04",
+   "candidatos": [
+    113
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036dd5d",
+  "userProjectId": "696423455dd723128ad69e92",
+  "campoIndice": "contractIndex",
+  "texto": "LEONARDO THOMAS AQUINO · alta 2026-10-31",
+  "antes": {
+   "indice": 116,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab89ed3"
+  },
+  "despues": {
+   "indice": 114,
+   "clave": "6afdb3ca0fc132faeab89ed1"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-31",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aebf28cea2a8158e2c8dfa5"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-31",
+    "baja": "2026-10-31",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aebf28cea2a8158e2c8dfa5"
+   },
+   "motivoPosicionVieja": "alta 2026-10-31 ≠ 2026-11-08",
+   "candidatos": [
+    114
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036dd8e",
+  "userProjectId": "6a2eba59feba0437c8a9b8cd",
+  "campoIndice": "contractIndex",
+  "texto": "LUCAS GABRIEL RAMIREZ · alta 2026-10-10",
+  "antes": {
+   "indice": 53,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8affe"
+  },
+  "despues": {
+   "indice": 52,
+   "clave": "6afdb3ca0fc132faeab8affd"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-10",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ac7eb495f25187fdd566488"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-10",
+    "baja": "2026-10-10",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ac7eb495f25187fdd566488"
+   },
+   "motivoPosicionVieja": "alta 2026-10-10 ≠ 2026-10-11",
+   "candidatos": [
+    52
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036dd8f",
+  "userProjectId": "6a2eba59feba0437c8a9b8cd",
+  "campoIndice": "contractIndex",
+  "texto": "LUCAS GABRIEL RAMIREZ · alta 2026-10-17",
+  "antes": {
+   "indice": 55,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b000"
+  },
+  "despues": {
+   "indice": 54,
+   "clave": "6afdb3ca0fc132faeab8afff"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-17",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad97d9910d585604172e149"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-17",
+    "baja": "2026-10-17",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad97d9910d585604172e149"
+   },
+   "motivoPosicionVieja": "alta 2026-10-17 ≠ 2026-10-18",
+   "candidatos": [
+    54
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036dd90",
+  "userProjectId": "6a2eba59feba0437c8a9b8cd",
+  "campoIndice": "contractIndex",
+  "texto": "LUCAS GABRIEL RAMIREZ · alta 2026-10-18",
+  "antes": {
+   "indice": 56,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b001"
+  },
+  "despues": {
+   "indice": 55,
+   "clave": "6afdb3ca0fc132faeab8b000"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-18",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad4fb326a7365d21f941ec9"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-18",
+    "baja": "2026-10-18",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad4fb326a7365d21f941ec9"
+   },
+   "motivoPosicionVieja": "alta 2026-10-18 ≠ 2026-10-25",
+   "candidatos": [
+    55
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036dd91",
+  "userProjectId": "6a2eba59feba0437c8a9b8cd",
+  "campoIndice": "contractIndex",
+  "texto": "LUCAS GABRIEL RAMIREZ · alta 2026-10-24",
+  "antes": {
+   "indice": 58,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b003"
+  },
+  "despues": {
+   "indice": 57,
+   "clave": "6afdb3ca0fc132faeab8b002"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-24",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae7fe1071265108aa713d86"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-24",
+    "baja": "2026-10-24",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae7fe1071265108aa713d86"
+   },
+   "motivoPosicionVieja": "alta 2026-10-24 ≠ 2026-11-01",
+   "candidatos": [
+    57
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036dd92",
+  "userProjectId": "6a2eba59feba0437c8a9b8cd",
+  "campoIndice": "contractIndex",
+  "texto": "LUCAS GABRIEL RAMIREZ · alta 2026-11-01",
+  "antes": {
+   "indice": 59,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b004"
+  },
+  "despues": {
+   "indice": 58,
+   "clave": "6afdb3ca0fc132faeab8b003"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-11-01",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aeaa10cdd5e6e23cbb1e715"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-01",
+    "baja": "2026-11-01",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aeaa10cdd5e6e23cbb1e715"
+   },
+   "motivoPosicionVieja": "alta 2026-11-01 ≠ 2026-10-31",
+   "candidatos": [
+    58
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036dd93",
+  "userProjectId": "6a2eba59feba0437c8a9b8cd",
+  "campoIndice": "contractIndex",
+  "texto": "LUCAS GABRIEL RAMIREZ · alta 2026-10-31",
+  "antes": {
+   "indice": 60,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b005"
+  },
+  "despues": {
+   "indice": 59,
+   "clave": "6afdb3ca0fc132faeab8b004"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-31",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae8763271265108aa71c4d3"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-31",
+    "baja": "2026-10-31",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae8763271265108aa71c4d3"
+   },
+   "motivoPosicionVieja": "alta 2026-10-31 ≠ 2026-11-08",
+   "candidatos": [
+    59
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036ddc3",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "DANIEL JEREMIAS REPETTI · alta 2026-10-09",
+  "antes": {
+   "indice": 20,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b06e"
+  },
+  "despues": {
+   "indice": 19,
+   "clave": "6afdb3ca0fc132faeab8b06d"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-09",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ac7e6235f25187fdd5656c1"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-09",
+    "baja": "2026-10-09",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ac7e6235f25187fdd5656c1"
+   },
+   "motivoPosicionVieja": "alta 2026-10-09 ≠ 2026-10-10",
+   "candidatos": [
+    19
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036ddc4",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "DANIEL JEREMIAS REPETTI · alta 2026-10-11",
+  "antes": {
+   "indice": 22,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b070"
+  },
+  "despues": {
+   "indice": 21,
+   "clave": "6afdb3ca0fc132faeab8b06f"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-11",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6acbc0c3094b0ef5f3c515d0"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-11",
+    "baja": "2026-10-11",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6acbc0c3094b0ef5f3c515d0"
+   },
+   "motivoPosicionVieja": "alta 2026-10-11 ≠ 2026-10-17",
+   "candidatos": [
+    21
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036ddc7",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "DANIEL JEREMIAS REPETTI · alta 2026-10-30",
+  "antes": {
+   "indice": 25,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b073"
+  },
+  "despues": {
+   "indice": 24,
+   "clave": "6afdb3ca0fc132faeab8b072"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-30",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae8763271265108aa71c4d3"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-30",
+    "baja": "2026-10-30",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae8763271265108aa71c4d3"
+   },
+   "motivoPosicionVieja": "alta 2026-10-30 ≠ 2026-11-01",
+   "candidatos": [
+    24
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036ddc8",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "DANIEL JEREMIAS REPETTI · alta 2026-11-01",
+  "antes": {
+   "indice": 27,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b075"
+  },
+  "despues": {
+   "indice": 25,
+   "clave": "6afdb3ca0fc132faeab8b073"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-11-01",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aebf28cea2a8158e2c8dfa5"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-01",
+    "baja": "2026-11-01",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aebf28cea2a8158e2c8dfa5"
+   },
+   "motivoPosicionVieja": "alta 2026-11-01 ≠ 2026-11-07",
+   "candidatos": [
+    25
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036ddc5",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "DANIEL JEREMIAS REPETTI · alta 2026-10-17",
+  "antes": {
+   "indice": 23,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b071"
+  },
+  "despues": {
+   "indice": 22,
+   "clave": "6afdb3ca0fc132faeab8b070"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-17",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad54b8d57e69935242f0e08"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-17",
+    "baja": "2026-10-17",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad54b8d57e69935242f0e08"
+   },
+   "motivoPosicionVieja": "alta 2026-10-17 ≠ 2026-10-24",
+   "candidatos": [
+    22
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036ddc6",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "DANIEL JEREMIAS REPETTI · alta 2026-10-24",
+  "antes": {
+   "indice": 24,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b072"
+  },
+  "despues": {
+   "indice": 23,
+   "clave": "6afdb3ca0fc132faeab8b071"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-24",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae7fe1071265108aa713d86"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-24",
+    "baja": "2026-10-24",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae7fe1071265108aa713d86"
+   },
+   "motivoPosicionVieja": "alta 2026-10-24 ≠ 2026-10-30",
+   "candidatos": [
+    23
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036ddc9",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "DANIEL JEREMIAS REPETTI · alta 2026-10-31",
+  "antes": {
+   "indice": 28,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b076"
+  },
+  "despues": {
+   "indice": 26,
+   "clave": "6afdb3ca0fc132faeab8b074"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-31",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aeaa10cdd5e6e23cbb1e715"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-31",
+    "baja": "2026-10-31",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aeaa10cdd5e6e23cbb1e715"
+   },
+   "motivoPosicionVieja": "alta 2026-10-31 ≠ 2026-11-14",
+   "candidatos": [
+    26
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036ddca",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "DANIEL JEREMIAS REPETTI · alta 2026-11-07",
+  "antes": {
+   "indice": 29,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b077"
+  },
+  "despues": {
+   "indice": 27,
+   "clave": "6afdb3ca0fc132faeab8b075"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-11-07",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aee9564e40216eb5f12e769"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-07",
+    "baja": "2026-11-07",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aee9564e40216eb5f12e769"
+   },
+   "motivoPosicionVieja": "alta 2026-11-07 ≠ 2026-11-15",
+   "candidatos": [
+    27
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6af0b8c3ab55baa1203750de",
+  "userProjectId": "696423455dd723128ad69e92",
+  "campoIndice": "contractIndex",
+  "texto": "LEONARDO THOMAS AQUINO · alta 2026-11-04",
+  "antes": {
+   "indice": 117,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab89ed4"
+  },
+  "despues": {
+   "indice": 115,
+   "clave": "6afdb3ca0fc132faeab89ed2"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-11-04",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aefe7213666532db4f2979d"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-04",
+    "baja": "2026-11-04",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aefe7213666532db4f2979d"
+   },
+   "motivoPosicionVieja": "alta 2026-11-04 ≠ 2026-11-09",
+   "candidatos": [
+    115
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6af0b8c3ab55baa1203750e0",
+  "userProjectId": "6a2eba59feba0437c8a9b8cd",
+  "campoIndice": "contractIndex",
+  "texto": "LUCAS GABRIEL RAMIREZ · alta 2026-11-08",
+  "antes": {
+   "indice": 61,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b006"
+  },
+  "despues": {
+   "indice": 60,
+   "clave": "6afdb3ca0fc132faeab8b005"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-11-08",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aefe7083666532db4f29747"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-08",
+    "baja": "2026-11-08",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aefe7083666532db4f29747"
+   },
+   "motivoPosicionVieja": "alta 2026-11-08 ≠ 2026-11-15",
+   "candidatos": [
+    60
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6af1d368ab55baa12037c95c",
+  "userProjectId": "696423455dd723128ad69e92",
+  "campoIndice": "contractIndex",
+  "texto": "LEONARDO THOMAS AQUINO · alta 2026-11-08",
+  "antes": {
+   "indice": 118,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab89ed5"
+  },
+  "despues": {
+   "indice": 116,
+   "clave": "6afdb3ca0fc132faeab89ed3"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-11-08",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6af13882653a4e7ebc701c4b"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-08",
+    "baja": "2026-11-08",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6af13882653a4e7ebc701c4b"
+   },
+   "motivoPosicionVieja": "alta 2026-11-08 ≠ 2026-11-13",
+   "candidatos": [
+    116
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6af32464ab55baa120389540",
+  "userProjectId": "696423455dd723128ad69e92",
+  "campoIndice": "contractIndex",
+  "texto": "LEONARDO THOMAS AQUINO · alta 2026-11-09",
+  "antes": {
+   "indice": 119,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab89ed6"
+  },
+  "despues": {
+   "indice": 117,
+   "clave": "6afdb3ca0fc132faeab89ed4"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-11-09",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6af28a1353770fd6535e9b4c"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-09",
+    "baja": "2026-11-09",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6af28a1353770fd6535e9b4c"
+   },
+   "motivoPosicionVieja": "alta 2026-11-09 ≠ 2026-11-14",
+   "candidatos": [
+    117
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6ac7e6235f25187fdd5656c1",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-10-08 · DANIEL JEREMIAS REPETTI",
+  "antes": {
+   "indice": 20,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b06e"
+  },
+  "despues": {
+   "indice": 19,
+   "clave": "6afdb3ca0fc132faeab8b06d"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ac7e6235f25187fdd5656c1"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-09",
+    "baja": "2026-10-09",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ac7e6235f25187fdd5656c1"
+   },
+   "motivoPosicionVieja": "presentado por otro log (ninguno ≠ 5656c1)",
+   "candidatos": [
+    19
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6ac7eb495f25187fdd566488",
+  "userProjectId": "6a2eba59feba0437c8a9b8cd",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-10-08 · LUCAS GABRIEL RAMIREZ",
+  "antes": {
+   "indice": 53,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8affe"
+  },
+  "despues": {
+   "indice": 52,
+   "clave": "6afdb3ca0fc132faeab8affd"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ac7eb495f25187fdd566488"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-10",
+    "baja": "2026-10-10",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ac7eb495f25187fdd566488"
+   },
+   "motivoPosicionVieja": "presentado por otro log (ninguno ≠ 566488)",
+   "candidatos": [
+    52
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6acbc0c3094b0ef5f3c515d0",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-10-11 · DANIEL JEREMIAS REPETTI",
+  "antes": {
+   "indice": 22,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b070"
+  },
+  "despues": {
+   "indice": 21,
+   "clave": "6afdb3ca0fc132faeab8b06f"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6acbc0c3094b0ef5f3c515d0"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-11",
+    "baja": "2026-10-11",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6acbc0c3094b0ef5f3c515d0"
+   },
+   "motivoPosicionVieja": "presentado por otro log (2f0e08 ≠ c515d0)",
+   "candidatos": [
+    21
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6ad4fb326a7365d21f941ec9",
+  "userProjectId": "696421da5dd723128ad69d73",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-10-18 · ETHEL INES PARRINELLO",
+  "antes": {
+   "indice": 79,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8965f"
+  },
+  "despues": {
+   "indice": 78,
+   "clave": "6afdb3ca0fc132faeab8965e"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad4fb326a7365d21f941ec9"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-18",
+    "baja": "2026-10-18",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad4fb326a7365d21f941ec9"
+   },
+   "motivoPosicionVieja": "presentado por otro log (a4159b ≠ 941ec9)",
+   "candidatos": [
+    78
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6ad4fb326a7365d21f941ec9",
+  "userProjectId": "6a2eba59feba0437c8a9b8cd",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-10-18 · LUCAS GABRIEL RAMIREZ",
+  "antes": {
+   "indice": 56,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b001"
+  },
+  "despues": {
+   "indice": 55,
+   "clave": "6afdb3ca0fc132faeab8b000"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad4fb326a7365d21f941ec9"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-18",
+    "baja": "2026-10-18",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad4fb326a7365d21f941ec9"
+   },
+   "motivoPosicionVieja": "presentado por otro log (ninguno ≠ 941ec9)",
+   "candidatos": [
+    55
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6ad54b8d57e69935242f0e08",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-10-18 · DANIEL JEREMIAS REPETTI",
+  "antes": {
+   "indice": 23,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b071"
+  },
+  "despues": {
+   "indice": 22,
+   "clave": "6afdb3ca0fc132faeab8b070"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad54b8d57e69935242f0e08"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-17",
+    "baja": "2026-10-17",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad54b8d57e69935242f0e08"
+   },
+   "motivoPosicionVieja": "presentado por otro log (713d86 ≠ 2f0e08)",
+   "candidatos": [
+    22
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6ad97d9910d585604172e149",
+  "userProjectId": "6a2eba59feba0437c8a9b8cd",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-10-22 · LUCAS GABRIEL RAMIREZ",
+  "antes": {
+   "indice": 55,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b000"
+  },
+  "despues": {
+   "indice": 54,
+   "clave": "6afdb3ca0fc132faeab8afff"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad97d9910d585604172e149"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-17",
+    "baja": "2026-10-17",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad97d9910d585604172e149"
+   },
+   "motivoPosicionVieja": "presentado por otro log (941ec9 ≠ 72e149)",
+   "candidatos": [
+    54
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6ae7fe1071265108aa713d86",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-02 · DANIEL JEREMIAS REPETTI",
+  "antes": {
+   "indice": 24,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b072"
+  },
+  "despues": {
+   "indice": 23,
+   "clave": "6afdb3ca0fc132faeab8b071"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae7fe1071265108aa713d86"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-24",
+    "baja": "2026-10-24",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae7fe1071265108aa713d86"
+   },
+   "motivoPosicionVieja": "presentado por otro log (71c4d3 ≠ 713d86)",
+   "candidatos": [
+    23
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6ae7fe1071265108aa713d86",
+  "userProjectId": "6a2eba59feba0437c8a9b8cd",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-02 · LUCAS GABRIEL RAMIREZ",
+  "antes": {
+   "indice": 58,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b003"
+  },
+  "despues": {
+   "indice": 57,
+   "clave": "6afdb3ca0fc132faeab8b002"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae7fe1071265108aa713d86"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-24",
+    "baja": "2026-10-24",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae7fe1071265108aa713d86"
+   },
+   "motivoPosicionVieja": "presentado por otro log (b1e715 ≠ 713d86)",
+   "candidatos": [
+    57
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6ae8763271265108aa71c4d3",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-02 · DANIEL JEREMIAS REPETTI",
+  "antes": {
+   "indice": 25,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b073"
+  },
+  "despues": {
+   "indice": 24,
+   "clave": "6afdb3ca0fc132faeab8b072"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae8763271265108aa71c4d3"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-30",
+    "baja": "2026-10-30",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae8763271265108aa71c4d3"
+   },
+   "motivoPosicionVieja": "presentado por otro log (c8dfa5 ≠ 71c4d3)",
+   "candidatos": [
+    24
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6ae8763271265108aa71c4d3",
+  "userProjectId": "6a2eba59feba0437c8a9b8cd",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-02 · LUCAS GABRIEL RAMIREZ",
+  "antes": {
+   "indice": 60,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b005"
+  },
+  "despues": {
+   "indice": 59,
+   "clave": "6afdb3ca0fc132faeab8b004"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae8763271265108aa71c4d3"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-31",
+    "baja": "2026-10-31",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae8763271265108aa71c4d3"
+   },
+   "motivoPosicionVieja": "presentado por otro log (f29747 ≠ 71c4d3)",
+   "candidatos": [
+    59
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6aeaa10cdd5e6e23cbb1e715",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-04 · DANIEL JEREMIAS REPETTI",
+  "antes": {
+   "indice": 28,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b076"
+  },
+  "despues": {
+   "indice": 26,
+   "clave": "6afdb3ca0fc132faeab8b074"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aeaa10cdd5e6e23cbb1e715"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-31",
+    "baja": "2026-10-31",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aeaa10cdd5e6e23cbb1e715"
+   },
+   "motivoPosicionVieja": "presentado por otro log (6faacc ≠ b1e715)",
+   "candidatos": [
+    26
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6aeaa10cdd5e6e23cbb1e715",
+  "userProjectId": "6a2eba59feba0437c8a9b8cd",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-04 · LUCAS GABRIEL RAMIREZ",
+  "antes": {
+   "indice": 59,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b004"
+  },
+  "despues": {
+   "indice": 58,
+   "clave": "6afdb3ca0fc132faeab8b003"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aeaa10cdd5e6e23cbb1e715"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-01",
+    "baja": "2026-11-01",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aeaa10cdd5e6e23cbb1e715"
+   },
+   "motivoPosicionVieja": "presentado por otro log (71c4d3 ≠ b1e715)",
+   "candidatos": [
+    58
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6aebf28cea2a8158e2c8dfa5",
+  "userProjectId": "696423455dd723128ad69e92",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-05 · LEONARDO THOMAS AQUINO",
+  "antes": {
+   "indice": 116,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab89ed3"
+  },
+  "despues": {
+   "indice": 114,
+   "clave": "6afdb3ca0fc132faeab89ed1"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aebf28cea2a8158e2c8dfa5"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-31",
+    "baja": "2026-10-31",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aebf28cea2a8158e2c8dfa5"
+   },
+   "motivoPosicionVieja": "presentado por otro log (701c4b ≠ c8dfa5)",
+   "candidatos": [
+    114
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6aebf28cea2a8158e2c8dfa5",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-05 · DANIEL JEREMIAS REPETTI",
+  "antes": {
+   "indice": 27,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b075"
+  },
+  "despues": {
+   "indice": 25,
+   "clave": "6afdb3ca0fc132faeab8b073"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aebf28cea2a8158e2c8dfa5"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-01",
+    "baja": "2026-11-01",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aebf28cea2a8158e2c8dfa5"
+   },
+   "motivoPosicionVieja": "presentado por otro log (12e769 ≠ c8dfa5)",
+   "candidatos": [
+    25
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6aed443314198dcf20e32b1c",
+  "userProjectId": "696423455dd723128ad69e92",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-06 · LEONARDO THOMAS AQUINO",
+  "antes": {
+   "indice": 115,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab89ed2"
+  },
+  "despues": {
+   "indice": 113,
+   "clave": "6afdb3ca0fc132faeab89ed0"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aed443314198dcf20e32b1c"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-01",
+    "baja": "2026-11-01",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aed443314198dcf20e32b1c"
+   },
+   "motivoPosicionVieja": "presentado por otro log (f2979d ≠ e32b1c)",
+   "candidatos": [
+    113
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6aee9564e40216eb5f12e769",
+  "userProjectId": "6a2eb9e7feba0437c8a9b8ad",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-07 · DANIEL JEREMIAS REPETTI",
+  "antes": {
+   "indice": 29,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b077"
+  },
+  "despues": {
+   "indice": 27,
+   "clave": "6afdb3ca0fc132faeab8b075"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aee9564e40216eb5f12e769"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-07",
+    "baja": "2026-11-07",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aee9564e40216eb5f12e769"
+   },
+   "motivoPosicionVieja": "presentado por otro log (88957c ≠ 12e769)",
+   "candidatos": [
+    27
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6aee9588e40216eb5f12e834",
+  "userProjectId": "696423455dd723128ad69e92",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-07 · LEONARDO THOMAS AQUINO",
+  "antes": {
+   "indice": 114,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab89ed1"
+  },
+  "despues": {
+   "indice": 112,
+   "clave": "6afdb3ca0fc132faeab89ecf"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aee9588e40216eb5f12e834"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-03",
+    "baja": "2026-11-03",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aee9588e40216eb5f12e834"
+   },
+   "motivoPosicionVieja": "presentado por otro log (c8dfa5 ≠ 12e834)",
+   "candidatos": [
+    112
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6aefe7083666532db4f29747",
+  "userProjectId": "6a2eba59feba0437c8a9b8cd",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-08 · LUCAS GABRIEL RAMIREZ",
+  "antes": {
+   "indice": 61,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8b006"
+  },
+  "despues": {
+   "indice": 60,
+   "clave": "6afdb3ca0fc132faeab8b005"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aefe7083666532db4f29747"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-08",
+    "baja": "2026-11-08",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aefe7083666532db4f29747"
+   },
+   "motivoPosicionVieja": "presentado por otro log (6faacc ≠ f29747)",
+   "candidatos": [
+    60
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6aefe7213666532db4f2979d",
+  "userProjectId": "696423455dd723128ad69e92",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-08 · LEONARDO THOMAS AQUINO",
+  "antes": {
+   "indice": 117,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab89ed4"
+  },
+  "despues": {
+   "indice": 115,
+   "clave": "6afdb3ca0fc132faeab89ed2"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aefe7213666532db4f2979d"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-04",
+    "baja": "2026-11-04",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aefe7213666532db4f2979d"
+   },
+   "motivoPosicionVieja": "presentado por otro log (5e9b4c ≠ f2979d)",
+   "candidatos": [
+    115
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6af13882653a4e7ebc701c4b",
+  "userProjectId": "696423455dd723128ad69e92",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-09 · LEONARDO THOMAS AQUINO",
+  "antes": {
+   "indice": 118,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab89ed5"
+  },
+  "despues": {
+   "indice": 116,
+   "clave": "6afdb3ca0fc132faeab89ed3"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6af13882653a4e7ebc701c4b"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-08",
+    "baja": "2026-11-08",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6af13882653a4e7ebc701c4b"
+   },
+   "motivoPosicionVieja": "presentado por otro log (6faacc ≠ 701c4b)",
+   "candidatos": [
+    116
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6af28a1353770fd6535e9b4c",
+  "userProjectId": "696423455dd723128ad69e92",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-10 · LEONARDO THOMAS AQUINO",
+  "antes": {
+   "indice": 119,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab89ed6"
+  },
+  "despues": {
+   "indice": 117,
+   "clave": "6afdb3ca0fc132faeab89ed4"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6af28a1353770fd6535e9b4c"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-09",
+    "baja": "2026-11-09",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6af28a1353770fd6535e9b4c"
+   },
+   "motivoPosicionVieja": "presentado por otro log (88957c ≠ 5e9b4c)",
+   "candidatos": [
+    117
+   ]
+  }
+ }
+]

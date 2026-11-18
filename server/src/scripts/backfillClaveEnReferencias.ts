@@ -23,7 +23,14 @@
  *  - CONSISTENTE CON EVIDENCIA DÉBIL (sólo la empleadora —un log que no quedó en ningún contrato: en
  *    seco, rechazado o reemplazado—, o sólo la fecha de baja): NO, salvo `--incluir-debiles`. Coincidir
  *    en la empleadora no prueba que no esté corrida.
- *  - SIN HUELLA (los recibos no guardan nada del contrato): NO, salvo `--incluir-sin-huella`.
+ *  - SIN HUELLA (los recibos no guardan nada del contrato): NO, salvo `--incluir-sin-huella`, y aun así
+ *    NUNCA en un vínculo sospechoso: uno que tuvo alguna referencia corrida (está en un respaldo de
+ *    `reubicarReferencias.ts`) o que todavía tiene alguna de ARCA o de recibos (las renovaciones y
+ *    solicitudes de la app vieja no cuentan: no guardaban la posición). Ahí la posición no merece confianza: esos
+ *    recibos se miran a mano (el precedente es Hernandez Dunn).
+ *  - `--marcar-no-resueltas`: las entradas de log con evidencia débil (su log no quedó en ningún
+ *    contrato: lo más probable es que ese contrato ya no exista) quedan con `claveNoResuelta`, para que
+ *    nadie le crea a su posición. Una clave por posición ahí sería inventar un vínculo.
  *  - LÁPIDA: recibe la clave de la lápida (es el contrato que nombraba; el contenido está en
  *    `contratos_anulados`).
  * Cada escritura además exige que la referencia siga en la misma posición y sin clave.
@@ -56,6 +63,7 @@ async function main() {
   const detalle = process.argv.includes("--detalle");
   const conDebiles = process.argv.includes("--incluir-debiles");
   const conSinHuella = process.argv.includes("--incluir-sin-huella");
+  const marcar = process.argv.includes("--marcar-no-resueltas");
   const iRevertir = process.argv.indexOf("--revertir");
   await mongoose.connect(env.MONGO_URI, { dbName: env.MONGO_DB_NAME });
   if (iRevertir >= 0) return revertir(process.argv[iRevertir + 1]);
@@ -63,6 +71,25 @@ async function main() {
 
   const refs = await leerReferencias();
   const contratos = await contratosDe(refs.map((r) => r.userProjectId));
+
+  // VÍNCULOS SOSPECHOSOS: los que tuvieron alguna referencia corrida (reubicada) o la tienen todavía.
+  const sospechosos = new Set<string>();
+  if (fs.existsSync(CARPETA_RESPALDOS)) {
+    for (const a of fs.readdirSync(CARPETA_RESPALDOS).filter((n) => /^reubicar-referencias-.*\.json$/.test(n))) {
+      for (const p of JSON.parse(fs.readFileSync(path.join(CARPETA_RESPALDOS, a), "utf8"))) sospechosos.add(String(p.userProjectId));
+    }
+  }
+  // Las renovaciones y solicitudes de la app vieja no cuentan: no guardaban la posición (quedó en 0 o vacía),
+  // así que no coincidir no es señal de un corrimiento.
+  for (const r of refs) {
+    if (r.coleccion === "users" || r.coleccion === "renovaciones_contrato") continue;
+    const lista = contratos.get(String(r.userProjectId));
+    if (lista && ["corrida", "fuera"].includes(clasificarReferencia(lista, r).tipo)) sospechosos.add(String(r.userProjectId));
+  }
+  const nombres = await db().collection("users_&_projects").aggregate([{ $match: { _id: { $in: [...sospechosos].map((s) => new Types.ObjectId(s)) } } }, { $lookup: { from: "users", localField: "userId", foreignField: "_id", as: "u" } }, { $project: { n: { $concat: [{ $ifNull: [{ $first: "$u.firstName" }, ""] }, " ", { $ifNull: [{ $first: "$u.lastName" }, ""] }] } } }]).toArray();
+  console.log(`Vínculos sospechosos (sus recibos no reciben clave): ${sospechosos.size}${nombres.length ? ` — ${nombres.map((x: any) => `${x.n} (${x._id})`).join(", ")}` : ""}\n`);
+  const recibosSospechosos: string[] = [];
+  const noResueltas: RefPorPosicion[] = [];
 
   type Fila = { consistente: number; debil: number; lapida: number; sinHuella: number; corrida: number; fuera: number; sinVinculo: number; contratoSinClave: number; debilFuera: number; sinHuellaFuera: number };
   const resumen = new Map<string, Fila>();
@@ -81,8 +108,16 @@ async function main() {
       noSeTocan.push(`${r.coleccion} ${r._id} · ${r.texto} · ${k.tipo === "corrida" ? `#${r.indice}: ` : ""}${k.motivo} → ${cand} [evidencia ${k.evidencia.join("+") || "ninguna"}, ${k.fuerza}]`);
       continue;
     }
-    if (k.tipo === "sin_huella" && !conSinHuella) { f.sinHuellaFuera++; continue; }
-    if (k.tipo === "consistente" && k.fuerza !== "fuerte" && !conDebiles) { f.debilFuera++; continue; }
+    if (k.tipo === "sin_huella" && (!conSinHuella || sospechosos.has(String(r.userProjectId)))) {
+      f.sinHuellaFuera++;
+      if (sospechosos.has(String(r.userProjectId))) recibosSospechosos.push(`${r.coleccion} ${r._id} · ${r.texto} · posición #${r.indice}`);
+      continue;
+    }
+    if (k.tipo === "consistente" && k.fuerza !== "fuerte" && !conDebiles) {
+      f.debilFuera++;
+      if (r.coleccion === "arca_altas_logs") noResueltas.push(r);
+      continue;
+    }
     const c = lista[Number(r.indice)];
     if (!c?.contratoKey) { f.contratoSinClave++; noSeTocan.push(`${r.coleccion} ${r._id} · ${r.texto} · el contrato #${r.indice} no tiene clave`); continue; }
     if (k.tipo === "lapida") f.lapida++;
@@ -102,7 +137,21 @@ async function main() {
     console.log(detalle ? "\nNO SE TOCAN:" : `\nNO SE TOCAN (primeras 30; --detalle para todas):`);
     for (const t of detalle ? noSeTocan : noSeTocan.slice(0, 30)) console.log(`  ${t}`);
   }
+  if (recibosSospechosos.length) {
+    console.log(`\nRECIBOS DE VÍNCULOS SOSPECHOSOS, A MANO: ${recibosSospechosos.length}`);
+    for (const t of recibosSospechosos) console.log(`  ${t}`);
+  }
+  if (marcar) console.log(`\nEntradas de log que quedan marcadas como no resueltas (claveNoResuelta): ${noResueltas.length}`);
   if (!commit) return;
+
+  if (marcar && noResueltas.length) {
+    let m = 0;
+    for (const r of noResueltas) {
+      const res = await db().collection(r.coleccion).updateOne({ _id: r._id }, { $set: { "contratos.$[e].claveNoResuelta": "log_sin_contrato" } }, { arrayFilters: [{ "e.userProjectId": r.userProjectId, "e.contractIndex": r.indice, "e.contratoKey": null }] });
+      m += res.modifiedCount;
+    }
+    console.log(`Marcadas como no resueltas: ${m} (documentos de log tocados; varias entradas pueden ir en uno).`);
+  }
 
   fs.mkdirSync(CARPETA_RESPALDOS, { recursive: true });
   const archivo = path.join(CARPETA_RESPALDOS, `clave-en-referencias-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);

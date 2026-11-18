@@ -25,7 +25,8 @@ export interface IArcaAltasLog extends Document {
     contratos: Array<{
         userProjectId: Types.ObjectId;
         contractIndex: number; /** Etapa 2c: la identidad del contrato. */
-        contratoKey?: Types.ObjectId | null;
+        contratoKey?: Types.ObjectId | null; /** Etapa 2c: no se le pudo dar clave con evidencia (su log no quedó en ningún contrato): queda por posición y NO hay que creerle a la posición. */
+        claveNoResuelta?: string;
         cuil: string;
         nombre: string; /** El registro de 85 tal cual se mandó a ARCA. */
         registro?: string;
