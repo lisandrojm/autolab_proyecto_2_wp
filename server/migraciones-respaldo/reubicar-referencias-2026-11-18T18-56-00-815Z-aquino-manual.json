@@ -1,0 +1,41 @@
+[
+ {
+  "coleccion": "arca_verificaciones_altas",
+  "_id": "6aed982c14198dcf20e37fcf",
+  "userProjectId": "696423455dd723128ad69e92",
+  "campoIndice": "contractIndex",
+  "texto": "LEONARDO THOMAS AQUINO · alta 2026-10-24",
+  "antes": {
+   "indice": 112,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab89ecf"
+  },
+  "despues": {
+   "indice": 110,
+   "clave": "6afdb3ca0fc132faeab89ecd"
+  },
+  "evidencia": {
+   "campos": [
+    "alta",
+    "empresaId",
+    "manual"
+   ],
+   "fuerza": "manual (aprobada 18/11/2026)",
+   "referencia": {
+    "alta": "2026-10-24",
+    "empresaId": "6a5fd12244faed2e72669b42"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-24",
+    "tipo": "Jornada",
+    "arca": "presentada",
+    "logId": "6adc209ac370f1083774a1ae"
+   },
+   "motivoPosicionVieja": "alta 2026-10-24 ≠ 2026-11-03; dos candidatos por alta+empleadora (#110 Jornada, #111 Servicios Jornada)",
+   "candidatos": [
+    110,
+    111
+   ],
+   "decision": "Dos señales independientes: (1) es una verificación de un alta de ARCA y sólo el #110 tiene alta en ARCA (#111 es Servicios, sin alta temprana); (2) todas las demás referencias de este vínculo estaban corridas exactamente 2 posiciones y 112 − 2 = 110."
+  }
+ }
+]
