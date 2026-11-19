@@ -64,6 +64,12 @@ export type EventoCorrida = {
     tipo: "otraEmpleadora";
     razonSocial: string;
     cuils: string[];
+}
+/** ARCA contestó pero el lote no lo guardó (código fuera del catálogo, no registrada…). */
+ | {
+    tipo: "noGuardado";
+    cuil: string;
+    motivo: string;
 };
 /** Las personas de UNA empleadora. Una corrida puede traer varias y las lee en la misma sesión. */
 export interface GrupoCorrida {
@@ -181,6 +187,12 @@ export declare function resumirTiempos(t: {
     };
     vaciarCon: string[];
 };
+/** Lo que el lote NO pudo aplicar, en frases. Es lo que hace falta para saber qué revisar. */
+/** Por qué el lote no guardó a cada CUIL, en una frase que va en su fila. */
+export declare function rechazosDelLote(r: any, empleadora: string): {
+    cuil: string;
+    motivo: string;
+}[];
 /**
  * UNA CORRIDA COLGADA BLOQUEA TODO: el candado no tiene vencimiento, así que si Playwright se quedó
  * esperando a ARCA para siempre, ni la cola ni el barrido ni el botón vuelven a arrancar nunca, y la

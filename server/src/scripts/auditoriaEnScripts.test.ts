@@ -30,7 +30,11 @@ const HISTORICOS = new Set([
   "unificarTiposDeContrato.ts",
 ]);
 
-const ESCRIBE = /\.(updateOne|updateMany|bulkWrite|replaceOne|deleteOne|deleteMany|insertOne|insertMany|findOneAndUpdate)\(/;
+const METODOS = "updateOne|updateMany|bulkWrite|replaceOne|deleteOne|deleteMany|insertOne|insertMany|findOneAndUpdate";
+/** Escribe sobre la colección de contratos: directo, o guardándola antes en una variable o constante. */
+const escribeContratos = (s: string) =>
+  new RegExp(`["'\`]users_&_projects["'\`]\\)\\s*\\.\\s*(${METODOS})\\(`).test(s) ||
+  ((/=\s*[\w.()]*collection\(\s*["'`]users_&_projects["'`]\s*\)\s*[;\n]/.test(s) || /=\s*["'`]users_&_projects["'`]\s*;/.test(s)) && new RegExp(`\\.(${METODOS})\\(`).test(s));
 
 test("los scripts que escriben users_&_projects con el driver pasan por escribirContratosAuditado", () => {
   const dir = path.dirname(fileURLToPath(import.meta.url));
@@ -39,7 +43,7 @@ test("los scripts que escriben users_&_projects con el driver pasan por escribir
     .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts") && !HISTORICOS.has(f))
     .filter((f) => {
       const s = fs.readFileSync(path.join(dir, f), "utf8");
-      return s.includes("users_&_projects") && ESCRIBE.test(s) && !s.includes("escribirContratosAuditado");
+      return escribeContratos(s) && !s.includes("escribirContratosAuditado");
     });
   assert.deepEqual(sinAuditoria, [], `Escriben users_&_projects sin auditoría: ${sinAuditoria.join(", ")}. Usar escribirContratosAuditado (o el modelo UserProject).`);
 });
