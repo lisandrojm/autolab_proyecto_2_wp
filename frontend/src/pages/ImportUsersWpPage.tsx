@@ -14,6 +14,17 @@ import {
   faDatabase
 } from "@fortawesome/free-solid-svg-icons";
 import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
+import Swal from "sweetalert2";
+
+/** Por qué la importación está pausada (lo dice el server: `utils/importFramePausado.ts`). */
+interface EstadoImportacion {
+  cronApagadoDesde: string;
+  motivo: string;
+  advertencia: string;
+  discrepancias: string;
+  cronEncendido: boolean;
+  ultimaSync: string | null;
+}
 
 interface SyncStats {
   createdUsers: number;
@@ -78,6 +89,7 @@ export const ImportUsersWpPage: React.FC = () => {
   const [latestSync, setLatestSync] = useState<HistoryItem | null>(null);
   const [addedUsersDetails, setAddedUsersDetails] = useState<AddedUserDetail[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [estado, setEstado] = useState<EstadoImportacion | null>(null);
 
   // Notification states
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | null }>({
@@ -146,6 +158,14 @@ export const ImportUsersWpPage: React.FC = () => {
         startPolling();
       }
 
+      // 1a. Por qué está pausada (el cartel de arriba). Si falla, se avisa: no se esconde.
+      try {
+        setEstado((await axios.get("/users/import/estado")).data);
+      } catch {
+        setEstado(null);
+        showToast("No se pudo leer el estado de la importación", "error");
+      }
+
       // 1b. Fetch project/contract/rol-frame details for the last added users
       const detailsRes = await axios.get("/users/import/last-added-details");
       setAddedUsersDetails(detailsRes.data || []);
@@ -166,12 +186,38 @@ export const ImportUsersWpPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /*
+    SINCRONIZAR PIDE ESCRIBIR LA FECHA DE LA ÚLTIMA (19/11/2026). La importación está pausada a
+    propósito y una sincronización después de meses vuelca todo FRAME sobre la base: no se hace con un
+    clic. El server exige la misma fecha (428 sin ella), así que esto no se saltea desde otro lado.
+  */
   const handleManualSync = async () => {
+    const ultima = estado?.ultimaSync || "";
+    const esperada = ultima || "PRIMERA";
+    const r = await Swal.fire({
+      title: "Sincronizar con FRAME",
+      icon: "warning",
+      html:
+        `<p style="text-align:left">La importación está pausada: el automático está apagado desde el <b>${estado?.cronApagadoDesde || "12/06/2026"}</b>` +
+        (ultima ? ` y la última sincronización fue el <b>${ultima}</b>.` : ".") +
+        `</p><p style="text-align:left;margin-top:8px">${estado?.advertencia || "Sincronizar trae todo FRAME de nuevo sobre la base."}</p>` +
+        `<p style="text-align:left;margin-top:8px">Para seguir, escribí <b>${esperada}</b>${ultima ? " (la fecha de la última sincronización)" : ""}.</p>`,
+      input: "text",
+      inputPlaceholder: ultima ? "DD/MM/AAAA" : "PRIMERA",
+      showCancelButton: true,
+      confirmButtonText: "Sincronizar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#d33",
+      focusCancel: true,
+      reverseButtons: true,
+      inputValidator: (v) => (String(v || "").trim().replace(/-/g, "/").toUpperCase() === esperada.toUpperCase() ? null : `Tiene que decir ${esperada}.`),
+    });
+    if (!r.isConfirmed) return;
     setLoading(true);
     try {
       // Sincronización SIEMPRE completa + con proyectos (sin opciones/automatización). El request
       // responde apenas se dispara (no espera a que termine); el resultado se sigue por polling.
-      await axios.post("/users/import/trigger", { syncProjects: true });
+      await axios.post("/users/import/trigger", { syncProjects: true, confirmarUltimaSync: String(r.value || "").trim() });
       showToast("Sincronización iniciada: puede tardar varios minutos, esta pantalla se actualiza sola.", "success");
       startPolling();
     } catch (err: any) {
@@ -247,6 +293,20 @@ export const ImportUsersWpPage: React.FC = () => {
             </div>
             
             <div className="p-5 flex-1 space-y-6">
+              {/* Por qué está pausada: que dentro de un año no sea otra vez una conjetura. */}
+              <div className="p-4 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                <h3 className="text-sm font-semibold flex items-center gap-2 mb-2">
+                  <FontAwesomeIcon icon={faExclamationTriangle} />
+                  Importación pausada{estado?.cronEncendido ? " (¡pero el automático figura encendido!)" : ""}
+                </h3>
+                <ul className="text-xs space-y-1.5 leading-relaxed list-disc list-inside">
+                  <li>El automático está apagado desde el <strong>{estado?.cronApagadoDesde || "12/06/2026"}</strong>. {estado?.motivo}</li>
+                  <li>Última sincronización: <strong>{estado?.ultimaSync || "ninguna"}</strong>.</li>
+                  <li>{estado?.advertencia || "Sincronizar trae todo FRAME de nuevo sobre la base."} Para sincronizar hay que escribir la fecha de la última.</li>
+                  <li>{estado?.discrepancias || "Mientras no se sincronice, el registro de discrepancias con FRAME queda vacío."}</li>
+                </ul>
+              </div>
+
               {/* Last run stats card */}
               <div className="bg-gray-55/60 dark:bg-gray-900/30 border border-gray-150 dark:border-gray-800 p-4 rounded-xl">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">

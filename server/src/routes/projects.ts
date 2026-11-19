@@ -122,7 +122,7 @@ function sumarAlFiltro(filter: any, condicion: Record<string, unknown>): void {
 }
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 import { NOVEDAD_SOLICITUD_APROBADA, nombreDePersona, notificar } from "../services/novedadesNotificaciones.js";
-import { esContratoVigente, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
+import { esContratoVigente, fechaISO, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
 import { rechazoAltaArcaConContrato } from "../services/superposicion.js";
 import { filaDelEquipoTrasGuardar, firmaDeAreas, rolDelEquipoTrasGuardar, tieneRol } from "../compartido/configDelEquipo.js";
 import { cambiosDeAreas, fotoDeAreas, registrarCambiosDelEquipo, type CambioDelEquipo } from "../services/historialEquipo.js";
@@ -133,6 +133,7 @@ import { anularContrato, AnulacionInvalida } from "../services/anulacionContrato
 import { moverRecibos, referenciasDeContrato } from "../services/referenciasContrato.js";
 import { cerrarSinFirma, CierreInvalido } from "../services/cierreSinFirma.js";
 import { esLapida, ultimoNoAnulado } from "../utils/anulacionContrato.js";
+import { contratoQueYaTieneLaSolicitud } from "../utils/unaSolicitudUnContrato.js";
 import { modalidadParaGuardar } from "../services/modalidades.js";
 import { Contrato } from "../models/Contrato.js";
 import { FormaPago } from "../models/FormaPago.js";
@@ -2493,7 +2494,31 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
       }
       // «isUpdate» sin índice reemplaza el ÚLTIMO contrato: el último de verdad, no una lápida.
       const ultimoReal = ultimoNoAnulado(userProject.contracts as any[]);
-      const prevContract = hasExplicitIndex ? userProject.contracts[idxNum] : isUpdate && ultimoReal >= 0 ? userProject.contracts[ultimoReal] : null;
+      /*
+        UNA SOLICITUD, UN CONTRATO (19/11/2026). Aprobar de nuevo una solicitud que ya tiene su contrato
+        en este vínculo agregaba otro (Bifulco el 11/11, un mes después; Paccoret el 08/10, a 4 s): el
+        mismo `solicitudId` en dos contratos, cada uno con recibos o ARCA propios. Ningún flujo legítimo
+        reusa el `solicitudId` —la renovación pide una solicitud nueva y la copia de contratos lo
+        descarta (`NO_SE_COPIAN`)—, así que se frena: sólo se puede guardar sobre ESE contrato. El 409
+        dice cuál es, para que el formulario ofrezca abrirlo y editarlo. Una lápida no cuenta (el
+        contrato anulado ya no es el de la solicitud). Es por vínculo: la misma solicitud aprobada en
+        otro proyecto es otro contrato.
+      */
+      if (idSolicitud) {
+        const destino = hasExplicitIndex ? idxNum : isUpdate && ultimoReal >= 0 ? ultimoReal : -1;
+        const yaTiene = contratoQueYaTieneLaSolicitud(userProject.contracts as any[], idSolicitud, destino);
+        if (yaTiene >= 0) {
+          const c: any = userProject.contracts[yaTiene];
+          const dia = (v: any) => (v instanceof Date ? v.toISOString().slice(0, 10) : fechaISO(v));
+          res.status(409).json({
+            error: `Esta solicitud ya tiene su contrato (${c.nombre_contrato || "contrato"}, alta ${dia(c.fecha_alta_contrato) || "—"}). Aprobarla de nuevo crearía un segundo contrato: si hay que cambiar algo, se edita ése.`,
+            codigo: "SOLICITUD_YA_TIENE_CONTRATO",
+            contrato: { projectId: String(project._id), userId: String(user._id), contractIndex: yaTiene, contratoKey: c.contratoKey ? String(c.contratoKey) : null, nombre_contrato: c.nombre_contrato || "", fecha_alta_contrato: dia(c.fecha_alta_contrato) || "", fecha_baja_contrato: dia(c.fecha_baja_contrato) || "" },
+          });
+          return;
+        }
+      }
+      const prevContract =hasExplicitIndex ? userProject.contracts[idxNum] : isUpdate && ultimoReal >= 0 ? userProject.contracts[ultimoReal] : null;
       if (prevContract) {
         if ((enrichedContract as any).altaDocumentoUrl === undefined) (enrichedContract as any).altaDocumentoUrl = (prevContract as any).altaDocumentoUrl;
         if ((enrichedContract as any).altaDocumentoNombre === undefined) (enrichedContract as any).altaDocumentoNombre = (prevContract as any).altaDocumentoNombre;

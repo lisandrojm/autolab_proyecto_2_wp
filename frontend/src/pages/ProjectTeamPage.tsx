@@ -3123,6 +3123,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       // (En modo «sólo aprobación» se avisó más arriba y se salió antes de los refrescos.)
     } catch (error: any) {
       console.error('Assign member error:', error);
+      /*
+        LA SOLICITUD YA TIENE SU CONTRATO (19/11/2026): el server no crea un segundo y dice cuál es.
+        En vez de dejar a quien aprueba trabado con un «ya existe», se ofrece abrir ESE contrato para
+        editarlo, que es lo que se quería hacer (lo cargado en este formulario se descarta).
+      */
+      const existente = error.response?.status === 409 && error.response?.data?.codigo === 'SOLICITUD_YA_TIENE_CONTRATO' ? error.response.data.contrato : null;
+      if (existente && typeof existente.contractIndex === 'number') {
+        const periodo = `${existente.nombre_contrato || 'Contrato'} · alta ${existente.fecha_alta_contrato || '—'}${existente.fecha_baja_contrato ? ` · baja ${existente.fecha_baja_contrato}` : ''}`;
+        const r = await sweetAlert.confirm('Esta solicitud ya tiene su contrato', `${periodo}.\n\nAprobarla de nuevo crearía un segundo contrato para la misma solicitud. Si hay que cambiar algo, se edita ése. Lo cargado en este formulario no se guarda.`, 'Abrir ese contrato', 'Cancelar');
+        if (r.isConfirmed) await handleOpenWizard(String(existente.userId), undefined, existente.contractIndex);
+        return;
+      }
       let errorMsg = 'Internal server error during assignment';
       if (error.response?.data?.error) {
         errorMsg = error.response.data.error;

@@ -45,6 +45,7 @@ import "../models/Client.js";
 
 import { ImportConfig } from "../models/ImportConfig.js";
 import { ImportHistory } from "../models/ImportHistory.js";
+import { IMPORT_FRAME_PAUSADO, confirmacionValida, fechaDeCorrida } from "../utils/importFramePausado.js";
 import { ExternalApiService } from "../services/externalApiService.js";
 
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
@@ -4036,6 +4037,14 @@ router.post("/import/config", requireTenant, authenticateToken, requirePermissio
       });
     }
 
+    // Prender el cron es sincronizar cada N horas: pide la misma confirmación (ver `utils/importFramePausado.ts`).
+    if (isEnabled === true && !wasEnabled) {
+      const ultima = await ImportHistory.findOne({ tenantId: req.tenantObjectId }).sort({ createdAt: -1 }).select("createdAt").lean();
+      if (!confirmacionValida((ultima as any)?.createdAt, req.body?.confirmarUltimaSync)) {
+        res.status(428).json({ codigo: "CONFIRMAR_SYNC_FRAME", ultimaSync: fechaDeCorrida((ultima as any)?.createdAt) || null, ...IMPORT_FRAME_PAUSADO, error: "La importación de FRAME está pausada. Para prender la automática hay que escribir la fecha de la última sincronización." });
+        return;
+      }
+    }
     config.isEnabled = isEnabled === true;
     config.intervalHours = Number(intervalHours) || 24;
     config.syncProjects = syncProjects === true;
@@ -4080,6 +4089,20 @@ router.get("/import/history/latest", requireTenant, authenticateToken, requirePe
     res.json(latest || null);
   } catch (error) {
     console.error("Get latest import history error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /users/import/estado - Por qué la importación está pausada, desde cuándo, y la fecha a confirmar.
+router.get("/import/estado", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const [ultima, config] = await Promise.all([
+      ImportHistory.findOne({ tenantId: req.tenantObjectId }).sort({ createdAt: -1 }).select("createdAt").lean(),
+      ImportConfig.findOne({ tenantId: req.tenantObjectId }).select("isEnabled").lean(),
+    ]);
+    res.json({ ...IMPORT_FRAME_PAUSADO, cronEncendido: !!(config as any)?.isEnabled, ultimaSync: fechaDeCorrida((ultima as any)?.createdAt) || null });
+  } catch (error) {
+    console.error("Get import estado error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -4176,6 +4199,13 @@ router.post("/import/trigger", requireTenant, authenticateToken, requirePermissi
     const yaHayUnaEnCurso = await ImportHistory.exists({ tenantId: req.tenantObjectId, status: "running" });
     if (yaHayUnaEnCurso) {
       res.status(409).json({ error: "Ya hay una sincronización en curso. Esperá a que termine antes de disparar otra." });
+      return;
+    }
+
+    // Pausada a propósito (ver `utils/importFramePausado.ts`): hay que escribir la fecha de la última.
+    const ultima = await ImportHistory.findOne({ tenantId: req.tenantObjectId }).sort({ createdAt: -1 }).select("createdAt").lean();
+    if (!confirmacionValida((ultima as any)?.createdAt, req.body?.confirmarUltimaSync)) {
+      res.status(428).json({ codigo: "CONFIRMAR_SYNC_FRAME", ultimaSync: fechaDeCorrida((ultima as any)?.createdAt) || null, ...IMPORT_FRAME_PAUSADO, error: `La importación de FRAME está pausada. Para sincronizar hay que escribir la fecha de la última sincronización (${fechaDeCorrida((ultima as any)?.createdAt) || "PRIMERA"}).` });
       return;
     }
 
