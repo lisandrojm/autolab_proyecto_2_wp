@@ -10,7 +10,8 @@ const contractSchema = new Schema({
     fecha_alta_contrato: { type: String },
     fecha_baja_contrato: { type: String },
     contratoKey: { type: Schema.Types.ObjectId },
-    estadoContrato: { type: String, enum: ["VIGENTE", "FINALIZADO", "ANULADO"] },
+    estadoContrato: { type: String, enum: ["VIGENTE", "FINALIZADO", "SIN_DETERMINAR", "ANULADO"] },
+    estadoContratoMotivo: { type: String },
     anulacion: {
         type: new Schema({ el: Date, por: { type: Schema.Types.ObjectId, ref: "User" }, porNombre: String, motivo: String, claveFrame: String, claveIdentidad: String }, { _id: false }),
         default: undefined,

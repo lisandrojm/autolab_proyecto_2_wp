@@ -12,7 +12,9 @@ interface IContract {
      * se anuló y está entero en `contratos_anulados`; acá queda sólo su clave (ver `utils/anulacionContrato.ts`).
      * VIGENTE y FINALIZADO los completa la etapa 3.
      */
-    estadoContrato?: "VIGENTE" | "FINALIZADO" | "ANULADO";
+    /** Etapa 3: ver `utils/estadoDeContrato.ts`. SIN_DETERMINAR = los datos no alcanzan (motivo en `estadoContratoMotivo`). */
+    estadoContrato?: "VIGENTE" | "FINALIZADO" | "SIN_DETERMINAR" | "ANULADO";
+    estadoContratoMotivo?: string;
     anulacion?: {
         el: Date;
         por?: Types.ObjectId | null;

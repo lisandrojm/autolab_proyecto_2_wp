@@ -17,7 +17,9 @@ interface IContract {
    * se anuló y está entero en `contratos_anulados`; acá queda sólo su clave (ver `utils/anulacionContrato.ts`).
    * VIGENTE y FINALIZADO los completa la etapa 3.
    */
-  estadoContrato?: "VIGENTE" | "FINALIZADO" | "ANULADO";
+  /** Etapa 3: ver `utils/estadoDeContrato.ts`. SIN_DETERMINAR = los datos no alcanzan (motivo en `estadoContratoMotivo`). */
+  estadoContrato?: "VIGENTE" | "FINALIZADO" | "SIN_DETERMINAR" | "ANULADO";
+  estadoContratoMotivo?: string;
   anulacion?: { el: Date; por?: Types.ObjectId | null; porNombre?: string; motivo?: string; claveFrame?: string; claveIdentidad?: string };
   proyecto_id: number;
   empleado_id: number;
@@ -460,7 +462,8 @@ const contractSchema = new Schema<IContract>(
     fecha_alta_contrato: { type: String },
     fecha_baja_contrato: { type: String },
     contratoKey: { type: Schema.Types.ObjectId },
-    estadoContrato: { type: String, enum: ["VIGENTE", "FINALIZADO", "ANULADO"] },
+    estadoContrato: { type: String, enum: ["VIGENTE", "FINALIZADO", "SIN_DETERMINAR", "ANULADO"] },
+    estadoContratoMotivo: { type: String },
     anulacion: {
       type: new Schema({ el: Date, por: { type: Schema.Types.ObjectId, ref: "User" }, porNombre: String, motivo: String, claveFrame: String, claveIdentidad: String }, { _id: false }),
       default: undefined,
