@@ -1,6 +1,7 @@
 // Local + VPS según .env.development o .env.production
 // Trigger reload 2
 import { enContexto } from "./utils/contextoAuditoria.js";
+import { initTransicionEstadoScheduler } from "./services/transicionEstadoContratos.js";
 import "./config/env.js";
 import { env } from "./config/env.js";
 
@@ -527,6 +528,13 @@ connectDB()
         enContexto({ origen: "sistema", detalle: "tarea initCampaniaVacacionesScheduler" }, () => initCampaniaVacacionesScheduler());
       } catch (error) {
         console.error("❌ Failed to initialize campania-vacaciones scheduler:", error);
+      }
+
+      // Estado de los contratos (etapa 3): una vez por día, VIGENTE → FINALIZADO cuando pasa la baja.
+      try {
+        enContexto({ origen: "sistema", detalle: "tarea initTransicionEstadoScheduler" }, () => initTransicionEstadoScheduler());
+      } catch (error) {
+        console.error("❌ Failed to initialize transicion-estado scheduler:", error);
       }
     }
 

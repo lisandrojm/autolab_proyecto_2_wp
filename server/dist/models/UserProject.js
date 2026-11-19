@@ -1,6 +1,7 @@
 import { Schema, model, Types } from "mongoose";
 import { clavesAPoner } from "../utils/identidadContrato.js";
 import { instalarAuditoriaDeContratos } from "../services/auditoriaContratos.js";
+import { instalarEstadoAlGuardar } from "../services/estadoContratoAlGuardar.js";
 import { camposDeContratoEnLapida } from "../utils/anulacionContrato.js";
 const contractSchema = new Schema({
     proyecto_id: { type: Number },
@@ -274,5 +275,7 @@ export const INDICE_PAR_FRAME = "frame_proyecto_empleado_unico";
 userProjectSchema.index({ externalProjectId: 1, externalEmployeeId: 1 }, { unique: true, name: INDICE_PAR_FRAME, partialFilterExpression: { externalProjectId: { $gt: 0 }, externalEmployeeId: { $gt: 0 } } });
 // Auditoría de contratos (etapa 3): cada escritura de `contracts[]` queda registrada por `contratoKey`.
 instalarAuditoriaDeContratos(userProjectSchema);
+// Estado del contrato (etapa 3): se calcula al guardar si falta o si cambiaron sus fechas o su tipo.
+instalarEstadoAlGuardar(userProjectSchema);
 const UserProject = model("UserProject", userProjectSchema);
 export default UserProject;

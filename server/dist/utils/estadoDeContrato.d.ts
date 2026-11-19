@@ -26,3 +26,12 @@ export declare function tipoEsIndeterminado(c: {
     contrato_id?: unknown;
     nombre_contrato?: unknown;
 }, porId: Map<string, boolean>, porNombre: Map<string, boolean>): boolean | undefined;
+/**
+ * LA TRANSICIÓN DIARIA, EN UN SOLO SENTIDO (decisión del usuario): un VIGENTE cuya baja ya pasó pasa a
+ * FINALIZADO. Nunca al revés, y nada más: ni SIN_DETERMINAR, ni ANULADO, ni un VIGENTE sin baja (un
+ * indeterminado abierto sólo se cierra con una baja). `null` = no cambia. Puro.
+ */
+export declare function transicionDiaria(c: {
+    estadoContrato?: unknown;
+    fecha_baja_contrato?: unknown;
+}, hoy: string): "FINALIZADO" | null;

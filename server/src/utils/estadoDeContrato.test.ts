@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { estadoSegunDatosLocales as estado, rigeHoySegunEstado as rige, tipoEsIndeterminado } from "./estadoDeContrato.js";
+import { estadoSegunDatosLocales as estado, rigeHoySegunEstado as rige, tipoEsIndeterminado, transicionDiaria } from "./estadoDeContrato.js";
+import { hayQueCalcularEstado } from "../services/estadoContratoAlGuardar.js";
 
 const HOY = "2026-11-19";
 
@@ -44,4 +45,25 @@ test("tipo indeterminado: por id y, si no, por nombre", () => {
   assert.equal(tipoEsIndeterminado({ contrato_id: "a", nombre_contrato: "Jornada" }, porId, porNombre), true);
   assert.equal(tipoEsIndeterminado({ nombre_contrato: " Jornada " }, porId, porNombre), false);
   assert.equal(tipoEsIndeterminado({ nombre_contrato: "Otro" }, porId, porNombre), undefined);
+});
+
+test("transición diaria: sólo VIGENTE con baja pasada → FINALIZADO; nunca al revés ni a otra cosa", () => {
+  assert.equal(transicionDiaria({ estadoContrato: "VIGENTE", fecha_baja_contrato: "2026-11-18" }, HOY), "FINALIZADO");
+  assert.equal(transicionDiaria({ estadoContrato: "VIGENTE", fecha_baja_contrato: "2026-11-19" }, HOY), null); // hoy todavía rige
+  assert.equal(transicionDiaria({ estadoContrato: "VIGENTE" }, HOY), null); // indeterminado abierto
+  assert.equal(transicionDiaria({ estadoContrato: "VIGENTE", fecha_baja_contrato: "null" }, HOY), null);
+  assert.equal(transicionDiaria({ estadoContrato: "FINALIZADO", fecha_baja_contrato: "2027-01-01" }, HOY), null); // nunca vuelve
+  assert.equal(transicionDiaria({ estadoContrato: "SIN_DETERMINAR", fecha_baja_contrato: "2020-01-01" }, HOY), null);
+  assert.equal(transicionDiaria({ estadoContrato: "ANULADO" }, HOY), null);
+  assert.equal(transicionDiaria({ fecha_baja_contrato: "2020-01-01" }, HOY), null); // sin estado: no lo decide esto
+});
+
+test("al guardar: se calcula si falta el estado o si cambiaron alta, baja o tipo; si no, se respeta", () => {
+  const base = { contratoKey: "k", estadoContrato: "VIGENTE", fecha_alta_contrato: "2026-01-01", fecha_baja_contrato: "2026-12-31", nombre_contrato: "Plazo fijo" };
+  assert.equal(hayQueCalcularEstado({ ...base, estadoContrato: undefined }, base), true); // el wizard lo reemplazó sin estado
+  assert.equal(hayQueCalcularEstado({ ...base }, undefined), false); // nuevo con estado ya puesto
+  assert.equal(hayQueCalcularEstado({ ...base, sueldo_bruto: 9 }, base), false); // otro campo: no
+  assert.equal(hayQueCalcularEstado({ ...base, fecha_baja_contrato: "2026-06-30" }, base), true);
+  assert.equal(hayQueCalcularEstado({ ...base, nombre_contrato: "Jornada" }, base), true);
+  assert.equal(hayQueCalcularEstado({ estadoContrato: "ANULADO" }, undefined), false);
 });

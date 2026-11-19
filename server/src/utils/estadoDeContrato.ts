@@ -59,3 +59,14 @@ export function tipoEsIndeterminado(c: { contrato_id?: unknown; nombre_contrato?
   const id = c?.contrato_id ? porId.get(String(c.contrato_id)) : undefined;
   return id ?? porNombre.get(String(c?.nombre_contrato || "").trim().toLowerCase());
 }
+
+/**
+ * LA TRANSICIÓN DIARIA, EN UN SOLO SENTIDO (decisión del usuario): un VIGENTE cuya baja ya pasó pasa a
+ * FINALIZADO. Nunca al revés, y nada más: ni SIN_DETERMINAR, ni ANULADO, ni un VIGENTE sin baja (un
+ * indeterminado abierto sólo se cierra con una baja). `null` = no cambia. Puro.
+ */
+export function transicionDiaria(c: { estadoContrato?: unknown; fecha_baja_contrato?: unknown }, hoy: string): "FINALIZADO" | null {
+  if (c?.estadoContrato !== "VIGENTE") return null;
+  const baja = fechaISO(c.fecha_baja_contrato);
+  return baja && baja < hoy ? "FINALIZADO" : null;
+}
