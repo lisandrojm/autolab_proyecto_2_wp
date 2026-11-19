@@ -7,6 +7,7 @@ import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { TablaRelacionesArca } from "./TablaRelacionesArca";
 import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
+import { SincronizarBajasModal } from "./SincronizarBajasModal";
 
 /*
   ANTIGÜEDAD SEGÚN ARCA: la copia local de las relaciones laborales de Simplificación Registral y la
@@ -146,11 +147,13 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
     { columna: "colaborador", direccion: "asc", porDefecto: true },
   );
 
+  const [verBajas, setVerBajas] = useState(false);
   const ultima = estado?.ultimaSync || null;
   const puedeSincronizar = !!estado && !estado.enCurso && !estado.arcaOcupadaPor && estado.hayCredenciales;
 
   return (
     <div className="space-y-6">
+      <SincronizarBajasModal isOpen={verBajas} onClose={() => setVerBajas(false)} />
       {/* La sincronización */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -196,6 +199,16 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
             >
               <FontAwesomeIcon icon={estado?.enCurso ? faSpinner : faRotate} spin={!!estado?.enCurso} />
               {estado?.enCurso ? "Sincronizando…" : "Sincronizar ahora"}
+            </button>
+            {/* Lleva a los CONTRATOS las bajas que el espejo ya tiene (etapa 3, paso 2): no abre ARCA. */}
+            <button
+              type="button"
+              onClick={() => setVerBajas(true)}
+              disabled={!!estado?.enCurso}
+              title={estado?.enCurso ? "Esperá a que termine la sincronización: las bajas salen del espejo actualizado" : "Escribir en los contratos las bajas que ARCA ya tiene (con misma persona, empleadora y fecha de alta)"}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-600 text-blue-700 dark:text-blue-300 text-sm font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Sincronizar bajas a contratos
             </button>
             {estado?.arcaOcupadaPor && <span className="text-[11px] text-amber-600">ARCA está ocupada por {estado.arcaOcupadaPor}.</span>}
           </div>

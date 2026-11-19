@@ -16,7 +16,9 @@
  *                   bug del que venimos. Va a un listado para que lo resuelva una persona.
  *   ANULADO         lo pone la anulación; esto no lo calcula ni lo toca.
  */
-import { fechaISO } from "./contratoVigencia.js";
+import { fechaISO as fechaTexto } from "./contratoVigencia.js";
+/** `fechaISO` acepta texto; algunas fechas pueden estar guardadas como Date. */
+const fechaISO = (v) => (v instanceof Date ? (Number.isNaN(v.getTime()) ? "" : v.toISOString().slice(0, 10)) : fechaTexto(v));
 /**
  * @param tipoIndeterminado el tipo del contrato (ABM de Contratos) es de tiempo indeterminado; `undefined`
  *   si no se pudo saber cuál es el tipo.

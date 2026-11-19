@@ -20,6 +20,8 @@ interface IContract {
   /** Etapa 3: ver `utils/estadoDeContrato.ts`. SIN_DETERMINAR = los datos no alcanzan (motivo en `estadoContratoMotivo`). */
   estadoContrato?: "VIGENTE" | "FINALIZADO" | "SIN_DETERMINAR" | "ANULADO";
   estadoContratoMotivo?: string;
+  origenBaja?: string;
+  bajaArca?: { fin?: string; situacionBaja?: string; empleadoraCuit?: string; bajaAnterior?: string | null; aplicadaEl?: Date; tipo?: string };
   anulacion?: { el: Date; por?: Types.ObjectId | null; porNombre?: string; motivo?: string; claveFrame?: string; claveIdentidad?: string };
   proyecto_id: number;
   empleado_id: number;
@@ -464,6 +466,12 @@ const contractSchema = new Schema<IContract>(
     contratoKey: { type: Schema.Types.ObjectId },
     estadoContrato: { type: String, enum: ["VIGENTE", "FINALIZADO", "SIN_DETERMINAR", "ANULADO"] },
     estadoContratoMotivo: { type: String },
+    /** De dónde salió la baja: "ARCA_SYNC" = la escribió «Sincronizar bajas» con evidencia fuerte (etapa 3, paso 2). */
+    origenBaja: { type: String },
+    bajaArca: {
+      type: new Schema({ fin: String, situacionBaja: String, empleadoraCuit: String, bajaAnterior: String, aplicadaEl: Date, tipo: String }, { _id: false }),
+      default: undefined,
+    },
     anulacion: {
       type: new Schema({ el: Date, por: { type: Schema.Types.ObjectId, ref: "User" }, porNombre: String, motivo: String, claveFrame: String, claveIdentidad: String }, { _id: false }),
       default: undefined,

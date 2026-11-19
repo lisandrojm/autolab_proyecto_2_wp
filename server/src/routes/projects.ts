@@ -2525,6 +2525,11 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         if ((enrichedContract as any).solicitudId === undefined && (prevContract as any).solicitudId) (enrichedContract as any).solicitudId = (prevContract as any).solicitudId;
         // Editar no le cambia el origen al contrato.
         if ((prevContract as any).origen) (enrichedContract as any).origen = (prevContract as any).origen;
+        // La baja que trajo ARCA (etapa 3, paso 2) conserva de dónde salió mientras la baja siga siendo ésa.
+        if ((prevContract as any).origenBaja && fechaISO(String((enrichedContract as any).fecha_baja_contrato || "")) === fechaISO(String((prevContract as any).fecha_baja_contrato || ""))) {
+          (enrichedContract as any).origenBaja = (prevContract as any).origenBaja;
+          (enrichedContract as any).bajaArca = (prevContract as any).bajaArca;
+        }
         // Lo de Firma digital tampoco lo conoce el wizard: los PDFs generados, si ya se envió a firmar y
         // el texto de Contrato/Release custom. Sin arrastrarlos, editar el contrato borraba el texto
         // escrito y dejaba un trámite ya enviado como si nunca se hubiera enviado.

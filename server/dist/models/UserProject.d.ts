@@ -15,6 +15,15 @@ interface IContract {
     /** Etapa 3: ver `utils/estadoDeContrato.ts`. SIN_DETERMINAR = los datos no alcanzan (motivo en `estadoContratoMotivo`). */
     estadoContrato?: "VIGENTE" | "FINALIZADO" | "SIN_DETERMINAR" | "ANULADO";
     estadoContratoMotivo?: string;
+    origenBaja?: string;
+    bajaArca?: {
+        fin?: string;
+        situacionBaja?: string;
+        empleadoraCuit?: string;
+        bajaAnterior?: string | null;
+        aplicadaEl?: Date;
+        tipo?: string;
+    };
     anulacion?: {
         el: Date;
         por?: Types.ObjectId | null;

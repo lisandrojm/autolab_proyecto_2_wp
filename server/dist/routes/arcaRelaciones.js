@@ -13,6 +13,7 @@ import { configSyncDe, horaDe } from "../services/arca/sincronizacionRelacionesC
 import { yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { hoyArgentina } from "../utils/contratoVigencia.js";
 import { isoDe } from "../services/arca/relacionesArcaStore.js";
+import { aplicarBajasArca, planDeBajasArca } from "../services/arca/bajasArcaContratos.js";
 /**
  * RELACIONES LABORALES DE ARCA Y ANTIGÜEDAD: lo que se lee en la pestaña «Antigüedad ARCA» de
  * Documentos y lo que la hace sincronizar. Nada de acá escribe en ARCA; la sincronización sólo lee.
@@ -173,6 +174,38 @@ router.post("/sincronizar", requireTenant, authenticateToken, permiso, async (re
         // Sin `await`: la corrida sigue por su cuenta y la pantalla la sigue por GET /estado.
         void sincronizarRelacionesTenant(tenantId, { meses, automatica: false }).catch((e) => console.error("[sync-relaciones-arca] manual:", e?.message || e));
         res.status(202).json({ arrancada: true, meses });
+    }
+    catch (e) {
+        errorDe(res, e);
+    }
+});
+/*
+  SINCRONIZAR BAJAS A LOS CONTRATOS (etapa 3, paso 2, 19/11/2026): lleva al contrato las bajas que ARCA
+  ya tiene en el espejo, sólo con evidencia fuerte (`services/arca/bajasArcaContratos.ts`). Primero se
+  mira (GET), después se aplica (POST); el POST vuelve a calcular el plan acá y escribe sólo lo que sigue
+  igual. Cada escritura queda en la auditoría de contratos a nombre de quien apretó el botón.
+*/
+const itemParaPantalla = ({ bajaCruda, altaCruda, ...x }) => x;
+/** GET /arca/relaciones/bajas-contratos — qué se escribiría y qué no, con por qué. No escribe. */
+router.get("/bajas-contratos", requireTenant, authenticateToken, permiso, async (req, res) => {
+    try {
+        const plan = await planDeBajasArca(req.tenantObjectId);
+        res.json({ ...plan, items: plan.items.map(itemParaPantalla), enCurso: syncEnCurso(String(req.tenantObjectId)) });
+    }
+    catch (e) {
+        errorDe(res, e);
+    }
+});
+/** POST /arca/relaciones/bajas-contratos/aplicar { claves?: string[] } — escribe las bajas (todas las aplicables, o esas). */
+router.post("/bajas-contratos/aplicar", requireTenant, authenticateToken, permiso, async (req, res) => {
+    try {
+        if (syncEnCurso(String(req.tenantObjectId))) {
+            res.status(409).json({ error: "Hay una sincronización de Relaciones Laborales en curso: esperá a que termine, así las bajas salen del espejo actualizado." });
+            return;
+        }
+        const claves = Array.isArray(req.body?.claves) ? req.body.claves.map(String) : undefined;
+        const r = await aplicarBajasArca(req.tenantObjectId, { claves });
+        res.json({ escritos: r.escritos.map(itemParaPantalla), cambiaron: r.cambiaron.map(itemParaPantalla) });
     }
     catch (e) {
         errorDe(res, e);

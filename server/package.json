@@ -234,7 +234,7 @@
     "test:import-identidad": "tsx --test src/utils/additiveSync.identidad.test.ts",
     "test:una-solicitud": "tsx --test src/utils/unaSolicitudUnContrato.test.ts",
     "test:import-pausado": "tsx --test src/utils/importFramePausado.test.ts",
-    "test:estado-contrato": "tsx --test src/utils/estadoDeContrato.test.ts",
+    "test:estado-contrato": "tsx --test src/utils/estadoDeContrato.test.ts src/utils/bajasArcaContrato.test.ts",
     "test:auditoria-contratos": "tsx --test src/utils/auditoriaContratos.test.ts src/scripts/auditoriaEnScripts.test.ts",
     "test:anulacion-contrato": "tsx --test src/services/anulacionContrato.test.ts",
     "test:plantillas": "tsx --test src/compartido/jornadas.test.ts src/compartido/solicitudDeContratacion.test.ts src/utils/superposicionContratos.test.ts src/utils/planDeLote.test.ts src/services/plantillasEquipo.capas.test.ts",

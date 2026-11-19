@@ -99,7 +99,44 @@ export interface RelacionResumida {
   puestoDesempenado: string;
 }
 
+/** Un contrato que «Sincronizar bajas» escribiría (o no, y por qué). Ver server `utils/bajasArcaContrato.ts`. */
+export type TipoCambioBaja = "baja_nueva" | "baja_anterior" | "arca_por_tramos" | "arca_plazo_mas_corto" | "arca_posterior" | "arca_abierta";
+export interface ItemBajaArca {
+  userProjectId: string;
+  userId: string;
+  persona: string;
+  cuil: string;
+  proyecto: string;
+  contratoKey: string;
+  posicion: number;
+  contrato: string;
+  alta: string;
+  bajaContrato: string;
+  finArca: string;
+  situacionBaja: string;
+  empleadora: string;
+  tipo: TipoCambioBaja;
+  aplicar: boolean;
+}
+export interface PlanBajasArca {
+  hoy: string;
+  espejoAl: string | null;
+  items: ItemBajaArca[];
+  resumen: Record<TipoCambioBaja, number>;
+  enCurso?: unknown;
+}
+
 export const arcaRelacionesAPI = {
+  /** Qué bajas de ARCA se llevarían a los contratos (no escribe). */
+  async planBajas(): Promise<PlanBajasArca> {
+    const { data } = await axios.get("/arca/relaciones/bajas-contratos");
+    return data;
+  },
+  /** Escribe las bajas (todas las aplicables, o las de esas claves). El server recalcula el plan. */
+  async aplicarBajas(claves?: string[]): Promise<{ escritos: ItemBajaArca[]; cambiaron: ItemBajaArca[] }> {
+    const { data } = await axios.post("/arca/relaciones/bajas-contratos/aplicar", claves ? { claves } : {});
+    return data;
+  },
   /** Las relaciones de varias personas por CUIL, de la más nueva a la más vieja (una sola consulta). */
   async relacionesDePersonas(cuils: string[]): Promise<{ empresas: EmpresaConCuit[]; relaciones: Record<string, RelacionResumida[]> }> {
     const { data } = await axios.post("/arca/relaciones/personas", { cuils });

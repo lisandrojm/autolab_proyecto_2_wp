@@ -16,7 +16,10 @@
  *                   bug del que venimos. Va a un listado para que lo resuelva una persona.
  *   ANULADO         lo pone la anulación; esto no lo calcula ni lo toca.
  */
-import { fechaISO } from "./contratoVigencia.js";
+import { fechaISO as fechaTexto } from "./contratoVigencia.js";
+
+/** `fechaISO` acepta texto; algunas fechas pueden estar guardadas como Date. */
+const fechaISO = (v: unknown): string => (v instanceof Date ? (Number.isNaN(v.getTime()) ? "" : v.toISOString().slice(0, 10)) : fechaTexto(v as any));
 
 export type EstadoContrato = "VIGENTE" | "FINALIZADO" | "SIN_DETERMINAR";
 
@@ -30,8 +33,8 @@ export interface EstadoCalculado {
  *   si no se pudo saber cuál es el tipo.
  */
 export function estadoSegunDatosLocales(c: { fecha_alta_contrato?: unknown; fecha_baja_contrato?: unknown }, tipoIndeterminado: boolean | undefined, hoy: string): EstadoCalculado {
-  const alta = fechaISO(c?.fecha_alta_contrato as any);
-  const baja = fechaISO(c?.fecha_baja_contrato as any);
+  const alta = fechaISO(c?.fecha_alta_contrato);
+  const baja = fechaISO(c?.fecha_baja_contrato);
   if (!alta) return { estado: "SIN_DETERMINAR", motivo: "sin fecha de alta" };
   if (baja && baja < alta) return { estado: "SIN_DETERMINAR", motivo: `la baja (${baja}) es anterior al alta (${alta})` };
   if (baja) return { estado: baja < hoy ? "FINALIZADO" : "VIGENTE" };
@@ -46,8 +49,8 @@ export function estadoSegunDatosLocales(c: { fecha_alta_contrato?: unknown; fech
  */
 export function rigeHoySegunEstado(c: { estadoContrato?: unknown; fecha_alta_contrato?: unknown; fecha_baja_contrato?: unknown }, hoy: string): boolean {
   if (c?.estadoContrato !== "VIGENTE") return false;
-  const alta = fechaISO(c.fecha_alta_contrato as any);
-  const baja = fechaISO(c.fecha_baja_contrato as any);
+  const alta = fechaISO(c.fecha_alta_contrato);
+  const baja = fechaISO(c.fecha_baja_contrato);
   return !!alta && alta <= hoy && (!baja || baja >= hoy);
 }
 
