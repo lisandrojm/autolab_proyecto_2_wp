@@ -29,8 +29,7 @@ import mongoose from "mongoose";
 import { env } from "../config/env.js";
 import { esContratoVigente, fechaISO, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
 import { estadoSegunDatosLocales, rigeHoySegunEstado, tipoEsIndeterminado } from "../utils/estadoDeContrato.js";
-import { bajaDeArcaQueAplica } from "../services/arca/altasVigentes.js";
-import { cambioDeBajaSegunArca } from "../utils/bajasArcaContrato.js";
+import { bajasSoloEnMemoria, imprimirSeccionD } from "../services/arca/bajasSoloEnMemoria.js";
 const db = () => mongoose.connection.db;
 const anulado = (c) => c?.estadoContrato === "ANULADO";
 /** `getContratoActivo` con la vigencia nueva: misma prioridad, otro «vigente». */
@@ -58,19 +57,8 @@ async function main() {
     const ups = await db()
         .collection("users_&_projects")
         .find({})
-        .project({ userId: 1, nombre_proyecto: 1, ...Object.fromEntries(["contratoKey", "estadoContrato", "estadoContratoMotivo", "fecha_alta_contrato", "fecha_baja_contrato", "fecha_carga", "contrato_id", "nombre_contrato", "empresaContratoId"].map((c) => [`contracts.${c}`, 1])) })
+        .project({ userId: 1, nombre_proyecto: 1, ...Object.fromEntries(["contratoKey", "estadoContrato", "estadoContratoMotivo", "fecha_alta_contrato", "fecha_baja_contrato", "fecha_carga", "contrato_id", "nombre_contrato"].map((c) => [`contracts.${c}`, 1])) })
         .toArray();
-    // Para D: CUIL de cada persona, CUIT de cada empresa y el espejo de ARCA.
-    const dig = (v) => String(v ?? "").replace(/\D/g, "");
-    const cuilDe = new Map((await db().collection("users").find({ "metadata.cuit": { $exists: true } }).project({ "metadata.cuit": 1 }).toArray()).map((u) => [String(u._id), dig(u.metadata?.cuit)]));
-    const cuitDe = new Map((await db().collection("companies").find({}).project({ cuit: 1 }).toArray()).map((e) => [String(e._id), dig(e.cuit)]));
-    const isoD = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
-    const relsPorCuil = new Map();
-    for (const r of await db().collection("relaciones_laborales_arca").find({}).project({ cuil: 1, empleadoraCuit: 1, fechaInicio: 1, fechaFin: 1, situacionBaja: 1 }).toArray()) {
-        const x = { cuil: r.cuil, empleadoraCuit: r.empleadoraCuit, inicio: isoD(r.fechaInicio), fin: isoD(r.fechaFin), situacionBaja: r.situacionBaja || "" };
-        (relsPorCuil.get(x.cuil) || relsPorCuil.set(x.cuil, []).get(x.cuil)).push(x);
-    }
-    const soloEnMemoria = new Map();
     const nombres = new Map();
     const nombreDe = async (id) => {
         const k = String(id);
@@ -113,18 +101,6 @@ async function main() {
                 difEstado.push(`${await quien()} · guardado ${guardado} · sus datos hoy dan ${hoyDaria.estado}${hoyDaria.motivo ? ` (${hoyDaria.motivo})` : ""}`);
             if (c.estadoContrato === "SIN_DETERMINAR")
                 sinDeterminar.push(`${await quien()} · ${c.estadoContratoMotivo || "sin motivo"}`);
-            // D. ¿La validación le aplica una baja de ARCA que el contrato no tiene escrita?
-            const cuil = cuilDe.get(String(up.userId)) || "";
-            const cuit = c.empresaContratoId ? cuitDe.get(String(c.empresaContratoId)) || "" : "";
-            const rels = relsPorCuil.get(cuil) || [];
-            const altaD = fechaISO(c.fecha_alta_contrato instanceof Date ? c.fecha_alta_contrato.toISOString() : c.fecha_alta_contrato);
-            const bajaD = fechaISO(c.fecha_baja_contrato instanceof Date ? c.fecha_baja_contrato.toISOString() : c.fecha_baja_contrato);
-            const enMemoria = bajaDeArcaQueAplica({ cuil, cuit, alta: altaD, baja: bajaD }, rels);
-            if (enMemoria) {
-                const porque = cambioDeBajaSegunArca(c, cuil, cuit, rels, hoy);
-                const k = porque ? (porque.aplicar ? "falta escribirla (Sincronizar bajas la escribe)" : `no se escribe: ${porque.tipo}`) : "no se escribe: sin clasificar";
-                (soloEnMemoria.get(k) || soloEnMemoria.set(k, []).get(k)).push(`${await quien()} · la validación usa la baja ${enMemoria.fin}`);
-            }
         }
         const v = getContratoActivo(cs, hoy);
         const n = activoNuevo(cs, hoy);
@@ -148,14 +124,10 @@ async function main() {
     listar("A. Contratos donde «rige hoy» cambia de la lógica vieja a la nueva", difVigencia);
     listar("B. Contratos cuyo estado guardado no es el que dan hoy sus datos", difEstado);
     listar("C. Vínculos donde cambia el contrato que rige", difRige);
-    const totalD = [...soloEnMemoria.values()].reduce((n, l) => n + l.length, 0);
-    console.log(`\nD. Bajas de ARCA que la validación aplica en memoria y el contrato no tiene escritas: ${totalD}`);
-    for (const [k, l] of soloEnMemoria)
-        listar(`   ${k}`, l);
     listar("SIN_DETERMINAR (los resuelve una persona)", sinDeterminar);
     const ok = !difVigencia.length && !difRige.length;
     console.log(`\n${ok ? "✔ La vigencia nueva coincide con la vieja en todos los contratos y vínculos." : "✖ Hay diferencias: cada una se contesta antes de cambiar los helpers."}`);
-    console.log(totalD ? `✖ Paso 2 incompleto: ${totalD} baja(s) de ARCA existen sólo en memoria. Los helpers no se tocan hasta resolverlas.` : "✔ Paso 2 completo: ninguna baja de ARCA existe sólo en memoria.");
+    imprimirSeccionD(await bajasSoloEnMemoria(hoy), detalle);
 }
 main()
     .catch((e) => { console.error(e); process.exitCode = 1; })

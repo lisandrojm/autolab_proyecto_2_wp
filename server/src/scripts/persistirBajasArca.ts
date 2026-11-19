@@ -11,6 +11,9 @@
  * script como autor). Se deshace contrato por contrato con la auditoría: `bajaArca.bajaAnterior` guarda
  * la baja que tenía.
  *
+ * Al terminar recalcula la sección D (`bajasSoloEnMemoria`): lo que la validación aplica en memoria y
+ * el contrato no tiene escrito. También en dry-run.
+ *
  * También lista lo que NO se escribe y alguien tiene que mirar: ARCA terminó después que el contrato, y
  * contratos terminados que en ARCA siguen abiertos (falta presentar la baja en ARCA).
  */
@@ -18,6 +21,7 @@ import mongoose from "mongoose";
 import { env } from "../config/env.js";
 import { Tenant } from "../models/Tenant.js";
 import { aplicarBajasArca, planDeBajasArca, type ItemBajaArca } from "../services/arca/bajasArcaContratos.js";
+import { bajasSoloEnMemoria, imprimirSeccionD } from "../services/arca/bajasSoloEnMemoria.js";
 import { contextoDeScript } from "../utils/contextoAuditoria.js";
 
 const dias = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
@@ -55,6 +59,9 @@ async function main() {
     }
     console.log("");
   }
+  // Siempre, también en dry-run: el hueco entre lo que la validación aplica en memoria y lo que se
+  // escribió se vuelve a abrir con cada novedad de ARCA (pedido del usuario, 19/11).
+  imprimirSeccionD(await bajasSoloEnMemoria(), detalle);
 }
 
 main()
