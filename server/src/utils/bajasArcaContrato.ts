@@ -51,6 +51,10 @@ export interface RelacionArca {
   situacionBaja?: string;
 }
 
+/** Umbral de alerta de la granularidad (decisión del usuario, 19/11): 15 días. */
+export const UMBRAL_GRANULARIDAD_DIAS = 15;
+const diasEntre = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
+
 export type TipoCambioBaja = "baja_nueva" | "baja_por_tramos" | "baja_anterior" | "arca_granularidad" | "revision_manual" | "arca_posterior" | "arca_abierta";
 
 export interface CambioDeBaja {
@@ -60,6 +64,10 @@ export interface CambioDeBaja {
   bajaContrato: string;
   finArca: string;
   situacionBaja: string;
+  /** En `arca_granularidad`: cuántos días antes de la baja del contrato termina el ÚLTIMO tramo de ARCA.
+   *  Más de `UMBRAL_GRANULARIDAD_DIAS` ya no parece granularidad (la persona pudo dejar antes): se lista
+   *  aparte para que alguien mire, sin cambiar la decisión. */
+  diasAntesDelFin?: number;
   /** Los tramos de ARCA que se miraron (misma persona y empleadora), para mostrar la evidencia. */
   tramos?: { inicio: string; fin: string; situacionBaja: string }[];
 }
@@ -100,7 +108,10 @@ export function cambioDeBajaSegunArca(
     if (tramos.length === 1 && esHecho(r)) return { tipo: "baja_anterior", aplicar: true, ...base };
     const fueraDeRango = tramos.some((x) => x.inicio < alta || !x.fin || x.fin > baja);
     if (fueraDeRango) return { tipo: "revision_manual", aplicar: false, ...base, tramos: ver(tramos) };
-    if (ultimo.fin === baja || tramos.every((x) => !esHecho(x))) return { tipo: "arca_granularidad", aplicar: false, ...base, tramos: ver(tramos) };
+    if (ultimo.fin === baja || tramos.every((x) => !esHecho(x))) {
+      const finUltimo = tramos.map((x) => x.fin).sort().at(-1)!;
+      return { tipo: "arca_granularidad", aplicar: false, ...base, tramos: ver(tramos), diasAntesDelFin: diasEntre(finUltimo, baja) };
+    }
     return { tipo: "revision_manual", aplicar: false, ...base, tramos: ver(tramos) };
   }
   if (r.fin && baja && r.fin > baja) return { tipo: "arca_posterior", aplicar: false, ...base };

@@ -40,6 +40,9 @@ const diaSiguiente = (f) => {
     d.setUTCDate(d.getUTCDate() + 1);
     return d.toISOString().slice(0, 10);
 };
+/** Umbral de alerta de la granularidad (decisión del usuario, 19/11): 15 días. */
+export const UMBRAL_GRANULARIDAD_DIAS = 15;
+const diasEntre = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
 export function cambioDeBajaSegunArca(contrato, cuil, cuit, relaciones, hoy) {
     if (contrato?.estadoContrato === "ANULADO")
         return null;
@@ -78,8 +81,10 @@ export function cambioDeBajaSegunArca(contrato, cuil, cuit, relaciones, hoy) {
         const fueraDeRango = tramos.some((x) => x.inicio < alta || !x.fin || x.fin > baja);
         if (fueraDeRango)
             return { tipo: "revision_manual", aplicar: false, ...base, tramos: ver(tramos) };
-        if (ultimo.fin === baja || tramos.every((x) => !esHecho(x)))
-            return { tipo: "arca_granularidad", aplicar: false, ...base, tramos: ver(tramos) };
+        if (ultimo.fin === baja || tramos.every((x) => !esHecho(x))) {
+            const finUltimo = tramos.map((x) => x.fin).sort().at(-1);
+            return { tipo: "arca_granularidad", aplicar: false, ...base, tramos: ver(tramos), diasAntesDelFin: diasEntre(finUltimo, baja) };
+        }
         return { tipo: "revision_manual", aplicar: false, ...base, tramos: ver(tramos) };
     }
     if (r.fin && baja && r.fin > baja)

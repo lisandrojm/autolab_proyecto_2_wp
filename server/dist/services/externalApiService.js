@@ -10,6 +10,7 @@ import { buildAdditiveSet, findNewContracts, sinRepetidosDeFrame, USER_FRAME_WHI
 import { resolveRoleFrameRefs } from "../utils/roleFrameSync.js";
 import { valoracionParaMargen } from "./valoracionDelTenant.js";
 import { conClaveNueva } from "../utils/identidadContrato.js";
+import { conEstadoCalculado } from "./estadoContratoAlGuardar.js";
 import { Contrato } from "../models/Contrato.js";
 import { DiscrepanciaFrame } from "../models/DiscrepanciaFrame.js";
 export class ExternalApiService {
@@ -496,8 +497,9 @@ export class ExternalApiService {
                                             upChanged = true;
                                         }
                                         if (newContracts.length > 0) {
-                                            // `updateOne` no pasa por los hooks del modelo: la clave de cada contrato nuevo va acá (etapa 2).
-                                            updateOps.$push = { contracts: { $each: conClaveNueva(newContracts) } };
+                                            // `updateOne` no pasa por los hooks del modelo: la clave (etapa 2) y el estado (etapa 3) de
+                                            // cada contrato nuevo van acá.
+                                            updateOps.$push = { contracts: { $each: await conEstadoCalculado(conClaveNueva(newContracts)) } };
                                             upChanged = true;
                                             console.log(`[EXTERNAL API] Appending ${newContracts.length} new contract(s) to UserProject ${savedProj._id} (emp ${emp.email}, proj ${extProjId}).`);
                                         }

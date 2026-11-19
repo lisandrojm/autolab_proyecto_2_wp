@@ -22,10 +22,11 @@ import { env } from "../config/env.js";
 import { Tenant } from "../models/Tenant.js";
 import { aplicarBajasArca, planDeBajasArca, type ItemBajaArca } from "../services/arca/bajasArcaContratos.js";
 import { bajasSoloEnMemoria, imprimirSeccionD } from "../services/arca/bajasSoloEnMemoria.js";
+import { UMBRAL_GRANULARIDAD_DIAS } from "../utils/bajasArcaContrato.js";
 import { contextoDeScript } from "../utils/contextoAuditoria.js";
 
 const dias = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
-const fila = (x: ItemBajaArca) => `${x.persona} (${x.cuil}) · ${x.proyecto} · #${x.posicion} ${x.contrato} · ${x.empleadora} · alta ${x.alta} · baja WeProdu ${x.bajaContrato || "—"} · ARCA ${x.finArca || "abierta"}${x.situacionBaja ? ` (${x.situacionBaja})` : ""}`;
+const fila = (x: ItemBajaArca) => `${x.diasAntesDelFin !== undefined ? `[${x.diasAntesDelFin} d antes] ` : ""}${x.persona} (${x.cuil}) · ${x.proyecto} · #${x.posicion} ${x.contrato} · ${x.empleadora} · alta ${x.alta} · baja WeProdu ${x.bajaContrato || "—"} · ARCA ${x.finArca || "abierta"}${x.situacionBaja ? ` (${x.situacionBaja})` : ""}`;
 
 async function main() {
   const commit = process.argv.includes("--commit");
@@ -54,7 +55,8 @@ async function main() {
     grupo("SE ESCRIBE: sin baja, ARCA en tramos contiguos con el último cerrado (fin del último tramo)", plan.items.filter((x) => x.tipo === "baja_por_tramos"));
     grupo("SE ESCRIBE: ARCA terminó antes que la baja del contrato, por un hecho", plan.items.filter((x) => x.tipo === "baja_anterior"));
     grupo("NO, REVISIÓN MANUAL: tramos fuera del período del contrato o un hecho entre tramos", plan.items.filter((x) => x.tipo === "revision_manual"));
-    grupo("NO: ARCA declara por jornadas («vencimiento») dentro del contrato; manda el plazo del contrato", plan.items.filter((x) => x.tipo === "arca_granularidad"));
+    grupo("NO: ARCA declara por jornadas («vencimiento») dentro del contrato; manda el plazo del contrato", plan.items.filter((x) => x.tipo === "arca_granularidad" && (x.diasAntesDelFin ?? 0) <= UMBRAL_GRANULARIDAD_DIAS));
+    grupo(`MIRAR: granularidad, pero el último tramo de ARCA termina más de ${UMBRAL_GRANULARIDAD_DIAS} días antes que el contrato (¿dejó antes?)`, plan.items.filter((x) => x.tipo === "arca_granularidad" && (x.diasAntesDelFin ?? 0) > UMBRAL_GRANULARIDAD_DIAS));
     grupo("NO: ARCA terminó más de 3 días después que el contrato", plan.items.filter((x) => x.tipo === "arca_posterior" && dias(x.bajaContrato, x.finArca) > 3));
     grupo("NO: el contrato terminó y en ARCA sigue abierta (falta la baja en ARCA)", plan.items.filter((x) => x.tipo === "arca_abierta"));
     if (commit) {

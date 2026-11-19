@@ -29,6 +29,7 @@ import { env } from "../config/env.js";
 import { escribirContratosAuditado } from "../services/auditoriaContratos.js";
 import { contextoDeScript } from "../utils/contextoAuditoria.js";
 import { fechaISO } from "../utils/contratoVigencia.js";
+import { catalogoDeTipos, estadoAlEscribir } from "../services/estadoContratoAlGuardar.js";
 
 const CARPETA_RESPALDOS = path.resolve(process.cwd(), "migraciones-respaldo");
 const arg = (n: string) => { const i = process.argv.indexOf(n); return i >= 0 ? process.argv[i + 1] : undefined; };
@@ -76,7 +77,10 @@ async function main() {
   fs.mkdirSync(CARPETA_RESPALDOS, { recursive: true });
   const archivo = path.join(CARPETA_RESPALDOS, `fecha-alta-contrato-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
   fs.writeFileSync(archivo, JSON.stringify(respaldo, null, 1));
-  const res = await escribirContratosAuditado(db().collection("users_&_projects") as any, { _id: up._id }, { $set: { "contracts.$[c].fecha_alta_contrato": nueva } }, { arrayFilters: [{ "c.contratoKey": k, "c.fecha_alta_contrato": c.fecha_alta_contrato }] });
+  // El estado con el alta nueva, con el cálculo compartido (un `updateOne` no pasa por el hook).
+  const estado = estadoAlEscribir({ ...c, fecha_alta_contrato: nueva }, await catalogoDeTipos());
+  const setEstado = estado && c.estadoContrato !== "ANULADO" ? { "contracts.$[c].estadoContrato": estado.estadoContrato, ...(estado.estadoContratoMotivo ? { "contracts.$[c].estadoContratoMotivo": estado.estadoContratoMotivo } : {}) } : {};
+  const res = await escribirContratosAuditado(db().collection("users_&_projects") as any, { _id: up._id }, { $set: { "contracts.$[c].fecha_alta_contrato": nueva, ...setEstado } }, { arrayFilters: [{ "c.contratoKey": k, "c.fecha_alta_contrato": c.fecha_alta_contrato }] });
   console.log(res.modifiedCount === 1 ? `  ✔ Corregido. Respaldo: ${archivo}` : "  = No se modificó (cambió entre la lectura y la escritura).");
 }
 
@@ -84,7 +88,8 @@ async function revertir(archivo: string) {
   const r: any = JSON.parse(fs.readFileSync(archivo, "utf8"));
   const k = new Types.ObjectId(r.contratoKey);
   const fecha = (v: any) => (typeof v === "string" && /T/.test(v) ? new Date(v) : v);
-  const res = await escribirContratosAuditado(db().collection("users_&_projects") as any, { _id: new Types.ObjectId(r.userProjectId) }, { $set: { "contracts.$[c].fecha_alta_contrato": fecha(r.antes.fecha_alta_contrato) } }, { arrayFilters: [{ "c.contratoKey": k, "c.fecha_alta_contrato": fecha(r.despues.fecha_alta_contrato) }] });
+  // Al revertir, el estado se vacía y lo completa la barrida con el alta restaurada.
+  const res = await escribirContratosAuditado(db().collection("users_&_projects") as any, { _id: new Types.ObjectId(r.userProjectId) }, { $set: { "contracts.$[c].fecha_alta_contrato": fecha(r.antes.fecha_alta_contrato), "contracts.$[c].estadoContrato": null } }, { arrayFilters: [{ "c.contratoKey": k, "c.fecha_alta_contrato": fecha(r.despues.fecha_alta_contrato) }] });
   console.log(res.modifiedCount === 1 ? "Revertido." : "No se revirtió: el contrato ya no está como lo dejó la corrección.");
 }
 

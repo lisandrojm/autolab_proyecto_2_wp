@@ -117,6 +117,24 @@ async function main() {
   const ok = !difVigencia.length && !difRige.length;
   console.log(`\n${ok ? "✔ La vigencia nueva coincide con la vieja en todos los contratos y vínculos." : "✖ Hay diferencias: cada una se contesta antes de cambiar los helpers."}`);
   imprimirSeccionD(await bajasSoloEnMemoria(hoy), detalle);
+
+  // E. EL DETECTOR DE CAMINOS SIN ESTADO: lo que completó la barrida (la red) y la escritura anterior de
+  // cada contrato, que es la que lo dejó sin estado. Si sube, apareció un camino nuevo (pedido del usuario).
+  const aud = db().collection("auditoria_contratos");
+  const completados = await aud.find({ detalle: "tarea initTransicionEstadoScheduler", motivo: /^Contrato sin estado/ }).project({ contratoKey: 1, el: 1 }).sort({ el: 1 }).toArray();
+  const porDia = new Map<string, number>();
+  const porCamino = new Map<string, number>();
+  for (const e of completados) {
+    const d = new Date(e.el).toISOString().slice(0, 10);
+    porDia.set(d, (porDia.get(d) || 0) + 1);
+    const previo: any = await aud.find({ contratoKey: e.contratoKey, el: { $lt: e.el }, detalle: { $ne: "tarea initTransicionEstadoScheduler" } }).sort({ el: -1 }).limit(1).next();
+    const camino = previo ? `${previo.detalle || previo.origen} (${previo.operacion || "?"}, ${new Date(previo.el).toISOString().slice(0, 16)})` : "sin evento anterior";
+    porCamino.set(camino, (porCamino.get(camino) || 0) + 1);
+  }
+  console.log(`\nE. Contratos que estuvieron sin estado y completó la barrida: ${completados.length}`);
+  for (const [d, n] of porDia) console.log(`   ${d}: ${n}`);
+  console.log("   qué escritura los dejó sin estado (el evento anterior de cada uno):");
+  for (const [c, n] of [...porCamino].sort((a, b) => b[1] - a[1])) console.log(`   ${String(n).padStart(4)}  ${c}`);
 }
 
 main()

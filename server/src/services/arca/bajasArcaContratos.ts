@@ -24,6 +24,7 @@ import { RelacionLaboralArca } from "../../models/RelacionLaboralArca.js";
 import { fechaISO, hoyArgentina } from "../../utils/contratoVigencia.js";
 import { bajaConFormatoDelAlta, cambioDeBajaSegunArca, type RelacionArca, type TipoCambioBaja } from "../../utils/bajasArcaContrato.js";
 import { enContexto } from "../../utils/contextoAuditoria.js";
+import { estadoAlEscribir } from "../estadoContratoAlGuardar.js";
 
 const dig = (v: unknown) => String(v ?? "").replace(/\D/g, "");
 const iso = (d: unknown) => (d ? new Date(d as any).toISOString().slice(0, 10) : "");
@@ -46,6 +47,7 @@ export interface ItemBajaArca {
   empleadoraCuit: string;
   tipo: TipoCambioBaja;
   aplicar: boolean;
+  diasAntesDelFin?: number;
   /** Los tramos de ARCA mirados (por tramos, granularidad, revisión manual). */
   tramos?: { inicio: string; fin: string; situacionBaja: string }[];
   /** El valor crudo de la baja, para escribir sólo si sigue igual. */
@@ -141,6 +143,8 @@ export async function aplicarBajasArca(tenantId: Types.ObjectId | string, opcion
       // De a un contrato: el filtro lleva la baja que tenía, así lo que cambió en el medio no se pisa.
       for (const x of lista) {
         const fin = bajaConFormatoDelAlta(x.finArca, x.altaCruda);
+        // Con baja el tipo no hace falta: el cálculo compartido nunca devuelve null acá.
+        const estado = estadoAlEscribir({ fecha_alta_contrato: x.altaCruda, fecha_baja_contrato: fin }, null, plan.hoy)!;
         const vacia = x.bajaCruda === null || x.bajaCruda === undefined || x.bajaCruda === "" || x.bajaCruda === "null";
         const r = await UserProject.updateOne(
           { _id: new Types.ObjectId(upId) },
@@ -149,9 +153,10 @@ export async function aplicarBajasArca(tenantId: Types.ObjectId | string, opcion
               "contracts.$[c].fecha_baja_contrato": fin,
               "contracts.$[c].origenBaja": "ARCA_SYNC",
               "contracts.$[c].bajaArca": { fin: x.finArca, situacionBaja: x.situacionBaja, empleadoraCuit: x.empleadoraCuit, bajaAnterior: vacia ? null : String(x.bajaCruda), aplicadaEl: new Date(), tipo: x.tipo },
-              "contracts.$[c].estadoContrato": x.finArca < plan.hoy ? "FINALIZADO" : "VIGENTE",
+              "contracts.$[c].estadoContrato": estado.estadoContrato,
+              ...(estado.estadoContratoMotivo ? { "contracts.$[c].estadoContratoMotivo": estado.estadoContratoMotivo } : {}),
             },
-            $unset: { "contracts.$[c].estadoContratoMotivo": "" },
+            ...(estado.estadoContratoMotivo ? {} : { $unset: { "contracts.$[c].estadoContratoMotivo": "" } }),
           },
           { arrayFilters: [{ "c.contratoKey": new Types.ObjectId(x.contratoKey), "c.estadoContrato": { $ne: "ANULADO" }, "c.fecha_baja_contrato": vacia ? { $in: [null, "", "null"] } : x.bajaCruda }] },
         );

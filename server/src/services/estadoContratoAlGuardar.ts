@@ -13,8 +13,11 @@
  * Un contrato que no se tocó conserva su estado, aunque el calendario haya avanzado: eso lo hace la
  * transición diaria, en un solo sentido (`transicionEstadoContratos.ts`).
  *
- * Las escrituras por `updateOne` no pasan por acá; las que tocan fechas ya ponen el estado (las bajas de
- * ARCA) y lo que quede sin estado lo completa la tarea diaria y lo marca el reporte.
+ * Las escrituras por `updateOne` no pasan por el hook: las que crean contratos o les cambian alta, baja o
+ * tipo ponen el estado ELLAS MISMAS con `estadoAlEscribir` / `conEstadoCalculado` (el mismo cálculo que el
+ * hook). Lo exige `scripts/estadoEnEscrituras.test.ts`, que falla si aparece una escritura así sin estado.
+ * La barrida de la tarea (cada 30 min) queda como red, y el reporte cuenta lo que completó: si ese
+ * número sube, apareció un camino nuevo (pedido del usuario, 19/11).
  */
 import mongoose, { type Schema } from "mongoose";
 import { Contrato } from "../models/Contrato.js";
@@ -46,6 +49,31 @@ export function hayQueCalcularEstado(c: any, previo: any | undefined): boolean {
   return !!previo && huellaDeEstado(previo) !== huellaDeEstado(c);
 }
 
+/** El tipo sólo importa sin baja (¿es indeterminado?). */
+const necesitaTipo = (c: any) => !!dia(c?.fecha_alta_contrato) && !dia(c?.fecha_baja_contrato);
+
+/**
+ * EL CÁLCULO COMPARTIDO (hook, escrituras por `updateOne`, scripts): el estado de un contrato según sus
+ * datos locales. `null` = no se puede decidir ahora sin adivinar (necesita el tipo y no hay catálogo):
+ * queda sin estado para la barrida. Nunca VIGENTE por defecto. Puro con el catálogo dado.
+ */
+export function estadoAlEscribir(c: any, catalogo: { porId: Map<string, boolean>; porNombre: Map<string, boolean> } | null, hoy = hoyArgentina()): { estadoContrato: string; estadoContratoMotivo?: string } | null {
+  if (!c || c.estadoContrato === "ANULADO") return null;
+  if (necesitaTipo(c) && !catalogo) return null;
+  const r = estadoSegunDatosLocales(c, catalogo ? tipoEsIndeterminado(c, catalogo.porId, catalogo.porNombre) : undefined, hoy);
+  return r.motivo ? { estadoContrato: r.estado, estadoContratoMotivo: r.motivo } : { estadoContrato: r.estado };
+}
+
+/** Para un `$push` de contratos nuevos: les pone el estado (pide el catálogo sólo si hace falta). */
+export async function conEstadoCalculado<T extends Record<string, any>>(contratos: T[], hoy = hoyArgentina()): Promise<T[]> {
+  const catalogo = contratos.some((c) => !c?.estadoContrato && necesitaTipo(c)) ? await catalogoDeTipos() : null;
+  return contratos.map((c) => {
+    if (!c || c.estadoContrato) return c;
+    const e = estadoAlEscribir(c, catalogo, hoy);
+    return e ? { ...c, ...e } : c;
+  });
+}
+
 export function instalarEstadoAlGuardar(schema: Schema): void {
   schema.pre("validate", async function (this: any) {
     if (!this.isNew && !this.isModified("contracts")) return;
@@ -55,17 +83,15 @@ export function instalarEstadoAlGuardar(schema: Schema): void {
     const pendientes = contratos.filter((c) => hayQueCalcularEstado(c, c?.contratoKey ? previoPorClave.get(String(c.contratoKey)) : undefined));
     if (!pendientes.length) return;
     const hoy = hoyArgentina();
-    // El tipo sólo importa sin baja (¿es indeterminado?): el catálogo se pide sólo entonces, y sin
-    // conexión a la base (validaciones en tests) ese contrato queda sin estado para la tarea diaria.
-    // Nunca se adivina el tipo.
-    const necesitaTipo = (c: any) => !!dia(c?.fecha_alta_contrato) && !dia(c?.fecha_baja_contrato);
+    // El catálogo se pide sólo si algún contrato lo necesita, y sin conexión a la base (validaciones en
+    // tests) ese contrato queda sin estado para la barrida. Nunca se adivina el tipo.
     const conectado = mongoose.connection.readyState === 1;
     const catalogo = pendientes.some(necesitaTipo) && conectado ? await catalogoDeTipos() : null;
     for (const c of pendientes) {
-      if (necesitaTipo(c) && !catalogo) continue;
-      const r = estadoSegunDatosLocales(c, catalogo ? tipoEsIndeterminado(c, catalogo.porId, catalogo.porNombre) : undefined, hoy);
-      c.estadoContrato = r.estado;
-      c.estadoContratoMotivo = r.motivo || undefined;
+      const e = estadoAlEscribir(c, catalogo, hoy);
+      if (!e) continue;
+      c.estadoContrato = e.estadoContrato;
+      c.estadoContratoMotivo = e.estadoContratoMotivo || undefined;
     }
   });
 }

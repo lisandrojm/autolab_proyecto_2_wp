@@ -34,6 +34,7 @@ export interface ItemBajaArca {
     empleadoraCuit: string;
     tipo: TipoCambioBaja;
     aplicar: boolean;
+    diasAntesDelFin?: number;
     /** Los tramos de ARCA mirados (por tramos, granularidad, revisión manual). */
     tramos?: {
         inicio: string;

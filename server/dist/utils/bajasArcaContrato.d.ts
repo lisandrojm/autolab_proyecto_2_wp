@@ -5,6 +5,8 @@ export interface RelacionArca {
     fin: string;
     situacionBaja?: string;
 }
+/** Umbral de alerta de la granularidad (decisión del usuario, 19/11): 15 días. */
+export declare const UMBRAL_GRANULARIDAD_DIAS = 15;
 export type TipoCambioBaja = "baja_nueva" | "baja_por_tramos" | "baja_anterior" | "arca_granularidad" | "revision_manual" | "arca_posterior" | "arca_abierta";
 export interface CambioDeBaja {
     tipo: TipoCambioBaja;
@@ -13,6 +15,10 @@ export interface CambioDeBaja {
     bajaContrato: string;
     finArca: string;
     situacionBaja: string;
+    /** En `arca_granularidad`: cuántos días antes de la baja del contrato termina el ÚLTIMO tramo de ARCA.
+     *  Más de `UMBRAL_GRANULARIDAD_DIAS` ya no parece granularidad (la persona pudo dejar antes): se lista
+     *  aparte para que alguien mire, sin cambiar la decisión. */
+    diasAntesDelFin?: number;
     /** Los tramos de ARCA que se miraron (misma persona y empleadora), para mostrar la evidencia. */
     tramos?: {
         inicio: string;
