@@ -45,12 +45,13 @@ export const cambiosDeContrato = (catalogos: CatalogosContratacion, contratoId: 
 });
 
 /*
-  CON UN CONTRATO DE ARCA, SÓLO SERVICIOS (17/11/2026): la regla del alta individual (05/11) en las
-  plantillas. `soloServicios` es el mensaje del server (`mensajeSoloServicios`) o vacío: con él, la
-  ventana ofrece sólo los tipos de Servicios y, si el elegido es de ARCA, se avisa. El server vuelve a
-  revisar al contratar (`planDeLote`, con las fechas de esa contratación).
+  CON UN CONTRATO DE ARCA EN ESAS FECHAS (17/11/2026, y desde el 19/11 SÓLO UN AVISO): `soloServicios` es
+  el mensaje del server (`mensajeSoloServicios`) o vacío. En las plantillas no frena ni acota la lista de
+  tipos —decisión del usuario del 19/11: «son diferentes contratos, no importa la superposición»—: se
+  muestra, y si el elegido es de ARCA se lo marca. En el alta individual la regla del 05/11 sigue
+  frenando; acá el server la devuelve como advertencia (`planDeLote`).
 */
-export const contratosParaElegir = (catalogos: CatalogosContratacion, soloServicios?: string | null) => (soloServicios ? catalogos.contratos.filter((c) => catalogos.tramitePorContrato.get(c._id) === "constancia_cuit") : catalogos.contratos);
+export const contratosParaElegir = (catalogos: CatalogosContratacion, _soloServicios?: string | null) => catalogos.contratos;
 
 export function AvisoSoloServicios({ mensaje, contratoId, catalogos }: { mensaje?: string | null; contratoId?: string | null; catalogos: CatalogosContratacion }) {
   if (!mensaje) return null;
@@ -58,7 +59,7 @@ export function AvisoSoloServicios({ mensaje, contratoId, catalogos }: { mensaje
   return (
     <p className={`rounded-lg p-2 text-xs font-semibold ${esArca ? "bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-200" : "bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200"}`}>
       {mensaje}
-      {esArca && " Elegí un tipo de contrato de Servicios."}
+      {esArca && " Es un aviso: se puede enviar igual."}
     </p>
   );
 }

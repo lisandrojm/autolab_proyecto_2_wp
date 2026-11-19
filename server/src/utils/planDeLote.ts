@@ -341,8 +341,14 @@ export function planDeLote(plantilla: PlantillaParaPlan, integrantes: Integrante
 
     const sup = ctx.superposiciones.get(integ._id) || [];
     for (const s of sup) advertencias.push(s.mensaje);
+    /*
+      CON UN CONTRATO DE ARCA EN ESAS FECHAS, SÓLO SERVICIOS: en las plantillas es un AVISO, no un error
+      (decisión del usuario, 19/11/2026: «son diferentes contratos, no importa la superposición»; y ya el
+      05/11 las altas masivas habían quedado afuera de la regla del alta individual). El supervisor lo ve
+      y manda igual; la fila sigue informando `soloServicios` para que la ventana del tipo lo muestre.
+    */
     const soloServicios = ctx.soloServicios?.get(integ._id) || "";
-    if (soloServicios && tipoImpositivo === "alta_temprana_afip") errores.push(soloServicios);
+    if (soloServicios && tipoImpositivo === "alta_temprana_afip") advertencias.push(soloServicios);
 
     const datos: DatosSolicitud | null = persona
       ? {

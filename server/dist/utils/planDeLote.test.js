@@ -329,15 +329,16 @@ test("tipo «6x6» con 30 jornadas: semana de 6 días, jornadas en base 30 y la 
     assert.equal(filas[0].importes.total, 30000);
     assert.equal(filas[0].datos.sedeId, 7);
 });
-test("con un contrato de ARCA en esas fechas, sólo Servicios: el puesto de ARCA no se contrata, el de Servicios sí (17/11/2026)", () => {
+test("con un contrato de ARCA en esas fechas: en las plantillas es un AVISO, no frena (19/11/2026; antes error, 17/11)", () => {
     const msg = "Tiene un contrato de ARCA en esas fechas (LN+, desde el 01/06/2023, sin fecha de baja): sólo se puede contratar con un tipo de contrato de Servicios.";
     const c = ctx({ soloServicios: new Map([["i1", msg]]) });
     const arca = planDeLote({ ...plantilla, tipoImpositivo: "alta_temprana_afip" }, [integ("1"), integ("2")], SEPT, {}, c);
-    assert.deepEqual(arca.filas[0].errores, [msg]);
+    assert.deepEqual(arca.filas[0].errores, [], "no frena el envío");
+    assert.ok(arca.filas[0].advertencias.includes(msg), "pero se avisa");
     assert.equal(arca.filas[0].soloServicios, msg);
-    assert.deepEqual(arca.filas[1].errores, [], "a otra persona no le toca");
+    assert.ok(!arca.filas[1].advertencias.includes(msg), "a otra persona no le toca");
     assert.equal(arca.filas[1].soloServicios, "");
     const servicios = planDeLote(plantilla, [integ("1", { contratoId: "cServ", nombreContrato: "Servicios", tipoImpositivo: "constancia_cuit" })], SEPT, {}, c);
-    assert.ok(!servicios.filas[0].errores.includes(msg));
-    assert.equal(servicios.filas[0].soloServicios, msg, "igual se informa, para que la ventana ofrezca sólo Servicios");
+    assert.ok(!servicios.filas[0].errores.includes(msg) && !servicios.filas[0].advertencias.includes(msg), "un puesto de Servicios no tiene nada que avisar");
+    assert.equal(servicios.filas[0].soloServicios, msg, "igual se informa, para que la ventana lo muestre");
 });
