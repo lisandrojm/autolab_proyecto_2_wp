@@ -145,7 +145,7 @@ export const ActivityLogCalendar: React.FC<ActivityLogCalendarProps> = ({ projec
 
       {/* Week Days Header */}
       <div className="grid grid-cols-7 mb-1 sm:mb-2 text-center text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-        {["D", "L", "M", "M", "J", "V", "S"].map((day, idx) => (
+        {["D", "L", "M", "X", "J", "V", "S"].map((day, idx) => (
           <div key={idx} className="py-1 sm:py-2">
             <span className="sm:hidden">{day}</span>
             <span className="hidden sm:inline">{["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"][idx]}</span>

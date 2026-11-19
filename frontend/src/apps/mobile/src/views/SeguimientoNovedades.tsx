@@ -56,7 +56,7 @@ const LEYENDA: [string, string][] = [
   ["bg-amber-500", "Parcial"],
 ];
 
-const INICIALES_DIA = ["D", "L", "M", "M", "J", "V", "S"];
+const INICIALES_DIA = ["D", "L", "M", "X", "J", "V", "S"]; // la semana arranca el domingo; X = miércoles
 const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 /** Día de la semana de un "YYYY-MM-DD" sin correrse por la zona horaria. */

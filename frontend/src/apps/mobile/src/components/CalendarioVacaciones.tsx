@@ -93,7 +93,7 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
 
   const generateCalendarDays = () => {
     const monthStart = startOfMonth(viewDate);
-    return eachDayOfInterval({ start: startOfWeek(monthStart, { weekStartsOn: 1 }), end: endOfWeek(endOfMonth(monthStart), { weekStartsOn: 1 }) });
+    return eachDayOfInterval({ start: startOfWeek(monthStart, { weekStartsOn: 0 }), end: endOfWeek(endOfMonth(monthStart), { weekStartsOn: 0 }) });
   };
 
   const isOccupied = (day: Date) => ocupadas.includes(format(day, 'yyyy-MM-dd'));
@@ -196,7 +196,7 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
 
         <div className="p-4">
           <div className="grid grid-cols-7 mb-2 text-center">
-            {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
+            {['D', 'L', 'M', 'X', 'J', 'V', 'S'].map((d, i) => (
               <div key={i} className="text-xs font-bold text-slate-400">
                 {d}
               </div>
