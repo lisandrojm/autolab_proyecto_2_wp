@@ -59,10 +59,12 @@ export declare function planDeBajasArca(tenantId: Types.ObjectId | string, opcio
 /**
  * Escribe las bajas del plan que se aplican. `claves`: sólo esos contratos (por `contratoKey`); sin
  * `claves`, todos los aplicables. Devuelve qué se escribió y qué no (porque cambió en el medio).
+ * `plan`: uno recién calculado EN EL SERVER (el cron), para no calcularlo dos veces; nunca del cliente.
  */
 export declare function aplicarBajasArca(tenantId: Types.ObjectId | string, opciones?: {
     claves?: string[];
     userIds?: string[];
+    plan?: PlanBajasArca;
 }): Promise<{
     escritos: ItemBajaArca[];
     cambiaron: ItemBajaArca[];

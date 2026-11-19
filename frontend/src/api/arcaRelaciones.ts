@@ -75,6 +75,8 @@ export interface ResumenSyncRelaciones {
   duracionMs: number;
   error?: string;
   htmlGuardado?: string;
+  /** Las bajas de ARCA aplicadas solas a los contratos después de la corrida automática (con tope). */
+  bajasContratos?: { aplicables: number; aplicadas: number; cambiaron: number; listadas: number; excluidasPorEmpleadora: number; frenada: boolean; tope: number; error?: string };
 }
 
 export interface EstadoSyncRelaciones {

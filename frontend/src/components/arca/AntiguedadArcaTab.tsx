@@ -233,6 +233,16 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
               {ultima.error && <span className="text-red-600"> · {ultima.error}</span>}
             </button>
             {ultima.htmlGuardado && <p className="mt-1 text-[11px] text-amber-600">Se guardó una pantalla de ARCA para revisar: <code>{ultima.htmlGuardado}</code></p>}
+            {/* Las bajas de ARCA que la corrida automática aplicó sola a los contratos, o frenó por el tope. */}
+            {ultima.bajasContratos && (
+              <p className={`mt-1 text-[11px] font-semibold ${ultima.bajasContratos.frenada || ultima.bajasContratos.error ? "text-red-600" : "text-gray-600 dark:text-gray-300"}`}>
+                {ultima.bajasContratos.error
+                  ? `Bajas de ARCA a contratos: falló (${ultima.bajasContratos.error}).`
+                  : ultima.bajasContratos.frenada
+                    ? `Bajas de ARCA a contratos: FRENADA. Iban a aplicarse ${ultima.bajasContratos.aplicables} y el tope es ${ultima.bajasContratos.tope}: no se escribió ninguna. Revisalas en «Sincronizar bajas a contratos».`
+                    : `Bajas de ARCA a contratos: ${ultima.bajasContratos.aplicadas} aplicadas solas · ${ultima.bajasContratos.listadas} para que mire una persona${ultima.bajasContratos.excluidasPorEmpleadora ? ` · ${ultima.bajasContratos.excluidasPorEmpleadora} sin aplicar por una empleadora con error` : ""}${ultima.bajasContratos.cambiaron ? ` · ${ultima.bajasContratos.cambiaron} cambiaron en el medio` : ""}`}
+              </p>
+            )}
             {verUltima && (
               <TablaConEncabezadoFijo className="mt-2" tabla="min-w-[480px] text-xs">
                 <thead>

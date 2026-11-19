@@ -169,9 +169,10 @@ async function guardianDeRecibos(tenantId: Types.ObjectId, items: ItemBajaArca[]
 /**
  * Escribe las bajas del plan que se aplican. `claves`: sólo esos contratos (por `contratoKey`); sin
  * `claves`, todos los aplicables. Devuelve qué se escribió y qué no (porque cambió en el medio).
+ * `plan`: uno recién calculado EN EL SERVER (el cron), para no calcularlo dos veces; nunca del cliente.
  */
-export async function aplicarBajasArca(tenantId: Types.ObjectId | string, opciones: { claves?: string[]; userIds?: string[] } = {}): Promise<{ escritos: ItemBajaArca[]; cambiaron: ItemBajaArca[]; plan: PlanBajasArca }> {
-  const plan = await planDeBajasArca(tenantId, { userIds: opciones.userIds });
+export async function aplicarBajasArca(tenantId: Types.ObjectId | string, opciones: { claves?: string[]; userIds?: string[]; plan?: PlanBajasArca } = {}): Promise<{ escritos: ItemBajaArca[]; cambiaron: ItemBajaArca[]; plan: PlanBajasArca }> {
+  const plan = opciones.plan || (await planDeBajasArca(tenantId, { userIds: opciones.userIds }));
   const pedidas = opciones.claves ? new Set(opciones.claves) : null;
   const aplicar = plan.items.filter((x) => x.aplicar && (!pedidas || pedidas.has(x.contratoKey)));
   const porVinculo = new Map<string, ItemBajaArca[]>();
