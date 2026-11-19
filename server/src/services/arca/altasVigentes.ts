@@ -4,7 +4,8 @@ import { User } from "../../models/User.js";
 import { Company } from "../../models/Company.js";
 import { RelacionLaboralArca } from "../../models/RelacionLaboralArca.js";
 import { Tenant } from "../../models/Tenant.js";
-import { fechaISO } from "../../utils/contratoVigencia.js";
+import { fechaISO, hoyArgentina } from "../../utils/contratoVigencia.js";
+import { cambioDeBajaSegunArca } from "../../utils/bajasArcaContrato.js";
 
 /**
  * UNA PERSONA NO TIENE DOS ALTAS A LA VEZ CON LA MISMA EMPLEADORA.
@@ -107,6 +108,8 @@ export interface RelacionArcaResumida {
    * sigue ACTIVA para ARCA: rechaza otra alta de la persona con esa empleadora (ver `secuenciaPorPersona.ts`).
    */
   cerrada?: boolean;
+  /** El motivo de baja de ARCA («Renuncia…», «Vencimiento…»): la regla distingue un hecho de la granularidad. */
+  situacionBaja?: string;
 }
 
 /**
@@ -121,7 +124,7 @@ export async function relacionesArcaDe(tenantId: Types.ObjectId | string, cuils:
   if (desde && /^\d{4}-\d{2}-\d{2}$/.test(desde)) filtro.$or = [{ fechaFin: null }, { situacionBaja: { $in: ["", null] } }, { fechaFin: { $gte: new Date(`${desde}T00:00:00.000Z`) } }];
   const rels: any[] = await RelacionLaboralArca.find(filtro).select("-_id cuil empleadoraCuit fechaInicio fechaFin situacionBaja").lean();
   const iso = (d: unknown) => (d ? new Date(d as any).toISOString().slice(0, 10) : "");
-  return rels.map((r) => ({ cuil: r.cuil, empleadoraCuit: r.empleadoraCuit, inicio: iso(r.fechaInicio), fin: iso(r.fechaFin), cerrada: !!String(r.situacionBaja || "").trim() }));
+  return rels.map((r) => ({ cuil: r.cuil, empleadoraCuit: r.empleadoraCuit, inicio: iso(r.fechaInicio), fin: iso(r.fechaFin), cerrada: !!String(r.situacionBaja || "").trim(), situacionBaja: String(r.situacionBaja || "").trim() }));
 }
 
 /**
@@ -148,24 +151,30 @@ export async function ultimaSyncOkPorCuit(tenantId: Types.ObjectId | string): Pr
  */
 export function aplicarBajasDeArca(presentadas: AltaPresentada[], relaciones: RelacionArcaResumida[], cuilDe: (p: AltaPresentada) => string, cuitDe: (p: AltaPresentada) => string): AltaPresentada[] {
   return presentadas.map((p) => {
-    const r = bajaDeArcaQueAplica({ cuil: cuilDe(p), cuit: cuitDe(p), alta: p.alta, baja: p.baja }, relaciones);
+    // Las otras altas presentadas de la persona con esa empleadora (las no presentadas no están acá: si
+    // un tramo queda sin explicar, la regla no aplica la baja, que es el lado conservador).
+    const otrasAltas = presentadas.filter((o) => o !== p && o.userId === p.userId && o.empresaId === p.empresaId && o.alta).map((o) => o.alta);
+    const r = bajaDeArcaQueAplica({ cuil: cuilDe(p), cuit: cuitDe(p), alta: p.alta, baja: p.baja }, relaciones, { otrasAltas });
     return r ? { ...p, baja: r.fin, bajaSegunArca: true } : p;
   });
 }
 
 /**
- * EL MATCH, SOLO (extraído el 18/11/2026 para que lo use también «sólo Servicios», ver
- * `services/superposicion.ts`): la relación de ARCA de la misma persona (CUIL), misma empleadora (CUIT)
- * y misma fecha de inicio EXACTA, si tiene una baja que el contrato no tiene o que es más temprana que la
- * del contrato. `null` = queda lo del contrato (sin CUIL, sin CUIT, sin relación, relación abierta, o el
- * contrato ya termina antes). Puro.
+ * LA BAJA QUE LA VALIDACIÓN USA EN MEMORIA = LA QUE SE ESCRIBIRÍA (alineado el 19/11/2026, pedido del
+ * usuario). Antes tomaba el fin de la primera relación con la misma persona, empleadora y fecha de inicio,
+ * sin más: en una relación que ARCA lleva por tramos (Palomino) daba el fin del primer tramo y la validación
+ * veía cerrado un contrato que seguía. Ahora es LA MISMA REGLA que «Sincronizar bajas»
+ * (`utils/bajasArcaContrato.ts`): devuelve la relación con la baja que se escribiría, o `null` si la regla
+ * no escribe nada (sin CUIL/CUIT/relación, relación abierta, el contrato termina antes, granularidad de
+ * ARCA, revisión manual…). `otrasAltas`: las altas de los otros contratos de la persona con esa empleadora
+ * (para el paraguas). Puro.
  */
-export function bajaDeArcaQueAplica(c: { cuil: string; cuit: string; alta: string; baja: string }, relaciones: RelacionArcaResumida[]): RelacionArcaResumida | null {
+export function bajaDeArcaQueAplica(c: { cuil: string; cuit: string; alta: string; baja: string }, relaciones: RelacionArcaResumida[], opciones: { otrasAltas?: string[]; hoy?: string } = {}): RelacionArcaResumida | null {
   if (!c.cuil || !c.cuit || !c.alta) return null;
-  const r = relaciones.find((x) => x.cuil === c.cuil && x.empleadoraCuit === c.cuit && x.inicio === c.alta);
-  if (!r || !r.fin) return null;
-  if (c.baja && c.baja <= r.fin) return null;
-  return r;
+  const cambio = cambioDeBajaSegunArca({ fecha_alta_contrato: c.alta, fecha_baja_contrato: c.baja }, c.cuil, c.cuit, relaciones, opciones.hoy || hoyArgentina(), opciones.otrasAltas || []);
+  if (!cambio?.aplicar) return null;
+  const r = relaciones.find((x) => x.cuil === c.cuil && x.empleadoraCuit === c.cuit && x.inicio === c.alta)!;
+  return { ...r, fin: cambio.finArca };
 }
 
 /**

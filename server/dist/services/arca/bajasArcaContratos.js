@@ -21,6 +21,7 @@ import { User } from "../../models/User.js";
 import { Company } from "../../models/Company.js";
 import { Tenant } from "../../models/Tenant.js";
 import { RelacionLaboralArca } from "../../models/RelacionLaboralArca.js";
+import { ReciboSueldoEnviado } from "../../models/ReciboSueldoEnviado.js";
 import { fechaISO, hoyArgentina } from "../../utils/contratoVigencia.js";
 import { bajaConFormatoDelAlta, cambioDeBajaSegunArca } from "../../utils/bajasArcaContrato.js";
 import { enContexto } from "../../utils/contextoAuditoria.js";
@@ -52,6 +53,16 @@ export async function planDeBajasArca(tenantId, opciones = {}) {
     const relsPorCuil = new Map();
     for (const r of relaciones)
         (relsPorCuil.get(r.cuil) || relsPorCuil.set(r.cuil, []).get(r.cuil)).push(r);
+    // Para el paraguas: las altas de todos los contratos no anulados de cada persona, por empleadora (en
+    // cualquier proyecto).
+    const altasPorPersonaYEmpresa = new Map();
+    for (const up of ups)
+        for (const c of up.contracts || []) {
+            if (!c?.contratoKey || !c.empresaContratoId || c.estadoContrato === "ANULADO")
+                continue;
+            const k = `${up.userId}|${c.empresaContratoId}`;
+            (altasPorPersonaYEmpresa.get(k) || altasPorPersonaYEmpresa.set(k, []).get(k)).push(fechaDe(c.fecha_alta_contrato));
+        }
     const items = [];
     for (const up of ups) {
         const u = porUsuario.get(String(up.userId));
@@ -67,7 +78,10 @@ export async function planDeBajasArca(tenantId, opciones = {}) {
             const e = empresa.get(String(c.empresaContratoId));
             if (!e)
                 return;
-            const cambio = cambioDeBajaSegunArca(c, cuil, e.cuit, suyas, hoy);
+            const alta = fechaDe(c.fecha_alta_contrato);
+            const todas = altasPorPersonaYEmpresa.get(`${up.userId}|${c.empresaContratoId}`) || [];
+            const otrasAltas = todas.filter((_, n) => n !== todas.indexOf(alta)); // saca UNA vez la propia
+            const cambio = cambioDeBajaSegunArca(c, cuil, e.cuit, suyas, hoy, otrasAltas);
             if (!cambio)
                 return;
             items.push({
@@ -88,11 +102,41 @@ export async function planDeBajasArca(tenantId, opciones = {}) {
             });
         });
     }
-    const resumen = { baja_nueva: 0, baja_por_tramos: 0, baja_anterior: 0, arca_granularidad: 0, revision_manual: 0, arca_posterior: 0, arca_abierta: 0 };
+    await guardianDeRecibos(tid, items);
+    const resumen = { baja_nueva: 0, baja_por_tramos: 0, baja_anterior: 0, baja_paraguas: 0, arca_granularidad: 0, revision_manual: 0, arca_posterior: 0, arca_abierta: 0 };
     for (const x of items)
         resumen[x.tipo]++;
     items.sort((a, b) => Number(b.aplicar) - Number(a.aplicar) || a.persona.localeCompare(b.persona));
     return { hoy, espejoAl: t?.integrations?.arcaSimplificacion?.sincronizacionRelaciones?.ultimaSync?.fecha || null, items, resumen };
+}
+/**
+ * EL GUARDIÁN DE LOS RECIBOS (decisión del usuario, 19/11/2026): una baja de ARCA que adelanta el fin de
+ * un contrato no se escribe si el contrato tiene recibos de sueldo de un período POSTERIOR al mes de esa
+ * baja (un recibo de febrero sobre un contrato cerrado en enero es una contradicción: Hernandez Dunn).
+ * Esos pasan a revisión manual con el recibo que lo frena. Es una condición del código, no un chequeo de
+ * hoy: los recibos de WeProdu empiezan en 2026-09 y van a seguir llegando. El recibo cuelga del contrato
+ * por `contratoKey` o, en los viejos sin clave, por vínculo + posición.
+ */
+async function guardianDeRecibos(tenantId, items) {
+    const candidatos = items.filter((x) => x.aplicar && x.finArca);
+    if (!candidatos.length)
+        return;
+    const recibos = await ReciboSueldoEnviado.find({ tenantId, userId: { $in: [...new Set(candidatos.map((x) => new Types.ObjectId(x.userId)))] } })
+        .select("periodo contratoKey userProjectId contractIndex")
+        .lean();
+    for (const x of candidatos) {
+        const mes = x.finArca.slice(0, 7);
+        const posteriores = recibos
+            .filter((r) => (r.contratoKey ? String(r.contratoKey) === x.contratoKey : String(r.userProjectId) === x.userProjectId && r.contractIndex === x.posicion))
+            .map((r) => String(r.periodo || ""))
+            .filter((p) => p > mes)
+            .sort();
+        if (!posteriores.length)
+            continue;
+        x.tipo = "revision_manual";
+        x.aplicar = false;
+        x.alerta = `tiene recibo(s) de ${posteriores.join(", ")}, posteriores a la baja de ARCA (${x.finArca}): no se adelanta la baja`;
+    }
 }
 /**
  * Escribe las bajas del plan que se aplican. `claves`: sólo esos contratos (por `contratoKey`); sin

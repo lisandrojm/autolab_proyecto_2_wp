@@ -26,7 +26,7 @@ import { UMBRAL_GRANULARIDAD_DIAS } from "../utils/bajasArcaContrato.js";
 import { contextoDeScript } from "../utils/contextoAuditoria.js";
 
 const dias = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
-const fila = (x: ItemBajaArca) => `${x.diasAntesDelFin !== undefined ? `[${x.diasAntesDelFin} d antes] ` : ""}${x.persona} (${x.cuil}) · ${x.proyecto} · #${x.posicion} ${x.contrato} · ${x.empleadora} · alta ${x.alta} · baja WeProdu ${x.bajaContrato || "—"} · ARCA ${x.finArca || "abierta"}${x.situacionBaja ? ` (${x.situacionBaja})` : ""}`;
+const fila = (x: ItemBajaArca) => `${x.diasAntesDelFin !== undefined ? `[${x.diasAntesDelFin} d antes] ` : ""}${x.alerta ? `[${x.alerta}] ` : ""}${x.persona} (${x.cuil}) · ${x.proyecto} · #${x.posicion} ${x.contrato} · ${x.empleadora} · alta ${x.alta} · baja WeProdu ${x.bajaContrato || "—"} · ARCA ${x.finArca || "abierta"}${x.situacionBaja ? ` (${x.situacionBaja})` : ""}`;
 
 async function main() {
   const commit = process.argv.includes("--commit");
@@ -40,7 +40,7 @@ async function main() {
     const plan = await planDeBajasArca(t._id);
     if (!plan.items.length) continue;
     console.log(`== ${t.name || t.slug} · espejo de ARCA al ${plan.espejoAl ? new Date(plan.espejoAl).toLocaleString("es-AR") : "¿nunca?"} · hoy ${plan.hoy}`);
-    console.log(`   se escriben: ${plan.resumen.baja_nueva} sin baja que ARCA cerró · ${plan.resumen.baja_por_tramos} sin baja, ARCA en tramos contiguos cerrados · ${plan.resumen.baja_anterior} con baja posterior a la de ARCA (por un hecho)`);
+    console.log(`   se escriben: ${plan.resumen.baja_nueva} sin baja que ARCA cerró · ${plan.resumen.baja_por_tramos} sin baja, ARCA en tramos contiguos cerrados · ${plan.resumen.baja_anterior} con baja posterior a la de ARCA (por un hecho) · ${plan.resumen.baja_paraguas} paraguas (los tramos posteriores son otros contratos)`);
     console.log(`   no se escriben: ${plan.resumen.arca_granularidad} ARCA declara por jornadas dentro del contrato · ${plan.resumen.revision_manual} para revisar a mano · ${plan.resumen.arca_abierta} terminados que en ARCA siguen abiertos · ${plan.resumen.arca_posterior} ARCA terminó después (${plan.items.filter((x) => x.tipo === "arca_posterior" && dias(x.bajaContrato, x.finArca) <= 3).length} por 1 a 3 días, lo habitual en jornadas)`);
     const grupo = (titulo: string, l: ItemBajaArca[]) => {
       if (!l.length) return;
@@ -54,6 +54,7 @@ async function main() {
     grupo("SE ESCRIBE: sin baja y ARCA la cerró", plan.items.filter((x) => x.tipo === "baja_nueva"));
     grupo("SE ESCRIBE: sin baja, ARCA en tramos contiguos con el último cerrado (fin del último tramo)", plan.items.filter((x) => x.tipo === "baja_por_tramos"));
     grupo("SE ESCRIBE: ARCA terminó antes que la baja del contrato, por un hecho", plan.items.filter((x) => x.tipo === "baja_anterior"));
+    grupo("SE ESCRIBE: paraguas, los tramos posteriores de ARCA son otros contratos de la persona (fin del PRIMER tramo)", plan.items.filter((x) => x.tipo === "baja_paraguas"));
     grupo("NO, REVISIÓN MANUAL: tramos fuera del período del contrato o un hecho entre tramos", plan.items.filter((x) => x.tipo === "revision_manual"));
     grupo("NO: ARCA declara por jornadas («vencimiento») dentro del contrato; manda el plazo del contrato", plan.items.filter((x) => x.tipo === "arca_granularidad" && (x.diasAntesDelFin ?? 0) <= UMBRAL_GRANULARIDAD_DIAS));
     grupo(`MIRAR: granularidad, pero el último tramo de ARCA termina más de ${UMBRAL_GRANULARIDAD_DIAS} días antes que el contrato (¿dejó antes?)`, plan.items.filter((x) => x.tipo === "arca_granularidad" && (x.diasAntesDelFin ?? 0) > UMBRAL_GRANULARIDAD_DIAS));

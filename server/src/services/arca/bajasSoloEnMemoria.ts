@@ -41,6 +41,12 @@ export async function bajasSoloEnMemoria(hoy = hoyArgentina()): Promise<BajaSolo
     const x = { cuil: r.cuil, empleadoraCuit: r.empleadoraCuit, inicio: isoD(r.fechaInicio), fin: isoD(r.fechaFin), situacionBaja: r.situacionBaja || "" };
     (relsPorCuil.get(x.cuil) || relsPorCuil.set(x.cuil, []).get(x.cuil)!).push(x);
   }
+  const altasPorPersonaYEmpresa = new Map<string, string[]>();
+  for (const up of ups) for (const c of up.contracts || []) {
+    if (!c?.empresaContratoId || c.estadoContrato === "ANULADO") continue;
+    const k = `${up.userId}|${c.empresaContratoId}`;
+    (altasPorPersonaYEmpresa.get(k) || altasPorPersonaYEmpresa.set(k, []).get(k)!).push(fecha(c.fecha_alta_contrato));
+  }
   const salida: BajaSoloEnMemoria[] = [];
   for (const up of ups) {
     const p = persona.get(String(up.userId));
@@ -52,9 +58,11 @@ export async function bajasSoloEnMemoria(hoy = hoyArgentina()): Promise<BajaSolo
       const cuit = c.empresaContratoId ? cuitDe.get(String(c.empresaContratoId)) || "" : "";
       const alta = fecha(c.fecha_alta_contrato);
       const baja = fecha(c.fecha_baja_contrato);
-      const enMemoria = bajaDeArcaQueAplica({ cuil: p.cuil, cuit, alta, baja }, rels as any);
+      const todas = altasPorPersonaYEmpresa.get(`${up.userId}|${c.empresaContratoId}`) || [];
+      const otrasAltas = todas.filter((_, n) => n !== todas.indexOf(alta));
+      const enMemoria = bajaDeArcaQueAplica({ cuil: p.cuil, cuit, alta, baja }, rels as any, { otrasAltas, hoy });
       if (!enMemoria) return;
-      const porque = cambioDeBajaSegunArca(c, p.cuil, cuit, rels, hoy);
+      const porque = cambioDeBajaSegunArca(c, p.cuil, cuit, rels, hoy, otrasAltas);
       salida.push({
         categoria: porque ? (porque.aplicar ? "falta escribirla (Sincronizar bajas la escribe)" : `no se escribe: ${porque.tipo}`) : "no se escribe: sin clasificar",
         descripcion: `${p.nombre || up.userId} · ${up.nombre_proyecto || ""} · #${i} ${c.nombre_contrato || ""} · alta ${alta || "—"} · baja ${baja || "—"} · clave ${c.contratoKey} · la validación usa la baja ${enMemoria.fin}`,
@@ -65,8 +73,9 @@ export async function bajasSoloEnMemoria(hoy = hoyArgentina()): Promise<BajaSolo
   return salida;
 }
 
-/** Las que no se escriben por una regla decidida (19/11): no cuentan como pendientes. */
-const DECIDIDAS = new Set(["no se escribe: arca_granularidad"]);
+/** Desde que la validación usa la misma regla que la escritura (19/11), acá sólo puede quedar lo que falta
+ *  escribir; las categorías «no se escribe» serían un desfase entre las dos y cuentan como pendientes. */
+const DECIDIDAS = new Set<string>([]);
 
 /** Imprime la sección D agrupada y devuelve cuántas quedan SIN decidir. */
 export function imprimirSeccionD(lista: BajaSoloEnMemoria[], detalle = false): number {

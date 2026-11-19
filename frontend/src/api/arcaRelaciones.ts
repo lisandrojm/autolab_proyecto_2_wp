@@ -100,7 +100,7 @@ export interface RelacionResumida {
 }
 
 /** Un contrato que «Sincronizar bajas» escribiría (o no, y por qué). Ver server `utils/bajasArcaContrato.ts`. */
-export type TipoCambioBaja = "baja_nueva" | "baja_por_tramos" | "baja_anterior" | "arca_granularidad" | "revision_manual" | "arca_posterior" | "arca_abierta";
+export type TipoCambioBaja = "baja_nueva" | "baja_por_tramos" | "baja_anterior" | "baja_paraguas" | "arca_granularidad" | "revision_manual" | "arca_posterior" | "arca_abierta";
 export interface ItemBajaArca {
   userProjectId: string;
   userId: string;
@@ -117,6 +117,8 @@ export interface ItemBajaArca {
   empleadora: string;
   tipo: TipoCambioBaja;
   aplicar: boolean;
+  /** Por qué va a revisión manual, o qué mirar. */
+  alerta?: string;
 }
 export interface PlanBajasArca {
   hoy: string;

@@ -156,7 +156,8 @@ export function compromisosConBajasDeArca(compromisos: CompromisoExistente[], re
   return compromisos.map((c) => {
     if (c.origen !== "contrato") return c;
     const cuit = c.empresaId ? cuitDe(c.empresaId) : "";
-    const r = bajaDeArcaQueAplica({ cuil, cuit, alta: c.desde, baja: c.hasta }, relaciones);
+    const otrasAltas = compromisos.filter((o) => o !== c && o.origen === "contrato" && o.empresaId === c.empresaId && o.desde).map((o) => o.desde);
+    const r = bajaDeArcaQueAplica({ cuil, cuit, alta: c.desde, baja: c.hasta }, relaciones, { otrasAltas });
     return r ? { ...c, hasta: r.fin, bajaSegunArca: { hastaContrato: c.hasta, empleadoraCuit: cuit } } : c;
   });
 }

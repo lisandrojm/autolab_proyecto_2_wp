@@ -25,7 +25,7 @@ const dias = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) 
 
 const NO_SE_ESCRIBEN: { tipo: TipoCambioBaja; titulo: string; explicacion: string; filtro?: (x: ItemBajaArca) => boolean }[] = [
   { tipo: "arca_abierta", titulo: "Terminados que en ARCA siguen abiertos", explicacion: "El contrato terminó pero ARCA no tiene la baja: falta presentarla en ARCA." },
-  { tipo: "revision_manual", titulo: "Para revisar a mano", explicacion: "ARCA tiene tramos que salen del período del contrato, o un hecho (renuncia, despido) en medio de varios tramos: WeProdu pudo haber unido relaciones distintas en un contrato. Lo mira una persona." },
+  { tipo: "revision_manual", titulo: "Para revisar a mano", explicacion: "Cada fila dice por qué: tramos de ARCA que no explica ningún contrato, otro contrato con la misma alta, un hecho (renuncia, despido) en medio de varios tramos, o recibos de sueldo posteriores a la baja de ARCA. Lo mira una persona." },
   { tipo: "arca_granularidad", titulo: "ARCA declara por jornadas dentro del contrato", explicacion: "ARCA termina antes por «vencimiento de plazo», con todos sus tramos dentro del contrato: es cómo ARCA registra las jornadas, no un hecho que cortó la relación. Manda el plazo del contrato." },
   { tipo: "arca_posterior", titulo: "ARCA terminó más de 3 días después que el contrato", explicacion: "No se alarga un contrato desde ARCA. Las de 1 a 3 días (lo habitual en jornadas) no se listan.", filtro: (x) => dias(x.bajaContrato, x.finArca) > 3 },
 ];
@@ -45,7 +45,7 @@ const Fila: React.FC<{ x: ItemBajaArca; marcado?: boolean; onMarcar?: (v: boolea
     <td className="px-2 py-1.5 whitespace-nowrap">
       <span className="text-gray-500 line-through decoration-gray-400">{x.bajaContrato ? fecha(x.bajaContrato) : "sin baja"}</span> → <span className="font-semibold text-gray-900 dark:text-white">{x.finArca ? fecha(x.finArca) : "abierta"}</span>
     </td>
-    <td className="px-2 py-1.5 text-[11px] text-gray-600 dark:text-gray-400">{x.situacionBaja || "—"}</td>
+    <td className="px-2 py-1.5 text-[11px] text-gray-600 dark:text-gray-400">{x.situacionBaja || "—"}{x.alerta && <div className="mt-0.5 text-amber-700 dark:text-amber-400">{x.alerta}</div>}</td>
   </tr>
 );
 

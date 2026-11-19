@@ -45,10 +45,40 @@ test("un día de hueco ya no es contiguo: se cierra el primer tramo (como un rei
   assert.equal(cambio({ fecha_alta_contrato: "2021-12-15" }, CUIL, E2030, [rel("2021-12-15", "2022-02-27"), rel("2022-03-01", "2026-10-31")], HOY)?.tipo, "baja_nueva");
 });
 
-test("Palomino después de escribirla: la cadena llega a la baja → granularidad, no vuelve a aparecer como pendiente", () => {
-  const r = cambio({ fecha_alta_contrato: "2021-12-15", fecha_baja_contrato: "2026-10-31" }, CUIL, E2030, [rel("2021-12-15", "2022-02-28", { situacionBaja: "Vencimiento" }), rel("2022-03-01", "2026-10-31", { situacionBaja: "Baja por despido" })], HOY);
-  assert.equal(r?.tipo, "arca_granularidad");
-  assert.equal(r?.aplicar, false);
+test("Palomino después de escribirla (y Aquino #85, Mai #21): la cadena contigua llega justo a la baja → coinciden, nada", () => {
+  assert.equal(cambio({ fecha_alta_contrato: "2021-12-15", fecha_baja_contrato: "2026-10-31" }, CUIL, E2030, [rel("2021-12-15", "2022-02-28", { situacionBaja: "Vencimiento" }), rel("2022-03-01", "2026-10-31", { situacionBaja: "Baja por despido" })], HOY), null);
+  assert.equal(cambio({ fecha_alta_contrato: "2025-11-26", fecha_baja_contrato: "2025-11-28" }, CUIL, E2030, [rel("2025-11-26", "2025-11-26"), rel("2025-11-27", "2025-11-28")], HOY), null);
+});
+
+test("Raffa: paraguas, todos los tramos posteriores son el alta de otra jornada de la persona → se escribe el fin del PRIMER tramo", () => {
+  const rels = [rel("2026-01-01", "2026-01-06", { situacionBaja: V }), rel("2026-01-11", "2026-01-11", { situacionBaja: V }), rel("2026-01-18", "2026-01-18", { situacionBaja: V })];
+  const r = cambio({ fecha_alta_contrato: "2026-01-01", fecha_baja_contrato: "2026-03-31" }, CUIL, E2030, rels, HOY, ["2026-01-11", "2026-01-18"]);
+  assert.equal(r?.tipo, "baja_paraguas");
+  assert.equal(r?.aplicar, true);
+  assert.equal(r?.finArca, "2026-01-06");
+  // sin saber las otras altas, la misma situación es granularidad (no se escribe): el lado conservador
+  assert.equal(cambio({ fecha_alta_contrato: "2026-01-01", fecha_baja_contrato: "2026-03-31" }, CUIL, E2030, rels, HOY).tipo, "arca_granularidad");
+});
+
+test("Rodini: el tramo que sale del período es otro contrato → paraguas igual (ya no es revisión manual)", () => {
+  const rels = [rel("2024-12-31", "2025-01-03", { situacionBaja: V }), rel("2025-01-13", "2025-01-17", { situacionBaja: V }), rel("2025-02-03", "2025-02-28", { situacionBaja: V })];
+  const r = cambio({ fecha_alta_contrato: "2024-12-31", fecha_baja_contrato: "2025-02-03" }, CUIL, E2030, rels, HOY, ["2025-01-13", "2025-02-03"]);
+  assert.equal(r?.tipo, "baja_paraguas");
+  assert.equal(r?.finArca, "2025-01-03");
+});
+
+test("paraguas a medias: un tramo explicado y otro no → revisión manual", () => {
+  const rels = [rel("2026-01-01", "2026-01-06", { situacionBaja: V }), rel("2026-01-11", "2026-01-11", { situacionBaja: V }), rel("2026-01-18", "2026-01-18", { situacionBaja: V })];
+  const r = cambio({ fecha_alta_contrato: "2026-01-01", fecha_baja_contrato: "2026-03-31" }, CUIL, E2030, rels, HOY, ["2026-01-11"]);
+  assert.equal(r?.tipo, "revision_manual");
+  assert.match(r?.alerta || "", /1 tramo/);
+});
+
+test("Xiara #98/#99: otro contrato con la MISMA alta y empleadora → revisión manual, no se sabe qué tramo explica a cuál", () => {
+  const rels = [rel("2026-07-20", "2026-07-20", { situacionBaja: V }), rel("2026-08-01", "2026-08-20", { situacionBaja: V })];
+  const r = cambio({ fecha_alta_contrato: "2026-07-20", fecha_baja_contrato: "2026-08-20" }, CUIL, E2030, rels, HOY, ["2026-07-20", "2026-08-01"]);
+  assert.equal(r?.tipo, "revision_manual");
+  assert.match(r?.alerta || "", /misma alta/);
 });
 
 test("Pereda: reingreso meses después NO es tramo → la primera relación se cierra igual", () => {
