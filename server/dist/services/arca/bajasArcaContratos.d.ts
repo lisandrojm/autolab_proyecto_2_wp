@@ -34,6 +34,12 @@ export interface ItemBajaArca {
     empleadoraCuit: string;
     tipo: TipoCambioBaja;
     aplicar: boolean;
+    /** Los tramos de ARCA mirados (por tramos, granularidad, revisión manual). */
+    tramos?: {
+        inicio: string;
+        fin: string;
+        situacionBaja: string;
+    }[];
     /** El valor crudo de la baja, para escribir sólo si sigue igual. */
     bajaCruda: unknown;
     altaCruda: unknown;

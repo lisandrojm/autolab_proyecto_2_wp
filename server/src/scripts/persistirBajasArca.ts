@@ -3,7 +3,7 @@
  *
  *   TENANT_SLUG=<slug> ./node_modules/.bin/dotenv -e .env.production -- ./node_modules/.bin/tsx src/scripts/persistirBajasArca.ts [--commit] [--detalle]
  *   En el VPS: NODE_ENV=production node dist/scripts/persistirBajasArca.js [--commit] [--detalle]
- *   (sin TENANT_SLUG, todos los tenants)
+ *   (sin TENANT_SLUG, todos los tenants; con CLAVES=<contratoKey,…> el --commit escribe sólo esos)
  *
  * Es lo mismo que el botón «Sincronizar bajas» de la pestaña Antigüedad ARCA, para todos de una vez:
  * `services/arca/bajasArcaContratos.ts`. Sólo con evidencia fuerte (misma persona, empleadora y fecha de
@@ -39,22 +39,28 @@ async function main() {
     const plan = await planDeBajasArca(t._id);
     if (!plan.items.length) continue;
     console.log(`== ${t.name || t.slug} · espejo de ARCA al ${plan.espejoAl ? new Date(plan.espejoAl).toLocaleString("es-AR") : "¿nunca?"} · hoy ${plan.hoy}`);
-    console.log(`   se escriben: ${plan.resumen.baja_nueva} sin baja que ARCA cerró · ${plan.resumen.baja_anterior} con baja posterior a la de ARCA`);
-    console.log(`   no se escriben: ${plan.resumen.arca_por_tramos} ARCA por tramos · ${plan.resumen.arca_plazo_mas_corto} ARCA con un plazo más corto · ${plan.resumen.arca_abierta} terminados que en ARCA siguen abiertos · ${plan.resumen.arca_posterior} ARCA terminó después (${plan.items.filter((x) => x.tipo === "arca_posterior" && dias(x.bajaContrato, x.finArca) <= 3).length} por 1 a 3 días, lo habitual en jornadas)`);
+    console.log(`   se escriben: ${plan.resumen.baja_nueva} sin baja que ARCA cerró · ${plan.resumen.baja_por_tramos} sin baja, ARCA en tramos contiguos cerrados · ${plan.resumen.baja_anterior} con baja posterior a la de ARCA (por un hecho)`);
+    console.log(`   no se escriben: ${plan.resumen.arca_granularidad} ARCA declara por jornadas dentro del contrato · ${plan.resumen.revision_manual} para revisar a mano · ${plan.resumen.arca_abierta} terminados que en ARCA siguen abiertos · ${plan.resumen.arca_posterior} ARCA terminó después (${plan.items.filter((x) => x.tipo === "arca_posterior" && dias(x.bajaContrato, x.finArca) <= 3).length} por 1 a 3 días, lo habitual en jornadas)`);
     const grupo = (titulo: string, l: ItemBajaArca[]) => {
       if (!l.length) return;
       console.log(`\n   ${titulo} (${l.length}):`);
-      for (const x of detalle ? l : l.slice(0, 40)) console.log(`     - ${fila(x)}`);
+      for (const x of detalle ? l : l.slice(0, 40)) {
+        console.log(`     - ${fila(x)}`);
+        if (x.tramos && (detalle || x.tipo !== "arca_granularidad")) for (const tr of x.tramos) console.log(`         tramo ARCA ${tr.inicio} → ${tr.fin || "abierta"}${tr.situacionBaja ? ` (${tr.situacionBaja})` : ""}`);
+      }
       if (!detalle && l.length > 40) console.log(`     … y ${l.length - 40} más (--detalle)`);
     };
     grupo("SE ESCRIBE: sin baja y ARCA la cerró", plan.items.filter((x) => x.tipo === "baja_nueva"));
-    grupo("SE ESCRIBE: ARCA terminó antes que la baja del contrato", plan.items.filter((x) => x.tipo === "baja_anterior"));
-    grupo("NO: ARCA lo declaró por tramos (otras relaciones dentro del contrato)", plan.items.filter((x) => x.tipo === "arca_por_tramos"));
-    grupo("NO: ARCA venció el plazo antes que el contrato (revisar la declaración)", plan.items.filter((x) => x.tipo === "arca_plazo_mas_corto"));
+    grupo("SE ESCRIBE: sin baja, ARCA en tramos contiguos con el último cerrado (fin del último tramo)", plan.items.filter((x) => x.tipo === "baja_por_tramos"));
+    grupo("SE ESCRIBE: ARCA terminó antes que la baja del contrato, por un hecho", plan.items.filter((x) => x.tipo === "baja_anterior"));
+    grupo("NO, REVISIÓN MANUAL: tramos fuera del período del contrato o un hecho entre tramos", plan.items.filter((x) => x.tipo === "revision_manual"));
+    grupo("NO: ARCA declara por jornadas («vencimiento») dentro del contrato; manda el plazo del contrato", plan.items.filter((x) => x.tipo === "arca_granularidad"));
     grupo("NO: ARCA terminó más de 3 días después que el contrato", plan.items.filter((x) => x.tipo === "arca_posterior" && dias(x.bajaContrato, x.finArca) > 3));
     grupo("NO: el contrato terminó y en ARCA sigue abierta (falta la baja en ARCA)", plan.items.filter((x) => x.tipo === "arca_abierta"));
     if (commit) {
-      const r = await aplicarBajasArca(t._id);
+      // CLAVES=<contratoKey,…>: escribe sólo esos (para aplicar de a uno lo decidido).
+      const claves = process.env.CLAVES ? process.env.CLAVES.split(",").map((x) => x.trim()).filter(Boolean) : undefined;
+      const r = await aplicarBajasArca(t._id, { claves });
       console.log(`\n   ✔ escritas ${r.escritos.length}${r.cambiaron.length ? ` · ${r.cambiaron.length} cambiaron entre la lectura y la escritura (no se tocaron)` : ""}`);
     }
     console.log("");

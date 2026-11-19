@@ -5,5 +5,5 @@ export interface BajaSoloEnMemoria {
     contratoKey: string;
 }
 export declare function bajasSoloEnMemoria(hoy?: string): Promise<BajaSoloEnMemoria[]>;
-/** Imprime la sección D agrupada y devuelve el total. */
+/** Imprime la sección D agrupada y devuelve cuántas quedan SIN decidir. */
 export declare function imprimirSeccionD(lista: BajaSoloEnMemoria[], detalle?: boolean): number;

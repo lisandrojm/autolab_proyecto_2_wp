@@ -10,20 +10,26 @@
  * terna es única (índice), así que no hay dos candidatas. Sin CUIL, sin empleadora, sin CUIT o sin esa
  * relación, no se escribe nada: no se deduce.
  *
- * Con la relación encontrada:
- *   baja_nueva            el contrato no tiene baja y ARCA sí                      → SE ESCRIBE la de ARCA
- *   baja_anterior         ARCA terminó ANTES que la baja del contrato, por un hecho
- *                         (renuncia, despido, acuerdo…)                            → SE ESCRIBE la de ARCA
- *   arca_por_tramos       ARCA terminó antes, pero tiene OTRAS relaciones de la misma persona y empleadora
- *                         dentro del período del contrato: se declaró por tramos (jornadas día por día,
- *                         Uzquiano, Raffa). Escribirla recortaría el contrato a su primer tramo  → no
- *   arca_plazo_mas_corto  ARCA terminó antes por «vencimiento de plazo»: ARCA declaró un período más
- *                         corto que el contrato (Sarli: plazo fijo de junio vencido en ARCA el 01/06).
- *                         Suele ser un error de la declaración, y el contrato tiene sueldo del mes   → no
+ * Con la relación encontrada («tramos» = las relaciones de la misma persona y empleadora; «contiguos» =
+ * cada uno empieza el día siguiente al fin del anterior):
+ *   baja_nueva            el contrato no tiene baja y ARCA la cerró                → SE ESCRIBE la de ARCA
+ *   baja_por_tramos       el contrato no tiene baja y ARCA lo lleva en tramos contiguos con el último
+ *                         cerrado (Palomino Mateo: 2 tramos, despido)  → SE ESCRIBE el fin del ÚLTIMO tramo.
+ *                         Si el último sigue abierto, la relación sigue: no se escribe nada.
+ *   baja_anterior         ARCA terminó ANTES que la baja del contrato, en un solo tramo, por un HECHO
+ *                         (renuncia, despido, acuerdo…: Rodriguez, Mai, Sirito…)   → SE ESCRIBE la de ARCA
+ *   arca_granularidad     ARCA terminó antes, pero por «vencimiento de plazo» y con todos los tramos
+ *                         dentro del contrato (o contiguos hasta su baja): no es un hecho que cortó la
+ *                         relación, es la granularidad con que ARCA declara (jornadas día por día; Sarli:
+ *                         plazo fijo de junio con un día en ARCA). Manda el plazo del contrato  → no
+ *   revision_manual       hay tramos que salen del rango del contrato (Rodini), o un hecho en medio de
+ *                         varios tramos: WeProdu pudo fusionar relaciones (Jordan, Fernández). Lo mira
+ *                         una persona                                             → no
  *   arca_posterior        ARCA terminó DESPUÉS que la baja del contrato (las jornadas: casi siempre un
- *                         día después)                                              → no
+ *                         día después)                                             → no
  *   arca_abierta          el contrato terminó y en ARCA sigue abierta: falta la baja EN ARCA          → no
- *   (nada)                coinciden, o los dos abiertos
+ *   (nada)                coinciden, o los dos abiertos, o tramos contiguos que siguen abiertos
+ * Reglas del usuario del 19/11 (tramos y motivo).
  * Puro.
  */
 import { fechaISO as fechaTexto } from "./contratoVigencia.js";
@@ -45,15 +51,17 @@ export interface RelacionArca {
   situacionBaja?: string;
 }
 
-export type TipoCambioBaja = "baja_nueva" | "baja_anterior" | "arca_por_tramos" | "arca_plazo_mas_corto" | "arca_posterior" | "arca_abierta";
+export type TipoCambioBaja = "baja_nueva" | "baja_por_tramos" | "baja_anterior" | "arca_granularidad" | "revision_manual" | "arca_posterior" | "arca_abierta";
 
 export interface CambioDeBaja {
   tipo: TipoCambioBaja;
-  /** Se escribe sólo en baja_nueva y baja_anterior. */
+  /** Se escribe sólo en baja_nueva, baja_por_tramos y baja_anterior. */
   aplicar: boolean;
   bajaContrato: string;
   finArca: string;
   situacionBaja: string;
+  /** Los tramos de ARCA que se miraron (misma persona y empleadora), para mostrar la evidencia. */
+  tramos?: { inicio: string; fin: string; situacionBaja: string }[];
 }
 
 export function cambioDeBajaSegunArca(
@@ -69,19 +77,31 @@ export function cambioDeBajaSegunArca(
   const r = relaciones.find((x) => x.cuil === cuil && x.empleadoraCuit === cuit && x.inicio === alta);
   if (!r) return null;
   const baja = fechaISO(contrato?.fecha_baja_contrato);
+  const mismas = relaciones.filter((x) => x.cuil === cuil && x.empleadoraCuit === cuit);
+  const ver = (l: RelacionArca[]) => l.map((x) => ({ inicio: x.inicio, fin: x.fin || "", situacionBaja: String(x.situacionBaja || "").trim() })).sort((a, b) => a.inicio.localeCompare(b.inicio));
+  // La cadena de tramos contiguos que arranca en el alta.
+  const cadena = [r];
+  for (let u = r; u.fin; ) {
+    const n = mismas.find((x) => x.inicio === diaSiguiente(u.fin));
+    if (!n || cadena.includes(n)) break;
+    cadena.push(n);
+    u = n;
+  }
+  const ultimo = cadena[cadena.length - 1];
   const base = { bajaContrato: baja, finArca: r.fin || "", situacionBaja: String(r.situacionBaja || "").trim() };
   if (r.fin && !baja) {
-    // Sin baja: si la misma empleadora lo vuelve a declarar al día siguiente, ARCA lo lleva por tramos
-    // consecutivos (Barbona: trimestres seguidos) y el fin del primero no es el fin de la relación.
-    const siguiente = diaSiguiente(r.fin);
-    if (relaciones.some((x) => x !== r && x.cuil === cuil && x.empleadoraCuit === cuit && x.inicio === siguiente)) return { tipo: "arca_por_tramos", aplicar: false, ...base };
-    return { tipo: "baja_nueva", aplicar: true, ...base };
+    if (cadena.length === 1) return { tipo: "baja_nueva", aplicar: true, ...base };
+    if (!ultimo.fin) return null; // tramos contiguos y el último abierto: la relación sigue
+    return { tipo: "baja_por_tramos", aplicar: true, bajaContrato: baja, finArca: ultimo.fin, situacionBaja: String(ultimo.situacionBaja || "").trim(), tramos: ver(cadena) };
   }
   if (r.fin && baja && r.fin < baja) {
-    const otraAdentro = relaciones.some((x) => x !== r && x.cuil === cuil && x.empleadoraCuit === cuit && x.inicio > r.fin && x.inicio <= baja);
-    if (otraAdentro) return { tipo: "arca_por_tramos", aplicar: false, ...base };
-    if (/vencimiento/i.test(base.situacionBaja)) return { tipo: "arca_plazo_mas_corto", aplicar: false, ...base };
-    return { tipo: "baja_anterior", aplicar: true, ...base };
+    const tramos = mismas.filter((x) => x.inicio <= baja && (!x.fin || x.fin >= alta));
+    const esHecho = (x: RelacionArca) => !/vencimiento/i.test(String(x.situacionBaja || ""));
+    if (tramos.length === 1 && esHecho(r)) return { tipo: "baja_anterior", aplicar: true, ...base };
+    const fueraDeRango = tramos.some((x) => x.inicio < alta || !x.fin || x.fin > baja);
+    if (fueraDeRango) return { tipo: "revision_manual", aplicar: false, ...base, tramos: ver(tramos) };
+    if (ultimo.fin === baja || tramos.every((x) => !esHecho(x))) return { tipo: "arca_granularidad", aplicar: false, ...base, tramos: ver(tramos) };
+    return { tipo: "revision_manual", aplicar: false, ...base, tramos: ver(tramos) };
   }
   if (r.fin && baja && r.fin > baja) return { tipo: "arca_posterior", aplicar: false, ...base };
   // Abierta en ARCA y el contrato ya terminó: falta presentar la baja en ARCA (no al revés).

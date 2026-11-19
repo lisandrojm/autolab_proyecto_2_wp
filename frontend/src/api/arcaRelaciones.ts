@@ -100,7 +100,7 @@ export interface RelacionResumida {
 }
 
 /** Un contrato que «Sincronizar bajas» escribiría (o no, y por qué). Ver server `utils/bajasArcaContrato.ts`. */
-export type TipoCambioBaja = "baja_nueva" | "baja_anterior" | "arca_por_tramos" | "arca_plazo_mas_corto" | "arca_posterior" | "arca_abierta";
+export type TipoCambioBaja = "baja_nueva" | "baja_por_tramos" | "baja_anterior" | "arca_granularidad" | "revision_manual" | "arca_posterior" | "arca_abierta";
 export interface ItemBajaArca {
   userProjectId: string;
   userId: string;

@@ -1,6 +1,7 @@
 export declare function transicionarEstados(opciones?: {
     escribir?: boolean;
     hoy?: string;
+    soloCompletar?: boolean;
 }): Promise<{
     finalizados: number;
     completados: number;

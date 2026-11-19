@@ -14,7 +14,7 @@
  * OJO con `enContexto`: una consulta de Mongoose corre cuando se la espera, no cuando se arma; si se
  * espera afuera del contexto, el contexto se pierde. Por eso `.exec()` adentro.
  *
- * Lo corre el servidor. Para mirar sin escribir, `transicionarEstados({ escribir: false })`.
+ * El paso 2 corre además cada 30 min (ver el reloj abajo). Lo corre el servidor. Para mirar sin escribir, `transicionarEstados({ escribir: false })`.
  */
 import { Types } from "mongoose";
 import UserProject from "../models/UserProject.js";
@@ -23,7 +23,7 @@ import { estadoSegunDatosLocales, tipoEsIndeterminado, transicionDiaria } from "
 import { catalogoDeTipos } from "./estadoContratoAlGuardar.js";
 import { enContexto } from "../utils/contextoAuditoria.js";
 
-export async function transicionarEstados(opciones: { escribir?: boolean; hoy?: string } = {}): Promise<{ finalizados: number; completados: number; vinculos: number }> {
+export async function transicionarEstados(opciones: { escribir?: boolean; hoy?: string; soloCompletar?: boolean } = {}): Promise<{ finalizados: number; completados: number; vinculos: number }> {
   const escribir = opciones.escribir !== false;
   const hoy = opciones.hoy || hoyArgentina();
   const proy = "contracts.contratoKey contracts.estadoContrato contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.contrato_id contracts.nombre_contrato";
@@ -32,7 +32,7 @@ export async function transicionarEstados(opciones: { escribir?: boolean; hoy?: 
   let vinculos = 0;
 
   // 1. VIGENTE → FINALIZADO.
-  const conVigentes: any[] = await UserProject.find({ contracts: { $elemMatch: { estadoContrato: "VIGENTE", fecha_baja_contrato: { $nin: [null, "", "null"] } } } }).select(proy).lean();
+  const conVigentes: any[] = opciones.soloCompletar ? [] : await UserProject.find({ contracts: { $elemMatch: { estadoContrato: "VIGENTE", fecha_baja_contrato: { $nin: [null, "", "null"] } } } }).select(proy).lean();
   for (const up of conVigentes) {
     const claves = (up.contracts || []).filter((c: any) => c?.contratoKey && transicionDiaria(c, hoy)).map((c: any) => new Types.ObjectId(String(c.contratoKey)));
     if (!claves.length) continue;
@@ -69,7 +69,11 @@ export async function transicionarEstados(opciones: { escribir?: boolean; hoy?: 
   return { finalizados, completados, vinculos };
 }
 
-// ---- el reloj: cada 30 min mira si ya pasó la medianoche argentina y todavía no corrió hoy.
+// ---- el reloj: cada 30 min.
+//  - Completar los SIN estado corre en CADA vuelta: un contrato de un día escrito por `updateOne` (sin el
+//    hook) no puede esperar a mañana, porque mañana ya venció y nunca habría estado VIGENTE (lo marcó el
+//    usuario, 19/11). Sólo toca estados nulos.
+//  - VIGENTE → FINALIZADO, una vez por día pasada la medianoche argentina.
 const CADA_MS = 30 * 60_000;
 let ultimoDia = "";
 let enCurso = false;
@@ -77,10 +81,14 @@ let enCurso = false;
 async function tick() {
   if (enCurso) return;
   const hoy = hoyArgentina();
-  if (ultimoDia === hoy) return;
+  const soloCompletar = ultimoDia === hoy;
   enCurso = true;
   try {
-    const r = await transicionarEstados({ hoy });
+    const r = await transicionarEstados({ hoy, soloCompletar });
+    if (soloCompletar) {
+      if (r.completados) console.log(`[estado-contratos] ${hoy}: ${r.completados} sin estado completados · ${r.vinculos} vínculo(s)`);
+      return;
+    }
     ultimoDia = hoy;
     console.log(`[estado-contratos] ${hoy}: ${r.finalizados} pasaron a FINALIZADO · ${r.completados} sin estado completados · ${r.vinculos} vínculo(s)`);
   } catch (e: any) {

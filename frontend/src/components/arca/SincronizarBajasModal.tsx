@@ -25,8 +25,8 @@ const dias = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) 
 
 const NO_SE_ESCRIBEN: { tipo: TipoCambioBaja; titulo: string; explicacion: string; filtro?: (x: ItemBajaArca) => boolean }[] = [
   { tipo: "arca_abierta", titulo: "Terminados que en ARCA siguen abiertos", explicacion: "El contrato terminó pero ARCA no tiene la baja: falta presentarla en ARCA." },
-  { tipo: "arca_plazo_mas_corto", titulo: "ARCA venció el plazo antes que el contrato", explicacion: "ARCA declara un período más corto (a veces vence el mismo día del alta). Suele ser un error de la declaración y el contrato tiene sueldo del período: se revisa la declaración, no se recorta el contrato." },
-  { tipo: "arca_por_tramos", titulo: "ARCA lo lleva por tramos", explicacion: "La misma empleadora tiene otras relaciones de la persona dentro del período (o la reabre al día siguiente): el fin del primer tramo no es el fin del contrato." },
+  { tipo: "revision_manual", titulo: "Para revisar a mano", explicacion: "ARCA tiene tramos que salen del período del contrato, o un hecho (renuncia, despido) en medio de varios tramos: WeProdu pudo haber unido relaciones distintas en un contrato. Lo mira una persona." },
+  { tipo: "arca_granularidad", titulo: "ARCA declara por jornadas dentro del contrato", explicacion: "ARCA termina antes por «vencimiento de plazo», con todos sus tramos dentro del contrato: es cómo ARCA registra las jornadas, no un hecho que cortó la relación. Manda el plazo del contrato." },
   { tipo: "arca_posterior", titulo: "ARCA terminó más de 3 días después que el contrato", explicacion: "No se alarga un contrato desde ARCA. Las de 1 a 3 días (lo habitual en jornadas) no se listan.", filtro: (x) => dias(x.bajaContrato, x.finArca) > 3 },
 ];
 

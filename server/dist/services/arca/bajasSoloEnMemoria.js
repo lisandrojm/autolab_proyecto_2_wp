@@ -59,7 +59,9 @@ export async function bajasSoloEnMemoria(hoy = hoyArgentina()) {
     }
     return salida;
 }
-/** Imprime la sección D agrupada y devuelve el total. */
+/** Las que no se escriben por una regla decidida (19/11): no cuentan como pendientes. */
+const DECIDIDAS = new Set(["no se escribe: arca_granularidad"]);
+/** Imprime la sección D agrupada y devuelve cuántas quedan SIN decidir. */
 export function imprimirSeccionD(lista, detalle = false) {
     console.log(`\nD. Bajas de ARCA que la validación aplica en memoria y el contrato no tiene escritas: ${lista.length}`);
     const grupos = new Map();
@@ -72,6 +74,9 @@ export function imprimirSeccionD(lista, detalle = false) {
         if (!detalle && l.length > 50)
             console.log(`  … y ${l.length - 50} más (--detalle)`);
     }
-    console.log(lista.length ? `✖ Paso 2 incompleto: ${lista.length} baja(s) de ARCA existen sólo en memoria. Los helpers no se tocan hasta resolverlas.` : "✔ Paso 2 completo: ninguna baja de ARCA existe sólo en memoria.");
-    return lista.length;
+    const pendientes = lista.filter((x) => !DECIDIDAS.has(x.categoria));
+    if (lista.length > pendientes.length)
+        console.log(`\n   (${lista.length - pendientes.length} decidida(s) por regla: no se escriben a propósito)`);
+    console.log(pendientes.length ? `✖ Paso 2 incompleto: ${pendientes.length} baja(s) de ARCA existen sólo en memoria sin decidir. Los helpers no se tocan hasta resolverlas.` : "✔ Paso 2 completo: ninguna baja de ARCA en memoria queda sin escribir ni decidir.");
+    return pendientes.length;
 }

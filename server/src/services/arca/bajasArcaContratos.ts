@@ -46,6 +46,8 @@ export interface ItemBajaArca {
   empleadoraCuit: string;
   tipo: TipoCambioBaja;
   aplicar: boolean;
+  /** Los tramos de ARCA mirados (por tramos, granularidad, revisión manual). */
+  tramos?: { inicio: string; fin: string; situacionBaja: string }[];
   /** El valor crudo de la baja, para escribir sólo si sigue igual. */
   bajaCruda: unknown;
   altaCruda: unknown;
@@ -114,7 +116,7 @@ export async function planDeBajasArca(tenantId: Types.ObjectId | string, opcione
       });
     });
   }
-  const resumen = { baja_nueva: 0, baja_anterior: 0, arca_por_tramos: 0, arca_plazo_mas_corto: 0, arca_posterior: 0, arca_abierta: 0 } as Record<TipoCambioBaja, number>;
+  const resumen = { baja_nueva: 0, baja_por_tramos: 0, baja_anterior: 0, arca_granularidad: 0, revision_manual: 0, arca_posterior: 0, arca_abierta: 0 } as Record<TipoCambioBaja, number>;
   for (const x of items) resumen[x.tipo]++;
   items.sort((a, b) => Number(b.aplicar) - Number(a.aplicar) || a.persona.localeCompare(b.persona));
   return { hoy, espejoAl: t?.integrations?.arcaSimplificacion?.sincronizacionRelaciones?.ultimaSync?.fecha || null, items, resumen };

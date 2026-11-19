@@ -87,7 +87,7 @@ export async function planDeBajasArca(tenantId, opciones = {}) {
             });
         });
     }
-    const resumen = { baja_nueva: 0, baja_anterior: 0, arca_por_tramos: 0, arca_plazo_mas_corto: 0, arca_posterior: 0, arca_abierta: 0 };
+    const resumen = { baja_nueva: 0, baja_por_tramos: 0, baja_anterior: 0, arca_granularidad: 0, revision_manual: 0, arca_posterior: 0, arca_abierta: 0 };
     for (const x of items)
         resumen[x.tipo]++;
     items.sort((a, b) => Number(b.aplicar) - Number(a.aplicar) || a.persona.localeCompare(b.persona));
