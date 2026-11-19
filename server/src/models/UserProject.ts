@@ -1,5 +1,6 @@
 import { Schema, model, Document, Types } from "mongoose";
 import { clavesAPoner } from "../utils/identidadContrato.js";
+import { instalarAuditoriaDeContratos } from "../services/auditoriaContratos.js";
 import { camposDeContratoEnLapida } from "../utils/anulacionContrato.js";
 
 // Define interface for a single contract within the project history
@@ -735,6 +736,9 @@ userProjectSchema.index(
   { externalProjectId: 1, externalEmployeeId: 1 },
   { unique: true, name: INDICE_PAR_FRAME, partialFilterExpression: { externalProjectId: { $gt: 0 }, externalEmployeeId: { $gt: 0 } } },
 );
+
+// Auditoría de contratos (etapa 3): cada escritura de `contracts[]` queda registrada por `contratoKey`.
+instalarAuditoriaDeContratos(userProjectSchema);
 
 const UserProject = model<IUserProject>("UserProject", userProjectSchema);
 

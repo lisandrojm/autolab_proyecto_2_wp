@@ -45,6 +45,7 @@ import "../models/Client.js";
 
 import { ImportConfig } from "../models/ImportConfig.js";
 import { ImportHistory } from "../models/ImportHistory.js";
+import { AuditoriaContrato } from "../models/AuditoriaContrato.js";
 import { IMPORT_FRAME_PAUSADO, confirmacionValida, fechaDeCorrida } from "../utils/importFramePausado.js";
 import { ExternalApiService } from "../services/externalApiService.js";
 
@@ -2994,6 +2995,52 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_us
     res.json(userObj);
   } catch (error) {
     console.error("Get user error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/*
+  GET /users/:id/contratos/:contratoKey/auditoria — EL HISTORIAL DE UN CONTRATO (etapa 3, 19/11/2026).
+
+  Lo que registró la auditoría (`services/auditoriaContratos.ts`): cuándo se creó, cada cambio campo por
+  campo, la anulación; quién (persona, script o sistema) y desde dónde. Por `contratoKey`, nunca por
+  posición. Mismo permiso y mismo control de tenant que «Todos los contratos», que es donde se muestra.
+*/
+router.get("/:id/contratos/:contratoKey/auditoria", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { id, contratoKey } = req.params;
+    if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(contratoKey)) {
+      res.status(400).json({ error: "Id inválido" });
+      return;
+    }
+    const user = await User.findOne({ _id: id, tenantId: req.tenantObjectId }).select("_id").lean();
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    const eventos: any[] = await AuditoriaContrato.find({ contratoKey: new Types.ObjectId(contratoKey), userId: new Types.ObjectId(id) }).sort({ el: -1, _id: -1 }).limit(500).lean();
+    // Quién, con nombre: el evento guarda el id (y el mail); el nombre se busca al leer.
+    const ids = [...new Set(eventos.map((e) => e.por?.userId).filter((x) => x && Types.ObjectId.isValid(x)))];
+    const personas: any[] = ids.length ? await User.find({ _id: { $in: ids } }).select("firstName lastName email metadata.fullName").lean() : [];
+    const nombre = new Map(personas.map((u) => [String(u._id), u.metadata?.fullName || `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email || ""]));
+    res.json(
+      eventos.map((e) => ({
+        _id: String(e._id),
+        el: e.el,
+        tipo: e.tipo,
+        cambios: e.cambios || [],
+        resumen: e.resumen || {},
+        motivo: e.motivo || "",
+        nota: e.nota || "",
+        origen: e.origen,
+        porNombre: (e.por?.userId && nombre.get(String(e.por.userId))) || e.por?.email || "",
+        detalle: e.detalle || "",
+        operacion: e.operacion,
+        posicion: e.posicion,
+      })),
+    );
+  } catch (error) {
+    console.error("Get auditoria contrato error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -13,10 +13,10 @@ export declare const createUserSchema: z.ZodObject<{
     name: z.ZodOptional<z.ZodString>;
     metadata: z.ZodOptional<z.ZodAny>;
 }, "strip", z.ZodTypeAny, {
+    name?: string;
     email?: string;
     firstName?: string;
     lastName?: string;
-    name?: string;
     hireDate?: Date;
     password?: string;
     roles?: string[];
@@ -26,10 +26,10 @@ export declare const createUserSchema: z.ZodObject<{
     isProjectResponsible?: boolean;
     metadata?: any;
 }, {
+    name?: string;
     email?: string;
     firstName?: string;
     lastName?: string;
-    name?: string;
     hireDate?: string | Date;
     password?: string;
     roles?: string[];

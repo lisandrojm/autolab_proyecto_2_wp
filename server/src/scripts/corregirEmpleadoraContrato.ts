@@ -25,6 +25,8 @@ import mongoose, { Types } from "mongoose";
 import fs from "node:fs";
 import path from "node:path";
 import { env } from "../config/env.js";
+import { escribirContratosAuditado } from "../services/auditoriaContratos.js";
+import { contextoDeScript } from "../utils/contextoAuditoria.js";
 
 const CARPETA_RESPALDOS = path.resolve(process.cwd(), "migraciones-respaldo");
 const arg = (n: string) => { const i = process.argv.indexOf(n); return i >= 0 ? process.argv[i + 1] : undefined; };
@@ -38,6 +40,8 @@ async function main() {
   const sinEmpleadora = de === "ninguna";
   if (![clave, a].every((x) => x && Types.ObjectId.isValid(x)) || !(sinEmpleadora || (de && Types.ObjectId.isValid(de)))) throw new Error("Faltan --clave, --de (ObjectId o «ninguna») o --a (ObjectId).");
   if (!motivo) throw new Error("Falta --motivo.");
+  // Auditoría de contratos (etapa 3): el cambio queda a nombre del script, con el motivo.
+  contextoDeScript(path.basename(process.argv[1] || "", path.extname(process.argv[1] || "")), { motivo, ...(arg("--por") ? { por: { userId: arg("--por") } } : {}) });
   console.log(commit ? "MODO COMMIT: escribe.\n" : "DRY-RUN: no escribe nada (con --commit escribe).\n");
 
   const k = new Types.ObjectId(clave);
@@ -69,7 +73,7 @@ async function main() {
   // El tipo se respeta: si estaba guardado como texto, sigue como texto.
   // Sin empleadora previa: como texto, que es como la guardan los demás contratos de estos vínculos.
   const nuevoId = sinEmpleadora || typeof c.empresaContratoId === "string" ? a : new Types.ObjectId(a!);
-  const res = await db().collection("users_&_projects").updateOne(
+  const res = await escribirContratosAuditado(db().collection("users_&_projects") as any, 
     { _id: up._id },
     { $set: { "contracts.$[c].empresaContratoId": nuevoId, "contracts.$[c].nombre_empresa_contrato": hacia.razonSocial } },
     { arrayFilters: [{ "c.contratoKey": k, "c.empresaContratoId": sinEmpleadora ? { $in: [null, ""] } : c.empresaContratoId }] },
@@ -80,7 +84,7 @@ async function main() {
 async function revertir(archivo: string) {
   const r: any = JSON.parse(fs.readFileSync(archivo, "utf8"));
   const k = new Types.ObjectId(r.contratoKey);
-  const res = await db().collection("users_&_projects").updateOne(
+  const res = await escribirContratosAuditado(db().collection("users_&_projects") as any, 
     { _id: new Types.ObjectId(r.userProjectId) },
     { $set: { "contracts.$[c].empresaContratoId": r.antes.empresaContratoId, "contracts.$[c].nombre_empresa_contrato": r.antes.nombre_empresa_contrato } },
     { arrayFilters: [{ "c.contratoKey": k, "c.nombre_empresa_contrato": r.despues.nombre_empresa_contrato }] },

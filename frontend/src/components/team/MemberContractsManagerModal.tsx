@@ -14,6 +14,7 @@ import { ContractFiltersBar, ContractFilterState, emptyContractFilters, matchesC
 import { getContratoActivo } from "../../utils/contratoVigencia";
 
 import { anularContratoConRevision, etiquetaContrato } from "../../utils/anularContrato";
+import { HistorialContrato } from "../contratos/HistorialContrato";
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -36,7 +37,7 @@ interface Props {
   qué, y sin ninguna acción (no se edita, no se descarga, no se vuelve a anular). Una anulación que no se
   ve desde la aplicación se ve igual que el borrado que reemplazó.
 */
-const TarjetaAnulado: React.FC<{ r: ManagedContract }> = ({ r }) => {
+const TarjetaAnulado: React.FC<{ r: ManagedContract; userId: string }> = ({ r, userId }) => {
   const a = r.anulado!;
   return (
     <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/60 p-4 text-sm">
@@ -57,6 +58,7 @@ const TarjetaAnulado: React.FC<{ r: ManagedContract }> = ({ r }) => {
         Anulado {a.el ? `el ${new Date(a.el).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}` : ""} por {a.porNombre || "—"}
         {a.vinculoEliminado ? " · era su último contrato en el proyecto: salió del equipo" : ""}
       </p>
+      <HistorialContrato userId={userId} contratoKey={(r.contract as any)?.contratoKey ? String((r.contract as any).contratoKey) : null} />
     </div>
   );
 };
@@ -227,10 +229,10 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
           <div className="space-y-3">
             {filtered.map((r, idx) =>
               r.anulado ? (
-                <TarjetaAnulado key={`anulado-${r.projectId}-${r.contractIndex}-${idx}`} r={r} />
+                <TarjetaAnulado key={`anulado-${r.projectId}-${r.contractIndex}-${idx}`} r={r} userId={userId!} />
               ) : (
+              <div key={`${r.projectId}-${r.contractIndex}-${idx}`}>
               <ContractCard
-                key={`${r.projectId}-${r.contractIndex}-${idx}`}
                 contract={r.contract}
                 contratoFrames={contratoFrames}
                 activeReleases={activeReleases}
@@ -251,6 +253,8 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
                 onDownloadRelease={(release, empresaId) => handleDownloadRelease(r, release, empresaId)}
                 onUploadAltaDocumento={(file) => handleUploadAltaDocumento(r, file)}
               />
+              <HistorialContrato userId={userId!} contratoKey={(r.contract as any)?.contratoKey ? String((r.contract as any).contratoKey) : null} />
+              </div>
               ),
             )}
           </div>

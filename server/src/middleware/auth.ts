@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { Types } from "mongoose";
+import { enContexto } from "../utils/contextoAuditoria.js";
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -53,7 +54,8 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
     // Agregar tenantObjectId para queries de MongoDB
     req.tenantId = payload.tenantId;
     req.tenantObjectId = new Types.ObjectId(payload.tenantId);
-    next();
+    // Todo lo que escriba este request queda a nombre de esta persona en la auditoría de contratos.
+    enContexto({ origen: "app", por: { userId: payload.sub, email: payload.email }, detalle: `${req.method} ${req.originalUrl.split("?")[0]}` }, () => next());
     return;
   } catch {
     res.status(401).json({ error: "Invalid token" });

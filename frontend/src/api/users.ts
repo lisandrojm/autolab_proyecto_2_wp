@@ -456,6 +456,22 @@ export interface ContratoAnuladoFila {
   contrato: { nombre_contrato: string; fecha_alta_contrato: string; fecha_baja_contrato: string; nombre_empresa_contrato: string; nombre_estado_empleado: string };
 }
 
+/** Un evento del historial de un contrato (auditoría, etapa 3). */
+export interface EventoAuditoriaContrato {
+  _id: string;
+  el: string;
+  tipo: "creado" | "modificado" | "anulado" | "quitado";
+  cambios: { campo: string; antes: unknown; despues: unknown }[];
+  resumen: { nombre_contrato?: string; fecha_alta_contrato?: string; fecha_baja_contrato?: string };
+  motivo: string;
+  nota: string;
+  origen: "app" | "script" | "sistema";
+  porNombre: string;
+  detalle: string;
+  operacion: string;
+  posicion: number;
+}
+
 export interface ManagedContract {
   projectId: string;
   projectName: string;
@@ -827,6 +843,12 @@ class UsersAPI {
    */
   async rolesFrameCounts(): Promise<{ name: string; count: number }[]> {
     const { data } = await axios.get(`/users/roles-frame-counts`, { headers: this.getHeaders() });
+    return Array.isArray(data) ? data : [];
+  }
+
+  /** El historial de un contrato: cada cambio, quién y cuándo (por su clave, no por su posición). */
+  async auditoriaDeContrato(userId: string, contratoKey: string): Promise<EventoAuditoriaContrato[]> {
+    const { data } = await axios.get(`/users/${userId}/contratos/${contratoKey}/auditoria`, { headers: this.getHeaders() });
     return Array.isArray(data) ? data : [];
   }
 

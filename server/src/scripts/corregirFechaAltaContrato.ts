@@ -26,6 +26,8 @@ import mongoose, { Types } from "mongoose";
 import fs from "node:fs";
 import path from "node:path";
 import { env } from "../config/env.js";
+import { escribirContratosAuditado } from "../services/auditoriaContratos.js";
+import { contextoDeScript } from "../utils/contextoAuditoria.js";
 import { fechaISO } from "../utils/contratoVigencia.js";
 
 const CARPETA_RESPALDOS = path.resolve(process.cwd(), "migraciones-respaldo");
@@ -41,6 +43,8 @@ async function main() {
   const [clave, de, a, motivo] = [arg("--clave"), arg("--de"), arg("--a"), (arg("--motivo") || "").trim()];
   if (!clave || !Types.ObjectId.isValid(clave) || !esFecha(de) || !esFecha(a)) throw new Error("Faltan --clave (ObjectId), --de y --a (AAAA-MM-DD).");
   if (!motivo) throw new Error("Falta --motivo.");
+  // Auditoría de contratos (etapa 3): el cambio queda a nombre del script, con el motivo.
+  contextoDeScript(path.basename(process.argv[1] || "", path.extname(process.argv[1] || "")), { motivo, ...(arg("--por") ? { por: { userId: arg("--por") } } : {}) });
   console.log(commit ? "MODO COMMIT: escribe.\n" : "DRY-RUN: no escribe nada (con --commit escribe).\n");
 
   const k = new Types.ObjectId(clave);
@@ -72,7 +76,7 @@ async function main() {
   fs.mkdirSync(CARPETA_RESPALDOS, { recursive: true });
   const archivo = path.join(CARPETA_RESPALDOS, `fecha-alta-contrato-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
   fs.writeFileSync(archivo, JSON.stringify(respaldo, null, 1));
-  const res = await db().collection("users_&_projects").updateOne({ _id: up._id }, { $set: { "contracts.$[c].fecha_alta_contrato": nueva } }, { arrayFilters: [{ "c.contratoKey": k, "c.fecha_alta_contrato": c.fecha_alta_contrato }] });
+  const res = await escribirContratosAuditado(db().collection("users_&_projects") as any, { _id: up._id }, { $set: { "contracts.$[c].fecha_alta_contrato": nueva } }, { arrayFilters: [{ "c.contratoKey": k, "c.fecha_alta_contrato": c.fecha_alta_contrato }] });
   console.log(res.modifiedCount === 1 ? `  ✔ Corregido. Respaldo: ${archivo}` : "  = No se modificó (cambió entre la lectura y la escritura).");
 }
 
@@ -80,7 +84,7 @@ async function revertir(archivo: string) {
   const r: any = JSON.parse(fs.readFileSync(archivo, "utf8"));
   const k = new Types.ObjectId(r.contratoKey);
   const fecha = (v: any) => (typeof v === "string" && /T/.test(v) ? new Date(v) : v);
-  const res = await db().collection("users_&_projects").updateOne({ _id: new Types.ObjectId(r.userProjectId) }, { $set: { "contracts.$[c].fecha_alta_contrato": fecha(r.antes.fecha_alta_contrato) } }, { arrayFilters: [{ "c.contratoKey": k, "c.fecha_alta_contrato": fecha(r.despues.fecha_alta_contrato) }] });
+  const res = await escribirContratosAuditado(db().collection("users_&_projects") as any, { _id: new Types.ObjectId(r.userProjectId) }, { $set: { "contracts.$[c].fecha_alta_contrato": fecha(r.antes.fecha_alta_contrato) } }, { arrayFilters: [{ "c.contratoKey": k, "c.fecha_alta_contrato": fecha(r.despues.fecha_alta_contrato) }] });
   console.log(res.modifiedCount === 1 ? "Revertido." : "No se revirtió: el contrato ya no está como lo dejó la corrección.");
 }
 

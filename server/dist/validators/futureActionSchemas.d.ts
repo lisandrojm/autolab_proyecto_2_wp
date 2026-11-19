@@ -17,7 +17,7 @@ export declare const createFutureActionSchema: z.ZodEffects<z.ZodEffects<z.ZodEf
     tipoAccionFutura?: "plazoDias" | "fechaEspecifica" | "sinVencimiento" | "presentacionDocumento";
     descripcionAccion?: string;
     responsableAccion?: "usuario" | "cliente" | "area_interna";
-    quienDefineVencimiento?: "cliente" | "area_interna" | "sistema";
+    quienDefineVencimiento?: "sistema" | "cliente" | "area_interna";
     orderId?: string;
 }, {
     metadata?: Record<string, any>;
@@ -27,7 +27,7 @@ export declare const createFutureActionSchema: z.ZodEffects<z.ZodEffects<z.ZodEf
     tipoAccionFutura?: "plazoDias" | "fechaEspecifica" | "sinVencimiento" | "presentacionDocumento";
     descripcionAccion?: string;
     responsableAccion?: "usuario" | "cliente" | "area_interna";
-    quienDefineVencimiento?: "cliente" | "area_interna" | "sistema";
+    quienDefineVencimiento?: "sistema" | "cliente" | "area_interna";
     orderId?: string;
 }>, {
     metadata?: Record<string, any>;
@@ -37,7 +37,7 @@ export declare const createFutureActionSchema: z.ZodEffects<z.ZodEffects<z.ZodEf
     tipoAccionFutura?: "plazoDias" | "fechaEspecifica" | "sinVencimiento" | "presentacionDocumento";
     descripcionAccion?: string;
     responsableAccion?: "usuario" | "cliente" | "area_interna";
-    quienDefineVencimiento?: "cliente" | "area_interna" | "sistema";
+    quienDefineVencimiento?: "sistema" | "cliente" | "area_interna";
     orderId?: string;
 }, {
     metadata?: Record<string, any>;
@@ -47,7 +47,7 @@ export declare const createFutureActionSchema: z.ZodEffects<z.ZodEffects<z.ZodEf
     tipoAccionFutura?: "plazoDias" | "fechaEspecifica" | "sinVencimiento" | "presentacionDocumento";
     descripcionAccion?: string;
     responsableAccion?: "usuario" | "cliente" | "area_interna";
-    quienDefineVencimiento?: "cliente" | "area_interna" | "sistema";
+    quienDefineVencimiento?: "sistema" | "cliente" | "area_interna";
     orderId?: string;
 }>, {
     metadata?: Record<string, any>;
@@ -57,7 +57,7 @@ export declare const createFutureActionSchema: z.ZodEffects<z.ZodEffects<z.ZodEf
     tipoAccionFutura?: "plazoDias" | "fechaEspecifica" | "sinVencimiento" | "presentacionDocumento";
     descripcionAccion?: string;
     responsableAccion?: "usuario" | "cliente" | "area_interna";
-    quienDefineVencimiento?: "cliente" | "area_interna" | "sistema";
+    quienDefineVencimiento?: "sistema" | "cliente" | "area_interna";
     orderId?: string;
 }, {
     metadata?: Record<string, any>;
@@ -67,7 +67,7 @@ export declare const createFutureActionSchema: z.ZodEffects<z.ZodEffects<z.ZodEf
     tipoAccionFutura?: "plazoDias" | "fechaEspecifica" | "sinVencimiento" | "presentacionDocumento";
     descripcionAccion?: string;
     responsableAccion?: "usuario" | "cliente" | "area_interna";
-    quienDefineVencimiento?: "cliente" | "area_interna" | "sistema";
+    quienDefineVencimiento?: "sistema" | "cliente" | "area_interna";
     orderId?: string;
 }>, {
     metadata?: Record<string, any>;
@@ -77,7 +77,7 @@ export declare const createFutureActionSchema: z.ZodEffects<z.ZodEffects<z.ZodEf
     tipoAccionFutura?: "plazoDias" | "fechaEspecifica" | "sinVencimiento" | "presentacionDocumento";
     descripcionAccion?: string;
     responsableAccion?: "usuario" | "cliente" | "area_interna";
-    quienDefineVencimiento?: "cliente" | "area_interna" | "sistema";
+    quienDefineVencimiento?: "sistema" | "cliente" | "area_interna";
     orderId?: string;
 }, {
     metadata?: Record<string, any>;
@@ -87,7 +87,7 @@ export declare const createFutureActionSchema: z.ZodEffects<z.ZodEffects<z.ZodEf
     tipoAccionFutura?: "plazoDias" | "fechaEspecifica" | "sinVencimiento" | "presentacionDocumento";
     descripcionAccion?: string;
     responsableAccion?: "usuario" | "cliente" | "area_interna";
-    quienDefineVencimiento?: "cliente" | "area_interna" | "sistema";
+    quienDefineVencimiento?: "sistema" | "cliente" | "area_interna";
     orderId?: string;
 }>;
 export declare const updateFutureActionSchema: z.ZodObject<{
