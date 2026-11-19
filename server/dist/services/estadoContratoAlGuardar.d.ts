@@ -16,7 +16,7 @@
  * Las escrituras por `updateOne` no pasan por acá; las que tocan fechas ya ponen el estado (las bajas de
  * ARCA) y lo que quede sin estado lo completa la tarea diaria y lo marca el reporte.
  */
-import type { Schema } from "mongoose";
+import { type Schema } from "mongoose";
 /** El catálogo de tipos (¿es de tiempo indeterminado?), cacheado unos minutos. */
 export declare function catalogoDeTipos(): Promise<{
     porId: Map<string, boolean>;

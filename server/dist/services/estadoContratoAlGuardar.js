@@ -1,3 +1,22 @@
+/**
+ * EL ESTADO SE PONE AL GUARDAR (etapa 3, 19/11/2026).
+ *
+ * Todo lo que crea o reemplaza un contrato con `save()` (el wizard, las solicitudes, el import…) lo deja
+ * sin `estadoContrato`: el wizard arma el contrato entero de nuevo. En vez de que cada ruta se acuerde,
+ * el modelo lo calcula antes de guardar con la misma regla de la migración (`estadoSegunDatosLocales`:
+ * alta, baja y si el tipo es de tiempo indeterminado; lo indecidible queda SIN_DETERMINAR, nunca VIGENTE
+ * por defecto).
+ *
+ * Cuándo lo calcula, por contrato (no anulado):
+ *  - no tiene estado (nuevo, o reemplazado por el wizard);
+ *  - cambió su alta, su baja o su tipo respecto de cómo se cargó (comparado por `contratoKey`).
+ * Un contrato que no se tocó conserva su estado, aunque el calendario haya avanzado: eso lo hace la
+ * transición diaria, en un solo sentido (`transicionEstadoContratos.ts`).
+ *
+ * Las escrituras por `updateOne` no pasan por acá; las que tocan fechas ya ponen el estado (las bajas de
+ * ARCA) y lo que quede sin estado lo completa la tarea diaria y lo marca el reporte.
+ */
+import mongoose from "mongoose";
 import { Contrato } from "../models/Contrato.js";
 import { hoyArgentina, fechaISO } from "../utils/contratoVigencia.js";
 import { estadoSegunDatosLocales, tipoEsIndeterminado } from "../utils/estadoDeContrato.js";
@@ -35,10 +54,17 @@ export function instalarEstadoAlGuardar(schema) {
         const pendientes = contratos.filter((c) => hayQueCalcularEstado(c, c?.contratoKey ? previoPorClave.get(String(c.contratoKey)) : undefined));
         if (!pendientes.length)
             return;
-        const { porId, porNombre } = await catalogoDeTipos();
         const hoy = hoyArgentina();
+        // El tipo sólo importa sin baja (¿es indeterminado?): el catálogo se pide sólo entonces, y sin
+        // conexión a la base (validaciones en tests) ese contrato queda sin estado para la tarea diaria.
+        // Nunca se adivina el tipo.
+        const necesitaTipo = (c) => !!dia(c?.fecha_alta_contrato) && !dia(c?.fecha_baja_contrato);
+        const conectado = mongoose.connection.readyState === 1;
+        const catalogo = pendientes.some(necesitaTipo) && conectado ? await catalogoDeTipos() : null;
         for (const c of pendientes) {
-            const r = estadoSegunDatosLocales(c, tipoEsIndeterminado(c, porId, porNombre), hoy);
+            if (necesitaTipo(c) && !catalogo)
+                continue;
+            const r = estadoSegunDatosLocales(c, catalogo ? tipoEsIndeterminado(c, catalogo.porId, catalogo.porNombre) : undefined, hoy);
             c.estadoContrato = r.estado;
             c.estadoContratoMotivo = r.motivo || undefined;
         }

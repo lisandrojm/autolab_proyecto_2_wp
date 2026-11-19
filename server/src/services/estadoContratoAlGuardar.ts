@@ -16,7 +16,7 @@
  * Las escrituras por `updateOne` no pasan por acá; las que tocan fechas ya ponen el estado (las bajas de
  * ARCA) y lo que quede sin estado lo completa la tarea diaria y lo marca el reporte.
  */
-import type { Schema } from "mongoose";
+import mongoose, { type Schema } from "mongoose";
 import { Contrato } from "../models/Contrato.js";
 import { hoyArgentina, fechaISO } from "../utils/contratoVigencia.js";
 import { estadoSegunDatosLocales, tipoEsIndeterminado } from "../utils/estadoDeContrato.js";
@@ -54,10 +54,16 @@ export function instalarEstadoAlGuardar(schema: Schema): void {
     const previoPorClave = new Map(alCargar.filter((c) => c?.contratoKey).map((c) => [String(c.contratoKey), c]));
     const pendientes = contratos.filter((c) => hayQueCalcularEstado(c, c?.contratoKey ? previoPorClave.get(String(c.contratoKey)) : undefined));
     if (!pendientes.length) return;
-    const { porId, porNombre } = await catalogoDeTipos();
     const hoy = hoyArgentina();
+    // El tipo sólo importa sin baja (¿es indeterminado?): el catálogo se pide sólo entonces, y sin
+    // conexión a la base (validaciones en tests) ese contrato queda sin estado para la tarea diaria.
+    // Nunca se adivina el tipo.
+    const necesitaTipo = (c: any) => !!dia(c?.fecha_alta_contrato) && !dia(c?.fecha_baja_contrato);
+    const conectado = mongoose.connection.readyState === 1;
+    const catalogo = pendientes.some(necesitaTipo) && conectado ? await catalogoDeTipos() : null;
     for (const c of pendientes) {
-      const r = estadoSegunDatosLocales(c, tipoEsIndeterminado(c, porId, porNombre), hoy);
+      if (necesitaTipo(c) && !catalogo) continue;
+      const r = estadoSegunDatosLocales(c, catalogo ? tipoEsIndeterminado(c, catalogo.porId, catalogo.porNombre) : undefined, hoy);
       c.estadoContrato = r.estado;
       c.estadoContratoMotivo = r.motivo || undefined;
     }
