@@ -91,6 +91,7 @@ async function main() {
     const cfg = getTenantDropboxConfig(tenant);
     const proyectos = await Project.find({ tenantId: tenant._id }).select("_id").lean();
     const ups: any[] = await UserProject.find({ projectId: { $in: proyectos.map((p: any) => p._id) }, "contracts.estado_id": { $in: idsDespues } })
+      // sin-estado: elige por la clave del contrato, no por vigencia.
       .select("userId contracts.estado_id contracts.nombre_estado_empleado contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.contrato_id contracts.nombre_contrato contracts.solicitudId contracts.origen " + CAMPOS_FIRMA.map((c) => `contracts.${c}`).join(" "))
       .lean();
     const candidatos: Array<{ up: any; idx: number; c: any }> = [];

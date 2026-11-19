@@ -59,15 +59,30 @@ export const fechaISO = (valor?: string | null): string => {
  */
 export const esContratoAnulado = (contrato?: ContratoVigenciaLike | null): boolean => contrato?.estadoContrato === "ANULADO";
 
+const avisados = new Set<string>();
+
 /**
- * Vigente = ya arrancó (Alta <= hoy) y no terminó (sin Baja, o Baja >= hoy). Si la Alta es futura,
- * el contrato todavía no rige, aunque no tenga fecha de baja (tiempo indeterminado).
+ * LA VIGENCIA SALE DEL ESTADO (etapa 3, 19/11/2026; misma regla que `server/src/utils/contratoVigencia.ts`).
+ * Rige hoy = `estadoContrato` VIGENTE, ya arrancó (Alta <= hoy) y no terminó (sin Baja, o Baja >= hoy).
+ * Con cualquier otro estado no rige —FINALIZADO, ANULADO, SIN_DETERMINAR— y tampoco SIN estado: nunca
+ * se adivina por las fechas. Un contrato sin la clave `estadoContrato` es casi seguro una respuesta del
+ * server que no la manda: se avisa por consola una vez por forma, para encontrarla.
  */
 export const esContratoVigente = (contrato?: ContratoVigenciaLike | null): boolean => {
   if (!contrato || esContratoAnulado(contrato)) return false;
+  if (contrato.estadoContrato !== "VIGENTE") {
+    if (contrato.estadoContrato === undefined && !("estadoContrato" in contrato)) {
+      const forma = Object.keys(contrato).slice(0, 8).join(",");
+      if (!avisados.has(forma)) {
+        avisados.add(forma);
+        console.warn(`[vigencia] contrato sin estadoContrato (¿el server no lo manda?): no rige. Campos: ${forma}`);
+      }
+    }
+    return false;
+  }
   const hoy = hoyISO();
   const alta = fechaISO(contrato.fecha_alta_contrato);
-  if (alta && alta > hoy) return false;
+  if (!alta || alta > hoy) return false;
   const baja = fechaISO(contrato.fecha_baja_contrato);
   return !baja || baja >= hoy;
 };
@@ -91,7 +106,7 @@ const claveAntiguedad = (contrato: ContratoVigenciaLike): string => `${fechaISO(
 /**
  * Contrato que representa la situación actual de la persona en el proyecto, por orden de prioridad:
  *
- *  1. Entre los VIGENTES (ya arrancaron y no terminaron), el TIEMPO INDETERMINADO manda, aunque
+ *  1. Entre los VIGENTES (estado VIGENTE, ya arrancaron y no terminaron), el TIEMPO INDETERMINADO manda, aunque
  *     después figuren cargados contratos a plazo. Un contrato sin fecha de fin sigue abierto.
  *  2. Si no hay indeterminado vigente, el vigente más reciente.
  *  3. Si no hay ninguno vigente (ni siquiera uno que todavía no arrancó), el más reciente de todos,

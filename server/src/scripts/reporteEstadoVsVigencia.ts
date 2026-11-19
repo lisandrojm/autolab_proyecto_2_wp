@@ -16,6 +16,8 @@
  * y para cada vínculo:
  *  C. el contrato que RIGE (`getContratoActivo`) con la vieja y con la nueva: es lo que usan el equipo,
  *     las altas y la superposición.
+ *  (Desde el 19/11 por la tarde `esContratoVigente` ES la regla por estado: A y C dan 0 por construcción y
+ *  quedan como guarda; B, D y E siguen siendo los detectores que importan.)
  *  D. LAS BAJAS DE ARCA QUE SÓLO EXISTEN EN MEMORIA: contratos a los que la validación de altas les aplica
  *     una baja de ARCA (`bajaDeArcaQueAplica`) que el contrato no tiene escrita. Mientras haya alguno,
  *     el paso 2 no está completo y los helpers NO pueden pasar a mirar sólo el estado: esas personas

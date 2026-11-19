@@ -8,8 +8,8 @@ import assert from "node:assert/strict";
 import { esContratoAnulado, esContratoVigente, esTiempoIndeterminado, getContratoActivo, ordenarContratosDesc } from "./contratoVigencia.js";
 
 const lapida = { contratoKey: "k", estadoContrato: "ANULADO", anulacion: { motivo: "duplicado" } };
-const jornada = { fecha_alta_contrato: "2025-07-29", fecha_baja_contrato: "2025-07-29", nombre_contrato: "Jornada" };
-const indeterminado = { fecha_alta_contrato: "2023-06-01", fecha_baja_contrato: "", nombre_contrato: "Tiempo Indeterminado" };
+const jornada = { estadoContrato: "FINALIZADO", fecha_alta_contrato: "2025-07-29", fecha_baja_contrato: "2025-07-29", nombre_contrato: "Jornada" };
+const indeterminado = { estadoContrato: "VIGENTE", fecha_alta_contrato: "2023-06-01", fecha_baja_contrato: "", nombre_contrato: "Tiempo Indeterminado" };
 
 describe("lápidas de contratos anulados", () => {
   it("una lápida no es vigente ni indeterminada (sin la guarda, sin fechas parecía las dos cosas)", () => {

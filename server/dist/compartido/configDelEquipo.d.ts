@@ -101,6 +101,7 @@ export declare function rolDelMiembro(rolEquipo: string | null | undefined, rolC
 export declare function rolDelMiembroHoy(vinculos: Array<{
     nombre_rol_frame?: string;
     contracts?: Array<{
+        estadoContrato?: any;
         fecha_alta_contrato?: any;
         fecha_baja_contrato?: any;
         nombre_rol_frame?: string;

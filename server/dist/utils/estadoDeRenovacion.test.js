@@ -8,7 +8,7 @@ const terminado = procesoTerminadoSegunEstados([
     { name: "Firma pendiente", data: { ordenDependencia: 3 } },
     { name: "Disponible", data: { ordenDependencia: 5 } },
 ], (s) => s.toLowerCase());
-const c = (alta, baja, delSistema, estado = "Disponible") => ({ fecha_alta_contrato: alta, fecha_baja_contrato: baja, nombre_estado_empleado: estado, delSistema });
+const c = (alta, baja, delSistema, estado = "Disponible") => ({ estadoContrato: baja && baja < HOY ? "FINALIZADO" : "VIGENTE", fecha_alta_contrato: alta, fecha_baja_contrato: baja, nombre_estado_empleado: estado, delSistema });
 const evaluar = (contrato, contratos, renovacionPedida = false) => estadoDeRenovacion({ contrato, contratos, hoy: HOY, procesoTerminado: terminado, renovacionPedida });
 describe("qué dice un contrato sobre su renovación", () => {
     it("un contrato viejo (importado) vencido y sin nada después: Renovar", () => {

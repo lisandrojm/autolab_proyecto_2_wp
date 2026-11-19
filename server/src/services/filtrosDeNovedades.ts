@@ -5,9 +5,9 @@ import { Role } from "../models/Role.js";
 import { Area } from "../models/Area.js";
 import { Shift } from "../models/Shift.js";
 import UserProject from "../models/UserProject.js";
-import { fechaISOExpr } from "../utils/contratosQueRigen.js";
+import { condicionVigenteExpr, fechaISOExpr } from "../utils/contratosQueRigen.js";
 import { claveEstado } from "../utils/estadoClave.js";
-import { hoyArgentina } from "../utils/contratoVigencia.js";
+import { esContratoVigente, hoyArgentina } from "../utils/contratoVigencia.js";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -99,6 +99,7 @@ const normalizarProyectoExpr = {
 
 /** Lo que se necesita saber del contrato que rige en una fila. */
 interface ContratoDeLaFila {
+  estadoContrato: string | null;
   alta: string;
   baja: string;
   nombre_contrato: string;
@@ -140,6 +141,7 @@ async function filasConSuContrato(desde: string, hasta: string, soloDelPeriodo: 
     para quedarse con uno por fila.
   */
   const claveDelContrato = {
+    estado: { $ifNull: ["$contracts.estadoContrato", null] },
     alta: fechaISOExpr("$contracts.fecha_alta_contrato"),
     baja: fechaISOExpr("$contracts.fecha_baja_contrato"),
     carga: { $toString: { $ifNull: ["$contracts.fecha_carga", ""] } },
@@ -185,13 +187,8 @@ async function filasConSuContrato(desde: string, hasta: string, soloDelPeriodo: 
     */
     {
       $addFields: {
-        vigentes: {
-          $filter: {
-            input: "$claves",
-            as: "k",
-            cond: { $and: [{ $or: [{ $eq: ["$$k.alta", ""] }, { $lte: ["$$k.alta", hoy] }] }, { $or: [{ $eq: ["$$k.baja", ""] }, { $gte: ["$$k.baja", hoy] }] }] },
-          },
-        },
+        // La misma regla que `esContratoVigente` (etapa 3): estado VIGENTE, ya arrancó y no terminó.
+        vigentes: { $filter: { input: "$claves", as: "k", cond: condicionVigenteExpr(hoy) } },
       },
     },
     {
@@ -225,6 +222,7 @@ async function filasConSuContrato(desde: string, hasta: string, soloDelPeriodo: 
     userId: String(f.userId),
     contrato: f.elegido
       ? {
+          estadoContrato: f.elegido.estado ?? null,
           alta: f.elegido.alta || "",
           baja: f.elegido.baja || "",
           nombre_contrato: String(f.elegido.nombre_contrato || "").trim(),
@@ -238,13 +236,8 @@ async function filasConSuContrato(desde: string, hasta: string, soloDelPeriodo: 
   }));
 }
 
-/** Vigente = ya arrancó y no terminó. Mismo criterio que `esContratoVigente` del front. */
-const estaVigente = (c: ContratoDeLaFila | null): boolean => {
-  if (!c) return false;
-  const hoy = hoyArgentina();
-  if (c.alta && c.alta > hoy) return false;
-  return !c.baja || c.baja >= hoy;
-};
+/** Rige hoy: `esContratoVigente` (estado VIGENTE y por fechas), sobre la fila reducida. */
+const estaVigente = (c: ContratoDeLaFila | null): boolean => !!c && esContratoVigente({ estadoContrato: c.estadoContrato, fecha_alta_contrato: c.alta, fecha_baja_contrato: c.baja });
 
 /** Lo que cada fila necesita del contrato y el padrón no manda. */
 export interface EconomiaDeLaFila {

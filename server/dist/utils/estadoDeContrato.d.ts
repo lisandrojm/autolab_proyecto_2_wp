@@ -12,9 +12,9 @@ export declare function estadoSegunDatosLocales(c: {
     fecha_baja_contrato?: unknown;
 }, tipoIndeterminado: boolean | undefined, hoy: string): EstadoCalculado;
 /**
- * La vigencia NUEVA (todavía no la usa ningún helper: primero el reporte que la compara con la vieja).
- * Rige hoy = estado VIGENTE, ya arrancó, y si tiene baja todavía no pasó. Sin estado, o con cualquier
- * otro, no rige: no se adivina.
+ * La vigencia por estado. Desde el 19/11/2026 ES `esContratoVigente` (los helpers ya la usan; el reporte
+ * `reporteEstadoVsVigencia` la comparó con la vieja antes del cambio). Rige hoy = estado VIGENTE, ya
+ * arrancó, y si tiene baja todavía no pasó. Sin estado, o con cualquier otro, no rige: no se adivina.
  */
 export declare function rigeHoySegunEstado(c: {
     estadoContrato?: unknown;

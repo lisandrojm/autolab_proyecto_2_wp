@@ -7,7 +7,7 @@ import { authenticateToken } from '../middleware/auth.js';
 import { requireTenant } from '../middleware/tenant.js';
 import { antiguedadArcaPorCuil } from '../services/arca/relacionesArcaStore.js';
 import { saldosDeVacaciones } from '../services/vacaciones/saldos.js';
-import { hoyArgentina } from '../utils/contratoVigencia.js';
+import { esContratoVigente, hoyArgentina } from '../utils/contratoVigencia.js';
 const router = Router();
 router.use(requireTenant, authenticateToken);
 const updateProfileSchema = z.object({
@@ -61,23 +61,14 @@ router.get('/', async (req, res) => {
                 .populate({ path: 'metadata.roles_frame', select: 'name', model: RoleFrame });
             // FILTER: Only show projects that exist and have active contracts
             if (user?.metadata?.projects && Array.isArray(user.metadata.projects)) {
-                const now = new Date();
+                const hoy = hoyArgentina();
                 user.metadata.projects = user.metadata.projects.filter((up) => {
                     // 1. Project must exist
                     if (!up || !up.projectId)
                         return false;
-                    // 2. Must have at least one active contract (no fecha_baja or fecha_baja in future)
-                    const hasActiveContract = !up.contracts ||
-                        up.contracts.length === 0 ||
-                        up.contracts.some((c) => {
-                            if (c?.estadoContrato === "ANULADO")
-                                return false; // lápida de un contrato anulado (etapa 2b)
-                            if (!c.fecha_baja_contrato)
-                                return true;
-                            const endDate = new Date(c.fecha_baja_contrato);
-                            endDate.setHours(23, 59, 59, 999);
-                            return endDate >= now;
-                        });
+                    // 2. Al menos un contrato que rige hoy (estado VIGENTE y por fechas, etapa 3: antes era «sin
+                    //    baja o baja futura», y un contrato sin estado contaba como activo).
+                    const hasActiveContract = !up.contracts || up.contracts.length === 0 || up.contracts.some((c) => esContratoVigente(c, hoy));
                     return hasActiveContract;
                 });
             }

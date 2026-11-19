@@ -44,6 +44,7 @@ async function main() {
         projectId: { $in: proyectos.map((p) => p._id) },
         contracts: { $elemMatch: { $or: [{ altaDocumentoUrl: { $exists: true, $nin: [null, ""] } }, { "altaArcaPresentada.resultado": { $exists: true } }] } },
     })
+        // sin-estado: diagnóstico de altas, mira fechas para otra cosa.
         .select("userId projectId contracts.estado_id contracts.nombre_estado_empleado contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.altaDocumentoUrl contracts.altaDocumentoNombre contracts.altaArcaPresentada contracts.firmaEnviadaAt contracts.firmaGeneradoAt contracts.nombre_contrato")
         .lean();
     const users = await User.find({ _id: { $in: ups.map((u) => u.userId) } }).select("firstName lastName").lean();

@@ -4,12 +4,21 @@
  * Un contrato de TIEMPO INDETERMINADO se guarda con `fecha_baja_contrato` vacía, así que la
  * ausencia de fecha de baja es lo que lo identifica como sin fecha de fin.
  *
- * Vigente = ya arrancó (fecha_alta_contrato <= hoy) Y no terminó (sin fecha_baja_contrato, o
- * fecha_baja_contrato >= hoy). Un contrato con Alta futura (todavía no arrancó) NO es vigente,
- * aunque no tenga fecha de baja.
+ * LA VIGENCIA SALE DEL ESTADO (etapa 3, 19/11/2026; antes salía sólo de las fechas). Un contrato RIGE
+ * HOY si su `estadoContrato` es VIGENTE, ya arrancó (alta <= hoy) y, si tiene baja, todavía no pasó
+ * (baja >= hoy). Con cualquier otro estado no rige: FINALIZADO, ANULADO, SIN_DETERMINAR (lo decide una
+ * persona) y también SIN ESTADO (null o el campo ausente): nunca se adivina a partir de las fechas
+ * (decisión del usuario). El estado lo pone el modelo al guardar y lo mantiene la tarea diaria
+ * (`services/estadoContratoAlGuardar.ts`, `services/transicionEstadoContratos.ts`).
  *
- * El flag `esTiempoIndeterminado` del tipo de contrato no se usa acá: si un contrato indeterminado
- * tiene fecha de baja cargada, esa baja es real y se respeta.
+ * El campo AUSENTE casi siempre es una proyección que se olvidó de pedir `contracts.estadoContrato`:
+ * se avisa por consola una vez por lugar (`proyeccionesConEstado.test.ts` lo exige en el código).
+ *
+ * Las tres copias de esta regla tienen que moverse juntas: `utils/contratosQueRigen.ts` (adentro de
+ * Mongo), `services/filtrosDeNovedades.ts` (ídem) y `frontend/src/utils/contratoVigencia.ts`.
+ *
+ * `esTiempoIndeterminado` sigue siendo «sin fecha de baja»: decide la prioridad entre vigentes, no la
+ * vigencia.
  */
 /** "Hoy" en hora de Argentina (el VPS puede correr en UTC), como "YYYY-MM-DD". */
 export function hoyArgentina() {
@@ -40,15 +49,29 @@ export function fechaISO(valor) {
  * quedaba vigente para siempre y `getContratoActivo` la elegía.
  */
 export const esContratoAnulado = (contrato) => contrato?.estadoContrato === "ANULADO";
+const avisados = new Set();
+/** Una vez por lugar: un contrato sin la clave `estadoContrato` es casi seguro una proyección incompleta. */
+function avisarSinEstado(contrato) {
+    const donde = (new Error().stack || "").split("\n").slice(3, 5).join(" ← ").trim();
+    if (avisados.has(donde))
+        return;
+    avisados.add(donde);
+    console.warn(`[vigencia] contrato sin la clave estadoContrato (¿proyección sin contracts.estadoContrato?): no rige. En ${donde}. Campos: ${Object.keys(contrato).slice(0, 8).join(", ")}`);
+}
 /**
- * Vigente = ya arrancó (Alta <= hoy) y no terminó (sin Baja, o Baja >= hoy). Si la Alta es futura,
- * el contrato todavía no rige, aunque no tenga fecha de baja (tiempo indeterminado).
+ * Rige hoy = estado VIGENTE, ya arrancó (Alta <= hoy) y no terminó (sin Baja, o Baja >= hoy). Sin
+ * estado, o con cualquier otro, no rige: no se adivina por las fechas.
  */
 export function esContratoVigente(contrato, hoy = hoyArgentina()) {
     if (!contrato || esContratoAnulado(contrato))
         return false;
+    if (contrato.estadoContrato !== "VIGENTE") {
+        if (contrato.estadoContrato === undefined && !("estadoContrato" in contrato))
+            avisarSinEstado(contrato);
+        return false;
+    }
     const alta = fechaISO(contrato.fecha_alta_contrato);
-    if (alta && alta > hoy)
+    if (!alta || alta > hoy)
         return false;
     const baja = fechaISO(contrato.fecha_baja_contrato);
     return !baja || baja >= hoy;
@@ -73,7 +96,7 @@ function claveAntiguedad(contrato) {
 /**
  * Contrato que representa la situación actual, por orden de prioridad:
  *
- *  1. Entre los VIGENTES (ya arrancaron y no terminaron), el TIEMPO INDETERMINADO manda, aunque
+ *  1. Entre los VIGENTES (estado VIGENTE, ya arrancaron y no terminaron), el TIEMPO INDETERMINADO manda, aunque
  *     después figuren cargados contratos a plazo. Un contrato sin fecha de fin sigue abierto.
  *  2. Si no hay indeterminado vigente, el vigente más reciente.
  *  3. Si no hay ninguno vigente (ni siquiera uno que todavía no arrancó), el más reciente de todos

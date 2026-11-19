@@ -106,6 +106,39 @@ export declare const fechaISOExpr: (campo: string) => {
     };
 };
 /**
+ * `esContratoVigente` como expresión de Mongo, sobre una clave `{ estado, alta, baja }` (`$$k`): estado
+ * VIGENTE, alta presente y <= hoy, y sin baja o baja >= hoy. Sin estado no rige (no se adivina).
+ */
+export declare const condicionVigenteExpr: (hoy: string) => {
+    $and: ({
+        $eq: string[];
+        $ne?: undefined;
+        $lte?: undefined;
+        $or?: undefined;
+    } | {
+        $ne: string[];
+        $eq?: undefined;
+        $lte?: undefined;
+        $or?: undefined;
+    } | {
+        $lte: string[];
+        $eq?: undefined;
+        $ne?: undefined;
+        $or?: undefined;
+    } | {
+        $or: ({
+            $eq: string[];
+            $gte?: undefined;
+        } | {
+            $gte: string[];
+            $eq?: undefined;
+        })[];
+        $eq?: undefined;
+        $ne?: undefined;
+        $lte?: undefined;
+    })[];
+};
+/**
  * `camposExtra`: campos del contrato que además hacen falta. La tabla de Gestionar Equipo pide una
  * docena —tipo, reemplazo, horario, jornadas, empresas— porque los muestra en sus columnas. Se piden
  * explícitos y no «todo el contrato» para que el peso de esto no crezca cada vez que alguien agrega

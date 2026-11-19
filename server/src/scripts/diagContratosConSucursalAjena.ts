@@ -46,6 +46,7 @@ async function main() {
 
   const ups: any[] = await UserProject.aggregate([
     { $match: { "contracts.empresaContratoId": { $in: empresas.map((e) => e._id) } } },
+    // sin-estado: diagnóstico, no decide vigencia.
     { $project: { userId: 1, c: { $map: { input: { $range: [0, { $size: { $ifNull: ["$contracts", []] } }] }, as: "i", in: { i: "$$i", e: { $arrayElemAt: ["$contracts.empresaContratoId", "$$i"] }, s: { $arrayElemAt: ["$contracts.sucursalArcaId", "$$i"] }, a: { $arrayElemAt: ["$contracts.actividadArca", "$$i"] }, st: { $arrayElemAt: ["$contracts.nombre_estado_empleado", "$$i"] }, alta: { $arrayElemAt: ["$contracts.fecha_alta_contrato", "$$i"] }, baja: { $arrayElemAt: ["$contracts.fecha_baja_contrato", "$$i"] } } } } } },
   ]);
   const users: any[] = await User.find({ _id: { $in: ups.map((u) => u.userId) } }).select("firstName lastName email").lean();

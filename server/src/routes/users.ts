@@ -1708,6 +1708,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
           const previos: any[] = await UserProject.aggregate([
             { $match: { userId: { $in: [...new Set(consultasUltimo.map((q) => q.userId))].map((id) => new Types.ObjectId(id)) } } },
             { $unwind: { path: "$contracts", includeArrayIndex: "i" } },
+            // sin-estado: busca el contrato ANTERIOR por fecha; no decide vigencia.
             { $project: { _id: 0, up: "$_id", i: 1, u: "$userId", alta: fechaISOExpr("$contracts.fecha_alta_contrato"), baja: fechaISOExpr("$contracts.fecha_baja_contrato"), nombre: "$contracts.nombre_contrato", proyecto: "$nombre_proyecto" } },
             { $match: { alta: { $ne: "" } } },
             { $set: { dia: { $dateFromString: { dateString: "$alta", format: "%Y-%m-%d", onError: null, onNull: null } } } },

@@ -135,7 +135,7 @@ describe("vigencia del server con lápidas", () => {
     it("una lápida no es vigente ni indeterminada, y getContratoActivo no la elige (devuelve el mismo objeto)", async () => {
         const { esContratoVigente, esTiempoIndeterminado, getContratoActivo } = await import("../utils/contratoVigencia.js");
         const lapida = { contratoKey: K(), estadoContrato: "ANULADO" };
-        const jornada = { fecha_alta_contrato: "2025-07-29", fecha_baja_contrato: "2025-07-29" };
+        const jornada = { estadoContrato: "FINALIZADO", fecha_alta_contrato: "2025-07-29", fecha_baja_contrato: "2025-07-29" };
         assert.equal(esContratoVigente(lapida, "2026-11-18"), false);
         assert.equal(esTiempoIndeterminado(lapida), false);
         const lista = [jornada, lapida];

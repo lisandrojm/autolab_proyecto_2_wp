@@ -1880,7 +1880,7 @@ router.get("/projects/:projectId/contratos-desalineados", requireTenant, authent
                     { "contracts.valoracion_regla_id": { $ne: null } },
                 ],
             })
-                .select("userId contracts.valoracion_id contracts.nombre_valoracion contracts.valoracionOverride contracts.nombre_categoria_sat contracts.nombre_rol_frame contracts.rol_frame_id contracts.valoracion_regla_id contracts.fecha_alta_contrato contracts.fecha_baja_contrato")
+                .select("userId contracts.valoracion_id contracts.nombre_valoracion contracts.valoracionOverride contracts.nombre_categoria_sat contracts.nombre_rol_frame contracts.rol_frame_id contracts.valoracion_regla_id contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.estadoContrato")
                 .lean(),
             Valoracion.find({ tenantId: req.tenantObjectId }).select("name color").lean(),
         ]);

@@ -16,7 +16,7 @@
  *                   bug del que venimos. Va a un listado para que lo resuelva una persona.
  *   ANULADO         lo pone la anulación; esto no lo calcula ni lo toca.
  */
-import { fechaISO as fechaTexto } from "./contratoVigencia.js";
+import { esContratoVigente, fechaISO as fechaTexto } from "./contratoVigencia.js";
 /** `fechaISO` acepta texto; algunas fechas pueden estar guardadas como Date. */
 const fechaISO = (v) => (v instanceof Date ? (Number.isNaN(v.getTime()) ? "" : v.toISOString().slice(0, 10)) : fechaTexto(v));
 /**
@@ -37,16 +37,12 @@ export function estadoSegunDatosLocales(c, tipoIndeterminado, hoy) {
     return { estado: "SIN_DETERMINAR", motivo: tipoIndeterminado === undefined ? "sin fecha de baja y no se reconoce el tipo de contrato" : "sin fecha de baja y el tipo de contrato no es de tiempo indeterminado" };
 }
 /**
- * La vigencia NUEVA (todavía no la usa ningún helper: primero el reporte que la compara con la vieja).
- * Rige hoy = estado VIGENTE, ya arrancó, y si tiene baja todavía no pasó. Sin estado, o con cualquier
- * otro, no rige: no se adivina.
+ * La vigencia por estado. Desde el 19/11/2026 ES `esContratoVigente` (los helpers ya la usan; el reporte
+ * `reporteEstadoVsVigencia` la comparó con la vieja antes del cambio). Rige hoy = estado VIGENTE, ya
+ * arrancó, y si tiene baja todavía no pasó. Sin estado, o con cualquier otro, no rige: no se adivina.
  */
 export function rigeHoySegunEstado(c, hoy) {
-    if (c?.estadoContrato !== "VIGENTE")
-        return false;
-    const alta = fechaISO(c.fecha_alta_contrato);
-    const baja = fechaISO(c.fecha_baja_contrato);
-    return !!alta && alta <= hoy && (!baja || baja >= hoy);
+    return esContratoVigente(c, hoy);
 }
 /** El tipo del contrato es indeterminado: por `contrato_id`, y si no, por el nombre exacto del tipo. */
 export function tipoEsIndeterminado(c, porId, porNombre) {
