@@ -157,12 +157,15 @@ const CeldaEnVivo: React.FC<{ v?: EnVivo; porDefecto: string }> = ({ v, porDefec
     );
   }
 
+  // La corrida del servidor no manda `cambio`: se compara lo que había con lo que quedó. Antes decía
+  // «sin cambios» con 120900 → 907806 a la vista.
+  const actualizada = v.cambio ? v.cambio === 'actualizada' : (v.despues || porDefecto || '') !== (v.antes || porDefecto || '');
   return (
     <span className="text-[11.5px] inline-flex items-center gap-1.5 flex-wrap">
       <span className="font-mono text-gray-500 dark:text-gray-400">{v.antes || porDefecto || '—'}</span>
       <FontAwesomeIcon icon={faArrowRight} className="h-2.5 w-2.5 text-gray-400" />
-      <span className={`font-mono ${v.cambio === 'actualizada' ? 'font-bold text-blue-700 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>{v.despues || porDefecto || '—'}</span>
-      {v.cambio === 'actualizada' ? (
+      <span className={`font-mono ${actualizada ? 'font-bold text-blue-700 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>{v.despues || porDefecto || '—'}</span>
+      {actualizada ? (
         <span className="text-green-700 dark:text-green-400 inline-flex items-center gap-1">
           <FontAwesomeIcon icon={faCheck} className="h-3 w-3" />
           actualizada
@@ -467,6 +470,8 @@ export const PantallaValidarObrasSociales: React.FC<{
           for (const c of ev.cuils || []) vivo[c] = { estado: 'consultando' };
         }
         else if (ev.tipo === 'error') vivo[ev.cuil] = { estado: 'error', motivo: ev.motivo };
+        // ARCA contestó pero no se guardó (código fuera del catálogo, no registrada…): en rojo, con el motivo.
+        else if (ev.tipo === 'noGuardado') vivo[ev.cuil] = { ...vivo[ev.cuil], estado: 'error', motivo: ev.motivo };
         else if (ev.tipo === 'guardando') setFaseCorrida('Guardando lo que devolvió ARCA…');
         else if (ev.tipo === 'fallo') setFracaso({ faltaron: total, motivo: ev.mensaje });
         else if (ev.tipo === 'fin' && ev.faltaron > 0) setFracaso({ faltaron: ev.faltaron, motivo: ev.motivo });
