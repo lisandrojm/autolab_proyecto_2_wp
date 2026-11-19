@@ -45,13 +45,14 @@ export const cambiosDeContrato = (catalogos: CatalogosContratacion, contratoId: 
 });
 
 /*
-  CON UN CONTRATO DE ARCA EN ESAS FECHAS (17/11/2026, y desde el 19/11 SÓLO UN AVISO): `soloServicios` es
-  el mensaje del server (`mensajeSoloServicios`) o vacío. En las plantillas no frena ni acota la lista de
-  tipos —decisión del usuario del 19/11: «son diferentes contratos, no importa la superposición»—: se
-  muestra, y si el elegido es de ARCA se lo marca. En el alta individual la regla del 05/11 sigue
-  frenando; acá el server la devuelve como advertencia (`planDeLote`).
+  CON UN CONTRATO DE ARCA EN ESAS FECHAS, SÓLO SERVICIOS (17/11/2026; la regla del alta individual del
+  05/11). `soloServicios` es el mensaje del server (`mensajeSoloServicios`) o vacío: con él, la ventana
+  del tipo ofrece SÓLO los tipos de Servicios (pedido del usuario, 19/11: «si sólo podría pedir Servicios,
+  no debería mostrar los de ARCA»), en la fila de la persona y en el puesto. El tipo general («para
+  todos») no se acota: si es de ARCA, la fila lo muestra marcado y el server lo devuelve como AVISO que
+  no frena (`planDeLote`, decisión del 19/11); al tocar la fila sólo se puede pasar a Servicios.
 */
-export const contratosParaElegir = (catalogos: CatalogosContratacion, _soloServicios?: string | null) => catalogos.contratos;
+export const contratosParaElegir = (catalogos: CatalogosContratacion, soloServicios?: string | null) => (soloServicios ? catalogos.contratos.filter((c) => catalogos.tramitePorContrato.get(c._id) === "constancia_cuit") : catalogos.contratos);
 
 export function AvisoSoloServicios({ mensaje, contratoId, catalogos }: { mensaje?: string | null; contratoId?: string | null; catalogos: CatalogosContratacion }) {
   if (!mensaje) return null;
@@ -59,7 +60,7 @@ export function AvisoSoloServicios({ mensaje, contratoId, catalogos }: { mensaje
   return (
     <p className={`rounded-lg p-2 text-xs font-semibold ${esArca ? "bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-200" : "bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200"}`}>
       {mensaje}
-      {esArca && " Es un aviso: se puede enviar igual."}
+      {esArca && " Tocá el tipo de contrato para pasarlo a Servicios; si se envía así, va como aviso."}
     </p>
   );
 }
