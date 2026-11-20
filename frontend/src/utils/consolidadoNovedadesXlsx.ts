@@ -117,7 +117,12 @@ export function repartoDeExtras(d: FilaDetalleConsolidado, g: OvertimeSettings):
 interface HorasDeLaFila { h50: number; h100: number; total: number }
 interface DetalleConReparto { d: FilaDetalleConsolidado; rep: { h50: number; h100: number } | null }
 
-/** Las 34 columnas de la planilla de liquidación, en su orden y con sus nombres. */
+/**
+ * Las 34 columnas de la planilla de liquidación, en su orden y con sus nombres, más UNA nuestra al final:
+ * «Días sin parte en el período». Sin ella, una persona sin partes sale con todo vacío y en la hoja que se pega
+ * eso se lee como «no tuvo novedades»: así se pagaron 0 horas de feriado a 17 personas y se perdieron 24 horas
+ * extra. La fila entera va resaltada cuando la persona no tiene NINGÚN parte en el período.
+ */
 export const COLUMNAS_EMPRESA: ColumnaHoja[] = [
   { titulo: "Mes", tipo: "entero", ancho: 8 }, { titulo: "CC", ancho: 6 }, { titulo: "Descripción", ancho: 14 }, { titulo: "Leg", tipo: "entero", ancho: 6 }, { titulo: "Apellido", ancho: 20 }, { titulo: "Nombre", ancho: 22 }, { titulo: "Cuil", ancho: 13 },
   { titulo: "ALTA", tipo: "fecha", ancho: 11 }, { titulo: "BAJA", tipo: "fecha", ancho: 11 }, { titulo: "Código", ancho: 8 }, { titulo: "Grupo", tipo: "entero", ancho: 6 }, { titulo: "Tarea", ancho: 34 },
@@ -127,6 +132,7 @@ export const COLUMNAS_EMPRESA: ColumnaHoja[] = [
   { titulo: "Adicional F (0019)", ancho: 9 }, { titulo: "Plus Nocturno", ancho: 9 }, { titulo: "Licencia Enfermedad (0012)", tipo: "entero", ancho: 10 }, { titulo: "Lic. Sin Goce de Sueldo", tipo: "entero", ancho: 10 }, { titulo: "Lic. Vacaciones", tipo: "entero", ancho: 9 },
   { titulo: "Adicional H (0601)", ancho: 9 }, { titulo: "Adicional (0008)", ancho: 9 }, { titulo: "Remplazos Inasistencias", tipo: "entero", ancho: 10 }, { titulo: "ART", ancho: 6 }, { titulo: "Día del Gremio", ancho: 8 },
   { titulo: "Adelantos Sueldo (0018)", ancho: 10 }, { titulo: "NETO Pactado", ancho: 10 }, { titulo: "NOVEDAD MENSUAL (0099)", ancho: 40 },
+  { titulo: "Días sin parte en el período", tipo: "entero", ancho: 11 },
 ];
 
 /** Los motivos del catálogo que alimentan cada concepto. Por nombre, porque el catálogo es del tenant. */
@@ -158,7 +164,8 @@ export function hojasDelConsolidado(c: ConsolidadoNovedades, g: OvertimeSettings
     const k = `${personaDe(f.clave)}|${f.empresa || ""}`;
     (grupos.get(k) || grupos.set(k, []).get(k)!).push(f);
   }
-  const porEmpresa = new Map<string, Celda[][]>();
+  const porEmpresa = new Map<string, { fila: Celda[]; sinParte: boolean }[]>();
+  const personasSinParte = new Set<string>();
   for (const [k, filas] of grupos) {
     const empresa = k.split("|")[1] || SIN_EMPRESA;
     // El contrato que rige: el abierto, o el de alta más reciente. Da ALTA, BAJA, categoría y obra social.
@@ -178,17 +185,29 @@ export function hojasDelConsolidado(c: ConsolidadoNovedades, g: OvertimeSettings
       null, null, porMotivo(esEnfermedad), porMotivo(esSinGoce), suma((f) => f.vacacionesCorridas),
       null, null, suma((f) => f.reemplazos), null, null,
       null, null, null,
+      // Días asignados sin parte. Vacío cuando ningún contrato tiene días evaluables (rotativo o sin días cargados).
+      filas.every((f) => f.jornadasPrevistas === null) ? null : suma((f) => f.diasSinParte),
     ];
-    (porEmpresa.get(empresa) || porEmpresa.set(empresa, []).get(empresa)!).push(fila);
+    const sinParte = filas.every((f) => !f.conAlgunParte);
+    if (sinParte) personasSinParte.add(personaDe(filas[0].clave));
+    (porEmpresa.get(empresa) || porEmpresa.set(empresa, []).get(empresa)!).push({ fila, sinParte });
   }
   const ordenEmpresas = [...porEmpresa.keys()].sort((a, b) => (a === SIN_EMPRESA ? 1 : 0) - (b === SIN_EMPRESA ? 1 : 0) || a.localeCompare(b, "es"));
-  const hojasEmpresa: HojaXlsx[] = ordenEmpresas.map((empresa) => ({
-    nombre: nombreDeHoja(`${mes.etiqueta} - ${empresa}`),
-    tabla: true,
-    vacioDice: "Ningún contrato mensualizado de esta empresa en el período.",
-    columnas: COLUMNAS_EMPRESA,
-    filas: porEmpresa.get(empresa)!.sort((a, b) => (typeof a[3] === "number" && typeof b[3] === "number" ? a[3] - b[3] : a[3] === null ? 1 : b[3] === null ? -1 : 0) || String(a[4] || "").localeCompare(String(b[4] || ""), "es")),
-  }));
+  const porLegajo = (a: Celda[], b: Celda[]) => (typeof a[3] === "number" && typeof b[3] === "number" ? a[3] - b[3] : a[3] === null ? 1 : b[3] === null ? -1 : 0) || String(a[4] || "").localeCompare(String(b[4] || ""), "es");
+  const hojasEmpresa: HojaXlsx[] = ordenEmpresas.map((empresa) => {
+    const filasE = porEmpresa.get(empresa)!.sort((a, b) => porLegajo(a.fila, b.fila));
+    return {
+      nombre: nombreDeHoja(`${mes.etiqueta} - ${empresa}`),
+      tabla: true,
+      vacioDice: "Ningún contrato mensualizado de esta empresa en el período.",
+      columnas: COLUMNAS_EMPRESA,
+      filas: filasE.map((x) => x.fila),
+      filasResaltadas: filasE.map((x, i) => (x.sinParte ? i : -1)).filter((i) => i >= 0),
+    };
+  });
+  const avisoSinParte = personasSinParte.size === 1
+    ? "1 persona de este archivo no tiene ningún parte en el período. Sus novedades están vacías porque no hay datos, no porque no haya novedades. Su fila va resaltada en la hoja de su empresa. Ver A revisar."
+    : `${personasSinParte.size} personas de este archivo no tienen ningún parte en el período. Sus novedades están vacías porque no hay datos, no porque no haya novedades. Sus filas van resaltadas en la hoja de su empresa. Ver A revisar.`;
 
   // ---------- Novedades por persona: la hoja de control ----------
   const porPersona = new Map<string, { legajo: string; nombre: string; cuil: string; filas: DetalleConReparto[] }>();
@@ -364,6 +383,7 @@ export function hojasDelConsolidado(c: ConsolidadoNovedades, g: OvertimeSettings
     columnas: [{ titulo: "", ancho: 36 }, { titulo: "", ancho: 110 }, { titulo: "", ancho: 12 }],
     filas: [
       ["CONSOLIDADO EMPRESAS"],
+      [personasSinParte.size ? avisoSinParte : "Todas las personas de las hojas por empresa figuran en algún parte del período."],
       ["Período", `${ddmmaaaa(c.desde)} al ${ddmmaaaa(c.hasta)}`],
       ["Mes de liquidación (hojas por empresa)", `${mes.etiqueta}: el mes siguiente al cierre del período, como nombra sus hojas la planilla de liquidación («11-2026» = 21/09 al 20/10, el sueldo de octubre). A confirmar con liquidaciones.`],
       ["Mes de sueldo (Días del Mes)", `${mesSueldo.nombre}: el mes calendario en que cierra el período. Días del Mes = 30 si el contrato lo cubre entero; si no, los días que cubre.`],
@@ -389,6 +409,7 @@ export function hojasDelConsolidado(c: ConsolidadoNovedades, g: OvertimeSettings
       ["Lic. Sin Goce de Sueldo", "Días con motivo «Sin Goce de Sueldo» en el parte."],
       ["Lic. Vacaciones", "Días CORRIDOS de cada tramo de vacaciones: del primer al último día con motivo Vacaciones, aunque en el medio haya francos."],
       ["Remplazos Inasistencias", "Días en que la persona figura en el parte reemplazando a otra."],
+      ["Días sin parte en el período (columna nuestra)", "Días asignados en el contrato sin ningún parte. Vacía cuando el contrato no tiene días evaluables (rotativo o sin días cargados). Una fila resaltada entera = la persona no figura en ningún parte del período: sus novedades son «sin datos», no «sin novedades»."],
       ["Sólo contratos mensualizados", "Tiempo indeterminado y plazo fijo. Los jornaleros (Servicios, Jornada, Eventual) no van en estas hojas: tienen su planilla («Exportar Jornaleros»)."],
       [],
       ["HOJAS POR EMPRESA: COLUMNAS QUE VAN VACÍAS Y POR QUÉ"],
@@ -452,6 +473,7 @@ export function hojasDelConsolidado(c: ConsolidadoNovedades, g: OvertimeSettings
       ["Valor hora", `Sueldo mano / ${divisor}. Vacío en jornadas: su sueldo mano es el valor de la jornada, no un mensual.`],
       ["Importes de extras", `Hs 50% × valor hora × ${1 + g.pct50 / 100} + Hs 100% × valor hora × ${1 + g.pct100 / 100}.`],
       ["Novedades por persona › Total días", "Cuántas filas tiene la persona en el Detalle diario. No da los días del período cuando la persona no tenía días asignados, o cuando tuvo dos partes el mismo día."],
+      ["Filas resaltadas en las hojas por empresa", "La persona no figura en ningún parte del período. Todo lo que sale de los partes (horas extra, feriado, licencias, reemplazos) está vacío o en cero por falta de datos, no porque no haya habido novedades. Antes de pagar, conseguir los partes o preguntar."],
     ],
   };
 

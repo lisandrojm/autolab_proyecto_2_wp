@@ -27,7 +27,7 @@ import { Convenio } from "../models/Convenio.js";
 import { ObraSocial } from "../models/ObraSocial.js";
 import { CONVENIO_EXCLUIDO } from "../compartido/arca/afipCompleteness.js";
 import { fechaISO } from "../utils/contratoVigencia.js";
-import { consolidarNovedades, type Consolidado, type ContratoConsolidado, type ParteConsolidado, type PersonaConsolidado } from "../utils/consolidadoNovedades.js";
+import { consolidarNovedades, type Consolidado, type ContratoConsolidado, type EntradaConsolidado, type ParteConsolidado, type PersonaConsolidado } from "../utils/consolidadoNovedades.js";
 
 export interface ProyectoDelConsolidado {
   id: string;
@@ -54,7 +54,8 @@ const str = (v: unknown) => (v === null || v === undefined ? "" : String(v)).tri
 const num = (v: unknown): number | null => { const n = Number(v); return v === null || v === undefined || v === "" || !Number.isFinite(n) ? null : n; };
 const etiquetaTurno = (t: any) => (t ? `${t.name}${t.startTime && t.endTime ? ` (${t.startTime} - ${t.endTime})` : ""}` : "");
 
-export async function armarConsolidado(tenantId: Types.ObjectId, o: { desde: string; hasta: string; proyectoIds: string[] }): Promise<ConsolidadoNovedades> {
+/** La entrada de la regla pura (personas, contratos, partes, feriados, motivos), ya con nombres resueltos. Sirve sola para medir (scripts). */
+export async function entradaDelConsolidado(tenantId: Types.ObjectId, o: { desde: string; hasta: string; proyectoIds: string[] }): Promise<{ proyectos: ProyectoDelConsolidado[]; entrada: EntradaConsolidado }> {
   const proyectoOids = o.proyectoIds.map(oid).filter(Boolean) as Types.ObjectId[];
   const proyectosRaw: any[] = await Project.find({ _id: { $in: proyectoOids }, tenantId }).select("name clientId metadata.centroCostoId metadata.centroCostoEmpresaTangoId").lean();
   const clientes: any[] = await Client.find({ _id: { $in: proyectosRaw.map((p) => p.clientId).filter(Boolean) } }).select("name").lean();
@@ -203,6 +204,11 @@ export async function armarConsolidado(tenantId: Types.ObjectId, o: { desde: str
 
   const feriados = feriadosRaw.map((h) => ({ fecha: new Date(h.date).toISOString().slice(0, 10), nombre: str(h.name) })).filter((h) => h.fecha >= o.desde && h.fecha <= o.hasta).sort((a, b) => a.fecha.localeCompare(b.fecha));
   const motivos = [...new Set(motivosRaw.map((m) => str(m.name)).filter(Boolean))];
-  const resultado = consolidarNovedades({ desde: o.desde, hasta: o.hasta, personas, contratos, partes, feriados, motivos });
-  return { desde: o.desde, hasta: o.hasta, proyectos, feriados, motivos, ...resultado, totales: { resumen: resultado.resumen.length, detalle: resultado.detalle.length, partes: resultado.partes.length, revisar: resultado.revisar.length } };
+  return { proyectos, entrada: { desde: o.desde, hasta: o.hasta, personas, contratos, partes, feriados, motivos } };
+}
+
+export async function armarConsolidado(tenantId: Types.ObjectId, o: { desde: string; hasta: string; proyectoIds: string[] }): Promise<ConsolidadoNovedades> {
+  const { proyectos, entrada } = await entradaDelConsolidado(tenantId, o);
+  const resultado = consolidarNovedades(entrada);
+  return { desde: o.desde, hasta: o.hasta, proyectos, feriados: entrada.feriados, motivos: entrada.motivos, ...resultado, totales: { resumen: resultado.resumen.length, detalle: resultado.detalle.length, partes: resultado.partes.length, revisar: resultado.revisar.length } };
 }

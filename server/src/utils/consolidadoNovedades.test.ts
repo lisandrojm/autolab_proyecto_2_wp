@@ -179,3 +179,10 @@ test("lo que a la hoja por empresa le falta del catálogo va a A revisar: contra
   assert.ok(tipos.includes("Persona sin ficha|(persona 9)"));
   assert.equal(r.revisar[0].tipo, "Persona sin ficha", "primera en el orden");
 });
+
+test("conAlgunParte: quien no figura en ningún parte lo dice en el resumen (la hoja por empresa resalta la fila)", () => {
+  const r = consolidarNovedades(base({ contratos: [contrato("1", "k1", "2026-11-01", "2026-11-30"), contrato("2", "k2", "2026-11-01", "2026-11-30")], partes: [parte("DEM-1", "2026-11-02", [registro("1", "present")])] }));
+  assert.equal(r.resumen.find((f) => f.colaborador === "Pérez, Ana")!.conAlgunParte, true);
+  assert.equal(r.resumen.find((f) => f.colaborador === "Gómez, Luis")!.conAlgunParte, false);
+  assert.equal(r.resumen.find((f) => f.colaborador === "Gómez, Luis")!.diasSinParte, 6);
+});

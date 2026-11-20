@@ -13,7 +13,7 @@ const detalle = (extra: Partial<FilaDetalleConsolidado>): FilaDetalleConsolidado
 const resumen = (extra: Partial<FilaResumenConsolidado>): FilaResumenConsolidado => ({
   clave: "p1|LN|k1", legajo: "00028", colaborador: "Pérez, Ana", cuil: "20111111112", empresa: "2030 S.R.L.", tipo: "Plazo fijo 6x6", categoria: "Auxiliar de Estudios", centroCosto: "426 - La Nacion", proyecto: "LN+", area: "Técnica", turno: "Mañana", desde: "2026-11-01", hasta: "2026-11-30",
   contratos: 1, jornadasTrabajadas: 2, jornadasPrevistas: 20, ausencias: 0, porMotivo: { Franco: 0, Vacaciones: 0, Enfermedad: 0, "Sin Goce de Sueldo": 0, "Otro motivo": 0 }, diasSinParte: 0, valorJornada: 41326.86, sueldoMano: 1004242.69, valorHoraNoAplica: false, extrasCrudas: 2,
-  proyectoId: "LN", apellido: "Pérez", nombrePila: "Ana", grupo: 7, obraSocialCodigo: "120900", obraSocialOrigen: "convenio", esJornada: false, sinContrato: false, mensualizado: true, horasFeriado: 0, vacacionesCorridas: 0, reemplazos: 0, ...extra,
+  proyectoId: "LN", apellido: "Pérez", nombrePila: "Ana", grupo: 7, obraSocialCodigo: "120900", obraSocialOrigen: "convenio", esJornada: false, sinContrato: false, mensualizado: true, conAlgunParte: true, horasFeriado: 0, vacacionesCorridas: 0, reemplazos: 0, ...extra,
 });
 const consolidado = (extra: Partial<ConsolidadoNovedades> = {}): ConsolidadoNovedades => ({
   desde: "2026-11-01", hasta: "2026-11-30", proyectos: [{ id: "LN", nombre: "LN+", cliente: "La Nación", centroCosto: "426 - La Nacion", centroCostoCodigo: "426", centroCostoDescripcion: "La Nacion" }], feriados: [{ fecha: "2026-11-20", nombre: "Soberanía" }], motivos: ["Franco", "Vacaciones", "Enfermedad", "Sin Goce de Sueldo"],
@@ -23,6 +23,8 @@ const consolidado = (extra: Partial<ConsolidadoNovedades> = {}): ConsolidadoNove
     resumen({ clave: "p2|LN|J|3|e1|c2|66686.15", legajo: "", colaborador: "Gómez, Luis", cuil: "27222222223", tipo: "Servicios Jornada", categoria: "Ayudante", desde: "2026-11-01", hasta: "2026-11-23", contratos: 12, jornadasTrabajadas: 12, jornadasPrevistas: null, porMotivo: { Franco: 1, Vacaciones: 0, Enfermedad: 0, "Sin Goce de Sueldo": 0, "Otro motivo": 0 }, ausencias: 1, valorJornada: 66686.15, sueldoMano: 54015.78, valorHoraNoAplica: true, extrasCrudas: 0, proyectoId: "LN", apellido: "Gómez", nombrePila: "Luis", grupo: 10, esJornada: true, mensualizado: false }),
     // Mensualizada en FZERO con vacaciones corridas, enfermedad y una categoría fuera del catálogo.
     resumen({ clave: "p3|LN|k3", legajo: "00004", colaborador: "Supervisora, Una", cuil: "27333333334", empresa: "FZERO S.R.L", tipo: "Tiempo Indeterminado", categoria: "APUNTADOR", desde: "2026-05-01", hasta: "", porMotivo: { Franco: 2, Vacaciones: 6, Enfermedad: 2, "Sin Goce de Sueldo": 1, "Otro motivo": 0 }, ausencias: 11, vacacionesCorridas: 7, apellido: "Supervisora", nombrePila: "Una", grupo: null, obraSocialCodigo: "", obraSocialOrigen: "", extrasCrudas: 0 }),
+    // Mensualizada de 2030 sin NINGÚN parte en el período: todo vacío por falta de datos, fila resaltada.
+    resumen({ clave: "p4|LN|k4", legajo: "00099", colaborador: "Ausente, Nadie", cuil: "20444444445", apellido: "Ausente", nombrePila: "Nadie", jornadasTrabajadas: 0, jornadasPrevistas: 20, diasSinParte: 20, conAlgunParte: false, extrasCrudas: 0 }),
   ],
   detalle: [
     detalle({ extras: { total: 1, h50: 0, h100: 0, horarioEntrada: "06:00", horarioSalida: "12:00", feriado: false }, entradaReal: "05:30", salidaReal: "12:30", reemplazo: "Reemplaza a Gómez, Luis" }),
@@ -62,10 +64,17 @@ test("la hoja por empresa: las 34 columnas en su orden, una fila por persona, s�
   const hojas = hojasDelConsolidado(consolidado(), DEFAULT_GLOSSARY, info);
   const h2030 = hojas[1], fzero = hojas[2];
   assert.deepEqual(h2030.columnas.map((c) => c.titulo), COLUMNAS_EMPRESA.map((c) => c.titulo));
-  assert.equal(COLUMNAS_EMPRESA.length, 34);
-  assert.equal(h2030.filas.length, 1, "la jornalera no va");
+  assert.equal(COLUMNAS_EMPRESA.length, 35, "las 34 de la planilla más «Días sin parte en el período»");
+  assert.equal(h2030.filas.length, 2, "la jornalera no va; la persona sin partes sí");
   const col = columna(h2030);
   const perez = h2030.filas[0];
+  assert.equal(perez[col("Días sin parte en el período")], 0);
+  const nadie = h2030.filas[1];
+  assert.equal(nadie[col("Leg")], 99);
+  assert.equal(nadie[col("Días sin parte en el período")], 20);
+  assert.equal(nadie[col("Horas Extras 100% (0016)")], 0);
+  assert.deepEqual(h2030.filasResaltadas, [1], "sin ningún parte = fila entera resaltada");
+  assert.ok(hojas[0].filas[1][0] === "1 persona de este archivo no tiene ningún parte en el período. Sus novedades están vacías porque no hay datos, no porque no haya novedades. Su fila va resaltada en la hoja de su empresa. Ver A revisar.", "el aviso va arriba de todo en Información");
   assert.equal(perez[col("Mes")], 202612);
   assert.equal(perez[col("CC")], 426);
   assert.equal(perez[col("Descripción")], "La Nacion");
@@ -159,7 +168,7 @@ test("novedades por persona, compensatorios y feriados salen del detalle; el det
   assert.equal(res.filas[1][rc("Contratos")], 12);
   const infoHoja = hojas[0];
   assert.ok(infoHoja.filas.some((r) => r[0] === "Exportado por" && r[1] === "Quien Exporta"));
-  assert.ok(infoHoja.filas.some((r) => r[0] === "12-2026 - 2030 S.R.L." && r[1] === 1));
+  assert.ok(infoHoja.filas.some((r) => r[0] === "12-2026 - 2030 S.R.L." && r[1] === 2));
   assert.ok(infoHoja.filas.some((r) => String(r[0]).startsWith("CLAVE DE CRUCE")));
   assert.ok(hojas[13].filas.some((r) => String(r[0]).startsWith("FERIADO (0017)")));
 });

@@ -10,7 +10,7 @@
  * la acote serían las 1.500 personas del tenant.
  */
 import { Types } from "mongoose";
-import { type Consolidado } from "../utils/consolidadoNovedades.js";
+import { type Consolidado, type EntradaConsolidado } from "../utils/consolidadoNovedades.js";
 export interface ProyectoDelConsolidado {
     id: string;
     nombre: string;
@@ -37,6 +37,15 @@ export interface ConsolidadoNovedades extends Consolidado {
         revisar: number;
     };
 }
+/** La entrada de la regla pura (personas, contratos, partes, feriados, motivos), ya con nombres resueltos. Sirve sola para medir (scripts). */
+export declare function entradaDelConsolidado(tenantId: Types.ObjectId, o: {
+    desde: string;
+    hasta: string;
+    proyectoIds: string[];
+}): Promise<{
+    proyectos: ProyectoDelConsolidado[];
+    entrada: EntradaConsolidado;
+}>;
 export declare function armarConsolidado(tenantId: Types.ObjectId, o: {
     desde: string;
     hasta: string;

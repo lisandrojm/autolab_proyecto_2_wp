@@ -168,6 +168,7 @@ export function consolidarNovedades(e) {
                 esJornada: !!c && esJornada(c),
                 sinContrato: !c,
                 mensualizado: !!c && esMensualizado(c.tipo),
+                conAlgunParte: conAlgunParte.has(personaId),
                 horasFeriado: 0,
                 vacacionesCorridas: 0,
                 reemplazos: 0,

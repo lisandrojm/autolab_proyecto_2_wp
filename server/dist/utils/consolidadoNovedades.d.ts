@@ -164,6 +164,8 @@ export interface FilaResumen {
     sinContrato: boolean;
     /** Tiempo indeterminado o plazo fijo (`esMensualizado`): lo único que va a la hoja por empresa. */
     mensualizado: boolean;
+    /** La persona figura en algún parte del período. Si no, sus novedades están vacías porque NO HAY DATOS, no porque no haya novedades. */
+    conAlgunParte: boolean;
     /** Horas trabajadas los feriados del período: salida real − entrada real, o el turno si no hay reales. Dio 10 de 10 contra la planilla real (concepto 0017). */
     horasFeriado: number;
     /** Vacaciones contadas como se pagan: días CORRIDOS de cada tramo, del primer al último día con motivo Vacaciones, aunque en el medio haya francos. Un día trabajado corta el tramo. */

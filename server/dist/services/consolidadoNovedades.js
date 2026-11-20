@@ -32,7 +32,8 @@ const oid = (v) => (v && Types.ObjectId.isValid(String(v)) ? new Types.ObjectId(
 const str = (v) => (v === null || v === undefined ? "" : String(v)).trim();
 const num = (v) => { const n = Number(v); return v === null || v === undefined || v === "" || !Number.isFinite(n) ? null : n; };
 const etiquetaTurno = (t) => (t ? `${t.name}${t.startTime && t.endTime ? ` (${t.startTime} - ${t.endTime})` : ""}` : "");
-export async function armarConsolidado(tenantId, o) {
+/** La entrada de la regla pura (personas, contratos, partes, feriados, motivos), ya con nombres resueltos. Sirve sola para medir (scripts). */
+export async function entradaDelConsolidado(tenantId, o) {
     const proyectoOids = o.proyectoIds.map(oid).filter(Boolean);
     const proyectosRaw = await Project.find({ _id: { $in: proyectoOids }, tenantId }).select("name clientId metadata.centroCostoId metadata.centroCostoEmpresaTangoId").lean();
     const clientes = await Client.find({ _id: { $in: proyectosRaw.map((p) => p.clientId).filter(Boolean) } }).select("name").lean();
@@ -192,6 +193,10 @@ export async function armarConsolidado(tenantId, o) {
     });
     const feriados = feriadosRaw.map((h) => ({ fecha: new Date(h.date).toISOString().slice(0, 10), nombre: str(h.name) })).filter((h) => h.fecha >= o.desde && h.fecha <= o.hasta).sort((a, b) => a.fecha.localeCompare(b.fecha));
     const motivos = [...new Set(motivosRaw.map((m) => str(m.name)).filter(Boolean))];
-    const resultado = consolidarNovedades({ desde: o.desde, hasta: o.hasta, personas, contratos, partes, feriados, motivos });
-    return { desde: o.desde, hasta: o.hasta, proyectos, feriados, motivos, ...resultado, totales: { resumen: resultado.resumen.length, detalle: resultado.detalle.length, partes: resultado.partes.length, revisar: resultado.revisar.length } };
+    return { proyectos, entrada: { desde: o.desde, hasta: o.hasta, personas, contratos, partes, feriados, motivos } };
+}
+export async function armarConsolidado(tenantId, o) {
+    const { proyectos, entrada } = await entradaDelConsolidado(tenantId, o);
+    const resultado = consolidarNovedades(entrada);
+    return { desde: o.desde, hasta: o.hasta, proyectos, feriados: entrada.feriados, motivos: entrada.motivos, ...resultado, totales: { resumen: resultado.resumen.length, detalle: resultado.detalle.length, partes: resultado.partes.length, revisar: resultado.revisar.length } };
 }

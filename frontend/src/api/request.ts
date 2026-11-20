@@ -173,6 +173,8 @@ export interface HojaXlsx {
   /** Hoja de datos: encabezados en la fila 1, autofiltro, primera fila congelada. */
   tabla?: boolean;
   vacioDice?: string;
+  /** Índices (base 0) de las filas que van resaltadas enteras: «a esta persona le faltan datos». */
+  filasResaltadas?: number[];
 }
 
 export interface FilaResumenConsolidado {
@@ -187,6 +189,8 @@ export interface FilaResumenConsolidado {
   proyectoId: string; apellido: string; nombrePila: string; grupo: number | null; obraSocialCodigo: string; obraSocialOrigen: string; esJornada: boolean; sinContrato: boolean;
   /** Tiempo indeterminado o plazo fijo: lo único que va a la hoja por empresa. */
   mensualizado: boolean;
+  /** La persona figura en algún parte del período. Si no, sus novedades vacías son «sin datos», no «sin novedades». */
+  conAlgunParte: boolean;
   /** Horas trabajadas en feriados del período (concepto 0017). */
   horasFeriado: number;
   /** Vacaciones en días corridos por tramo. */

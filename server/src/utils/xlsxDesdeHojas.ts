@@ -29,6 +29,8 @@ export interface HojaXlsx {
   filas: (string | number | null)[][];
   /** Hoja de datos: encabezados en la fila 1, autofiltro y primera fila congelada. Si no, texto libre. */
   tabla?: boolean;
+  /** Índices (base 0, sobre `filas`) de las filas que van resaltadas enteras: «a esta persona le faltan datos». */
+  filasResaltadas?: number[];
   /** Para una tabla sin filas: lo que dice la hoja en vez de quedar en blanco. */
   vacioDice?: string;
 }
@@ -80,7 +82,12 @@ export async function xlsxDesdeHojas(hojas: HojaXlsx[]): Promise<Buffer> {
         const fila = ws.addRow([hoja.vacioDice || "Sin filas en este período."]);
         fila.font = { italic: true };
       } else {
-        for (const f of hoja.filas) ws.addRow(hoja.columnas.map((c, i) => valorDeCelda(f[i], c.tipo || "texto")));
+        const resaltadas = new Set(hoja.filasResaltadas || []);
+        hoja.filas.forEach((f, idx) => {
+          const fila = ws.addRow(hoja.columnas.map((c, i) => valorDeCelda(f[i], c.tipo || "texto")));
+          // Una fila resaltada (naranja claro, en todas sus celdas) es «faltan datos», no «sin novedades».
+          if (resaltadas.has(idx)) for (let i = 1; i <= hoja.columnas.length; i++) fila.getCell(i).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFCE4D6" } };
+        });
         ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: hoja.filas.length + 1, column: hoja.columnas.length } };
       }
       hoja.columnas.forEach((c, i) => {

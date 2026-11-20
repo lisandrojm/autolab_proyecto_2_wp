@@ -1,0 +1,21 @@
+{
+ "coleccion": "users_&_projects",
+ "userProjectId": "696423955dd723128ad69ed1",
+ "contratoKey": "6afdb3ca0fc132faeab8a6ef",
+ "posicion": 0,
+ "antes": {
+  "fecha_alta_contrato": "2023-06-01"
+ },
+ "despues": {
+  "fecha_alta_contrato": "2023-09-01"
+ },
+ "arca": {
+  "empleadoraCuit": "30717068374",
+  "fechaInicio": "2023-09-01T00:00:00.000Z",
+  "fechaFin": null,
+  "modalidad": "A tiempo completo indeterminado/Trabajo permanente"
+ },
+ "motivo": "Alta corregida a la de ARCA (relación 2030 S.R.L. desde 01/09/2023) que coincide con la planilla de liquidación (NOVEDADES_LICHA, ALTA 01/09/2023); WeProdu tenía 01/06/2023. Decisión del 20/11/2026: donde ARCA y liquidaciones coinciden contra WeProdu, se corrige.",
+ "por": "script corregirFechaAltaContrato",
+ "el": "2026-11-20T17:01:07.117Z"
+}

@@ -664,7 +664,7 @@ router.get("/consolidado", async (req, res) => {
  * límite de carga masiva.
  */
 const columnaSchema = z.object({ titulo: z.string().max(200), tipo: z.enum(["texto", "fecha", "hora", "numero", "entero"]).optional(), ancho: z.number().min(1).max(200).optional() });
-const hojaSchema = z.object({ nombre: z.string().min(1).max(60), columnas: z.array(columnaSchema).min(1).max(200), filas: z.array(z.array(z.union([z.string().max(5000), z.number(), z.null()]))).max(100000), tabla: z.boolean().optional(), vacioDice: z.string().max(500).optional() });
+const hojaSchema = z.object({ nombre: z.string().min(1).max(60), columnas: z.array(columnaSchema).min(1).max(200), filas: z.array(z.array(z.union([z.string().max(5000), z.number(), z.null()]))).max(100000), tabla: z.boolean().optional(), vacioDice: z.string().max(500).optional(), filasResaltadas: z.array(z.number().int().nonnegative()).max(100000).optional() });
 // Hasta 40 hojas: una por empresa del contrato más las fijas (Información, Novedades por persona, Compensatorios ×3, Feriados ×2, Resumen, Detalle, Partes, A revisar, Glosario).
 const xlsxBody = z.object({ hojas: z.array(hojaSchema).min(1).max(40), nombreArchivo: z.string().min(1).max(200) });
 router.post("/consolidado/xlsx", async (req, res) => {
