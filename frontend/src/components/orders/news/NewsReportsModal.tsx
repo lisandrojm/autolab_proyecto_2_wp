@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, eachDayOfInterval } from "date-fns";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel, faCircleInfo, faChartSimple, faFileLines, faChevronLeft, faChevronRight, faFilter, faSpinner, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { faFileExport, faCalendar, faBriefcase, faUser, faClock, faUserSlash, faMoneyBillWave, faSearch, faFileContract, faTimes, faIdBadge, faCalendarDays, faHourglassHalf, faDollarSign, faClipboardList, faLocationDot, faStar, faFileExcel, faCircleInfo, faChartSimple, faFileLines, faChevronLeft, faChevronRight, faFilter, faSpinner, faLayerGroup, faTableList } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../../ui/Modal";
 import { SelectorBadges } from "../../ui/SelectorBadges";
 import { User, UserProjectMetadata } from "../../../api/users";
@@ -18,6 +18,7 @@ import { isContractVigente } from "../../team/ContractCard";
 import { getContratoActivo } from "../../../utils/contratoVigencia";
 import { overtimeUtils, OvertimeSettings, splitOvertime } from "../../../utils/overtimeUtils";
 import { ANCHOS_GLOSARIO, filasGlosarioExtras } from "../../../utils/hojaGlosarioExtras";
+import { hojasDelConsolidado, nombreDelConsolidado } from "../../../utils/consolidadoNovedadesXlsx";
 import * as XLSX from "xlsx";
 import { usePuedeAbrir } from "../../../hooks/usePuedeAbrir";
 import { fechaDeCalendario } from "../../../utils/fechas";
@@ -701,6 +702,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
   const puedeAbrir = usePuedeAbrir();
   const [dateFrom, setDateFrom] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [planillaJornalerosAbierta, setPlanillaJornalerosAbierta] = useState(false);
+  const [exportandoConsolidado, setExportandoConsolidado] = useState(false);
+  const [errorConsolidado, setErrorConsolidado] = useState("");
   const [dateTo, setDateTo] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
   /**
    * PROYECTO/S: VARIOS A LA VEZ. Vacío = todos.
@@ -2140,6 +2143,41 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     XLSX.writeFile(wb, `detalle_diario_consolidado_${dateFrom}_a_${dateTo}.xlsx`);
   };
 
+  /*
+    EL CONSOLIDADO PARA LIQUIDAR (20/11/2026): cinco hojas, por proyecto y período.
+
+    Reemplaza al «Detalle Diario» (una fila por persona y día: 5.301 filas para LN+ en noviembre, 3.980
+    «Sin Registro»), que queda al lado hasta que liquidaciones compare un período. El server clasifica
+    (`utils/consolidadoNovedades.ts`); acá se reparten las extras con el glosario de ESTE navegador —el
+    mismo cálculo de la tabla, sin tocarlo— y el server escribe el archivo como tabla (encabezados en la
+    fila 1, autofiltro, fila congelada, fechas y horas reales). Es por proyecto: sin uno, «sin ningún
+    parte en el mes» serían todas las personas del tenant.
+  */
+  const idsProyectosDelConsolidado = useMemo(() => proyectosSeleccionados.map((clave) => proyectosDelReporte.find((p) => p.clave === clave)?.id).filter((id): id is string => !!id), [proyectosSeleccionados, proyectosDelReporte]);
+  const handleExportConsolidado = async () => {
+    if (idsProyectosDelConsolidado.length === 0 || exportandoConsolidado) return;
+    setExportandoConsolidado(true);
+    setErrorConsolidado("");
+    try {
+      const datos = await activityReportsAPI.consolidado(dateFrom, dateTo, idsProyectosDelConsolidado);
+      const hojas = hojasDelConsolidado(datos, glossary, { exportadoPor: datos.exportadoPor || "", exportadoEl: format(new Date(), "dd/MM/yyyy HH:mm") });
+      const nombre = nombreDelConsolidado(datos);
+      const blob = await activityReportsAPI.consolidadoXlsx(hojas, nombre);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", nombre);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setErrorConsolidado(e?.response?.data?.error || e?.message || "No se pudo generar el consolidado.");
+    } finally {
+      setExportandoConsolidado(false);
+    }
+  };
+
   const handleOpenContract = (s: EmployeeStats) => {
     setContractModal({
       open: true,
@@ -2175,7 +2213,8 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
         }
         size="full"
         footer={
-          <div className="flex justify-end gap-2 w-full">
+          <div className="flex justify-end gap-2 w-full flex-wrap">
+            {errorConsolidado && <span className="text-xs text-red-600 dark:text-red-400 self-center mr-auto">{errorConsolidado}</span>}
             <button onClick={handleExport} disabled={statsByEmployee.length === 0} className="px-5 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
               <FontAwesomeIcon icon={faFileExport} />
               Exportar CSV
@@ -2187,6 +2226,11 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
             <button onClick={handleDailyExportXLS} disabled={statsByEmployee.length === 0} className="px-5 py-2 bg-green-600 dark:bg-green-700 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
               <FontAwesomeIcon icon={faClipboardList} />
               Exportar Detalle Diario
+            </button>
+            {/* El consolidado para liquidar (20/11/2026). Por proyecto: sin uno elegido no hay a quién acotar «sin ningún parte en el mes». */}
+            <button onClick={handleExportConsolidado} disabled={idsProyectosDelConsolidado.length === 0 || exportandoConsolidado} title={idsProyectosDelConsolidado.length === 0 ? "Elegí al menos un proyecto en el filtro" : `Cinco hojas para liquidar: resumen por persona, detalle diario, partes, a revisar y glosario (${dateFrom} al ${dateTo})`} className="px-5 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+              <FontAwesomeIcon icon={exportandoConsolidado ? faSpinner : faTableList} spin={exportandoConsolidado} />
+              Consolidado para liquidar
             </button>
             {/* La planilla mensual de liquidación: sale de las solicitudes de Jornada, no de los partes, así que no depende de la tabla. */}
             <button onClick={() => setPlanillaJornalerosAbierta(true)} className="px-5 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition-colors flex items-center gap-2 text-sm font-semibold shadow-sm">

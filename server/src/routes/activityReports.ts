@@ -16,6 +16,8 @@ import { User } from "../models/User.js";
 import { Area } from "../models/Area.js";
 import { Shift } from "../models/Shift.js";
 import { Holiday } from "../models/Holiday.js";
+import { armarConsolidado } from "../services/consolidadoNovedades.js";
+import { xlsxDesdeHojas, type HojaXlsx } from "../utils/xlsxDesdeHojas.js";
 
 const router = Router();
 
@@ -642,6 +644,71 @@ router.get("/asistencias-del-periodo", async (req: AuthenticatedRequest & Tenant
   } catch (error) {
     console.error("Asistencias del período error:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * EL CONSOLIDADO DE NOVEDADES (20/11/2026): los datos de las cinco hojas que sirven para liquidar.
+ *
+ * Reemplaza al «Exportar Detalle Diario» del reporte (una fila por persona y día, 5.301 filas para LN+
+ * en noviembre). Las reglas están en `utils/consolidadoNovedades.ts`; la carga en el servicio. Es por
+ * proyecto: sin uno, «sin ningún parte en el mes» serían todas las personas del tenant. El reparto de las
+ * extras entre 50% y 100% y los importes NO salen de acá: el glosario vive en el navegador de quien
+ * exporta, que reparte con la misma función de siempre y después pide el archivo a `/consolidado/xlsx`.
+ */
+const consolidadoQuery = z.object({
+  desde: z.string().regex(DATE_RE),
+  hasta: z.string().regex(DATE_RE),
+  /** Ids de proyecto separados por coma. */
+  proyectos: z.string().min(1),
+});
+router.get("/consolidado", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const q = consolidadoQuery.safeParse(req.query);
+    if (!q.success || q.data.desde > q.data.hasta) {
+      res.status(400).json({ error: "Parámetros 'desde'/'hasta' (AAAA-MM-DD, desde<=hasta) y 'proyectos' (ids separados por coma) son obligatorios" });
+      return;
+    }
+    const proyectoIds = [...new Set(q.data.proyectos.split(",").map((s) => s.trim()).filter((s) => mongoose.Types.ObjectId.isValid(s)))];
+    if (!proyectoIds.length) {
+      res.status(400).json({ error: "Elegí al menos un proyecto" });
+      return;
+    }
+    const [consolidado, quien] = await Promise.all([
+      armarConsolidado(req.tenantObjectId!, { desde: q.data.desde, hasta: q.data.hasta, proyectoIds }),
+      User.findOne({ _id: req.user?.userId, tenantId: req.tenantObjectId }).select("firstName lastName email").lean() as Promise<any>,
+    ]);
+    res.json({ ...consolidado, exportadoPor: quien ? `${quien.firstName || ""} ${quien.lastName || ""}`.trim() || quien.email || "" : "" });
+  } catch (error) {
+    console.error("Consolidado de novedades error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * EL ARCHIVO: las hojas ya armadas por el navegador (con su glosario), escritas como tabla con exceljs
+ * (fila 1 de encabezados, autofiltro, primera fila congelada, fechas y horas reales). Ver
+ * `utils/xlsxDesdeHojas.ts`. El cuerpo puede pasar de 1 MB (el detalle de un mes): `server.ts` le da el
+ * límite de carga masiva.
+ */
+const columnaSchema = z.object({ titulo: z.string().max(200), tipo: z.enum(["texto", "fecha", "hora", "numero", "entero"]).optional(), ancho: z.number().min(1).max(200).optional() });
+const hojaSchema = z.object({ nombre: z.string().min(1).max(60), columnas: z.array(columnaSchema).min(1).max(200), filas: z.array(z.array(z.union([z.string().max(5000), z.number(), z.null()]))).max(100000), tabla: z.boolean().optional(), vacioDice: z.string().max(500).optional() });
+const xlsxBody = z.object({ hojas: z.array(hojaSchema).min(1).max(20), nombreArchivo: z.string().min(1).max(200) });
+router.post("/consolidado/xlsx", async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const b = xlsxBody.safeParse(req.body);
+    if (!b.success) {
+      res.status(400).json({ error: "Hojas inválidas", detalle: b.error.issues.slice(0, 3) });
+      return;
+    }
+    const buffer = await xlsxDesdeHojas(b.data.hojas as HojaXlsx[]);
+    const nombre = b.data.nombreArchivo.replace(/[^\w.\-+]+/g, "_").replace(/\.xlsx$/i, "") + ".xlsx";
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename=${nombre}`);
+    res.send(buffer);
+  } catch (error) {
+    console.error("Consolidado xlsx error:", error);
+    res.status(500).json({ error: "No se pudo generar el archivo" });
   }
 });
 

@@ -183,7 +183,8 @@ app.use((req, res, next) => {
   // volver a empujar a cargar de a un registro, que es el problema que `/bulk` viene a resolver.
   // `/import-json` manda el catálogo de FRAME entero (806 centros de costo, ~115 KB) por la misma
   // razón: el archivo se importa de una o no se importa.
-  const cargaMasiva = req.method === "POST" && (req.path.endsWith("/bulk") || req.path.endsWith("/import-json"));
+  // El consolidado de Novedades manda las hojas ya armadas (el detalle de un mes pasa de 1 MB).
+  const cargaMasiva = req.method === "POST" && (req.path.endsWith("/bulk") || req.path.endsWith("/import-json") || req.path.endsWith("/consolidado/xlsx"));
   const limite = cargaMasiva ? "10mb" : "1mb";
   express.json({
     limit: limite,
