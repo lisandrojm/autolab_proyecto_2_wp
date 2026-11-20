@@ -145,6 +145,7 @@ export async function entradaDelConsolidado(tenantId, o) {
                 grupo: categoriaDatos.get(Number(c.categoria_sat_id))?.grupo ?? null,
                 obraSocialCodigo: obraSocialDe(c).codigo,
                 obraSocialOrigen: obraSocialDe(c).origen,
+                obraSocialSegunLiquidaciones: str(c.obraSocialSegunLiquidaciones),
                 area: str(c.nombre_area) || areaPorId.get(String(c.areaId || asignaciones[0]?.areaId || "")) || "",
                 turno: str(c.nombre_turno) || idsTurno.map((id) => str(turnoPorId.get(id)?.name)).filter(Boolean).join(", "),
                 horaInicio: str(c.hora_inicio),

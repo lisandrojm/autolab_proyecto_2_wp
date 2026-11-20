@@ -86,6 +86,7 @@ const contractSchema = new Schema({
     obraSocialConstatadaEn: { type: String, enum: ["sss", "arca"] },
     obraSocialConstatadaEl: { type: Date, default: null },
     obraSocialNoFigura: { type: Boolean, default: false },
+    obraSocialSegunLiquidaciones: { type: String },
     obraSocialBloqueada: { type: Boolean, default: false },
     obraSocialAplicadaOrigen: { type: String, enum: ["panel", "script"] },
     obraSocialAplicadaPor: { type: Schema.Types.ObjectId, ref: "User", default: null },

@@ -232,6 +232,13 @@ interface IContract {
    */
   obraSocialNoFigura?: boolean;
   /**
+   * RNOS que usa LIQUIDACIONES para este contrato, según su planilla (NOVEDADES_LICHA, cargado por script el
+   * 20/11/2026 por CUIL y empresa). NO es la obra social del contrato ni decide nada: es la referencia para que
+   * el Consolidado Empresas avise «Obra social discrepa con liquidaciones» con los dos valores, y lo decida
+   * laboral. Cuando ARCA constata una y liquidaciones tiene otra, ninguna gana sola.
+   */
+  obraSocialSegunLiquidaciones?: string;
+  /**
    * Por dónde entró la constatación: el panel de pegado o el script que opera ARCA.
    *
    * Se guarda junto con quién y cuándo porque el dato queda BLOQUEADO: si alguien lo discute meses
@@ -540,6 +547,7 @@ const contractSchema = new Schema<IContract>(
     obraSocialConstatadaEn: { type: String, enum: ["sss", "arca"] },
     obraSocialConstatadaEl: { type: Date, default: null },
     obraSocialNoFigura: { type: Boolean, default: false },
+    obraSocialSegunLiquidaciones: { type: String },
     obraSocialBloqueada: { type: Boolean, default: false },
     obraSocialAplicadaOrigen: { type: String, enum: ["panel", "script"] },
     obraSocialAplicadaPor: { type: Schema.Types.ObjectId, ref: "User", default: null },

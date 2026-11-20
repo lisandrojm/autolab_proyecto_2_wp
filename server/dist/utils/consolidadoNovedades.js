@@ -352,6 +352,10 @@ export function consolidarNovedades(e) {
                 revisar.push({ tipo: "Categoría sin grupo", colaborador: nombreDe(c.personaId), cuil: cuilDe(c.personaId), fecha: vigencia, detalle: `La categoría «${c.categoria || "(vacía)"}» del contrato ${c.tipo || ""} no está en el catálogo de categorías: Grupo y Tarea salen incompletos.` });
             if (!c.obraSocialCodigo)
                 revisar.push({ tipo: "Obra social sin código", colaborador: nombreDe(c.personaId), cuil: cuilDe(c.personaId), fecha: vigencia, detalle: `Ni el contrato ${c.tipo || ""} tiene obra social, ni su categoría («${c.categoria || "(vacía)"}») lleva a un convenio con obra social: la columna Código queda vacía.` });
+            // Los dos valores, sin decidir cuál gana: lo decide laboral. La referencia de liquidaciones la cargó un script desde su planilla.
+            const rnos = (s) => s.replace(/\D/g, "").padStart(6, "0");
+            if (c.obraSocialCodigo && c.obraSocialSegunLiquidaciones && rnos(c.obraSocialCodigo) !== rnos(c.obraSocialSegunLiquidaciones))
+                revisar.push({ tipo: "Obra social discrepa con liquidaciones", colaborador: nombreDe(c.personaId), cuil: cuilDe(c.personaId), fecha: vigencia, detalle: `WeProdu emite ${c.obraSocialCodigo} (${c.obraSocialOrigen === "contrato" ? "fijada en el contrato, constatada o manual" : c.obraSocialOrigen === "convenio" ? "la del convenio de la categoría" : "la de la empleadora"}); liquidaciones usa ${c.obraSocialSegunLiquidaciones}. Lo decide laboral.` });
         }
     const sinFicha = new Set();
     for (const f of resumen.values()) {
@@ -384,7 +388,7 @@ export function consolidarNovedades(e) {
         .map((p) => ({ parte: p.numero, fecha: p.fecha, proyecto: p.proyecto, area: p.area, turno: p.turno, responsable: p.responsable, presentes: p.registros.filter((r) => r.status === "present" || r.status === "late").length, ausentes: p.registros.filter((r) => r.status !== "present" && r.status !== "late").length, comentario: p.comentario.trim() }))
         .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.parte.localeCompare(b.parte));
     const porNombre = (a, b) => a.colaborador.localeCompare(b.colaborador, "es", { sensitivity: "base" });
-    const ORDEN_TIPOS = ["Persona sin ficha", "Sin contrato vigente", "Reemplazante sin contrato vigente", "Falta parte", "Sin ningún parte en el mes", "Días no evaluables", "Salida anterior a la entrada", "Extras sin entrada/salida", "Sin área", "Contrato duplicado", "Contrato sin empresa", "Categoría sin grupo", "Obra social sin código", "Motivo fuera del catálogo", "Valor hora no disponible"];
+    const ORDEN_TIPOS = ["Persona sin ficha", "Sin contrato vigente", "Reemplazante sin contrato vigente", "Falta parte", "Sin ningún parte en el mes", "Días no evaluables", "Salida anterior a la entrada", "Extras sin entrada/salida", "Sin área", "Contrato duplicado", "Contrato sin empresa", "Categoría sin grupo", "Obra social sin código", "Obra social discrepa con liquidaciones", "Motivo fuera del catálogo", "Valor hora no disponible"];
     return {
         resumen: [...resumen.values()].sort((a, b) => porNombre(a, b) || a.desde.localeCompare(b.desde)),
         detalle: detalle.sort((a, b) => porNombre(a, b) || a.fecha.localeCompare(b.fecha) || a.parte.localeCompare(b.parte)),

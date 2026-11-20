@@ -238,6 +238,13 @@ interface IContract {
      */
     obraSocialNoFigura?: boolean;
     /**
+     * RNOS que usa LIQUIDACIONES para este contrato, según su planilla (NOVEDADES_LICHA, cargado por script el
+     * 20/11/2026 por CUIL y empresa). NO es la obra social del contrato ni decide nada: es la referencia para que
+     * el Consolidado Empresas avise «Obra social discrepa con liquidaciones» con los dos valores, y lo decida
+     * laboral. Cuando ARCA constata una y liquidaciones tiene otra, ninguna gana sola.
+     */
+    obraSocialSegunLiquidaciones?: string;
+    /**
      * Por dónde entró la constatación: el panel de pegado o el script que opera ARCA.
      *
      * Se guarda junto con quién y cuándo porque el dato queda BLOQUEADO: si alguien lo discute meses

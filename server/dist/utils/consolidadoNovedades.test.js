@@ -5,7 +5,7 @@ import { consolidarNovedades } from "./consolidadoNovedades.js";
 const P = { id: "p1", nombre: "LN+", centroCosto: "705" };
 const persona = (id, nombre) => ({ id, nombre, apellido: nombre.split(", ")[0], nombrePila: nombre.split(", ")[1] || "", cuil: `20${id.padStart(9, "0")}`, legajo: `L${id}` });
 const contrato = (personaId, key, alta, baja, extra = {}) => ({
-    key, personaId, proyectoId: P.id, proyecto: P.nombre, centroCosto: P.centroCosto, alta, baja, tipo: "Plazo fijo 6x6", tipoId: "6", empresa: "2030 S.R.L.", empresaId: "e1", categoria: "Auxiliar", categoriaId: "c1", grupo: 4, obraSocialCodigo: "120900", obraSocialOrigen: "convenio", area: "Técnica", turno: "Mañana", horaInicio: "06:00", horaFin: "12:00", sueldoJornada: 41326.86, sueldoMano: 1004242, fechasTrabajadas: [], diasSemana: [1, 2, 3, 4, 5, 6], rotativo: false, ...extra,
+    key, personaId, proyectoId: P.id, proyecto: P.nombre, centroCosto: P.centroCosto, alta, baja, tipo: "Plazo fijo 6x6", tipoId: "6", empresa: "2030 S.R.L.", empresaId: "e1", categoria: "Auxiliar", categoriaId: "c1", grupo: 4, obraSocialCodigo: "120900", obraSocialOrigen: "convenio", obraSocialSegunLiquidaciones: "", area: "Técnica", turno: "Mañana", horaInicio: "06:00", horaFin: "12:00", sueldoJornada: 41326.86, sueldoMano: 1004242, fechasTrabajadas: [], diasSemana: [1, 2, 3, 4, 5, 6], rotativo: false, ...extra,
 });
 const registro = (personaId, status, extra = {}) => ({ personaId, status, motivo: "", reemplazanteId: "", extras: 0, h50: 0, h100: 0, entradaReal: "", salidaReal: "", entradaPrevista: "06:00", salidaPrevista: "12:00", area: "Técnica", turno: "Mañana (06:00 - 12:00)", ...extra });
 const parte = (numero, fecha, registros, extra = {}) => ({ numero, fecha, proyectoId: P.id, proyecto: P.nombre, area: "Técnica", turno: "Mañana", responsable: "Supervisora, Una", comentario: "", registros, ...extra });
@@ -169,4 +169,14 @@ test("conAlgunParte: quien no figura en ningún parte lo dice en el resumen (la 
     assert.equal(r.resumen.find((f) => f.colaborador === "Pérez, Ana").conAlgunParte, true);
     assert.equal(r.resumen.find((f) => f.colaborador === "Gómez, Luis").conAlgunParte, false);
     assert.equal(r.resumen.find((f) => f.colaborador === "Gómez, Luis").diasSinParte, 6);
+});
+test("obra social: si liquidaciones usa otra, A revisar lo dice con los dos valores y no decide; igual código (con o sin ceros) no avisa", () => {
+    const r = consolidarNovedades(base({ contratos: [
+            contrato("1", "k1", "2026-11-01", "2026-11-30", { obraSocialCodigo: "901006", obraSocialOrigen: "contrato", obraSocialSegunLiquidaciones: "128102" }),
+            contrato("2", "k2", "2026-11-01", "2026-11-30", { obraSocialCodigo: "003900", obraSocialSegunLiquidaciones: "3900" }),
+        ] }));
+    const d = r.revisar.filter((x) => x.tipo === "Obra social discrepa con liquidaciones");
+    assert.equal(d.length, 1);
+    assert.equal(d[0].colaborador, "Pérez, Ana");
+    assert.ok(d[0].detalle.includes("901006") && d[0].detalle.includes("128102") && d[0].detalle.includes("Lo decide laboral"));
 });

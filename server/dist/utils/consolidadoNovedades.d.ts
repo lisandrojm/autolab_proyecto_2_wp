@@ -67,6 +67,8 @@ export interface ContratoConsolidado {
      */
     obraSocialCodigo: string;
     obraSocialOrigen: "contrato" | "convenio" | "empresa" | "";
+    /** RNOS que usa liquidaciones según su planilla (referencia cargada por script; «» si no hay). Sólo para avisar la discrepancia. */
+    obraSocialSegunLiquidaciones: string;
     area: string;
     turno: string;
     horaInicio: string;
