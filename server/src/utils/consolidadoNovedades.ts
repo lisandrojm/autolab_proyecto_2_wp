@@ -226,11 +226,18 @@ export function leCorresponde(c: ContratoConsolidado, d: string): Esperado {
   return "sin_dias";
 }
 
-/** Entre los contratos que cubren el día: el abierto manda; si no, el de alta más reciente. */
+/** Cuánto dice un contrato (área, turno, sueldos, días): para elegir entre dos que empatan. */
+const datosDe = (x: ContratoConsolidado) => [x.area, x.turno, x.sueldoJornada, x.sueldoMano, x.diasSemana.length || x.fechasTrabajadas.length].filter(Boolean).length;
+
+/**
+ * Entre los contratos que cubren el día: el abierto manda; si no, el de alta más reciente. A igual alta, el
+ * que más dice (Aguinaga: dos indeterminados del 01/06/2023, uno con área, turno y días y otro vacío; si
+ * regía el vacío, la fila salía «Sin área»).
+ */
 export function contratoQueRige(contratos: ContratoConsolidado[], d: string): ContratoConsolidado | null {
   const vivos = contratos.filter((c) => cubre(c, d));
   if (!vivos.length) return null;
-  const masReciente = (xs: ContratoConsolidado[]) => xs.reduce((m, a) => (a.alta >= m.alta ? a : m));
+  const masReciente = (xs: ContratoConsolidado[]) => xs.reduce((m, a) => (a.alta > m.alta || (a.alta === m.alta && datosDe(a) > datosDe(m)) ? a : m));
   const abiertos = vivos.filter((c) => !c.baja);
   return abiertos.length ? masReciente(abiertos) : masReciente(vivos);
 }
@@ -250,9 +257,13 @@ export function consolidarNovedades(e: EntradaConsolidado): Consolidado {
     if (!ES_FECHA.test(c.alta)) continue;
     const k = `${c.personaId}|${c.proyectoId}`;
     const lista = contratosDe.get(k) || contratosDe.set(k, []).get(k)!;
-    const mismoTipo = (x: ContratoConsolidado) => (c.tipoId && x.tipoId ? x.tipoId === c.tipoId : x.tipo === c.tipo);
-    if (c.alta !== c.baja && tocaPeriodo(c, desde, hasta) && lista.some((x) => x.alta === c.alta && x.baja === c.baja && mismoTipo(x))) {
+    // Por NOMBRE de tipo cuando lo hay: el importado de FRAME y el cargado en la app traen ids distintos para el mismo «Tiempo Indeterminado».
+    const mismoTipo = (x: ContratoConsolidado) => (c.tipo && x.tipo ? x.tipo === c.tipo : x.tipoId === c.tipoId);
+    const duplicadoDe = c.alta !== c.baja && tocaPeriodo(c, desde, hasta) ? lista.findIndex((x) => x.alta === c.alta && x.baja === c.baja && mismoTipo(x)) : -1;
+    if (duplicadoDe >= 0) {
       revisar.push({ tipo: "Contrato duplicado", colaborador: nombreDe(c.personaId), cuil: cuilDe(c.personaId), fecha: `${ddmm(c.alta)}${c.baja ? ` al ${ddmm(c.baja)}` : " (abierto)"}`, detalle: `Dos contratos ${c.tipo || "del mismo tipo"} idénticos (misma alta, baja y tipo) en ${c.proyecto}: se muestra uno.` });
+      // Se queda el que más dice: si el que ya estaba no tiene área, turno o sueldo y éste sí, éste lo reemplaza.
+      if (datosDe(c) > datosDe(lista[duplicadoDe])) lista[duplicadoDe] = c;
       continue;
     }
     lista.push(c);

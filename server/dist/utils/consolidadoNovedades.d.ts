@@ -203,7 +203,11 @@ export declare const esJornada: (c: ContratoConsolidado) => boolean;
 type Esperado = "si" | "no" | "rotativo" | "sin_dias";
 /** Si a la persona le correspondía trabajar ese día según el contrato. No se infiere del turno. */
 export declare function leCorresponde(c: ContratoConsolidado, d: string): Esperado;
-/** Entre los contratos que cubren el día: el abierto manda; si no, el de alta más reciente. */
+/**
+ * Entre los contratos que cubren el día: el abierto manda; si no, el de alta más reciente. A igual alta, el
+ * que más dice (Aguinaga: dos indeterminados del 01/06/2023, uno con área, turno y días y otro vacío; si
+ * regía el vacío, la fila salía «Sin área»).
+ */
 export declare function contratoQueRige(contratos: ContratoConsolidado[], d: string): ContratoConsolidado | null;
 export declare function consolidarNovedades(e: EntradaConsolidado): Consolidado;
 export {};

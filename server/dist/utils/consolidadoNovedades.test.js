@@ -8,9 +8,9 @@ const contrato = (personaId, key, alta, baja, extra = {}) => ({
     key, personaId, proyectoId: P.id, proyecto: P.nombre, centroCosto: P.centroCosto, alta, baja, tipo: "Plazo fijo 6x6", tipoId: "6", empresa: "2030 S.R.L.", empresaId: "e1", categoria: "Auxiliar", categoriaId: "c1", area: "Técnica", turno: "Mañana", horaInicio: "06:00", horaFin: "12:00", sueldoJornada: 41326.86, sueldoMano: 1004242, fechasTrabajadas: [], diasSemana: [1, 2, 3, 4, 5, 6], rotativo: false, ...extra,
 });
 const registro = (personaId, status, extra = {}) => ({ personaId, status, motivo: "", reemplazanteId: "", extras: 0, h50: 0, h100: 0, entradaReal: "", salidaReal: "", entradaPrevista: "06:00", salidaPrevista: "12:00", area: "Técnica", turno: "Mañana (06:00 - 12:00)", ...extra });
-const parte = (numero, fecha, registros, extra = {}) => ({ numero, fecha, proyectoId: P.id, proyecto: P.nombre, area: "Técnica", turno: "Mañana", responsable: "Kees, Nahuel", comentario: "", registros, ...extra });
+const parte = (numero, fecha, registros, extra = {}) => ({ numero, fecha, proyectoId: P.id, proyecto: P.nombre, area: "Técnica", turno: "Mañana", responsable: "Supervisora, Una", comentario: "", registros, ...extra });
 // Lunes 02/11 a domingo 08/11 de 2026.
-const base = (extra = {}) => ({ desde: "2026-11-02", hasta: "2026-11-08", personas: [persona("1", "Aguirre, Daniel"), persona("2", "Pereda, Mariana")], contratos: [], partes: [], feriados: [], motivos: ["Franco", "Vacaciones"], ...extra });
+const base = (extra = {}) => ({ desde: "2026-11-02", hasta: "2026-11-08", personas: [persona("1", "Pérez, Ana"), persona("2", "Gómez, Luis")], contratos: [], partes: [], feriados: [], motivos: ["Franco", "Vacaciones"], ...extra });
 test("un día sin parte: no le correspondía → nada; le correspondía → Falta parte en el detalle y agrupada por persona en A revisar", () => {
     const r = consolidarNovedades(base({ contratos: [contrato("1", "k1", "2026-11-01", "2026-11-30")], partes: [parte("DEM-1", "2026-11-02", [registro("1", "present")])] }));
     // Lun con parte; mar a sáb asignados sin parte; domingo no asignado.
@@ -33,9 +33,9 @@ test("sin ningún parte en el período: nada en el detalle, UNA alerta; el resum
 test("contrato sin días o rotativo: no se infiere del turno; «Días no evaluables» y previstas vacías", () => {
     const r = consolidarNovedades(base({ contratos: [contrato("1", "k1", "2026-11-01", "2026-11-30", { diasSemana: [] }), contrato("2", "k2", "2026-11-01", "2026-11-30", { rotativo: true, diasSemana: [1, 2, 3, 4, 5, 6, 0] })], partes: [parte("DEM-1", "2026-11-02", [registro("1", "present"), registro("2", "absent", { motivo: "Franco" })])] }));
     assert.equal(r.detalle.length, 2);
-    assert.deepEqual(r.revisar.map((x) => [x.tipo, x.colaborador]), [["Días no evaluables", "Aguirre, Daniel"], ["Días no evaluables", "Pereda, Mariana"]]);
-    assert.match(r.revisar[0].detalle, /no tiene días asignados/);
-    assert.match(r.revisar[1].detalle, /días rotativos/);
+    assert.deepEqual(r.revisar.map((x) => [x.tipo, x.colaborador]), [["Días no evaluables", "Gómez, Luis"], ["Días no evaluables", "Pérez, Ana"]]);
+    assert.match(r.revisar[0].detalle, /días rotativos/);
+    assert.match(r.revisar[1].detalle, /no tiene días asignados/);
     assert.deepEqual(r.resumen.map((f) => f.jornadasPrevistas), [null, null]);
 });
 test("parte de alguien sin contrato ese día: «Sin contrato vigente» con lo que dijo el parte; sin parte y sin contrato, nada", () => {
@@ -84,10 +84,10 @@ test("reemplazos, horas y área: reemplazado por / reemplaza a; salida anterior 
                 registro("2", "present", { extras: 1, entradaReal: "23:00", salidaReal: "01:00", entradaPrevista: "18:00", salidaPrevista: "00:00", area: "" }),
             ], { area: "" })],
     }));
-    const fila1 = r.detalle.find((d) => d.colaborador === "Aguirre, Daniel" && d.fecha === "2026-11-02");
-    const fila2 = r.detalle.find((d) => d.colaborador === "Pereda, Mariana");
-    assert.equal(fila1.reemplazo, "Reemplazado por Pereda, Mariana");
-    assert.equal(fila2.reemplazo, "Reemplaza a Aguirre, Daniel");
+    const fila1 = r.detalle.find((d) => d.colaborador === "Pérez, Ana" && d.fecha === "2026-11-02");
+    const fila2 = r.detalle.find((d) => d.colaborador === "Gómez, Luis");
+    assert.equal(fila1.reemplazo, "Reemplazado por Gómez, Luis");
+    assert.equal(fila2.reemplazo, "Reemplaza a Pérez, Ana");
     assert.deepEqual(r.revisar.map((x) => x.tipo), ["Sin contrato vigente", "Reemplazante sin contrato vigente", "Falta parte", "Sin área"]);
     const r2 = consolidarNovedades(base({ contratos: [contrato("1", "k1", "2026-11-01", "2026-11-30")], partes: [parte("DEM-1", "2026-11-02", [registro("1", "present", { extras: 1, entradaReal: "10:00", salidaReal: "09:00" }), registro("1", "present", { extras: 1 })])] }));
     assert.deepEqual(r2.revisar.map((x) => x.tipo).filter((t) => t !== "Falta parte").sort(), ["Extras sin entrada/salida", "Salida anterior a la entrada"]);
@@ -110,5 +110,5 @@ test("feriado, día no asignado y hoja de partes: el feriado viaja; presente en 
     assert.equal(d.feriado, "Feriado de prueba");
     assert.equal(d.motivo, "Día no asignado en el contrato");
     assert.equal(d.extras?.feriado, true);
-    assert.deepEqual(r.partes, [{ parte: "DEM-1", fecha: "2026-11-08", proyecto: "LN+", area: "Técnica", turno: "Mañana", responsable: "Kees, Nahuel", presentes: 1, ausentes: 0, comentario: "Comentario del parte" }]);
+    assert.deepEqual(r.partes, [{ parte: "DEM-1", fecha: "2026-11-08", proyecto: "LN+", area: "Técnica", turno: "Mañana", responsable: "Supervisora, Una", presentes: 1, ausentes: 0, comentario: "Comentario del parte" }]);
 });
