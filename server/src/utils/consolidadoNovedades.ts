@@ -37,6 +37,9 @@ export interface PersonaConsolidado {
   id: string;
   /** «Apellido, Nombre». */
   nombre: string;
+  /** Apellido y nombre por separado: la planilla de liquidación los lleva en dos columnas. */
+  apellido: string;
+  nombrePila: string;
   cuil: string;
   legajo: string;
 }
@@ -57,6 +60,15 @@ export interface ContratoConsolidado {
   empresaId: string;
   categoria: string;
   categoriaId: string;
+  /** Grupo de la categoría (`categorias-sat.data.numeroCategoria`, el «N* 4» de la planilla). null = categoría fuera del catálogo. */
+  grupo: number | null;
+  /**
+   * RNOS de la obra social que se declara por este contrato, resuelto con la cascada de ARCA
+   * (`compartido/arca/afipCompleteness.ts`): la fijada en el contrato → la del convenio de la categoría →
+   * la de la empleadora si la categoría está excluida de convenio. «» = ninguna resolvió.
+   */
+  obraSocialCodigo: string;
+  obraSocialOrigen: "contrato" | "convenio" | "empresa" | "";
   area: string;
   turno: string;
   horaInicio: string;
@@ -144,6 +156,24 @@ export interface FilaResumen {
   valorHoraNoAplica: boolean;
   /** Suma cruda de las extras (para saber si la fila necesita importes). */
   extrasCrudas: number;
+  // --- Para la hoja por empresa (la planilla de liquidación), 20/11/2026 ---
+  proyectoId: string;
+  apellido: string;
+  nombrePila: string;
+  grupo: number | null;
+  obraSocialCodigo: string;
+  obraSocialOrigen: string;
+  esJornada: boolean;
+  /** Fila de un parte sin contrato que lo cubra: no va a la hoja por empresa. */
+  sinContrato: boolean;
+  /** Tiempo indeterminado o plazo fijo (`esMensualizado`): lo único que va a la hoja por empresa. */
+  mensualizado: boolean;
+  /** Horas trabajadas los feriados del período: salida real − entrada real, o el turno si no hay reales. Dio 10 de 10 contra la planilla real (concepto 0017). */
+  horasFeriado: number;
+  /** Vacaciones contadas como se pagan: días CORRIDOS de cada tramo, del primer al último día con motivo Vacaciones, aunque en el medio haya francos. Un día trabajado corta el tramo. */
+  vacacionesCorridas: number;
+  /** Días en que la persona figura en el parte reemplazando a otra. */
+  reemplazos: number;
 }
 
 export interface ExtrasCrudas {
@@ -165,6 +195,8 @@ export interface FilaDetalle {
   colaborador: string;
   cuil: string;
   proyecto: string;
+  /** Empresa del contrato que rige ese día («» si no hay). */
+  empresa: string;
   area: string;
   turno: string;
   estado: string;
@@ -213,6 +245,25 @@ export const diaDeSemana = (f: string) => new Date(`${f}T00:00:00Z`).getUTCDay()
 export const diaCorto = (f: string) => DIAS[diaDeSemana(f)];
 const ddmm = (f: string) => `${f.slice(8, 10)}/${f.slice(5, 7)}`;
 export const esJornada = (c: ContratoConsolidado) => c.fechasTrabajadas.length > 0;
+/**
+ * Mensualizado = lo que va en la planilla de liquidación por empresa: Tiempo indeterminado y Plazo fijo (5x7, 6x6).
+ * Por NOMBRE del tipo y en lista blanca: un «Servicios Adicional» de un día sin fechas cargadas no es jornada
+ * para `esJornada`, pero tampoco es un sueldo mensual (con la lista negra aparecían 39 filas de más).
+ * Los jornaleros (Servicios, Jornada, Eventual) tienen su propia planilla.
+ */
+export const esMensualizado = (tipo: string) => /tiempo indeterminado|plazo fijo/i.test(tipo);
+const diaSiguiente = (f: string) => { const d = new Date(`${f}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
+const diasEntre = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
+/** Horas entre dos «HH:mm»; una salida anterior a la entrada cruza la medianoche. 0 si falta alguna. */
+export const horasEntre = (entrada: string, salida: string) => {
+  if (!/^\d{2}:\d{2}$/.test(entrada) || !/^\d{2}:\d{2}$/.test(salida)) return 0;
+  const [h1, m1] = entrada.split(":").map(Number), [h2, m2] = salida.split(":").map(Number);
+  let h = h2 + m2 / 60 - (h1 + m1 / 60);
+  if (h <= 0) h += 24;
+  return Math.round(h * 100) / 100;
+};
+/** El motivo del catálogo que son vacaciones. Por nombre, porque el catálogo es del tenant («Vacaciones»). */
+const esVacaciones = (motivo: string) => /vacacion/i.test(motivo);
 const cubre = (c: ContratoConsolidado, d: string) => c.alta <= d && (c.baja || SIN_FIN) >= d;
 const tocaPeriodo = (c: ContratoConsolidado, desde: string, hasta: string) => c.alta <= hasta && (!c.baja || c.baja >= desde);
 const estadoDelParte = (status: string) => (status === "present" ? "Presente" : status === "late" ? "Tardanza" : "Ausente");
@@ -308,6 +359,18 @@ export function consolidarNovedades(e: EntradaConsolidado): Consolidado {
         sueldoMano: c && !esJornada(c) ? c.sueldoMano : null,
         valorHoraNoAplica: !!c && esJornada(c),
         extrasCrudas: 0,
+        proyectoId: proyecto.id,
+        apellido: persona.get(personaId)?.apellido || "",
+        nombrePila: persona.get(personaId)?.nombrePila || "",
+        grupo: c?.grupo ?? null,
+        obraSocialCodigo: c?.obraSocialCodigo || "",
+        obraSocialOrigen: c?.obraSocialOrigen || "",
+        esJornada: !!c && esJornada(c),
+        sinContrato: !c,
+        mensualizado: !!c && esMensualizado(c.tipo),
+        horasFeriado: 0,
+        vacacionesCorridas: 0,
+        reemplazos: 0,
       };
       resumen.set(clave, f);
     }
@@ -379,7 +442,7 @@ export function consolidarNovedades(e: EntradaConsolidado): Consolidado {
           if (!area) revisar.push({ tipo: "Sin área", colaborador: f.colaborador, cuil: f.cuil, fecha: ddmm(d), detalle: `Ni el parte ${parte.numero} ni el contrato dicen el área.` });
           f.extrasCrudas += r.extras;
           detalle.push({
-            claveResumen: f.clave, fecha: d, dia: diaCorto(d), feriado: nombreFeriado, colaborador: f.colaborador, cuil: f.cuil, proyecto: proyecto.nombre, area, turno, estado, motivo,
+            claveResumen: f.clave, fecha: d, dia: diaCorto(d), feriado: nombreFeriado, colaborador: f.colaborador, cuil: f.cuil, proyecto: proyecto.nombre, empresa: f.empresa, area, turno, estado, motivo,
             entradaPrevista: r.entradaPrevista, salidaPrevista: r.salidaPrevista, entradaReal: r.entradaReal, salidaReal: r.salidaReal,
             extras: r.extras > 0 ? { total: r.extras, h50: r.h50, h100: r.h100, horarioEntrada: r.entradaPrevista || c?.horaInicio || "", horarioSalida: r.salidaPrevista || c?.horaFin || "", feriado: !!nombreFeriado } : null,
             reemplazo: partes.join(" · "), parte: parte.numero,
@@ -393,7 +456,7 @@ export function consolidarNovedades(e: EntradaConsolidado): Consolidado {
           const k = `${personaId}|${proyectoId}`;
           const fp = faltaParte.get(k) || faltaParte.set(k, { personaId, proyecto: proyecto.nombre, area: c.area, turno: c.turno, fechas: [] }).get(k)!;
           fp.fechas.push(d);
-          if (conAlgunParte.has(personaId)) detalle.push({ claveResumen: f.clave, fecha: d, dia: diaCorto(d), feriado: nombreFeriado, colaborador: f.colaborador, cuil: f.cuil, proyecto: proyecto.nombre, area: c.area, turno: c.turno, estado: "Falta parte", motivo: "Día asignado en el contrato sin parte", entradaPrevista: c.horaInicio, salidaPrevista: c.horaFin, entradaReal: "", salidaReal: "", extras: null, reemplazo: "", parte: "" });
+          if (conAlgunParte.has(personaId)) detalle.push({ claveResumen: f.clave, fecha: d, dia: diaCorto(d), feriado: nombreFeriado, colaborador: f.colaborador, cuil: f.cuil, proyecto: proyecto.nombre, empresa: f.empresa, area: c.area, turno: c.turno, estado: "Falta parte", motivo: "Día asignado en el contrato sin parte", entradaPrevista: c.horaInicio, salidaPrevista: c.horaFin, entradaReal: "", salidaReal: "", extras: null, reemplazo: "", parte: "" });
         } else if (esperado === "rotativo" || esperado === "sin_dias") {
           filaResumen(personaId, proyecto, c).jornadasPrevistas = null;
           const k = `${personaId}|${c.key}`;
@@ -413,6 +476,42 @@ export function consolidarNovedades(e: EntradaConsolidado): Consolidado {
     }
   }
 
+  // Para la hoja por empresa: horas en feriado, reemplazos y vacaciones corridas, por fila del resumen.
+  const trabajo = new Set(detalle.filter((d) => d.estado === "Presente" || d.estado === "Tardanza").map((d) => `${d.claveResumen.split("|")[0]}|${d.fecha}`));
+  const vacacionesPorClave = new Map<string, string[]>();
+  for (const d of detalle) {
+    const f = resumen.get(d.claveResumen)!;
+    const trabajado = d.estado === "Presente" || d.estado === "Tardanza";
+    if (trabajado && feriado.has(d.fecha)) f.horasFeriado = Math.round((f.horasFeriado + horasEntre(d.entradaReal || d.entradaPrevista, d.salidaReal || d.salidaPrevista)) * 100) / 100;
+    if (trabajado && d.reemplazo.includes("Reemplaza a ")) f.reemplazos += 1;
+    if (d.estado === "Ausente" && esVacaciones(d.motivo)) (vacacionesPorClave.get(d.claveResumen) || vacacionesPorClave.set(d.claveResumen, []).get(d.claveResumen)!).push(d.fecha);
+  }
+  for (const [clave, fechas] of vacacionesPorClave) {
+    const f = resumen.get(clave)!;
+    const personaId = clave.split("|")[0];
+    const orden = [...new Set(fechas)].sort();
+    let ini = orden[0], fin = orden[0];
+    for (const x of orden.slice(1)) {
+      // Mismo tramo mientras no haya trabajado ningún día en el medio (los francos del tramo se pagan como vacaciones).
+      let trabajoEnElMedio = false;
+      for (let d = diaSiguiente(fin); d < x; d = diaSiguiente(d)) if (trabajo.has(`${personaId}|${d}`)) { trabajoEnElMedio = true; break; }
+      if (trabajoEnElMedio) { f.vacacionesCorridas += diasEntre(ini, fin) + 1; ini = x; }
+      fin = x;
+    }
+    f.vacacionesCorridas += diasEntre(ini, fin) + 1;
+  }
+
+  // Lo que a la hoja por empresa le falta del catálogo: una línea por contrato mensualizado que toca el período.
+  for (const lista of contratosDe.values()) for (const c of lista) {
+    if (!esMensualizado(c.tipo) || !tocaPeriodo(c, desde, hasta)) continue;
+    const vigencia = `${ddmm(c.alta)}${c.baja ? ` al ${ddmm(c.baja)}` : " (abierto)"}`;
+    if (!c.empresa) revisar.push({ tipo: "Contrato sin empresa", colaborador: nombreDe(c.personaId), cuil: cuilDe(c.personaId), fecha: vigencia, detalle: `El contrato ${c.tipo || ""} de ${c.proyecto} no tiene empresa: no entra en ninguna hoja por empresa (va en «SIN EMPRESA»).` });
+    if (c.grupo === null) revisar.push({ tipo: "Categoría sin grupo", colaborador: nombreDe(c.personaId), cuil: cuilDe(c.personaId), fecha: vigencia, detalle: `La categoría «${c.categoria || "(vacía)"}» del contrato ${c.tipo || ""} no está en el catálogo de categorías: Grupo y Tarea salen incompletos.` });
+    if (!c.obraSocialCodigo) revisar.push({ tipo: "Obra social sin código", colaborador: nombreDe(c.personaId), cuil: cuilDe(c.personaId), fecha: vigencia, detalle: `Ni el contrato ${c.tipo || ""} tiene obra social, ni su categoría («${c.categoria || "(vacía)"}») lleva a un convenio con obra social: la columna Código queda vacía.` });
+  }
+  const sinFicha = new Set<string>();
+  for (const f of resumen.values()) { const personaId = f.clave.split("|")[0]; if (!persona.has(personaId) && !sinFicha.has(personaId)) { sinFicha.add(personaId); revisar.push({ tipo: "Persona sin ficha", colaborador: f.colaborador, cuil: "", fecha: `${ddmm(desde)} al ${ddmm(hasta)}`, detalle: `Figura en partes o contratos de ${f.proyecto} y no existe como usuario (borrada): sin nombre, CUIL ni legajo.` }); } }
+
   // Alertas agrupadas: por persona, no por día.
   for (const fp of faltaParte.values()) {
     const sinNinguno = !conAlgunParte.has(fp.personaId);
@@ -431,7 +530,7 @@ export function consolidarNovedades(e: EntradaConsolidado): Consolidado {
     .map((p) => ({ parte: p.numero, fecha: p.fecha, proyecto: p.proyecto, area: p.area, turno: p.turno, responsable: p.responsable, presentes: p.registros.filter((r) => r.status === "present" || r.status === "late").length, ausentes: p.registros.filter((r) => r.status !== "present" && r.status !== "late").length, comentario: p.comentario.trim() }))
     .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.parte.localeCompare(b.parte));
   const porNombre = (a: { colaborador: string }, b: { colaborador: string }) => a.colaborador.localeCompare(b.colaborador, "es", { sensitivity: "base" });
-  const ORDEN_TIPOS = ["Sin contrato vigente", "Reemplazante sin contrato vigente", "Falta parte", "Sin ningún parte en el mes", "Días no evaluables", "Salida anterior a la entrada", "Extras sin entrada/salida", "Sin área", "Contrato duplicado", "Motivo fuera del catálogo", "Valor hora no disponible"];
+  const ORDEN_TIPOS = ["Persona sin ficha", "Sin contrato vigente", "Reemplazante sin contrato vigente", "Falta parte", "Sin ningún parte en el mes", "Días no evaluables", "Salida anterior a la entrada", "Extras sin entrada/salida", "Sin área", "Contrato duplicado", "Contrato sin empresa", "Categoría sin grupo", "Obra social sin código", "Motivo fuera del catálogo", "Valor hora no disponible"];
   return {
     resumen: [...resumen.values()].sort((a, b) => porNombre(a, b) || a.desde.localeCompare(b.desde)),
     detalle: detalle.sort((a, b) => porNombre(a, b) || a.fecha.localeCompare(b.fecha) || a.parte.localeCompare(b.parte)),

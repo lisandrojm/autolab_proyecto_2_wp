@@ -19,6 +19,7 @@ import { getContratoActivo } from "../../../utils/contratoVigencia";
 import { overtimeUtils, OvertimeSettings, splitOvertime } from "../../../utils/overtimeUtils";
 import { ANCHOS_GLOSARIO, filasGlosarioExtras } from "../../../utils/hojaGlosarioExtras";
 import { hojasDelConsolidado, nombreDelConsolidado } from "../../../utils/consolidadoNovedadesXlsx";
+import { periodosDeLiquidacion } from "../../../utils/periodoLiquidacion";
 import * as XLSX from "xlsx";
 import { usePuedeAbrir } from "../../../hooks/usePuedeAbrir";
 import { fechaDeCalendario } from "../../../utils/fechas";
@@ -2154,6 +2155,7 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
     parte en el mes» serían todas las personas del tenant.
   */
   const idsProyectosDelConsolidado = useMemo(() => proyectosSeleccionados.map((clave) => proyectosDelReporte.find((p) => p.clave === clave)?.id).filter((id): id is string => !!id), [proyectosSeleccionados, proyectosDelReporte]);
+  const periodosDeLiquidacionOpciones = useMemo(() => periodosDeLiquidacion(new Date()), []);
   const handleExportConsolidado = async () => {
     if (idsProyectosDelConsolidado.length === 0 || exportandoConsolidado) return;
     setExportandoConsolidado(true);
@@ -2227,10 +2229,15 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
               <FontAwesomeIcon icon={faClipboardList} />
               Exportar Detalle Diario
             </button>
-            {/* El consolidado para liquidar (20/11/2026). Por proyecto: sin uno elegido no hay a quién acotar «sin ningún parte en el mes». */}
-            <button onClick={handleExportConsolidado} disabled={idsProyectosDelConsolidado.length === 0 || exportandoConsolidado} title={idsProyectosDelConsolidado.length === 0 ? "Elegí al menos un proyecto en el filtro" : `Cinco hojas para liquidar: resumen por persona, detalle diario, partes, a revisar y glosario (${dateFrom} al ${dateTo})`} className="px-5 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+            {/*
+              EL CONSOLIDADO EMPRESAS (20/11/2026): una hoja por empresa del contrato con las 34 columnas de la
+              planilla de liquidación, más novedades por persona, compensatorios, feriados, resumen, detalle,
+              partes, a revisar y glosario. Por proyecto: sin uno elegido no hay a quién acotar «sin ningún
+              parte en el mes». El período es el del filtro de fechas (ver «Período de liquidación»).
+            */}
+            <button onClick={handleExportConsolidado} disabled={idsProyectosDelConsolidado.length === 0 || exportandoConsolidado} title={idsProyectosDelConsolidado.length === 0 ? "Elegí al menos un proyecto en el filtro" : `Una hoja por empresa para pegar en la planilla de liquidación, más novedades por persona, compensatorios, feriados, detalle diario, partes, a revisar y glosario (${dateFrom.split("-").reverse().join("/")} al ${dateTo.split("-").reverse().join("/")})`} className="px-5 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 transition-colors flex items-center gap-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
               <FontAwesomeIcon icon={exportandoConsolidado ? faSpinner : faTableList} spin={exportandoConsolidado} />
-              Consolidado para liquidar
+              Consolidado Empresas
             </button>
             {/* La planilla mensual de liquidación: sale de las solicitudes de Jornada, no de los partes, así que no depende de la tabla. */}
             <button onClick={() => setPlanillaJornalerosAbierta(true)} className="px-5 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition-colors flex items-center gap-2 text-sm font-semibold shadow-sm">
@@ -2254,6 +2261,20 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
               angosta bajan solos (`flex-wrap`) sin romper nada.
             */}
             <div className="flex flex-wrap items-end gap-3">
+              {/*
+                PERÍODO DE LIQUIDACIÓN (20/11/2026): del 21 al 20. Elegir uno escribe las dos fechas; las fechas
+                se pueden seguir tocando a mano (rango libre). Dice el rango literal y no «Noviembre 2026», que
+                significó dos cosas distintas según quién lo dijera.
+              */}
+              <div className="space-y-1 w-[230px]">
+                <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Período de liquidación</label>
+                <select value={periodosDeLiquidacionOpciones.find((p) => p.desde === dateFrom && p.hasta === dateTo)?.desde || ""} onChange={(e) => { const p = periodosDeLiquidacionOpciones.find((x) => x.desde === e.target.value); if (p) { setDateFrom(p.desde); setDateTo(p.hasta); } }} className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                  <option value="">Rango libre (fechas a mano)</option>
+                  {periodosDeLiquidacionOpciones.map((p) => (
+                    <option key={p.desde} value={p.desde}>{p.etiqueta}</option>
+                  ))}
+                </select>
+              </div>
               <div className="space-y-1 w-[150px]">
                 <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha Desde</label>
                 <div className="relative">

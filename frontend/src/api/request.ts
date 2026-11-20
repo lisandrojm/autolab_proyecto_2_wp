@@ -183,10 +183,19 @@ export interface FilaResumenConsolidado {
   sueldoMano: number | null;
   valorHoraNoAplica: boolean;
   extrasCrudas: number;
+  // Para la hoja por empresa (planilla de liquidación).
+  proyectoId: string; apellido: string; nombrePila: string; grupo: number | null; obraSocialCodigo: string; obraSocialOrigen: string; esJornada: boolean; sinContrato: boolean;
+  /** Tiempo indeterminado o plazo fijo: lo único que va a la hoja por empresa. */
+  mensualizado: boolean;
+  /** Horas trabajadas en feriados del período (concepto 0017). */
+  horasFeriado: number;
+  /** Vacaciones en días corridos por tramo. */
+  vacacionesCorridas: number;
+  reemplazos: number;
 }
 export interface ExtrasCrudas { total: number; h50: number; h100: number; horarioEntrada: string; horarioSalida: string; feriado: boolean }
 export interface FilaDetalleConsolidado {
-  claveResumen: string; fecha: string; dia: string; feriado: string; colaborador: string; cuil: string; proyecto: string; area: string; turno: string; estado: string; motivo: string;
+  claveResumen: string; fecha: string; dia: string; feriado: string; colaborador: string; cuil: string; proyecto: string; empresa: string; area: string; turno: string; estado: string; motivo: string;
   entradaPrevista: string; salidaPrevista: string; entradaReal: string; salidaReal: string; extras: ExtrasCrudas | null; reemplazo: string; parte: string;
 }
 export interface FilaParteConsolidado { parte: string; fecha: string; proyecto: string; area: string; turno: string; responsable: string; presentes: number; ausentes: number; comentario: string }
@@ -194,7 +203,7 @@ export interface FilaRevisarConsolidado { tipo: string; colaborador: string; cui
 export interface ConsolidadoNovedades {
   desde: string;
   hasta: string;
-  proyectos: { id: string; nombre: string; cliente: string; centroCosto: string }[];
+  proyectos: { id: string; nombre: string; cliente: string; centroCosto: string; centroCostoCodigo: string; centroCostoDescripcion: string }[];
   feriados: { fecha: string; nombre: string }[];
   /** Los motivos de ausencia del catálogo, en su orden: una columna cada uno en el resumen. */
   motivos: string[];

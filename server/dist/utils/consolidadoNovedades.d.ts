@@ -36,6 +36,9 @@ export interface PersonaConsolidado {
     id: string;
     /** «Apellido, Nombre». */
     nombre: string;
+    /** Apellido y nombre por separado: la planilla de liquidación los lleva en dos columnas. */
+    apellido: string;
+    nombrePila: string;
     cuil: string;
     legajo: string;
 }
@@ -55,6 +58,15 @@ export interface ContratoConsolidado {
     empresaId: string;
     categoria: string;
     categoriaId: string;
+    /** Grupo de la categoría (`categorias-sat.data.numeroCategoria`, el «N* 4» de la planilla). null = categoría fuera del catálogo. */
+    grupo: number | null;
+    /**
+     * RNOS de la obra social que se declara por este contrato, resuelto con la cascada de ARCA
+     * (`compartido/arca/afipCompleteness.ts`): la fijada en el contrato → la del convenio de la categoría →
+     * la de la empleadora si la categoría está excluida de convenio. «» = ninguna resolvió.
+     */
+    obraSocialCodigo: string;
+    obraSocialOrigen: "contrato" | "convenio" | "empresa" | "";
     area: string;
     turno: string;
     horaInicio: string;
@@ -141,6 +153,23 @@ export interface FilaResumen {
     valorHoraNoAplica: boolean;
     /** Suma cruda de las extras (para saber si la fila necesita importes). */
     extrasCrudas: number;
+    proyectoId: string;
+    apellido: string;
+    nombrePila: string;
+    grupo: number | null;
+    obraSocialCodigo: string;
+    obraSocialOrigen: string;
+    esJornada: boolean;
+    /** Fila de un parte sin contrato que lo cubra: no va a la hoja por empresa. */
+    sinContrato: boolean;
+    /** Tiempo indeterminado o plazo fijo (`esMensualizado`): lo único que va a la hoja por empresa. */
+    mensualizado: boolean;
+    /** Horas trabajadas los feriados del período: salida real − entrada real, o el turno si no hay reales. Dio 10 de 10 contra la planilla real (concepto 0017). */
+    horasFeriado: number;
+    /** Vacaciones contadas como se pagan: días CORRIDOS de cada tramo, del primer al último día con motivo Vacaciones, aunque en el medio haya francos. Un día trabajado corta el tramo. */
+    vacacionesCorridas: number;
+    /** Días en que la persona figura en el parte reemplazando a otra. */
+    reemplazos: number;
 }
 export interface ExtrasCrudas {
     total: number;
@@ -160,6 +189,8 @@ export interface FilaDetalle {
     colaborador: string;
     cuil: string;
     proyecto: string;
+    /** Empresa del contrato que rige ese día («» si no hay). */
+    empresa: string;
     area: string;
     turno: string;
     estado: string;
@@ -200,6 +231,15 @@ export declare const OTRO_MOTIVO = "Otro motivo";
 export declare const diaDeSemana: (f: string) => number;
 export declare const diaCorto: (f: string) => string;
 export declare const esJornada: (c: ContratoConsolidado) => boolean;
+/**
+ * Mensualizado = lo que va en la planilla de liquidación por empresa: Tiempo indeterminado y Plazo fijo (5x7, 6x6).
+ * Por NOMBRE del tipo y en lista blanca: un «Servicios Adicional» de un día sin fechas cargadas no es jornada
+ * para `esJornada`, pero tampoco es un sueldo mensual (con la lista negra aparecían 39 filas de más).
+ * Los jornaleros (Servicios, Jornada, Eventual) tienen su propia planilla.
+ */
+export declare const esMensualizado: (tipo: string) => boolean;
+/** Horas entre dos «HH:mm»; una salida anterior a la entrada cruza la medianoche. 0 si falta alguna. */
+export declare const horasEntre: (entrada: string, salida: string) => number;
 type Esperado = "si" | "no" | "rotativo" | "sin_dias";
 /** Si a la persona le correspondía trabajar ese día según el contrato. No se infiere del turno. */
 export declare function leCorresponde(c: ContratoConsolidado, d: string): Esperado;

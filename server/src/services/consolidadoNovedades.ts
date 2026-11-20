@@ -23,6 +23,9 @@ import { Info } from "../models/Info.js";
 import { RequestConfig } from "../models/RequestConfig.js";
 import { Holiday } from "../models/Holiday.js";
 import { CentroCosto } from "../models/CentroCosto.js";
+import { Convenio } from "../models/Convenio.js";
+import { ObraSocial } from "../models/ObraSocial.js";
+import { CONVENIO_EXCLUIDO } from "../compartido/arca/afipCompleteness.js";
 import { fechaISO } from "../utils/contratoVigencia.js";
 import { consolidarNovedades, type Consolidado, type ContratoConsolidado, type ParteConsolidado, type PersonaConsolidado } from "../utils/consolidadoNovedades.js";
 
@@ -30,7 +33,11 @@ export interface ProyectoDelConsolidado {
   id: string;
   nombre: string;
   cliente: string;
+  /** «426 - La Nacion» (código y descripción del catálogo Tango). */
   centroCosto: string;
+  /** Las dos columnas de la planilla de liquidación: CC («426») y Descripción («La Nacion»). */
+  centroCostoCodigo: string;
+  centroCostoDescripcion: string;
 }
 
 export interface ConsolidadoNovedades extends Consolidado {
@@ -56,27 +63,48 @@ export async function armarConsolidado(tenantId: Types.ObjectId, o: { desde: str
   const centroDe = (p: any) => {
     const candidatos = centrosRaw.filter((c) => Number(c.data?.id) === Number(p.metadata?.centroCostoId));
     const c = candidatos.find((x) => !p.metadata?.centroCostoEmpresaTangoId || x.empresaTangoId === p.metadata?.centroCostoEmpresaTangoId) || candidatos[0];
-    return c ? `${str(c.codAuxiliar) || str(c.name)}${str(c.descAuxiliar) ? ` ${str(c.descAuxiliar)}` : ""}`.trim() : "";
+    if (!c) return { codigo: "", descripcion: "", etiqueta: "" };
+    const codigo = str(c.codAuxiliar) || str(c.name);
+    // El catálogo trae «426 - La Nacion»: la descripción sola es lo que la planilla pone en su columna.
+    const descripcion = (str(c.descAuxiliar) || str(c.name)).replace(new RegExp(`^${codigo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*-?\\s*`), "").trim() || codigo;
+    return { codigo, descripcion, etiqueta: codigo && descripcion !== codigo ? `${codigo} - ${descripcion}` : codigo || descripcion };
   };
-  const proyectos: ProyectoDelConsolidado[] = proyectosRaw.map((p) => ({ id: String(p._id), nombre: str(p.name), cliente: nombreCliente.get(String(p.clientId || "")) || "", centroCosto: centroDe(p) }));
+  const proyectos: ProyectoDelConsolidado[] = proyectosRaw.map((p) => { const cc = centroDe(p); return { id: String(p._id), nombre: str(p.name), cliente: nombreCliente.get(String(p.clientId || "")) || "", centroCosto: cc.etiqueta, centroCostoCodigo: cc.codigo, centroCostoDescripcion: cc.descripcion }; });
   const proyectoDe = new Map(proyectos.map((p) => [p.id, p]));
   const idsProyecto = proyectos.map((p) => new Types.ObjectId(p.id));
 
-  const [partesRaw, ups, areas, turnos, empresas, categorias, tipos, motivosRaw, feriadosRaw] = await Promise.all([
+  const [partesRaw, ups, areas, turnos, empresas, categorias, tipos, motivosRaw, feriadosRaw, convenios, obrasSociales] = await Promise.all([
     Request.find({ tenantId, projectId: { $in: idsProyecto }, date: { $gte: o.desde, $lte: o.hasta } }).select("reportNumber date projectId areaId shiftId userId comments attendance").lean() as Promise<any[]>,
     UserProject.find({ projectId: { $in: idsProyecto } }).select("userId projectId contracts").lean() as Promise<any[]>,
     Area.find({ tenantId }).select("name").lean() as Promise<any[]>,
     Shift.find({ tenantId }).select("name startTime endTime").lean() as Promise<any[]>,
-    Company.find({}).select("razonSocial").lean() as Promise<any[]>,
-    CategoriaSat.find({}).select("name data.id").lean() as Promise<any[]>,
+    Company.find({}).select("razonSocial obraSocialDefaultId obraSocialId").lean() as Promise<any[]>,
+    CategoriaSat.find({}).select("name data.id data.numeroCategoria data.convenio").lean() as Promise<any[]>,
     Info.find({ type: "contrato" }).select("name data.id").lean() as Promise<any[]>,
     RequestConfig.find({ tenantId }).select("name order").sort({ order: 1, name: 1 }).lean() as Promise<any[]>,
     Holiday.find({ tenantId, date: { $gte: new Date(`${o.desde}T00:00:00Z`), $lte: new Date(`${o.hasta}T23:59:59Z`) } }).select("date name").lean() as Promise<any[]>,
+    Convenio.find({}).select("externalId obraSocialDefaultId").lean() as Promise<any[]>,
+    ObraSocial.find({}).select("externalId data.id").lean() as Promise<any[]>,
   ]);
   const areaPorId = new Map(areas.map((a) => [String(a._id), str(a.name)]));
   const turnoPorId = new Map(turnos.map((t) => [String(t._id), t]));
   const empresaPorId = new Map(empresas.map((e) => [String(e._id), str(e.razonSocial)]));
   const categoriaPorNum = new Map(categorias.map((c) => [Number(c.data?.id), str(c.name)]));
+  const categoriaDatos = new Map(categorias.map((c) => [Number(c.data?.id), { grupo: num(c.data?.numeroCategoria), convenio: str(c.data?.convenio) }]));
+  // La cascada de obra social de ARCA (`afipCompleteness.ts`): contrato → convenio de la categoría → empleadora si la categoría está excluida de convenio.
+  const rnosPorDataId = new Map(obrasSociales.map((os) => [Number(os.data?.id), str(os.externalId)]));
+  const osDelConvenio = new Map(convenios.map((c) => [str(c.externalId), num(c.obraSocialDefaultId)]));
+  const osDeLaEmpresa = new Map(empresas.map((e) => [String(e._id), num(e.obraSocialDefaultId ?? e.obraSocialId)]));
+  const obraSocialDe = (c: any): { codigo: string; origen: ContratoConsolidado["obraSocialOrigen"] } => {
+    const propia = rnosPorDataId.get(Number(c.obraSocialId));
+    if (c.obraSocialId && propia) return { codigo: propia, origen: "contrato" };
+    const convenio = categoriaDatos.get(Number(c.categoria_sat_id))?.convenio || "";
+    const delConvenio = rnosPorDataId.get(Number(osDelConvenio.get(convenio)));
+    if (delConvenio) return { codigo: delConvenio, origen: "convenio" };
+    const deLaEmpresa = convenio === CONVENIO_EXCLUIDO ? rnosPorDataId.get(Number(osDeLaEmpresa.get(String(c.empresaContratoId || "")))) : undefined;
+    if (deLaEmpresa) return { codigo: deLaEmpresa, origen: "empresa" };
+    return { codigo: "", origen: "" };
+  };
   const tipoPorNum = new Map(tipos.map((t) => [Number(t.data?.id), str(t.name)]));
   const unicoPorHorario = (entrada: string, salida: string) => { if (!entrada || !salida) return null; const m = turnos.filter((t) => t.startTime === entrada && t.endTime === salida); return m.length === 1 ? m[0] : null; };
 
@@ -85,10 +113,13 @@ export async function armarConsolidado(tenantId: Types.ObjectId, o: { desde: str
   for (const up of ups) idsPersonas.add(String(up.userId));
   for (const p of partesRaw) { idsPersonas.add(String(p.userId || "")); for (const a of p.attendance || []) { idsPersonas.add(String(a.employeeId || "")); if (a.replacementId) idsPersonas.add(String(a.replacementId)); } }
   idsPersonas.delete("");
-  const usuarios: any[] = await User.find({ _id: { $in: [...idsPersonas].map(oid).filter(Boolean) } }).select("firstName lastName email metadata.cuit metadata.numeroLegajoTango metadata.fullName").lean();
+  const usuarios: any[] = await User.find({ _id: { $in: [...idsPersonas].map(oid).filter(Boolean) } }).select("firstName lastName email metadata.cuit metadata.numeroLegajoTango metadata.fullName metadata.apellido metadata.nombre").lean();
   const personas: PersonaConsolidado[] = usuarios.map((u) => ({
     id: String(u._id),
     nombre: [str(u.lastName), str(u.firstName)].filter(Boolean).join(", ") || str(u.metadata?.fullName) || str(u.email) || String(u._id),
+    // La ficha ya los tiene separados (`metadata.apellido`/`nombre`); si no, lo que diga el usuario.
+    apellido: str(u.metadata?.apellido) || str(u.lastName),
+    nombrePila: str(u.metadata?.nombre) || str(u.firstName),
     cuil: str(u.metadata?.cuit).replace(/\D/g, ""),
     legajo: str(u.metadata?.numeroLegajoTango),
   }));
@@ -116,8 +147,12 @@ export async function armarConsolidado(tenantId: Types.ObjectId, o: { desde: str
         tipoId: str(c.tipo_contrato_id),
         empresa: str(c.nombre_empresa_contrato) || empresaPorId.get(String(c.empresaContratoId || "")) || "",
         empresaId: str(c.empresaContratoId),
-        categoria: str(c.nombre_categoria_sat) || categoriaPorNum.get(Number(c.categoria_sat_id)) || "",
+        // El catálogo primero: el nombre guardado en el contrato envejece («Sin categoria» con el id de Asistente de Iluminación).
+        categoria: categoriaPorNum.get(Number(c.categoria_sat_id)) || str(c.nombre_categoria_sat) || "",
         categoriaId: str(c.categoria_sat_id),
+        grupo: categoriaDatos.get(Number(c.categoria_sat_id))?.grupo ?? null,
+        obraSocialCodigo: obraSocialDe(c).codigo,
+        obraSocialOrigen: obraSocialDe(c).origen,
         area: str(c.nombre_area) || areaPorId.get(String(c.areaId || asignaciones[0]?.areaId || "")) || "",
         turno: str(c.nombre_turno) || idsTurno.map((id) => str(turnoPorId.get(id)?.name)).filter(Boolean).join(", "),
         horaInicio: str(c.hora_inicio),

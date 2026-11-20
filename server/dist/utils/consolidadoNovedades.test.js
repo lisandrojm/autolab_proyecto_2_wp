@@ -3,9 +3,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { consolidarNovedades } from "./consolidadoNovedades.js";
 const P = { id: "p1", nombre: "LN+", centroCosto: "705" };
-const persona = (id, nombre) => ({ id, nombre, cuil: `20${id.padStart(9, "0")}`, legajo: `L${id}` });
+const persona = (id, nombre) => ({ id, nombre, apellido: nombre.split(", ")[0], nombrePila: nombre.split(", ")[1] || "", cuil: `20${id.padStart(9, "0")}`, legajo: `L${id}` });
 const contrato = (personaId, key, alta, baja, extra = {}) => ({
-    key, personaId, proyectoId: P.id, proyecto: P.nombre, centroCosto: P.centroCosto, alta, baja, tipo: "Plazo fijo 6x6", tipoId: "6", empresa: "2030 S.R.L.", empresaId: "e1", categoria: "Auxiliar", categoriaId: "c1", area: "Técnica", turno: "Mañana", horaInicio: "06:00", horaFin: "12:00", sueldoJornada: 41326.86, sueldoMano: 1004242, fechasTrabajadas: [], diasSemana: [1, 2, 3, 4, 5, 6], rotativo: false, ...extra,
+    key, personaId, proyectoId: P.id, proyecto: P.nombre, centroCosto: P.centroCosto, alta, baja, tipo: "Plazo fijo 6x6", tipoId: "6", empresa: "2030 S.R.L.", empresaId: "e1", categoria: "Auxiliar", categoriaId: "c1", grupo: 4, obraSocialCodigo: "120900", obraSocialOrigen: "convenio", area: "Técnica", turno: "Mañana", horaInicio: "06:00", horaFin: "12:00", sueldoJornada: 41326.86, sueldoMano: 1004242, fechasTrabajadas: [], diasSemana: [1, 2, 3, 4, 5, 6], rotativo: false, ...extra,
 });
 const registro = (personaId, status, extra = {}) => ({ personaId, status, motivo: "", reemplazanteId: "", extras: 0, h50: 0, h100: 0, entradaReal: "", salidaReal: "", entradaPrevista: "06:00", salidaPrevista: "12:00", area: "Técnica", turno: "Mañana (06:00 - 12:00)", ...extra });
 const parte = (numero, fecha, registros, extra = {}) => ({ numero, fecha, proyectoId: P.id, proyecto: P.nombre, area: "Técnica", turno: "Mañana", responsable: "Supervisora, Una", comentario: "", registros, ...extra });
@@ -111,4 +111,56 @@ test("feriado, día no asignado y hoja de partes: el feriado viaja; presente en 
     assert.equal(d.motivo, "Día no asignado en el contrato");
     assert.equal(d.extras?.feriado, true);
     assert.deepEqual(r.partes, [{ parte: "DEM-1", fecha: "2026-11-08", proyecto: "LN+", area: "Técnica", turno: "Mañana", responsable: "Supervisora, Una", presentes: 1, ausentes: 0, comentario: "Comentario del parte" }]);
+});
+// --- Hoja por empresa (20/11/2026) ---
+test("feriado: las horas trabajadas salen de las reales (o del turno), 0 si estuvo ausente; el detalle lleva la empresa", () => {
+    const feriados = [{ fecha: "2026-11-04", nombre: "Feriado de prueba" }];
+    const r = consolidarNovedades(base({ feriados, contratos: [contrato("1", "k1", "2026-11-01", "2026-11-30"), contrato("2", "k2", "2026-11-01", "2026-11-30")], partes: [
+            parte("DEM-1", "2026-11-04", [registro("1", "present", { extras: 1, entradaReal: "05:30", salidaReal: "12:30" }), registro("2", "absent", { motivo: "Franco" })]),
+            parte("DEM-2", "2026-11-05", [registro("1", "present"), registro("2", "present")]),
+        ] }));
+    const ana = r.resumen.find((f) => f.colaborador === "Pérez, Ana"), luis = r.resumen.find((f) => f.colaborador === "Gómez, Luis");
+    assert.equal(ana.horasFeriado, 7, "05:30 a 12:30 el feriado");
+    assert.equal(luis.horasFeriado, 0, "ausente el feriado");
+    assert.equal(ana.apellido, "Pérez");
+    assert.equal(ana.nombrePila, "Ana");
+    assert.equal(ana.grupo, 4);
+    assert.equal(ana.obraSocialCodigo, "120900");
+    assert.equal(ana.esJornada, false);
+    assert.equal(ana.sinContrato, false);
+    assert.ok(r.detalle.every((d) => d.empresa === "2030 S.R.L."));
+    // Sin horas reales: las del turno (06:00-12:00 = 6). Turno que cruza medianoche: 18:00-00:00 = 6.
+    const r2 = consolidarNovedades(base({ feriados, contratos: [contrato("1", "k1", "2026-11-01", "2026-11-30")], partes: [parte("DEM-1", "2026-11-04", [registro("1", "present", { entradaPrevista: "18:00", salidaPrevista: "00:00" })])] }));
+    assert.equal(r2.resumen[0].horasFeriado, 6);
+});
+test("vacaciones corridas: del primer al último día del tramo aunque haya un franco en el medio; un día trabajado corta el tramo", () => {
+    // Lun 02 a dom 08: vacaciones 02, 03, 04 y 06, 07 con franco el 05 → un tramo de 6 corridos (02 al 07).
+    const partesVac = ["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-06", "2026-11-07"].map((f, i) => parte(`DEM-${i}`, f, [registro("1", "absent", { motivo: "Vacaciones" })]));
+    const r = consolidarNovedades(base({ contratos: [contrato("1", "k1", "2026-11-01", "2026-11-30")], partes: [...partesVac, parte("DEM-F", "2026-11-05", [registro("1", "absent", { motivo: "Franco" })])] }));
+    assert.equal(r.resumen[0].porMotivo["Vacaciones"], 5);
+    assert.equal(r.resumen[0].vacacionesCorridas, 6);
+    // Si el 05 trabajó, son dos tramos: 3 + 2.
+    const r2 = consolidarNovedades(base({ contratos: [contrato("1", "k1", "2026-11-01", "2026-11-30")], partes: [...partesVac, parte("DEM-F", "2026-11-05", [registro("1", "present")])] }));
+    assert.equal(r2.resumen[0].vacacionesCorridas, 5);
+});
+test("reemplazos: cuenta los días en que la persona reemplaza a otra", () => {
+    const r = consolidarNovedades(base({ contratos: [contrato("1", "k1", "2026-11-01", "2026-11-30"), contrato("2", "k2", "2026-11-01", "2026-11-30")], partes: [
+            parte("DEM-1", "2026-11-02", [registro("1", "absent", { motivo: "Franco", reemplazanteId: "2" }), registro("2", "present")]),
+            parte("DEM-2", "2026-11-03", [registro("1", "present"), registro("2", "present")]),
+        ] }));
+    assert.equal(r.resumen.find((f) => f.colaborador === "Gómez, Luis").reemplazos, 1);
+    assert.equal(r.resumen.find((f) => f.colaborador === "Pérez, Ana").reemplazos, 0);
+});
+test("lo que a la hoja por empresa le falta del catálogo va a A revisar: contrato sin empresa, categoría sin grupo, obra social sin código, persona sin ficha", () => {
+    const r = consolidarNovedades(base({
+        contratos: [contrato("1", "k1", "2026-11-01", "2026-11-30", { empresa: "", grupo: null, obraSocialCodigo: "", obraSocialOrigen: "" }), contrato("2", "k2", "2026-11-01", "2026-11-30", { tipo: "Servicios Jornada", fechasTrabajadas: ["2026-11-03"], grupo: null, obraSocialCodigo: "" })],
+        partes: [parte("DEM-1", "2026-11-02", [registro("1", "present"), registro("9", "present")])],
+    }));
+    const tipos = r.revisar.map((x) => `${x.tipo}|${x.colaborador}`);
+    assert.ok(tipos.includes("Contrato sin empresa|Pérez, Ana"));
+    assert.ok(tipos.includes("Categoría sin grupo|Pérez, Ana"));
+    assert.ok(tipos.includes("Obra social sin código|Pérez, Ana"));
+    assert.ok(!tipos.some((t) => t.startsWith("Categoría sin grupo|Gómez")), "las jornadas no van a la hoja por empresa: sin alerta");
+    assert.ok(tipos.includes("Persona sin ficha|(persona 9)"));
+    assert.equal(r.revisar[0].tipo, "Persona sin ficha", "primera en el orden");
 });

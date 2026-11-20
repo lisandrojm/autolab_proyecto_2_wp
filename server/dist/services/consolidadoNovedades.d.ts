@@ -15,7 +15,11 @@ export interface ProyectoDelConsolidado {
     id: string;
     nombre: string;
     cliente: string;
+    /** «426 - La Nacion» (código y descripción del catálogo Tango). */
     centroCosto: string;
+    /** Las dos columnas de la planilla de liquidación: CC («426») y Descripción («La Nacion»). */
+    centroCostoCodigo: string;
+    centroCostoDescripcion: string;
 }
 export interface ConsolidadoNovedades extends Consolidado {
     desde: string;
