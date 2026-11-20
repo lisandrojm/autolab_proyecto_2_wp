@@ -3094,8 +3094,11 @@ router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermis
       return;
     }
     const ups = await UserProject.find({ userId }).lean();
+    // Los anulados que se llevaron el vínculo (etapa 2b) ya no tienen UserProject: su proyecto entra por acá,
+    // si no, no salen en ninguna lista (20/11/2026: «Esta persona no tiene contratos» después de anular el último).
+    const todasLasAnuladas: any[] = await ContratoAnulado.find({ userId: new Types.ObjectId(String(userId)) }).lean();
 
-    const projIds = [...new Set(ups.map((up: any) => String(up.projectId)).filter(Boolean))];
+    const projIds = [...new Set([...ups.map((up: any) => String(up.projectId)), ...todasLasAnuladas.map((a) => String(a.projectId))].filter(Boolean))];
     const projects = await Project.find({ _id: { $in: projIds }, tenantId: req.tenantObjectId })
       .select("name clientId contratoEmpresas releaseEmpresas")
       .lean();
@@ -3146,11 +3149,12 @@ router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermis
     /*
       ANULADOS A LA VISTA (18/11/2026). Una anulación invisible se ve igual que el borrado que reemplazó:
       cada lápida sale con lo que era el contrato, quién lo anuló, cuándo y por qué. También los anulados
-      que se llevaron el vínculo (eran el último contrato): no tienen lápida, sólo su registro.
+      que se llevaron el vínculo (eran el último contrato): no tienen lápida, sólo su registro, y su proyecto
+      ya no está entre los vínculos (por eso entra al armar `projects`, arriba).
       Va en este endpoint —y no en uno aparte con otro permiso— para que quien ve los contratos vea también
       los anulados.
     */
-    const anuladas: any[] = await ContratoAnulado.find({ userId: new Types.ObjectId(String(userId)), projectId: { $in: projects.map((p: any) => p._id) } }).lean();
+    const anuladas: any[] = todasLasAnuladas.filter((a) => projMap.has(String(a.projectId)));
     const porClave = new Map(anuladas.map((a) => [String(a.contratoKey), a]));
     const resumenAnulacion = (a: any) => ({
       el: a.anuladoEl,
