@@ -65,7 +65,20 @@ export interface PlanBajasArca {
   resumen: Record<TipoCambioBaja, number>;
 }
 
-export async function planDeBajasArca(tenantId: Types.ObjectId | string, opciones: { userIds?: string[] } = {}): Promise<PlanBajasArca> {
+/** Lo que hace falta para comparar contratos con el espejo de ARCA: lo comparten el plan de bajas y la auditoría (etapa 5). */
+export interface ContextoArca {
+  hoy: string;
+  espejoAl: string | null;
+  /** Las personas con CUIT válido, por id. */
+  porUsuario: Map<string, any>;
+  /** Sus vínculos (proyección mínima de contratos). */
+  ups: any[];
+  /** Empleadoras por id: CUIT y razón social. */
+  empresa: Map<string, { cuit: string; nombre: string }>;
+  relsPorCuil: Map<string, RelacionArca[]>;
+}
+
+export async function cargarContextoArca(tenantId: Types.ObjectId | string, opciones: { userIds?: string[] } = {}): Promise<ContextoArca> {
   const tid = new Types.ObjectId(String(tenantId));
   const hoy = hoyArgentina();
   const filtroUsuarios: any = { tenantId: tid, "metadata.cuit": { $exists: true, $nin: ["", null] } };
@@ -88,6 +101,12 @@ export async function planDeBajasArca(tenantId: Types.ObjectId | string, opcione
   const relaciones: RelacionArca[] = rels.map((r) => ({ cuil: r.cuil, empleadoraCuit: r.empleadoraCuit, inicio: iso(r.fechaInicio), fin: iso(r.fechaFin), situacionBaja: r.situacionBaja || "" }));
   const relsPorCuil = new Map<string, RelacionArca[]>();
   for (const r of relaciones) (relsPorCuil.get(r.cuil) || relsPorCuil.set(r.cuil, []).get(r.cuil)!).push(r);
+  return { hoy, espejoAl: t?.integrations?.arcaSimplificacion?.sincronizacionRelaciones?.ultimaSync?.fecha || null, porUsuario, ups, empresa, relsPorCuil };
+}
+
+export async function planDeBajasArca(tenantId: Types.ObjectId | string, opciones: { userIds?: string[]; contexto?: ContextoArca } = {}): Promise<PlanBajasArca> {
+  const tid = new Types.ObjectId(String(tenantId));
+  const { hoy, espejoAl, porUsuario, ups, empresa, relsPorCuil } = opciones.contexto || (await cargarContextoArca(tid, { userIds: opciones.userIds }));
 
   // Para el paraguas: las altas de todos los contratos no anulados de cada persona, por empleadora (en
   // cualquier proyecto).
@@ -135,7 +154,7 @@ export async function planDeBajasArca(tenantId: Types.ObjectId | string, opcione
   const resumen = { baja_nueva: 0, baja_por_tramos: 0, baja_anterior: 0, baja_paraguas: 0, arca_granularidad: 0, revision_manual: 0, arca_posterior: 0, arca_abierta: 0 } as Record<TipoCambioBaja, number>;
   for (const x of items) resumen[x.tipo]++;
   items.sort((a, b) => Number(b.aplicar) - Number(a.aplicar) || a.persona.localeCompare(b.persona));
-  return { hoy, espejoAl: t?.integrations?.arcaSimplificacion?.sincronizacionRelaciones?.ultimaSync?.fecha || null, items, resumen };
+  return { hoy, espejoAl, items, resumen };
 }
 
 /**

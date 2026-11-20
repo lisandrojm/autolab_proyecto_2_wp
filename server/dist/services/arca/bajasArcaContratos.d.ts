@@ -16,7 +16,7 @@
  * tenía antes). El estado del contrato se recalcula con la baja nueva.
  */
 import { Types } from "mongoose";
-import { type TipoCambioBaja } from "../../utils/bajasArcaContrato.js";
+import { type RelacionArca, type TipoCambioBaja } from "../../utils/bajasArcaContrato.js";
 export interface ItemBajaArca {
     userProjectId: string;
     userId: string;
@@ -53,8 +53,27 @@ export interface PlanBajasArca {
     items: ItemBajaArca[];
     resumen: Record<TipoCambioBaja, number>;
 }
+/** Lo que hace falta para comparar contratos con el espejo de ARCA: lo comparten el plan de bajas y la auditoría (etapa 5). */
+export interface ContextoArca {
+    hoy: string;
+    espejoAl: string | null;
+    /** Las personas con CUIT válido, por id. */
+    porUsuario: Map<string, any>;
+    /** Sus vínculos (proyección mínima de contratos). */
+    ups: any[];
+    /** Empleadoras por id: CUIT y razón social. */
+    empresa: Map<string, {
+        cuit: string;
+        nombre: string;
+    }>;
+    relsPorCuil: Map<string, RelacionArca[]>;
+}
+export declare function cargarContextoArca(tenantId: Types.ObjectId | string, opciones?: {
+    userIds?: string[];
+}): Promise<ContextoArca>;
 export declare function planDeBajasArca(tenantId: Types.ObjectId | string, opciones?: {
     userIds?: string[];
+    contexto?: ContextoArca;
 }): Promise<PlanBajasArca>;
 /**
  * Escribe las bajas del plan que se aplican. `claves`: sólo esos contratos (por `contratoKey`); sin

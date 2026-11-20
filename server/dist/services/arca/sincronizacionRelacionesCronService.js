@@ -4,6 +4,7 @@ import { yaPasoLaHora } from "./horarioAltasAutomaticas.js";
 import { sincronizarRelacionesTenant } from "./sincronizarRelaciones.js";
 import { CandadoArcaOcupado } from "./candadoArca.js";
 import { aplicarBajasArcaAutomaticas } from "./bajasArcaAutomaticas.js";
+import { recalcularAuditoriaArca } from "./auditoriaArca.js";
 /**
  * EL HORARIO DE LA SINCRONIZACIÓN DE RELACIONES LABORALES: una vez por día, a la hora que configuró
  * cada tenant (06:00 argentinas por defecto, lejos de las 14:00 de la presentación de altas, porque
@@ -114,6 +115,9 @@ async function tick() {
                 */
                 if (!resumen.error)
                     await aplicarBajasArcaAutomaticas(id, resumen.empresas.filter((e) => e.error).map((e) => String(e.cuit || "").replace(/\D/g, "")));
+                // Etapa 5: con el espejo y las bajas al día, los totales de lo que no encaja (para el contador).
+                if (!resumen.error)
+                    await recalcularAuditoriaArca(id);
             }
             catch (e) {
                 if (e instanceof CandadoArcaOcupado) {

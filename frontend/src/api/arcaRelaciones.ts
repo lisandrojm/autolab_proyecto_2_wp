@@ -130,7 +130,65 @@ export interface PlanBajasArca {
   enCurso?: unknown;
 }
 
+/** AUDITORÍA ARCA (etapa 5): lo que no encaja entre WeProdu y ARCA. Ver server `services/arca/auditoriaArca.ts`. */
+export type ItemAuditoriaBaja = ItemBajaArca & { diasAntesDelFin?: number; tramos?: { inicio: string; fin: string; situacionBaja: string }[] };
+export interface ItemRelacionSinContrato {
+  userId: string;
+  persona: string;
+  cuil: string;
+  empleadora: string;
+  empleadoraCuit: string;
+  inicio: string;
+  fin: string;
+  situacionBaja: string;
+  /** Los contratos solapados, del más cercano al más lejano. `dias` positivo = ARCA empieza después. */
+  contratos: { contratoKey: string; userProjectId: string; posicion: number; proyecto: string; contrato: string; alta: string; baja: string; dias: number }[];
+}
+export interface ItemDiscrepanciaFrame {
+  _id: string;
+  userId: string;
+  persona: string;
+  userProjectId: string;
+  contratoKey: string | null;
+  posicion: number;
+  campo: string;
+  weprodu: string;
+  frame: string;
+  detectadaEl: string;
+  ultimaVezEl: string;
+  veces: number;
+}
+export interface TotalesAuditoria {
+  faltaBajaArca: number;
+  revisionManual: number;
+  granularidad: number;
+  relacionSinContrato: number;
+  discrepanciasFrame: number;
+  total: number;
+}
+export interface AuditoriaArca {
+  hoy: string;
+  espejoAl: string | null;
+  calculadoEl: string;
+  faltaBajaArca: ItemAuditoriaBaja[];
+  revisionManual: ItemAuditoriaBaja[];
+  granularidad: ItemAuditoriaBaja[];
+  relacionSinContrato: ItemRelacionSinContrato[];
+  discrepanciasFrame: ItemDiscrepanciaFrame[];
+  totales: TotalesAuditoria;
+}
+
 export const arcaRelacionesAPI = {
+  /** La auditoría completa (etapa 5). Calcula en el momento y deja guardados los totales. */
+  async auditoria(): Promise<AuditoriaArca> {
+    const { data } = await axios.get("/arca/relaciones/auditoria");
+    return data;
+  },
+  /** Los totales guardados de la auditoría (barato: para el contador). */
+  async auditoriaResumen(): Promise<{ el: string | null; totales: TotalesAuditoria | null }> {
+    const { data } = await axios.get("/arca/relaciones/auditoria/resumen");
+    return data;
+  },
   /** Qué bajas de ARCA se llevarían a los contratos (no escribe). */
   async planBajas(): Promise<PlanBajasArca> {
     const { data } = await axios.get("/arca/relaciones/bajas-contratos");

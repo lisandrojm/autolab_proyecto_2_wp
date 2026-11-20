@@ -29,7 +29,7 @@ import { estadoAlEscribir } from "../estadoContratoAlGuardar.js";
 const dig = (v) => String(v ?? "").replace(/\D/g, "");
 const iso = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 const fechaDe = (v) => (v instanceof Date ? v.toISOString().slice(0, 10) : fechaISO(v));
-export async function planDeBajasArca(tenantId, opciones = {}) {
+export async function cargarContextoArca(tenantId, opciones = {}) {
     const tid = new Types.ObjectId(String(tenantId));
     const hoy = hoyArgentina();
     const filtroUsuarios = { tenantId: tid, "metadata.cuit": { $exists: true, $nin: ["", null] } };
@@ -53,6 +53,11 @@ export async function planDeBajasArca(tenantId, opciones = {}) {
     const relsPorCuil = new Map();
     for (const r of relaciones)
         (relsPorCuil.get(r.cuil) || relsPorCuil.set(r.cuil, []).get(r.cuil)).push(r);
+    return { hoy, espejoAl: t?.integrations?.arcaSimplificacion?.sincronizacionRelaciones?.ultimaSync?.fecha || null, porUsuario, ups, empresa, relsPorCuil };
+}
+export async function planDeBajasArca(tenantId, opciones = {}) {
+    const tid = new Types.ObjectId(String(tenantId));
+    const { hoy, espejoAl, porUsuario, ups, empresa, relsPorCuil } = opciones.contexto || (await cargarContextoArca(tid, { userIds: opciones.userIds }));
     // Para el paraguas: las altas de todos los contratos no anulados de cada persona, por empleadora (en
     // cualquier proyecto).
     const altasPorPersonaYEmpresa = new Map();
@@ -107,7 +112,7 @@ export async function planDeBajasArca(tenantId, opciones = {}) {
     for (const x of items)
         resumen[x.tipo]++;
     items.sort((a, b) => Number(b.aplicar) - Number(a.aplicar) || a.persona.localeCompare(b.persona));
-    return { hoy, espejoAl: t?.integrations?.arcaSimplificacion?.sincronizacionRelaciones?.ultimaSync?.fecha || null, items, resumen };
+    return { hoy, espejoAl, items, resumen };
 }
 /**
  * EL GUARDIÁN DE LOS RECIBOS (decisión del usuario, 19/11/2026): una baja de ARCA que adelanta el fin de

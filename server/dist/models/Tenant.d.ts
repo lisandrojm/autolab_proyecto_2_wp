@@ -212,6 +212,11 @@ export interface ITenant extends Document {
                     numero?: number;
                     desde?: Date | null;
                 };
+                /** Los totales de la auditoría ARCA (etapa 5): lo que lee el contador sin recalcular (`services/arca/auditoriaArca.ts`). */
+                auditoria?: {
+                    el?: Date;
+                    totales?: any;
+                };
             };
         };
         /**

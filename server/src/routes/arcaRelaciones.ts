@@ -14,6 +14,7 @@ import { yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { hoyArgentina } from "../utils/contratoVigencia.js";
 import { isoDe } from "../services/arca/relacionesArcaStore.js";
 import { aplicarBajasArca, planDeBajasArca } from "../services/arca/bajasArcaContratos.js";
+import { auditoriaArca, guardarTotalesAuditoria, totalesGuardados } from "../services/arca/auditoriaArca.js";
 
 /**
  * RELACIONES LABORALES DE ARCA Y ANTIGÜEDAD: lo que se lee en la pestaña «Antigüedad ARCA» de
@@ -185,6 +186,31 @@ router.get("/bajas-contratos", requireTenant, authenticateToken, permiso, async 
   try {
     const plan = await planDeBajasArca(req.tenantObjectId!);
     res.json({ ...plan, items: plan.items.map(itemParaPantalla), enCurso: syncEnCurso(String(req.tenantObjectId)) });
+  } catch (e) {
+    errorDe(res, e);
+  }
+});
+
+/*
+  AUDITORÍA ARCA (etapa 5, 20/11/2026): lo que no encaja entre WeProdu y ARCA, para que lo mire una persona
+  (`services/arca/auditoriaArca.ts`). Sólo lectura. Abrir la pestaña deja los totales guardados, que es lo
+  que el contador lee sin recalcular.
+*/
+/** GET /arca/relaciones/auditoria — las secciones completas. */
+router.get("/auditoria", requireTenant, authenticateToken, permiso, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const a = await auditoriaArca(req.tenantObjectId!);
+    await guardarTotalesAuditoria(req.tenantObjectId!, a.totales).catch(() => {});
+    res.json(a);
+  } catch (e) {
+    errorDe(res, e);
+  }
+});
+
+/** GET /arca/relaciones/auditoria/resumen — los totales guardados (barato: el contador del menú y la pestaña). */
+router.get("/auditoria/resumen", requireTenant, authenticateToken, permiso, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    res.json(await totalesGuardados(req.tenantObjectId!));
   } catch (e) {
     errorDe(res, e);
   }

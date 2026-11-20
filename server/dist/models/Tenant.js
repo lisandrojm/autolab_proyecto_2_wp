@@ -113,6 +113,8 @@ const tenantSchema = new Schema({
                 ultimaSync: { type: Schema.Types.Mixed },
                 // Declarado a propósito (el esquema es `strict`): el reintento de la automática del día.
                 reintento: { dia: { type: String }, numero: { type: Number }, desde: { type: Date } },
+                // Los totales de la auditoría ARCA (etapa 5), para el contador.
+                auditoria: { el: { type: Date }, totales: { type: Schema.Types.Mixed } },
             },
         },
         dropboxSign: {

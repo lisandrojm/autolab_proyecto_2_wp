@@ -12,6 +12,7 @@ import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
+import { arcaRelacionesAPI } from '../api/arcaRelaciones';
 import { SettingsModal } from './SettingsModal';
 import { useClientContextStore } from '../stores/clientContextStore';
 import { useEmpresaContextStore } from '../stores/empresaContextStore';
@@ -416,6 +417,16 @@ export const MobileNavbar: React.FC = () => {
     tampoco se abre escribiendo la dirección. Un ítem nuevo necesita su regla en esa tabla.
   */
   const puedeAbrir = usePuedeAbrir();
+  /*
+    AUDITORÍA ARCA (etapa 5, 20/11/2026): el número de cosas que no encajan entre WeProdu y ARCA, al lado
+    de «Documentos», para que alguien lo vea sin ir a buscarlo. Son los totales que el server deja guardados
+    (cada corrida de las 06:00 y cada vez que se abre la pestaña): no recalcula nada.
+  */
+  const [auditoriaArca, setAuditoriaArca] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    if (!user || !puedeAbrir('/documents')) return;
+    arcaRelacionesAPI.auditoriaResumen().then((r) => setAuditoriaArca(r.totales?.total ?? undefined)).catch(() => {});
+  }, [user, puedeAbrir]);
 
   const menuItems = useMemo(() => {
     const isSuperAdminTenant = user?.tenantSlug === 'superadmin';
@@ -502,7 +513,7 @@ export const MobileNavbar: React.FC = () => {
       }
       // El ícono de Dropbox dice de dónde salen los documentos, así que el nombre no tiene que
       // repetirlo: la marca queda en la imagen y la etiqueta nombra la pantalla.
-      if (puedeAbrir('/documents')) base.push({ permiso: 'admin_hr_documents:view', path: '/documents', icon: faDropbox, label: 'Documentos', scope: 'global' });
+      if (puedeAbrir('/documents')) base.push({ permiso: 'admin_hr_documents:view', path: '/documents', icon: faDropbox, label: 'Documentos', scope: 'global', pendientes: auditoriaArca, title: auditoriaArca ? `Auditoría ARCA: ${auditoriaArca} para que mire una persona` : undefined });
 
       // CONFIGURACION Items
       if (puedeAbrir('/requests/config')) base.push({ permiso: 'config_activity_logs:view', path: '/requests/config', icon: faFileText, label: 'Novedades', scope: 'global' });
@@ -597,7 +608,7 @@ export const MobileNavbar: React.FC = () => {
     }
 
     return base;
-  }, [puedeAbrir, adminCounts, user?.tenantSlug, contadores]);
+  }, [puedeAbrir, adminCounts, user?.tenantSlug, contadores, auditoriaArca]);
 
   const handleMenuClick = () => {};
 
