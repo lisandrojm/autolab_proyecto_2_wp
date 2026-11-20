@@ -15,6 +15,8 @@ import { getContratoActivo } from "../../utils/contratoVigencia";
 
 import { anularContratoConRevision, etiquetaContrato } from "../../utils/anularContrato";
 import { HistorialContrato } from "../contratos/HistorialContrato";
+import { OperacionArcaModal } from "../contratos/OperacionArcaModal";
+import { faLandmark } from "@fortawesome/free-solid-svg-icons";
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -72,6 +74,12 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
   const [allEmpresas, setAllEmpresas] = useState<EmpresaOption[]>([]);
 
   const [filters, setFilters] = useState<ContractFilterState>(emptyContractFilters);
+  /*
+    LA RELACIÓN EN ARCA (20/11/2026): baja, modificación o anulación de un contrato que ya tiene el alta
+    presentada, desde su tarjeta. El modal corre en seco hasta que alguien confirma; al terminar una operación real
+    se recarga la lista para que la marca se vea.
+  */
+  const [operarArca, setOperarArca] = useState<ManagedContract | null>(null);
 
   const navigate = useNavigate();
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
@@ -253,7 +261,17 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
                 onDownloadRelease={(release, empresaId) => handleDownloadRelease(r, release, empresaId)}
                 onUploadAltaDocumento={(file) => handleUploadAltaDocumento(r, file)}
               />
-              <HistorialContrato userId={userId!} contratoKey={(r.contract as any)?.contratoKey ? String((r.contract as any).contratoKey) : null} />
+              <div className="flex flex-wrap items-center gap-4">
+                <HistorialContrato userId={userId!} contratoKey={(r.contract as any)?.contratoKey ? String((r.contract as any).contratoKey) : null} />
+                {(r.contract.altaArcaPresentada || r.contract.bajaArcaPresentada || r.contract.modificacionArcaPresentada || r.contract.anulacionArcaPresentada) && (
+                  <button type="button" onClick={() => setOperarArca(r)} className="mt-1 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-blue-700 dark:text-gray-400 dark:hover:text-blue-300" title="Baja, modificación o anulación de la relación en ARCA (Relaciones Laborales → Modificaciones y Bajas). Primero en seco.">
+                    <FontAwesomeIcon icon={faLandmark} className="h-3 w-3" />
+                    Relación en ARCA
+                    {r.contract.bajaArcaPresentada?.resultado === "presentada" && <span className="ml-1 px-1.5 py-0.5 rounded bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-[10px]">baja {r.contract.bajaArcaPresentada.payload?.fechaFin ? String(r.contract.bajaArcaPresentada.payload.fechaFin) : ""}</span>}
+                    {r.contract.altaArcaPresentada?.resultado === "anulada" && <span className="ml-1 px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 text-[10px]">alta anulada</span>}
+                  </button>
+                )}
+              </div>
               </div>
               ),
             )}
@@ -261,6 +279,15 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
         )}
 
       </div>
+      {operarArca && (
+        <OperacionArcaModal
+          isOpen
+          onClose={() => setOperarArca(null)}
+          ref_={{ userProjectId: String(operarArca.userProjectId || ""), contratoKey: operarArca.contract.contratoKey || null, contractIndex: operarArca.contractIndex }}
+          zIndex={zIndex + 20}
+          onHecho={load}
+        />
+      )}
     </Modal>
   );
 };

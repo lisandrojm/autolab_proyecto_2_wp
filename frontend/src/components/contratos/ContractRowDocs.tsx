@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFilePdf, faUpload, faDownload, faSpinner, faLock, faEdit, faTrash, faFlagCheckered } from "@fortawesome/free-solid-svg-icons";
 import { ContractOverviewRow, Contract, AltaArcaPresentada } from "../../api/users";
+import type { OperacionArcaPresentada } from "@compartido/arca/tiposArca";
 import { ContratoFrameItem, contratoFrameAPI } from "../../api/contratosFrame";
 import { InfoItem } from "../../api/info";
 import { Release, releasesAPI } from "../../api/release";
@@ -268,6 +269,9 @@ export const ContractDocsColumns: React.FC<{
             </div>
             {/* Lo que presentó la corrida automática. No es el PDF: el PDF llega después, por Dropbox. */}
             {!esConstanciaCuit && record.altaArcaPresentada && <InsigniaAltaPresentada a={record.altaArcaPresentada} />}
+            {!esConstanciaCuit && record.bajaArcaPresentada && <InsigniaOperacionArca op="baja" m={record.bajaArcaPresentada} />}
+            {!esConstanciaCuit && record.modificacionArcaPresentada && <InsigniaOperacionArca op="modificacion" m={record.modificacionArcaPresentada} />}
+            {!esConstanciaCuit && record.anulacionArcaPresentada && <InsigniaOperacionArca op="anulacion" m={record.anulacionArcaPresentada} />}
           </div>
         ) : (
           <span className="text-xs text-gray-400">—</span>
@@ -411,7 +415,40 @@ export const ContractActionsCell: React.FC<{ record: ContractOverviewRow; onDele
  * «Indeterminada» va en ámbar y lo dice: se apretó el botón y no se pudo leer el resultado. Es la
  * que más importa ver, porque es la que alguien podría volver a presentar sin mirar ARCA.
  */
+/**
+ * UNA OPERACIÓN SOBRE LA RELACIÓN EN ARCA (Modificaciones y Bajas, 20/11/2026): la baja, la modificación o la
+ * anulación mandadas desde WeProdu, con su resultado y de qué lado estuvo el problema cuando falló.
+ */
+const InsigniaOperacionArca: React.FC<{ op: "baja" | "modificacion" | "anulacion"; m: OperacionArcaPresentada }> = ({ op, m }) => {
+  const nombre = op === "baja" ? "Baja" : op === "modificacion" ? "Modificación" : `Anulación${m.que ? ` (${m.que})` : ""}`;
+  const fecha = m.fecha ? new Date(m.fecha).toLocaleDateString("es-AR") : "";
+  const sinConfirmar = m.resultado === "indeterminado" || m.resultado === "presentando";
+  const texto = m.resultado === "presentada" ? `${nombre} en ARCA` : m.resultado === "anulada" ? `${nombre} anulada` : sinConfirmar ? `${nombre} sin confirmar` : m.clase === "regla_arca" ? `${nombre} rechazada` : `${nombre}: no se pudo`;
+  const estilo =
+    m.resultado === "presentada"
+      ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+      : sinConfirmar
+        ? "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800"
+        : m.resultado === "anulada"
+          ? "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700"
+          : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800";
+  const detalle = [fecha ? `el ${fecha}` : "", m.payload && (m.payload as any).fechaFin ? `fin ${(m.payload as any).fechaFin}` : "", m.acuse?.cbt ? `C.B.T. ${m.acuse.cbt}` : "", m.clase === "regla_arca" ? `ARCA dijo: «${m.motivo || ""}»` : m.clase === "navegacion" ? `No se llegó a la pantalla: ${m.motivo || ""}. Se puede reintentar.` : m.motivo || ""].filter(Boolean).join(" · ");
+  return (
+    <span title={`${nombre} mandada desde WeProdu a Relaciones Laborales → Modificaciones y Bajas ${detalle}`} className={`self-start inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold ${estilo}`}>
+      {texto}
+    </span>
+  );
+};
+
 const InsigniaAltaPresentada: React.FC<{ a: AltaArcaPresentada }> = ({ a }) => {
+  // ANULADA EN ARCA desde WeProdu (Modificaciones y Bajas): ya no es un alta, y no se vuelve a presentar sola.
+  if (a.resultado === "anulada") {
+    return (
+      <span title={a.motivo || "El alta se anuló en ARCA desde WeProdu."} className="self-start inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-semibold bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700">
+        Alta anulada en ARCA
+      </span>
+    );
+  }
   /*
     ALTA EXTERNA (04/11/2026): la hizo alguien a mano en ARCA y apareció idéntica en la sincronización de
     Relaciones Laborales; la plataforma la adoptó como propia. Insignia propia, para que se distinga de

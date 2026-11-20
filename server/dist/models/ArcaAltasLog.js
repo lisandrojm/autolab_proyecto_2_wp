@@ -1,7 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 const schema = new Schema({
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
-    tipo: { type: String, enum: ["carga_masiva", "altas_masivas", "verificacion", "externa"], required: true },
+    tipo: { type: String, enum: ["carga_masiva", "altas_masivas", "verificacion", "externa", "baja", "modificacion", "anulacion"], required: true },
     usuarioId: { type: Schema.Types.ObjectId, ref: "User" },
     automatica: { type: Boolean },
     empresaId: { type: Schema.Types.ObjectId, ref: "Company" },
@@ -13,6 +13,7 @@ const schema = new Schema({
     topeEnPantalla: Number,
     topeUsado: Number,
     motivoCorte: String,
+    operacion: { type: Schema.Types.Mixed },
     codigoNovedad: String,
     nroTransaccion: String,
     fechaPresentacion: String,

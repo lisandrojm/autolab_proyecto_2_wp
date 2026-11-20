@@ -1,4 +1,40 @@
 import { Document, Types } from "mongoose";
+/**
+ * Una operación sobre la relación ya dada de alta, hecha desde WeProdu en Modificaciones y Bajas (20/11/2026).
+ * Es la forma común de `bajaArcaPresentada`, `modificacionArcaPresentada` y `anulacionArcaPresentada`; el tipo
+ * que viaja al frontend es `OperacionArcaPresentada` en `compartido/arca/tiposArca.ts`.
+ */
+export interface OperacionArcaContrato {
+    via: "modificaciones";
+    fecha: Date;
+    /** `fallida` = ARCA la rechazó o no la habilita (`clase: regla_arca`), o la pantalla no se pudo recorrer (`clase: navegacion`). */
+    resultado: "presentada" | "indeterminado" | "fallida" | "presentando" | "anulada";
+    clase?: "regla_arca" | "navegacion" | "";
+    motivo?: string;
+    acuse?: {
+        cbt?: string;
+        cat?: string;
+        nroTransaccion?: string;
+        texto?: string;
+    };
+    payload?: Record<string, unknown>;
+    relacion?: {
+        inicio?: string;
+        fin?: string;
+        cat?: string;
+        cbt?: string;
+        sitRevista?: string;
+    };
+    que?: "alta" | "baja";
+    cambios?: Array<{
+        campo: string;
+        antes: string;
+        despues: string;
+    }>;
+    logId?: Types.ObjectId;
+    porConsulta?: boolean;
+    usuarioId?: Types.ObjectId | null;
+}
 interface IContract {
     /**
      * LA IDENTIDAD DEL CONTRATO (etapa 2, 18/11/2026; ver `utils/identidadContrato.ts`). Sin valor por
@@ -306,6 +342,20 @@ interface IContract {
      * cada resultado; este no se borra nunca.
      */
     enviosArca?: number;
+    /**
+     * LAS OPERACIONES SOBRE LA RELACIÓN YA DADA DE ALTA, hechas desde WeProdu en Relaciones Laborales →
+     * Modificaciones y Bajas (20/11/2026, ver `services/arca/corridaOperacionRelacion.ts`). Tres marcas
+     * separadas porque son tres trámites distintos, con reglas y plazos distintos: la baja (fecha de fin y
+     * motivo), la modificación de datos ya informados y la anulación del alta o de la baja.
+     *
+     * Misma lógica que `altaArcaPresentada`: se escribe `presentando` justo ANTES de «Confirmar», el resultado
+     * apenas se lee, y una marca `presentada` / `presentando` / `indeterminado` traba volver a mandar lo mismo.
+     * `clase` separa el rechazo de ARCA (`regla_arca`, con su texto en `motivo`) del fallo de navegación.
+     * NO confundir con `bajaArca`, que es la baja que ARCA informó y la sincronización copió al contrato.
+     */
+    bajaArcaPresentada?: OperacionArcaContrato;
+    modificacionArcaPresentada?: OperacionArcaContrato;
+    anulacionArcaPresentada?: OperacionArcaContrato;
     /**
      * LA ÚLTIMA VERIFICACIÓN EN ARCA de un alta trabada por «ARCA ya tiene un alta de ese día» (pedido del
      * 02/11/2026, ver `services/arca/verificacionAltas.ts`). `presentada`: el alta ya estaba en ARCA y el

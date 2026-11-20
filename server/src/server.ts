@@ -97,6 +97,8 @@ import { arcaSituacionRevistaRoutes } from "./routes/arcaSituacionesRevista.js";
 import { arcaDefaultsRoutes } from "./routes/arcaDefaults.js";
 import { arcaCatalogoRoutes } from "./routes/arcaCatalogo.js";
 import { arcaRelacionesRoutes } from "./routes/arcaRelaciones.js";
+import { arcaSituacionBajaRoutes } from "./routes/arcaSituacionesBaja.js";
+import { arcaOperacionesRoutes } from "./routes/arcaOperaciones.js";
 import { convenioRoutes } from "./routes/convenios.js";
 import { centroCostoRoutes } from "./routes/centrosCosto.js";
 import { companyRoutes } from "./routes/companies.js";
@@ -338,6 +340,10 @@ app.use("/api/v1/arca/actividades", arcaActividadRoutes);
 app.use("/api/v1/arca/modalidades-liquidacion", arcaModalidadLiquidacionRoutes);
 app.use("/api/v1/arca/puestos-desempenados", arcaPuestoDesempenadoRoutes);
 app.use("/api/v1/arca/situaciones-revista", arcaSituacionRevistaRoutes);
+// El motivo de una baja (tabla oficial de ARCA, del formulario Registrar baja).
+app.use("/api/v1/arca/situaciones-baja", arcaSituacionBajaRoutes);
+// Baja, modificación y anulación de una relación laboral en ARCA (Relaciones Laborales → Modificaciones y Bajas).
+app.use("/api/v1/arca/operaciones", arcaOperacionesRoutes);
 app.use("/api/v1/convenios", convenioRoutes);
 app.use("/api/v1/centros-costo", centroCostoRoutes);
 app.use("/api/v1/companies", companyRoutes);

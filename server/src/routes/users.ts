@@ -1079,6 +1079,8 @@ const CAMPOS_FILA_CONTRATO = [
   "_id", "nombre_contrato", "nombre_estado_empleado", "nombre_sede", "areaShiftAssignments", "areaId", "shiftId", "nombre_area", "nombre_turno", "reemplazo", "empleado_id_reemplezado",
   "fecha_alta_contrato", "fecha_baja_contrato", "fecha_carga", "sueldo_mano", "cantidad_jornadas_laborales", "hora_inicio", "hora_fin",
   "altaDocumentoUrl", "altaDocumentoNombre", "altaArcaPresentada",
+  // Las operaciones sobre la relación en ARCA (Modificaciones y Bajas): la columna «ARCA» las muestra.
+  "bajaArcaPresentada", "modificacionArcaPresentada", "anulacionArcaPresentada",
   "constanciaVigenciaDesde", "constanciaVigenciaHasta", "constanciaVerificador", "constanciaAfipEstado", "constanciaAfipConsultadaAt", "constanciaAfipDropboxSubidaAt",
   "firmaContratoUrl", "firmaContratoNombre", "firmaReleases", "firmaGeneradoAt", "firmaReleasesGeneradoAt", "firmaEnviadaAt",
   "contenidoCustomContrato", "contenidoCustomReleases",
@@ -1825,6 +1827,9 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         // Lo que presentó la corrida automática de altas (Carga Masiva / Altas Masivas). No es el
         // estado del contrato: es la marca que evita presentarlo dos veces.
         altaArcaPresentada: c.altaArcaPresentada || null,
+        bajaArcaPresentada: c.bajaArcaPresentada || null,
+        modificacionArcaPresentada: c.modificacionArcaPresentada || null,
+        anulacionArcaPresentada: c.anulacionArcaPresentada || null,
         // Datos leídos del PDF de la Constancia de CUIT (vigencia = cuándo hay que volver a pedirla).
         constanciaVigenciaDesde: c.constanciaVigenciaDesde || "",
         constanciaVigenciaHasta: c.constanciaVigenciaHasta || "",
@@ -3130,10 +3135,12 @@ router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermis
       (up.contracts || []).forEach((c: any, idx: number) => {
         // Lápida (etapa 2b): va en su posición, como ANULADO, con lo que era (más abajo). No es un contrato operable.
         if (c?.estadoContrato === "ANULADO") {
-          rows.push({ projectId: String(up.projectId), projectName, clientId, clientName, contratoEmpresas: [], releaseEmpresas: [], contractIndex: idx, contract: c, _clave: String(c.contratoKey || "") });
+          rows.push({ userProjectId: String(up._id), projectId: String(up.projectId), projectName, clientId, clientName, contratoEmpresas: [], releaseEmpresas: [], contractIndex: idx, contract: c, _clave: String(c.contratoKey || "") });
           return;
         }
         rows.push({
+          // El vínculo: lo necesita la operación en ARCA (baja, modificación, anulación) para nombrar el contrato.
+          userProjectId: String(up._id),
           projectId: String(up.projectId),
           projectName,
           clientId,

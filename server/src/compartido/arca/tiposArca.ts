@@ -33,14 +33,51 @@ export interface AltaArcaPresentada {
   /** `verificacion`: se encontró ya hecha en ARCA, no se presentó desde WeProdu. `externa`: hecha a mano en ARCA y adoptada al sincronizar. */
   via: "carga_masiva" | "altas_masivas" | "verificacion" | "externa";
   fecha: string;
-  /** `presentando`: se marcó antes del «Aceptar» de ARCA y la corrida se cortó sin resultado. */
-  resultado: "presentada" | "indeterminado" | "fallida" | "presentando";
+  /**
+   * `presentando`: se marcó antes del «Aceptar» de ARCA y la corrida se cortó sin resultado.
+   * `anulada`: el alta se anuló en ARCA desde WeProdu (ver `AnulacionArcaPresentada`); ya no traba nada ni se vuelve a presentar sola.
+   */
+  resultado: "presentada" | "indeterminado" | "fallida" | "presentando" | "anulada";
   codigoNovedad?: string;
   nroTransaccion?: string;
   motivo?: string;
   /** Altas Masivas por tandas. */
   tanda?: number;
   cat?: string;
+  porConsulta?: boolean;
+}
+
+/**
+ * UNA OPERACIÓN SOBRE UNA RELACIÓN YA DADA DE ALTA, hecha desde WeProdu en Relaciones Laborales →
+ * Modificaciones y Bajas (20/11/2026): la baja, la modificación de datos o la anulación. Misma forma que
+ * la marca del alta: es la constancia de NUESTRO lado y la traba para no mandar dos veces lo mismo.
+ *
+ * `resultado`: `presentada` (ARCA la tomó y se leyó en el listado), `indeterminado` (se confirmó y no se
+ * pudo leer el resultado: mirar en ARCA, no reenviar), `fallida` (ARCA la rechazó o el ícono estaba
+ * deshabilitado: se puede volver a intentar), `presentando` (se escribió justo antes de «Confirmar» y la
+ * corrida se cortó), `anulada` (sólo en la baja: se anuló después en ARCA).
+ *
+ * `clase` dice de qué lado estuvo el problema cuando `fallida`: `regla_arca` = ARCA la rechazó o no la
+ * habilita (el texto está en `motivo`); `navegacion` = la pantalla no era la esperada, la sesión se cayó o
+ * ARCA no contestó; se puede reintentar sin tocar nada.
+ */
+export interface OperacionArcaPresentada {
+  via: "modificaciones";
+  fecha: string;
+  resultado: "presentada" | "indeterminado" | "fallida" | "presentando" | "anulada";
+  clase?: "regla_arca" | "navegacion" | "";
+  motivo?: string;
+  /** Lo que ARCA devolvió como comprobante: la Clave de Baja Temprana (C.B.T.), un número de transacción o el texto del acuse. */
+  acuse?: { cbt?: string; cat?: string; nroTransaccion?: string; texto?: string };
+  /** Exactamente lo que se mandó (fechas y códigos tal como se escribieron en la pantalla). */
+  payload?: Record<string, unknown>;
+  /** La relación tal como la mostraba ARCA antes de operar (fechas, C.A.T., situación). */
+  relacion?: { inicio?: string; fin?: string; cat?: string; cbt?: string; sitRevista?: string };
+  /** Anulación: qué se anuló. */
+  que?: "alta" | "baja";
+  /** Modificación: campo por campo, antes y después. */
+  cambios?: Array<{ campo: string; antes: string; despues: string }>;
+  logId?: string;
   porConsulta?: boolean;
 }
 
@@ -112,6 +149,10 @@ export interface ContractOverviewRow {
    * que evita presentarlo dos veces. `indeterminado` = hay que mirarlo en ARCA antes de hacer nada.
    */
   altaArcaPresentada?: AltaArcaPresentada | null;
+  /** Las operaciones sobre la relación ya dada de alta, hechas desde WeProdu en Modificaciones y Bajas (ver `OperacionArcaPresentada`). */
+  bajaArcaPresentada?: OperacionArcaPresentada | null;
+  modificacionArcaPresentada?: OperacionArcaPresentada | null;
+  anulacionArcaPresentada?: OperacionArcaPresentada | null;
   /** Datos leídos del PDF de la Constancia de CUIT de ARCA ("YYYY-MM-DD"). Vale un mes: la vigencia marca cuándo hay que volver a pedirla. */
   constanciaVigenciaDesde?: string;
   constanciaVigenciaHasta?: string;

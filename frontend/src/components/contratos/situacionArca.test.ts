@@ -28,6 +28,16 @@ describe("situacionArca: contratos de ARCA (alta temprana)", () => {
     assert.equal(situacionArca(fila({ altaArcaPresentada: { via: "carga_masiva", fecha: "2026-11-01", resultado: "indeterminado" } }), AFIP).grupo, "sin_confirmar");
     assert.equal(situacionArca(fila({ altaArcaPresentada: { via: "carga_masiva", fecha: "2026-11-01", resultado: "presentando" } }), AFIP).grupo, "sin_confirmar");
   });
+  it("anulada en ARCA desde WeProdu, ya no tiene alta; con la baja registrada desde WeProdu lo dice junto al alta (20/11/2026)", () => {
+    const an = situacionArca(fila({ altaArcaPresentada: { via: "altas_masivas", fecha: "2026-11-01", resultado: "anulada", motivo: "Alta anulada en ARCA desde WeProdu el 20/11/2026." } }), AFIP);
+    assert.deepEqual([an.grupo, an.texto], ["sin_alta", "Alta anulada en ARCA"]);
+    assert.match(an.titulo, /anulada en ARCA/);
+    const conBaja = situacionArca(fila({ altaArcaPresentada: { via: "altas_masivas", fecha: "2026-11-01", resultado: "presentada" }, bajaArcaPresentada: { via: "modificaciones", fecha: "2026-11-20", resultado: "presentada", payload: { fechaFin: "30/11/2026" }, acuse: { cbt: "1".repeat(20) } } }), AFIP);
+    assert.deepEqual([conBaja.grupo, conBaja.texto], ["con_alta", "Alta y baja en ARCA"]);
+    assert.match(conBaja.titulo, /30\/11\/2026.*C\.B\.T\./);
+    // Una baja rechazada o sin confirmar no cambia la situación del alta.
+    assert.equal(situacionArca(fila({ altaArcaPresentada: { via: "altas_masivas", fecha: "2026-11-01", resultado: "presentada" }, bajaArcaPresentada: { via: "modificaciones", fecha: "2026-11-20", resultado: "fallida", clase: "regla_arca" } }), AFIP).texto, "Alta en ARCA");
+  });
   it("rechazada o sin nada, no tiene alta", () => {
     const r = situacionArca(fila({ altaArcaPresentada: { via: "carga_masiva", fecha: "2026-11-01", resultado: "fallida", motivo: "CUIL inválido" } }), AFIP);
     assert.deepEqual([r.grupo, r.texto, r.titulo], ["sin_alta", "Rechazada por ARCA", "CUIL inválido"]);

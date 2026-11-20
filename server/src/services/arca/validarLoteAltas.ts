@@ -210,13 +210,15 @@ export async function validarLoteAltas(o: { tenantObjectId: any; modo: ModoAltas
       falla(`${etiqueta}: no está en el estado de Alta temprana de ARCA (está en «${c.nombre_estado_empleado || "sin estado"}»).`);
       return;
     }
-    if (!o.forzar && o.descartarPresentadas && c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") {
+    // Una fallida o una ANULADA en ARCA (desde Modificaciones y Bajas) no es un alta vigente: se puede volver a presentar.
+    const sinAltaVigente = !c.altaArcaPresentada || c.altaArcaPresentada.resultado === "fallida" || c.altaArcaPresentada.resultado === "anulada";
+    if (!o.forzar && o.descartarPresentadas && !sinAltaVigente) {
       // Por tandas se RETOMA: lo ya presentado no es un error del lote, se saltea. Así una corrida
       // cortada se relanza con la misma selección y sigue desde la primera tanda sin resultado.
       descartadas.push({ userProjectId: it.userProjectId, contractIndex: it.contractIndex, cuil: digitos(u?.metadata?.cuit), nombre, registro: it.registro, motivo: c.altaArcaPresentada.resultado === "presentada" ? "presentada" : "incierta" });
       return;
     }
-    if (!o.forzar && c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") {
+    if (!o.forzar && !sinAltaVigente) {
       falla(`${etiqueta}: ya se presentó en ARCA (${c.altaArcaPresentada.via === "altas_masivas" ? "Altas Masivas" : "Carga Masiva"}, ${new Date(c.altaArcaPresentada.fecha).toLocaleDateString("es-AR")}). No se presenta dos veces.`);
       return;
     }

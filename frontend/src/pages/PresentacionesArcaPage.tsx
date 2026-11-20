@@ -11,6 +11,7 @@ import { CorridaAltasArca } from "../components/contratos/CorridaAltasArca";
 import { CuentaRegresiva } from "../components/ui/CuentaRegresiva";
 import { avisoForzarAlta, libreDesdeTrasAlta } from "@compartido/arca/vigenciaAltaPresentada";
 import { sweetAlert } from "../utils/sweetAlert";
+import { OperacionesArcaHistorial } from "../components/arca/OperacionesArcaHistorial";
 import { ProjectTeamPage } from "./ProjectTeamPage";
 import { TablaConEncabezadoFijo, useAltoDeBarra } from "../components/ui/TablaConEncabezadoFijo";
 import { AccionDelDocumento, BotonRetomarCircuito, BotonVolverABajar, ChipConstancia, esFueraDelCircuito, esNoUbicada } from "../components/contratos/HistorialAltasArca";
@@ -192,7 +193,8 @@ export const PresentacionesArcaPage: React.FC = () => {
     «Alta Temprana A.R.C.A» en Contratos (las corridas guardadas, de todas las empleadoras), aplanado a
     una fila por persona: acá se viene a buscar «¿salió el alta de fulano?», no la corrida.
   */
-  const [tab, setTab] = useState<"pendientes" | "presentadas">("pendientes");
+  // Y una tercera (20/11/2026): las bajas, modificaciones y anulaciones mandadas desde el contrato.
+  const [tab, setTab] = useState<"pendientes" | "presentadas" | "operaciones">("pendientes");
   const [corridas, setCorridas] = useState<CorridaAltasGuardada[] | null>(null);
   const [buscar, setBuscar] = useState("");
   // Por defecto, sólo lo que salió solo: es lo que se viene a confirmar («¿se presentó?»). Las manuales y forzadas se ven destildando.
@@ -812,6 +814,7 @@ export const PresentacionesArcaPage: React.FC = () => {
               [
                 ["pendientes", `Pendientes (${estado.contratos.length})`],
                 ["presentadas", `Presentadas${corridas ? ` (${presentadas.length})` : ""}`],
+                ["operaciones", "Bajas y modificaciones"],
               ] as const
             ).map(([k, etiqueta]) => (
               <button
@@ -824,6 +827,8 @@ export const PresentacionesArcaPage: React.FC = () => {
               </button>
             ))}
           </div>
+
+          {tab === "operaciones" && <OperacionesArcaHistorial />}
 
           {tab === "presentadas" && (
             <section className="space-y-3">

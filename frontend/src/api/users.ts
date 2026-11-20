@@ -1,10 +1,10 @@
 import axios from "./axiosConfig";
 import { emitUsersChanged } from "../utils/navbarEvents";
 
-import type { ContractOverviewRow } from "@compartido/arca/tiposArca";
+import type { AltaArcaPresentada, ContractOverviewRow, OperacionArcaPresentada } from "@compartido/arca/tiposArca";
 import type { AntiguedadArcaResumen } from "@compartido/antiguedadTexto";
 export type { AntiguedadArcaResumen } from "@compartido/antiguedadTexto";
-export type { SinCuitDocumento, SinCuitValidacion, AltaArcaPresentada, ContractOverviewRow } from "@compartido/arca/tiposArca";
+export type { SinCuitDocumento, SinCuitValidacion, AltaArcaPresentada, OperacionArcaPresentada, ContractOverviewRow } from "@compartido/arca/tiposArca";
 
 /** Una solicitud sin aprobar, tal como la lista el padrón de Contratados (`GET /users/solicitudes-pendientes`). */
 export interface SolicitudPendienteDeContrato {
@@ -90,6 +90,13 @@ export interface TenantRef {
 
 /* ---------- Tipos dominio ---------- */
 export interface Contract {
+  /** La identidad del contrato (etapa 2) y las marcas de ARCA, cuando el server manda el contrato entero (gestor «Todos los contratos»). */
+  contratoKey?: string | null;
+  estadoContrato?: string;
+  altaArcaPresentada?: AltaArcaPresentada | null;
+  bajaArcaPresentada?: OperacionArcaPresentada | null;
+  modificacionArcaPresentada?: OperacionArcaPresentada | null;
+  anulacionArcaPresentada?: OperacionArcaPresentada | null;
   fecha_alta_contrato: string;
   fecha_baja_contrato: string;
   /** De qué proyecto vino, si entró con «Agregar con contrato vigente» (copia del contrato de ese proyecto). */
@@ -473,6 +480,8 @@ export interface EventoAuditoriaContrato {
 }
 
 export interface ManagedContract {
+  /** El vínculo (users_&_projects) al que pertenece el contrato: con él se nombra en las operaciones de ARCA. */
+  userProjectId?: string;
   projectId: string;
   projectName: string;
   clientId: string;

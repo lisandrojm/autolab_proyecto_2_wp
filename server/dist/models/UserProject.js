@@ -3,6 +3,21 @@ import { clavesAPoner } from "../utils/identidadContrato.js";
 import { instalarAuditoriaDeContratos } from "../services/auditoriaContratos.js";
 import { instalarEstadoAlGuardar } from "../services/estadoContratoAlGuardar.js";
 import { camposDeContratoEnLapida } from "../utils/anulacionContrato.js";
+const operacionArcaSchema = new Schema({
+    via: { type: String, enum: ["modificaciones"] },
+    fecha: { type: Date },
+    resultado: { type: String, enum: ["presentada", "indeterminado", "fallida", "presentando", "anulada"] },
+    clase: { type: String },
+    motivo: { type: String },
+    acuse: { type: Schema.Types.Mixed },
+    payload: { type: Schema.Types.Mixed },
+    relacion: { type: Schema.Types.Mixed },
+    que: { type: String, enum: ["alta", "baja"] },
+    cambios: { type: [new Schema({ campo: String, antes: String, despues: String }, { _id: false })], default: undefined },
+    logId: { type: Schema.Types.ObjectId, ref: "ArcaAltasLog" },
+    porConsulta: { type: Boolean },
+    usuarioId: { type: Schema.Types.ObjectId, ref: "User", default: null },
+}, { _id: false });
 const contractSchema = new Schema({
     proyecto_id: { type: Number },
     empleado_id: { type: Number },
@@ -94,7 +109,8 @@ const contractSchema = new Schema({
         type: new Schema({
             via: { type: String, enum: ["carga_masiva", "altas_masivas", "verificacion", "externa"] },
             fecha: { type: Date },
-            resultado: { type: String, enum: ["presentada", "indeterminado", "fallida", "presentando"] },
+            // `anulada`: el alta se anuló en ARCA desde WeProdu (`anulacionArcaPresentada`): ya no traba ni se vuelve a presentar sola.
+            resultado: { type: String, enum: ["presentada", "indeterminado", "fallida", "presentando", "anulada"] },
             codigoNovedad: { type: String },
             nroTransaccion: { type: String },
             motivo: { type: String },
@@ -109,6 +125,10 @@ const contractSchema = new Schema({
         default: undefined,
     },
     enviosArca: { type: Number },
+    // Las operaciones de Modificaciones y Bajas: ver `IContract.bajaArcaPresentada` y hermanas.
+    bajaArcaPresentada: { type: operacionArcaSchema, default: undefined },
+    modificacionArcaPresentada: { type: operacionArcaSchema, default: undefined },
+    anulacionArcaPresentada: { type: operacionArcaSchema, default: undefined },
     // La última verificación en ARCA de un alta trabada por «ARCA ya tiene un alta de ese día»: ver `IContract.verificacionArca`.
     verificacionArca: {
         type: new Schema({

@@ -22,3 +22,8 @@ export declare const MOTOR_ALTAS: string;
 export declare const MOTOR_CATALOGOS: string;
 /** Consultas de Relaciones Laborales por mes de movimientos y descarga del TXT. SÓLO LEE. */
 export declare const MOTOR_RELACIONES: string;
+/**
+ * Baja, modificación y anulación de una relación laboral (Relaciones Laborales → Modificaciones y Bajas). ESCRIBE
+ * en ARCA. Archivo aparte del de altas, con su propia lista blanca y su propio escaneo (20/11/2026).
+ */
+export declare const MOTOR_MODIFICACIONES: string;

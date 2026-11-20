@@ -205,6 +205,39 @@ npm run test:afip85            # el registro de 85 (frontend/)
 npm run test:arca-altas        # el cotejo del lote y el candado (server/)
 ```
 
+## Baja, modificación y anulación de una relación (`modificaciones-arca.mjs`)
+
+El cuarto motor que **escribe** en ARCA: Relaciones Laborales → Modificaciones y Bajas, los tres íconos de cada
+relación. Lo corre el servidor (`server/src/services/arca/corridaOperacionRelacion.ts`) desde la tarjeta del contrato
+(«Todos los contratos» → **Relación en ARCA**) o desde `src/scripts/operarRelacionArca.ts`. Documentación completa en
+`documentation/arca-operaciones-relacion.md`.
+
+| Operación | Camino en ARCA | Lo que no se deshace |
+|---|---|---|
+| Baja | buscar por CUIL → ícono «Registrar baja» → fecha de fin + motivo (+ telegrama) | **Confirmar** de `RegistraBaja.aspx` |
+| Modificación | buscar por CUIL → ícono «Modificar Registro» → cambiar los campos pedidos | **Confirmar** de `ModificaAlta.aspx` |
+| Anulación | buscar por CUIL → ícono «anular» | **el ícono mismo** (ARCA confirma con un diálogo) |
+
+### Las garantías
+
+- **Cinco clicks exactos**, cada uno en su función: `apretar` (Continuar, Volver, Cancelar), `apretarIcono` (los tres íconos,
+  buscados en la tarjeta de LA relación por su fecha de inicio, nunca por posición), `irAPaginaDelListado`,
+  `confirmarBaja` y `confirmarModificacion`. El test escanea la fuente y lo exige.
+- **Un ícono deshabilitado no se aprieta.** ARCA deshabilita por relación (`disabled`, `ImgDisabled`, `_off.gif`); el
+  motor lo informa como rechazo por regla de ARCA, sin tocar nada.
+- **En seco completa y cancela.** Nada queda en ARCA. La anulación en seco sólo mira si el ícono está habilitado.
+- **El rastro antes del click.** `antesDeConfirmar` se espera justo antes de confirmar: ahí el servidor marca el contrato.
+- **El resultado se lee del listado**, volviendo a buscar la relación (fecha de fin, C.B.T.), nunca se supone. Lo que no
+  se puede leer es `indeterminado` y no se reintenta.
+- **Dos clases de fallo**: `regla_arca` (ARCA rechazó o no habilita, texto literal) y `navegacion` (se puede reintentar).
+- **Lo no relevado está declarado**: la pantalla posterior al ícono de anular (`ICONOS.anular.abre = POR_RELEVAR`). Si
+  aparece una pantalla desconocida, se guarda y no se toca nada más.
+
+```bash
+npm run test:arca:modificaciones   # el motor (frontend/)
+cd ../server && npm run test:arca-operaciones   # las reglas y la corrida con un ARCA simulado (server/)
+```
+
 ## Catálogos de ARCA (`catalogos-arca.mjs`)
 
 Lee los nomencladores que publica «Registrar Nuevas Altas» (`window.l_CCT`, `l_CatCCT`, `l_PD`, `l_SR`, `l_GTS`, `l_TS`, `l_MC`, `l_ML`, `l_Dom`, `l_ActDom`) y las obras sociales (`leerCatalogo` de `registrar-obras-sociales.mjs`, reutilizado). **Cero clicks propios**: la única interacción es elegir la empleadora con `aceptarSelectorDeCuit`, y verifica su CUIT en pantalla antes de leer. Lo corre el servidor (`server/src/services/arca/catalogoArcaSync.ts`), con el mismo candado de una corrida por tenant. Ver `documentation/catalogo-arca.md`.
