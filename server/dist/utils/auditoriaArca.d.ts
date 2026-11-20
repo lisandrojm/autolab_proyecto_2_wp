@@ -13,6 +13,9 @@
  *  - Es UNA fila por relación, con los contratos solapados al lado. Cuando ARCA declara un tramo de
  *    varios días y WeProdu tiene una jornada por día (Montoya: tramo 17–20/07, jornadas 18, 19 y 20),
  *    es una sola fila y no tres: el dato es que el 17 está en ARCA y no en WeProdu.
+ *  - Un tramo CONTIGUO a una relación explicada (empieza el día siguiente a su fin) está explicado por
+ *    la misma cadena, igual que en el clasificador de bajas (Palomino: 15/12/2021–28/02/2022 y
+ *    01/03/2022–31/10/2026 son UN contrato).
  *  - Una relación que no se solapa con ningún contrato no se lista: no se sabe de qué relación local
  *    sería la «otra fecha» (y las viejas, anteriores a los datos de WeProdu, serían miles).
  *  - Lo que WeProdu tiene y ARCA no (una jornada sin relación ese día) lo cubre la verificación de altas.

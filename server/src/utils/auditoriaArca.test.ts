@@ -28,6 +28,14 @@ test("Montoya: un tramo 17–20/07 y jornadas 18, 19, 20 (y una del 12) → UNA 
   assert.deepEqual(r[0].contratos.map((c) => [c.contratoKey, c.dias]), [["k18", -1], ["k19", -2], ["k20", -3]]);
 });
 
+test("Palomino: el segundo tramo, contiguo al primero (que tiene contrato exacto), está explicado por la misma cadena", () => {
+  const contratos = [contrato("k0", "2021-12-15", "2026-10-31")];
+  const rels = [rel("2021-12-15", "2022-02-28"), rel("2022-03-01", "2026-10-31", { situacionBaja: "Baja por despido" })];
+  assert.deepEqual(relacionesSinContratoExacto(contratos, rels, HOY), []);
+  // Con un hueco de un día ya no es la cadena: se lista.
+  assert.equal(relacionesSinContratoExacto(contratos, [rel("2021-12-15", "2022-02-27"), rel("2022-03-01", "2026-10-31")], HOY).length, 1);
+});
+
 test("sin solapamiento no se lista (una jornada del 12 y un tramo del 17 al 20 no son la misma relación)", () => {
   assert.deepEqual(relacionesSinContratoExacto([contrato("k12", "2026-07-12", "2026-07-12")], [rel("2026-07-17", "2026-07-20")], HOY), []);
 });

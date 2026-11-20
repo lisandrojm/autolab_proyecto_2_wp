@@ -48,12 +48,13 @@ const FilaRelacion: React.FC<{ x: ItemRelacionSinContrato }> = ({ x }) => (
       <div className="text-[11px] text-gray-500">{x.situacionBaja || "—"}</div>
     </td>
     <td className="px-2 py-1.5 text-gray-700 dark:text-gray-300">
-      {x.contratos.map((c) => (
+      {x.contratos.slice(0, 5).map((c) => (
         <div key={c.contratoKey} className="whitespace-nowrap">
           {c.contrato} · {c.proyecto} · {fecha(c.alta)} → {c.baja ? fecha(c.baja) : "abierto"}
           <span className="ml-1 text-[11px] text-amber-700 dark:text-amber-400">{c.dias === 0 ? "" : c.dias > 0 ? `ARCA empieza ${c.dias} día(s) después` : `ARCA empieza ${-c.dias} día(s) antes`}</span>
         </div>
       ))}
+      {x.contratos.length > 5 && <div className="text-[11px] text-gray-500">y {x.contratos.length - 5} más dentro de esa relación</div>}
     </td>
   </tr>
 );
