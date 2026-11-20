@@ -49,13 +49,13 @@ const etiquetaTurno = (t: any) => (t ? `${t.name}${t.startTime && t.endTime ? ` 
 
 export async function armarConsolidado(tenantId: Types.ObjectId, o: { desde: string; hasta: string; proyectoIds: string[] }): Promise<ConsolidadoNovedades> {
   const proyectoOids = o.proyectoIds.map(oid).filter(Boolean) as Types.ObjectId[];
-  const proyectosRaw: any[] = await Project.find({ _id: { $in: proyectoOids }, tenantId }).select("name clientId centroCostoId centroCostoEmpresaTangoId").lean();
+  const proyectosRaw: any[] = await Project.find({ _id: { $in: proyectoOids }, tenantId }).select("name clientId metadata.centroCostoId metadata.centroCostoEmpresaTangoId").lean();
   const clientes: any[] = await Client.find({ _id: { $in: proyectosRaw.map((p) => p.clientId).filter(Boolean) } }).select("name").lean();
-  const centrosRaw: any[] = await CentroCosto.find({ "data.id": { $in: proyectosRaw.map((p) => p.centroCostoId).filter((x) => Number.isFinite(Number(x)) && x !== null) } }).select("codAuxiliar descAuxiliar name data empresaTangoId").lean();
+  const centrosRaw: any[] = await CentroCosto.find({ "data.id": { $in: proyectosRaw.map((p) => p.metadata?.centroCostoId).filter((x) => Number.isFinite(Number(x)) && x !== null) } }).select("codAuxiliar descAuxiliar name data empresaTangoId").lean();
   const nombreCliente = new Map(clientes.map((c) => [String(c._id), str(c.name)]));
   const centroDe = (p: any) => {
-    const candidatos = centrosRaw.filter((c) => Number(c.data?.id) === Number(p.centroCostoId));
-    const c = candidatos.find((x) => !p.centroCostoEmpresaTangoId || x.empresaTangoId === p.centroCostoEmpresaTangoId) || candidatos[0];
+    const candidatos = centrosRaw.filter((c) => Number(c.data?.id) === Number(p.metadata?.centroCostoId));
+    const c = candidatos.find((x) => !p.metadata?.centroCostoEmpresaTangoId || x.empresaTangoId === p.metadata?.centroCostoEmpresaTangoId) || candidatos[0];
     return c ? `${str(c.codAuxiliar) || str(c.name)}${str(c.descAuxiliar) ? ` ${str(c.descAuxiliar)}` : ""}`.trim() : "";
   };
   const proyectos: ProyectoDelConsolidado[] = proyectosRaw.map((p) => ({ id: String(p._id), nombre: str(p.name), cliente: nombreCliente.get(String(p.clientId || "")) || "", centroCosto: centroDe(p) }));
