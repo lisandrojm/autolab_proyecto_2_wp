@@ -57,6 +57,9 @@ export interface ContratoEnFechas {
   mensaje: string;
   liquidacion?: "jornal" | "mensual";
   empresaNombre?: string;
+  nombreContrato?: string;
+  modalidadContrato?: string;
+  liquidacionTexto?: string;
 }
 
 /** Lo que la regla del alta vigente dice para esas fechas. */

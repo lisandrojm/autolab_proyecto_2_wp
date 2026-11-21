@@ -171,6 +171,8 @@ export default function DetallePuesto() {
   // De hoy en adelante y con la empresa del equipo: un indeterminado recorta ya a Servicios; un alta que termina sólo avisa (`reglaDelAlta`).
   const altaVigente = useAltaEnFechas({ activo: !!a?.userId, userId: a?.userId || undefined, desde: hoyISO, hasta: "", empresaId: empresaDelEquipo || null });
   const reglaAlta = reglaDelAlta(altaVigente, true);
+  // Sin fechas todavía: no es «en esas fechas», es vigente.
+  const soloServiciosPuesto = reglaAlta.soloServicios.replace("en esas fechas", "vigente");
   useEffect(() => {
     setVerAvisos(false);
     setReemplazoAbierto(!!a?.reemplazo);
@@ -213,7 +215,13 @@ export default function DetallePuesto() {
   }
 
   const persona = a?.userId ? a : null;
-  const avisos = equipo.avisos?.[puesto._id] || [];
+  /*
+    LOS COMPROMISOS DEL PUESTO: los choques de días y horario (los calcula el server con el equipo) y, además,
+    el ALTA DE ARCA que ya tiene (21/11/2026): un indeterminado en otro turno no choca de horario, pero es
+    el compromiso que más pesa —deja sólo Servicios—, y el mensaje dice cuál es (tipo, empresa, modalidad y liquidación).
+  */
+  const altaArca = soloServiciosPuesto || reglaAlta.aviso;
+  const avisos = [...(altaArca ? [altaArca] : []), ...(equipo.avisos?.[puesto._id] || [])];
   const r = a?.reemplazo || null;
   const efectivo = x.efectivo;
   const base = x.base;
@@ -464,7 +472,7 @@ export default function DetallePuesto() {
           justo lo que se viene a mirar. Lo que difiere del equipo se marca en su fila.
         */}
         <div className="space-y-2">
-          <FilasCondiciones valores={efectivo} areas={areas} catalogos={catalogos} onAbrirContrato={() => setHoja("contrato")} onAbrirTurno={() => setHoja("turno")} onCambio={(c) => void cambiar(c)} distintas={distintas} soloServicios={reglaAlta.soloServicios} avisoAlta={reglaAlta.aviso} />
+          <FilasCondiciones valores={efectivo} areas={areas} catalogos={catalogos} onAbrirContrato={() => setHoja("contrato")} onAbrirTurno={() => setHoja("turno")} onCambio={(c) => void cambiar(c)} distintas={distintas} soloServicios={soloServiciosPuesto} avisoAlta={reglaAlta.aviso} />
           {/* Sólo cuando hay algo que volver: un botón gris, como los demás secundarios de la pantalla. */}
           {x.diferencias.length > 0 && (
             <button type="button" onClick={volverAlEquipo} className="flex min-h-[48px] w-full items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-bold text-slate-800 dark:border-slate-600 dark:text-slate-100">
@@ -608,7 +616,7 @@ export default function DetallePuesto() {
           void elegirRol(id);
         }}
       />
-      <HojasCondiciones cual={hoja === "contrato" || hoja === "turno" ? hoja : null} onCerrar={() => setHoja(null)} titulo={`Puesto ${numero}`} areas={areas} catalogos={catalogos} valores={efectivo} onCambio={(c) => void cambiar(c)} soloServicios={reglaAlta.soloServicios} />
+      <HojasCondiciones cual={hoja === "contrato" || hoja === "turno" ? hoja : null} onCerrar={() => setHoja(null)} titulo={`Puesto ${numero}`} areas={areas} catalogos={catalogos} valores={efectivo} onCambio={(c) => void cambiar(c)} soloServicios={soloServiciosPuesto} />
     </Pantalla>
   );
 }
