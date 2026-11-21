@@ -193,7 +193,8 @@ export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, 
 
       <main className="flex-1 px-4 pb-6 pt-4">{children}</main>
 
-      {pie && !boton && <footer className="sticky bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 pb-4 pt-3 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">{pie}</footer>}
+      {/* El pie propio, igual que el botón: A 64 PX DEL PISO. En bottom-0 lo tapaba la barra y sólo se veía al llegar al final. */}
+      {pie && !boton && <footer className="sticky bottom-16 z-20 border-t border-slate-200 bg-white/95 px-4 pb-4 pt-3 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">{pie}</footer>}
       {/* El botón se pega A 64 PX DEL PISO y no al piso: abajo está la barra, y quedaría tapado por ella. */}
       {boton && (
         <footer className="sticky bottom-16 z-20 border-t border-slate-200 bg-white/95 px-4 pb-4 pt-3 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">

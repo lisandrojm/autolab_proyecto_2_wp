@@ -7,7 +7,7 @@ import { faArrowRightArrowLeft, faCheck, faChevronDown, faChevronLeft, faChevron
 import { plantillasEquipoAPI, Puesto } from "../../../../../api/plantillasEquipo";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { usePlantilla, usePlantillas } from "./contexto";
-import { Pantalla, Seccion, Vacio } from "./Pantalla";
+import { Pantalla, Seccion, TOPE_PEGADO, Vacio } from "./Pantalla";
 import { FilasCondiciones, HojaCondicion, HojasCondiciones } from "./Condiciones";
 import { SelectorPersona } from "./SelectorPersona";
 import { CampoCategoria, ModalCategoria } from "../contratacion/SelectorCategoria";
@@ -174,7 +174,16 @@ export default function DetallePuesto() {
   const idx = lista.findIndex((y) => y.n === numero);
   const anterior = lista[idx - 1];
   const siguiente = lista[idx + 1];
-  const irA = (m: number) => navigate(rutas.puesto(p._id, equipo._id, m), { replace: true });
+  const irA = async (m: number) => {
+    const pendiente = importeFijado(importe);
+    if (tocoImporte.current && pendiente !== (x.efectivo.dailyRateManual ?? null)) {
+      const r = await cambiar({ dailyRateManual: pendiente }, true);
+      if (!r) return;
+    }
+    tocoImporte.current = false;
+    setCambiadoEn(null);
+    navigate(rutas.puesto(p._id, equipo._id, m), { replace: true });
+  };
   const conCambios = cambiadoEn === numero;
   /** «Guardar» / «Guardar equipo»: manda lo pendiente del importe (sin esperar al guardado diferido) y avisa. */
   const guardarPuesto = async () => {
@@ -274,27 +283,41 @@ export default function DetallePuesto() {
       contexto={contexto}
       atras={atras}
       pie={
-        <div className="flex gap-2">
-          <button type="button" onClick={() => anterior && irA(anterior.n)} disabled={!anterior} className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 disabled:opacity-30 dark:border-slate-600 dark:text-slate-100">
-            <FontAwesomeIcon icon={faChevronLeft} />
-            Puesto anterior
-          </button>
-          {siguiente && !conCambios ? (
-            <button type="button" onClick={() => irA(siguiente.n)} className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 dark:border-slate-600 dark:text-slate-100">
+        /*
+          FIJO ABAJO (21/11/2026): arriba, recorrer los puestos; abajo, Cancelar y Guardar. Cancelar vuelve al
+          equipo sin mandar el importe que se estaba escribiendo (lo demás se guarda al elegirlo, como siempre).
+        */
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <button type="button" onClick={() => anterior && void irA(anterior.n)} disabled={!anterior || guardandoPie} className="flex min-h-[40px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 disabled:opacity-30 dark:border-slate-600 dark:text-slate-100">
+              <FontAwesomeIcon icon={faChevronLeft} />
+              Puesto anterior
+            </button>
+            <button type="button" onClick={() => siguiente && void irA(siguiente.n)} disabled={!siguiente || guardandoPie} className="flex min-h-[40px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 disabled:opacity-30 dark:border-slate-600 dark:text-slate-100">
               Puesto siguiente
               <FontAwesomeIcon icon={faChevronRight} />
             </button>
-          ) : (
-            <button type="button" onClick={() => void guardarPuesto()} disabled={guardandoPie} className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-bold text-white disabled:opacity-60">
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => navigate(atras)} disabled={guardandoPie} className="flex min-h-[48px] flex-1 items-center justify-center rounded-xl border border-slate-300 text-sm font-bold text-slate-800 dark:border-slate-600 dark:text-slate-100">
+              Cancelar
+            </button>
+            <button type="button" onClick={() => void guardarPuesto()} disabled={guardandoPie} className={`flex min-h-[48px] flex-[2] items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-bold text-white disabled:opacity-60 ${conCambios ? "ring-2 ring-blue-300 dark:ring-blue-400/60" : ""}`}>
               <FontAwesomeIcon icon={guardandoPie ? faSpinner : faCheck} spin={guardandoPie} />
               {siguiente ? "Guardar" : "Guardar equipo"}
             </button>
-          )}
+          </div>
         </div>
       }
     >
-      <Seccion titulo="Persona">
-        <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
+      {/*
+        LA PERSONA, PEGADA DEBAJO DEL ENCABEZADO (21/11/2026): al bajar por condiciones e importes se sigue
+        viendo de quién se habla. El fondo de la pantalla detrás tapa lo que pasa por debajo, y `-mx-4 px-4`
+        lo lleva de borde a borde. El aviso de superposición va afuera: pegado, ocupaba media pantalla.
+      */}
+      <div className="sticky z-20 -mx-4 mb-3 bg-slate-50 px-4 pb-3 pt-1 dark:bg-slate-900" style={{ top: TOPE_PEGADO }}>
+        <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Persona</h2>
+        <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
           {/*
             EL NOMBRE Y, A SU DERECHA, UN BOTÓN CHICO PARA CAMBIARLA. Era un botón azul de ancho
             completo debajo del nombre: el más grande de la pantalla para algo que pasa cada tanto. Un
@@ -306,13 +329,19 @@ export default function DetallePuesto() {
               <p className={`truncate text-lg font-bold ${persona ? "text-slate-900 dark:text-white" : "text-amber-800 dark:text-amber-300"}`}>{persona ? persona.nombre : "Sin asignar"}</p>
               {persona && <p className="font-mono text-sm text-slate-500 dark:text-slate-400">{persona.cuit ? `CUIT ${formatCuit(persona.cuit)}` : "Sin CUIT cargado"}</p>}
             </div>
-            <button type="button" onClick={() => setHoja("persona")} aria-label={persona ? "Cambiar persona" : "Asignar persona"} title={persona ? "Cambiar persona" : "Asignar persona"} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${persona ? "border border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200" : "bg-blue-600 text-white"}`}>
+            {/* «Reemplazar» escrito, chico, a la izquierda del ícono: refuerza qué hace el botón. */}
+            <button type="button" onClick={() => setHoja("persona")} aria-label={persona ? "Reemplazar persona" : "Asignar persona"} title={persona ? "Reemplazar persona" : "Asignar persona"} className={`flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-3 ${persona ? "border border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200" : "bg-blue-600 text-white"}`}>
+              <span className="text-[11px] font-semibold">{persona ? "Reemplazar" : "Asignar"}</span>
               <FontAwesomeIcon icon={persona ? faArrowRightArrowLeft : faUserPlus} />
             </button>
           </div>
           {persona && !persona.activo && <p className="text-sm font-semibold text-red-700 dark:text-red-300">Está inactiva: no se puede contratar.</p>}
-          {avisos.length > 0 && (
-            <div className="mt-3 rounded-xl bg-red-50 p-2 dark:bg-red-500/10">
+        </div>
+      </div>
+
+      {avisos.length > 0 && (
+        <Seccion>
+            <div className="rounded-xl bg-red-50 p-2 dark:bg-red-500/10">
               <button type="button" onClick={() => setVerAvisos((v) => !v)} aria-expanded={verAvisos} className="flex min-h-[40px] w-full items-center gap-2 text-left text-sm font-semibold text-red-800 dark:text-red-200">
                 <FontAwesomeIcon icon={faTriangleExclamation} />
                 <span className="flex-1">{avisos.length === 1 ? "Se puede superponer con 1 compromiso al elegir la fecha" : `Se pueden superponer con ${avisos.length} compromisos al elegir las fechas`}</span>
@@ -326,9 +355,8 @@ export default function DetallePuesto() {
                 </ul>
               )}
             </div>
-          )}
-        </div>
-      </Seccion>
+        </Seccion>
+      )}
 
       <Seccion>
         <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
