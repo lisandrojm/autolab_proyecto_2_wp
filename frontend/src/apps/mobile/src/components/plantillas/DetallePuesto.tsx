@@ -315,8 +315,7 @@ export default function DetallePuesto() {
         viendo de quién se habla. El fondo de la pantalla detrás tapa lo que pasa por debajo, y `-mx-4 px-4`
         lo lleva de borde a borde. El aviso de superposición va afuera: pegado, ocupaba media pantalla.
       */}
-      <div className="sticky z-20 -mx-4 mb-3 bg-slate-50 px-4 pb-3 pt-1 dark:bg-slate-900" style={{ top: TOPE_PEGADO }}>
-        <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Persona</h2>
+      <div className="sticky z-20 -mx-4 mb-3 bg-slate-50 px-4 pb-3 pt-2 dark:bg-slate-900" style={{ top: TOPE_PEGADO }}>
         <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
           {/*
             EL NOMBRE Y, A SU DERECHA, UN BOTÓN CHICO PARA CAMBIARLA. Era un botón azul de ancho
