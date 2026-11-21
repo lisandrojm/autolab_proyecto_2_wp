@@ -22,6 +22,7 @@ import { olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 import { quitarDelConteo, sumarAlConteo } from "../services/conteoUsuariosTenant.js";
 import { decisionAltaDePersona, pedidoDesdeSolicitud, rechazoAltaArcaConContrato, superposicionesDeAlta, tramiteDelTipo } from "../services/superposicion.js";
 import { avisoSinFechas } from "../compartido/altaVigente.js";
+import { ultimoNoAnulado } from "../utils/anulacionContrato.js";
 import { efectosDeSolicitudEditada, efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "../services/solicitudes.js";
 import { Area } from "../models/Area.js";
 import { Shift } from "../models/Shift.js";
@@ -2474,8 +2475,16 @@ router.post("/superposiciones", requireTenant, authenticateToken, requireAnyPerm
 */
 router.post("/contrato-en-fechas", requireTenant, authenticateToken, requireAnyPermission("admin_users:view", MOBILE_USERS), async (req, res) => {
     try {
-        const { userId, desde, hasta, fechas, empresaId } = req.body || {};
-        const d = await decisionAltaDePersona(req.tenantObjectId, userId ? String(userId) : undefined, { desde: String(desde || ""), hasta: String(hasta || ""), fechas: Array.isArray(fechas) ? fechas.map(String) : undefined }, empresaId ? String(empresaId) : null);
+        const { userId, desde, hasta, fechas, empresaId, excluir } = req.body || {};
+        // Editar Miembro: el contrato que se edita (proyecto + índice; sin índice, el último no anulado) no se frena consigo mismo.
+        let excluido = null;
+        if (excluir?.projectId && Types.ObjectId.isValid(String(excluir.projectId)) && userId && Types.ObjectId.isValid(String(userId))) {
+            const up = await UserProject.findOne({ userId: new Types.ObjectId(String(userId)), projectId: new Types.ObjectId(String(excluir.projectId)) }).select("contracts.estadoContrato").lean();
+            const indice = excluir.contractIndex !== undefined && excluir.contractIndex !== null && excluir.contractIndex !== "" ? Number(excluir.contractIndex) : ultimoNoAnulado(up?.contracts || []);
+            if (up && Number.isInteger(indice) && indice >= 0)
+                excluido = { userProjectId: String(up._id), contractIndex: indice };
+        }
+        const d = await decisionAltaDePersona(req.tenantObjectId, userId ? String(userId) : undefined, { desde: String(desde || ""), hasta: String(hasta || ""), fechas: Array.isArray(fechas) ? fechas.map(String) : undefined }, empresaId ? String(empresaId) : null, excluido);
         const resumen = (a, mensaje) => ({ proyectoNombre: a.proyectoNombre, desde: a.desde, hasta: a.hasta, liquidacion: a.liquidacion, empresaNombre: a.empresaNombre, mensaje });
         res.json({
             contrato: d.soloServicios ? resumen(d.soloServicios, d.mensaje) : null,
