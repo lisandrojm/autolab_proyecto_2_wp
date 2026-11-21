@@ -143,7 +143,82 @@ export const activityReportsAPI = {
     const response = await axiosClient.get<{ feriados: { fecha: string; nombre: string }[] }>(`/activity-reports/feriados-del-periodo?desde=${desde}&hasta=${hasta}`);
     return Array.isArray(response.data?.feriados) ? response.data.feriados : [];
   },
+
+  /**
+   * EL CONSOLIDADO DE NOVEDADES (20/11/2026): los datos de las cinco hojas para liquidar, por proyecto.
+   * Las extras vienen CRUDAS: el reparto 50/100 y los importes los hace el navegador con su glosario
+   * (`utils/consolidadoNovedadesXlsx.ts`), y después pide el archivo a `consolidadoXlsx`.
+   */
+  consolidado: async (desde: string, hasta: string, proyectoIds: string[]): Promise<ConsolidadoNovedades> => {
+    const response = await axiosClient.get<ConsolidadoNovedades>("/activity-reports/consolidado", { params: { desde, hasta, proyectos: proyectoIds.join(",") }, timeout: 120000 });
+    return response.data;
+  },
+
+  /** Las hojas ya armadas → .xlsx escrito por el server (fila 1 de encabezados, autofiltro, fila congelada). */
+  consolidadoXlsx: async (hojas: HojaXlsx[], nombreArchivo: string): Promise<Blob> => {
+    const response = await axiosClient.post("/activity-reports/consolidado/xlsx", { hojas, nombreArchivo }, { responseType: "blob", timeout: 120000 });
+    return response.data as Blob;
+  },
 };
+
+/* ── Consolidado de Novedades: espejo de `server/src/utils/consolidadoNovedades.ts` y `xlsxDesdeHojas.ts` ── */
+
+export type TipoColumna = "texto" | "fecha" | "hora" | "numero" | "entero";
+export interface ColumnaHoja { titulo: string; tipo?: TipoColumna; ancho?: number }
+export interface HojaXlsx {
+  nombre: string;
+  columnas: ColumnaHoja[];
+  /** Fechas «AAAA-MM-DD», horas «HH:mm»; `null` o «» = celda vacía. */
+  filas: (string | number | null)[][];
+  /** Hoja de datos: encabezados en la fila 1, autofiltro, primera fila congelada. */
+  tabla?: boolean;
+  vacioDice?: string;
+  /** Índices (base 0) de las filas que van resaltadas enteras: «a esta persona le faltan datos». */
+  filasResaltadas?: number[];
+}
+
+export interface FilaResumenConsolidado {
+  clave: string; legajo: string; colaborador: string; cuil: string; empresa: string; tipo: string; categoria: string; centroCosto: string; proyecto: string; area: string; turno: string; desde: string; hasta: string;
+  contratos: number; jornadasTrabajadas: number; jornadasPrevistas: number | null; ausencias: number; porMotivo: Record<string, number>; diasSinParte: number;
+  valorJornada: number | null;
+  /** El navegador lo divide por el divisor del glosario; null = no hay o no aplica. */
+  sueldoMano: number | null;
+  valorHoraNoAplica: boolean;
+  extrasCrudas: number;
+  // Para la hoja por empresa (planilla de liquidación).
+  proyectoId: string; apellido: string; nombrePila: string; grupo: number | null; obraSocialCodigo: string; obraSocialOrigen: string; esJornada: boolean; sinContrato: boolean;
+  /** Tiempo indeterminado o plazo fijo: lo único que va a la hoja por empresa. */
+  mensualizado: boolean;
+  /** La persona figura en algún parte del período. Si no, sus novedades vacías son «sin datos», no «sin novedades». */
+  conAlgunParte: boolean;
+  /** Horas trabajadas en feriados del período (concepto 0017). */
+  horasFeriado: number;
+  /** Vacaciones en días corridos por tramo. */
+  vacacionesCorridas: number;
+  reemplazos: number;
+}
+export interface ExtrasCrudas { total: number; h50: number; h100: number; horarioEntrada: string; horarioSalida: string; feriado: boolean }
+export interface FilaDetalleConsolidado {
+  claveResumen: string; fecha: string; dia: string; feriado: string; colaborador: string; cuil: string; proyecto: string; empresa: string; area: string; turno: string; estado: string; motivo: string;
+  entradaPrevista: string; salidaPrevista: string; entradaReal: string; salidaReal: string; extras: ExtrasCrudas | null; reemplazo: string; parte: string;
+}
+export interface FilaParteConsolidado { parte: string; fecha: string; proyecto: string; area: string; turno: string; responsable: string; presentes: number; ausentes: number; comentario: string }
+export interface FilaRevisarConsolidado { tipo: string; colaborador: string; cuil: string; fecha: string; detalle: string }
+export interface ConsolidadoNovedades {
+  desde: string;
+  hasta: string;
+  proyectos: { id: string; nombre: string; cliente: string; centroCosto: string; centroCostoCodigo: string; centroCostoDescripcion: string }[];
+  feriados: { fecha: string; nombre: string }[];
+  /** Los motivos de ausencia del catálogo, en su orden: una columna cada uno en el resumen. */
+  motivos: string[];
+  resumen: FilaResumenConsolidado[];
+  detalle: FilaDetalleConsolidado[];
+  partes: FilaParteConsolidado[];
+  revisar: FilaRevisarConsolidado[];
+  totales: { resumen: number; detalle: number; partes: number; revisar: number };
+  /** Quién pidió el export (lo pone el server). */
+  exportadoPor?: string;
+}
 
 /** Un parte del período con su asistencia, tal como la cuenta el reporte de Novedades. */
 export interface ParteConAsistencia {

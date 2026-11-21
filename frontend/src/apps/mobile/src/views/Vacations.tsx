@@ -128,6 +128,8 @@ export default function Vacations({ onNavigate }: VacationsProps) {
       (acc: number, p: any) =>
         acc +
         (p.contracts || []).reduce((cAcc: number, c: any) => {
+          // Un contrato anulado no suma antigüedad, y su lápida no tiene fechas (etapa 2b).
+          if (c?.estadoContrato === "ANULADO" || !fechaDeCalendario(c.fecha_alta_contrato)) return cAcc;
           // Días de calendario, no instantes (ver `fechaDeCalendario`).
           const start = fechaDeCalendario(c.fecha_alta_contrato) || new Date(c.fecha_alta_contrato);
           const end = fechaDeCalendario(c.fecha_baja_contrato) || new Date();
@@ -371,8 +373,8 @@ export default function Vacations({ onNavigate }: VacationsProps) {
   const generateCalendarDays = () => {
     const monthStart = startOfMonth(viewDate);
     const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart, { weekStartsOn: 1 }); // Monday start
-    const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
+    const startDate = startOfWeek(monthStart, { weekStartsOn: 0 }); // la semana arranca el domingo
+    const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 });
 
     return eachDayOfInterval({
       start: startDate,
@@ -750,7 +752,7 @@ export default function Vacations({ onNavigate }: VacationsProps) {
 
             <div className="p-4">
               <div className="grid grid-cols-7 mb-2 text-center">
-                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, index) => (
+                {['D', 'L', 'M', 'X', 'J', 'V', 'S'].map((day, index) => (
                   <div key={index} className="text-xs font-bold text-slate-400">
                     {day}
                   </div>

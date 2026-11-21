@@ -98,7 +98,7 @@ export const RegistroRescatados: React.FC<{ onClose: () => void }> = ({ onClose 
           <p className="py-6 text-center text-sm text-gray-500">{datos.totalTenant === 0 ? "Todavía no hubo rescates: la integración de Dropbox venía depositando todos los firmados." : "Nada coincide con el filtro."}</p>
         ) : datos ? (
           <>
-            <TablaConEncabezadoFijo className="rounded-lg border border-gray-200 dark:border-gray-700" tabla="min-w-full">
+            <TablaConEncabezadoFijo sinExportar className="rounded-lg border border-gray-200 dark:border-gray-700" tabla="min-w-full">
               <thead className="bg-gray-50 dark:bg-gray-900/60 text-[11px] uppercase text-gray-500">
                 <tr>
                   <th className="px-3 py-2 text-left whitespace-nowrap">Rescatado el</th>

@@ -23,6 +23,26 @@ describe("splitOvertime", () => {
     assert.equal(r.h50, 1);
     assert.equal(r.h100, 0);
   });
+  it("05:00-13:00 sobre un turno de 07:00 a 14:00, un lunes: llegó antes y se fue antes, la hora extra va entera al 50%", () => {
+    const r = splitOvertime("2026-11-16", "05:00", "13:00", 1, DEFAULT_GLOSSARY, "07:00", "14:00");
+    assert.equal(r.h50, 1);
+    assert.equal(r.h100, 0);
+  });
+  it("06:00-14:00 sobre un turno de 07:00 a 14:00: la hora antes de entrar cae en el rango, al 50%", () => {
+    const r = splitOvertime("2026-11-16", "06:00", "14:00", 1, DEFAULT_GLOSSARY, "07:00", "14:00");
+    assert.equal(r.h50, 1);
+    assert.equal(r.h100, 0);
+  });
+  it("04:00-13:00 sobre 07:00-14:00: 2 h extra; 1 h al 50% (06:00-07:00) y 1 h al 100%", () => {
+    const r = splitOvertime("2026-11-16", "04:00", "13:00", 2, DEFAULT_GLOSSARY, "07:00", "14:00");
+    assert.equal(r.h50, 1);
+    assert.equal(r.h100, 1);
+  });
+  it("05:30-13:00 sobre 07:00-14:00: 0,5 h extra, va al 50%", () => {
+    const r = splitOvertime("2026-11-16", "05:30", "13:00", 0.5, DEFAULT_GLOSSARY, "07:00", "14:00");
+    assert.equal(r.h50, 0.5);
+    assert.equal(r.h100, 0);
+  });
   it("domingo: todo al 100%", () => {
     const r = splitOvertime("2026-10-11", "05:30", "12:30", 1, DEFAULT_GLOSSARY, "06:00", "12:00");
     assert.equal(r.h100, 1);

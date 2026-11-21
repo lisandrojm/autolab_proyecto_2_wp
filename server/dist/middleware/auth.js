@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { Types } from "mongoose";
+import { enContexto } from "../utils/contextoAuditoria.js";
 export function authenticateToken(req, res, next) {
     const h = req.header("Authorization") ?? "";
     const token = h.startsWith("Bearer ") ? h.slice(7) : "";
@@ -23,7 +24,8 @@ export function authenticateToken(req, res, next) {
         // Agregar tenantObjectId para queries de MongoDB
         req.tenantId = payload.tenantId;
         req.tenantObjectId = new Types.ObjectId(payload.tenantId);
-        next();
+        // Todo lo que escriba este request queda a nombre de esta persona en la auditoría de contratos.
+        enContexto({ origen: "app", por: { userId: payload.sub, email: payload.email }, detalle: `${req.method} ${req.originalUrl.split("?")[0]}` }, () => next());
         return;
     }
     catch {

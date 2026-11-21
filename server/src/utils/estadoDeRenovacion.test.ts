@@ -12,7 +12,7 @@ const terminado = procesoTerminadoSegunEstados(
   ],
   (s) => s.toLowerCase(),
 );
-const c = (alta: string, baja: string, delSistema: boolean, estado = "Disponible"): ContratoParaRenovacion => ({ fecha_alta_contrato: alta, fecha_baja_contrato: baja, nombre_estado_empleado: estado, delSistema });
+const c = (alta: string, baja: string, delSistema: boolean, estado = "Disponible"): ContratoParaRenovacion => ({ estadoContrato: baja && baja < HOY ? "FINALIZADO" : "VIGENTE", fecha_alta_contrato: alta, fecha_baja_contrato: baja, nombre_estado_empleado: estado, delSistema });
 const evaluar = (contrato: ContratoParaRenovacion, contratos: ContratoParaRenovacion[], renovacionPedida = false) => estadoDeRenovacion({ contrato, contratos, hoy: HOY, procesoTerminado: terminado, renovacionPedida });
 
 describe("qué dice un contrato sobre su renovación", () => {

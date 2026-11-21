@@ -212,7 +212,7 @@ async function contratoDelCodigo(tenantId, codigo) {
         .filter(({ x }) => fechaISO(x.fecha_alta_contrato) === (c.alta || "") && fechaISO(x.fecha_baja_contrato) === (c.baja || "") && (!c.carga || String(x.fecha_carga ?? "") === c.carga));
     if (porFechas.length === 1)
         return { up, idx: porFechas[0].idx };
-    if (typeof c.indice === "number" && contratos[c.indice])
+    if (typeof c.indice === "number" && contratos[c.indice] && contratos[c.indice].estadoContrato !== "ANULADO")
         return { up, idx: c.indice };
     return null;
 }

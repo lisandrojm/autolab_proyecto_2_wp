@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { Tenant } from "../models/Tenant.js";
 import { getTenantDropboxConfig } from "./dropboxService.js";
 import { escanearTenantAhora } from "./estadoDropboxCronService.js";
+import { enContexto } from "../utils/contextoAuditoria.js";
 /**
  * ESCANEAR APENAS DROPBOX AVISA, en vez de esperar el próximo turno del reloj.
  *
@@ -154,8 +155,10 @@ export function programarEscaneo(tenantId, opts) {
         esperando.delete(tenantId);
         const estado = { repetir: false };
         escaneando.set(tenantId, estado);
+        // El webhook llega sin persona ni tarea: lo que el escaneo escriba en contratos (transición de
+        // estados) queda en la auditoría a nombre del webhook, no como «sin contexto» (etapa 3).
         void Promise.resolve()
-            .then(() => correr(tenantId))
+            .then(() => enContexto({ origen: "sistema", detalle: "webhook dropbox: escaneo de carpetas" }, () => correr(tenantId)))
             .catch((e) => console.error(`[Dropbox webhook] falló el escaneo del tenant ${tenantId}:`, e?.message || e))
             .finally(() => {
             escaneando.delete(tenantId);

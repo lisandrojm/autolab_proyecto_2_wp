@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test:afip": "tsx --test src/components/contratos/afipTxt.test.ts",
+    "test:contrato-vigencia": "tsx --test src/utils/contratoVigencia.test.ts",
     "test:afip85": "tsx --test src/components/contratos/afipTxt85.test.ts",
     "test:arca:altas": "node --test tools/altas-arca.test.mjs",
     "test:dropbox-sign": "node --test tools/envio-dropbox-sign.test.mjs",
@@ -31,11 +32,13 @@
     "test:cbu": "tsx --test src/utils/cbu.test.ts",
     "test:fecha-firma": "tsx --test src/utils/fechaFirmaDropboxSign.test.ts",
     "test:horas-extra": "tsx --test src/utils/overtimeUtils.test.ts",
+    "test:consolidado": "tsx --test src/utils/consolidadoNovedadesXlsx.test.ts",
     "test:cascada-arca": "tsx --test src/components/contratos/cascadaArca.test.ts",
     "test:dias": "tsx --test src/components/contratos/diasDeTrabajo.test.ts",
     "test:seleccion-categoria": "tsx --test src/utils/seleccionConvenioCategoria.test.ts",
     "test:situacion-arca": "tsx --test src/components/contratos/situacionArca.test.ts",
-    "test:bandejas": "tsx --test src/config/bandejasContratacion.test.ts"
+    "test:bandejas": "tsx --test src/config/bandejasContratacion.test.ts",
+    "test:arca:modificaciones": "node --test tools/modificaciones-arca.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

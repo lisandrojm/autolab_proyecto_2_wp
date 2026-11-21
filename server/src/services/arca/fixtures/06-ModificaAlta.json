@@ -1,0 +1,453 @@
+{
+ "pantalla": "modifica_alta",
+ "accion": "ModificaAlta.aspx?idx=0&NP=1",
+ "ids": [
+  "ctl00_MasterBody",
+  "ctl00_spanAyuda_ToolTip",
+  "ctl00_spanSitioSeguro_ToolTip",
+  "ctl00_MapaHome",
+  "ctl00_areaHome",
+  "ctl00_imageHeader",
+  "ctl00_Menu1_Menu1",
+  "ctl00_Menu1_Menu1n0",
+  "ctl00_Menu1_Menu1n1",
+  "ctl00_Menu1_Menu1n2",
+  "ctl00_Menu1_Menu1n3",
+  "ctl00_Menu1_Menu1n4",
+  "ctl00_Menu1_Menu1n0Items",
+  "ctl00_Menu1_Menu1n5",
+  "ctl00_Menu1_Menu1n6",
+  "ctl00_Menu1_Menu1n7",
+  "ctl00_Menu1_Menu1n8",
+  "ctl00_Menu1_Menu1n9",
+  "ctl00_Menu1_Menu1n10",
+  "ctl00_Menu1_Menu1n11",
+  "ctl00_Menu1_Menu1n12",
+  "ctl00_Menu1_Menu1n0ItemsUp",
+  "ctl00_Menu1_Menu1n0ItemsDn",
+  "ctl00_Menu1_Menu1n1Items",
+  "ctl00_Menu1_Menu1n13",
+  "ctl00_Menu1_Menu1n14",
+  "ctl00_Menu1_Menu1n15",
+  "ctl00_Menu1_Menu1n16",
+  "ctl00_Menu1_Menu1n17",
+  "ctl00_Menu1_Menu1n18",
+  "ctl00_Menu1_Menu1n19",
+  "ctl00_Menu1_Menu1n20",
+  "ctl00_Menu1_Menu1n1ItemsUp",
+  "ctl00_Menu1_Menu1n1ItemsDn",
+  "ctl00_Menu1_Menu1n2Items",
+  "ctl00_Menu1_Menu1n21",
+  "ctl00_Menu1_Menu1n22",
+  "ctl00_Menu1_Menu1n23",
+  "ctl00_Menu1_Menu1n2ItemsUp",
+  "ctl00_Menu1_Menu1n2ItemsDn",
+  "ctl00_Menu1_Menu1n3Items",
+  "ctl00_Menu1_Menu1n24",
+  "ctl00_Menu1_Menu1n25",
+  "ctl00_Menu1_Menu1n3ItemsUp",
+  "ctl00_Menu1_Menu1n3ItemsDn",
+  "ctl00_Menu1_Menu1_SkipLink",
+  "ctl00_Image5",
+  "ctl00_lblEmpleador",
+  "ctl00_btnCerrarSesion",
+  "ctl00_Image4",
+  "ctl00_lblCuit",
+  "ctl00_Image1",
+  "ctl00_lblInicioEmpleador",
+  "ctl00_Image3",
+  "ctl00_lblART",
+  "ctl00_lblInicioContrato",
+  "ctl00_Image8",
+  "ctl00_lblASeg",
+  "ctl00_lblInicioAseg",
+  "ctl00_Image10",
+  "ctl00_lblJurisdiccion",
+  "ctl00_lblrol",
+  "ctl00_ContentPlaceHolder1_lblCuil",
+  "ctl00_ContentPlaceHolder1_lblApenom",
+  "ctl00_ContentPlaceHolder1_InputFechaInicio_txtFecha",
+  "ctl00_ContentPlaceHolder1_InputFechaFin_txtFecha",
+  "ctl00_ContentPlaceHolder1_PredictCodeOS_AutocompleteValue",
+  "ctl00_ContentPlaceHolder1_PredictCodeOS_mainDiv",
+  "ctl00_ContentPlaceHolder1_PredictCodeOS_AutocompleteText",
+  "ctl00_ContentPlaceHolder1_PredictCodeOS_imgAuto",
+  "ctl00_ContentPlaceHolder1_PredictCodeModCont_AutocompleteValue",
+  "ctl00_ContentPlaceHolder1_PredictCodeModCont_mainDiv",
+  "ctl00_ContentPlaceHolder1_PredictCodeModCont_AutocompleteText",
+  "ctl00_ContentPlaceHolder1_PredictCodeModCont_imgAuto",
+  "ctl00_ContentPlaceHolder1_PredictCodeSitRev_AutocompleteValue",
+  "ctl00_ContentPlaceHolder1_PredictCodeSitRev_mainDiv",
+  "ctl00_ContentPlaceHolder1_PredictCodeSitRev_AutocompleteText",
+  "ctl00_ContentPlaceHolder1_PredictCodeSitRev_imgAuto",
+  "ctl00_ContentPlaceHolder1_PredictCodeRectificacion_AutocompleteValue",
+  "ctl00_ContentPlaceHolder1_PredictCodeRectificacion_mainDiv",
+  "ctl00_ContentPlaceHolder1_PredictCodeRectificacion_AutocompleteText",
+  "ctl00_ContentPlaceHolder1_PredictCodeSucursal_AutocompleteValue",
+  "ctl00_ContentPlaceHolder1_PredictCodeSucursal_mainDiv",
+  "ctl00_ContentPlaceHolder1_PredictCodeSucursal_AutocompleteText",
+  "ctl00_ContentPlaceHolder1_PredictCodeSucursal_imgAuto",
+  "ctl00_ContentPlaceHolder1_PredictCodeAct_AutocompleteValue",
+  "ctl00_ContentPlaceHolder1_PredictCodeAct_mainDiv",
+  "ctl00_ContentPlaceHolder1_PredictCodeAct_AutocompleteText",
+  "ctl00_ContentPlaceHolder1_PredictCodeAct_imgAuto",
+  "ctl00_ContentPlaceHolder1_PredictConvenio_AutocompleteValue",
+  "ctl00_ContentPlaceHolder1_PredictConvenio_mainDiv",
+  "ctl00_ContentPlaceHolder1_PredictConvenio_AutocompleteText",
+  "ctl00_ContentPlaceHolder1_PredictConvenio_imgAuto",
+  "ctl00_ContentPlaceHolder1_PredictCategoria_AutocompleteValue",
+  "ctl00_ContentPlaceHolder1_PredictCategoria_mainDiv",
+  "ctl00_ContentPlaceHolder1_PredictCategoria_AutocompleteText",
+  "ctl00_ContentPlaceHolder1_PredictCategoria_imgAuto",
+  "ctl00_ContentPlaceHolder1_PredictPuesto_AutocompleteValue",
+  "ctl00_ContentPlaceHolder1_PredictPuesto_mainDiv",
+  "ctl00_ContentPlaceHolder1_PredictPuesto_AutocompleteText",
+  "ctl00_ContentPlaceHolder1_PredictPuesto_imgAuto",
+  "ctl00_ContentPlaceHolder1_PredictGrupoTipoServicio_AutocompleteValue",
+  "ctl00_ContentPlaceHolder1_PredictGrupoTipoServicio_mainDiv",
+  "ctl00_ContentPlaceHolder1_PredictGrupoTipoServicio_AutocompleteText",
+  "ctl00_ContentPlaceHolder1_PredictGrupoTipoServicio_imgAuto",
+  "ctl00_ContentPlaceHolder1_PredictTipoServicio_AutocompleteValue",
+  "ctl00_ContentPlaceHolder1_PredictTipoServicio_mainDiv",
+  "ctl00_ContentPlaceHolder1_PredictTipoServicio_AutocompleteText",
+  "ctl00_ContentPlaceHolder1_PredictTipoServicio_imgAuto",
+  "ctl00_ContentPlaceHolder1_InputRetribucion_txtRem",
+  "ctl00_ContentPlaceHolder1_PredictCodeMLiq_AutocompleteValue",
+  "ctl00_ContentPlaceHolder1_PredictCodeMLiq_mainDiv",
+  "ctl00_ContentPlaceHolder1_PredictCodeMLiq_AutocompleteText",
+  "ctl00_ContentPlaceHolder1_PredictCodeMLiq_imgAuto",
+  "ctl00_ContentPlaceHolder1_chkAgro",
+  "ctl00_ContentPlaceHolder1_inputFechaSusp_txtFecha",
+  "ctl00_ContentPlaceHolder1_TipoCCG",
+  "ctl00_ContentPlaceHolder1_btnCancelar",
+  "ctl00_ContentPlaceHolder1_btnConfirmar",
+  "ctl00_FechaHoy1_lblFechaHoy",
+  "ctl00_btnAyuda",
+  "ctl00_ContentPlaceHolder1_PredictCodeOS_AutocompleteTextAutoCompleteEx_completionListElem",
+  "ctl00_ContentPlaceHolder1_PredictCodeModCont_AutocompleteTextAutoCompleteEx_completionListElem",
+  "ctl00_ContentPlaceHolder1_PredictCodeSitRev_AutocompleteTextAutoCompleteEx_completionListElem",
+  "ctl00_ContentPlaceHolder1_PredictCodeRectificacion_AutocompleteTextAutoCompleteEx_completionListElem",
+  "ctl00_ContentPlaceHolder1_PredictCodeSucursal_AutocompleteTextAutoCompleteEx_completionListElem",
+  "ctl00_ContentPlaceHolder1_PredictCodeAct_AutocompleteTextAutoCompleteEx_completionListElem",
+  "ctl00_ContentPlaceHolder1_PredictConvenio_AutocompleteTextAutoCompleteEx_completionListElem",
+  "ctl00_ContentPlaceHolder1_PredictCategoria_AutocompleteTextAutoCompleteEx_completionListElem",
+  "ctl00_ContentPlaceHolder1_PredictPuesto_AutocompleteTextAutoCompleteEx_completionListElem",
+  "ctl00_ContentPlaceHolder1_PredictGrupoTipoServicio_AutocompleteTextAutoCompleteEx_completionListElem",
+  "ctl00_ContentPlaceHolder1_PredictTipoServicio_AutocompleteTextAutoCompleteEx_completionListElem",
+  "ctl00_ContentPlaceHolder1_PredictCodeMLiq_AutocompleteTextAutoCompleteEx_completionListElem"
+ ],
+ "botones": [
+  {
+   "id": "ctl00_btnCerrarSesion",
+   "tag": "a",
+   "tipo": "",
+   "rotulo": "Salir del sistema en forma segura",
+   "href": "javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(\"ctl00$btnCerrarSesion\", \"\", true, \"\", \"\", false, true))",
+   "onclick": "",
+   "src": ""
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_btnCancelar",
+   "tag": "input",
+   "tipo": "submit",
+   "rotulo": "Cancelar",
+   "href": "",
+   "onclick": "javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(\"ctl00$ContentPlaceHolder1$btnCancelar\", \"\", true, \"\", \"\", false, false))",
+   "src": ""
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_btnConfirmar",
+   "tag": "input",
+   "tipo": "submit",
+   "rotulo": "Confirmar",
+   "href": "",
+   "onclick": "javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(\"ctl00$ContentPlaceHolder1$btnConfirmar\", \"\", true, \"\", \"\", false, false))",
+   "src": ""
+  }
+ ],
+ "campos": [
+  {
+   "id": "ctl00_ContentPlaceHolder1_InputFechaInicio_txtFecha",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "10",
+   "valor": "19/11/2026",
+   "rotulo": "FECHA DE INICIO (ALTA)"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_InputFechaFin_txtFecha",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "10",
+   "valor": "30/11/2026",
+   "rotulo": "FECHA DE FIN (BAJA)"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeOS_AutocompleteText",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "",
+   "valor": "120900 - O.S.DEL PERSONAL DE TELEVISION",
+   "rotulo": "OBRA SOCIAL"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeModCont_AutocompleteText",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "",
+   "valor": "022 - A TIEMPO COMPLETO DETERMINADO (CONTRATO A PLAZO FIJO)",
+   "rotulo": "MODALIDAD DE CONTRATO"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeSitRev_AutocompleteText",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "",
+   "valor": "01 - ACTIVO",
+   "rotulo": "SITUACION DE REVISTA"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeRectificacion_AutocompleteText",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "",
+   "valor": "0 - SIN RECTIFICACIÒN (SIN BENEFICIO LEY 26476)",
+   "rotulo": "TIPO RECTIFICACION"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeSucursal_AutocompleteText",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "",
+   "valor": "00001 - RUIZ HUIDOBRO 4365  COD. POSTAL 1430, CIUDAD AUTONOMA BUENOS AIRES",
+   "rotulo": "SUCURSAL"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeAct_AutocompleteText",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "",
+   "valor": "591110 - PRODUCCIÓN DE FILMES Y VIDEOCINTAS",
+   "rotulo": "ACTIVIDAD ECONOMICA"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictConvenio_AutocompleteText",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "",
+   "valor": "0634/11 - TELEVISIÔN - SINDICATO ARGENTINO DE TELEVISION C/ CAMARA ARGENTINA DE PRODUCTORAS INDEPENDIENTES DE TELEVISION",
+   "rotulo": "CONVENIO COLECTIVO"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCategoria_AutocompleteText",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "",
+   "valor": "035326 - CARACTERIZADOR - GRUPO 6",
+   "rotulo": "CATEGORIA"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictPuesto_AutocompleteText",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "",
+   "valor": "4132 - EMPLEADOS DE SERVICIOS DE APOYO A LA PRODUCCIÓN",
+   "rotulo": "PUESTO DESEMPEÑADO"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictGrupoTipoServicio_AutocompleteText",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "",
+   "valor": "1 - CONTINUOS",
+   "rotulo": ""
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictTipoServicio_AutocompleteText",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "",
+   "valor": "000 - SERVICIOS COMUNES CONTINUOS",
+   "rotulo": ""
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_InputRetribucion_txtRem",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "11",
+   "valor": "1340020,20",
+   "rotulo": "RETRIBUCIÓN PACTADA"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeMLiq_AutocompleteText",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "",
+   "valor": "1 - MES",
+   "rotulo": "MODALIDAD DE LIQUIDACION"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_chkAgro",
+   "tag": "input",
+   "tipo": "checkbox",
+   "maxlength": "",
+   "valor": "false",
+   "rotulo": "TRABAJADOR AGROPECUARIO"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_inputFechaSusp_txtFecha",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "10",
+   "valor": "",
+   "rotulo": "FECHA DE SUSPENSION"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_TipoCCG",
+   "tag": "select",
+   "tipo": "select-one",
+   "maxlength": "",
+   "valor": "0",
+   "opciones": [
+    {
+     "value": "0",
+     "texto": "0 - Sin Lic. COVID / No asociado a CCG"
+    },
+    {
+     "value": "1",
+     "texto": "1 - Lic. COVID Dcto. 322 Art. 3b / Tipo de contrato CCG"
+    },
+    {
+     "value": "2",
+     "texto": "2 - Trab. agrario permanente prestación continua a tiempo completo adherido a CCG. (Ley 26.727)"
+    },
+    {
+     "value": "3",
+     "texto": "3 - Trab. agrario permanente prestación continua a tiempo parcial adherido a CCG. (Ley 26.727)"
+    },
+    {
+     "value": "4",
+     "texto": "4 - Trab. agrario permanente discontinuo adherido a CCG. (Ley 26.727)"
+    },
+    {
+     "value": "5",
+     "texto": "5 - Trab. agrario temporario adherido a CCG. (Ley 26.727)"
+    },
+    {
+     "value": "6",
+     "texto": "6 - Plazo indeterminado a tiempo completo adherido a CCG. (Ley 20.744)"
+    },
+    {
+     "value": "7",
+     "texto": "7 - Plazo indeterminado a tiempo parcial adherido a CCG. (Ley 20.744)"
+    },
+    {
+     "value": "8",
+     "texto": "8 - Plazo fijo adherido a CCG. (Ley 20.744)"
+    },
+    {
+     "value": "9",
+     "texto": "9 - Temporada adherido a CCG. (Ley 20.744)"
+    }
+   ],
+   "rotulo": "Lic. COVID Dto. 332 Art. 3b / Tipo de contrato CCG"
+  }
+ ],
+ "ocultos": [
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeOS_AutocompleteValue",
+   "valor": "120900"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeModCont_AutocompleteValue",
+   "valor": "022"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeSitRev_AutocompleteValue",
+   "valor": "01"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeRectificacion_AutocompleteValue",
+   "valor": "0"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeSucursal_AutocompleteValue",
+   "valor": "00001"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeAct_AutocompleteValue",
+   "valor": "591110"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictConvenio_AutocompleteValue",
+   "valor": "0634/11"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCategoria_AutocompleteValue",
+   "valor": "035326"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictPuesto_AutocompleteValue",
+   "valor": "4132"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictGrupoTipoServicio_AutocompleteValue",
+   "valor": "1"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictTipoServicio_AutocompleteValue",
+   "valor": "000"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeMLiq_AutocompleteValue",
+   "valor": "1"
+  }
+ ],
+ "catalogos": [
+  {
+   "nombre": "l_MC",
+   "filas": 153
+  },
+  {
+   "nombre": "l_SR",
+   "filas": 23
+  },
+  {
+   "nombre": "l_CR",
+   "filas": 4
+  },
+  {
+   "nombre": "l_Dom",
+   "filas": 1
+  },
+  {
+   "nombre": "l_ActDom",
+   "filas": 2
+  },
+  {
+   "nombre": "l_CCT",
+   "filas": 4
+  },
+  {
+   "nombre": "l_CatCCT",
+   "filas": 115
+  },
+  {
+   "nombre": "l_PD",
+   "filas": 391
+  },
+  {
+   "nombre": "l_GTS",
+   "filas": 2
+  },
+  {
+   "nombre": "l_TS",
+   "filas": 293
+  },
+  {
+   "nombre": "l_ML",
+   "filas": 8
+  }
+ ],
+ "texto": "| Simplificación registral\n\n\n\nDatos del Empleador\n\t\t\nRelaciones Laborales\n\t\t\nVinculos Familiares\n\t\t\nOtros Servicios\n\t\t\n\n\n\n Empleador:\t\n  2030 S. R. L.\n \n\t \t\nSALIR\n\n CUIT:\t  XXXXXXXXXXX\n Inicio como Empleador:\t  01/05/2021\n ART contratada:\t  00027 - PREVENCION ASE DE RIESGOS DEL TRABAJO SA...\tInicio:\t  04/2021\n Seguro colectivo:\t  S224 - SANCOR COOPERATIVA DE SEGUROS LIMITADA\tInicio:\t  05/2026\n Jurisdicción Laboral:\t  CIUDAD AUTONOMA BUENOS AIRES\tCONTRIBUYENTE\n\n\n\n \nREGISTRAR MODIFICACIONES DE ALTAS\n\nModifique los datos y verifíquelos antes de enviar\nCUIL\tXXXXXXXXXXX  -  APELLIDO NOMBRE\nFECHA DE INICIO (ALTA)\t  \nFECHA DE FIN (BAJA)\t\nOBRA SOCIAL\t\n\nMODALIDAD DE CONTRATO\t\n\nSITUACION DE REVISTA\t\n\nTIPO RECTIFICACION\t\n\nSUCURSAL\t\n\nACTIVIDAD ECONOMICA\t\n\nCONVENIO COLECTIVO\t\n\nCATEGORIA\t\n\nPUESTO DESEMPEÑADO\t\n\nTIPO SERVICIO\t\n\n\n\nRETRIBUCIÓN PACTADA\t\nMODALIDAD DE LIQUIDACION\t\n\nTRABAJADOR AGROPECUARIO\t  \nFECHA DE SUSPENSION\t\nLic. COVID Dto. 332 Art. 3b / Tipo de contrato CCG\t\n0 - Sin Lic. COVID / No asociado a CCG\n1 - Lic. COVID Dcto. 322 Art. 3b / Tipo de contrato CCG\n2 - Trab. agrario permanente prestación continua a tiempo completo adherido a CCG. (Ley 26.727)\n3 - Trab. agrario permanente prestación continua a tiempo parcial adherido a CCG. (Ley 26.727)\n4 - Trab. agrario permanente discontinuo adherido a CCG. (Ley 26.727)\n5 - Trab. agrario temporario adherido a CCG. (Ley 26.727)\n6 - Plazo indeterminado a tiempo completo adherido a CCG. (Ley 20.744)\n7 - Plazo indeterminado a tiempo parcial adherido a CCG. (Ley 20.744)\n8 - Plazo fijo adherido a CCG. (Ley 20.744)\n9 - Temporada adherido a CCG. (Ley 20.744)\n  \n \n\n      \n\n\n\n\nviernes, 20 de noviembre de 2026\n\nAyuda en línea"
+}

@@ -39,7 +39,8 @@ async function ordenDependenciaDelEstado(estadoId: number | undefined | null): P
  */
 export async function aplicarTransicion(up: IUserProject, contractIndex: number, estadoPedido: IInfo): Promise<ResultadoTransicion> {
   const contrato = up.contracts[contractIndex] as any;
-  if (!contrato) return { aplicada: false, motivo: "contrato_inexistente" };
+  // Una lápida (contrato anulado, etapa 2b) no avanza de estado: sería escribirle encima.
+  if (!contrato || (contrato as any).estadoContrato === "ANULADO") return { aplicada: false, motivo: "contrato_inexistente" };
   // Un tipo que no manda nada a firmar no pasa por Generar Documentos: va a Contratados (ver `destinoSiNoSeFirma`).
   const estadoDestino = await destinoSiNoSeFirma(contrato, estadoPedido);
 

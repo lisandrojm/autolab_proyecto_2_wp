@@ -127,14 +127,14 @@ export const CustomMultiDatePicker: React.FC<CustomMultiDatePickerProps> = ({ la
   const generateMonthDays = () => {
     const monthStart = startOfMonth(viewDate);
     const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
-    const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
+    const startDate = startOfWeek(monthStart, { weekStartsOn: 0 });
+    const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 });
 
     return eachDayOfInterval({ start: startDate, end: endDate });
   };
 
   const days = generateMonthDays();
-  const weekDays = ["L", "M", "M", "J", "V", "S", "D"];
+  const weekDays = ["D", "L", "M", "X", "J", "V", "S"]; // la semana arranca el domingo (pedido del 19/11/2026)
 
   const handleConfirm = () => {
     onChange(tempSelection);

@@ -383,7 +383,8 @@ export async function candidatosDeAlta(
     const intentos = fallida ? Number(c.altaArcaPresentada?.intentos || 0) : 0;
     const primerIntentoEl = intentos > 0 && c.altaArcaPresentada?.primerIntentoEl ? new Date(c.altaArcaPresentada.primerIntentoEl).toISOString() : "";
     const rechazadaEl = fallida && c.altaArcaPresentada?.fecha && !Number.isNaN(new Date(c.altaArcaPresentada.fecha).getTime()) ? new Date(c.altaArcaPresentada.fecha).toISOString() : "";
-    if (c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") motivo = "Ya se presentó en ARCA.";
+    if (c.altaArcaPresentada?.resultado === "anulada") motivo = "El alta se anuló en ARCA desde WeProdu: no se vuelve a presentar sola. Si corresponde, presentala de nuevo desde Contratos.";
+    else if (c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") motivo = "Ya se presentó en ARCA.";
     else if (row.sinCuit) motivo = "No tiene CUIT/CUIL: va por el circuito «Sin CUIT», no por ARCA.";
     else if (!empresaId || !empresa) motivo = "Falta elegir la Empresa Contrato.";
     else {

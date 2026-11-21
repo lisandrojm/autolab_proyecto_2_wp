@@ -117,12 +117,17 @@ function sumarAlFiltro(filter, condicion) {
 }
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 import { NOVEDAD_SOLICITUD_APROBADA, nombreDePersona, notificar } from "../services/novedadesNotificaciones.js";
-import { esContratoVigente, hoyArgentina } from "../utils/contratoVigencia.js";
+import { esContratoVigente, fechaISO, hoyArgentina } from "../utils/contratoVigencia.js";
 import { rechazoAltaArcaConContrato } from "../services/superposicion.js";
 import { filaDelEquipoTrasGuardar, firmaDeAreas, rolDelEquipoTrasGuardar, tieneRol } from "../compartido/configDelEquipo.js";
 import { cambiosDeAreas, fotoDeAreas, registrarCambiosDelEquipo } from "../services/historialEquipo.js";
 import { contratosQueRigenDelProyecto } from "../utils/contratosQueRigen.js";
-import { quitarContrato } from "../services/contratoDeSolicitud.js";
+import { resolverIndiceContrato } from "../utils/identidadContrato.js";
+import { anularContrato, AnulacionInvalida } from "../services/anulacionContrato.js";
+import { moverRecibos, referenciasDeContrato } from "../services/referenciasContrato.js";
+import { cerrarSinFirma, CierreInvalido } from "../services/cierreSinFirma.js";
+import { esLapida, ultimoNoAnulado } from "../utils/anulacionContrato.js";
+import { contratoQueYaTieneLaSolicitud } from "../utils/unaSolicitudUnContrato.js";
 import { modalidadParaGuardar } from "../services/modalidades.js";
 import { Contrato } from "../models/Contrato.js";
 import { FormaPago } from "../models/FormaPago.js";
@@ -1044,7 +1049,7 @@ router.get("/projects/:projectId", requireTenant, authenticateToken, requireAnyR
                     projectId: project._id,
                     userId: { $in: miembros.map((u) => u._id) },
                 })
-                    .select("projectId userId areaId nombre_proyecto nombre_rol_frame contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.hora_inicio contracts.hora_fin contracts.areaId contracts.shiftId contracts.areaShiftAssignments")
+                    .select("projectId userId areaId nombre_proyecto nombre_rol_frame contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.hora_inicio contracts.hora_fin contracts.areaId contracts.shiftId contracts.areaShiftAssignments contracts.estadoContrato")
                     .lean();
                 const porUsuario = new Map(vinculos.map((v) => [String(v.userId), v]));
                 for (const miembro of miembros) {
@@ -1242,6 +1247,10 @@ router.get("/projects/:projectId/area-shift-members", requireTenant, authenticat
                 estadoContrato: contratoActivo?.nombre_estado_empleado || "",
                 fechaAlta: contratoActivo?.fecha_alta_contrato || "",
                 fechaBaja: contratoActivo?.fecha_baja_contrato || "",
+                // El horario y los días del contrato que rige (Equipos lo muestra en cada persona, 17/11/2026).
+                horaInicio: contratoActivo?.hora_inicio || "",
+                horaFin: contratoActivo?.hora_fin || "",
+                diasSemana: Array.isArray(contratoActivo?.dias_semana) ? contratoActivo.dias_semana : [],
                 // La sede del contrato que rige (sólo informativa: la fila sale de la asignación, ver `sedeEnArea`).
                 sedeContrato: sedeDe(contratoActivo?.sede_id),
                 // Áreas donde la persona está asignada pero FALTA ELEGIR SEDE (el área tiene varias): la Jerarquía las muestra aparte.
@@ -1871,7 +1880,7 @@ router.get("/projects/:projectId/contratos-desalineados", requireTenant, authent
                     { "contracts.valoracion_regla_id": { $ne: null } },
                 ],
             })
-                .select("userId contracts.valoracion_id contracts.nombre_valoracion contracts.valoracionOverride contracts.nombre_categoria_sat contracts.nombre_rol_frame contracts.rol_frame_id contracts.valoracion_regla_id contracts.fecha_alta_contrato contracts.fecha_baja_contrato")
+                .select("userId contracts.valoracion_id contracts.nombre_valoracion contracts.valoracionOverride contracts.nombre_categoria_sat contracts.nombre_rol_frame contracts.rol_frame_id contracts.valoracion_regla_id contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.estadoContrato")
                 .lean(),
             Valoracion.find({ tenantId: req.tenantObjectId }).select("name color").lean(),
         ]);
@@ -2048,9 +2057,10 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         const esContratoNuevo = !hayIndice && !isUpdate;
         let contratoPrevio = null;
         if (!esContratoNuevo) {
-            const up = await UserProject.findOne({ userId, projectId: project._id }).select("contracts.valoracion_regla_id contracts.modalidadId").lean();
+            const up = await UserProject.findOne({ userId, projectId: project._id }).select("contracts.valoracion_regla_id contracts.modalidadId contracts.estadoContrato").lean();
             const lista = up?.contracts || [];
-            contratoPrevio = hayIndice ? lista[Number(contractIndex)] : lista[lista.length - 1];
+            // Sin índice, el último de verdad: una lápida no tiene regla de valoración (etapa 2b).
+            contratoPrevio = hayIndice ? lista[Number(contractIndex)] : lista[ultimoNoAnulado(lista)];
         }
         const regla = await reglaDeValoracion({ proyecto: project, contrato: esContratoNuevo ? contract : { ...contract, valoracion_regla_id: contratoPrevio?.valoracion_regla_id }, esNuevo: esContratoNuevo });
         const veredicto = await revisarValoracion({ regla, rolFrameId: contract.rol_frame_id, categoriaSatId: contract.categoria_sat_id, motivo: contract.valoracionOverride?.motivo });
@@ -2234,6 +2244,12 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         Object.assign(contract, modalidad);
         const enrichedContract = {
             ...contract,
+            /*
+              La clave del contrato NO viene del cliente (etapa 2): un contrato copiado de otro proyecto la
+              traería repetida. Al editar, el modelo le devuelve la del contrato que reemplaza; uno nuevo recibe
+              una nueva (ver `clavesAPoner`).
+            */
+            contratoKey: undefined,
             empresaContratoId: contract.empresaContratoId || null,
             empresaReleaseId: contract.empresaReleaseId || null,
             nombre_empresa_contrato: empresaContratoDoc?.razonSocial || "",
@@ -2307,7 +2323,38 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             // así que `enrichedContract` nunca los trae. Como acá se reemplaza el subdocumento ENTERO, hay
             // que arrastrar el valor previo o el upload de "Alta AFIP/Servicios" desaparece en cuanto se
             // edite cualquier otra cosa del contrato.
-            const prevContract = hasExplicitIndex ? userProject.contracts[idxNum] : isUpdate && userProject.contracts.length > 0 ? userProject.contracts[userProject.contracts.length - 1] : null;
+            // Una lápida (contrato anulado) no se edita: guardar encima la «resucitaría» (etapa 2b).
+            if (hasExplicitIndex && esLapida(userProject.contracts[idxNum])) {
+                res.status(409).json({ error: "Ese contrato está anulado: no se puede editar." });
+                return;
+            }
+            // «isUpdate» sin índice reemplaza el ÚLTIMO contrato: el último de verdad, no una lápida.
+            const ultimoReal = ultimoNoAnulado(userProject.contracts);
+            /*
+              UNA SOLICITUD, UN CONTRATO (19/11/2026). Aprobar de nuevo una solicitud que ya tiene su contrato
+              en este vínculo agregaba otro (Bifulco el 11/11, un mes después; Paccoret el 08/10, a 4 s): el
+              mismo `solicitudId` en dos contratos, cada uno con recibos o ARCA propios. Ningún flujo legítimo
+              reusa el `solicitudId` —la renovación pide una solicitud nueva y la copia de contratos lo
+              descarta (`NO_SE_COPIAN`)—, así que se frena: sólo se puede guardar sobre ESE contrato. El 409
+              dice cuál es, para que el formulario ofrezca abrirlo y editarlo. Una lápida no cuenta (el
+              contrato anulado ya no es el de la solicitud). Es por vínculo: la misma solicitud aprobada en
+              otro proyecto es otro contrato.
+            */
+            if (idSolicitud) {
+                const destino = hasExplicitIndex ? idxNum : isUpdate && ultimoReal >= 0 ? ultimoReal : -1;
+                const yaTiene = contratoQueYaTieneLaSolicitud(userProject.contracts, idSolicitud, destino);
+                if (yaTiene >= 0) {
+                    const c = userProject.contracts[yaTiene];
+                    const dia = (v) => (v instanceof Date ? v.toISOString().slice(0, 10) : fechaISO(v));
+                    res.status(409).json({
+                        error: `Esta solicitud ya tiene su contrato (${c.nombre_contrato || "contrato"}, alta ${dia(c.fecha_alta_contrato) || "—"}). Aprobarla de nuevo crearía un segundo contrato: si hay que cambiar algo, se edita ése.`,
+                        codigo: "SOLICITUD_YA_TIENE_CONTRATO",
+                        contrato: { projectId: String(project._id), userId: String(user._id), contractIndex: yaTiene, contratoKey: c.contratoKey ? String(c.contratoKey) : null, nombre_contrato: c.nombre_contrato || "", fecha_alta_contrato: dia(c.fecha_alta_contrato) || "", fecha_baja_contrato: dia(c.fecha_baja_contrato) || "" },
+                    });
+                    return;
+                }
+            }
+            const prevContract = hasExplicitIndex ? userProject.contracts[idxNum] : isUpdate && ultimoReal >= 0 ? userProject.contracts[ultimoReal] : null;
             if (prevContract) {
                 if (enrichedContract.altaDocumentoUrl === undefined)
                     enrichedContract.altaDocumentoUrl = prevContract.altaDocumentoUrl;
@@ -2318,6 +2365,11 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
                 // Editar no le cambia el origen al contrato.
                 if (prevContract.origen)
                     enrichedContract.origen = prevContract.origen;
+                // La baja que trajo ARCA (etapa 3, paso 2) conserva de dónde salió mientras la baja siga siendo ésa.
+                if (prevContract.origenBaja && fechaISO(String(enrichedContract.fecha_baja_contrato || "")) === fechaISO(String(prevContract.fecha_baja_contrato || ""))) {
+                    enrichedContract.origenBaja = prevContract.origenBaja;
+                    enrichedContract.bajaArca = prevContract.bajaArca;
+                }
                 // Lo de Firma digital tampoco lo conoce el wizard: los PDFs generados, si ya se envió a firmar y
                 // el texto de Contrato/Release custom. Sin arrastrarlos, editar el contrato borraba el texto
                 // escrito y dejaba un trámite ya enviado como si nunca se hubiera enviado.
@@ -2329,8 +2381,8 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
             if (hasExplicitIndex) {
                 userProject.contracts[idxNum] = enrichedContract;
             }
-            else if (isUpdate && userProject.contracts.length > 0) {
-                userProject.contracts[userProject.contracts.length - 1] = enrichedContract;
+            else if (isUpdate && ultimoReal >= 0) {
+                userProject.contracts[ultimoReal] = enrichedContract;
             }
             else {
                 // Contrato NUEVO desde «Agregar miembro»: se marca, porque Contratos lista sólo los creados en
@@ -2526,40 +2578,177 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         });
     }
 });
-// DELETE /projects/:projectId/members/:userId/contracts/:index - Elimina UN contrato puntual (por índice).
-// Si la persona queda sin contratos en el proyecto, se limpia el UserProject y sus referencias.
-router.delete("/projects/:projectId/members/:userId/contracts/:index", requireTenant, authenticateToken, requireAnyRole, async (req, res) => {
+/*
+  ANULAR UN CONTRATO (etapa 2b, 18/11/2026; ver `services/anulacionContrato.ts`). Reemplaza al borrado
+  físico: el contrato queda entero en `contratos_anulados` y en su posición una lápida, así no se corren
+  los demás. Si era el último contrato de verdad de la persona en el proyecto, el vínculo se borra como
+  antes. Motivo obligatorio.
+*/
+async function anularDesdeRuta(req, res, origen, motivo) {
+    const { projectId, userId, index } = req.params;
+    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+    if (!project)
+        return res.status(404).json({ error: "Project not found" });
+    const up = await UserProject.findOne({ projectId, userId });
+    if (!up)
+        return res.status(404).json({ error: "No hay contratos para esta persona en el proyecto" });
+    // Por clave cuando el cliente la manda: el índice es una posición. Una lápida no se encuentra (ya está anulado).
+    const idx = resolverIndiceContrato(up, index);
+    if (idx < 0)
+        return res.status(400).json({ error: "Contrato no encontrado (o ya anulado)" });
+    // Una presentación de altas en curso marca cada contrato por su POSICIÓN. La lápida no corre a nadie,
+    // pero el contrato que se está presentando no puede desaparecer a mitad: se espera igual.
+    const corrida = quienTiene(String(req.tenantObjectId));
+    if (corrida && (corrida.tipo === "altas_masivas" || corrida.tipo === "carga_masiva")) {
+        return res.status(409).json({ error: "Hay una presentación de altas en ARCA en curso. Esperá a que termine para anular contratos." });
+    }
+    if (up.contracts?.[idx]?.altaArcaPresentada?.resultado === "presentando") {
+        return res.status(409).json({ error: "Este contrato se está presentando en ARCA ahora mismo: no se puede anular." });
+    }
     try {
-        const { projectId, userId, index } = req.params;
-        const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
-        if (!project) {
-            res.status(404).json({ error: "Project not found" });
+        const r = await anularContrato({ up, idx, tenantId: req.tenantObjectId, por: req.user?.userId, motivo, origen });
+        return res.json({ message: origen === "delete_deprecado" ? "Contrato eliminado" : "Contrato anulado", anulado: true, ...r });
+    }
+    catch (e) {
+        if (e instanceof AnulacionInvalida)
+            return res.status(400).json({ error: e.message });
+        throw e;
+    }
+}
+// POST /projects/:projectId/members/:userId/contracts/:index/anular  { motivo }
+router.post("/projects/:projectId/members/:userId/contracts/:index/anular", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        await anularDesdeRuta(req, res, "panel", String(req.body?.motivo || ""));
+    }
+    catch (error) {
+        console.error("Anular contrato error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/** Lo justo para reconocer un contrato en pantalla. */
+const resumenDeContrato = (c) => ({
+    contratoKey: c?.contratoKey ? String(c.contratoKey) : null,
+    nombre_contrato: c?.nombre_contrato || "",
+    fecha_alta_contrato: c?.fecha_alta_contrato || "",
+    fecha_baja_contrato: c?.fecha_baja_contrato || "",
+    nombre_empresa_contrato: c?.nombre_empresa_contrato || "",
+    nombre_estado_empleado: c?.nombre_estado_empleado || "",
+});
+/** El vínculo y la posición de un contrato del panel (por clave o por posición). Responde el error si no está. */
+async function contratoDelPanel(req, res) {
+    const { projectId, userId, index } = req.params;
+    const project = await Project.findOne({ _id: projectId, tenantId: req.tenantObjectId }).select("_id").lean();
+    if (!project) {
+        res.status(404).json({ error: "Project not found" });
+        return null;
+    }
+    const up = await UserProject.findOne({ projectId, userId });
+    if (!up) {
+        res.status(404).json({ error: "No hay contratos para esta persona en el proyecto" });
+        return null;
+    }
+    const idx = resolverIndiceContrato(up, index);
+    if (idx < 0) {
+        res.status(400).json({ error: "Contrato no encontrado (o ya anulado)" });
+        return null;
+    }
+    return { up, idx };
+}
+/*
+  GET .../contracts/:index/referencias — LO QUE HAY QUE SABER ANTES DE ANULAR (la vista previa del panel,
+  el equivalente del dry-run de `anularContratos.ts`): si ARCA lo frena, qué cuelga de su posición, si es
+  el último contrato de la persona en el proyecto, y a qué otros contratos se le pueden mover los recibos.
+*/
+router.get("/projects/:projectId/members/:userId/contracts/:index/referencias", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const encontrado = await contratoDelPanel(req, res);
+        if (!encontrado)
             return;
-        }
-        const up = await UserProject.findOne({ projectId, userId });
-        if (!up) {
-            res.status(404).json({ error: "No hay contratos para esta persona en el proyecto" });
+        const { up, idx } = encontrado;
+        const c = up.contracts[idx];
+        const resultadoArca = String(c?.altaArcaPresentada?.resultado || "");
+        const referencias = await referenciasDeContrato(up._id, idx);
+        res.json({
+            posicion: idx,
+            contrato: resumenDeContrato(c),
+            arca: { resultado: resultadoArca, bloquea: ["presentada", "indeterminado", "presentando"].includes(resultadoArca) },
+            referencias,
+            esUltimoContrato: !up.contracts.some((x, i) => i !== idx && !esLapida(x)),
+            // Adónde se pueden mover sus recibos: los otros contratos de verdad del MISMO vínculo.
+            destinosParaRecibos: up.contracts.map((x, i) => ({ index: i, ...resumenDeContrato(x), anulado: esLapida(x) })).filter((x) => x.index !== idx && !x.anulado),
+        });
+    }
+    catch (error) {
+        console.error("Referencias de contrato error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/*
+  POST .../contracts/:index/mover-recibos  { destino: <posición o contratoKey> } — mueve los recibos de
+  sueldo de este contrato a otro de la MISMA persona en el MISMO proyecto (p. ej. quedaron atados al
+  contrato duplicado que hay que anular). Queda en el log con quién y qué.
+*/
+router.post("/projects/:projectId/members/:userId/contracts/:index/mover-recibos", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const encontrado = await contratoDelPanel(req, res);
+        if (!encontrado)
             return;
-        }
-        // Por `_id` cuando el cliente lo manda: el índice es una posición y puede haber cambiado.
-        const idx = resolverIndiceContrato(up, index);
-        if (idx < 0) {
-            res.status(400).json({ error: "Contrato no encontrado" });
+        const { up, idx } = encontrado;
+        const destino = resolverIndiceContrato(up, String(req.body?.destino ?? ""));
+        if (destino < 0)
+            return res.status(400).json({ error: "El contrato de destino no existe (o está anulado)." });
+        if (destino === idx)
+            return res.status(400).json({ error: "El destino es el mismo contrato." });
+        const r = await moverRecibos(up._id, idx, destino);
+        console.log(`[mover-recibos] ${up._id}: ${r.movidos} recibos y ${r.lotesMovidos} lotes de #${idx} (${up.contracts[idx]?.contratoKey}) a #${destino} (${up.contracts[destino]?.contratoKey}) por ${req.user?.userId}. Recibos: ${r.recibos.join(",") || "—"}`);
+        res.json({ ok: true, movidos: r.movidos, lotesMovidos: r.lotesMovidos });
+    }
+    catch (error) {
+        console.error("Mover recibos error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/*
+  POST .../contracts/:index/cerrar-sin-firma  { motivo } — TERMINA EL CIRCUITO SIN FIRMA: los documentos
+  no se mandan a firmar y el contrato pasa al estado final así como está (ver `services/cierreSinFirma.ts`).
+*/
+router.post("/projects/:projectId/members/:userId/contracts/:index/cerrar-sin-firma", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        const encontrado = await contratoDelPanel(req, res);
+        if (!encontrado)
             return;
+        try {
+            const r = await cerrarSinFirma({ up: encontrado.up, idx: encontrado.idx, motivo: String(req.body?.motivo || ""), por: req.user?.userId });
+            res.json({ ok: true, ...r });
         }
-        // Una presentación de altas en curso marca cada contrato por su POSICIÓN: borrar uno corre a los
-        // demás y el resultado quedaría en otro contrato. Se espera a que termine.
-        const corrida = quienTiene(String(req.tenantObjectId));
-        if (corrida && (corrida.tipo === "altas_masivas" || corrida.tipo === "carga_masiva")) {
-            res.status(409).json({ error: "Hay una presentación de altas en ARCA en curso. Esperá a que termine para eliminar contratos." });
-            return;
+        catch (e) {
+            if (e instanceof CierreInvalido)
+                return res.status(409).json({ error: e.message });
+            throw e;
         }
-        if (up.contracts?.[idx]?.altaArcaPresentada?.resultado === "presentando") {
-            res.status(409).json({ error: "Este contrato se está presentando en ARCA ahora mismo: no se puede eliminar." });
-            return;
-        }
-        await quitarContrato(up, idx);
-        res.json({ message: "Contrato eliminado" });
+    }
+    catch (error) {
+        console.error("Cerrar sin firma error:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+/*
+  DELETE /projects/:projectId/members/:userId/contracts/:index — DEPRECADO (etapa 2b). Sigue respondiendo
+  igual para no romper a los clientes que lo usan, pero ya NO borra: anula (lápida + archivo), porque el
+  borrado físico corría las posiciones. Usar POST .../anular, que pide motivo.
+  Mismo permiso que POST .../anular: una puerta sin llave al lado de la restringida, haciendo lo mismo,
+  era peor que cualquiera de las dos. Si aparece un 403 inesperado, el aviso de deprecación dice quién llamó.
+*/
+/** El aviso va ANTES del permiso: así también queda registrado quién recibe un 403 (un cliente que quedó afuera). */
+const avisoDeleteDeprecado = (req, res, next) => {
+    res.setHeader("Deprecation", "true");
+    res.setHeader("Link", `</api/v1/projects/${req.params.projectId}/members/${req.params.userId}/contracts/${req.params.index}/anular>; rel="successor-version"`);
+    console.warn(`[DEPRECADO] DELETE de contrato ${req.params.projectId}/${req.params.userId}#${req.params.index} por ${req.user?.userId} (${req.get("user-agent") || "sin user-agent"}): se anula si tiene permiso (usar POST .../anular).`);
+    next();
+};
+router.delete("/projects/:projectId/members/:userId/contracts/:index", requireTenant, authenticateToken, avisoDeleteDeprecado, requirePermission("admin_contracts:view"), async (req, res) => {
+    try {
+        await anularDesdeRuta(req, res, "delete_deprecado", String(req.body?.motivo || req.query?.motivo || "Eliminado desde el panel (DELETE deprecado, sin motivo)"));
     }
     catch (error) {
         console.error("Delete member contract error:", error);
@@ -2675,28 +2864,6 @@ router.patch("/projects/:projectId/members/:userId/contracts/:index/empresa-cont
         res.status(500).json({ error: "Internal server error" });
     }
 });
-/**
- * Resuelve QUÉ contrato del member se está tocando, aceptando su `_id` o su índice.
- *
- * El índice es una POSICIÓN, no una identidad: cambia sola. El escenario real es que alguien abra el
- * contrato en posición 2, se vaya a constatar la obra social en la SSS (hay captcha, tarda), y
- * mientras tanto se elimine el contrato en posición 0. Al volver y guardar, el índice 2 ya apunta a
- * otro contrato: el dato se escribe en el alta equivocada, sin error y sin aviso.
- *
- * Por eso se prefiere el `_id` del subdocumento, que Mongoose genera para cada elemento del array.
- * Se sigue aceptando el índice para no romper a los clientes que todavía lo mandan, pero es el camino
- * viejo: el que manda un id no puede escribir en el contrato equivocado.
- *
- * Devuelve el índice resuelto, porque el resto del código escribe con `up.contracts[idx] = ...`.
- */
-function resolverIndiceContrato(up, param) {
-    const esObjectId = /^[a-f\d]{24}$/i.test(String(param || ""));
-    if (esObjectId) {
-        return up.contracts.findIndex((c) => String(c?._id || "") === String(param));
-    }
-    const idx = Number(param);
-    return Number.isInteger(idx) && idx >= 0 && idx < up.contracts.length ? idx : -1;
-}
 /**
  * PATCH /projects/:projectId/members/:userId/contracts/:index/obra-social
  *
@@ -3625,7 +3792,7 @@ router.get("/contratos/altas-arca/historial", requireTenant, authenticateToken, 
           Se piden solo esos dos campos; el orden de `contracts` se conserva, así el índice sigue valiendo.
         */
         const idsUp = [...new Set(logs.flatMap((l) => (l.contratos || []).map((c) => String(c.userProjectId || ""))).filter((id) => Types.ObjectId.isValid(id)))];
-        const ups = idsUp.length > 0 ? await UserProject.find({ _id: { $in: idsUp } }).select("contracts.altaConstancia contracts.altaEnviadaAFirmarEl contracts.altaArcaPresentada contracts.fecha_alta_contrato contracts.fecha_baja_contrato").lean() : [];
+        const ups = idsUp.length > 0 ? await UserProject.find({ _id: { $in: idsUp } }).select("contracts.altaConstancia contracts.altaEnviadaAFirmarEl contracts.altaArcaPresentada contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.estadoContrato").lean() : [];
         const upPorId = new Map(ups.map((u) => [String(u._id), u]));
         /*
           «PRESENTADA DESPUÉS» (pedido del 18/10/2026). Una fila rechazada de una corrida vieja queda rechazada

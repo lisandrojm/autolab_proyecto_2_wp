@@ -19,6 +19,8 @@ export interface IConstanciaArca extends Document {
   userId?: Types.ObjectId | null;
   userProjectId: Types.ObjectId;
   contractIndex: number;
+  /** La `contratoKey` del contrato (etapa 2c): la identidad que no depende de la posición. `null` en lo viejo sin backfill. */
+  contratoKey?: Types.ObjectId | null;
   empresaId?: Types.ObjectId | null;
   empresaCuit: string;
   empresaRazonSocial: string;
@@ -72,6 +74,7 @@ const schema = new Schema<IConstanciaArca>(
     userId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     userProjectId: { type: Schema.Types.ObjectId, required: true },
     contractIndex: { type: Number, required: true },
+    contratoKey: { type: Schema.Types.ObjectId, default: null, index: true },
     empresaId: { type: Schema.Types.ObjectId, ref: "Company", default: null },
     empresaCuit: { type: String, default: "" },
     empresaRazonSocial: { type: String, default: "" },

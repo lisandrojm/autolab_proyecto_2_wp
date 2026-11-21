@@ -187,6 +187,10 @@ export interface AreaShiftMember {
   estadoContrato: string;
   fechaAlta: string;
   fechaBaja: string;
+  /** El horario («HH:mm») y los días (0=domingo…6=sábado) del contrato que rige; vacíos si el contrato no los tiene. */
+  horaInicio?: string;
+  horaFin?: string;
+  diasSemana?: number[];
   /**
    * Sólo quien tiene MÁS DE UN CONTRATO VIGENTE A LA VEZ EN TURNOS DISTINTOS (14/11/2026): qué combinaciones
    * área × turno × sede pone cada contrato, con su nombre, fechas y horario. El reporte de asistencia lista a
@@ -203,6 +207,7 @@ export interface TurnosDeUnContrato {
   fechaBaja: string;
   horaInicio: string;
   horaFin: string;
+  diasSemana?: number[];
 }
 
 export interface AreaShiftCountsResponse {
@@ -334,6 +339,32 @@ function normalizeProject(raw: any): Project {
 }
 
 /* ------------------------------ API ------------------------------ */
+/** Resumen de un contrato para reconocerlo en pantalla. */
+export interface ResumenContrato {
+  contratoKey: string | null;
+  nombre_contrato: string;
+  fecha_alta_contrato: string;
+  fecha_baja_contrato: string;
+  nombre_empresa_contrato: string;
+  nombre_estado_empleado: string;
+}
+
+/** La vista previa antes de anular (GET .../contracts/:index/referencias). */
+export interface ReferenciasContrato {
+  posicion: number;
+  contrato: ResumenContrato;
+  arca: { resultado: string; bloquea: boolean };
+  referencias: {
+    bloqueantes: { recibos: { periodo: string; estado: string }[]; lotesDeRecibos: number; renovaciones: number; solicitudesDeRenovacion: number };
+    informativas: { verificacionesArca: number; constanciasArca: number; logsDeAltas: number };
+    totalBloqueantes: number;
+    textoBloqueantes: string;
+    textoInformativas: string;
+  };
+  esUltimoContrato: boolean;
+  destinosParaRecibos: (ResumenContrato & { index: number })[];
+}
+
 class ProjectsAPI {
   /** Lee credenciales desde localStorage y, si faltan, cae al Zustand store */
   private getHeaders() {
@@ -740,7 +771,33 @@ class ProjectsAPI {
     emitProjectsChanged("update", projectId, clientId);
   }
 
-  /** Elimina un contrato puntual (por índice) de la persona en un proyecto. */
+  /**
+   * Anula un contrato puntual (etapa 2b): queda guardado entero con el motivo y en su posición queda una
+   * lápida, así no se corren los demás. Reemplaza a `deleteMemberContract`.
+   */
+  async anularMemberContract(projectId: string, userId: string, index: number, motivo: string): Promise<void> {
+    await axios.post(`/projects/${projectId}/members/${userId}/contracts/${index}/anular`, { motivo }, { headers: this.getHeaders() });
+  }
+
+  /** Lo que hay que saber antes de anular: ARCA, referencias por posición, si es el último, adónde mover recibos. */
+  async referenciasContrato(projectId: string, userId: string, index: number): Promise<ReferenciasContrato> {
+    const { data } = await axios.get(`/projects/${projectId}/members/${userId}/contracts/${index}/referencias`, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /** Mueve los recibos de sueldo de un contrato a otro de la misma persona en el mismo proyecto. */
+  async moverRecibos(projectId: string, userId: string, index: number, destino: number): Promise<{ movidos: number; lotesMovidos: number }> {
+    const { data } = await axios.post(`/projects/${projectId}/members/${userId}/contracts/${index}/mover-recibos`, { destino }, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /** Termina el circuito sin firma: el contrato pasa al estado final así como está (sus documentos no se mandan a firmar). */
+  async cerrarSinFirma(projectId: string, userId: string, index: number, motivo: string): Promise<{ estadoAnterior: string; estadoNuevo: string; constancia: string }> {
+    const { data } = await axios.post(`/projects/${projectId}/members/${userId}/contracts/${index}/cerrar-sin-firma`, { motivo }, { headers: this.getHeaders() });
+    return data;
+  }
+
+  /** @deprecated Usar `anularMemberContract`. El server ya no borra: anula sin motivo. */
   async deleteMemberContract(projectId: string, userId: string, index: number): Promise<void> {
     await axios.delete(`/projects/${projectId}/members/${userId}/contracts/${index}`, {
       headers: this.getHeaders(),

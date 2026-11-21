@@ -147,13 +147,15 @@ export function rolDelMiembro(rolEquipo: string | null | undefined, rolContrato:
  * vigente más reciente, y ahí el rol del EQUIPO (el del contrato sólo si el equipo no tiene). Sin nada
  * vigente, el rol del equipo del último proyecto que lo tenga. "" si no hay ninguno.
  */
-export function rolDelMiembroHoy(vinculos: Array<{ nombre_rol_frame?: string; contracts?: Array<{ fecha_alta_contrato?: any; fecha_baja_contrato?: any; nombre_rol_frame?: string }> }> | null | undefined, hoy: string): string {
+export function rolDelMiembroHoy(vinculos: Array<{ nombre_rol_frame?: string; contracts?: Array<{ estadoContrato?: any; fecha_alta_contrato?: any; fecha_baja_contrato?: any; nombre_rol_frame?: string }> }> | null | undefined, hoy: string): string {
   let mejor: { alta: string; rol: string } | null = null;
   for (const v of vinculos || []) {
     for (const c of v?.contracts || []) {
+      // Rige hoy = estado VIGENTE y por fechas (etapa 3; misma regla que `esContratoVigente`, que acá no se importa).
+      if (c.estadoContrato !== "VIGENTE") continue;
       const alta = diaDe(c.fecha_alta_contrato);
       const baja = diaDe(c.fecha_baja_contrato);
-      if ((alta && alta > hoy) || (baja && baja < hoy)) continue;
+      if (!alta || alta > hoy || (baja && baja < hoy)) continue;
       const rol = rolDelMiembro(v.nombre_rol_frame, c.nombre_rol_frame);
       if (rol && (!mejor || alta >= mejor.alta)) mejor = { alta, rol };
     }

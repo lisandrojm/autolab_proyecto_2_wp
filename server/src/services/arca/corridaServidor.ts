@@ -41,7 +41,9 @@ export type EventoCorrida =
   | { tipo: "fin"; validadas: number; faltaron: number; motivo: string; detalle: string[] }
   | { tipo: "fallo"; mensaje: string }
   /** Se reintenta con otra empleadora a los que la del contrato rechazó por «alta activa». */
-  | { tipo: "otraEmpleadora"; razonSocial: string; cuils: string[] };
+  | { tipo: "otraEmpleadora"; razonSocial: string; cuils: string[] }
+  /** ARCA contestó pero el lote no lo guardó (código fuera del catálogo, no registrada…). */
+  | { tipo: "noGuardado"; cuil: string; motivo: string };
 
 /** Las personas de UNA empleadora. Una corrida puede traer varias y las lee en la misma sesión. */
 export interface GrupoCorrida {
@@ -420,6 +422,13 @@ async function correr(o: {
           const aplicado = await aplicarLoteObrasSociales({ tenantObjectId, empresaId: g.empresaId, filas, origen: "panel", usuarioId });
           resumen.guardadas = aplicado.aplicados;
           aplicados.push(aplicado);
+          /*
+            LO QUE NO SE GUARDÓ SE DICE EN SU FILA (19/11/2026). ARCA contestó, pero el lote lo rechazó
+            (código fuera del catálogo, obra social no registrada por la empleadora…): la fila quedaba en
+            verde con «sin cambios» y el rechazo era sólo un contador al pie. Jorge Garcia: ARCA dijo
+            907806, que no estaba en el catálogo, y parecía validado.
+          */
+          for (const { cuil, motivo } of rechazosDelLote(aplicado, g.razonSocial)) emitir({ tipo: "noGuardado", cuil, motivo });
         } catch (e: any) {
           console.error(`Obras sociales: no pude guardar lo de ${g.razonSocial}:`, e?.message || e);
           error = `No se pudo guardar lo leído para ${g.razonSocial || g.empresaCuit}: ${e?.message || e}`;
@@ -607,6 +616,16 @@ function detallePorPersona(eventos: EventoCorrida[]): Array<{ cuil: string; rnos
 }
 
 /** Lo que el lote NO pudo aplicar, en frases. Es lo que hace falta para saber qué revisar. */
+/** Por qué el lote no guardó a cada CUIL, en una frase que va en su fila. */
+export function rechazosDelLote(r: any, empleadora: string): { cuil: string; motivo: string }[] {
+  const l: { cuil: string; motivo: string }[] = [];
+  for (const x of r.rnosDesconocido || []) l.push({ cuil: x.cuil, motivo: `ARCA dice ${x.rnos}, que no está en el catálogo de Obras Sociales: no se guardó. Hay que agregarla al catálogo (y a la empleadora) y volver a validar.` });
+  for (const x of r.noRegistrada || []) l.push({ cuil: x.cuil, motivo: `ARCA dice ${x.rnos}${x.nombre ? ` (${x.nombre})` : ""}, que ${empleadora || "la empleadora"} no tiene registrada: no se guardó.` });
+  for (const c of r.sinContrato || []) l.push({ cuil: c, motivo: `Sin contrato en ${empleadora || "esta empleadora"}: no se guardó.` });
+  for (const c of r.yaBloqueados || []) l.push({ cuil: c, motivo: "Ya estaba validada: no se pisó." });
+  return l;
+}
+
 function detalleDeLoAplicado(r: any): string[] {
   const l: string[] = [];
   if (r.sinContrato?.length) l.push(`${r.sinContrato.length} sin contrato en esta empleadora.`);

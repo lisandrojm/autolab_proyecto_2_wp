@@ -166,13 +166,15 @@ export async function validarLoteAltas(o) {
             falla(`${etiqueta}: no está en el estado de Alta temprana de ARCA (está en «${c.nombre_estado_empleado || "sin estado"}»).`);
             return;
         }
-        if (!o.forzar && o.descartarPresentadas && c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") {
+        // Una fallida o una ANULADA en ARCA (desde Modificaciones y Bajas) no es un alta vigente: se puede volver a presentar.
+        const sinAltaVigente = !c.altaArcaPresentada || c.altaArcaPresentada.resultado === "fallida" || c.altaArcaPresentada.resultado === "anulada";
+        if (!o.forzar && o.descartarPresentadas && !sinAltaVigente) {
             // Por tandas se RETOMA: lo ya presentado no es un error del lote, se saltea. Así una corrida
             // cortada se relanza con la misma selección y sigue desde la primera tanda sin resultado.
             descartadas.push({ userProjectId: it.userProjectId, contractIndex: it.contractIndex, cuil: digitos(u?.metadata?.cuit), nombre, registro: it.registro, motivo: c.altaArcaPresentada.resultado === "presentada" ? "presentada" : "incierta" });
             return;
         }
-        if (!o.forzar && c.altaArcaPresentada && c.altaArcaPresentada.resultado !== "fallida") {
+        if (!o.forzar && !sinAltaVigente) {
             falla(`${etiqueta}: ya se presentó en ARCA (${c.altaArcaPresentada.via === "altas_masivas" ? "Altas Masivas" : "Carga Masiva"}, ${new Date(c.altaArcaPresentada.fecha).toLocaleDateString("es-AR")}). No se presenta dos veces.`);
             return;
         }
@@ -263,7 +265,7 @@ export async function bloqueadasPorVigencia(tenantObjectId, empresaId, items) {
     if (empresaCuit.length !== 11)
         return [];
     const ups = await UserProject.find({ _id: { $in: [...new Set(validos.map((i) => i.userProjectId))] } })
-        .select("projectId userId contracts.fecha_alta_contrato contracts.fecha_baja_contrato")
+        .select("projectId userId contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.estadoContrato")
         .lean();
     const upPorId = new Map(ups.map((u) => [String(u._id), u]));
     const proyectos = new Set((await Project.find({ _id: { $in: ups.map((u) => u.projectId) }, tenantId: tenantObjectId }).select("_id").lean()).map((p) => String(p._id)));

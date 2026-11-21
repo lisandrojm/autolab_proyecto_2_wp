@@ -63,6 +63,8 @@ export interface IReciboDelLote {
     userProjectId?: Types.ObjectId | null;
     projectId?: Types.ObjectId | null;
     contractIndex?: number | null;
+    /** La `contratoKey` del contrato (etapa 2c): la identidad que no depende de la posición. `null` en lo viejo sin backfill. */
+    contratoKey?: Types.ObjectId | null;
     /** Para mostrar sin volver a buscar. */
     nombreUsuario?: string;
     nombreProyecto?: string;

@@ -12,8 +12,8 @@ import { RequestConfig } from "../models/RequestConfig.js";
 import { importePorJornada } from "../compartido/jornadas.js";
 import { armarPayloadDeSolicitud } from "../compartido/solicitudDeContratacion.js";
 import { Contexto, erroresDelLote, FechasDeContratacion, IntegranteParaPlan, MAX_INTEGRANTES_POR_LOTE, PlanDeLote, planDeLote, PlantillaParaPlan, Puntual } from "../utils/planDeLote.js";
-import { compromisosDePersona, superposicionesDeAlta, pedidoDesdeSolicitud } from "./superposicion.js";
-import { choquesDelEquipo, CompromisoExistente, superposiciones } from "../utils/superposicionContratos.js";
+import { compromisosDePersona, contratoDePersonaEnFechas, superposicionesDeAlta, pedidoDesdeSolicitud } from "./superposicion.js";
+import { choquesDelEquipo, CompromisoExistente, mensajeSoloServicios, superposiciones } from "../utils/superposicionContratos.js";
 import { hoyArgentina } from "../utils/contratoVigencia.js";
 import { efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "./solicitudes.js";
 import { createUserSchema, normalizarRolesFrame } from "../validators/usuarioSchemas.js";
@@ -935,6 +935,7 @@ async function contextoDe(tenantId: Types.ObjectId, p: any, integrantes: Integra
     // Mismo filtro que el formulario: activos y sin «horas extra», que no es una ausencia.
     motivos: new Set(motivos.filter((m: any) => !String(m.name || "").toLowerCase().includes("horas extra")).map((m: any) => String(m._id))),
     superposiciones: new Map(),
+    soloServicios: new Map(),
   };
 }
 
@@ -987,7 +988,8 @@ export async function planificarVarios(tenantId: Types.ObjectId, p: any, bodies:
   const hoy = hoyArgentina();
   await Promise.all(
     todas.map(async (x) => {
-      const avisos = await superposicionesDeAlta(tenantId, x.f.userId, x.pedido);
+      const [avisos, contratoArca] = await Promise.all([superposicionesDeAlta(tenantId, x.f.userId, x.pedido), contratoDePersonaEnFechas(tenantId, x.f.userId, x.pedido)]);
+      if (contratoArca) partes[x.k].ctx.soloServicios!.set(x.f.integranteId, mensajeSoloServicios(contratoArca));
       // La misma persona en otro puesto de ESTA contratación (de este equipo o de otro): todavía no existe en la base.
       const otrosPuestos: CompromisoExistente[] = todas
         .filter((o) => o !== x && o.f.userId === x.f.userId)

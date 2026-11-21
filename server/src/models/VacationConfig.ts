@@ -57,7 +57,7 @@ export interface IVacationConfig extends Document {
    * eligen, que la empresa asigne un tramo único. Reglas en `compartido/vacaciones/campania.ts`. No hay
    * opción de pagar en lugar de gozar: no es configurable porque no existe.
    */
-  campania?: { activa: boolean; plazoParaDefinirDias: number; avisoMinimoDias: number; minDiasPorTramo: number };
+  campania?: { activa: boolean; plazoParaDefinirDias: number; avisoMinimoDias: number; minDiasPorTramo: number; tiposContratoInvitar?: number[] };
   /**
    * DE QUÉ EMPLEADORA SE TOMA LA ANTIGÜEDAD (15/11/2026). Ya no se suman los días de todas: cuenta la
    * de una sola (ver `empresaDeComputo` en utils/antiguedadArca.ts).
@@ -167,6 +167,8 @@ const VacationConfigSchema = new Schema<IVacationConfig>(
       plazoParaDefinirDias: { type: Number, default: 14, min: 1, max: 120 },
       avisoMinimoDias: { type: Number, default: 30, min: 0, max: 180 },
       minDiasPorTramo: { type: Number, default: 7, min: 1, max: 60 },
+      // Los tipos de contrato con que arranca tildada una campaña nueva. Vacío = todos los habilitados.
+      tiposContratoInvitar: { type: [Number], default: [] },
     },
     // Antigüedad por empresa. Con estos defaults, un tenant que nunca lo tocó lee «empresa vigente».
     computoAntiguedad: {

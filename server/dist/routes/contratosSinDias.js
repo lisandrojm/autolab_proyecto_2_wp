@@ -32,11 +32,13 @@ router.get("/", ...acceso, async (req, res) => {
         const proyectos = await Project.find({ tenantId: req.tenantObjectId }).select("name clientId").populate("clientId", "name").lean();
         const nombreProyecto = new Map(proyectos.map((p) => [String(p._id), p.clientId?.name ? `${p.clientId.name} | ${p.name}` : p.name]));
         const ups = await UserProject.find({ projectId: { $in: proyectos.map((p) => p._id) } })
-            .select("userId projectId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.dias_semana contracts.dias_por_semana contracts.dias_rotativos contracts.hora_inicio contracts.hora_fin contracts.shiftId contracts.areaShiftAssignments contracts.nombre_contrato contracts.nombre_rol_frame contracts.cantidad_jornadas_laborales")
+            .select("userId projectId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.dias_semana contracts.dias_por_semana contracts.dias_rotativos contracts.hora_inicio contracts.hora_fin contracts.shiftId contracts.areaShiftAssignments contracts.nombre_contrato contracts.nombre_rol_frame contracts.cantidad_jornadas_laborales contracts.estadoContrato")
             .lean();
         const filas = [];
         for (const up of ups) {
             (up.contracts || []).forEach((c, indice) => {
+                if (c?.estadoContrato === "ANULADO")
+                    return; // lápida de un contrato anulado (etapa 2b)
                 if (Array.isArray(c.dias_semana) && c.dias_semana.length > 0)
                     return;
                 const baja = fechaISO(c.fecha_baja_contrato);
@@ -92,15 +94,15 @@ router.put("/", ...acceso, async (req, res) => {
             res.status(400).json({ error: "Falta indicar qué contrato." });
             return;
         }
-        const up = await UserProject.findById(userProjectId).select("projectId contracts.fecha_alta_contrato").lean();
+        const up = await UserProject.findById(userProjectId).select("projectId contracts.fecha_alta_contrato contracts.estadoContrato").lean();
         const deEsteTenant = up && (await Project.exists({ _id: up.projectId, tenantId: req.tenantObjectId }));
         const c = up?.contracts?.[Number(indice)];
-        if (!deEsteTenant || !c || fechaISO(c.fecha_alta_contrato) !== String(fechaAlta || "")) {
+        if (!deEsteTenant || !c || c.estadoContrato === "ANULADO" || fechaISO(c.fecha_alta_contrato) !== String(fechaAlta || "")) {
             res.status(409).json({ error: "Ese contrato cambió mientras tanto. Recargá la lista." });
             return;
         }
         const i = Number(indice);
-        await UserProject.updateOne({ _id: userProjectId }, { $set: { [`contracts.${i}.dias_semana`]: dias, [`contracts.${i}.dias_por_semana`]: porSemana, [`contracts.${i}.dias_rotativos`]: rotativos } });
+        await UserProject.updateOne({ _id: userProjectId, [`contracts.${i}.estadoContrato`]: { $ne: "ANULADO" } }, { $set: { [`contracts.${i}.dias_semana`]: dias, [`contracts.${i}.dias_por_semana`]: porSemana, [`contracts.${i}.dias_rotativos`]: rotativos } });
         res.json({ ok: true });
     }
     catch (error) {

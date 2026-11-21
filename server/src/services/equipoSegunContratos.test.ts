@@ -35,8 +35,8 @@ describe("el área del equipo se lee del contrato que rige", () => {
   });
   it("la ficha de una persona: entre sus contratos manda el que rige hoy", () => {
     const fila = filaSegunContratos({ userId: "u1", areaShiftAssignments: [{ areaId: TECNICA, shiftIds: [TARDE] }] }, [
-      { fecha_alta_contrato: "2020-01-01", fecha_baja_contrato: "2020-01-31", areaShiftAssignments: [{ areaId: TECNICA, shiftIds: [TARDE] }] },
-      { fecha_alta_contrato: "2020-02-01", fecha_baja_contrato: "", areaShiftAssignments: [{ areaId: TECNICA, shiftIds: [MANANA] }] },
+      { estadoContrato: "FINALIZADO", fecha_alta_contrato: "2020-01-01", fecha_baja_contrato: "2020-01-31", areaShiftAssignments: [{ areaId: TECNICA, shiftIds: [TARDE] }] },
+      { estadoContrato: "VIGENTE", fecha_alta_contrato: "2020-02-01", fecha_baja_contrato: "", areaShiftAssignments: [{ areaId: TECNICA, shiftIds: [MANANA] }] },
     ]);
     assert.deepEqual(fila.areaShiftAssignments, [{ areaId: TECNICA, shiftIds: [MANANA] }]);
   });
@@ -49,8 +49,8 @@ describe("el área del equipo se lee del contrato que rige", () => {
 describe("varios contratos vigentes a la vez: el área del equipo es la suma", () => {
   const EDICION = "64a000000000000000000002";
   const NOCHE = "64b000000000000000000003";
-  const plazoFijo = { _indice: 0, fecha_alta_contrato: "2026-11-01", fecha_baja_contrato: "2026-11-30", areaShiftAssignments: [{ areaId: TECNICA, shiftIds: [MANANA], sedeId: 1 }] };
-  const adicional = { _indice: 1, fecha_alta_contrato: "2026-11-01", fecha_baja_contrato: "2026-11-23", areaShiftAssignments: [{ areaId: TECNICA, shiftIds: [TARDE], sedeId: 1 }] };
+  const plazoFijo = { _indice: 0, estadoContrato: "VIGENTE", fecha_alta_contrato: "2026-11-01", fecha_baja_contrato: "2026-11-30", areaShiftAssignments: [{ areaId: TECNICA, shiftIds: [MANANA], sedeId: 1 }] };
+  const adicional = { _indice: 1, estadoContrato: "VIGENTE", fecha_alta_contrato: "2026-11-01", fecha_baja_contrato: "2026-11-23", areaShiftAssignments: [{ areaId: TECNICA, shiftIds: [TARDE], sedeId: 1 }] };
   const rige = { ...adicional, _vigentes: [plazoFijo, adicional] };
 
   it("Mañana en un contrato y Tarde en el otro → los dos turnos, en una fila; primero el del que rige", () => {
@@ -75,7 +75,7 @@ describe("varios contratos vigentes a la vez: el área del equipo es la suma", (
   it("la ficha de una persona: dos vigentes hoy se suman; el vencido no cuenta", () => {
     const fila = filaSegunContratos(
       { userId: "u1", areaShiftAssignments: [] },
-      [{ fecha_alta_contrato: "2026-10-01", fecha_baja_contrato: "2026-10-31", areaShiftAssignments: [{ areaId: EDICION, shiftIds: [NOCHE] }] }, plazoFijo, adicional],
+      [{ estadoContrato: "FINALIZADO", fecha_alta_contrato: "2026-10-01", fecha_baja_contrato: "2026-10-31", areaShiftAssignments: [{ areaId: EDICION, shiftIds: [NOCHE] }] }, plazoFijo, adicional],
       "2026-11-14",
     );
     assert.deepEqual(fila.areaShiftAssignments, [{ areaId: TECNICA, shiftIds: [TARDE, MANANA], sedeId: 1 }]);
@@ -115,8 +115,8 @@ describe("varios contratos vigentes a la vez: el área del equipo es la suma", (
 // El reporte de asistencia lista a la persona una vez por contrato, y Equipos muestra en cada turno el suyo.
 describe("qué turnos pone cada contrato vigente", () => {
   const claves = (filas: any[]) => clavesDelMiembro(filas);
-  const plazoFijo = { _indice: 0, nombre_contrato: "Plazo fijo 6x6", nombre_estado_empleado: "Firma enviada", fecha_alta_contrato: "2026-11-01", fecha_baja_contrato: "2026-11-30", hora_inicio: "06:00", hora_fin: "12:00", areaShiftAssignments: [{ areaId: TECNICA, shiftIds: [MANANA], sedeId: 1 }] };
-  const adicional = { _indice: 1, nombre_contrato: "Servicios Adicional", nombre_estado_empleado: "Disponible", fecha_alta_contrato: "2026-11-01", fecha_baja_contrato: "2026-11-23", hora_inicio: "12:00", hora_fin: "18:00", areaShiftAssignments: [{ areaId: TECNICA, shiftIds: [TARDE], sedeId: 1 }] };
+  const plazoFijo = { _indice: 0, nombre_contrato: "Plazo fijo 6x6", nombre_estado_empleado: "Firma enviada", estadoContrato: "VIGENTE", fecha_alta_contrato: "2026-11-01", fecha_baja_contrato: "2026-11-30", hora_inicio: "06:00", hora_fin: "12:00", areaShiftAssignments: [{ areaId: TECNICA, shiftIds: [MANANA], sedeId: 1 }] };
+  const adicional = { _indice: 1, nombre_contrato: "Servicios Adicional", nombre_estado_empleado: "Disponible", estadoContrato: "VIGENTE", fecha_alta_contrato: "2026-11-01", fecha_baja_contrato: "2026-11-23", hora_inicio: "12:00", hora_fin: "18:00", areaShiftAssignments: [{ areaId: TECNICA, shiftIds: [TARDE], sedeId: 1 }] };
 
   it("Mañana con el plazo fijo y Tarde con el adicional → uno por contrato, con su horario; primero el que rige", () => {
     const r = turnosPorContrato({ ...adicional, _vigentes: [plazoFijo, adicional] }, claves)!;

@@ -81,7 +81,7 @@ export async function nombresPorPantalla(opts: { tenantId: string; tenantObjectI
 
   // La empleadora de cada persona sale de su contrato: la pantalla de ARCA trabaja por CUIT de empleador.
   const ups: any[] = await UserProject.find({ userId: { $in: [...porCuil.values()].map((u) => u._id) } })
-    .select("userId contracts.empresaContratoId")
+    .select("userId contracts.empresaContratoId contracts.estadoContrato")
     .lean();
   const empresaDeUsuario = new Map<string, string>();
   for (const up of ups) {

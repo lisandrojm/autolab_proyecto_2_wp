@@ -32,7 +32,7 @@ function indiceDelRegistro(up, reg) {
         .filter(({ x }) => fechaISO(x.fecha_alta_contrato) === (c.alta || "") && fechaISO(x.fecha_baja_contrato) === (c.baja || "") && (!c.carga || String(x.fecha_carga ?? "") === c.carga));
     if (porFechas.length === 1)
         return porFechas[0].idx;
-    return typeof c.indice === "number" && contratos[c.indice] ? c.indice : null;
+    return typeof c.indice === "number" && contratos[c.indice] && contratos[c.indice].estadoContrato !== "ANULADO" ? c.indice : null;
 }
 /**
  * Job periódico: revisa, para cada Estado con transición automática "dropbox_carpeta", si aparecieron
@@ -331,6 +331,8 @@ async function scanEstadoParaTenant(tenant, cfg, estadoDestino) {
     const userIdsSet = new Set();
     for (const up of userProjects) {
         up.contracts.forEach((c, idx) => {
+            if (c?.estadoContrato === "ANULADO")
+                return; // lápida: no espera ningún archivo (etapa 2b)
             const sinEstado = c.estado_id === null || c.estado_id === undefined;
             if (sinEstado || idsAnteriores.includes(c.estado_id)) {
                 userIdsSet.add(String(up.userId));

@@ -12,7 +12,7 @@
  * `corridaServidor.ts`): un proceso, una corrida por vez, sin Redis.
  */
 
-export type TipoCorridaArca = "obras_sociales" | "nombres" | "carga_masiva" | "altas_masivas" | "catalogo" | "constancias" | "relaciones" | "verificacion";
+export type TipoCorridaArca = "obras_sociales" | "nombres" | "carga_masiva" | "altas_masivas" | "catalogo" | "constancias" | "relaciones" | "verificacion" | "baja" | "modificacion" | "anulacion";
 
 export const NOMBRE_CORRIDA: Record<TipoCorridaArca, string> = {
   obras_sociales: "la validación de obras sociales",
@@ -23,6 +23,10 @@ export const NOMBRE_CORRIDA: Record<TipoCorridaArca, string> = {
   constancias: "la descarga de constancias de alta",
   relaciones: "la sincronización de relaciones laborales",
   verificacion: "la verificación de altas en ARCA",
+  // Las tres operaciones de Relaciones Laborales → Modificaciones y Bajas (ver `corridaOperacionRelacion.ts`).
+  baja: "una baja en ARCA",
+  modificacion: "una modificación de relación laboral en ARCA",
+  anulacion: "una anulación en ARCA",
 };
 
 const tomados = new Map<string, { tipo: TipoCorridaArca; desde: Date }>();

@@ -3,6 +3,8 @@ import { Project } from "../models/Project.js";
 import { User } from "../models/User.js";
 import UserProject from "../models/UserProject.js";
 import { fechaISO } from "../utils/contratoVigencia.js";
+import { esLapida } from "../utils/anulacionContrato.js";
+import { anularContrato } from "./anulacionContrato.js";
 /**
  * Saca UN contrato de una asignación. Si la persona queda sin contratos en el proyecto, se borra la
  * asignación y sus referencias (equipo, coordinación, ficha), como si nunca hubiera estado.
@@ -11,19 +13,25 @@ import { fechaISO } from "../utils/contratoVigencia.js";
  * solicitud aprobada deje la base exactamente igual que borrar su contrato a mano.
  */
 export async function quitarContrato(up, idx) {
-    const projectId = up.projectId;
-    const userId = up.userId;
     up.contracts.splice(idx, 1);
     up.markModified("contracts");
-    if (up.contracts.length === 0) {
-        const upId = up._id;
-        await up.deleteOne();
-        await Project.findByIdAndUpdate(projectId, { $pull: { assignedUsers: userId, teamConfig: { userId }, coordinatorAssignments: { userId } } });
-        await User.findByIdAndUpdate(userId, { $pull: { projectIds: projectId, "metadata.projects": upId } });
-    }
-    else {
+    if (up.contracts.length === 0)
+        await eliminarVinculo(up);
+    else
         await up.save();
-    }
+}
+/**
+ * La persona ya no tiene contratos en el proyecto: se borra el vínculo y sus referencias (equipo,
+ * coordinación, ficha), como si nunca hubiera estado. Lo usan el borrado físico (deprecado) y la
+ * anulación del último contrato de verdad (`services/anulacionContrato.ts`).
+ */
+export async function eliminarVinculo(up) {
+    const projectId = up.projectId;
+    const userId = up.userId;
+    const upId = up._id;
+    await up.deleteOne();
+    await Project.findByIdAndUpdate(projectId, { $pull: { assignedUsers: userId, teamConfig: { userId }, coordinatorAssignments: { userId } } });
+    await User.findByIdAndUpdate(userId, { $pull: { projectIds: projectId, "metadata.projects": upId } });
 }
 /** "YYYY-MM-DD" de lo que venga: la solicitud guarda texto, pero un Date no debe romper la comparación. */
 const dia = (v) => (v instanceof Date ? v.toISOString().slice(0, 10) : fechaISO(v == null ? "" : String(v)));
@@ -68,15 +76,20 @@ export async function buscarContratoDeSolicitud(params) {
     if (!Types.ObjectId.isValid(params.personaId) || projectIds.length === 0)
         return null;
     const asignaciones = await UserProject.find({ userId: params.personaId, projectId: { $in: projectIds } });
-    const todos = asignaciones.flatMap((up) => (up.contracts || []).map((c, idx) => ({ up, c, idx })));
+    // Las lápidas (contratos ya anulados) no son candidatos: mantienen su posición, pero no son un contrato.
+    const todos = asignaciones.flatMap((up) => (up.contracts || []).map((c, idx) => ({ up, c, idx })).filter((x) => !esLapida(x.c)));
     return elegirContratoDeSolicitud(todos, params);
 }
 /** Borra el contrato de la solicitud, si aparece. Si no, no toca nada y lo dice. */
-export async function borrarContratoDeSolicitud(params) {
+export async function borrarContratoDeSolicitud(params, quien) {
     const elegido = await buscarContratoDeSolicitud(params);
     if (!elegido)
         return { borrado: false };
     const detalle = { proyecto: String(elegido.up.nombre_proyecto || ""), desde: dia(elegido.c.fecha_alta_contrato), hasta: dia(elegido.c.fecha_baja_contrato) };
-    await quitarContrato(elegido.up, elegido.idx);
+    /*
+      SE ANULA, NO SE BORRA (etapa 2b, 18/11/2026): borrarlo corría la posición de los contratos que venían
+      después. El contrato queda entero en `contratos_anulados` y en su lugar una lápida.
+    */
+    await anularContrato({ up: elegido.up, idx: elegido.idx, tenantId: quien?.tenantId ?? null, por: quien?.por ?? null, porNombre: quien?.porNombre || "", motivo: "Se borró la solicitud aprobada que lo había creado", origen: "borrar_solicitud" });
     return { borrado: true, ...detalle };
 }

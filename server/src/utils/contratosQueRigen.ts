@@ -41,12 +41,20 @@ export const fechaISOExpr = (campo: string) => ({
 });
 
 /**
+ * `esContratoVigente` como expresión de Mongo, sobre una clave `{ estado, alta, baja }` (`$$k`): estado
+ * VIGENTE, alta presente y <= hoy, y sin baja o baja >= hoy. Sin estado no rige (no se adivina).
+ */
+export const condicionVigenteExpr = (hoy: string) => ({
+  $and: [{ $eq: ["$$k.estado", "VIGENTE"] }, { $ne: ["$$k.alta", ""] }, { $lte: ["$$k.alta", hoy] }, { $or: [{ $eq: ["$$k.baja", ""] }, { $gte: ["$$k.baja", hoy] }] }],
+});
+
+/**
  * EL CONTRATO QUE RIGE DE CADA MIEMBRO, ELEGIDO ADENTRO DE MONGO.
  *
  * Los vínculos de un proyecto grande pesan: 254 personas con 22 contratos de promedio son 5,3 MB.
  * Traerlos para quedarse con UNO por persona hacía que `area-shift-counts` bajara ~1 MB aun pidiendo
  * cuatro campos (11 s medidos), y la Jerarquía lo repetía una vez por área. Acá la elección se hace
- * en la base con la misma regla que `getContratoActivo` —vigentes; entre ellos manda el tiempo
+ * en la base con la misma regla que `getContratoActivo` —vigentes (estado VIGENTE y por fechas, etapa 3); entre ellos manda el tiempo
  * indeterminado; el más reciente por alta y, a igualdad, por carga; sin vigentes, el más reciente de
  * todos— y viaja una fila chica por persona.
  *
@@ -58,7 +66,7 @@ export const fechaISOExpr = (campo: string) => ({
 /** Lo que devuelve siempre: lo que miran los contadores y la Jerarquía. */
 // `sede_id`: la sede del contrato decide en qué fila «área · sede» cae la persona (ver `compartido/areaTurno.ts`).
 // `areaId`/`shiftId`: los contratos viejos sólo tienen ésos (ver `services/equipoSegunContratos.ts`).
-const CAMPOS_BASE = ["fecha_alta_contrato", "fecha_baja_contrato", "nombre_estado_empleado", "nombre_contrato", "areaShiftAssignments", "areaId", "shiftId", "sede_id"];
+const CAMPOS_BASE = ["estadoContrato", "fecha_alta_contrato", "fecha_baja_contrato", "nombre_estado_empleado", "nombre_contrato", "areaShiftAssignments", "areaId", "shiftId", "sede_id"];
 
 /**
  * `camposExtra`: campos del contrato que además hacen falta. La tabla de Gestionar Equipo pide una
@@ -76,40 +84,46 @@ const CAMPOS_BASE = ["fecha_alta_contrato", "fecha_baja_contrato", "nombre_estad
  */
 export async function contratosQueRigenDelProyecto(projectId: string, hoy: string, camposExtra: string[] = []): Promise<Map<string, any>> {
   const campos = [...new Set([...CAMPOS_BASE, ...camposExtra])];
+  const condVigente = condicionVigenteExpr(hoy);
   const filas = await UserProject.aggregate([
     { $match: { projectId: new Types.ObjectId(projectId) } },
     {
       $project: {
         userId: 1,
         contracts: 1,
+        // Sin las lápidas de contratos anulados (etapa 2b): sin fechas parecían vigentes e indeterminadas.
+        // Se filtran DESPUÉS de numerar: `i` sigue siendo la posición real en el array.
         claves: {
-          $map: {
-            input: { $range: [0, { $size: { $ifNull: ["$contracts", []] } }] },
-            as: "i",
-            in: {
-              $let: {
-                vars: { c: { $arrayElemAt: ["$contracts", "$$i"] } },
+          $filter: {
+            input: {
+              $map: {
+                input: { $range: [0, { $size: { $ifNull: ["$contracts", []] } }] },
+                as: "i",
                 in: {
-                  i: "$$i",
-                  alta: fechaISOExpr("$$c.fecha_alta_contrato"),
-                  baja: fechaISOExpr("$$c.fecha_baja_contrato"),
-                  carga: { $toString: { $ifNull: ["$$c.fecha_carga", ""] } },
+                  $let: {
+                    vars: { c: { $arrayElemAt: ["$contracts", "$$i"] } },
+                    in: {
+                      i: "$$i",
+                      anulado: { $eq: ["$$c.estadoContrato", "ANULADO"] },
+                      estado: { $ifNull: ["$$c.estadoContrato", null] },
+                      alta: fechaISOExpr("$$c.fecha_alta_contrato"),
+                      baja: fechaISOExpr("$$c.fecha_baja_contrato"),
+                      carga: { $toString: { $ifNull: ["$$c.fecha_carga", ""] } },
+                    },
+                  },
                 },
               },
             },
+            as: "x",
+            cond: { $not: ["$$x.anulado"] },
           },
         },
       },
     },
     {
       $addFields: {
-        vigentes: {
-          $filter: {
-            input: "$claves",
-            as: "k",
-            cond: { $and: [{ $or: [{ $eq: ["$$k.alta", ""] }, { $lte: ["$$k.alta", hoy] }] }, { $or: [{ $eq: ["$$k.baja", ""] }, { $gte: ["$$k.baja", hoy] }] }] },
-          },
-        },
+        // La misma regla que `esContratoVigente` (etapa 3): estado VIGENTE, ya arrancó y no terminó.
+        vigentes: { $filter: { input: "$claves", as: "k", cond: condVigente } },
       },
     },
     {
@@ -139,7 +153,8 @@ export async function contratosQueRigenDelProyecto(projectId: string, hoy: strin
         _id: 0,
         userId: 1,
         indice: "$elegido.i",
-        total: { $size: { $ifNull: ["$contracts", []] } },
+        // Cuántos contratos de verdad: sin lápidas.
+        total: { $size: { $filter: { input: { $ifNull: ["$contracts", []] }, as: "c", cond: { $ne: ["$$c.estadoContrato", "ANULADO"] } } } },
         vigentes: {
           $cond: [
             { $gt: [{ $size: "$vigentes" }, 1] },
@@ -152,7 +167,7 @@ export async function contratosQueRigenDelProyecto(projectId: string, hoy: strin
                     vars: { c: { $arrayElemAt: ["$contracts", "$$k.i"] } },
                     in: {
                       _indice: "$$k.i",
-                      fecha_alta_contrato: "$$c.fecha_alta_contrato",
+                      estadoContrato: "$$c.estadoContrato", fecha_alta_contrato: "$$c.fecha_alta_contrato",
                       fecha_baja_contrato: "$$c.fecha_baja_contrato",
                       nombre_contrato: "$$c.nombre_contrato",
                       nombre_estado_empleado: "$$c.nombre_estado_empleado",
@@ -227,26 +242,24 @@ export async function contratosQueRigenDeLasPersonas(
       tres strings cortos.
     */
     { $unwind: { path: "$contracts", preserveNullAndEmptyArrays: false } },
+    // Sin las lápidas de contratos anulados (etapa 2b).
+    { $match: { "contracts.estadoContrato": { $ne: "ANULADO" } } },
     {
       $project: {
         _id: 0,
         userId: 1,
+        estado: { $ifNull: ["$contracts.estadoContrato", null] },
         alta: fechaISOExpr("$contracts.fecha_alta_contrato"),
         baja: fechaISOExpr("$contracts.fecha_baja_contrato"),
         carga: { $toString: { $ifNull: ["$contracts.fecha_carga", ""] } },
         ...Object.fromEntries(camposExtra.map((campo) => [campo, `$contracts.${campo}`])),
       },
     },
-    { $group: { _id: "$userId", claves: { $push: { alta: "$alta", baja: "$baja", carga: "$carga", ...Object.fromEntries(camposExtra.map((campo) => [campo, `$${campo}`])) } } } },
+    { $group: { _id: "$userId", claves: { $push: { estado: "$estado", alta: "$alta", baja: "$baja", carga: "$carga", ...Object.fromEntries(camposExtra.map((campo) => [campo, `$${campo}`])) } } } },
     {
       $addFields: {
-        vigentes: {
-          $filter: {
-            input: "$claves",
-            as: "k",
-            cond: { $and: [{ $or: [{ $eq: ["$$k.alta", ""] }, { $lte: ["$$k.alta", hoy] }] }, { $or: [{ $eq: ["$$k.baja", ""] }, { $gte: ["$$k.baja", hoy] }] }] },
-          },
-        },
+        // La misma regla que `esContratoVigente` (etapa 3).
+        vigentes: { $filter: { input: "$claves", as: "k", cond: condicionVigenteExpr(hoy) } },
       },
     },
     {
@@ -278,6 +291,7 @@ export async function contratosQueRigenDeLasPersonas(
       String(f._id),
       f.elegido
         ? {
+            estadoContrato: f.elegido.estado ?? null,
             fecha_alta_contrato: f.elegido.alta || "",
             fecha_baja_contrato: f.elegido.baja || "",
             ...Object.fromEntries(camposExtra.map((campo) => [campo, f.elegido[campo] ?? null])),

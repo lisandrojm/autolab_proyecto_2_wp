@@ -1,15 +1,17 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLandmark, faFileSignature, faIdCard, faHourglassHalf, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faLandmark, faFileSignature, faIdCard, faHourglassHalf, faUserPlus, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { faDropbox } from "@fortawesome/free-brands-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { DropboxTab } from "../components/documents/DropboxTab";
 import { AntiguedadArcaTab } from "../components/arca/AntiguedadArcaTab";
+import { AuditoriaArcaTab } from "../components/arca/AuditoriaArcaTab";
+import { arcaRelacionesAPI } from "../api/arcaRelaciones";
 import { getHelp, hasHelp } from "../data/help/helpContent";
 import { usePuedeAbrir } from "../hooks/usePuedeAbrir";
 
-type TabKey = "dropbox" | "afip" | "paritarias" | "registros" | "solicitudes" | "antiguedad";
+type TabKey = "dropbox" | "afip" | "paritarias" | "registros" | "solicitudes" | "antiguedad" | "auditoria";
 
 export function DocumentsPage() {
   const puedeAbrir = usePuedeAbrir();
@@ -18,12 +20,19 @@ export function DocumentsPage() {
   const carpetaInicial = params.get("carpeta") || undefined;
   const busquedaInicial = params.get("buscar") || undefined;
   // `?tab=antiguedad`: el link de Vacaciones › Gestión por Usuario (modal de antigüedad) abre directo en Antigüedad ARCA.
-  const [activeTab, setActiveTab] = useState<TabKey>(params.get("tab") === "antiguedad" ? "antiguedad" : carpetaInicial?.startsWith("/WEPRODU/ARCA") ? "afip" : "dropbox");
+  const tabInicial = params.get("tab");
+  const [activeTab, setActiveTab] = useState<TabKey>(tabInicial === "antiguedad" || tabInicial === "auditoria" ? tabInicial : carpetaInicial?.startsWith("/WEPRODU/ARCA") ? "afip" : "dropbox");
   const [itemCount, setItemCount] = useState<number | undefined>(undefined);
   const [showInfo, setShowInfo] = useState(false);
   const helpEntry = getHelp("documents");
+  // El contador de «Auditoría ARCA» (etapa 5): los totales guardados, sin recalcular nada.
+  const [auditoriaTotal, setAuditoriaTotal] = useState<number | null>(null);
+  useEffect(() => {
+    arcaRelacionesAPI.auditoriaResumen().then((r) => setAuditoriaTotal(r.totales?.total ?? null)).catch(() => {});
+  }, []);
 
   const handleCountChange = useCallback((count: number | undefined) => setItemCount(count), []);
+  const handleAuditoriaCount = useCallback((count: number | undefined) => { setItemCount(count); if (count !== undefined) setAuditoriaTotal(count); }, []);
 
   return (
     <PageLayout
@@ -61,6 +70,11 @@ export function DocumentsPage() {
               <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === "antiguedad" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("antiguedad")} title="La antigüedad de cada persona según las relaciones laborales que ARCA tiene registradas, sincronizadas todos los días">
                 <FontAwesomeIcon icon={faHourglassHalf} className="text-xs" />
                 Antigüedad ARCA
+              </button>
+              <button className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === "auditoria" ? "border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"}`} onClick={() => setActiveTab("auditoria")} title="Lo que no encaja entre WeProdu y ARCA (bajas que faltan en ARCA, casos para revisar, altas con fecha distinta, discrepancias con FRAME): lo mira una persona">
+                <FontAwesomeIcon icon={faTriangleExclamation} className="text-xs" />
+                Auditoría ARCA
+                {auditoriaTotal !== null && <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${auditoriaTotal ? "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-200" : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300"}`}>{auditoriaTotal}</span>}
               </button>
             </div>
               {puedeAbrir("/escaneo-dropbox") && (
@@ -104,6 +118,7 @@ export function DocumentsPage() {
               sincronizada a diario) y la antigüedad calculada sobre ella.
             */}
             {activeTab === "antiguedad" && <AntiguedadArcaTab key="antiguedad" onCountChange={handleCountChange} />}
+            {activeTab === "auditoria" && <AuditoriaArcaTab key="auditoria" onCountChange={handleAuditoriaCount} />}
           </div>
         </div>
       }

@@ -15,26 +15,26 @@ export declare const createUserSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     name?: string;
     email?: string;
+    firstName?: string;
+    lastName?: string;
+    hireDate?: Date;
     password?: string;
     roles?: string[];
     clientIds?: string[];
     projectIds?: string[];
-    firstName?: string;
-    lastName?: string;
-    hireDate?: Date;
     extraVacationDays?: number;
     isProjectResponsible?: boolean;
     metadata?: any;
 }, {
     name?: string;
     email?: string;
+    firstName?: string;
+    lastName?: string;
+    hireDate?: string | Date;
     password?: string;
     roles?: string[];
     clientIds?: string[];
     projectIds?: string[];
-    firstName?: string;
-    lastName?: string;
-    hireDate?: string | Date;
     extraVacationDays?: number;
     isProjectResponsible?: boolean;
     metadata?: any;

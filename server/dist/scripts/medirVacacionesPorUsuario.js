@@ -36,6 +36,7 @@ async function main() {
         {
             $project: {
                 _id: 0, userId: 1, nombre_rol_frame: 1, rol_frame_id: 1,
+                // sin-estado: medición, no decide vigencia.
                 contracts: { $map: { input: { $ifNull: ["$contracts", []] }, as: "c", in: { fecha_alta_contrato: "$$c.fecha_alta_contrato", fecha_baja_contrato: "$$c.fecha_baja_contrato", nombre_rol_frame: "$$c.nombre_rol_frame" } } },
             },
         },

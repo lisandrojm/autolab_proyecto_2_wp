@@ -13,6 +13,7 @@ const schema = new Schema({
     userProjectId: { type: Schema.Types.ObjectId, default: null },
     projectId: { type: Schema.Types.ObjectId, ref: "Project", default: null },
     contractIndex: { type: Number, default: null },
+    contratoKey: { type: Schema.Types.ObjectId, default: null, index: true },
     nombreProyecto: { type: String, default: "" },
     asignadoAMano: { type: Boolean, default: false },
     datos: { type: Schema.Types.Mixed, default: {} },

@@ -1,10 +1,10 @@
 import axios from "./axiosConfig";
 import { emitUsersChanged } from "../utils/navbarEvents";
 
-import type { ContractOverviewRow } from "@compartido/arca/tiposArca";
+import type { AltaArcaPresentada, ContractOverviewRow, OperacionArcaPresentada } from "@compartido/arca/tiposArca";
 import type { AntiguedadArcaResumen } from "@compartido/antiguedadTexto";
 export type { AntiguedadArcaResumen } from "@compartido/antiguedadTexto";
-export type { SinCuitDocumento, SinCuitValidacion, AltaArcaPresentada, ContractOverviewRow } from "@compartido/arca/tiposArca";
+export type { SinCuitDocumento, SinCuitValidacion, AltaArcaPresentada, OperacionArcaPresentada, ContractOverviewRow } from "@compartido/arca/tiposArca";
 
 /** Una solicitud sin aprobar, tal como la lista el padrón de Contratados (`GET /users/solicitudes-pendientes`). */
 export interface SolicitudPendienteDeContrato {
@@ -90,6 +90,13 @@ export interface TenantRef {
 
 /* ---------- Tipos dominio ---------- */
 export interface Contract {
+  /** La identidad del contrato (etapa 2) y las marcas de ARCA, cuando el server manda el contrato entero (gestor «Todos los contratos»). */
+  contratoKey?: string | null;
+  estadoContrato?: string;
+  altaArcaPresentada?: AltaArcaPresentada | null;
+  bajaArcaPresentada?: OperacionArcaPresentada | null;
+  modificacionArcaPresentada?: OperacionArcaPresentada | null;
+  anulacionArcaPresentada?: OperacionArcaPresentada | null;
   fecha_alta_contrato: string;
   fecha_baja_contrato: string;
   /** De qué proyecto vino, si entró con «Agregar con contrato vigente» (copia del contrato de ese proyecto). */
@@ -442,7 +449,39 @@ export interface UsersListResponse {
 }
 
 /** Contrato de una persona enriquecido con su proyecto, cliente y empresas (para gestionarlo cross-proyecto). */
+/** Un contrato anulado de la persona (GET /users/:id/contratos-anulados). */
+export interface ContratoAnuladoFila {
+  contratoKey: string;
+  projectId: string;
+  projectName: string;
+  posicion: number;
+  anuladoEl: string;
+  anuladoPorNombre: string;
+  motivo: string;
+  origen: string;
+  vinculoEliminado: boolean;
+  contrato: { nombre_contrato: string; fecha_alta_contrato: string; fecha_baja_contrato: string; nombre_empresa_contrato: string; nombre_estado_empleado: string };
+}
+
+/** Un evento del historial de un contrato (auditoría, etapa 3). */
+export interface EventoAuditoriaContrato {
+  _id: string;
+  el: string;
+  tipo: "creado" | "modificado" | "anulado" | "quitado";
+  cambios: { campo: string; antes: unknown; despues: unknown }[];
+  resumen: { nombre_contrato?: string; fecha_alta_contrato?: string; fecha_baja_contrato?: string };
+  motivo: string;
+  nota: string;
+  origen: "app" | "script" | "sistema";
+  porNombre: string;
+  detalle: string;
+  operacion: string;
+  posicion: number;
+}
+
 export interface ManagedContract {
+  /** El vínculo (users_&_projects) al que pertenece el contrato: con él se nombra en las operaciones de ARCA. */
+  userProjectId?: string;
   projectId: string;
   projectName: string;
   clientId: string;
@@ -451,6 +490,18 @@ export interface ManagedContract {
   releaseEmpresas: { id: string; label: string }[];
   contractIndex: number;
   contract: Contract;
+  /**
+   * Contrato ANULADO (etapa 2b): `contract` es la lápida y esto es lo que era, quién lo anuló, cuándo y
+   * por qué. `vinculoEliminado`: era el último contrato y la persona salió del equipo (no hay lápida).
+   */
+  anulado?: {
+    el: string | null;
+    porNombre: string;
+    motivo: string;
+    origen: string;
+    vinculoEliminado: boolean;
+    contrato: { nombre_contrato?: string; fecha_alta_contrato?: string; fecha_baja_contrato?: string; nombre_empresa_contrato?: string; nombre_estado_empleado?: string };
+  };
 }
 
 /* ---------- Normalizadores ---------- */
@@ -804,9 +855,21 @@ class UsersAPI {
     return Array.isArray(data) ? data : [];
   }
 
+  /** El historial de un contrato: cada cambio, quién y cuándo (por su clave, no por su posición). */
+  async auditoriaDeContrato(userId: string, contratoKey: string): Promise<EventoAuditoriaContrato[]> {
+    const { data } = await axios.get(`/users/${userId}/contratos/${contratoKey}/auditoria`, { headers: this.getHeaders() });
+    return Array.isArray(data) ? data : [];
+  }
+
   /** Todos los contratos de una persona (cross-proyecto/cliente), enriquecidos para gestionarlos. */
   async getAllContracts(userId: string): Promise<ManagedContract[]> {
     const { data } = await axios.get(`/users/${userId}/all-contracts`, { headers: this.getHeaders() });
+    return Array.isArray(data) ? data : [];
+  }
+
+  /** Los contratos anulados de la persona: qué eran, quién los anuló, cuándo y por qué. */
+  async contratosAnulados(userId: string): Promise<ContratoAnuladoFila[]> {
+    const { data } = await axios.get(`/users/${userId}/contratos-anulados`, { headers: this.getHeaders() });
     return Array.isArray(data) ? data : [];
   }
 

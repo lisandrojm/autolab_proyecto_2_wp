@@ -284,6 +284,7 @@ export interface IUserMetadata {
         userProjectId?: Types.ObjectId;
         fechaBajaContrato?: string;
         indiceContrato?: number;
+        contratoKey?: Types.ObjectId | null;
     };
     /**
      * Con qué se superponía el alta cuando se pidió (contratos en cualquier proyecto y otras solicitudes

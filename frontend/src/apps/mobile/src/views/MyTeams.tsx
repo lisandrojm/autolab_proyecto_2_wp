@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSitemap, faLayerGroup, faChevronDown, faChevronRight, faUserTie, faUserShield, faSearch, faXmark, faFileContract, faCircleInfo, faLocationDot } from "@fortawesome/free-solid-svg-icons";
+import { faSitemap, faLayerGroup, faChevronDown, faChevronRight, faUserTie, faUserShield, faSearch, faXmark, faFileContract, faCircleInfo, faLocationDot, faClock } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import SectionHeader from "../components/SectionHeader";
 import ContratoMiembroModal from "../components/ContratoMiembroModal";
@@ -299,7 +299,7 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
         const lista = m.get(clave) || [];
         // Quien tiene dos contratos vigentes en turnos distintos: en cada turno, el contrato que lo pone ahí (14/11/2026).
         const delTurno = persona.porContrato?.find((c) => c.claves.includes(clave));
-        lista.push(delTurno ? { ...persona, nombreContrato: delTurno.nombreContrato, estadoContrato: delTurno.estadoContrato, fechaAlta: delTurno.fechaAlta, fechaBaja: delTurno.fechaBaja } : persona);
+        lista.push(delTurno ? { ...persona, nombreContrato: delTurno.nombreContrato, estadoContrato: delTurno.estadoContrato, fechaAlta: delTurno.fechaAlta, fechaBaja: delTurno.fechaBaja, horaInicio: delTurno.horaInicio, horaFin: delTurno.horaFin, diasSemana: delTurno.diasSemana } : persona);
         m.set(clave, lista);
       }
     }
@@ -352,6 +352,14 @@ export default function MyTeams({ onNavigate }: MyTeamsProps) {
         </div>
         {/* El tipo de contrato en su propia línea: con las fechas y el estado en la misma se truncaba. */}
         {m.nombreContrato && <p className="truncate text-[10px] font-bold uppercase tracking-wider text-gray-500">{m.nombreContrato}</p>}
+        {/* El horario de SU contrato (puede no coincidir con el del turno). */}
+        <p className="flex min-w-0 items-center gap-1 truncate text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+          <FontAwesomeIcon icon={faClock} className="h-2.5 w-2.5 shrink-0 text-primary opacity-70" />
+          <span className="truncate">
+            {m.horaInicio || m.horaFin ? `Entrada ${m.horaInicio || "—"} · Salida ${m.horaFin || "—"}` : "Sin horario en el contrato"}
+            {m.diasSemana && m.diasSemana.length > 0 ? ` · ${textoDeDias(m.diasSemana)}` : ""}
+          </span>
+        </p>
         <p className="truncate text-[10px] text-slate-500 dark:text-slate-400">
           Alta: {fechaContrato(m.fechaAlta)} · Baja: {m.fechaBaja ? fechaContrato(m.fechaBaja) : "—"}
           {m.estadoContrato ? ` · ${m.estadoContrato}` : ""}

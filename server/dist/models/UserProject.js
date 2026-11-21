@@ -1,4 +1,23 @@
-import { Schema, model } from "mongoose";
+import { Schema, model, Types } from "mongoose";
+import { clavesAPoner } from "../utils/identidadContrato.js";
+import { instalarAuditoriaDeContratos } from "../services/auditoriaContratos.js";
+import { instalarEstadoAlGuardar } from "../services/estadoContratoAlGuardar.js";
+import { camposDeContratoEnLapida } from "../utils/anulacionContrato.js";
+const operacionArcaSchema = new Schema({
+    via: { type: String, enum: ["modificaciones"] },
+    fecha: { type: Date },
+    resultado: { type: String, enum: ["presentada", "indeterminado", "fallida", "presentando", "anulada"] },
+    clase: { type: String },
+    motivo: { type: String },
+    acuse: { type: Schema.Types.Mixed },
+    payload: { type: Schema.Types.Mixed },
+    relacion: { type: Schema.Types.Mixed },
+    que: { type: String, enum: ["alta", "baja"] },
+    cambios: { type: [new Schema({ campo: String, antes: String, despues: String }, { _id: false })], default: undefined },
+    logId: { type: Schema.Types.ObjectId, ref: "ArcaAltasLog" },
+    porConsulta: { type: Boolean },
+    usuarioId: { type: Schema.Types.ObjectId, ref: "User", default: null },
+}, { _id: false });
 const contractSchema = new Schema({
     proyecto_id: { type: Number },
     empleado_id: { type: Number },
@@ -6,6 +25,19 @@ const contractSchema = new Schema({
     categoria_sat_id: { type: Number },
     fecha_alta_contrato: { type: String },
     fecha_baja_contrato: { type: String },
+    contratoKey: { type: Schema.Types.ObjectId },
+    estadoContrato: { type: String, enum: ["VIGENTE", "FINALIZADO", "SIN_DETERMINAR", "ANULADO"] },
+    estadoContratoMotivo: { type: String },
+    /** De dónde salió la baja: "ARCA_SYNC" = la escribió «Sincronizar bajas» con evidencia fuerte (etapa 3, paso 2). */
+    origenBaja: { type: String },
+    bajaArca: {
+        type: new Schema({ fin: String, situacionBaja: String, empleadoraCuit: String, bajaAnterior: String, aplicadaEl: Date, tipo: String }, { _id: false }),
+        default: undefined,
+    },
+    anulacion: {
+        type: new Schema({ el: Date, por: { type: Schema.Types.ObjectId, ref: "User" }, porNombre: String, motivo: String, claveFrame: String, claveIdentidad: String }, { _id: false }),
+        default: undefined,
+    },
     tipo_contrato_id: { type: Number },
     contrato_id: { type: Schema.Types.ObjectId, ref: "Contrato" },
     forma_pago_id: { type: Schema.Types.ObjectId, ref: "FormaPago", default: null },
@@ -69,6 +101,7 @@ const contractSchema = new Schema({
     obraSocialConstatadaEn: { type: String, enum: ["sss", "arca"] },
     obraSocialConstatadaEl: { type: Date, default: null },
     obraSocialNoFigura: { type: Boolean, default: false },
+    obraSocialSegunLiquidaciones: { type: String },
     obraSocialBloqueada: { type: Boolean, default: false },
     obraSocialAplicadaOrigen: { type: String, enum: ["panel", "script"] },
     obraSocialAplicadaPor: { type: Schema.Types.ObjectId, ref: "User", default: null },
@@ -76,7 +109,8 @@ const contractSchema = new Schema({
         type: new Schema({
             via: { type: String, enum: ["carga_masiva", "altas_masivas", "verificacion", "externa"] },
             fecha: { type: Date },
-            resultado: { type: String, enum: ["presentada", "indeterminado", "fallida", "presentando"] },
+            // `anulada`: el alta se anuló en ARCA desde WeProdu (`anulacionArcaPresentada`): ya no traba ni se vuelve a presentar sola.
+            resultado: { type: String, enum: ["presentada", "indeterminado", "fallida", "presentando", "anulada"] },
             codigoNovedad: { type: String },
             nroTransaccion: { type: String },
             motivo: { type: String },
@@ -91,6 +125,10 @@ const contractSchema = new Schema({
         default: undefined,
     },
     enviosArca: { type: Number },
+    // Las operaciones de Modificaciones y Bajas: ver `IContract.bajaArcaPresentada` y hermanas.
+    bajaArcaPresentada: { type: operacionArcaSchema, default: undefined },
+    modificacionArcaPresentada: { type: operacionArcaSchema, default: undefined },
+    anulacionArcaPresentada: { type: operacionArcaSchema, default: undefined },
     // La última verificación en ARCA de un alta trabada por «ARCA ya tiene un alta de ese día»: ver `IContract.verificacionArca`.
     verificacionArca: {
         type: new Schema({
@@ -136,6 +174,7 @@ const contractSchema = new Schema({
     firmaReleasesGeneradoAt: { type: Date },
     firmaEnviadaAt: { type: Date },
     circuitoReparado: { type: Schema.Types.Mixed, default: undefined },
+    cierreSinFirma: { type: Schema.Types.Mixed, default: undefined },
     reciboDesvinculado: { type: Schema.Types.Mixed, default: undefined },
     contenidoCustomContrato: { type: String, default: null, maxlength: 200000 },
     contenidoCustomReleases: [
@@ -198,6 +237,46 @@ const userProjectSchema = new Schema({
 userProjectSchema.index({ projectId: 1, userId: 1 }, { unique: true });
 // Contratos por vencer: busca por fecha de baja en vez de leer todas las asignaciones de un proyecto.
 userProjectSchema.index({ "contracts.fecha_baja_contrato": 1 });
+/*
+  LA CLAVE DE CADA CONTRATO (etapa 2). Índice para buscar un contrato por su clave. NO es único a propósito:
+  en un índice único multiclave cada contrato SIN clave cuenta como `null`, y durante la transición dos
+  vínculos con un contrato sin clave cada uno chocarían. Las claves repetidas las reporta el backfill.
+*/
+userProjectSchema.index({ "contracts.contratoKey": 1 }, { partialFilterExpression: { "contracts.contratoKey": { $exists: true } } });
+/*
+  QUE NINGÚN CONTRATO PIERDA SU CLAVE (etapa 2). Hay ~30 lugares que reemplazan un contrato entero
+  (asignar un objeto nuevo en una posición del array), y para Mongoose el reemplazo es un subdocumento nuevo, sin la clave del que
+  estaba. En vez de confiar en que cada uno la arrastre —y en que el próximo que se escriba también—, el
+  modelo anota al cargar qué clave tenía cada posición y, antes de guardar, la devuelve al que quedó en
+  ese lugar (`clavesAPoner`). En `validate` y no en `save`: corre igual en los dos, y se puede probar sin base.
+*/
+userProjectSchema.post("init", function () {
+    this.$locals.clavesAlCargar = (this.contracts || []).map((c) => (c?.contratoKey ? String(c.contratoKey) : null));
+});
+userProjectSchema.pre("validate", function () {
+    const contratos = this.contracts || [];
+    const decisiones = clavesAPoner(this.$locals?.clavesAlCargar, contratos.map((c) => ({ clave: c?.contratoKey ? String(c.contratoKey) : null, nuevo: !!c?.isNew })));
+    decisiones.forEach((d, i) => {
+        if (d)
+            contratos[i].contratoKey = new Types.ObjectId(d.clave);
+    });
+    /*
+      UNA LÁPIDA NO SE VUELVE A ESCRIBIR (etapa 2b). Hay endpoints que escriben por posición sin pasar por
+      `resolverIndiceContrato` (firma digital, AFIP, transiciones de estado…): si uno apunta a la posición
+      de un contrato anulado, le copiaría datos encima y lo resucitaría a medias. Mejor un error que eso.
+    */
+    contratos.forEach((c, i) => {
+        if (c?.estadoContrato !== "ANULADO")
+            return;
+        const campos = camposDeContratoEnLapida(typeof c.toObject === "function" ? c.toObject() : c);
+        if (campos.length)
+            throw new Error(`El contrato de la posición ${i} está anulado: no se puede escribir (${campos.slice(0, 5).join(", ")}).`);
+    });
+});
+// Después de guardar, lo guardado es el nuevo punto de partida (un segundo `save` del mismo documento).
+userProjectSchema.post("save", function () {
+    this.$locals.clavesAlCargar = (this.contracts || []).map((c) => (c?.contratoKey ? String(c.contratoKey) : null));
+});
 // Formas de pago: contar los contratos que usan una antes de dejar borrarla. Sólo los que tienen una.
 userProjectSchema.index({ "contracts.forma_pago_id": 1 }, { partialFilterExpression: { "contracts.forma_pago_id": { $type: "objectId" } } });
 /*
@@ -215,5 +294,9 @@ userProjectSchema.index({ "contracts.forma_pago_id": 1 }, { partialFilterExpress
 */
 export const INDICE_PAR_FRAME = "frame_proyecto_empleado_unico";
 userProjectSchema.index({ externalProjectId: 1, externalEmployeeId: 1 }, { unique: true, name: INDICE_PAR_FRAME, partialFilterExpression: { externalProjectId: { $gt: 0 }, externalEmployeeId: { $gt: 0 } } });
+// Auditoría de contratos (etapa 3): cada escritura de `contracts[]` queda registrada por `contratoKey`.
+instalarAuditoriaDeContratos(userProjectSchema);
+// Estado del contrato (etapa 3): se calcula al guardar si falta o si cambiaron sus fechas o su tipo.
+instalarEstadoAlGuardar(userProjectSchema);
 const UserProject = model("UserProject", userProjectSchema);
 export default UserProject;

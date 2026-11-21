@@ -230,6 +230,8 @@ export interface FilaPreview {
   errores: string[];
   advertencias: string[];
   superposicionHorario: boolean;
+  /** Tiene un contrato de ARCA en estas fechas: sólo se la contrata por Servicios (el mensaje), o vacío. */
+  soloServicios?: string;
   fechasTrabajadas: string[];
   desde: string;
   hasta: string;

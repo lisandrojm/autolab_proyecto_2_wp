@@ -6,7 +6,8 @@ import type { EstadoInvitacion } from "../compartido/vacaciones/campania.js";
  * CAMPAÑA DE GOCE DE VACACIONES (15/11/2026)
  * ═══════════════════════════════════════════════════════════════════════
  *
- * Una por temporada y tenant: invita a cada persona activa con días disponibles a elegir sus fechas
+ * Una por temporada y tenant: invita a cada persona activa con días disponibles (y, si la campaña lo
+ * pide, con su contrato vigente de ciertos tipos: `tiposContratoInvitar`) a elegir sus fechas
  * dentro de la ventana, con fecha límite; si no elige, la empresa le asigna un tramo único. Las reglas
  * puras están en `compartido/vacaciones/campania.ts`, el circuito en `services/vacaciones/campaniaVacaciones.ts`.
  *
@@ -31,6 +32,20 @@ export interface ICampaniaVacaciones extends Document {
   minDiasPorTramo: number;
   /** "YYYY-MM-DD": se fija al lanzarla (hoy + plazo). */
   fechaLimite?: string | null;
+  /**
+   * A QUIÉN SE INVITA (16/11/2026): los `tipo_contrato_id` cuyo contrato vigente en la empresa de cómputo
+   * hace que se invite a la persona. Vacío = todos los tipos habilitados. Se elige en borrador.
+   */
+  tiposContratoInvitar: number[];
+  /**
+   * LO QUE SE USÓ AL LANZAR, para que quede escrito: los tipos que entraron (con su nombre de ese día y
+   * cuántas personas), si fue «todos los habilitados», y cuántas con días quedaron afuera por cada motivo.
+   */
+  lanzamiento?: {
+    todosLosTipos: boolean;
+    tipos: { id: number; nombre: string; invitadas: number }[];
+    excluidas: { tipoDeshabilitado: number; tipoNoIncluido: number; sinContrato: number };
+  } | null;
   estado: EstadoCampania;
   creadaPor?: Types.ObjectId;
   lanzadaPor?: Types.ObjectId;
@@ -52,6 +67,18 @@ const campaniaSchema = new Schema<ICampaniaVacaciones>(
     avisoMinimoDias: { type: Number, required: true },
     minDiasPorTramo: { type: Number, required: true },
     fechaLimite: { type: String, default: null },
+    tiposContratoInvitar: { type: [Number], default: [] },
+    lanzamiento: {
+      type: new Schema(
+        {
+          todosLosTipos: Boolean,
+          tipos: [{ _id: false, id: Number, nombre: String, invitadas: Number }],
+          excluidas: { tipoDeshabilitado: Number, tipoNoIncluido: Number, sinContrato: Number },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
     estado: { type: String, enum: ["borrador", "lanzada", "cerrada"], default: "borrador" },
     creadaPor: { type: Schema.Types.ObjectId, ref: "User" },
     lanzadaPor: { type: Schema.Types.ObjectId, ref: "User" },

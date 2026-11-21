@@ -57,7 +57,7 @@ export function contratoEnLasFechas(pedido, existentes) {
 }
 /** El mensaje de la regla, igual en el formulario y en el rechazo del server. */
 export function mensajeSoloServicios(c) {
-    const periodo = c.hasta ? `del ${corta(c.desde)} al ${corta(c.hasta)}` : `desde el ${corta(c.desde)}, sin fecha de baja`;
+    const periodo = c.hasta ? `del ${corta(c.desde)} al ${corta(c.hasta)}${c.bajaSegunArca ? " (baja según ARCA)" : ""}` : `desde el ${corta(c.desde)}, sin fecha de baja`;
     return `Tiene un contrato de ARCA en esas fechas (${c.proyectoNombre || "otro proyecto"}, ${periodo}): sólo se puede contratar con un tipo de contrato de Servicios.`;
 }
 /**

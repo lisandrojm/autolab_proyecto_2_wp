@@ -7,7 +7,13 @@ import { fechaCorta } from "@compartido/planVacaciones/fechas";
 import { ETIQUETA_ESTADO, OTORGADOS, contarDiasTramo, validarPropuesta } from "@compartido/vacaciones/campania";
 import { getImageUrl } from "../../../../utils/imageHelpers";
 import SectionHeader from "../components/SectionHeader";
-import { CustomDatePicker } from "../components/CustomDatePicker";
+import CalendarioVacaciones, { type ModoCalendario } from "../components/CalendarioVacaciones";
+import { useVacations } from "../hooks/useVacations";
+import { useProfile } from "../hooks/useProfile";
+import VacationDetailModal from "../components/VacationDetailModal";
+import { vacationsAPI, type VacationRequest } from "../../../../api/vacations";
+import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { fechaPermitida, textoDeVentana } from "@compartido/ventanaGoce";
 import { useRefrescoEnFoco } from "../hooks/useRefrescoEnFoco";
 import { sweetAlert } from "../utils/sweetAlert";
 import { ViewType } from "../types";
@@ -33,6 +39,19 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
   const [datos, setDatos] = useState<MiInvitacion | null | undefined>(undefined);
   const [tramos, setTramos] = useState<Tramo[]>([{ desde: "", hasta: "" }]);
   const [enviando, setEnviando] = useState(false);
+  // El calendario de «Mis Vacaciones», abierto para un tramo.
+  const [calendario, setCalendario] = useState<{ tramo: number; modo: ModoCalendario | null } | null>(null);
+  const { occupiedDates, pendingDates, refetch: refrescarOcupadas } = useVacations();
+  // El detalle de un tramo (la misma ficha que «Mis Vacaciones»), con la cancelación de la campaña.
+  const { profile } = useProfile();
+  const [detalle, setDetalle] = useState<VacationRequest | null>(null);
+  const abrirDetalle = async (id: string) => {
+    try {
+      setDetalle(await vacationsAPI.getById(id));
+    } catch (e) {
+      sweetAlert.error("No se pudo", errorDeCampania(e));
+    }
+  };
 
   const cargar = useCallback(() => {
     campaniasVacacionesAPI
@@ -79,7 +98,7 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
 
   if (datos === undefined) return <LoadingSpinner message="Cargando..." />;
 
-  const encabezado = <SectionHeader icon={faUmbrellaBeach} titulo="Elegí tus vacaciones" onBack={() => onNavigate("home")} info={INFO} />;
+  const encabezado = <SectionHeader icon={faUmbrellaBeach} titulo="Vacaciones" onBack={() => onNavigate("home")} info={INFO} />;
   if (!datos || !inv || !c)
     return (
       <div className="flex-1 pb-24">
@@ -96,6 +115,7 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
   const desdeMinimo = datos.primerInicioPosible > c.ventanaDesde ? datos.primerInicioPosible : c.ventanaDesde;
   const otorgada = OTORGADOS.includes(inv.estado);
   const faltan = datos.diasParaLaFechaLimite;
+  const ventanaPersona = (inv as any).ventanaPersona?.enabled ? (inv as any).ventanaPersona : null;
 
   return (
     <div className="flex-1 pb-24">
@@ -113,11 +133,17 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
             </div>
             <span className="shrink-0 rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">{ETIQUETA_ESTADO[datos.estadoVisible]}</span>
           </div>
+          {/* El recordatorio es siempre ámbar, aunque falten pocos días: informa, no alarma. */}
           {datos.puedeProponer && (
-            <p className={`mt-3 flex items-center gap-2 text-sm font-semibold ${faltan <= 2 ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
-              <FontAwesomeIcon icon={faHourglassHalf} />
-              {faltan === 0 ? "Hoy es el último día para elegir" : `Te quedan ${faltan} día(s) para elegir (hasta el ${fechaCorta(c.fechaLimite)})`}
-            </p>
+            <div className="mt-3 rounded-lg bg-amber-50 p-3 dark:bg-amber-950/20">
+              <p className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400">
+                <FontAwesomeIcon icon={faHourglassHalf} />
+                {faltan === 0 ? "Hoy es el último día para elegir" : `Te quedan ${faltan} día(s) para elegir (hasta el ${fechaCorta(c.fechaLimite)})`}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                Si para esa fecha todavía no elegiste, no te preocupes: la empresa te propone unas fechas para que no te quedes sin organizarlas.
+              </p>
+            </div>
           )}
         </div>
 
@@ -142,13 +168,14 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
             <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{inv.asignacion?.vacationId ? "Asignadas por la empresa" : "Tu propuesta"}</p>
             <div className="space-y-2">
               {datos.vacaciones.map((v) => (
-                <div key={v._id} className="flex items-center justify-between gap-2 text-sm">
+                <button type="button" key={v._id} onClick={() => abrirDetalle(v._id)} className="flex w-full items-center justify-between gap-2 rounded-lg px-1 py-1 text-left text-sm active:bg-slate-100 dark:active:bg-slate-800">
                   <span className="flex items-center gap-2 text-slate-800 dark:text-slate-200">
                     <FontAwesomeIcon icon={faCalendarAlt} className="text-primary opacity-70" />
                     {fechaCorta(String(v.startDate).slice(0, 10))} al {fechaCorta(String(v.endDate).slice(0, 10))} · {v.daysRequested} d
                   </span>
                   <span className={`shrink-0 text-[11px] font-bold ${["approved", "delivered"].includes(v.status) ? "text-emerald-600 dark:text-emerald-400" : ["rejected", "cancelled"].includes(v.status) ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>{TEXTO_STATUS[v.status] || v.status}</span>
-                </div>
+                  <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 shrink-0 text-slate-400" />
+                </button>
               ))}
             </div>
           </div>
@@ -188,6 +215,15 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
           </div>
         )}
 
+        {/* La campaña reemplaza a la tarjeta «Vacaciones» de la home: desde acá se sigue llegando a lo de siempre. */}
+        <button type="button" onClick={() => onNavigate("vacations")} className="flex w-full items-center justify-between rounded-xl border bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm active:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:active:bg-slate-800">
+          <span className="flex items-center gap-2">
+            <FontAwesomeIcon icon={faUmbrellaBeach} className="text-primary opacity-70" />
+            Mis solicitudes y saldo
+          </span>
+          <FontAwesomeIcon icon={faChevronRight} className="h-3 w-3 text-slate-400" />
+        </button>
+
         {/* Elegir: uno o más tramos. */}
         {datos.puedeProponer && (
           <div className={caja}>
@@ -207,9 +243,9 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <CustomDatePicker label="Desde" value={t.desde} minDate={desdeMinimo} maxDate={c.ventanaHasta} onChange={(d) => setTramos(tramos.map((x, k) => (k === i ? { ...x, desde: d, hasta: x.hasta && x.hasta < d ? "" : x.hasta } : x)))} />
-                    <CustomDatePicker label="Hasta" value={t.hasta} minDate={t.desde || desdeMinimo} maxDate={c.ventanaHasta} onChange={(d) => setTramos(tramos.map((x, k) => (k === i ? { ...x, hasta: d } : x)))} />
+                  <div onClick={() => setCalendario({ tramo: i, modo: "start" })} className="relative cursor-pointer">
+                    <input type="text" value={t.desde && t.hasta ? `Desde ${fechaCorta(t.desde)} Hasta ${fechaCorta(t.hasta)}` : t.desde ? `Desde ${fechaCorta(t.desde)} ...` : ""} readOnly placeholder="Seleccionar rango de fechas" className="w-full cursor-pointer rounded border border-slate-300 bg-white px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100" />
+                    <FontAwesomeIcon icon={faCalendarAlt} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
                 </div>
               ))}
@@ -232,9 +268,51 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
               <FontAwesomeIcon icon={enviando ? faClock : faCheck} />
               {enviando ? "Enviando..." : "Enviar propuesta"}
             </button>
+            <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-500 dark:text-slate-400">
+              <span aria-hidden="true">🌴</span>
+              {faltan === 0 ? "Todavía estás a tiempo: hoy podés elegir con calma." : "Podés tomarte tu tiempo, estás a tiempo de elegir."}
+            </p>
           </div>
         )}
       </div>
+
+      {/* Ver la propuesta completa; se puede cancelar mientras nada esté aprobado, nunca editar. */}
+      <VacationDetailModal
+        vacation={detalle}
+        profile={profile}
+        isOpen={!!detalle}
+        onClose={() => setDetalle(null)}
+        cancelacion={{
+          permitida: !!detalle && !inv.asignacion?.vacationId && ["pending", "pre_approved"].includes(detalle.status) && !datos.vacaciones.some((v) => ["approved", "delivered"].includes(v.status)),
+          titulo: "¿Cancelar tu propuesta?",
+          texto:
+            (datos.vacaciones.length > 1 ? `Se cancelan los ${datos.vacaciones.length} tramos de tu propuesta y se te devuelven los días.` : "Se cancela tu propuesta y se te devuelven los días.") +
+            (faltan >= 0 ? " Después podés volver a elegir tus fechas." : " Como ya pasó la fecha límite, la empresa te va a proponer unas fechas."),
+          cancelar: async () => {
+            setDatos(await campaniasVacacionesAPI.cancelarPropuesta());
+            await refrescarOcupadas();
+          },
+        }}
+      />
+
+      {/* El mismo calendario que «Mis Vacaciones»: sólo cambia qué días se pueden elegir y el tope del tramo. */}
+      {calendario && tramos[calendario.tramo] && (
+        <CalendarioVacaciones
+          modo={calendario.modo}
+          setModo={(m) => setCalendario(m ? { ...calendario, modo: m } : null)}
+          desde={tramos[calendario.tramo].desde}
+          hasta={tramos[calendario.tramo].hasta}
+          onCambiar={(desde, hasta) => setTramos(tramos.map((x, k) => (k === calendario.tramo ? { desde, hasta } : x)))}
+          disponibles={datos.diasDisponibles - tramos.reduce((s, t, k) => s + (k !== calendario.tramo && t.desde && t.hasta && t.hasta >= t.desde ? contarDiasTramo(t, diasCorridos) : 0), 0)}
+          diasCorridos={diasCorridos}
+          ocupadas={occupiedDates}
+          pendientes={pendingDates || []}
+          permitida={(f) => f >= desdeMinimo && f <= c.ventanaHasta && (!ventanaPersona || fechaPermitida(f, ventanaPersona))}
+          textoVentana={`entre el ${fechaCorta(desdeMinimo)} y el ${fechaCorta(c.ventanaHasta)}${ventanaPersona ? ` (${textoDeVentana(ventanaPersona)})` : ""}`}
+          mesInicial={desdeMinimo}
+          onConfirmar={() => setCalendario(null)}
+        />
+      )}
     </div>
   );
 }

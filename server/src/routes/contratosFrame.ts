@@ -17,6 +17,7 @@ import { ensureContratosBackfilled } from "./contratos.js";
 import { PLACEHOLDER_CONTRATO_CUSTOM, textoCustomUsable } from "../compartido/textoCustom.js";
 
 import { asegurarPlantillasCustomSinRomper, MENSAJE_DEL_SISTEMA } from "../services/plantillasCustomSistema.js";
+import { esLapida, ultimoNoAnulado } from "../utils/anulacionContrato.js";
 const router = Router();
 
 const parseNum = (val: any): number => {
@@ -176,7 +177,8 @@ export async function generarContratoPdf(opts: { tenantId: string; templateId: s
   });
   const contracts: any[] = up?.contracts || [];
   let idx = contractIndex;
-  if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length) idx = contracts.length - 1;
+  // Sin índice válido (o apuntando a un contrato anulado), el último contrato de verdad (etapa 2b).
+  if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length || esLapida(contracts[idx])) idx = ultimoNoAnulado(contracts);
   const contract: any = contracts[idx] || {};
 
   const cuerpo = item.esCustom ? (opts.contenidoCustom ?? contract.contenidoCustomContrato ?? "") : item.content;

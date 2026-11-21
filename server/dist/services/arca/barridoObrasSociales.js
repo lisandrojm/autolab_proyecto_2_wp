@@ -78,7 +78,7 @@ export async function contratosSinValidar(tenantObjectId, diasAtras = DIAS_ATRAS
                             empresaContratoId: "$$c.empresaContratoId",
                             fecha_carga: "$$c.fecha_carga",
                             nombre_contrato: "$$c.nombre_contrato",
-                            fecha_alta_contrato: "$$c.fecha_alta_contrato",
+                            estadoContrato: "$$c.estadoContrato", fecha_alta_contrato: "$$c.fecha_alta_contrato",
                             fecha_baja_contrato: "$$c.fecha_baja_contrato",
                             nombre_estado_empleado: "$$c.nombre_estado_empleado",
                             obraSocialId: "$$c.obraSocialId",
@@ -161,7 +161,7 @@ export async function fichasDePersonas(tenantObjectId, cuils) {
                         in: {
                             empresaContratoId: "$$c.empresaContratoId",
                             nombre_contrato: "$$c.nombre_contrato",
-                            fecha_alta_contrato: "$$c.fecha_alta_contrato",
+                            estadoContrato: "$$c.estadoContrato", fecha_alta_contrato: "$$c.fecha_alta_contrato",
                             fecha_baja_contrato: "$$c.fecha_baja_contrato",
                             nombre_estado_empleado: "$$c.nombre_estado_empleado",
                             obraSocialId: "$$c.obraSocialId",

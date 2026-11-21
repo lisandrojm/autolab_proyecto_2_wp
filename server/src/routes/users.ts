@@ -45,6 +45,8 @@ import "../models/Client.js";
 
 import { ImportConfig } from "../models/ImportConfig.js";
 import { ImportHistory } from "../models/ImportHistory.js";
+import { AuditoriaContrato } from "../models/AuditoriaContrato.js";
+import { IMPORT_FRAME_PAUSADO, confirmacionValida, fechaDeCorrida } from "../utils/importFramePausado.js";
 import { ExternalApiService } from "../services/externalApiService.js";
 
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
@@ -65,6 +67,8 @@ import { nombreParaSellar } from "../services/arca/nombreArca.js";
 import { etiquetaCentroCostoDe, resolverCentroCostoDeProyectos } from "../services/centroCostoDeProyectos.js";
 import { constanciasPorContrato } from "../services/arca/constanciasArca.js";
 
+import { AnulacionInvalida } from "../services/anulacionContrato.js";
+import { ContratoAnulado } from "../models/ContratoAnulado.js";
 const router = Router();
 
 /* ------------------- Filtros del equipo de un proyecto (client-side → server) -------------------
@@ -663,7 +667,7 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
               localField: "metadata.projects",
               foreignField: "_id",
               as: "_ups",
-              pipeline: [{ $project: { n: { $size: { $ifNull: ["$contracts", []] } } } }],
+              pipeline: [{ $project: { n: { $size: { $filter: { input: { $ifNull: ["$contracts", []] }, as: "c", cond: { $ne: ["$$c.estadoContrato", "ANULADO"] } } } } } }],
             },
           },
           { $addFields: { _orden: { $sum: "$_ups.n" } } },
@@ -829,6 +833,7 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
         ? (UserProject.aggregate([
             { $match: { userId: { $in: idsPagina } } },
             { $unwind: { path: "$contracts", preserveNullAndEmptyArrays: false } },
+            { $match: { "contracts.estadoContrato": { $ne: "ANULADO" } } },
             { $group: { _id: "$userId", jornadas: { $sum: { $ifNull: ["$contracts.cantidad_jornadas_laborales", 0] } }, contratos: { $sum: 1 } } },
           ]) as Promise<any[]>)
         : Promise.resolve([] as any[]),
@@ -883,7 +888,7 @@ router.get("/", requireTenant, authenticateToken, requireAnyPermission("admin_us
       const sinOrigen = idsPagina.filter((id: any) => { const r = contratoQueRige.get(String(id)); return r && !r.origenContrato; });
       if (sinOrigen.length > 0) {
         const vinculos: any[] = await UserProject.find({ userId: { $in: sinOrigen }, projectId: { $ne: new Types.ObjectId(String(req.query.projectId)) } })
-          .select("userId nombre_proyecto contracts.fecha_alta_contrato contracts.nombre_contrato contracts.fecha_carga")
+          .select("userId nombre_proyecto contracts.fecha_alta_contrato contracts.nombre_contrato contracts.fecha_carga contracts.estadoContrato")
           .lean();
         for (const v of vinculos) {
           const rige = contratoQueRige.get(String(v.userId));
@@ -1074,6 +1079,8 @@ const CAMPOS_FILA_CONTRATO = [
   "_id", "nombre_contrato", "nombre_estado_empleado", "nombre_sede", "areaShiftAssignments", "areaId", "shiftId", "nombre_area", "nombre_turno", "reemplazo", "empleado_id_reemplezado",
   "fecha_alta_contrato", "fecha_baja_contrato", "fecha_carga", "sueldo_mano", "cantidad_jornadas_laborales", "hora_inicio", "hora_fin",
   "altaDocumentoUrl", "altaDocumentoNombre", "altaArcaPresentada",
+  // Las operaciones sobre la relación en ARCA (Modificaciones y Bajas): la columna «ARCA» las muestra.
+  "bajaArcaPresentada", "modificacionArcaPresentada", "anulacionArcaPresentada",
   "constanciaVigenciaDesde", "constanciaVigenciaHasta", "constanciaVerificador", "constanciaAfipEstado", "constanciaAfipConsultadaAt", "constanciaAfipDropboxSubidaAt",
   "firmaContratoUrl", "firmaContratoNombre", "firmaReleases", "firmaGeneradoAt", "firmaReleasesGeneradoAt", "firmaEnviadaAt",
   "contenidoCustomContrato", "contenidoCustomReleases",
@@ -1260,7 +1267,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
     const todosLosContratos = req.query.todosLosContratos === "true";
     /** `renovables=true` (Renovaciones): sólo los vencidos que de verdad están sin renovar. */
     const soloRenovables = req.query.renovables === "true";
-    const camposContrato: any = { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga" };
+    // `x`: la lápida de un contrato anulado (etapa 2b). Se manda para saltearla sin reindexar.
+    const camposContrato: any = { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga", x: "$$x.estadoContrato" };
     if (necesitaNombreContrato) camposContrato.n = "$$x.nombre_contrato";
     // Si vino por Solicitudes o por «Agregar miembro», siempre: distingue un contrato viejo de una renovación.
     const delSistemaExpr = { $or: [{ $gt: ["$$x.solicitudId", null] }, { $eq: ["$$x.origen", "agregar_miembro"] }] };
@@ -1319,7 +1327,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
       projectId: d.p,
       userId: d.u,
       nombre_rol_frame: d.r,
-      contracts: (d.c || []).map((c: any) => ({ fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_contrato: c.n, nombre_estado_empleado: c.e, reemplazo: c.m, empresaContratoId: c.q, delSistema: !!c.o })),
+      contracts: (d.c || []).map((c: any) => ({ estadoContrato: c.x, fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_contrato: c.n, nombre_estado_empleado: c.e, reemplazo: c.m, empresaContratoId: c.q, delSistema: !!c.o })),
     }));
     const msFase1 = Date.now() - tFase1;
 
@@ -1450,10 +1458,11 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         if (permisoExcluido && permisos.has(permisoExcluido)) continue;
       }
 
+      // Las lápidas (contratos anulados, etapa 2b) no son filas; `contractIndex` sale de `contratos`, así que la posición no se corre.
       const candidatosDeLaAsignacion: any[] = todosLosContratos
-        ? contratos
+        ? contratos.filter((c: any) => c?.estadoContrato !== "ANULADO")
         : estadosFiltro.length > 0
-          ? contratos.filter((c) => enBandeja(c) && (c === contratoActivo || sinVentana || fechaISO(c.fecha_alta_contrato) >= desdeBandeja))
+          ? contratos.filter((c) => c?.estadoContrato !== "ANULADO" && enBandeja(c) && (c === contratoActivo || sinVentana || fechaISO(c.fecha_alta_contrato) >= desdeBandeja))
           : [contratoActivo];
 
       for (const contrato of candidatosDeLaAsignacion) {
@@ -1500,7 +1509,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         projectId: String(project._id),
         projectName: project.name || "",
         nombreRolFrame: m.nombre_rol_frame || "",
-        contractsInProject: contratos.length,
+        contractsInProject: contratos.filter((c: any) => c?.estadoContrato !== "ANULADO").length,
         contractIndex: contratos.indexOf(contrato),
         renovacion: renovacionDe(contrato),
         // Los campos del contrato se completan en la FASE 2 (solo para la página devuelta).
@@ -1701,6 +1710,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
           const previos: any[] = await UserProject.aggregate([
             { $match: { userId: { $in: [...new Set(consultasUltimo.map((q) => q.userId))].map((id) => new Types.ObjectId(id)) } } },
             { $unwind: { path: "$contracts", includeArrayIndex: "i" } },
+            // sin-estado: busca el contrato ANTERIOR por fecha; no decide vigencia.
             { $project: { _id: 0, up: "$_id", i: 1, u: "$userId", alta: fechaISOExpr("$contracts.fecha_alta_contrato"), baja: fechaISOExpr("$contracts.fecha_baja_contrato"), nombre: "$contracts.nombre_contrato", proyecto: "$nombre_proyecto" } },
             { $match: { alta: { $ne: "" } } },
             { $set: { dia: { $dateFromString: { dateString: "$alta", format: "%Y-%m-%d", onError: null, onNull: null } } } },
@@ -1817,6 +1827,9 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         // Lo que presentó la corrida automática de altas (Carga Masiva / Altas Masivas). No es el
         // estado del contrato: es la marca que evita presentarlo dos veces.
         altaArcaPresentada: c.altaArcaPresentada || null,
+        bajaArcaPresentada: c.bajaArcaPresentada || null,
+        modificacionArcaPresentada: c.modificacionArcaPresentada || null,
+        anulacionArcaPresentada: c.anulacionArcaPresentada || null,
         // Datos leídos del PDF de la Constancia de CUIT (vigencia = cuándo hay que volver a pedirla).
         constanciaVigenciaDesde: c.constanciaVigenciaDesde || "",
         constanciaVigenciaHasta: c.constanciaVigenciaHasta || "",
@@ -2030,7 +2043,7 @@ router.get("/contratacion/contadores", requireTenant, authenticateToken, require
             $map: {
               input: { $ifNull: ["$contracts", []] },
               as: "x",
-              in: { a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga", e: "$$x.nombre_estado_empleado", o: { $or: [{ $gt: ["$$x.solicitudId", null] }, { $eq: ["$$x.origen", "agregar_miembro"] }] }, f: { $gt: ["$$x.firmaEnviadaAt", null] } },
+              in: { x: "$$x.estadoContrato", a: "$$x.fecha_alta_contrato", b: "$$x.fecha_baja_contrato", g: "$$x.fecha_carga", e: "$$x.nombre_estado_empleado", o: { $or: [{ $gt: ["$$x.solicitudId", null] }, { $eq: ["$$x.origen", "agregar_miembro"] }] }, f: { $gt: ["$$x.firmaEnviadaAt", null] } },
             },
           },
         },
@@ -2038,7 +2051,7 @@ router.get("/contratacion/contadores", requireTenant, authenticateToken, require
     ]);
     const vinculos = filas.map((d) => ({
       userId: String(d.u || ""),
-      contracts: (d.c || []).map((c: any) => ({ fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_estado_empleado: c.e, delSistema: !!c.o, firmaEnviadaAt: c.f ? true : null })),
+      contracts: (d.c || []).map((c: any) => ({ estadoContrato: c.x, fecha_alta_contrato: c.a, fecha_baja_contrato: c.b, fecha_carga: c.g, nombre_estado_empleado: c.e, delSistema: !!c.o, firmaEnviadaAt: c.f ? true : null })),
     }));
     const userIds = [...new Set(vinculos.map((v) => v.userId))].filter((id) => Types.ObjectId.isValid(id));
     const usuarios: any[] = userIds.length ? await User.find({ _id: { $in: userIds } }).select("metadata.cuit metadata.sinCuit").lean() : [];
@@ -2195,7 +2208,7 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
         ...(projectIds.length ? { projectId: { $in: projectIds.map((id) => new Types.ObjectId(id)) } } : {}),
         "contracts.solicitudId": { $in: idsAprobadas },
       })
-        .select("projectId userId contracts._id contracts.solicitudId contracts.empresaContratoId contracts.nombre_empresa_contrato contracts.categoria_sat_id contracts.obraSocialId contracts.obraSocialOrigen contracts.obraSocialNoFigura contracts.obraSocialConstatadaEl")
+        .select("projectId userId contracts._id contracts.solicitudId contracts.empresaContratoId contracts.nombre_empresa_contrato contracts.categoria_sat_id contracts.obraSocialId contracts.obraSocialOrigen contracts.obraSocialNoFigura contracts.obraSocialConstatadaEl contracts.estadoContrato")
         .lean();
       const pedidas = new Set(idsAprobadas.map(String));
       const contratos: any[] = ups.flatMap((up: any) => (up.contracts || []).filter((c: any) => pedidas.has(String(c.solicitudId || ""))));
@@ -2303,7 +2316,7 @@ router.get("/solicitudes-overview", requireTenant, authenticateToken, requirePer
     const personasIds = [...new Set([...personaDe.values()].filter((id) => Types.ObjectId.isValid(id)))].map((id) => new Types.ObjectId(id));
     const contratosDe = new Map<string, Array<{ c: any; proyecto: string }>>();
     if (personasIds.length > 0) {
-      const vinculos: any[] = await UserProject.find({ userId: { $in: personasIds } }).select("userId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.nombre_contrato contracts.fecha_carga contracts.solicitudId").lean();
+      const vinculos: any[] = await UserProject.find({ userId: { $in: personasIds } }).select("userId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.nombre_contrato contracts.fecha_carga contracts.solicitudId contracts.estadoContrato").lean();
       for (const v of vinculos) {
         const lista = contratosDe.get(String(v.userId)) || [];
         for (const c of v.contracts || []) if (fechaISO(c?.fecha_alta_contrato)) lista.push({ c, proyecto: String(v.nombre_proyecto || "") });
@@ -2769,7 +2782,7 @@ const consultarDirectorio = async (tenantObjectId: any, status?: string) => {
         "projectId areaId nombre_proyecto nombre_rol_frame " +
         "contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga " +
         "contracts.hora_inicio contracts.hora_fin contracts.areaId contracts.shiftId contracts.areaShiftAssignments " +
-        "contracts.nombre_contrato contracts.tipo_contrato_id",
+        "contracts.nombre_contrato contracts.tipo_contrato_id contracts.estadoContrato",
     })
     .sort({ firstName: 1, lastName: 1 })
     .lean();
@@ -2937,7 +2950,7 @@ router.get("/:id/contrato-que-rige", requireTenant, authenticateToken, requireAn
       res.status(404).json({ error: "Persona no encontrada." });
       return;
     }
-    const vinculos: any[] = await UserProject.find({ userId: id }).select("projectId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_contrato contracts.tipo_contrato_id").lean();
+    const vinculos: any[] = await UserProject.find({ userId: id }).select("projectId nombre_proyecto contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fecha_carga contracts.nombre_contrato contracts.tipo_contrato_id contracts.estadoContrato").lean();
     const contratos = vinculos.flatMap((v) => (v.contracts || []).map((c: any) => ({ ...c, proyecto: String(v.nombre_proyecto || ""), proyectoId: v.projectId })));
     const c = getContratoActivo(contratos);
     const proyecto: any = c?.proyectoId ? await Project.findById(c.proyectoId).select("metadata.centroCostoId metadata.centroCostoEmpresaTangoId").lean() : null;
@@ -2992,8 +3005,90 @@ router.get("/:id", requireTenant, authenticateToken, requirePermission("admin_us
   }
 });
 
+/*
+  GET /users/:id/contratos/:contratoKey/auditoria — EL HISTORIAL DE UN CONTRATO (etapa 3, 19/11/2026).
+
+  Lo que registró la auditoría (`services/auditoriaContratos.ts`): cuándo se creó, cada cambio campo por
+  campo, la anulación; quién (persona, script o sistema) y desde dónde. Por `contratoKey`, nunca por
+  posición. Mismo permiso y mismo control de tenant que «Todos los contratos», que es donde se muestra.
+*/
+router.get("/:id/contratos/:contratoKey/auditoria", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const { id, contratoKey } = req.params;
+    if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(contratoKey)) {
+      res.status(400).json({ error: "Id inválido" });
+      return;
+    }
+    const user = await User.findOne({ _id: id, tenantId: req.tenantObjectId }).select("_id").lean();
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    const eventos: any[] = await AuditoriaContrato.find({ contratoKey: new Types.ObjectId(contratoKey), userId: new Types.ObjectId(id) }).sort({ el: -1, _id: -1 }).limit(500).lean();
+    // Quién, con nombre: el evento guarda el id (y el mail); el nombre se busca al leer.
+    const ids = [...new Set(eventos.map((e) => e.por?.userId).filter((x) => x && Types.ObjectId.isValid(x)))];
+    const personas: any[] = ids.length ? await User.find({ _id: { $in: ids } }).select("firstName lastName email metadata.fullName").lean() : [];
+    const nombre = new Map(personas.map((u) => [String(u._id), u.metadata?.fullName || `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email || ""]));
+    res.json(
+      eventos.map((e) => ({
+        _id: String(e._id),
+        el: e.el,
+        tipo: e.tipo,
+        cambios: e.cambios || [],
+        resumen: e.resumen || {},
+        motivo: e.motivo || "",
+        nota: e.nota || "",
+        origen: e.origen,
+        porNombre: (e.por?.userId && nombre.get(String(e.por.userId))) || e.por?.email || "",
+        detalle: e.detalle || "",
+        operacion: e.operacion,
+        posicion: e.posicion,
+      })),
+    );
+  } catch (error) {
+    console.error("Get auditoria contrato error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /users/:id/all-contracts - Todos los contratos de la persona (cross-proyecto/cliente), enriquecidos
 // con proyecto, cliente y empresas de cada proyecto para poder listarlos, filtrarlos y descargarlos.
+/*
+  GET /users/:id/contratos-anulados — LOS CONTRATOS ANULADOS DE LA PERSONA (etapa 2b): qué era cada uno,
+  quién lo anuló, cuándo y por qué. Sólo los proyectos de este tenant.
+*/
+router.get("/:id/contratos-anulados", requireTenant, authenticateToken, requirePermission("admin_contracts:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    if (!Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: "Id inválido" });
+    const proyectos: any[] = await Project.find({ tenantId: req.tenantObjectId }).select("_id name").lean();
+    const nombreProyecto = new Map(proyectos.map((p) => [String(p._id), p.name]));
+    const filas: any[] = await ContratoAnulado.find({ userId: new Types.ObjectId(req.params.id), projectId: { $in: proyectos.map((p) => p._id) } }).sort({ anuladoEl: -1 }).lean();
+    res.json(
+      filas.map((f) => ({
+        contratoKey: String(f.contratoKey),
+        projectId: String(f.projectId),
+        projectName: nombreProyecto.get(String(f.projectId)) || "",
+        posicion: f.posicion,
+        anuladoEl: f.anuladoEl,
+        anuladoPorNombre: f.anuladoPorNombre || "",
+        motivo: f.motivo || "",
+        origen: f.origen,
+        vinculoEliminado: !!f.vinculoEliminado,
+        contrato: {
+          nombre_contrato: f.contrato?.nombre_contrato || "",
+          fecha_alta_contrato: f.contrato?.fecha_alta_contrato || "",
+          fecha_baja_contrato: f.contrato?.fecha_baja_contrato || "",
+          nombre_empresa_contrato: f.contrato?.nombre_empresa_contrato || "",
+          nombre_estado_empleado: f.contrato?.nombre_estado_empleado || "",
+        },
+      })),
+    );
+  } catch (error) {
+    console.error("Contratos anulados error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
     const userId = req.params.id;
@@ -3004,8 +3099,11 @@ router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermis
       return;
     }
     const ups = await UserProject.find({ userId }).lean();
+    // Los anulados que se llevaron el vínculo (etapa 2b) ya no tienen UserProject: su proyecto entra por acá,
+    // si no, no salen en ninguna lista (20/11/2026: «Esta persona no tiene contratos» después de anular el último).
+    const todasLasAnuladas: any[] = await ContratoAnulado.find({ userId: new Types.ObjectId(String(userId)) }).lean();
 
-    const projIds = [...new Set(ups.map((up: any) => String(up.projectId)).filter(Boolean))];
+    const projIds = [...new Set([...ups.map((up: any) => String(up.projectId)), ...todasLasAnuladas.map((a) => String(a.projectId))].filter(Boolean))];
     const projects = await Project.find({ _id: { $in: projIds }, tenantId: req.tenantObjectId })
       .select("name clientId contratoEmpresas releaseEmpresas")
       .lean();
@@ -3035,7 +3133,14 @@ router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermis
       const contratoEmpresas = toEmpresas(proj?.contratoEmpresas);
       const releaseEmpresas = toEmpresas(proj?.releaseEmpresas);
       (up.contracts || []).forEach((c: any, idx: number) => {
+        // Lápida (etapa 2b): va en su posición, como ANULADO, con lo que era (más abajo). No es un contrato operable.
+        if (c?.estadoContrato === "ANULADO") {
+          rows.push({ userProjectId: String(up._id), projectId: String(up.projectId), projectName, clientId, clientName, contratoEmpresas: [], releaseEmpresas: [], contractIndex: idx, contract: c, _clave: String(c.contratoKey || "") });
+          return;
+        }
         rows.push({
+          // El vínculo: lo necesita la operación en ARCA (baja, modificación, anulación) para nombrar el contrato.
+          userProjectId: String(up._id),
           projectId: String(up.projectId),
           projectName,
           clientId,
@@ -3048,8 +3153,45 @@ router.get("/:id/all-contracts", requireTenant, authenticateToken, requirePermis
       });
     }
 
-    // Más reciente primero (por fecha de alta).
-    rows.sort((a, b) => new Date(b.contract?.fecha_alta_contrato || 0).getTime() - new Date(a.contract?.fecha_alta_contrato || 0).getTime());
+    /*
+      ANULADOS A LA VISTA (18/11/2026). Una anulación invisible se ve igual que el borrado que reemplazó:
+      cada lápida sale con lo que era el contrato, quién lo anuló, cuándo y por qué. También los anulados
+      que se llevaron el vínculo (eran el último contrato): no tienen lápida, sólo su registro, y su proyecto
+      ya no está entre los vínculos (por eso entra al armar `projects`, arriba).
+      Va en este endpoint —y no en uno aparte con otro permiso— para que quien ve los contratos vea también
+      los anulados.
+    */
+    const anuladas: any[] = todasLasAnuladas.filter((a) => projMap.has(String(a.projectId)));
+    const porClave = new Map(anuladas.map((a) => [String(a.contratoKey), a]));
+    const resumenAnulacion = (a: any) => ({
+      el: a.anuladoEl,
+      porNombre: a.anuladoPorNombre || "",
+      motivo: a.motivo || "",
+      origen: a.origen,
+      vinculoEliminado: !!a.vinculoEliminado,
+      contrato: {
+        nombre_contrato: a.contrato?.nombre_contrato || "",
+        fecha_alta_contrato: a.contrato?.fecha_alta_contrato || "",
+        fecha_baja_contrato: a.contrato?.fecha_baja_contrato || "",
+        nombre_empresa_contrato: a.contrato?.nombre_empresa_contrato || "",
+        nombre_estado_empleado: a.contrato?.nombre_estado_empleado || "",
+      },
+    });
+    for (const r of rows) {
+      if (!r._clave) continue;
+      const a = porClave.get(r._clave);
+      r.anulado = a ? resumenAnulacion(a) : { el: null, porNombre: "", motivo: "", origen: "", vinculoEliminado: false, contrato: {} };
+      delete r._clave;
+    }
+    for (const a of anuladas.filter((x) => x.vinculoEliminado)) {
+      const proj: any = projMap.get(String(a.projectId));
+      const clientId = proj?.clientId ? String(proj.clientId) : "";
+      rows.push({ projectId: String(a.projectId), projectName: proj?.name || "", clientId, clientName: clientId ? clientMap.get(clientId) || "" : "", contratoEmpresas: [], releaseEmpresas: [], contractIndex: a.posicion, contract: { contratoKey: a.contratoKey, estadoContrato: "ANULADO" }, anulado: resumenAnulacion(a) });
+    }
+
+    // Más reciente primero (por fecha de alta; la de un anulado, la del contrato que era).
+    const altaDe = (r: any) => new Date((r.anulado ? r.anulado.contrato?.fecha_alta_contrato : r.contract?.fecha_alta_contrato) || 0).getTime();
+    rows.sort((a, b) => altaDe(b) - altaDe(a));
 
     res.json(rows);
   } catch (error) {
@@ -3619,7 +3761,16 @@ router.delete("/:id/solicitud", requireTenant, authenticateToken, permisoSobreSo
     if (m.solicitudStatus === "aprobada") {
       const apuntaAOtraPersona = !!m.solicitudUserId && String(m.solicitudUserId) !== String(id);
       // El contrato primero: si falla, la solicitud sigue ahí y se puede reintentar.
-      contrato = await borrarContratoDeSolicitud(datosDeSolicitud(solicitud));
+      try {
+        contrato = await borrarContratoDeSolicitud(datosDeSolicitud(solicitud), { tenantId: req.tenantObjectId, por: req.user?.userId });
+      } catch (e) {
+        // P. ej. el alta ya está presentada en ARCA (etapa 2b): no se anula, y la solicitud tampoco se borra.
+        if (e instanceof AnulacionInvalida) {
+          res.status(409).json({ error: `No se puede borrar la solicitud aprobada: ${e.message}` });
+          return;
+        }
+        throw e;
+      }
       const esLaPersona = !apuntaAOtraPersona || !!(await UserProject.exists({ userId: id }));
       if (esLaPersona) {
         await Promise.all([
@@ -3945,6 +4096,14 @@ router.post("/import/config", requireTenant, authenticateToken, requirePermissio
       });
     }
 
+    // Prender el cron es sincronizar cada N horas: pide la misma confirmación (ver `utils/importFramePausado.ts`).
+    if (isEnabled === true && !wasEnabled) {
+      const ultima = await ImportHistory.findOne({ tenantId: req.tenantObjectId }).sort({ createdAt: -1 }).select("createdAt").lean();
+      if (!confirmacionValida((ultima as any)?.createdAt, req.body?.confirmarUltimaSync)) {
+        res.status(428).json({ codigo: "CONFIRMAR_SYNC_FRAME", ultimaSync: fechaDeCorrida((ultima as any)?.createdAt) || null, ...IMPORT_FRAME_PAUSADO, error: "La importación de FRAME está pausada. Para prender la automática hay que escribir la fecha de la última sincronización." });
+        return;
+      }
+    }
     config.isEnabled = isEnabled === true;
     config.intervalHours = Number(intervalHours) || 24;
     config.syncProjects = syncProjects === true;
@@ -3993,6 +4152,20 @@ router.get("/import/history/latest", requireTenant, authenticateToken, requirePe
   }
 });
 
+// GET /users/import/estado - Por qué la importación está pausada, desde cuándo, y la fecha a confirmar.
+router.get("/import/estado", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const [ultima, config] = await Promise.all([
+      ImportHistory.findOne({ tenantId: req.tenantObjectId }).sort({ createdAt: -1 }).select("createdAt").lean(),
+      ImportConfig.findOne({ tenantId: req.tenantObjectId }).select("isEnabled").lean(),
+    ]);
+    res.json({ ...IMPORT_FRAME_PAUSADO, cronEncendido: !!(config as any)?.isEnabled, ultimaSync: fechaDeCorrida((ultima as any)?.createdAt) || null });
+  } catch (error) {
+    console.error("Get import estado error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GET /users/import/last-added-details - Usuarios del último import con sus proyectos,
 // rol frame y contratos (desde users_&_projects), para la tabla "Nuevos Usuarios".
 router.get("/import/last-added-details", requireTenant, authenticateToken, requirePermission("admin_users:view"), async (req: AuthenticatedRequest & TenantRequest, res) => {
@@ -4024,7 +4197,8 @@ router.get("/import/last-added-details", requireTenant, authenticateToken, requi
       relByUser.get(key)!.push({
         nombre_proyecto: r.nombre_proyecto || "",
         nombre_rol_frame: r.nombre_rol_frame || "",
-        contracts: (r.contracts || []).map((c: any) => ({
+        // Sin las lápidas de contratos anulados (etapa 2b): acá sólo se muestran, no se direccionan.
+        contracts: (r.contracts || []).filter((c: any) => c?.estadoContrato !== "ANULADO").map((c: any) => ({
           nombre_contrato: c.nombre_contrato || "",
           nombre_rol_frame: c.nombre_rol_frame || "",
           fecha_alta_contrato: c.fecha_alta_contrato || "",
@@ -4084,6 +4258,13 @@ router.post("/import/trigger", requireTenant, authenticateToken, requirePermissi
     const yaHayUnaEnCurso = await ImportHistory.exists({ tenantId: req.tenantObjectId, status: "running" });
     if (yaHayUnaEnCurso) {
       res.status(409).json({ error: "Ya hay una sincronización en curso. Esperá a que termine antes de disparar otra." });
+      return;
+    }
+
+    // Pausada a propósito (ver `utils/importFramePausado.ts`): hay que escribir la fecha de la última.
+    const ultima = await ImportHistory.findOne({ tenantId: req.tenantObjectId }).sort({ createdAt: -1 }).select("createdAt").lean();
+    if (!confirmacionValida((ultima as any)?.createdAt, req.body?.confirmarUltimaSync)) {
+      res.status(428).json({ codigo: "CONFIRMAR_SYNC_FRAME", ultimaSync: fechaDeCorrida((ultima as any)?.createdAt) || null, ...IMPORT_FRAME_PAUSADO, error: `La importación de FRAME está pausada. Para sincronizar hay que escribir la fecha de la última sincronización (${fechaDeCorrida((ultima as any)?.createdAt) || "PRIMERA"}).` });
       return;
     }
 

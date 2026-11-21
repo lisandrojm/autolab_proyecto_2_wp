@@ -13,7 +13,8 @@ const ESTADOS = [
     { name: "Servicios", tipoImpositivo: "constancia_cuit" },
 ];
 const contar = (vinculos, sinCuit = []) => contarBandejasDeLaBase(vinculos, { estadosImpositivos: ESTADOS, estadoEnvio: "Envío de documentación", sinCuitDe: (id) => sinCuit.includes(id), hoy: HOY });
-const c = (x) => ({ fecha_alta_contrato: "2026-11-01", fecha_baja_contrato: "2026-11-30", delSistema: true, ...x });
+// Con estado (etapa 3): la vigencia ya no sale sólo de las fechas.
+const c = (x) => { const b = { fecha_alta_contrato: "2026-11-01", fecha_baja_contrato: "2026-11-30", delSistema: true, ...x }; return { estadoContrato: b.fecha_baja_contrato && b.fecha_baja_contrato < HOY ? "FINALIZADO" : "VIGENTE", ...b }; };
 describe("contarBandejasDeLaBase", () => {
     it("cuenta cada contrato en su trámite: alta temprana, constancia de CUIT y generar documentos", () => {
         const r = contar([

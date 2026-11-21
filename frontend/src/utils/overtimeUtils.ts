@@ -147,9 +147,20 @@ export const splitOvertime = (
     return { h50: 0, h100: totalHours, pct: glossary.pct100 };
   }
 
-  const ratio50 = mins50 / computedTotalMins;
-  const h50 = totalHours * ratio50;
-  const h100 = totalHours - h50;
+  /* Si el total es MENOR que lo trabajado fuera del turno (llegó antes y se fue antes: 05:00-13:00 sobre
+     07:00-14:00 da 2 h fuera del turno pero 1 h extra), la hora que se fue antes se descuenta primero del
+     tramo al 100%: lo extra va primero al 50% (16/11/2026; antes se repartía en proporción y daba
+     0,5/0,5). Si el total cubre todo lo de fuera del turno, el reparto es proporcional. */
+  const totalMins = totalHours * 60;
+  let h50: number;
+  let h100: number;
+  if (totalMins < computedTotalMins) {
+    h50 = Math.min(totalMins, mins50) / 60;
+    h100 = totalHours - h50;
+  } else {
+    h50 = totalHours * (mins50 / computedTotalMins);
+    h100 = totalHours - h50;
+  }
 
   return {
     h50: parseFloat(h50.toFixed(2)),

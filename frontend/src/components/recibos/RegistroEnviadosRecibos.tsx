@@ -201,7 +201,7 @@ export const RegistroEnviadosRecibos: React.FC = () => {
           <LoadingSpinner />
         </div>
       ) : (
-        <TablaConEncabezadoFijo className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 ${cargando ? "opacity-60" : ""}`} tabla="w-full text-left border-collapse">
+        <TablaConEncabezadoFijo sinExportar className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 ${cargando ? "opacity-60" : ""}`} tabla="w-full text-left border-collapse">
           <thead>
             <tr>
               <th className={th}>Enviado</th>

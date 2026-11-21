@@ -3,7 +3,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { ErrorVacacion } from "../services/vacaciones/crearVacacion.js";
-import { acusarInvitacion, acusarOtorgamiento, cargarCampania, cerrarCampania, confirmarAsignaciones, crearCampania, editarAsignacion, lanzarCampania, listarCampanias, miInvitacion, proponerFechas, recordar, reporteCsv, sugerirAsignaciones, tablero, } from "../services/vacaciones/campaniaVacaciones.js";
+import { acusarInvitacion, acusarOtorgamiento, cancelarPropuesta, cargarCampania, cerrarCampania, confirmarAsignaciones, crearCampania, editarAsignacion, guardarTiposContrato, lanzarCampania, listarCampanias, miInvitacion, proponerFechas, recordar, reporteCsv, sugerirAsignaciones, tablero, vistaPreviaDeInvitacion, } from "../services/vacaciones/campaniaVacaciones.js";
 const manejar = (fn) => async (req, res) => {
     try {
         const r = await fn(req, res);
@@ -28,12 +28,16 @@ campaniasVacacionesRoutes.use(requireTenant, authenticateToken);
 campaniasVacacionesRoutes.get("/mia", manejar(async (req) => ({ invitacion: await miInvitacion(tid(req), yo(req)) })));
 campaniasVacacionesRoutes.post("/mia/acuse", manejar(async (req) => acusarInvitacion(tid(req), yo(req))));
 campaniasVacacionesRoutes.post("/mia/proponer", manejar(async (req) => proponerFechas(tid(req), yo(req), req.body?.tramos)));
+campaniasVacacionesRoutes.post("/mia/cancelar-propuesta", manejar(async (req) => cancelarPropuesta(tid(req), yo(req))));
 campaniasVacacionesRoutes.post("/mia/acuse-otorgamiento", manejar(async (req) => acusarOtorgamiento(tid(req), yo(req))));
 /* ── El admin ── */
 campaniasVacacionesRoutes.get("/", soloAdmin, manejar(async (req) => listarCampanias(tid(req))));
 campaniasVacacionesRoutes.post("/", soloAdmin, manejar(async (req) => crearCampania(tid(req), yo(req), req.body || {})));
 campaniasVacacionesRoutes.get("/:id", soloAdmin, manejar(async (req) => tablero(tid(req), String(req.params.id))));
-campaniasVacacionesRoutes.post("/:id/lanzar", soloAdmin, manejar(async (req) => lanzarCampania(tid(req), String(req.params.id), yo(req))));
+// A quién se invita: cuánta gente con días hay por tipo de contrato (la vista previa) y la selección de la campaña.
+campaniasVacacionesRoutes.get("/:id/vista-previa", soloAdmin, manejar(async (req) => vistaPreviaDeInvitacion(tid(req), String(req.params.id))));
+campaniasVacacionesRoutes.put("/:id/tipos-contrato", soloAdmin, manejar(async (req) => guardarTiposContrato(tid(req), String(req.params.id), req.body?.tiposContratoInvitar)));
+campaniasVacacionesRoutes.post("/:id/lanzar", soloAdmin, manejar(async (req) => lanzarCampania(tid(req), String(req.params.id), yo(req), req.body?.tiposContratoInvitar)));
 campaniasVacacionesRoutes.post("/:id/recordatorio", soloAdmin, manejar(async (req) => {
     const c = await cargarCampania(tid(req), String(req.params.id));
     if (c.estado !== "lanzada")

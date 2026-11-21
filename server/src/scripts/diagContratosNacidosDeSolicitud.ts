@@ -25,6 +25,7 @@ async function main() {
   const proyectos: any[] = await Project.find({ tenantId: new Types.ObjectId(tenantId) }).select("_id name").lean();
   const nombreProyecto = new Map(proyectos.map((p) => [String(p._id), p.name]));
   const ups: any[] = await UserProject.find({ projectId: { $in: proyectos.map((p) => p._id) }, contracts: { $elemMatch: { solicitudId: { $exists: true, $ne: null } } } })
+    // sin-estado: diagnóstico, no decide vigencia.
     .select("userId projectId contracts.solicitudId contracts.estado_id contracts.nombre_estado_empleado contracts.fecha_carga contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.nombre_contrato contracts.obraSocialId contracts.obraSocialOrigen")
     .lean();
   const users: any[] = await User.find({ _id: { $in: ups.map((u) => u.userId) } }).select("firstName lastName email").lean();

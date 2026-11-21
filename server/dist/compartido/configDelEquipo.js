@@ -127,9 +127,12 @@ export function rolDelMiembroHoy(vinculos, hoy) {
     let mejor = null;
     for (const v of vinculos || []) {
         for (const c of v?.contracts || []) {
+            // Rige hoy = estado VIGENTE y por fechas (etapa 3; misma regla que `esContratoVigente`, que acá no se importa).
+            if (c.estadoContrato !== "VIGENTE")
+                continue;
             const alta = diaDe(c.fecha_alta_contrato);
             const baja = diaDe(c.fecha_baja_contrato);
-            if ((alta && alta > hoy) || (baja && baja < hoy))
+            if (!alta || alta > hoy || (baja && baja < hoy))
                 continue;
             const rol = rolDelMiembro(v.nombre_rol_frame, c.nombre_rol_frame);
             if (rol && (!mejor || alta >= mejor.alta))

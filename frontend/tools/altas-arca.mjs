@@ -31,6 +31,11 @@
  *
  * No importa `playwright-core`: recibe la página ya abierta por el servidor (`navegador.ts`), así no
  * depende de `frontend/node_modules`, que no está en el VPS.
+ *
+ * LO QUE SE EXPORTA SIN CLICK (20/11/2026): `leerPantalla`, `manejarDialogos`, `textosDeError`, `entrarComo`,
+ * `verificarEmpleadora` y `cortar` los usa también el motor de Modificaciones y Bajas
+ * (`modificaciones-arca.mjs`), que tiene su propia lista blanca y su propio escaneo. Ninguno aprieta nada:
+ * la garantía de este archivo —sus cinco clicks, cada uno en su función— no cambia por exportarlos.
  */
 import { readFile } from "node:fs/promises";
 import { esperarEstado, ESPERA_POSTBACK_MS } from "./arca-postback.mjs";
@@ -87,7 +92,7 @@ export function pantallaAltas({ accion = "", ids = [], texto = "" } = {}) {
   return "otra";
 }
 
-async function leerPantalla(page) {
+export async function leerPantalla(page) {
   return page
     .evaluate(() => ({
       accion: document.querySelector("form#aspnetForm")?.getAttribute("action") || "",
@@ -164,7 +169,7 @@ async function aceptarGrilla(page, estado) {
  * Los diálogos del navegador: se RECHAZAN, salvo el que dispare el click irreversible. Un `confirm()`
  * inesperado aceptado por default podría confirmar algo que nadie pidió.
  */
-function manejarDialogos(page, estado, onProgreso) {
+export function manejarDialogos(page, estado, onProgreso) {
   const h = async (d) => {
     const msg = d.message();
     estado.dialogos.push(msg);
@@ -247,7 +252,7 @@ export async function htmlAnonimo(page) {
  * muestra el CUIT; el encabezado «Empleador / CUIT» aparece en las de Relaciones Laborales. La
  * verificación la hace `verificarEmpleadora`, ya en la pantalla de trabajo y antes de escribir.
  */
-async function entrarComo(page, empresaCuit) {
+export async function entrarComo(page, empresaCuit) {
   const cuit = soloDigitos(empresaCuit);
   if (cuit.length !== 11) throw new Error("La empleadora no tiene un CUIT de 11 dígitos. No se escribió nada.");
   if ((await pantallaActual(page)) !== "selector_cuit") {
@@ -267,7 +272,7 @@ async function entrarComo(page, empresaCuit) {
  * bajo otra empresa ARCA lo acepta sin avisar. Espera unos segundos a que el encabezado lo muestre, y
  * TIRA si no está (nunca devuelve false).
  */
-async function verificarEmpleadora(page, empresaCuit, onProgreso) {
+export async function verificarEmpleadora(page, empresaCuit, onProgreso) {
   const cuit = soloDigitos(empresaCuit);
   await esperarEstado(async () => (await cuitsEnPantalla(page)).includes(cuit), { ms: 10_000, que: "el CUIT de la empleadora en pantalla", log });
   const enPantalla = await cuitsEnPantalla(page);
@@ -275,7 +280,7 @@ async function verificarEmpleadora(page, empresaCuit, onProgreso) {
   onProgreso({ tipo: "empleadoraVerificada", cuit });
 }
 
-const cortar = (señal, paso) => {
+export const cortar = (señal, paso) => {
   if (señal?.cortada) throw Object.assign(new Error(`Detenido antes de ${paso}. No se presentó nada.`), { detenido: true });
 };
 
@@ -405,7 +410,7 @@ export function motivoDelRechazo({ dialogos = [], enRojo = [], texto = "", antes
 }
 
 /** Los textos visibles en rojo o en elementos de error/mensaje de la pantalla. */
-async function textosDeError(page) {
+export async function textosDeError(page) {
   return page
     .evaluate(() => {
       const out = [];

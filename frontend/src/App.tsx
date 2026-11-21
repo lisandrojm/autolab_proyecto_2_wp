@@ -91,6 +91,7 @@ import { FuentesParitariaPage } from "./pages/FuentesParitariaPage";
 import { ArcaModalidadesLiquidacionPage } from "./pages/ArcaModalidadesLiquidacionPage";
 import { ArcaPuestosDesempenadosPage } from "./pages/ArcaPuestosDesempenadosPage";
 import { ArcaSituacionesRevistaPage } from "./pages/ArcaSituacionesRevistaPage";
+import { ArcaSituacionesBajaPage } from "./pages/ArcaSituacionesBajaPage";
 import { ArcaCatalogoPage } from "./pages/ArcaCatalogoPage";
 import { ConveniosPage } from "./pages/ConveniosPage";
 import { CentrosCostoPage } from "./pages/CentrosCostoPage";
@@ -557,6 +558,15 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              {/* Cada sección de Admin › Vacaciones (ver config/seccionesVacaciones.ts). «calendar» tiene ruta propia y gana por ser fija. */}
+              <Route
+                path="/vacations/:seccion"
+                element={
+                  <ProtectedRoute>
+                    <VacationsPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/vacations/calendar"
                 element={
@@ -865,6 +875,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ArcaSituacionesRevistaPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/arca/situaciones-baja"
+                element={
+                  <ProtectedRoute>
+                    <ArcaSituacionesBajaPage />
                   </ProtectedRoute>
                 }
               />

@@ -41,6 +41,7 @@ export interface IVacationConfig extends Document {
         plazoParaDefinirDias: number;
         avisoMinimoDias: number;
         minDiasPorTramo: number;
+        tiposContratoInvitar?: number[];
     };
     /**
      * DE QUÉ EMPLEADORA SE TOMA LA ANTIGÜEDAD (15/11/2026). Ya no se suman los días de todas: cuenta la

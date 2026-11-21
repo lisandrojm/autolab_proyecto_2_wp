@@ -4,14 +4,24 @@
  * Un contrato de TIEMPO INDETERMINADO se guarda con `fecha_baja_contrato` vacía, así que la
  * ausencia de fecha de baja es lo que lo identifica como sin fecha de fin.
  *
- * Vigente = ya arrancó (fecha_alta_contrato <= hoy) Y no terminó (sin fecha_baja_contrato, o
- * fecha_baja_contrato >= hoy). Un contrato con Alta futura (todavía no arrancó) NO es vigente,
- * aunque no tenga fecha de baja.
+ * LA VIGENCIA SALE DEL ESTADO (etapa 3, 19/11/2026; antes salía sólo de las fechas). Un contrato RIGE
+ * HOY si su `estadoContrato` es VIGENTE, ya arrancó (alta <= hoy) y, si tiene baja, todavía no pasó
+ * (baja >= hoy). Con cualquier otro estado no rige: FINALIZADO, ANULADO, SIN_DETERMINAR (lo decide una
+ * persona) y también SIN ESTADO (null o el campo ausente): nunca se adivina a partir de las fechas
+ * (decisión del usuario). El estado lo pone el modelo al guardar y lo mantiene la tarea diaria
+ * (`services/estadoContratoAlGuardar.ts`, `services/transicionEstadoContratos.ts`).
  *
- * El flag `esTiempoIndeterminado` del tipo de contrato no se usa acá: si un contrato indeterminado
- * tiene fecha de baja cargada, esa baja es real y se respeta.
+ * El campo AUSENTE casi siempre es una proyección que se olvidó de pedir `contracts.estadoContrato`:
+ * se avisa por consola una vez por lugar (`proyeccionesConEstado.test.ts` lo exige en el código).
+ *
+ * Las tres copias de esta regla tienen que moverse juntas: `utils/contratosQueRigen.ts` (adentro de
+ * Mongo), `services/filtrosDeNovedades.ts` (ídem) y `frontend/src/utils/contratoVigencia.ts`.
+ *
+ * `esTiempoIndeterminado` sigue siendo «sin fecha de baja»: decide la prioridad entre vigentes, no la
+ * vigencia.
  */
 export interface ContratoVigenciaLike {
+    estadoContrato?: string | null;
     fecha_alta_contrato?: string;
     fecha_baja_contrato?: string;
     [key: string]: any;
@@ -25,8 +35,16 @@ export declare function hoyArgentina(): string;
  */
 export declare function fechaISO(valor?: string | null): string;
 /**
- * Vigente = ya arrancó (Alta <= hoy) y no terminó (sin Baja, o Baja >= hoy). Si la Alta es futura,
- * el contrato todavía no rige, aunque no tenga fecha de baja (tiempo indeterminado).
+ * ¿Es la LÁPIDA de un contrato anulado? (etapa 2b, ver `utils/anulacionContrato.ts`). No tiene fechas, y
+ * sin esta guarda «sin alta» se leía como «ya arrancó» y «sin baja» como «indeterminado»: la lápida
+ * quedaba vigente para siempre y `getContratoActivo` la elegía.
+ */
+export declare const esContratoAnulado: (contrato: {
+    estadoContrato?: unknown;
+} | null | undefined) => boolean;
+/**
+ * Rige hoy = estado VIGENTE, ya arrancó (Alta <= hoy) y no terminó (sin Baja, o Baja >= hoy). Sin
+ * estado, o con cualquier otro, no rige: no se adivina por las fechas.
  */
 export declare function esContratoVigente(contrato: ContratoVigenciaLike | null | undefined, hoy?: string): boolean;
 /** Igual que `esContratoVigente`, recibiendo solo la fecha de baja. */
@@ -36,10 +54,10 @@ export declare function esTiempoIndeterminado(contrato: ContratoVigenciaLike | n
 /**
  * Contrato que representa la situación actual, por orden de prioridad:
  *
- *  1. Entre los VIGENTES (ya arrancaron y no terminaron), el TIEMPO INDETERMINADO manda, aunque
+ *  1. Entre los VIGENTES (estado VIGENTE, ya arrancaron y no terminaron), el TIEMPO INDETERMINADO manda, aunque
  *     después figuren cargados contratos a plazo. Un contrato sin fecha de fin sigue abierto.
  *  2. Si no hay indeterminado vigente, el vigente más reciente.
  *  3. Si no hay ninguno vigente (ni siquiera uno que todavía no arrancó), el más reciente de todos
  *     (para seguir mostrando el histórico).
  */
-export declare function getContratoActivo<T extends ContratoVigenciaLike>(contratos: T[] | null | undefined, hoy?: string): T | null;
+export declare function getContratoActivo<T extends ContratoVigenciaLike>(todos: T[] | null | undefined, hoy?: string): T | null;

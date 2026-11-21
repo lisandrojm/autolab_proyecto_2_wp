@@ -1,0 +1,413 @@
+[
+ {
+  "coleccion": "arca_verificaciones_altas",
+  "_id": "6aed982c14198dcf20e37fcb",
+  "userProjectId": "696423e95dd723128ad69f1f",
+  "campoIndice": "contractIndex",
+  "texto": "MARIANA SOLEDAD PEREDA · alta 2026-10-17",
+  "antes": {
+   "indice": 14,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8a606"
+  },
+  "despues": {
+   "indice": 13,
+   "clave": "6afdb3ca0fc132faeab8a605"
+  },
+  "evidencia": {
+   "campos": [
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-17",
+    "empresaId": "6a5fd12244faed2e72669b42"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-17",
+    "baja": "2026-10-17",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad7c9de476158e73ba46041"
+   },
+   "motivoPosicionVieja": "alta 2026-10-17 ≠ 2026-10-18",
+   "candidatos": [
+    13
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036dd73",
+  "userProjectId": "696423e95dd723128ad69f1f",
+  "campoIndice": "contractIndex",
+  "texto": "MARIANA SOLEDAD PEREDA · alta 2026-10-18",
+  "antes": {
+   "indice": 15,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8a607"
+  },
+  "despues": {
+   "indice": 14,
+   "clave": "6afdb3ca0fc132faeab8a606"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-18",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad52303d86e3b7b0a59c0af"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-18",
+    "baja": "2026-10-18",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad52303d86e3b7b0a59c0af"
+   },
+   "motivoPosicionVieja": "alta 2026-10-18 ≠ 2026-10-19",
+   "candidatos": [
+    14
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036dd74",
+  "userProjectId": "696423e95dd723128ad69f1f",
+  "campoIndice": "contractIndex",
+  "texto": "MARIANA SOLEDAD PEREDA · alta 2026-10-19",
+  "antes": {
+   "indice": 16,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8a608"
+  },
+  "despues": {
+   "indice": 15,
+   "clave": "6afdb3ca0fc132faeab8a607"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-19",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad97d9910d585604172e149"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-19",
+    "baja": "2026-10-19",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad97d9910d585604172e149"
+   },
+   "motivoPosicionVieja": "alta 2026-10-19 ≠ 2026-10-24",
+   "candidatos": [
+    15
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036dd75",
+  "userProjectId": "696423e95dd723128ad69f1f",
+  "campoIndice": "contractIndex",
+  "texto": "MARIANA SOLEDAD PEREDA · alta 2026-10-24",
+  "antes": {
+   "indice": 17,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8a609"
+  },
+  "despues": {
+   "indice": 16,
+   "clave": "6afdb3ca0fc132faeab8a608"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-10-24",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae7fe1071265108aa713d86"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-24",
+    "baja": "2026-10-24",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae7fe1071265108aa713d86"
+   },
+   "motivoPosicionVieja": "alta 2026-10-24 ≠ 2026-11-04",
+   "candidatos": [
+    16
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6aefa0e0ab55baa12036dd76",
+  "userProjectId": "696423e95dd723128ad69f1f",
+  "campoIndice": "contractIndex",
+  "texto": "MARIANA SOLEDAD PEREDA · alta 2026-11-04",
+  "antes": {
+   "indice": 18,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8a60a"
+  },
+  "despues": {
+   "indice": 17,
+   "clave": "6afdb3ca0fc132faeab8a609"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-11-04",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aebf28cea2a8158e2c8dfa5"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-04",
+    "baja": "2026-11-06",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aebf28cea2a8158e2c8dfa5"
+   },
+   "motivoPosicionVieja": "alta 2026-11-04 ≠ 2026-11-05",
+   "candidatos": [
+    17
+   ]
+  }
+ },
+ {
+  "coleccion": "constancias_arca",
+  "_id": "6af0b8c3ab55baa1203750df",
+  "userProjectId": "696423e95dd723128ad69f1f",
+  "campoIndice": "contractIndex",
+  "texto": "MARIANA SOLEDAD PEREDA · alta 2026-11-05",
+  "antes": {
+   "indice": 19,
+   "claveEnEsaPosicion": null
+  },
+  "despues": {
+   "indice": 18,
+   "clave": "6afdb3ca0fc132faeab8a60a"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "alta",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "alta": "2026-11-05",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aefe7213666532db4f2979d"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-05",
+    "baja": "2026-11-05",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aefe7213666532db4f2979d"
+   },
+   "motivoPosicionVieja": "posición 19 fuera de los 19 contratos",
+   "candidatos": [
+    18
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6ad52303d86e3b7b0a59c0af",
+  "userProjectId": "696423e95dd723128ad69f1f",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-10-18 · MARIANA SOLEDAD PEREDA",
+  "antes": {
+   "indice": 15,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8a607"
+  },
+  "despues": {
+   "indice": 14,
+   "clave": "6afdb3ca0fc132faeab8a606"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad52303d86e3b7b0a59c0af"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-18",
+    "baja": "2026-10-18",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad52303d86e3b7b0a59c0af"
+   },
+   "motivoPosicionVieja": "presentado por otro log (72e149 ≠ 59c0af)",
+   "candidatos": [
+    14
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6ad97d9910d585604172e149",
+  "userProjectId": "696423e95dd723128ad69f1f",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-10-22 · MARIANA SOLEDAD PEREDA",
+  "antes": {
+   "indice": 16,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8a608"
+  },
+  "despues": {
+   "indice": 15,
+   "clave": "6afdb3ca0fc132faeab8a607"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad97d9910d585604172e149"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-19",
+    "baja": "2026-10-19",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ad97d9910d585604172e149"
+   },
+   "motivoPosicionVieja": "presentado por otro log (713d86 ≠ 72e149)",
+   "candidatos": [
+    15
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6ae7fe1071265108aa713d86",
+  "userProjectId": "696423e95dd723128ad69f1f",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-02 · MARIANA SOLEDAD PEREDA",
+  "antes": {
+   "indice": 17,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8a609"
+  },
+  "despues": {
+   "indice": 16,
+   "clave": "6afdb3ca0fc132faeab8a608"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae7fe1071265108aa713d86"
+   },
+   "contratoElegido": {
+    "alta": "2026-10-24",
+    "baja": "2026-10-24",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6ae7fe1071265108aa713d86"
+   },
+   "motivoPosicionVieja": "presentado por otro log (c8dfa5 ≠ 713d86)",
+   "candidatos": [
+    16
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6aebf28cea2a8158e2c8dfa5",
+  "userProjectId": "696423e95dd723128ad69f1f",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-05 · MARIANA SOLEDAD PEREDA",
+  "antes": {
+   "indice": 18,
+   "claveEnEsaPosicion": "6afdb3ca0fc132faeab8a60a"
+  },
+  "despues": {
+   "indice": 17,
+   "clave": "6afdb3ca0fc132faeab8a609"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aebf28cea2a8158e2c8dfa5"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-04",
+    "baja": "2026-11-06",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aebf28cea2a8158e2c8dfa5"
+   },
+   "motivoPosicionVieja": "presentado por otro log (f2979d ≠ c8dfa5)",
+   "candidatos": [
+    17
+   ]
+  }
+ },
+ {
+  "coleccion": "arca_altas_logs",
+  "arreglo": "contratos",
+  "_id": "6aefe7213666532db4f2979d",
+  "userProjectId": "696423e95dd723128ad69f1f",
+  "campoIndice": "contractIndex",
+  "texto": "log 2026-11-08 · MARIANA SOLEDAD PEREDA",
+  "antes": {
+   "indice": 19,
+   "claveEnEsaPosicion": null
+  },
+  "despues": {
+   "indice": 18,
+   "clave": "6afdb3ca0fc132faeab8a60a"
+  },
+  "evidencia": {
+   "campos": [
+    "logId",
+    "empresaId"
+   ],
+   "fuerza": "fuerte",
+   "referencia": {
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aefe7213666532db4f2979d"
+   },
+   "contratoElegido": {
+    "alta": "2026-11-05",
+    "baja": "2026-11-05",
+    "empresaId": "6a5fd12244faed2e72669b42",
+    "logId": "6aefe7213666532db4f2979d"
+   },
+   "motivoPosicionVieja": "posición 19 fuera de los 19 contratos",
+   "candidatos": [
+    18
+   ]
+  }
+ }
+]

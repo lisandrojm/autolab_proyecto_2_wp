@@ -75,6 +75,8 @@ export interface ResumenSyncRelaciones {
   duracionMs: number;
   error?: string;
   htmlGuardado?: string;
+  /** Las bajas de ARCA aplicadas solas a los contratos después de la corrida automática (con tope). */
+  bajasContratos?: { aplicables: number; aplicadas: number; cambiaron: number; listadas: number; excluidasPorEmpleadora: number; frenada: boolean; tope: number; error?: string };
 }
 
 export interface EstadoSyncRelaciones {
@@ -99,7 +101,104 @@ export interface RelacionResumida {
   puestoDesempenado: string;
 }
 
+/** Un contrato que «Sincronizar bajas» escribiría (o no, y por qué). Ver server `utils/bajasArcaContrato.ts`. */
+export type TipoCambioBaja = "baja_nueva" | "baja_por_tramos" | "baja_anterior" | "baja_paraguas" | "arca_granularidad" | "revision_manual" | "arca_posterior" | "arca_abierta";
+export interface ItemBajaArca {
+  userProjectId: string;
+  userId: string;
+  persona: string;
+  cuil: string;
+  proyecto: string;
+  contratoKey: string;
+  posicion: number;
+  contrato: string;
+  alta: string;
+  bajaContrato: string;
+  finArca: string;
+  situacionBaja: string;
+  empleadora: string;
+  tipo: TipoCambioBaja;
+  aplicar: boolean;
+  /** Por qué va a revisión manual, o qué mirar. */
+  alerta?: string;
+}
+export interface PlanBajasArca {
+  hoy: string;
+  espejoAl: string | null;
+  items: ItemBajaArca[];
+  resumen: Record<TipoCambioBaja, number>;
+  enCurso?: unknown;
+}
+
+/** AUDITORÍA ARCA (etapa 5): lo que no encaja entre WeProdu y ARCA. Ver server `services/arca/auditoriaArca.ts`. */
+export type ItemAuditoriaBaja = ItemBajaArca & { diasAntesDelFin?: number; tramos?: { inicio: string; fin: string; situacionBaja: string }[] };
+export interface ItemRelacionSinContrato {
+  userId: string;
+  persona: string;
+  cuil: string;
+  empleadora: string;
+  empleadoraCuit: string;
+  inicio: string;
+  fin: string;
+  situacionBaja: string;
+  /** Los contratos solapados, del más cercano al más lejano. `dias` positivo = ARCA empieza después. */
+  contratos: { contratoKey: string; userProjectId: string; posicion: number; proyecto: string; contrato: string; alta: string; baja: string; dias: number }[];
+}
+export interface ItemDiscrepanciaFrame {
+  _id: string;
+  userId: string;
+  persona: string;
+  userProjectId: string;
+  contratoKey: string | null;
+  posicion: number;
+  campo: string;
+  weprodu: string;
+  frame: string;
+  detectadaEl: string;
+  ultimaVezEl: string;
+  veces: number;
+}
+export interface TotalesAuditoria {
+  faltaBajaArca: number;
+  revisionManual: number;
+  granularidad: number;
+  relacionSinContrato: number;
+  discrepanciasFrame: number;
+  total: number;
+}
+export interface AuditoriaArca {
+  hoy: string;
+  espejoAl: string | null;
+  calculadoEl: string;
+  faltaBajaArca: ItemAuditoriaBaja[];
+  revisionManual: ItemAuditoriaBaja[];
+  granularidad: ItemAuditoriaBaja[];
+  relacionSinContrato: ItemRelacionSinContrato[];
+  discrepanciasFrame: ItemDiscrepanciaFrame[];
+  totales: TotalesAuditoria;
+}
+
 export const arcaRelacionesAPI = {
+  /** La auditoría completa (etapa 5). Calcula en el momento y deja guardados los totales. */
+  async auditoria(): Promise<AuditoriaArca> {
+    const { data } = await axios.get("/arca/relaciones/auditoria");
+    return data;
+  },
+  /** Los totales guardados de la auditoría (barato: para el contador). */
+  async auditoriaResumen(): Promise<{ el: string | null; totales: TotalesAuditoria | null }> {
+    const { data } = await axios.get("/arca/relaciones/auditoria/resumen");
+    return data;
+  },
+  /** Qué bajas de ARCA se llevarían a los contratos (no escribe). */
+  async planBajas(): Promise<PlanBajasArca> {
+    const { data } = await axios.get("/arca/relaciones/bajas-contratos");
+    return data;
+  },
+  /** Escribe las bajas (todas las aplicables, o las de esas claves). El server recalcula el plan. */
+  async aplicarBajas(claves?: string[]): Promise<{ escritos: ItemBajaArca[]; cambiaron: ItemBajaArca[] }> {
+    const { data } = await axios.post("/arca/relaciones/bajas-contratos/aplicar", claves ? { claves } : {});
+    return data;
+  },
   /** Las relaciones de varias personas por CUIL, de la más nueva a la más vieja (una sola consulta). */
   async relacionesDePersonas(cuils: string[]): Promise<{ empresas: EmpresaConCuit[]; relaciones: Record<string, RelacionResumida[]> }> {
     const { data } = await axios.post("/arca/relaciones/personas", { cuils });

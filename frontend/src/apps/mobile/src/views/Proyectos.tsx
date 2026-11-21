@@ -97,7 +97,7 @@ export default function Proyectos({ onNavigate }: { onNavigate?: (view: ViewType
     // Filter contracts to only those that match this project's ID or name
     const matchedContracts =
       proj.contracts?.filter((c: any) => {
-        if (!c) return false;
+        if (!c || c.estadoContrato === "ANULADO") return false; // lápida de un contrato anulado (etapa 2b)
 
         // Cross-reference project external/metadata ID if available
         const extProjId = proj.externalProjectId || proj.metadata?.id;

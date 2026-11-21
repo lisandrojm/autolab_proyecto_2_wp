@@ -194,5 +194,33 @@ export declare function importesNetosDelContrato(p: {
     semana: number;
     mensual: number;
     total: number;
+    jornadaBruto: number;
+    semanaBruto: number;
+    mensualBruto: number;
+};
+/**
+ * LA ESCALA DEL CONTRATO, como la muestra la solicitud (`EscalaDelContrato` en el frontend, 17/11/2026):
+ * sueldo básico, adicional, % adicional y presentismo de la categoría, llevados a lo que se paga en ESTE
+ * contrato. Lo pactado es un factor contra la escala:
+ *
+ *   jornada de escala = (básico + adicional + presentismo, o el bruto) ÷ jornadas del tipo (sin ellas, 30) × multiplicador
+ *   factor            = importe por jornada del contrato ÷ jornada de escala
+ *   cada columna      = su valor de escala × factor
+ *
+ * El % adicional es del grupo (no se escala). Sin categoría o sin escala, todo vacío. Puro.
+ */
+export declare function escalaDelContratoEnDocumento(p: {
+    jornadaBruto: unknown;
+    basico?: unknown;
+    adicional?: unknown;
+    presentismo?: unknown;
+    bruto?: unknown;
+    jornadasPorMes?: unknown;
+    multiplicador?: unknown;
+}): {
+    sueldoBasico: string;
+    adicional: string;
+    porcentajeAdicional: string;
+    presentismo: string;
 };
 export declare function buildEmployeeDocData(user: any, up: any, contract: any, empresa?: any): Promise<Record<string, any>>;

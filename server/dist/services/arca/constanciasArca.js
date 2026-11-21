@@ -66,6 +66,7 @@ export function filaDesdeContrato(o) {
         userId: String(o.up.userId),
         userProjectId: String(o.up._id),
         contractIndex: o.idx,
+        contratoKey: o.c.contratoKey ? String(o.c.contratoKey) : null,
         empresaId: String(o.empresa._id),
         empresaCuit: digitos(o.empresa.cuit),
         empresaRazonSocial: o.empresa.razonSocial,
@@ -89,7 +90,7 @@ export async function filasPresentadas(tenantObjectId, o = {}) {
     if (o.empresaId && Types.ObjectId.isValid(o.empresaId))
         match.empresaContratoId = { $in: [new Types.ObjectId(o.empresaId), o.empresaId] };
     const ups = await UserProject.find({ projectId: { $in: proyectos.map((p) => p._id) }, contracts: { $elemMatch: match } })
-        .select("userId contracts.empresaContratoId contracts.altaArcaPresentada contracts.altaConstancia contracts.fecha_alta_contrato contracts.fecha_baja_contrato")
+        .select("userId contracts.empresaContratoId contracts.altaArcaPresentada contracts.altaConstancia contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.estadoContrato contracts.contratoKey")
         .lean();
     const usuarios = await User.find({ _id: { $in: ups.map((u) => u.userId) }, tenantId: tenantObjectId }).select("firstName lastName metadata.cuit").lean();
     const porId = new Map(usuarios.map((u) => [String(u._id), u]));
@@ -121,7 +122,7 @@ export async function sincronizarConstancias(tenantObjectId, o = {}) {
     const tenantId = new Types.ObjectId(String(tenantObjectId));
     const ops = [];
     for (const f of filas) {
-        const base = { ...f, userId: new Types.ObjectId(f.userId), userProjectId: new Types.ObjectId(f.userProjectId), empresaId: new Types.ObjectId(f.empresaId), logId: f.logId && Types.ObjectId.isValid(f.logId) ? new Types.ObjectId(f.logId) : null };
+        const base = { ...f, userId: new Types.ObjectId(f.userId), userProjectId: new Types.ObjectId(f.userProjectId), empresaId: new Types.ObjectId(f.empresaId), logId: f.logId && Types.ObjectId.isValid(f.logId) ? new Types.ObjectId(f.logId) : null, contratoKey: f.contratoKey ? new Types.ObjectId(f.contratoKey) : null };
         const { nombre, fechaBaja, empresaRazonSocial, ...soloAlCrear } = base;
         ops.push({
             updateOne: {
@@ -130,6 +131,10 @@ export async function sincronizarConstancias(tenantObjectId, o = {}) {
                 upsert: true,
             },
         });
+        // Etapa 2c: una fila vieja sin clave la toma del contrato, sólo si sigue apuntando a la misma posición.
+        if (base.contratoKey) {
+            ops.push({ updateOne: { filter: { tenantId, clave: f.clave, userProjectId: base.userProjectId, contractIndex: f.contractIndex, contratoKey: null }, update: { $set: { contratoKey: base.contratoKey } } } });
+        }
         if (yaTieneConstancia(f.estado)) {
             /*
               En revisión se reconoce sólo una constancia DISTINTA de la que ya conoce la fila (otro código: se

@@ -44,6 +44,27 @@ export const cambiosDeContrato = (catalogos: CatalogosContratacion, contratoId: 
   tipoImpositivo: catalogos.tramitePorContrato.get(contratoId) || null,
 });
 
+/*
+  CON UN CONTRATO DE ARCA EN ESAS FECHAS, SÓLO SERVICIOS (17/11/2026; la regla del alta individual del
+  05/11). `soloServicios` es el mensaje del server (`mensajeSoloServicios`) o vacío: con él, la ventana
+  del tipo ofrece SÓLO los tipos de Servicios (pedido del usuario, 19/11: «si sólo podría pedir Servicios,
+  no debería mostrar los de ARCA»), en la fila de la persona y en el puesto. El tipo general («para
+  todos») no se acota: si es de ARCA, la fila lo muestra marcado y el server lo devuelve como AVISO que
+  no frena (`planDeLote`, decisión del 19/11); al tocar la fila sólo se puede pasar a Servicios.
+*/
+export const contratosParaElegir = (catalogos: CatalogosContratacion, soloServicios?: string | null) => (soloServicios ? catalogos.contratos.filter((c) => catalogos.tramitePorContrato.get(c._id) === "constancia_cuit") : catalogos.contratos);
+
+export function AvisoSoloServicios({ mensaje, contratoId, catalogos }: { mensaje?: string | null; contratoId?: string | null; catalogos: CatalogosContratacion }) {
+  if (!mensaje) return null;
+  const esArca = !!contratoId && catalogos.tramitePorContrato.get(contratoId) === "alta_temprana_afip";
+  return (
+    <p className={`rounded-lg p-2 text-xs font-semibold ${esArca ? "bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-200" : "bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200"}`}>
+      {mensaje}
+      {esArca && " Tocá el tipo de contrato para pasarlo a Servicios; si se envía así, va como aviso."}
+    </p>
+  );
+}
+
 export const porDiasSueltos = (catalogos: CatalogosContratacion, contratoId?: string | null) => (catalogos.contratos.find((c) => c._id === contratoId) as any)?.data?.modoFechas === "dias";
 
 interface HojaProps {
@@ -65,11 +86,11 @@ export type HojaCondicion = null | "contrato" | "turno";
  * Elegir cierra la hoja: son elecciones de UNA cosa, y dejarla abierta después de tocar es obligar a
  * buscar la cruz. El turno, además, completa horario y días.
  */
-export function HojasCondiciones({ cual, onCerrar, titulo, areas, catalogos, valores, onCambio }: Omit<HojaProps, "abierta"> & { cual: HojaCondicion }) {
+export function HojasCondiciones({ cual, onCerrar, titulo, areas, catalogos, valores, onCambio, soloServicios }: Omit<HojaProps, "abierta"> & { cual: HojaCondicion; soloServicios?: string | null }) {
   return (
     <>
       {/* El tipo de contrato: la misma ventana del alta individual, con el badge del trámite al lado de cada uno. */}
-      <ModalTipoContrato abierto={cual === "contrato"} onCerrar={onCerrar} contratos={catalogos.contratos} contratoId={valores.contratoId || ""} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onElegir={(id) => onCambio(cambiosDeContrato(catalogos, id))} />
+      <ModalTipoContrato abierto={cual === "contrato"} onCerrar={onCerrar} contratos={contratosParaElegir(catalogos, soloServicios)} contratoId={valores.contratoId || ""} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onElegir={(id) => onCambio(cambiosDeContrato(catalogos, id))} />
       <HojaModal abierta={cual === "turno"} onCerrar={onCerrar} titulo={titulo} subtitulo="Área y turno · completa el horario y los días">
         <ListaTurnos
           areas={areas}
@@ -104,6 +125,8 @@ interface FilasProps {
   sinHorario?: boolean;
   /** Algo al lado del rótulo «Tipo de contrato» (el ⓘ del equipo: es el valor por defecto de cada puesto). */
   infoContrato?: ReactNode;
+  /** La persona tiene un contrato de ARCA vigente: el mensaje (ver `AvisoSoloServicios`). */
+  soloServicios?: string | null;
 }
 
 /**
@@ -111,7 +134,7 @@ interface FilasProps {
  * badge de trámite), y debajo, en su tarjeta, área y turno (abre su hoja), horario y días (se editan
  * acá mismo).
  */
-export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, onAbrirTurno, onCambio, distintas, sinHorario, infoContrato }: FilasProps) {
+export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, onAbrirTurno, onCambio, distintas, sinHorario, infoContrato, soloServicios }: FilasProps) {
   const turno = nombreTurno(areas, valores.areaId, valores.shiftId);
   const sueltos = porDiasSueltos(catalogos, valores.contratoId);
   const dias = valores.diasSemana || [];
@@ -119,6 +142,7 @@ export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, o
   return (
     <div className="space-y-3">
     <CampoTipoContrato contratos={catalogos.contratos} contratoId={valores.contratoId || ""} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onAbrir={onAbrirContrato} marca={<>{marca("contrato")}{infoContrato && <span className="font-normal normal-case tracking-normal">{infoContrato}</span>}</>} />
+    <AvisoSoloServicios mensaje={soloServicios} contratoId={valores.contratoId} catalogos={catalogos} />
 
     <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-800/70">
       <button type="button" onClick={onAbrirTurno} className="flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left">

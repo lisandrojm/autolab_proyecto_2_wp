@@ -126,7 +126,8 @@ function indiceDelContratoQueRige(user: any, projectId?: string): number | null 
 /** Cuántos contratos tiene la persona en el proyecto: lo cuenta el server, o el array si vino. */
 function cantidadDeContratos(user: any, projectId?: string): number {
   if (typeof user?.contractCount === 'number') return user.contractCount;
-  return vinculoConElProyecto(user, projectId)?.contracts?.length || 0;
+  // Sin las lápidas de los contratos anulados (etapa 2b).
+  return (vinculoConElProyecto(user, projectId)?.contracts || []).filter((c: any) => c?.estadoContrato !== 'ANULADO').length;
 }
 
 // Formatea una fecha de contrato (ISO "YYYY-MM-DD...") a d/m/yyyy sin corrimiento de zona horaria.
@@ -2660,7 +2661,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     setMotivoValoracion(String((contratoPorIndice as any)?.valoracionOverride?.motivo || ''));
     // El contrato de ESTE proyecto que se va a editar (el del índice, o el último): su regla de nacimiento.
     const contratosDelProyecto = (currentProjectMeta?.contracts as any[]) || [];
-    const editado = contratoPorIndice || contratosDelProyecto[contratosDelProyecto.length - 1] || null;
+    // El último de verdad: una lápida (contrato anulado) no tiene regla (etapa 2b).
+    const editado = contratoPorIndice || [...contratosDelProyecto].reverse().find((c: any) => c?.estadoContrato !== 'ANULADO') || null;
     setReglaContratoEditado(String(editado?.valoracion_regla_id?._id || editado?.valoracion_regla_id || ''));
     setAvisoConvenio('');
 
@@ -3121,6 +3123,18 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       // (En modo «sólo aprobación» se avisó más arriba y se salió antes de los refrescos.)
     } catch (error: any) {
       console.error('Assign member error:', error);
+      /*
+        LA SOLICITUD YA TIENE SU CONTRATO (19/11/2026): el server no crea un segundo y dice cuál es.
+        En vez de dejar a quien aprueba trabado con un «ya existe», se ofrece abrir ESE contrato para
+        editarlo, que es lo que se quería hacer (lo cargado en este formulario se descarta).
+      */
+      const existente = error.response?.status === 409 && error.response?.data?.codigo === 'SOLICITUD_YA_TIENE_CONTRATO' ? error.response.data.contrato : null;
+      if (existente && typeof existente.contractIndex === 'number') {
+        const periodo = `${existente.nombre_contrato || 'Contrato'} · alta ${existente.fecha_alta_contrato || '—'}${existente.fecha_baja_contrato ? ` · baja ${existente.fecha_baja_contrato}` : ''}`;
+        const r = await sweetAlert.confirm('Esta solicitud ya tiene su contrato', `${periodo}.\n\nAprobarla de nuevo crearía un segundo contrato para la misma solicitud. Si hay que cambiar algo, se edita ése. Lo cargado en este formulario no se guarda.`, 'Abrir ese contrato', 'Cancelar');
+        if (r.isConfirmed) await handleOpenWizard(String(existente.userId), undefined, existente.contractIndex);
+        return;
+      }
       let errorMsg = 'Internal server error during assignment';
       if (error.response?.data?.error) {
         errorMsg = error.response.data.error;

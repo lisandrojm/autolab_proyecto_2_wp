@@ -17,7 +17,7 @@
  */
 import { diasEntre, diasHasta, esISO, fechaCorta, sePisan, sumarDias } from "../planVacaciones/fechas.js";
 import { rangoPermitido, temporadaConVentana, textoDeVentana } from "../ventanaGoce.js";
-export const CONFIG_CAMPANIA_POR_DEFECTO = { activa: false, plazoParaDefinirDias: 14, avisoMinimoDias: 30, minDiasPorTramo: 7 };
+export const CONFIG_CAMPANIA_POR_DEFECTO = { activa: false, plazoParaDefinirDias: 14, avisoMinimoDias: 30, minDiasPorTramo: 7, tiposContratoInvitar: [] };
 /**
  * Qué pasa si la persona no elige, y cómo asigna la empresa. Son constantes y no configuración: NO hay
  * otra opción. En particular, no existe «pagar en lugar de gozar» (art. 156: sólo al egreso).
@@ -36,7 +36,47 @@ export function normalizarConfigCampania(v) {
         plazoParaDefinirDias: entero(v?.plazoParaDefinirDias, d.plazoParaDefinirDias, 1, 120),
         avisoMinimoDias: entero(v?.avisoMinimoDias, d.avisoMinimoDias, 0, 180),
         minDiasPorTramo: entero(v?.minDiasPorTramo, d.minDiasPorTramo, 1, 60),
+        tiposContratoInvitar: normalizarTiposContrato(v?.tiposContratoInvitar),
     };
+}
+/** La lista de tipos tal como se guarda: números, sin repetir, ordenados. Lo que no es una lista queda vacío. */
+export function normalizarTiposContrato(v) {
+    if (!Array.isArray(v))
+        return [];
+    const ids = v.filter((x) => x !== null && x !== "" && typeof x !== "boolean").map(Number).filter((n) => Number.isFinite(n));
+    return [...new Set(ids)].sort((a, b) => a - b);
+}
+/** Por qué NO se invita a alguien, o `null` si se la invita. `tipoContratoId` null = sin contrato vigente de cómputo. */
+export function motivoDeNoInvitar(o) {
+    if (o.tipoContratoId !== null && o.deshabilitados.includes(o.tipoContratoId))
+        return "tipo_deshabilitado";
+    if (o.seleccion.length === 0)
+        return null;
+    if (o.tipoContratoId === null)
+        return "sin_contrato_vigente";
+    return o.seleccion.includes(o.tipoContratoId) ? null : "tipo_no_incluido";
+}
+/**
+ * LA VISTA PREVIA: cuántas personas se invitarían con esa selección, y cuántas quedan afuera por cada
+ * motivo. Es `motivoDeNoInvitar` aplicado grupo por grupo, así que coincide con lo que hace el lanzamiento.
+ */
+export function resumenDeInvitables(p, seleccion, deshabilitados) {
+    const r = { invitar: 0, tipoDeshabilitado: 0, tipoNoIncluido: 0, sinContrato: 0 };
+    const sumar = (tipoContratoId, personas) => {
+        const motivo = motivoDeNoInvitar({ tipoContratoId, seleccion, deshabilitados });
+        if (!motivo)
+            r.invitar += personas;
+        else if (motivo === "tipo_deshabilitado")
+            r.tipoDeshabilitado += personas;
+        else if (motivo === "tipo_no_incluido")
+            r.tipoNoIncluido += personas;
+        else
+            r.sinContrato += personas;
+    };
+    for (const t of p.porTipo)
+        sumar(t.id, t.personas);
+    sumar(null, p.sinContrato);
+    return r;
 }
 const diaDeSemana = (iso) => new Date(`${iso}T12:00:00Z`).getUTCDay();
 /**

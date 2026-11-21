@@ -16,6 +16,8 @@ router.get("/contracts-available", async (req, res) => {
     // Aggregate all unique contract types from UserProject
     const contracts = await UserProject.aggregate([
       { $unwind: "$contracts" },
+      // Sin las lápidas de contratos anulados (etapa 2b): no tienen tipo y armaban un grupo vacío.
+      { $match: { "contracts.estadoContrato": { $ne: "ANULADO" } } },
       {
         $group: {
           _id: "$contracts.tipo_contrato_id",

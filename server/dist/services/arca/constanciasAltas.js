@@ -31,7 +31,7 @@ export async function pendientesDeConstancia(tenantObjectId, empresaId) {
             },
         },
     })
-        .select("userId contracts.empresaContratoId contracts.altaArcaPresentada contracts.altaConstancia contracts.fecha_alta_contrato contracts.fecha_baja_contrato")
+        .select("userId contracts.empresaContratoId contracts.altaArcaPresentada contracts.altaConstancia contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.estadoContrato")
         .lean();
     const usuarios = await User.find({
         _id: { $in: ups.map((u) => u.userId) },
@@ -75,7 +75,7 @@ export async function pendientesDeConstanciaTodas(tenantObjectId) {
         projectId: { $in: proyectos.map((p) => p._id) },
         contracts: { $elemMatch: { "altaArcaPresentada.resultado": "presentada" } },
     })
-        .select("userId contracts.empresaContratoId contracts.altaArcaPresentada contracts.altaConstancia contracts.fecha_alta_contrato contracts.fecha_baja_contrato")
+        .select("userId contracts.empresaContratoId contracts.altaArcaPresentada contracts.altaConstancia contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.estadoContrato")
         .lean();
     const usuarios = await User.find({ _id: { $in: ups.map((u) => u.userId) }, tenantId: tenantObjectId }).select("firstName lastName metadata.cuit").lean();
     const porId = new Map(usuarios.map((u) => [String(u._id), u]));

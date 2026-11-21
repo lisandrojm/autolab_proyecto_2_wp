@@ -7,15 +7,15 @@ export declare const registerSchema: z.ZodObject<{
     role: z.ZodDefault<z.ZodEnum<["admin", "manager", "client", "superadmin", "user"]>>;
 }, "strip", z.ZodTypeAny, {
     email?: string;
-    password?: string;
     firstName?: string;
     lastName?: string;
+    password?: string;
     role?: "user" | "superadmin" | "admin" | "manager" | "client";
 }, {
     email?: string;
-    password?: string;
     firstName?: string;
     lastName?: string;
+    password?: string;
     role?: "user" | "superadmin" | "admin" | "manager" | "client";
 }>;
 export type RegisterInput = z.infer<typeof registerSchema>;

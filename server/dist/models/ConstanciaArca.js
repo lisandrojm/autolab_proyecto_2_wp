@@ -7,6 +7,7 @@ const schema = new Schema({
     userId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     userProjectId: { type: Schema.Types.ObjectId, required: true },
     contractIndex: { type: Number, required: true },
+    contratoKey: { type: Schema.Types.ObjectId, default: null, index: true },
     empresaId: { type: Schema.Types.ObjectId, ref: "Company", default: null },
     empresaCuit: { type: String, default: "" },
     empresaRazonSocial: { type: String, default: "" },

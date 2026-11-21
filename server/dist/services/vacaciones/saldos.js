@@ -7,9 +7,10 @@ import UserProject from "../../models/UserProject.js";
 import { AntiguedadArca } from "../../models/AntiguedadArca.js";
 import { Company } from "../../models/Company.js";
 import { textoAntiguedad } from "../../compartido/antiguedadTexto.js";
-import { hoyArgentina } from "../../utils/contratoVigencia.js";
+import { fechaISO, hoyArgentina } from "../../utils/contratoVigencia.js";
 import { contratosQueRigenDeLasPersonas } from "../../utils/contratosQueRigen.js";
-import { baseDeAntiguedad, isoDia } from "../../utils/antiguedadArca.js";
+import { contratoVigenteDeComputo } from "../../utils/contratoDeComputo.js";
+import { baseDeAntiguedad, empresaDeComputo, isoDia } from "../../utils/antiguedadArca.js";
 export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear, opciones = {}) {
     /*
       LOS USUARIOS, SIN SUS VÍNCULOS POBLADOS.
@@ -77,13 +78,16 @@ export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear,
                         input: { $ifNull: ["$contracts", []] },
                         as: "c",
                         in: {
-                            fecha_alta_contrato: "$$c.fecha_alta_contrato",
+                            estadoContrato: "$$c.estadoContrato", fecha_alta_contrato: "$$c.fecha_alta_contrato",
                             fecha_baja_contrato: "$$c.fecha_baja_contrato",
                             nombre_rol_frame: "$$c.nombre_rol_frame",
                             // La empleadora del contrato: con ella se discriminan las vacaciones y la antigüedad por empresa.
                             empresaContratoId: "$$c.empresaContratoId",
                             nombre_empresa_contrato: "$$c.nombre_empresa_contrato",
                             nombre_contrato: "$$c.nombre_contrato",
+                            // El tipo y la carga: para el contrato vigente en la empresa de cómputo (campaña de goce por tipo de contrato).
+                            tipo_contrato_id: "$$c.tipo_contrato_id",
+                            fecha_carga: "$$c.fecha_carga",
                         },
                     },
                 },
@@ -338,6 +342,13 @@ export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear,
           quién son, y descartarlos achicaría la antigüedad—.
         */
         let arcaBase = arca;
+        /*
+          EL CONTRATO VIGENTE EN LA EMPRESA DE CÓMPUTO (16/11/2026): el que mira la campaña de goce para
+          invitar por tipo de contrato (`utils/contratoDeComputo.ts`). La empresa es la que elige la regla de
+          antigüedad aunque los días se sumen (config o período cerrado): sumar cambia la cuenta, no a qué
+          empleadora pertenece hoy la persona. `null` = no tiene contrato vigente con esa empleadora.
+        */
+        let contratoVigenteComputo = null;
         let empresaComputo = null;
         {
             // ARCA: sus filas por empleadora. Sin ARCA: los contratos agrupados por empresa (null si alguno no tiene).
@@ -368,6 +379,16 @@ export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear,
             }
             const base = baseDeAntiguedad({ diasSumados: contractsDays, hayArca: !!arca, porArca, porContratos, motivoSuma, modo: modoComputo, precedencia: precedenciaClaves, hoy: hoyISO });
             contractsDays = base.dias;
+            {
+                const claveDeComputo = base.elegida?.fila.empleadoraCuit ?? empresaDeComputo(arca ? porArca : porContratos || [], hoyISO, { modo: modoComputo, precedencia: precedenciaClaves })?.fila.empleadoraCuit ?? null;
+                // La misma clave con que se agrupan los contratos por empleadora más arriba: su CUIT, o el id si no tiene.
+                const conEmpresa = misVinculos.flatMap((v) => (v.contracts || []).map((ct) => ({ ...ct, claveEmpresa: ct.empresaContratoId ? empresaPorId.get(String(ct.empresaContratoId))?.cuit || String(ct.empresaContratoId) : "" })));
+                const ct = contratoVigenteDeComputo(conEmpresa, claveDeComputo, hoyISO);
+                if (ct) {
+                    const tipo = ct.tipo_contrato_id === null || ct.tipo_contrato_id === undefined || ct.tipo_contrato_id === "" ? NaN : Number(ct.tipo_contrato_id);
+                    contratoVigenteComputo = { tipoContratoId: Number.isFinite(tipo) ? tipo : null, nombre: String(ct.nombre_contrato || ""), alta: fechaISO(ct.fecha_alta_contrato), baja: fechaISO(ct.fecha_baja_contrato), empresa: claveDeComputo ? nombreDeEmpresa(claveDeComputo) : String(ct.nombre_empresa_contrato || "") };
+                }
+            }
             const cuitDe = (clave) => (empresaPorCuit.has(clave) ? clave : "");
             if (base.elegida) {
                 const { fila, motivo, fuente, consideradas } = base.elegida;
@@ -564,6 +585,7 @@ export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear,
                   cuando se sumaron todas (`sumaEntreEmpresas` dice por qué). `null` si no hay empresas para elegir.
                 */
                 empresaComputo,
+                contratoVigenteComputo,
                 sumaEntreEmpresas: motivoSuma,
                 arca: arca
                     ? {

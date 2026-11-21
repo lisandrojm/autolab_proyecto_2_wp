@@ -18,6 +18,8 @@ export interface IConstanciaArca extends Document {
     userId?: Types.ObjectId | null;
     userProjectId: Types.ObjectId;
     contractIndex: number;
+    /** La `contratoKey` del contrato (etapa 2c): la identidad que no depende de la posición. `null` en lo viejo sin backfill. */
+    contratoKey?: Types.ObjectId | null;
     empresaId?: Types.ObjectId | null;
     empresaCuit: string;
     empresaRazonSocial: string;

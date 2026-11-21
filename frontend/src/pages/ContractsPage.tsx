@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ContractOverviewRow } from '../api/users';
-import { projectsAPI } from '../api/projects';
 import { contratoFrameAPI, ContratoFrameItem } from '../api/contratosFrame';
 import { infoAPI, InfoItem } from '../api/info';
 import { MemberContractsManagerModal } from '../components/team/MemberContractsManagerModal';
@@ -27,6 +26,7 @@ import { useContadoresContratacionStore } from '../stores/contadoresContratacion
 import { emitPendientesChanged } from '../utils/navbarEvents';
 import { rechazarSolicitudConMotivo } from '../components/solicitudes/accionesSolicitud';
 
+import { anularContratoConRevision } from '../utils/anularContrato';
 /*
   LA PANTALLA DE UNA BANDEJA DE CONTRATACIÓN (11/11/2026, pedido del usuario).
 
@@ -179,18 +179,10 @@ export const ContractsPage: React.FC<{ bandeja: Exclude<ClaveBandeja, 'solicitud
 
   // Eliminar SOLO ese contrato (por índice) del proyecto.
   const handleDeleteContract = async (record: ContractOverviewRow, alBorrar?: () => void) => {
-    const res = await sweetAlert.confirm('¿Eliminar contrato?', `Se eliminará este contrato de "${record.projectName}". Esta acción no se puede deshacer.`, 'Sí, eliminar');
-    if (!res.isConfirmed) return false;
-    try {
-      await projectsAPI.deleteMemberContract(record.projectId, record.userId, record.contractIndex);
-      invalidateRefCache('contracts-overview:');
-      sweetAlert.success('Contrato eliminado', 'El contrato fue eliminado.');
-      alBorrar?.();
-      return true;
-    } catch {
-      sweetAlert.error('Error', 'No se pudo eliminar el contrato.');
-      return false;
-    }
+    if (!(await anularContratoConRevision({ projectId: record.projectId, userId: record.userId, contractIndex: record.contractIndex, contexto: `Proyecto «${record.projectName}».` }))) return false;
+    invalidateRefCache('contracts-overview:');
+    alBorrar?.();
+    return true;
   };
 
   /* Las tres variantes del trámite impositivo son EXCLUYENTES (el contrato está en una sola): se elige cuál mirar. */

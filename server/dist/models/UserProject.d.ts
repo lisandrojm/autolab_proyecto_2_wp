@@ -1,5 +1,73 @@
 import { Document, Types } from "mongoose";
+/**
+ * Una operación sobre la relación ya dada de alta, hecha desde WeProdu en Modificaciones y Bajas (20/11/2026).
+ * Es la forma común de `bajaArcaPresentada`, `modificacionArcaPresentada` y `anulacionArcaPresentada`; el tipo
+ * que viaja al frontend es `OperacionArcaPresentada` en `compartido/arca/tiposArca.ts`.
+ */
+export interface OperacionArcaContrato {
+    via: "modificaciones";
+    fecha: Date;
+    /** `fallida` = ARCA la rechazó o no la habilita (`clase: regla_arca`), o la pantalla no se pudo recorrer (`clase: navegacion`). */
+    resultado: "presentada" | "indeterminado" | "fallida" | "presentando" | "anulada";
+    clase?: "regla_arca" | "navegacion" | "";
+    motivo?: string;
+    acuse?: {
+        cbt?: string;
+        cat?: string;
+        nroTransaccion?: string;
+        texto?: string;
+    };
+    payload?: Record<string, unknown>;
+    relacion?: {
+        inicio?: string;
+        fin?: string;
+        cat?: string;
+        cbt?: string;
+        sitRevista?: string;
+    };
+    que?: "alta" | "baja";
+    cambios?: Array<{
+        campo: string;
+        antes: string;
+        despues: string;
+    }>;
+    logId?: Types.ObjectId;
+    porConsulta?: boolean;
+    usuarioId?: Types.ObjectId | null;
+}
 interface IContract {
+    /**
+     * LA IDENTIDAD DEL CONTRATO (etapa 2, 18/11/2026; ver `utils/identidadContrato.ts`). Sin valor por
+     * defecto a propósito: un contrato sin clave todavía se nombra por su posición, como siempre. La ponen
+     * el modelo (contratos nuevos y reemplazos, al validar) y el backfill (los viejos, con huella).
+     */
+    contratoKey?: Types.ObjectId | null;
+    /**
+     * El estado del contrato como relación laboral (NO el del circuito de firma: ése es `estado_id` /
+     * `nombre_estado_empleado`). En la etapa 2b sólo se escribe ANULADO, que marca una LÁPIDA: el contrato
+     * se anuló y está entero en `contratos_anulados`; acá queda sólo su clave (ver `utils/anulacionContrato.ts`).
+     * VIGENTE y FINALIZADO los completa la etapa 3.
+     */
+    /** Etapa 3: ver `utils/estadoDeContrato.ts`. SIN_DETERMINAR = los datos no alcanzan (motivo en `estadoContratoMotivo`). */
+    estadoContrato?: "VIGENTE" | "FINALIZADO" | "SIN_DETERMINAR" | "ANULADO";
+    estadoContratoMotivo?: string;
+    origenBaja?: string;
+    bajaArca?: {
+        fin?: string;
+        situacionBaja?: string;
+        empleadoraCuit?: string;
+        bajaAnterior?: string | null;
+        aplicadaEl?: Date;
+        tipo?: string;
+    };
+    anulacion?: {
+        el: Date;
+        por?: Types.ObjectId | null;
+        porNombre?: string;
+        motivo?: string;
+        claveFrame?: string;
+        claveIdentidad?: string;
+    };
     proyecto_id: number;
     empleado_id: number;
     estado_id: number;
@@ -206,6 +274,13 @@ interface IContract {
      */
     obraSocialNoFigura?: boolean;
     /**
+     * RNOS que usa LIQUIDACIONES para este contrato, según su planilla (NOVEDADES_LICHA, cargado por script el
+     * 20/11/2026 por CUIL y empresa). NO es la obra social del contrato ni decide nada: es la referencia para que
+     * el Consolidado Empresas avise «Obra social discrepa con liquidaciones» con los dos valores, y lo decida
+     * laboral. Cuando ARCA constata una y liquidaciones tiene otra, ninguna gana sola.
+     */
+    obraSocialSegunLiquidaciones?: string;
+    /**
      * Por dónde entró la constatación: el panel de pegado o el script que opera ARCA.
      *
      * Se guarda junto con quién y cuándo porque el dato queda BLOQUEADO: si alguien lo discute meses
@@ -267,6 +342,20 @@ interface IContract {
      * cada resultado; este no se borra nunca.
      */
     enviosArca?: number;
+    /**
+     * LAS OPERACIONES SOBRE LA RELACIÓN YA DADA DE ALTA, hechas desde WeProdu en Relaciones Laborales →
+     * Modificaciones y Bajas (20/11/2026, ver `services/arca/corridaOperacionRelacion.ts`). Tres marcas
+     * separadas porque son tres trámites distintos, con reglas y plazos distintos: la baja (fecha de fin y
+     * motivo), la modificación de datos ya informados y la anulación del alta o de la baja.
+     *
+     * Misma lógica que `altaArcaPresentada`: se escribe `presentando` justo ANTES de «Confirmar», el resultado
+     * apenas se lee, y una marca `presentada` / `presentando` / `indeterminado` traba volver a mandar lo mismo.
+     * `clase` separa el rechazo de ARCA (`regla_arca`, con su texto en `motivo`) del fallo de navegación.
+     * NO confundir con `bajaArca`, que es la baja que ARCA informó y la sincronización copió al contrato.
+     */
+    bajaArcaPresentada?: OperacionArcaContrato;
+    modificacionArcaPresentada?: OperacionArcaContrato;
+    anulacionArcaPresentada?: OperacionArcaContrato;
     /**
      * LA ÚLTIMA VERIFICACIÓN EN ARCA de un alta trabada por «ARCA ya tiene un alta de ese día» (pedido del
      * 02/11/2026, ver `services/arca/verificacionAltas.ts`). `presentada`: el alta ya estaba en ARCA y el
@@ -357,6 +446,21 @@ interface IContract {
         };
         firmaAnterior: Record<string, unknown>;
         motivo: string;
+    } | null;
+    /**
+     * TERMINÓ EL CIRCUITO SIN FIRMA (18/11/2026, `services/cierreSinFirma.ts`): sus documentos no se mandan
+     * a firmar y quedan como están; el contrato pasó al estado final a mano. Quién, cuándo, por qué y
+     * desde qué estado: para poder explicarlo (y volverlo atrás) después.
+     */
+    cierreSinFirma?: {
+        el: Date;
+        por: Types.ObjectId | null;
+        porNombre: string;
+        motivo: string;
+        estadoAnterior: {
+            id: number | null;
+            nombre: string;
+        };
     } | null;
     /** Tenía un recibo de sueldo guardado como su contrato (20–24/10/2026); se le quitó (07/11/2026). Lo que tenía. */
     reciboDesvinculado?: {

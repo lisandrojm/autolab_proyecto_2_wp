@@ -30,6 +30,8 @@ export interface IRenovacionContrato {
     fechaBajaContrato: string;
     /** Posición del contrato en `UserProject.contracts`. Lo escrito antes de que esto existiera es 0. */
     indiceContrato: number;
+    /** La `contratoKey` del contrato (etapa 2c): la identidad que no depende de la posición. `null` en lo viejo sin backfill. */
+    contratoKey?: Types.ObjectId | null;
     decision: "renovar" | "dejar_vencer";
     /** La solicitud de renovación, cuando `decision` es "renovar". */
     solicitudId?: Types.ObjectId;

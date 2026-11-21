@@ -207,6 +207,8 @@ export interface ITenant extends Document {
         ultimaSync?: any;
         /** Reintento de la automática del día cuando falló (ver `sincronizacionRelacionesCronService`). */
         reintento?: { dia?: string; numero?: number; desde?: Date | null };
+        /** Los totales de la auditoría ARCA (etapa 5): lo que lee el contador sin recalcular (`services/arca/auditoriaArca.ts`). */
+        auditoria?: { el?: Date; totales?: any };
       };
     };
     /**
@@ -454,6 +456,8 @@ const tenantSchema = new Schema<ITenant>(
           ultimaSync: { type: Schema.Types.Mixed },
           // Declarado a propósito (el esquema es `strict`): el reintento de la automática del día.
           reintento: { dia: { type: String }, numero: { type: Number }, desde: { type: Date } },
+          // Los totales de la auditoría ARCA (etapa 5), para el contador.
+          auditoria: { el: { type: Date }, totales: { type: Schema.Types.Mixed } },
         },
       },
       dropboxSign: {

@@ -41,6 +41,8 @@ export interface RelacionArcaResumida {
      * sigue ACTIVA para ARCA: rechaza otra alta de la persona con esa empleadora (ver `secuenciaPorPersona.ts`).
      */
     cerrada?: boolean;
+    /** El motivo de baja de ARCA («Renuncia…», «Vencimiento…»): la regla distingue un hecho de la granularidad. */
+    situacionBaja?: string;
 }
 /**
  * Las Relaciones Laborales de ARCA de esas personas (con todas las empleadoras), resumidas. Con `desde`
@@ -63,6 +65,25 @@ export declare function ultimaSyncOkPorCuit(tenantId: Types.ObjectId | string): 
  * no sincronizada) queda lo de WeProdu. Puro.
  */
 export declare function aplicarBajasDeArca(presentadas: AltaPresentada[], relaciones: RelacionArcaResumida[], cuilDe: (p: AltaPresentada) => string, cuitDe: (p: AltaPresentada) => string): AltaPresentada[];
+/**
+ * LA BAJA QUE LA VALIDACIÓN USA EN MEMORIA = LA QUE SE ESCRIBIRÍA (alineado el 19/11/2026, pedido del
+ * usuario). Antes tomaba el fin de la primera relación con la misma persona, empleadora y fecha de inicio,
+ * sin más: en una relación que ARCA lleva por tramos (Palomino) daba el fin del primer tramo y la validación
+ * veía cerrado un contrato que seguía. Ahora es LA MISMA REGLA que «Sincronizar bajas»
+ * (`utils/bajasArcaContrato.ts`): devuelve la relación con la baja que se escribiría, o `null` si la regla
+ * no escribe nada (sin CUIL/CUIT/relación, relación abierta, el contrato termina antes, granularidad de
+ * ARCA, revisión manual…). `otrasAltas`: las altas de los otros contratos de la persona con esa empleadora
+ * (para el paraguas). Puro.
+ */
+export declare function bajaDeArcaQueAplica(c: {
+    cuil: string;
+    cuit: string;
+    alta: string;
+    baja: string;
+}, relaciones: RelacionArcaResumida[], opciones?: {
+    otrasAltas?: string[];
+    hoy?: string;
+}): RelacionArcaResumida | null;
 /**
  * El alta ya presentada que se superpone con este contrato, si hay. Dos períodos se pisan si cada uno
  * empieza antes de que termine el otro. El mismo contrato no cuenta (es el que se está presentando).

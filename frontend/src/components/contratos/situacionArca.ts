@@ -62,6 +62,16 @@ export function situacionArca(r: FilaConArca, tipo: string | undefined, o: { pen
   const a = r.altaArcaPresentada;
   const ciclo = r.constanciaArca;
   const fecha = ciclo?.presentadaEl || (a?.resultado === "presentada" ? a.fecha : "") || "";
+  /*
+    LAS OPERACIONES DE MODIFICACIONES Y BAJAS (20/11/2026): un alta anulada en ARCA desde WeProdu ya no es un alta
+    (ni traba, ni se presenta sola); una baja registrada desde WeProdu se dice junto al alta, con su fecha y su C.B.T.
+  */
+  if (a?.resultado === "anulada") return { ...nada, grupo: "sin_alta", texto: "Alta anulada en ARCA", titulo: a.motivo || "El alta se anuló en ARCA desde WeProdu. Si corresponde, se puede volver a presentar.", clase: ROJO };
+  const b = r.bajaArcaPresentada;
+  if (b?.resultado === "presentada" && (ciclo || a?.resultado === "presentada" || r.altaDocumentoUrl)) {
+    const fin = String((b.payload as any)?.fechaFin || b.relacion?.fin || "");
+    return { grupo: "con_alta", texto: "Alta y baja en ARCA", titulo: `La relación tiene la baja registrada en ARCA desde WeProdu${fin ? ` al ${fin}` : ""}${b.acuse?.cbt ? ` (C.B.T. ${b.acuse.cbt})` : ""}.`, clase: VERDE, fecha };
+  }
   // La fila del ciclo nace cuando el alta se presentó; la constancia bajada también lo prueba.
   if (ciclo || a?.resultado === "presentada" || r.altaDocumentoUrl) {
     const como = a?.via === "externa" ? "Hecha a mano en ARCA y adoptada al sincronizar." : a?.via === "verificacion" ? "Ya estaba hecha en ARCA (se encontró al verificar)." : "";

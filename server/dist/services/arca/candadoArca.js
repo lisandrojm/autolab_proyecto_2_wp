@@ -20,6 +20,10 @@ export const NOMBRE_CORRIDA = {
     constancias: "la descarga de constancias de alta",
     relaciones: "la sincronización de relaciones laborales",
     verificacion: "la verificación de altas en ARCA",
+    // Las tres operaciones de Relaciones Laborales → Modificaciones y Bajas (ver `corridaOperacionRelacion.ts`).
+    baja: "una baja en ARCA",
+    modificacion: "una modificación de relación laboral en ARCA",
+    anulacion: "una anulación en ARCA",
 };
 const tomados = new Map();
 /** Quién tiene la sesión de ARCA de este tenant ahora, o `null`. */

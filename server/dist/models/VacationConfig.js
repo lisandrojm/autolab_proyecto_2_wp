@@ -83,6 +83,8 @@ const VacationConfigSchema = new Schema({
         plazoParaDefinirDias: { type: Number, default: 14, min: 1, max: 120 },
         avisoMinimoDias: { type: Number, default: 30, min: 0, max: 180 },
         minDiasPorTramo: { type: Number, default: 7, min: 1, max: 60 },
+        // Los tipos de contrato con que arranca tildada una campaña nueva. Vacío = todos los habilitados.
+        tiposContratoInvitar: { type: [Number], default: [] },
     },
     // Antigüedad por empresa. Con estos defaults, un tenant que nunca lo tocó lee «empresa vigente».
     computoAntiguedad: {

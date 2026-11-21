@@ -1,0 +1,156 @@
+{
+ "pantalla": "registra_baja",
+ "accion": "RegistraBaja.aspx?idx=0&NP=1",
+ "ids": [
+  "ctl00_MasterBody",
+  "ctl00_spanAyuda_ToolTip",
+  "ctl00_spanSitioSeguro_ToolTip",
+  "ctl00_MapaHome",
+  "ctl00_areaHome",
+  "ctl00_imageHeader",
+  "ctl00_Menu1_Menu1",
+  "ctl00_Menu1_Menu1n0",
+  "ctl00_Menu1_Menu1n1",
+  "ctl00_Menu1_Menu1n2",
+  "ctl00_Menu1_Menu1n3",
+  "ctl00_Menu1_Menu1n4",
+  "ctl00_Menu1_Menu1n0Items",
+  "ctl00_Menu1_Menu1n5",
+  "ctl00_Menu1_Menu1n6",
+  "ctl00_Menu1_Menu1n7",
+  "ctl00_Menu1_Menu1n8",
+  "ctl00_Menu1_Menu1n9",
+  "ctl00_Menu1_Menu1n10",
+  "ctl00_Menu1_Menu1n11",
+  "ctl00_Menu1_Menu1n12",
+  "ctl00_Menu1_Menu1n0ItemsUp",
+  "ctl00_Menu1_Menu1n0ItemsDn",
+  "ctl00_Menu1_Menu1n1Items",
+  "ctl00_Menu1_Menu1n13",
+  "ctl00_Menu1_Menu1n14",
+  "ctl00_Menu1_Menu1n15",
+  "ctl00_Menu1_Menu1n16",
+  "ctl00_Menu1_Menu1n17",
+  "ctl00_Menu1_Menu1n18",
+  "ctl00_Menu1_Menu1n19",
+  "ctl00_Menu1_Menu1n20",
+  "ctl00_Menu1_Menu1n1ItemsUp",
+  "ctl00_Menu1_Menu1n1ItemsDn",
+  "ctl00_Menu1_Menu1n2Items",
+  "ctl00_Menu1_Menu1n21",
+  "ctl00_Menu1_Menu1n22",
+  "ctl00_Menu1_Menu1n23",
+  "ctl00_Menu1_Menu1n2ItemsUp",
+  "ctl00_Menu1_Menu1n2ItemsDn",
+  "ctl00_Menu1_Menu1n3Items",
+  "ctl00_Menu1_Menu1n24",
+  "ctl00_Menu1_Menu1n25",
+  "ctl00_Menu1_Menu1n3ItemsUp",
+  "ctl00_Menu1_Menu1n3ItemsDn",
+  "ctl00_Menu1_Menu1_SkipLink",
+  "ctl00_Image5",
+  "ctl00_lblEmpleador",
+  "ctl00_btnCerrarSesion",
+  "ctl00_Image4",
+  "ctl00_lblCuit",
+  "ctl00_Image1",
+  "ctl00_lblInicioEmpleador",
+  "ctl00_Image3",
+  "ctl00_lblART",
+  "ctl00_lblInicioContrato",
+  "ctl00_Image8",
+  "ctl00_lblASeg",
+  "ctl00_lblInicioAseg",
+  "ctl00_Image10",
+  "ctl00_lblJurisdiccion",
+  "ctl00_lblrol",
+  "ctl00_ContentPlaceHolder1_hMsgBV",
+  "ctl00_ContentPlaceHolder1_lblCuil",
+  "ctl00_ContentPlaceHolder1_lblApenom",
+  "ctl00_ContentPlaceHolder1_lblFechaInicio",
+  "ctl00_ContentPlaceHolder1_InputFechaFin_txtFecha",
+  "ctl00_ContentPlaceHolder1_PredictCodeSitB_AutocompleteValue",
+  "ctl00_ContentPlaceHolder1_PredictCodeSitB_mainDiv",
+  "ctl00_ContentPlaceHolder1_PredictCodeSitB_AutocompleteText",
+  "ctl00_ContentPlaceHolder1_PredictCodeSitB_imgAuto",
+  "ctl00_ContentPlaceHolder1_InputFechaTelR_txtFecha",
+  "ctl00_ContentPlaceHolder1_lblError",
+  "ctl00_ContentPlaceHolder1_btnCancelar",
+  "ctl00_ContentPlaceHolder1_btnConfirmar",
+  "ctl00_FechaHoy1_lblFechaHoy",
+  "ctl00_btnAyuda",
+  "ctl00_ContentPlaceHolder1_PredictCodeSitB_AutocompleteTextAutoCompleteEx_completionListElem"
+ ],
+ "botones": [
+  {
+   "id": "ctl00_btnCerrarSesion",
+   "tag": "a",
+   "tipo": "",
+   "rotulo": "Salir del sistema en forma segura",
+   "href": "javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(\"ctl00$btnCerrarSesion\", \"\", true, \"\", \"\", false, true))",
+   "onclick": "",
+   "src": ""
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_btnCancelar",
+   "tag": "input",
+   "tipo": "submit",
+   "rotulo": "Cancelar",
+   "href": "",
+   "onclick": "javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(\"ctl00$ContentPlaceHolder1$btnCancelar\", \"\", true, \"\", \"\", false, false))",
+   "src": ""
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_btnConfirmar",
+   "tag": "input",
+   "tipo": "submit",
+   "rotulo": "Confirmar",
+   "href": "",
+   "onclick": "javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(\"ctl00$ContentPlaceHolder1$btnConfirmar\", \"\", true, \"\", \"\", false, false))",
+   "src": ""
+  }
+ ],
+ "campos": [
+  {
+   "id": "ctl00_ContentPlaceHolder1_InputFechaFin_txtFecha",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "10",
+   "valor": "",
+   "rotulo": "FECHA DE FIN (BAJA)"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeSitB_AutocompleteText",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "",
+   "valor": "",
+   "rotulo": "MOTIVO DE LA BAJA"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_InputFechaTelR_txtFecha",
+   "tag": "input",
+   "tipo": "text",
+   "maxlength": "10",
+   "valor": "",
+   "rotulo": "FECHA TELEGRAMA RENUNCIA"
+  }
+ ],
+ "ocultos": [
+  {
+   "id": "ctl00_ContentPlaceHolder1_hMsgBV",
+   "valor": "0"
+  },
+  {
+   "id": "ctl00_ContentPlaceHolder1_PredictCodeSitB_AutocompleteValue",
+   "valor": ""
+  }
+ ],
+ "catalogos": [
+  {
+   "nombre": "l_SBV",
+   "filas": 34
+  }
+ ],
+ "texto": "| Simplificación registral\n\n\n\nDatos del Empleador\n\t\t\nRelaciones Laborales\n\t\t\nVinculos Familiares\n\t\t\nOtros Servicios\n\t\t\n\n\n\n Empleador:\t\n  2030 S. R. L.\n \n\t \t\nSALIR\n\n CUIT:\t  XXXXXXXXXXX\n Inicio como Empleador:\t  01/05/2021\n ART contratada:\t  00027 - PREVENCION ASE DE RIESGOS DEL TRABAJO SA...\tInicio:\t  04/2021\n Seguro colectivo:\t  S224 - SANCOR COOPERATIVA DE SEGUROS LIMITADA\tInicio:\t  05/2026\n Jurisdicción Laboral:\t  CIUDAD AUTONOMA BUENOS AIRES\tCONTRIBUYENTE\n\n\n\n \nREGISTRAR BAJAS\n\nRecuerde que para informar una baja deberá seleccionar el motivo\nCUIL\tXXXXXXXXXXX  APELLIDO NOMBRE\nFECHA DE INICIO (ALTA)\t19/11/2026  \nFECHA DE FIN (BAJA)\t\nMOTIVO DE LA BAJA\t\n\nFECHA TELEGRAMA RENUNCIA\t  \n \n\n \n      \n\n\n\n\nviernes, 20 de noviembre de 2026\n\nAyuda en línea"
+}

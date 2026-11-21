@@ -7,6 +7,7 @@ import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { TablaRelacionesArca } from "./TablaRelacionesArca";
 import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
+import { SincronizarBajasModal } from "./SincronizarBajasModal";
 
 /*
   ANTIGÜEDAD SEGÚN ARCA: la copia local de las relaciones laborales de Simplificación Registral y la
@@ -146,11 +147,13 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
     { columna: "colaborador", direccion: "asc", porDefecto: true },
   );
 
+  const [verBajas, setVerBajas] = useState(false);
   const ultima = estado?.ultimaSync || null;
   const puedeSincronizar = !!estado && !estado.enCurso && !estado.arcaOcupadaPor && estado.hayCredenciales;
 
   return (
     <div className="space-y-6">
+      <SincronizarBajasModal isOpen={verBajas} onClose={() => setVerBajas(false)} />
       {/* La sincronización */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -197,6 +200,16 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
               <FontAwesomeIcon icon={estado?.enCurso ? faSpinner : faRotate} spin={!!estado?.enCurso} />
               {estado?.enCurso ? "Sincronizando…" : "Sincronizar ahora"}
             </button>
+            {/* Lleva a los CONTRATOS las bajas que el espejo ya tiene (etapa 3, paso 2): no abre ARCA. */}
+            <button
+              type="button"
+              onClick={() => setVerBajas(true)}
+              disabled={!!estado?.enCurso}
+              title={estado?.enCurso ? "Esperá a que termine la sincronización: las bajas salen del espejo actualizado" : "Escribir en los contratos las bajas que ARCA ya tiene (con misma persona, empleadora y fecha de alta)"}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-600 text-blue-700 dark:text-blue-300 text-sm font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Sincronizar bajas a contratos
+            </button>
             {estado?.arcaOcupadaPor && <span className="text-[11px] text-amber-600">ARCA está ocupada por {estado.arcaOcupadaPor}.</span>}
           </div>
         </div>
@@ -220,6 +233,16 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
               {ultima.error && <span className="text-red-600"> · {ultima.error}</span>}
             </button>
             {ultima.htmlGuardado && <p className="mt-1 text-[11px] text-amber-600">Se guardó una pantalla de ARCA para revisar: <code>{ultima.htmlGuardado}</code></p>}
+            {/* Las bajas de ARCA que la corrida automática aplicó sola a los contratos, o frenó por el tope. */}
+            {ultima.bajasContratos && (
+              <p className={`mt-1 text-[11px] font-semibold ${ultima.bajasContratos.frenada || ultima.bajasContratos.error ? "text-red-600" : "text-gray-600 dark:text-gray-300"}`}>
+                {ultima.bajasContratos.error
+                  ? `Bajas de ARCA a contratos: falló (${ultima.bajasContratos.error}).`
+                  : ultima.bajasContratos.frenada
+                    ? `Bajas de ARCA a contratos: FRENADA. Iban a aplicarse ${ultima.bajasContratos.aplicables} y el tope es ${ultima.bajasContratos.tope}: no se escribió ninguna. Revisalas en «Sincronizar bajas a contratos».`
+                    : `Bajas de ARCA a contratos: ${ultima.bajasContratos.aplicadas} aplicadas solas · ${ultima.bajasContratos.listadas} para que mire una persona${ultima.bajasContratos.excluidasPorEmpleadora ? ` · ${ultima.bajasContratos.excluidasPorEmpleadora} sin aplicar por una empleadora con error` : ""}${ultima.bajasContratos.cambiaron ? ` · ${ultima.bajasContratos.cambiaron} cambiaron en el medio` : ""}`}
+              </p>
+            )}
             {verUltima && (
               <TablaConEncabezadoFijo className="mt-2" tabla="min-w-[480px] text-xs">
                 <thead>

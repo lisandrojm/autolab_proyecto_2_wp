@@ -14,6 +14,8 @@ export interface IImportHistory extends Document {
     updatedUsers: number;
     skippedUsers: number;
     errorsUsers: number;
+    /** Contratos que FRAME manda con otra categoría u otra baja (ver `DiscrepanciaFrame`): no se crean ni se pisan. */
+    discrepanciasFrame?: number;
   };
   addedUsers: Array<{
     name: string;
@@ -41,7 +43,8 @@ const importHistorySchema = new Schema<IImportHistory>(
       createdUsers: { type: Number, default: 0 },
       updatedUsers: { type: Number, default: 0 },
       skippedUsers: { type: Number, default: 0 },
-      errorsUsers: { type: Number, default: 0 }
+      errorsUsers: { type: Number, default: 0 },
+      discrepanciasFrame: { type: Number, default: 0 }
     },
     addedUsers: [
       {

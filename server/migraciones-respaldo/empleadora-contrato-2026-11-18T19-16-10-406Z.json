@@ -1,0 +1,14 @@
+{
+ "coleccion": "users_&_projects",
+ "userProjectId": "6964239e5dd723128ad69ed9",
+ "contratoKey": "6afdb3ca0fc132faeab8a7cc",
+ "posicion": 7,
+ "antes": {},
+ "despues": {
+  "empresaContratoId": "6a5fd12244faed2e72669b42",
+  "nombre_empresa_contrato": "2030 S.R.L."
+ },
+ "motivo": "Empleadora desde ARCA: la única relación del CUIL 20411707769 con inicio 2026-04-01 es con 2030 S.R.L. (30-71706837-4). El contrato no tenía empleadora.",
+ "por": "script corregirEmpleadoraContrato",
+ "el": "2026-11-18T19:16:10.406Z"
+}

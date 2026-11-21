@@ -23,6 +23,8 @@ export interface FilaConstancia {
     userId: string;
     userProjectId: string;
     contractIndex: number;
+    /** Etapa 2c: la clave del contrato (hex), o null si el contrato todavía no la tiene. */
+    contratoKey: string | null;
     empresaId: string;
     empresaCuit: string;
     empresaRazonSocial: string;

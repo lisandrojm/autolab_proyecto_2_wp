@@ -11,10 +11,12 @@ import { CorridaAltasArca } from "../components/contratos/CorridaAltasArca";
 import { CuentaRegresiva } from "../components/ui/CuentaRegresiva";
 import { avisoForzarAlta, libreDesdeTrasAlta } from "@compartido/arca/vigenciaAltaPresentada";
 import { sweetAlert } from "../utils/sweetAlert";
+import { OperacionesArcaHistorial } from "../components/arca/OperacionesArcaHistorial";
 import { ProjectTeamPage } from "./ProjectTeamPage";
 import { TablaConEncabezadoFijo, useAltoDeBarra } from "../components/ui/TablaConEncabezadoFijo";
 import { AccionDelDocumento, BotonRetomarCircuito, BotonVolverABajar, ChipConstancia, esFueraDelCircuito, esNoUbicada } from "../components/contratos/HistorialAltasArca";
 
+import { anularContratoConRevision } from "../utils/anularContrato";
 /*
   A.R.C.A ALTAS AUTOMÁTICAS: cada alta temprana se presenta sola a la hora configurada (14:00 argentinas
   por defecto) del día de su alta, o con la anticipación configurada (Configuración → ARCA → Altas Automáticas). Acá se ve qué va a salir y cuándo —con la cuenta regresiva de cada una—, qué todavía
@@ -191,7 +193,8 @@ export const PresentacionesArcaPage: React.FC = () => {
     «Alta Temprana A.R.C.A» en Contratos (las corridas guardadas, de todas las empleadoras), aplanado a
     una fila por persona: acá se viene a buscar «¿salió el alta de fulano?», no la corrida.
   */
-  const [tab, setTab] = useState<"pendientes" | "presentadas">("pendientes");
+  // Y una tercera (20/11/2026): las bajas, modificaciones y anulaciones mandadas desde el contrato.
+  const [tab, setTab] = useState<"pendientes" | "presentadas" | "operaciones">("pendientes");
   const [corridas, setCorridas] = useState<CorridaAltasGuardada[] | null>(null);
   const [buscar, setBuscar] = useState("");
   // Por defecto, sólo lo que salió solo: es lo que se viene a confirmar («¿se presentó?»). Las manuales y forzadas se ven destildando.
@@ -566,19 +569,9 @@ export const PresentacionesArcaPage: React.FC = () => {
 
   const eliminar = async (c: AltaPendienteArca) => {
     if (!c.projectId) return;
-    const r = await sweetAlert.confirm(
-      "¿Eliminar contrato?",
-      `Se eliminará el contrato «${c.tipoContrato || "sin tipo"}» de ${c.nombre} en «${c.proyecto}» (alta ${fechaCorta(c.fechaAlta)}). Sale de la cola y no se presenta. En ARCA no cambia nada. No se puede deshacer.`,
-      "Sí, eliminar",
-    );
-    if (!r.isConfirmed) return;
     setBorrando(claveDe(c));
     try {
-      await projectsAPI.deleteMemberContract(c.projectId, c.userId, c.contractIndex);
-      sweetAlert.success("Contrato eliminado", `${c.nombre} salió de la cola.`);
-      await cargar();
-    } catch (err: any) {
-      sweetAlert.error("No se pudo eliminar", err?.response?.data?.error || err?.message || "");
+      if (await anularContratoConRevision({ projectId: c.projectId, userId: c.userId, contractIndex: c.contractIndex, contexto: `${c.nombre} en «${c.proyecto}». Sale de la cola y no se presenta; en ARCA no cambia nada.` })) await cargar();
     } finally {
       setBorrando("");
     }
@@ -821,6 +814,7 @@ export const PresentacionesArcaPage: React.FC = () => {
               [
                 ["pendientes", `Pendientes (${estado.contratos.length})`],
                 ["presentadas", `Presentadas${corridas ? ` (${presentadas.length})` : ""}`],
+                ["operaciones", "Bajas y modificaciones"],
               ] as const
             ).map(([k, etiqueta]) => (
               <button
@@ -833,6 +827,8 @@ export const PresentacionesArcaPage: React.FC = () => {
               </button>
             ))}
           </div>
+
+          {tab === "operaciones" && <OperacionesArcaHistorial />}
 
           {tab === "presentadas" && (
             <section className="space-y-3">

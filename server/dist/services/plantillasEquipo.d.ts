@@ -146,6 +146,7 @@ export declare function previewDeContratacion(acc: Acceso, id: string, body: any
         errores: string[];
         advertencias: string[];
         superposicionHorario: boolean;
+        soloServicios: string;
     }[];
     totales: {
         personas: number;
@@ -191,6 +192,7 @@ export declare function previewDeVarios(acc: Acceso, id: string, body: any): Pro
             errores: string[];
             advertencias: string[];
             superposicionHorario: boolean;
+            soloServicios: string;
         }[];
         totales: {
             personas: number;

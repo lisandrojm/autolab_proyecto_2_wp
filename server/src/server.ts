@@ -1,5 +1,7 @@
 // Local + VPS según .env.development o .env.production
 // Trigger reload 2
+import { enContexto } from "./utils/contextoAuditoria.js";
+import { initTransicionEstadoScheduler } from "./services/transicionEstadoContratos.js";
 import "./config/env.js";
 import { env } from "./config/env.js";
 
@@ -95,6 +97,8 @@ import { arcaSituacionRevistaRoutes } from "./routes/arcaSituacionesRevista.js";
 import { arcaDefaultsRoutes } from "./routes/arcaDefaults.js";
 import { arcaCatalogoRoutes } from "./routes/arcaCatalogo.js";
 import { arcaRelacionesRoutes } from "./routes/arcaRelaciones.js";
+import { arcaSituacionBajaRoutes } from "./routes/arcaSituacionesBaja.js";
+import { arcaOperacionesRoutes } from "./routes/arcaOperaciones.js";
 import { convenioRoutes } from "./routes/convenios.js";
 import { centroCostoRoutes } from "./routes/centrosCosto.js";
 import { companyRoutes } from "./routes/companies.js";
@@ -181,7 +185,8 @@ app.use((req, res, next) => {
   // volver a empujar a cargar de a un registro, que es el problema que `/bulk` viene a resolver.
   // `/import-json` manda el catálogo de FRAME entero (806 centros de costo, ~115 KB) por la misma
   // razón: el archivo se importa de una o no se importa.
-  const cargaMasiva = req.method === "POST" && (req.path.endsWith("/bulk") || req.path.endsWith("/import-json"));
+  // El consolidado de Novedades manda las hojas ya armadas (el detalle de un mes pasa de 1 MB).
+  const cargaMasiva = req.method === "POST" && (req.path.endsWith("/bulk") || req.path.endsWith("/import-json") || req.path.endsWith("/consolidado/xlsx"));
   const limite = cargaMasiva ? "10mb" : "1mb";
   express.json({
     limit: limite,
@@ -335,6 +340,10 @@ app.use("/api/v1/arca/actividades", arcaActividadRoutes);
 app.use("/api/v1/arca/modalidades-liquidacion", arcaModalidadLiquidacionRoutes);
 app.use("/api/v1/arca/puestos-desempenados", arcaPuestoDesempenadoRoutes);
 app.use("/api/v1/arca/situaciones-revista", arcaSituacionRevistaRoutes);
+// El motivo de una baja (tabla oficial de ARCA, del formulario Registrar baja).
+app.use("/api/v1/arca/situaciones-baja", arcaSituacionBajaRoutes);
+// Baja, modificación y anulación de una relación laboral en ARCA (Relaciones Laborales → Modificaciones y Bajas).
+app.use("/api/v1/arca/operaciones", arcaOperacionesRoutes);
 app.use("/api/v1/convenios", convenioRoutes);
 app.use("/api/v1/centros-costo", centroCostoRoutes);
 app.use("/api/v1/companies", companyRoutes);
@@ -458,74 +467,81 @@ connectDB()
     } else {
       // Initialize the Import Users Background Scheduler
       try {
-        initCronScheduler();
+        enContexto({ origen: "sistema", detalle: "tarea initCronScheduler" }, () => initCronScheduler());
       } catch (error) {
         console.error("❌ Failed to initialize background scheduler:", error);
       }
 
       // Backup de la base a Dropbox, cada 12 horas (tab «DDBB» de Documentos).
       try {
-        initBackupScheduler();
+        enContexto({ origen: "sistema", detalle: "tarea initBackupScheduler" }, () => initBackupScheduler());
       } catch (error) {
         console.error("❌ Failed to initialize backup scheduler:", error);
       }
 
       // Initialize the Estado auto-transition Dropbox folder scanner
       try {
-        initEstadoDropboxScheduler();
-        initParitariasScheduler();
+        enContexto({ origen: "sistema", detalle: "tarea initEstadoDropboxScheduler" }, () => initEstadoDropboxScheduler());
+        enContexto({ origen: "sistema", detalle: "tarea initParitariasScheduler" }, () => initParitariasScheduler());
         // El catálogo de centros de costo, de los Tango de las tres empresas.
-        initCentrosCostoScheduler();
+        enContexto({ origen: "sistema", detalle: "tarea initCentrosCostoScheduler" }, () => initCentrosCostoScheduler());
       } catch (error) {
         console.error("❌ Failed to initialize estado-dropbox scheduler:", error);
       }
 
       // Lectura de la casilla de Dropbox Sign: detecta los envíos a firmar y los archiva en Pendbox.
       try {
-        initDropboxSignMailScheduler();
+        enContexto({ origen: "sistema", detalle: "tarea initDropboxSignMailScheduler" }, () => initDropboxSignMailScheduler());
       } catch (error) {
         console.error("❌ Failed to initialize dropbox-sign mail scheduler:", error);
       }
 
       // El bot que envía a la firma los documentos del Outbox por la web de Dropbox Sign (sólo tenants que lo activaron).
       try {
-        initDropboxSignEnvioScheduler();
+        enContexto({ origen: "sistema", detalle: "tarea initDropboxSignEnvioScheduler" }, () => initDropboxSignEnvioScheduler());
       } catch (error) {
         console.error("❌ Failed to initialize dropbox-sign envío scheduler:", error);
       }
 
       // Presentación automática de las altas en ARCA, todos los días a las 14 h (sólo tenants que la activaron).
       try {
-        initPresentacionAutomaticaScheduler();
+        enContexto({ origen: "sistema", detalle: "tarea initPresentacionAutomaticaScheduler" }, () => initPresentacionAutomaticaScheduler());
       } catch (error) {
         console.error("❌ Failed to initialize presentacion-automatica scheduler:", error);
       }
       // Descarga automática de las constancias de alta temprana, una vez por día (sólo tenants que la activaron).
       try {
-        initDescargaConstanciasScheduler();
+        enContexto({ origen: "sistema", detalle: "tarea initDescargaConstanciasScheduler" }, () => initDescargaConstanciasScheduler());
       } catch (error) {
         console.error("❌ Failed to initialize descarga-constancias scheduler:", error);
       }
 
       // Barrido de obras sociales sin validar: la red de seguridad de la cola (cada 10 min, por tenant).
       try {
-        initBarridoObrasSocialesScheduler();
+        enContexto({ origen: "sistema", detalle: "tarea initBarridoObrasSocialesScheduler" }, () => initBarridoObrasSocialesScheduler());
       } catch (error) {
         console.error("❌ Failed to initialize barrido-obras-sociales scheduler:", error);
       }
 
       // Relaciones laborales según ARCA: una lectura diaria de los movimientos del mes (sólo tenants que la activaron).
       try {
-        initSincronizacionRelacionesScheduler();
+        enContexto({ origen: "sistema", detalle: "tarea initSincronizacionRelacionesScheduler" }, () => initSincronizacionRelacionesScheduler());
       } catch (error) {
         console.error("❌ Failed to initialize sincronizacion-relaciones scheduler:", error);
       }
 
       // Campaña de goce: vencimientos y recordatorios de las campañas lanzadas (una vez por hora).
       try {
-        initCampaniaVacacionesScheduler();
+        enContexto({ origen: "sistema", detalle: "tarea initCampaniaVacacionesScheduler" }, () => initCampaniaVacacionesScheduler());
       } catch (error) {
         console.error("❌ Failed to initialize campania-vacaciones scheduler:", error);
+      }
+
+      // Estado de los contratos (etapa 3): una vez por día, VIGENTE → FINALIZADO cuando pasa la baja.
+      try {
+        enContexto({ origen: "sistema", detalle: "tarea initTransicionEstadoScheduler" }, () => initTransicionEstadoScheduler());
+      } catch (error) {
+        console.error("❌ Failed to initialize transicion-estado scheduler:", error);
       }
     }
 

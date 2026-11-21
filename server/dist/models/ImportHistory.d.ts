@@ -13,6 +13,8 @@ export interface IImportHistory extends Document {
         updatedUsers: number;
         skippedUsers: number;
         errorsUsers: number;
+        /** Contratos que FRAME manda con otra categoría u otra baja (ver `DiscrepanciaFrame`): no se crean ni se pisan. */
+        discrepanciasFrame?: number;
     };
     addedUsers: Array<{
         name: string;

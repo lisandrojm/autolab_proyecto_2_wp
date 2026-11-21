@@ -1,3 +1,4 @@
+import { type QuienAnula } from "./anulacionContrato.js";
 /**
  * Saca UN contrato de una asignación. Si la persona queda sin contratos en el proyecto, se borra la
  * asignación y sus referencias (equipo, coordinación, ficha), como si nunca hubiera estado.
@@ -6,6 +7,12 @@
  * solicitud aprobada deje la base exactamente igual que borrar su contrato a mano.
  */
 export declare function quitarContrato(up: any, idx: number): Promise<void>;
+/**
+ * La persona ya no tiene contratos en el proyecto: se borra el vínculo y sus referencias (equipo,
+ * coordinación, ficha), como si nunca hubiera estado. Lo usan el borrado físico (deprecado) y la
+ * anulación del último contrato de verdad (`services/anulacionContrato.ts`).
+ */
+export declare function eliminarVinculo(up: any): Promise<void>;
 /**
  * Cuál de los contratos candidatos es el de la solicitud (ver los criterios abajo). Sin base de datos
  * de por medio, para poder probarlo: equivocarse acá es borrar el contrato de otra contratación.
@@ -49,7 +56,7 @@ export declare function buscarContratoDeSolicitud(params: DatosDeSolicitud): Pro
     idx: number;
 } | null>;
 /** Borra el contrato de la solicitud, si aparece. Si no, no toca nada y lo dice. */
-export declare function borrarContratoDeSolicitud(params: DatosDeSolicitud): Promise<{
+export declare function borrarContratoDeSolicitud(params: DatosDeSolicitud, quien?: QuienAnula): Promise<{
     borrado: boolean;
     proyecto?: string;
     desde?: string;

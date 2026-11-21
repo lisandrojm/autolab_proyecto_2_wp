@@ -12,6 +12,7 @@ import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
 import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
+import { arcaRelacionesAPI } from '../api/arcaRelaciones';
 import { SettingsModal } from './SettingsModal';
 import { useClientContextStore } from '../stores/clientContextStore';
 import { useEmpresaContextStore } from '../stores/empresaContextStore';
@@ -19,6 +20,7 @@ import { createNavbarEventListener } from '../utils/navbarEvents';
 import { BANDEJAS, contadorDeBandeja, sumaAccionable } from '../config/bandejasContratacion';
 import { useContadoresContratacionStore } from '../stores/contadoresContratacionStore';
 import { RUTAS_REGLAS_VACACIONES, SECCIONES_REGLAS_VACACIONES } from '../config/seccionesReglasVacaciones';
+import { RUTAS_VACACIONES, SECCIONES_VACACIONES } from '../config/seccionesVacaciones';
 
 interface AdminCounts {
   clients: number;
@@ -83,7 +85,7 @@ const PLANTILLAS_PATHS = [MEMBRETE_PATH, '/pdfs', '/pdfs-vacaciones', '/contrato
  * autocompletar el código y normalizar la descripción al cargarlas ahí. Por eso va pegado a
  * Domicilios de Explotación y comparte su permiso.
  */
-const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/actividades', '/arca/tipos-servicio', '/arca/grupos-tipo-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion', '/arca/puestos-desempenados', '/arca/situaciones-revista', '/arca/catalogo', '/arca/fuentes-paritaria', '/convenios', '/arca/categorias'];
+const ARCA_NOMENCLADOR_PATHS = ['/obras-sociales', '/arca/sucursales', '/arca/actividades', '/arca/tipos-servicio', '/arca/grupos-tipo-servicio', '/arca/modalidades-contratacion', '/arca/modalidades-liquidacion', '/arca/puestos-desempenados', '/arca/situaciones-revista', '/arca/situaciones-baja', '/arca/catalogo', '/arca/fuentes-paritaria', '/convenios', '/arca/categorias'];
 /**
  * La Conexión va DEBAJO DE LA RAYA, con lo que no es nomenclador, y ahí entra por su nombre.
  *
@@ -218,6 +220,13 @@ const DDBB_PATHS = ["/ddbb/mongodb"];
 const VACACIONES_PATHS = RUTAS_REGLAS_VACACIONES;
 
 /**
+ * Grupo «Vacaciones» de Admin GENERAL: Solicitudes, Gestión por usuario, Plan por proyecto y Campaña.
+ * Eran pestañas de `/vacations` (16/11/2026, pedido del usuario: lo mismo que Contratación). En el
+ * orden de `config/seccionesVacaciones.ts`, no alfabético: de lo diario a lo de temporada.
+ */
+const VACACIONES_GENERAL_PATHS = RUTAS_VACACIONES;
+
+/**
  * Subgrupos colapsables de Configuración. `storageKey` persiste el abierto/cerrado y
  * `paths` decide qué items se sacan del listado plano para meterlos adentro del grupo.
  */
@@ -227,6 +236,7 @@ const CONFIG_GROUPS = [
   { key: 'documentos', storageKey: 'configDocumentosOpen', paths: DOCUMENTOS_PATHS },
   { key: 'ddbb', storageKey: 'configDdbbOpen', paths: DDBB_PATHS },
   { key: 'vacacionesReglas', storageKey: 'configVacacionesOpen', paths: VACACIONES_PATHS },
+  { key: 'vacacionesGeneral', storageKey: 'generalVacacionesOpen', paths: VACACIONES_GENERAL_PATHS },
   /*
     Los dos «Usuarios». El primero NO está en Configuración sino en Admin GENERAL — esta lista dejó de
     ser solo de esa sección y pasó a ser el registro de todos los grupos plegables del menú, que es lo
@@ -407,6 +417,16 @@ export const MobileNavbar: React.FC = () => {
     tampoco se abre escribiendo la dirección. Un ítem nuevo necesita su regla en esa tabla.
   */
   const puedeAbrir = usePuedeAbrir();
+  /*
+    AUDITORÍA ARCA (etapa 5, 20/11/2026): el número de cosas que no encajan entre WeProdu y ARCA, al lado
+    de «Documentos», para que alguien lo vea sin ir a buscarlo. Son los totales que el server deja guardados
+    (cada corrida de las 06:00 y cada vez que se abre la pestaña): no recalcula nada.
+  */
+  const [auditoriaArca, setAuditoriaArca] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    if (!user || !puedeAbrir('/documents')) return;
+    arcaRelacionesAPI.auditoriaResumen().then((r) => setAuditoriaArca(r.totales?.total ?? undefined)).catch(() => {});
+  }, [user, puedeAbrir]);
 
   const menuItems = useMemo(() => {
     const isSuperAdminTenant = user?.tenantSlug === 'superadmin';
@@ -487,10 +507,13 @@ export const MobileNavbar: React.FC = () => {
       if (puedeAbrir('/admin/contratos-sin-dias')) base.push({ permiso: 'admin_contracts:view', path: '/admin/contratos-sin-dias', icon: faCalendarXmark, label: 'Sin días', scope: 'global' });
       if (puedeAbrir('/requests')) base.push({ permiso: 'admin_activity_logs:view', path: '/requests', icon: faFileText, label: 'Novedades', scope: 'global', dividerTop: true });
       if (puedeAbrir('/orders')) base.push({ permiso: 'admin_orders:view', path: '/orders', icon: faShoppingCart, label: 'Pedidos', scope: 'global' });
-      if (puedeAbrir('/vacations')) base.push({ permiso: 'admin_vacations:view', path: '/vacations', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' });
+      // Las secciones de Vacaciones: cada una es un ítem del grupo «Vacaciones» (ver VACACIONES_GENERAL_PATHS).
+      for (const s of SECCIONES_VACACIONES) {
+        if (puedeAbrir(s.ruta)) base.push({ permiso: 'admin_vacations:view', path: s.ruta, icon: faUmbrellaBeach, label: s.label, scope: 'global' });
+      }
       // El ícono de Dropbox dice de dónde salen los documentos, así que el nombre no tiene que
       // repetirlo: la marca queda en la imagen y la etiqueta nombra la pantalla.
-      if (puedeAbrir('/documents')) base.push({ permiso: 'admin_hr_documents:view', path: '/documents', icon: faDropbox, label: 'Documentos', scope: 'global' });
+      if (puedeAbrir('/documents')) base.push({ permiso: 'admin_hr_documents:view', path: '/documents', icon: faDropbox, label: 'Documentos', scope: 'global', pendientes: auditoriaArca, title: auditoriaArca ? `Auditoría ARCA: ${auditoriaArca} para que mire una persona` : undefined });
 
       // CONFIGURACION Items
       if (puedeAbrir('/requests/config')) base.push({ permiso: 'config_activity_logs:view', path: '/requests/config', icon: faFileText, label: 'Novedades', scope: 'global' });
@@ -580,12 +603,14 @@ export const MobileNavbar: React.FC = () => {
       // Las dos que solo pide el alta URGENTE (Altas Masivas, registro de 85).
       if (puedeAbrir('/arca/puestos-desempenados')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/puestos-desempenados', icon: faListCheck, label: 'Puestos Desempeñados', scope: 'global' });
       if (puedeAbrir('/arca/situaciones-revista')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/situaciones-revista', icon: faListCheck, label: 'Situaciones de Revista', scope: 'global' });
+      // El motivo de una baja (Relaciones Laborales → Modificaciones y Bajas → Registrar baja).
+      if (puedeAbrir('/arca/situaciones-baja')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/situaciones-baja', icon: faListCheck, label: 'Situaciones de Baja', scope: 'global' });
       // El espejo de lo que ARCA publica: contra él se validan los códigos. Se lee de ARCA desde acá.
       if (puedeAbrir('/arca/catalogo')) base.push({ permiso: 'config_arca_tablas:view', path: '/arca/catalogo', icon: faDatabase, label: 'Catálogo de ARCA', scope: 'global' });
     }
 
     return base;
-  }, [puedeAbrir, adminCounts, user?.tenantSlug, contadores]);
+  }, [puedeAbrir, adminCounts, user?.tenantSlug, contadores, auditoriaArca]);
 
   const handleMenuClick = () => {};
 
@@ -685,7 +710,10 @@ export const MobileNavbar: React.FC = () => {
     // Los sueltos de la sección. Los grupos entran aparte y ordenan por su propio rótulo.
     // Solicitudes, Contratos y Documentos ya NO están acá: se fueron adentro de «Contratación», y
     // dejarlos también sueltos los duplicaría en el menú.
-    const generalSueltos = isSuperAdminTenant ? ['/tenants'] : ['/admin/projects', '/orders', '/vacations', '/requests', '/valoraciones'];
+    const generalSueltos = isSuperAdminTenant ? ['/tenants'] : ['/admin/projects', '/orders', '/requests', '/valoraciones'];
+    // Grupo «Vacaciones»: sus secciones en el orden de la config (ver VACACIONES_GENERAL_PATHS).
+    const vacacionesGeneralChildren = VACACIONES_GENERAL_PATHS.map((p) => adminItems.find((item) => item.path === p)).filter(Boolean) as typeof adminItems;
+    const vacacionesGeneralGroup = { path: '#vacaciones-general', groupKey: 'vacacionesGeneral', icon: faUmbrellaBeach, label: 'Vacaciones', scope: 'global' as const, children: vacacionesGeneralChildren };
     /*
       «Centros de Costos» y «Clientes» van AL FINAL, después de Vacaciones, y no en el orden alfabético
       del resto de la sección.
@@ -703,6 +731,7 @@ export const MobileNavbar: React.FC = () => {
         ...adminItems.filter((item) => generalSueltos.includes(item.path)),
         ...(contratacionChildren.length > 0 ? [contratacionGroup] : []),
         ...(usuariosGeneralChildren.length > 0 ? [usuariosGeneralGroup] : []),
+        ...(vacacionesGeneralChildren.length > 0 ? [vacacionesGeneralGroup] : []),
       ].sort(byLabel),
       ...generalAlFinal.map((ruta) => adminItems.find((item) => item.path === ruta)).filter(Boolean),
     ] as any[];

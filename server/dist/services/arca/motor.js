@@ -24,3 +24,8 @@ export const MOTOR_ALTAS = resolve(RAIZ_REPO, "frontend/tools/altas-arca.mjs");
 export const MOTOR_CATALOGOS = resolve(RAIZ_REPO, "frontend/tools/catalogos-arca.mjs");
 /** Consultas de Relaciones Laborales por mes de movimientos y descarga del TXT. SÓLO LEE. */
 export const MOTOR_RELACIONES = resolve(RAIZ_REPO, "frontend/tools/consulta-relaciones-arca.mjs");
+/**
+ * Baja, modificación y anulación de una relación laboral (Relaciones Laborales → Modificaciones y Bajas). ESCRIBE
+ * en ARCA. Archivo aparte del de altas, con su propia lista blanca y su propio escaneo (20/11/2026).
+ */
+export const MOTOR_MODIFICACIONES = resolve(RAIZ_REPO, "frontend/tools/modificaciones-arca.mjs");

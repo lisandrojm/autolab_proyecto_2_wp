@@ -2298,7 +2298,7 @@ export const UsersPage: React.FC = () => {
                         )}
                       </td>
                       <td className="py-4 px-6 hidden md:table-cell text-center">
-                        <span className="text-xs text-gray-500">{(user.metadata?.projects || []).reduce((acc: number, p: any) => acc + (p.contracts?.length || 0), 0)}</span>
+                        <span className="text-xs text-gray-500">{(user.metadata?.projects || []).reduce((acc: number, p: any) => acc + (p.contracts || []).filter((c: any) => c?.estadoContrato !== "ANULADO").length, 0)}</span>
                       </td>
                       {/*
                         Columna ARCA: el estado y su acción en la misma celda.

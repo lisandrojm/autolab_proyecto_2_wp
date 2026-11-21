@@ -9,6 +9,7 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { usePlantilla, usePlantillas } from "./contexto";
 import { Pantalla, Seccion, TOPE_PEGADO, Vacio } from "./Pantalla";
 import { FilasCondiciones, HojaCondicion, HojasCondiciones } from "./Condiciones";
+import { useContratoEnFechas } from "../../../../../hooks/useContratoEnFechas";
 import { SelectorPersona } from "./SelectorPersona";
 import { CampoCategoria, ModalCategoria } from "../contratacion/SelectorCategoria";
 import { BloqueReemplazo } from "../contratacion/BloqueReemplazo";
@@ -119,6 +120,7 @@ export default function DetallePuesto() {
 
   const a = x?.asignacion;
   /*
+<<<<<<< HEAD
     LA FOTO DEL PUESTO AL ENTRAR (21/11/2026). Cada cambio se guarda apenas se elige —así funcionan las
     plantillas—, pero el pie ahora ofrece Cancelar: vuelve el puesto a como estaba al entrar o al último
     «Guardar». Se fotografían las condiciones (rol, contrato, área, horario, días, categoría, importe), la
@@ -161,6 +163,14 @@ export default function DetallePuesto() {
     setBusquedaRol("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numero, equipoId, a?.userId]);
+=======
+    ¿TIENE UN CONTRATO DE ARCA VIGENTE HOY? Entonces el puesto sólo se ofrece por Servicios (la regla del
+    alta individual). Acá no hay fechas todavía —son de cada contratación—: se mira hoy, y al contratar
+    el server revisa con las fechas de esa vez.
+  */
+  const hoyISO = new Date().toLocaleDateString("en-CA");
+  const contratoVigente = useContratoEnFechas({ activo: !!a?.userId, userId: a?.userId || undefined, desde: hoyISO, hasta: hoyISO });
+>>>>>>> 4e65ef497ce5e4b571996f4c000d7f82a82ec916
   useEffect(() => {
     setVerAvisos(false);
     setReemplazoAbierto(!!a?.reemplazo);
@@ -450,7 +460,7 @@ export default function DetallePuesto() {
           justo lo que se viene a mirar. Lo que difiere del equipo se marca en su fila.
         */}
         <div className="space-y-2">
-          <FilasCondiciones valores={efectivo} areas={areas} catalogos={catalogos} onAbrirContrato={() => setHoja("contrato")} onAbrirTurno={() => setHoja("turno")} onCambio={(c) => void cambiar(c)} distintas={distintas} />
+          <FilasCondiciones valores={efectivo} areas={areas} catalogos={catalogos} onAbrirContrato={() => setHoja("contrato")} onAbrirTurno={() => setHoja("turno")} onCambio={(c) => void cambiar(c)} distintas={distintas} soloServicios={contratoVigente?.mensaje} />
           {/* Sólo cuando hay algo que volver: un botón gris, como los demás secundarios de la pantalla. */}
           {x.diferencias.length > 0 && (
             <button type="button" onClick={volverAlEquipo} className="flex min-h-[48px] w-full items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-bold text-slate-800 dark:border-slate-600 dark:text-slate-100">
@@ -580,6 +590,7 @@ export default function DetallePuesto() {
         categoriaId={efectivo.categoriaSatId || ""}
         onElegir={(id) => void cambiar({ categoriaSatId: id || null })}
       />
+<<<<<<< HEAD
       <ModalOtroRol
         abierto={rolModal}
         onCerrar={() => setRolModal(false)}
@@ -595,6 +606,9 @@ export default function DetallePuesto() {
         }}
       />
       <HojasCondiciones cual={hoja === "contrato" || hoja === "turno" ? hoja : null} onCerrar={() => setHoja(null)} titulo={`Puesto ${numero}`} areas={areas} catalogos={catalogos} valores={efectivo} onCambio={(c) => void cambiar(c)} />
+=======
+      <HojasCondiciones cual={hoja === "contrato" || hoja === "turno" ? hoja : null} onCerrar={() => setHoja(null)} titulo={`Puesto ${numero}`} areas={areas} catalogos={catalogos} valores={efectivo} onCambio={(c) => void cambiar(c)} soloServicios={contratoVigente?.mensaje} />
+>>>>>>> 4e65ef497ce5e4b571996f4c000d7f82a82ec916
     </Pantalla>
   );
 }

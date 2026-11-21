@@ -6,6 +6,7 @@ const renovacionContratoSchema = new Schema({
     projectId: { type: Schema.Types.ObjectId, ref: "Project" },
     fechaBajaContrato: { type: String, required: true },
     indiceContrato: { type: Number, required: true, default: 0 },
+    contratoKey: { type: Schema.Types.ObjectId, default: null, index: true },
     decision: { type: String, enum: ["renovar", "dejar_vencer"], required: true },
     solicitudId: { type: Schema.Types.ObjectId, ref: "User" },
     decididoPor: { type: Schema.Types.ObjectId, ref: "User" },

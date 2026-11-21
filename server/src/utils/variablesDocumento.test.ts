@@ -7,7 +7,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { brutoDeEscalaEnDocumento, importesNetosDelContrato, textoDeDiasSemana } from "./employeeDocData.js";
+import { brutoDeEscalaEnDocumento, escalaDelContratoEnDocumento, importesNetosDelContrato, textoDeDiasSemana } from "./employeeDocData.js";
 import { getDummyDocVariables, replaceDocVariables } from "./documentPdf.js";
 import { numeroALetras } from "./numeroALetras.js";
 
@@ -75,12 +75,46 @@ describe("importes netos y días del contrato (variables del 09/10/2026)", () =>
   });
   it("sin escala el importe por jornada ya es el neto, y sin jornadas no hay total", () => {
     const r = importesNetosDelContrato({ jornadaBruto: 1000, diasPorSemana: 0, jornadasPorMes: null, jornadas: 0 });
-    assert.deepEqual(r, { jornada: 1000, semana: 0, mensual: 30000, total: 0 });
+    assert.deepEqual(r, { jornada: 1000, semana: 0, mensual: 30000, total: 0, jornadaBruto: 1000, semanaBruto: 0, mensualBruto: 30000 });
+  });
+  it("los brutos de la solicitud: jornada, × días por semana y × jornadas por mes del tipo", () => {
+    const r = importesNetosDelContrato({ jornadaBruto: 107392.04, escalaNeto: 81, escalaBruto: 100, diasPorSemana: 5, jornadasPorMes: 22, jornadas: 7 });
+    assert.equal(r.jornadaBruto, 107392.04);
+    assert.equal(r.semanaBruto, 536960.2);
+    assert.equal(r.mensualBruto, 2362624.88);
   });
   it("los días como los muestra la app", () => {
     assert.equal(textoDeDiasSemana([1, 2, 3, 4, 5]), "Lu a Vi");
     assert.equal(textoDeDiasSemana([0, 1, 2, 3, 4, 5, 6]), "Lun a Dom");
     assert.equal(textoDeDiasSemana([1, 3, 5]), "Lu, Mi, Vi");
     assert.equal(textoDeDiasSemana([]), "");
+  });
+});
+
+describe("los campos de la solicitud (17/11/2026)", () => {
+  it("el catálogo ofrece los campos del formulario, con el neto por jornada en letras", () => {
+    const c = catalogo();
+    for (const v of ["sueldoBasico", "adicional", "porcentajeAdicional", "presentismo", "importeJornadaNeto", "importeJornadaNetoLetras", "importeJornadaBruto", "importeSemanaNeto", "importeSemanaBruto", "importeMensualNeto", "importeMensualBruto", "importeTotalNeto", "importeTotalNetoLetras"]) assert.ok(c.includes(v), `falta {{${v}}} en el modal`);
+  });
+  it("las anteriores siguen en el catálogo: hay plantillas que las usan", () => {
+    const c = catalogo();
+    for (const v of ["sueldoJornada", "sueldoJornadaLetras", "sueldoMano", "sueldoBruto"]) assert.ok(c.includes(v), `falta {{${v}}}`);
+  });
+  it("con el importe de la escala, básico, adicional y presentismo son los de la escala", () => {
+    // 634/11: básico 1.000.000, 35 % de adicional, presentismo 10 % de básico + adicional; 30 jornadas.
+    const mensual = 1000000 + 350000 + 135000;
+    const e = escalaDelContratoEnDocumento({ jornadaBruto: mensual / 30, basico: 1000000, adicional: 350000, presentismo: 135000, jornadasPorMes: 30 });
+    assert.equal(e.sueldoBasico, (1000000).toLocaleString("es-AR"));
+    assert.equal(e.adicional, (350000).toLocaleString("es-AR"));
+    assert.equal(e.presentismo, (135000).toLocaleString("es-AR"));
+    assert.equal(e.porcentajeAdicional, "35 %");
+  });
+  it("pactado un 10 % arriba de la escala: cada columna sube un 10 %, el % adicional no", () => {
+    const e = escalaDelContratoEnDocumento({ jornadaBruto: (1485000 / 22) * 1.1, basico: 1000000, adicional: 350000, presentismo: 135000, jornadasPorMes: 22 });
+    assert.equal(e.sueldoBasico, (1100000).toLocaleString("es-AR"));
+    assert.equal(e.porcentajeAdicional, "35 %");
+  });
+  it("sin categoría, vacías", () => {
+    assert.deepEqual(escalaDelContratoEnDocumento({ jornadaBruto: 1000 }), { sueldoBasico: "", adicional: "", porcentajeAdicional: "", presentismo: "" });
   });
 });

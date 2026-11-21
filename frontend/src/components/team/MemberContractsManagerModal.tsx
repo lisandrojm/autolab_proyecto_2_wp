@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileContract, faFileLines } from "@fortawesome/free-solid-svg-icons";
+import { faBan, faFileContract, faFileLines } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
 import { usersAPI, ManagedContract } from "../../api/users";
 import { projectsAPI } from "../../api/projects";
@@ -13,6 +13,10 @@ import { ContractCard, EmpresaOption, findTemplate, templateHasContent } from ".
 import { ContractFiltersBar, ContractFilterState, emptyContractFilters, matchesContractFilters } from "./ContractFilters";
 import { getContratoActivo } from "../../utils/contratoVigencia";
 
+import { anularContratoConRevision, etiquetaContrato } from "../../utils/anularContrato";
+import { HistorialContrato } from "../contratos/HistorialContrato";
+import { OperacionArcaModal } from "../contratos/OperacionArcaModal";
+import { faLandmark } from "@fortawesome/free-solid-svg-icons";
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -20,13 +24,49 @@ interface Props {
   userName?: string;
   contratoFrames: ContratoFrameItem[];
   releases: Release[];
+  /** Abrir ya filtrado por un proyecto (desde el equipo de ese proyecto). */
+  proyectoInicial?: string;
+  /** Por encima de otro modal (el del equipo). */
+  zIndex?: number;
 }
 
 /**
  * Gestión de TODOS los contratos de una persona (cross-proyecto/cliente): lista con formato de tarjetas,
  * filtros (cliente, proyecto, tipo, vigencia, rango de fechas) y descarga de contrato/release por tarjeta.
  */
-export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, userId, userName, contratoFrames, releases }) => {
+/*
+  UN CONTRATO ANULADO EN LA LISTA (18/11/2026): en su lugar, con lo que era, quién lo anuló, cuándo y por
+  qué, y sin ninguna acción (no se edita, no se descarga, no se vuelve a anular). Una anulación que no se
+  ve desde la aplicación se ve igual que el borrado que reemplazó.
+*/
+const TarjetaAnulado: React.FC<{ r: ManagedContract; userId: string }> = ({ r, userId }) => {
+  const a = r.anulado!;
+  return (
+    <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/60 p-4 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-900">
+          <FontAwesomeIcon icon={faBan} className="h-3 w-3" />
+          ANULADO
+        </span>
+        {r.clientName && <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{r.clientName}</span>}
+        {r.projectName && <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">{r.projectName}</span>}
+        {!a.vinculoEliminado && <span className="text-xs text-gray-500">posición #{r.contractIndex}</span>}
+      </div>
+      <p className="mt-2 text-gray-500 dark:text-gray-400 line-through decoration-gray-400">{etiquetaContrato({ ...a.contrato, nombre_contrato: a.contrato.nombre_contrato || "", nombre_empresa_contrato: a.contrato.nombre_empresa_contrato || "", fecha_alta_contrato: a.contrato.fecha_alta_contrato || "", fecha_baja_contrato: a.contrato.fecha_baja_contrato || "" } as any)}</p>
+      <p className="mt-2 text-gray-800 dark:text-gray-100">
+        <span className="font-semibold">Motivo:</span> {a.motivo || "—"}
+      </p>
+      <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+        Anulado {a.el ? `el ${new Date(a.el).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}` : ""} por {a.porNombre || "—"}
+        {a.vinculoEliminado ? " · era su último contrato en el proyecto: salió del equipo" : ""}
+      </p>
+      <HistorialContrato userId={userId} contratoKey={(r.contract as any)?.contratoKey ? String((r.contract as any).contratoKey) : null} />
+    </div>
+  );
+};
+
+export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, userId, userName, contratoFrames, releases, proyectoInicial, zIndex = 60 }) => {
+  // Los contratos y, en su lugar, los ANULADOS (etapa 2b; vienen en la misma lista con `anulado`).
   const [rows, setRows] = useState<ManagedContract[]>([]);
   const [loading, setLoading] = useState(false);
   // Empresas del ABM: fallback para los proyectos que no tienen ninguna configurada (mismo criterio que
@@ -34,6 +74,12 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
   const [allEmpresas, setAllEmpresas] = useState<EmpresaOption[]>([]);
 
   const [filters, setFilters] = useState<ContractFilterState>(emptyContractFilters);
+  /*
+    LA RELACIÓN EN ARCA (20/11/2026): baja, modificación o anulación de un contrato que ya tiene el alta
+    presentada, desde su tarjeta. El modal corre en seco hasta que alguien confirma; al terminar una operación real
+    se recarga la lista para que la marca se vea.
+  */
+  const [operarArca, setOperarArca] = useState<ManagedContract | null>(null);
 
   const navigate = useNavigate();
   const activeReleases = useMemo(() => releases.filter((r) => r.isActive), [releases]);
@@ -50,9 +96,9 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
 
   useEffect(() => {
     if (!isOpen || !userId) return;
-    setFilters(emptyContractFilters);
+    setFilters(proyectoInicial ? { ...emptyContractFilters, proyecto: proyectoInicial } : emptyContractFilters);
     load();
-  }, [isOpen, userId, load]);
+  }, [isOpen, userId, load, proyectoInicial]);
 
   useEffect(() => {
     if (!isOpen || allEmpresas.length > 0) return;
@@ -69,18 +115,10 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
     navigate(`/projects/${r.projectId}/team`, { state: { openWizardFor: { userId, contractIndex: r.contractIndex } } });
   };
 
-  // Eliminar: borra SOLO ese contrato (por índice) del proyecto.
+  // Anular SOLO ese contrato (cualquiera, no sólo el último): revisa, ofrece mover recibos, pide motivo.
   const handleDelete = async (r: ManagedContract) => {
     if (!userId) return;
-    const res = await sweetAlert.confirm("¿Eliminar contrato?", `Se eliminará este contrato de "${r.projectName}". Esta acción no se puede deshacer.`, "Sí, eliminar");
-    if (!res.isConfirmed) return;
-    try {
-      await projectsAPI.deleteMemberContract(r.projectId, userId, r.contractIndex);
-      sweetAlert.success("Contrato eliminado", "El contrato fue eliminado.");
-      load();
-    } catch {
-      sweetAlert.error("Error", "No se pudo eliminar el contrato.");
-    }
+    if (await anularContratoConRevision({ projectId: r.projectId, userId, contractIndex: r.contractIndex, contexto: `Proyecto «${r.projectName}».` })) load();
   };
 
   // Opciones de filtro derivadas de los contratos
@@ -98,7 +136,10 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
 
   const tipos = useMemo(() => {
     const s = new Set<string>();
-    rows.forEach((r) => r.contract?.nombre_contrato && s.add(r.contract.nombre_contrato));
+    rows.forEach((r) => {
+      const n = r.anulado ? r.anulado.contrato.nombre_contrato : r.contract?.nombre_contrato;
+      if (n) s.add(n);
+    });
     return [...s];
   }, [rows]);
 
@@ -107,7 +148,7 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
   // tabla del equipo y que el modal de Gestionar equipo.
   const indiceQueRigePorProyecto = useMemo(() => {
     const porProyecto = new Map<string, ManagedContract[]>();
-    rows.forEach((r) => {
+    rows.filter((r) => !r.anulado).forEach((r) => {
       if (!porProyecto.has(r.projectId)) porProyecto.set(r.projectId, []);
       porProyecto.get(r.projectId)!.push(r);
     });
@@ -122,12 +163,18 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
     return m;
   }, [rows]);
 
-  const isLatest = (r: ManagedContract) => indiceQueRigePorProyecto.get(r.projectId) === r.contractIndex;
+  const isLatest = (r: ManagedContract) => !r.anulado && indiceQueRigePorProyecto.get(r.projectId) === r.contractIndex;
 
   const filtered = useMemo(
-    () => rows.filter((r) => matchesContractFilters(filters, { contract: r.contract, clientId: r.clientId, projectId: r.projectId, isLatest: isLatest(r) })),
+    () =>
+      rows.filter((r) =>
+        matchesContractFilters(filters, { contract: (r.anulado ? r.anulado.contrato : r.contract) as any, clientId: r.clientId, projectId: r.projectId, isLatest: isLatest(r), anulado: !!r.anulado }),
+      ),
     [rows, filters, indiceQueRigePorProyecto],
   );
+  const totalContratos = rows.filter((r) => !r.anulado).length;
+  const totalAnulados = rows.length - totalContratos;
+  const filtradosContratos = filtered.filter((r) => !r.anulado).length;
 
   const handleDownloadContract = async (r: ManagedContract, empresaId?: string) => {
     const template = findTemplate(r.contract, contratoFrames);
@@ -163,7 +210,7 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={userName || "Empleado"} subtitle="Gestión de contratos (todos los proyectos)" size="lg" zIndex={60}>
+    <Modal isOpen={isOpen} onClose={onClose} title={userName || "Empleado"} subtitle="Gestión de contratos (todos los proyectos)" size="lg" zIndex={zIndex}>
       <div className="space-y-4">
         <ContractFiltersBar value={filters} onChange={setFilters} clientes={clientes} proyectos={proyectos} tipos={tipos} />
 
@@ -173,7 +220,10 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
             <FontAwesomeIcon icon={faFileContract} className="h-4 w-4" />
             Contratos
           </span>
-          <span className="pb-2 text-xs text-gray-500">{filtered.length} de {rows.length}</span>
+          <span className="pb-2 text-xs text-gray-500">
+            {filtradosContratos} de {totalContratos}
+            {totalAnulados > 0 ? ` · ${filtered.length - filtradosContratos} de ${totalAnulados} ${totalAnulados === 1 ? "anulado" : "anulados"}` : ""}
+          </span>
         </div>
 
         {loading ? (
@@ -185,9 +235,12 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
           </div>
         ) : (
           <div className="space-y-3">
-            {filtered.map((r, idx) => (
+            {filtered.map((r, idx) =>
+              r.anulado ? (
+                <TarjetaAnulado key={`anulado-${r.projectId}-${r.contractIndex}-${idx}`} r={r} userId={userId!} />
+              ) : (
+              <div key={`${r.projectId}-${r.contractIndex}-${idx}`}>
               <ContractCard
-                key={`${r.projectId}-${r.contractIndex}-${idx}`}
                 contract={r.contract}
                 contratoFrames={contratoFrames}
                 activeReleases={activeReleases}
@@ -203,15 +256,38 @@ export const MemberContractsManagerModal: React.FC<Props> = ({ isOpen, onClose, 
                 onEdit={() => handleEdit(r)}
                 onDelete={() => handleDelete(r)}
                 editTitle="Editar contrato (ir al equipo del proyecto)"
-                deleteTitle="Eliminar este contrato"
+                deleteTitle="Anular este contrato"
                 onDownloadContract={(empresaId) => handleDownloadContract(r, empresaId)}
                 onDownloadRelease={(release, empresaId) => handleDownloadRelease(r, release, empresaId)}
                 onUploadAltaDocumento={(file) => handleUploadAltaDocumento(r, file)}
               />
-            ))}
+              <div className="flex flex-wrap items-center gap-4">
+                <HistorialContrato userId={userId!} contratoKey={(r.contract as any)?.contratoKey ? String((r.contract as any).contratoKey) : null} />
+                {(r.contract.altaArcaPresentada || r.contract.bajaArcaPresentada || r.contract.modificacionArcaPresentada || r.contract.anulacionArcaPresentada) && (
+                  <button type="button" onClick={() => setOperarArca(r)} className="mt-1 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-blue-700 dark:text-gray-400 dark:hover:text-blue-300" title="Baja, modificación o anulación de la relación en ARCA (Relaciones Laborales → Modificaciones y Bajas). Primero en seco.">
+                    <FontAwesomeIcon icon={faLandmark} className="h-3 w-3" />
+                    Relación en ARCA
+                    {r.contract.bajaArcaPresentada?.resultado === "presentada" && <span className="ml-1 px-1.5 py-0.5 rounded bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-[10px]">baja {r.contract.bajaArcaPresentada.payload?.fechaFin ? String(r.contract.bajaArcaPresentada.payload.fechaFin) : ""}</span>}
+                    {r.contract.altaArcaPresentada?.resultado === "anulada" && <span className="ml-1 px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 text-[10px]">alta anulada</span>}
+                  </button>
+                )}
+              </div>
+              </div>
+              ),
+            )}
           </div>
         )}
+
       </div>
+      {operarArca && (
+        <OperacionArcaModal
+          isOpen
+          onClose={() => setOperarArca(null)}
+          ref_={{ userProjectId: String(operarArca.userProjectId || ""), contratoKey: operarArca.contract.contratoKey || null, contractIndex: operarArca.contractIndex }}
+          zIndex={zIndex + 20}
+          onHecho={load}
+        />
+      )}
     </Modal>
   );
 };

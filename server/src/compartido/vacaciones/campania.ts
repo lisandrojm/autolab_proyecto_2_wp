@@ -29,9 +29,14 @@ export interface ConfigCampania {
   avisoMinimoDias: number;
   /** El tramo más corto que se acepta al fraccionar (LCT: 7 días corridos). */
   minDiasPorTramo: number;
+  /**
+   * Con qué tipos de contrato (`tipo_contrato_id`) arranca tildada una campaña nueva. Vacío = todos los
+   * habilitados. Cada campaña guarda su propia lista: ver «A QUIÉN SE INVITA», más abajo.
+   */
+  tiposContratoInvitar: number[];
 }
 
-export const CONFIG_CAMPANIA_POR_DEFECTO: ConfigCampania = { activa: false, plazoParaDefinirDias: 14, avisoMinimoDias: 30, minDiasPorTramo: 7 };
+export const CONFIG_CAMPANIA_POR_DEFECTO: ConfigCampania = { activa: false, plazoParaDefinirDias: 14, avisoMinimoDias: 30, minDiasPorTramo: 7, tiposContratoInvitar: [] };
 
 /**
  * Qué pasa si la persona no elige, y cómo asigna la empresa. Son constantes y no configuración: NO hay
@@ -53,7 +58,70 @@ export function normalizarConfigCampania(v: any): ConfigCampania {
     plazoParaDefinirDias: entero(v?.plazoParaDefinirDias, d.plazoParaDefinirDias, 1, 120),
     avisoMinimoDias: entero(v?.avisoMinimoDias, d.avisoMinimoDias, 0, 180),
     minDiasPorTramo: entero(v?.minDiasPorTramo, d.minDiasPorTramo, 1, 60),
+    tiposContratoInvitar: normalizarTiposContrato(v?.tiposContratoInvitar),
   };
+}
+
+/* ─────────────────────────── A quién se invita ─────────────────────────── */
+
+/**
+ * A QUIÉN SE INVITA, POR TIPO DE CONTRATO (16/11/2026). La campaña puede limitarse a ciertos tipos de
+ * contrato. Lo que se mira de cada persona es UN contrato: el vigente en su EMPRESA DE CÓMPUTO (la
+ * empleadora de la que sale su antigüedad); si ahí tiene varios vigentes, el de alta más reciente. Lo
+ * elige el server (`utils/contratoDeComputo.ts`); acá está la decisión, que comparten el lanzamiento y
+ * la vista previa para que digan el mismo número:
+ *  · Un tipo deshabilitado en «Visibilidad por tipo de Contrato» (`contractRules.vacationsEnabled = false`)
+ *    NUNCA se invita, esté o no tildado en la campaña.
+ *  · Sin selección (lista vacía) no se filtra por tipo: la población de siempre, menos los deshabilitados.
+ *  · Con selección, sólo quien tiene su contrato vigente de cómputo en uno de esos tipos. Quien no tiene
+ *    contrato vigente en su empresa de cómputo (o lo tiene sin tipo) queda afuera: no hay qué comparar.
+ */
+export type MotivoNoInvitar = "tipo_deshabilitado" | "tipo_no_incluido" | "sin_contrato_vigente";
+
+/** La lista de tipos tal como se guarda: números, sin repetir, ordenados. Lo que no es una lista queda vacío. */
+export function normalizarTiposContrato(v: unknown): number[] {
+  if (!Array.isArray(v)) return [];
+  const ids = v.filter((x) => x !== null && x !== "" && typeof x !== "boolean").map(Number).filter((n) => Number.isFinite(n));
+  return [...new Set(ids)].sort((a, b) => a - b);
+}
+
+/** Por qué NO se invita a alguien, o `null` si se la invita. `tipoContratoId` null = sin contrato vigente de cómputo. */
+export function motivoDeNoInvitar(o: { tipoContratoId: number | null; seleccion: number[]; deshabilitados: number[] }): MotivoNoInvitar | null {
+  if (o.tipoContratoId !== null && o.deshabilitados.includes(o.tipoContratoId)) return "tipo_deshabilitado";
+  if (o.seleccion.length === 0) return null;
+  if (o.tipoContratoId === null) return "sin_contrato_vigente";
+  return o.seleccion.includes(o.tipoContratoId) ? null : "tipo_no_incluido";
+}
+
+/** Cuánta gente con días hay en cada tipo de contrato (por su contrato vigente de cómputo), y cuánta sin contrato. */
+export interface PoblacionPorTipo {
+  porTipo: { id: number; nombre: string; personas: number }[];
+  sinContrato: number;
+}
+
+export interface ResumenDeInvitables {
+  invitar: number;
+  tipoDeshabilitado: number;
+  tipoNoIncluido: number;
+  sinContrato: number;
+}
+
+/**
+ * LA VISTA PREVIA: cuántas personas se invitarían con esa selección, y cuántas quedan afuera por cada
+ * motivo. Es `motivoDeNoInvitar` aplicado grupo por grupo, así que coincide con lo que hace el lanzamiento.
+ */
+export function resumenDeInvitables(p: PoblacionPorTipo, seleccion: number[], deshabilitados: number[]): ResumenDeInvitables {
+  const r: ResumenDeInvitables = { invitar: 0, tipoDeshabilitado: 0, tipoNoIncluido: 0, sinContrato: 0 };
+  const sumar = (tipoContratoId: number | null, personas: number) => {
+    const motivo = motivoDeNoInvitar({ tipoContratoId, seleccion, deshabilitados });
+    if (!motivo) r.invitar += personas;
+    else if (motivo === "tipo_deshabilitado") r.tipoDeshabilitado += personas;
+    else if (motivo === "tipo_no_incluido") r.tipoNoIncluido += personas;
+    else r.sinContrato += personas;
+  };
+  for (const t of p.porTipo) sumar(t.id, t.personas);
+  sumar(null, p.sinContrato);
+  return r;
 }
 
 /* ─────────────────────────── Fechas ─────────────────────────── */

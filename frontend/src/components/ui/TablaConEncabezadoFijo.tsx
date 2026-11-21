@@ -1,4 +1,8 @@
 import React, { Children, Fragment, isValidElement, useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFileExcel, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { exportarTablaAExcel } from '../../utils/exportarTablaExcel';
+import { sweetAlert } from '../../utils/sweetAlert';
 
 /*
   UNA TABLA CUYO ENCABEZADO QUEDA FIJO, CON EL SCROLL DE LA PÁGINA (30/10/2026).
@@ -34,6 +38,12 @@ import React, { Children, Fragment, isValidElement, useCallback, useLayoutEffect
   `top`. OJO: un ancestro con `overflow-hidden` deja al encabezado sin pegar (también es un contenedor
   de scroll); para recortar los bordes redondeados de una tarjeta va `overflow-clip`, que no lo es.
   En desarrollo se avisa por consola.
+
+  EXPORTAR A EXCEL (16/11/2026). Arriba a la derecha de cada tabla va el botón «Excel», que baja lo que
+  la tabla tiene dibujado (`utils/exportarTablaExcel.ts`): se pidió que TODA tabla se pueda exportar, y
+  ponerlo acá las cubre a todas, también a las que se agreguen. Una tabla que ya tiene su propio export
+  (un CSV o un reporte hecho a medida) lo apaga con `sinExportar`. `exportar` le pone nombre al archivo;
+  sin eso, sale del título del modal o de la pantalla.
 */
 
 interface Medidas {
@@ -52,7 +62,43 @@ interface Props {
   /** A qué altura se pega. Por defecto se detecta: el borde de arriba de un contenedor con scroll (menos su padding), `--wp-sticky-top` en la página. */
   top?: string;
   tablaRef?: React.Ref<HTMLTableElement>;
+  /** El nombre del archivo de Excel (sin extensión ni fecha). Por defecto, el título del modal o de la pantalla. */
+  exportar?: string;
+  /** Sin el botón «Excel»: la tabla ya tiene su propio export. */
+  sinExportar?: boolean;
 }
+
+/** El botón «Excel» de arriba de la tabla. No se dibuja mientras la tabla no tiene filas. */
+const BotonExcel: React.FC<{ tabla: React.RefObject<HTMLTableElement | null>; nombre?: string }> = ({ tabla, nombre }) => {
+  const [bajando, setBajando] = useState(false);
+  const [hayFilas, setHayFilas] = useState(false);
+  // En cada render: las filas llegan después (la tabla se dibuja vacía mientras carga).
+  useLayoutEffect(() => {
+    const t = tabla.current;
+    const filas = t ? Array.from(t.tBodies).reduce((n, b) => n + b.rows.length, 0) : 0;
+    setHayFilas((antes) => (antes === filas > 0 ? antes : filas > 0));
+  });
+  if (!hayFilas) return null;
+  const bajar = async () => {
+    if (!tabla.current) return;
+    setBajando(true);
+    try {
+      await exportarTablaAExcel(tabla.current, nombre);
+    } catch (e: any) {
+      sweetAlert.error('No se pudo exportar', e?.message || 'No se pudo armar el archivo de Excel.');
+    } finally {
+      setBajando(false);
+    }
+  };
+  return (
+    <div className="flex justify-end mb-1 print:hidden" data-no-exportar>
+      <button type="button" onClick={bajar} disabled={bajando} title="Exportar esta tabla a Excel (lo que está en pantalla)" className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50">
+        <FontAwesomeIcon icon={bajando ? faSpinner : faFileExcel} spin={bajando} />
+        Excel
+      </button>
+    </div>
+  );
+};
 
 /**
  * EL ALTO DE UNA BARRA PROPIA DE LA PÁGINA que también se pega debajo del header (la de «N tildadas» de
@@ -107,7 +153,7 @@ const medirColumnas = (tabla: HTMLTableElement, thead: HTMLTableSectionElement):
   return unicos.slice(1).map((x, i) => x - unicos[i]);
 };
 
-export const TablaConEncabezadoFijo: React.FC<Props> = ({ children, className = '', tabla = '', top, tablaRef }) => {
+export const TablaConEncabezadoFijo: React.FC<Props> = ({ children, className = '', tabla = '', top, tablaRef, exportar, sinExportar }) => {
   const partes = aplanar(children);
   const encabezado = partes.find((p) => isValidElement(p) && p.type === 'thead') as React.ReactElement<React.HTMLAttributes<HTMLTableSectionElement>> | undefined;
   const resto = partes.filter((p) => p !== encabezado);
@@ -186,15 +232,21 @@ export const TablaConEncabezadoFijo: React.FC<Props> = ({ children, className = 
   if (!encabezado) {
     if (import.meta.env.DEV) console.warn('TablaConEncabezadoFijo: la tabla no tiene un <thead> como hijo directo; el encabezado no queda fijo.');
     return (
-      <div className={`overflow-x-auto ${className}`}>
-        <table ref={ponerTabla} className={tabla}>
-          {children}
-        </table>
+      <div className="min-w-0">
+        {!sinExportar && <BotonExcel tabla={tablaRealRef} nombre={exportar} />}
+        <div className={`overflow-x-auto ${className}`}>
+          <table ref={ponerTabla} className={tabla}>
+            {children}
+          </table>
+        </div>
       </div>
     );
   }
 
   return (
+    // Una sola caja para el botón y la tabla: así un padre con `space-y`, grilla o flex las sigue viendo como un hijo.
+    <div className="min-w-0">
+    {!sinExportar && <BotonExcel tabla={tablaRealRef} nombre={exportar} />}
     <div ref={raizRef} className={`relative overflow-clip ${className}`}>
       <div
         ref={copiaRef}
@@ -223,6 +275,7 @@ export const TablaConEncabezadoFijo: React.FC<Props> = ({ children, className = 
           {resto}
         </table>
       </div>
+    </div>
     </div>
   );
 };

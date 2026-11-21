@@ -28,6 +28,8 @@ export interface IReciboSueldoEnviado extends Document {
     userProjectId: Types.ObjectId | null;
     projectId: Types.ObjectId | null;
     contractIndex: number | null;
+    /** La `contratoKey` del contrato (etapa 2c): la identidad que no depende de la posición. `null` en lo viejo sin backfill. */
+    contratoKey?: Types.ObjectId | null;
     nombreProyecto: string;
     asignadoAMano: boolean;
     /** Todo lo leído del recibo, tal cual se mandó (incluye los conceptos). */

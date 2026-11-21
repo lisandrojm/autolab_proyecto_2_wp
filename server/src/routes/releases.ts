@@ -15,6 +15,7 @@ import { capturarFirmaDePlantilla, guardarFirmaDelDocumento, probarFirmaDePlanti
 import { PLACEHOLDER_RELEASE_CUSTOM, textoCustomDeRelease, textoCustomUsable } from "../compartido/textoCustom.js";
 
 import { asegurarPlantillasCustomSinRomper, MENSAJE_DEL_SISTEMA } from "../services/plantillasCustomSistema.js";
+import { esLapida, ultimoNoAnulado } from "../utils/anulacionContrato.js";
 const router = Router();
 
 // El release se redacta en la plataforma (editor con formato) y se guarda como HTML en `content`.
@@ -200,7 +201,8 @@ export async function generarReleasePdf(opts: { tenantId: string; releaseId: str
   });
   const contracts: any[] = up?.contracts || [];
   let idx = contractIndex;
-  if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length) idx = contracts.length - 1;
+  // Sin índice válido (o apuntando a un contrato anulado), el último contrato de verdad (etapa 2b).
+  if (!Number.isInteger(idx) || idx < 0 || idx >= contracts.length || esLapida(contracts[idx])) idx = ultimoNoAnulado(contracts);
   const contract: any = contracts[idx] || {};
 
   const cuerpo = release.esCustom ? (opts.contenidoCustom ?? textoCustomDeRelease(contract.contenidoCustomReleases, String(release._id)) ?? "") : release.content;

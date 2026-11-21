@@ -194,6 +194,7 @@ export function turnosPorContrato(contrato, clavesDe) {
             fechaBaja: String(v?.fecha_baja_contrato || ""),
             horaInicio: String(v?.hora_inicio || ""),
             horaFin: String(v?.hora_fin || ""),
+            diasSemana: Array.isArray(v?.dias_semana) ? v.dias_semana : [],
         });
     }
     return grupos.size > 1 ? [...grupos.values()] : null;

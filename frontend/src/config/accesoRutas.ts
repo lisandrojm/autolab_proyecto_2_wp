@@ -2,6 +2,7 @@ import { matchPath } from "react-router-dom";
 import { esPermisoMobile, esPermisoPlataforma } from "../utils/permisosMobile";
 import { BANDEJAS, RUTA_CONTRATACION } from "./bandejasContratacion";
 import { RUTAS_REGLAS_VACACIONES } from "./seccionesReglasVacaciones";
+import { RUTAS_VACACIONES } from "./seccionesVacaciones";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -91,7 +92,8 @@ export const REGLAS_RUTAS: ReglaRuta[] = [
   { path: "/admin/solicitudes", permisos: ["admin_users:view"] },
   { path: "/requests", permisos: ["admin_activity_logs:view"] },
   { path: "/orders", permisos: ["admin_orders:view"] },
-  { path: "/vacations", permisos: ["admin_vacations:view"] },
+  // Solicitudes (`/vacations`) y cada sección del grupo Vacaciones de Admin GENERAL, con el mismo permiso.
+  ...RUTAS_VACACIONES.map((path) => ({ path, permisos: ["admin_vacations:view"] })),
   { path: "/vacations/calendar", permisos: ["admin_vacations:view"] },
   { path: "/documents", permisos: ["admin_hr_documents:view"] },
 
@@ -139,6 +141,7 @@ export const REGLAS_RUTAS: ReglaRuta[] = [
   { path: "/arca/modalidades-liquidacion", permisos: ["config_arca_tablas:view"] },
   { path: "/arca/puestos-desempenados", permisos: ["config_arca_tablas:view"] },
   { path: "/arca/situaciones-revista", permisos: ["config_arca_tablas:view"] },
+  { path: "/arca/situaciones-baja", permisos: ["config_arca_tablas:view"] },
   { path: "/arca/catalogo", permisos: ["config_arca_tablas:view"] },
 
   // --- Entradas: redirigen a la primera pantalla permitida (ver `rutaInicial`) --------------------

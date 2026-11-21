@@ -14,8 +14,12 @@ import mongoose, { Schema, Document, Model, Types } from "mongoose";
  */
 export interface IArcaAltasLog extends Document {
   tenantId: Types.ObjectId;
-  /** `verificacion`: no presentó nada; registra las altas que la verificación encontró ya hechas en ARCA (`verificacionAltas.ts`). */
-  tipo: "carga_masiva" | "altas_masivas" | "verificacion" | "externa";
+  /**
+   * `verificacion`: no presentó nada; registra las altas que la verificación encontró ya hechas en ARCA (`verificacionAltas.ts`).
+   * `baja` | `modificacion` | `anulacion`: una operación sobre una relación ya dada de alta, en Modificaciones y
+   * Bajas (`corridaOperacionRelacion.ts`); el detalle va en `operacion` y el contrato tocado en `contratos[0]`.
+   */
+  tipo: "carga_masiva" | "altas_masivas" | "verificacion" | "externa" | "baja" | "modificacion" | "anulacion";
   usuarioId?: Types.ObjectId;
   /** La lanzó la presentación automática de las 14 h: no hay persona detrás. */
   automatica?: boolean;
@@ -23,7 +27,7 @@ export interface IArcaAltasLog extends Document {
   empresaCuit?: string;
   empresaRazonSocial?: string;
   enSeco: boolean;
-  contratos: Array<{ userProjectId: Types.ObjectId; contractIndex: number; cuil: string; nombre: string; /** El registro de 85 tal cual se mandó a ARCA. */ registro?: string; resultado: string; motivo?: string; tanda?: number; cat?: string; porConsulta?: boolean }>;
+  contratos: Array<{ userProjectId: Types.ObjectId; contractIndex: number; /** Etapa 2c: la identidad del contrato. */ contratoKey?: Types.ObjectId | null; /** Etapa 2c: no se le pudo dar clave con evidencia (su log no quedó en ningún contrato): queda por posición y NO hay que creerle a la posición. */ claveNoResuelta?: string; cuil: string; nombre: string; /** El registro de 85 tal cual se mandó a ARCA. */ registro?: string; resultado: string; motivo?: string; tanda?: number; cat?: string; porConsulta?: boolean }>;
   /** Altas Masivas por tandas: cada tanda con sus tiempos y su resultado. */
   tandas?: Array<{
     n: number;
@@ -45,6 +49,25 @@ export interface IArcaAltasLog extends Document {
   topeUsado?: number;
   /** Por qué se cortó antes de terminar: `detenida`, `error`, `dialogo`, `rechazos_seguidos`… */
   motivoCorte?: string;
+  /**
+   * Las operaciones de Modificaciones y Bajas: qué se pidió (`payload`, con las fechas y los códigos tal como se
+   * escribieron), la relación como la mostraba ARCA antes (`relacion`), el acuse leído después (`acuse`), y de qué
+   * lado estuvo el problema si falló (`clase`: `regla_arca` o `navegacion`). `que` sólo en la anulación.
+   */
+  operacion?: {
+    que?: "alta" | "baja";
+    payload?: any;
+    relacion?: any;
+    acuse?: any;
+    clase?: string;
+    cambios?: Array<{ campo: string; antes: string; despues: string }>;
+    /** Lo que ARCA mostró después de confirmar, sin CUIL ni VIEWSTATE (para escribir el lector que falte). */
+    html?: string;
+    textoNuevo?: string;
+    enRojo?: string[];
+    /** Cómo se leyó el resultado: `listado` (se volvió a buscar la relación) o `pantalla` (lo que quedó después de confirmar). */
+    leidoDe?: string;
+  };
   codigoNovedad?: string;
   nroTransaccion?: string;
   fechaPresentacion?: string;
@@ -67,18 +90,19 @@ export interface IArcaAltasLog extends Document {
 const schema = new Schema<IArcaAltasLog>(
   {
     tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true },
-    tipo: { type: String, enum: ["carga_masiva", "altas_masivas", "verificacion", "externa"], required: true },
+    tipo: { type: String, enum: ["carga_masiva", "altas_masivas", "verificacion", "externa", "baja", "modificacion", "anulacion"], required: true },
     usuarioId: { type: Schema.Types.ObjectId, ref: "User" },
     automatica: { type: Boolean },
     empresaId: { type: Schema.Types.ObjectId, ref: "Company" },
     empresaCuit: String,
     empresaRazonSocial: String,
     enSeco: { type: Boolean, default: true },
-    contratos: [{ _id: false, userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" }, contractIndex: Number, cuil: String, nombre: String, registro: String, resultado: String, motivo: String, tanda: Number, cat: String, porConsulta: Boolean }],
+    contratos: [{ _id: false, userProjectId: { type: Schema.Types.ObjectId, ref: "UserProject" }, contractIndex: Number, contratoKey: { type: Schema.Types.ObjectId, default: null }, claveNoResuelta: String, cuil: String, nombre: String, registro: String, resultado: String, motivo: String, tanda: Number, cat: String, porConsulta: Boolean }],
     tandas: [{ _id: false, n: Number, cuils: [String], inicio: Date, fin: Date, duracionMs: Number, resultado: String, error: String, textoArca: String, dialogos: [String], html: String, textoNuevo: String, enRojo: [String] }],
     topeEnPantalla: Number,
     topeUsado: Number,
     motivoCorte: String,
+    operacion: { type: Schema.Types.Mixed },
     codigoNovedad: String,
     nroTransaccion: String,
     fechaPresentacion: String,

@@ -15,6 +15,8 @@
  */
 export type EstadoRenovacion = "renovar" | "en_proceso" | "renovado" | null;
 export interface ContratoParaRenovacion {
+    /** Decide la vigencia (etapa 3): sin VIGENTE, el contrato no rige. */
+    estadoContrato?: string | null;
     fecha_alta_contrato?: string | null;
     fecha_baja_contrato?: string | null;
     nombre_estado_empleado?: string | null;

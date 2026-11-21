@@ -69,6 +69,8 @@ export interface ResumenSync {
   htmlGuardado?: string;
   /** Altas hechas a mano en ARCA que aparecieron en esta sincronización (ver `adopcionAltasExternas.ts`). */
   altasExternas?: { adoptadas: number; revisionManual: number; error?: string };
+  /** Las bajas de ARCA aplicadas solas a los contratos después de una corrida automática (lo escribe `bajasArcaAutomaticas.ts`). */
+  bajasContratos?: { aplicables: number; aplicadas: number; cambiaron: number; listadas: number; excluidasPorEmpleadora: number; frenada: boolean; tope: number; error?: string };
 }
 
 export interface EstadoSync {

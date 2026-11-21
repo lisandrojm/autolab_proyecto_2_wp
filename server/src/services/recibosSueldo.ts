@@ -15,6 +15,7 @@ import { agruparPaginas, leerRecibo, normalizarNombre } from "../utils/reciboDeS
 import { normalizarCuit } from "../utils/constanciaPdf.js";
 import { Company } from "../models/Company.js";
 import { fechaISO, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
+import { claveEnPosicion, indiceDeReferencia } from "../utils/identidadContrato.js";
 import { nombreArchivoDocumento } from "./nomenclaturaService.js";
 import { getTenantDropboxConfig, uploadFile } from "./dropboxService.js";
 import { resolverCarpetaPorProposito } from "../utils/estadoCarpetas.js";
@@ -72,7 +73,7 @@ async function extraerPaginas(sabana: PDFDocument, indices: number[]): Promise<B
  * La persona y su contrato que rige, para un CUIL. Si la persona está en varios proyectos, el
  * contrato vigente más reciente; sin ninguno vigente, su último contrato (ver abajo).
  */
-type ContratoDelRecibo = Pick<IReciboDelLote, "userProjectId" | "projectId" | "contractIndex" | "nombreProyecto"> & {
+type ContratoDelRecibo = Pick<IReciboDelLote, "userProjectId" | "projectId" | "contractIndex" | "contratoKey" | "nombreProyecto"> & {
   /** Vacío si el contrato está vigente; si no, por qué va con otro (o por qué no va). */
   aviso: string;
 };
@@ -103,16 +104,17 @@ async function personaYContrato(tenantId: Types.ObjectId, userId: Types.ObjectId
     for (const up of vinculos) {
       for (const [idx, c] of ((up.contracts || []) as any[]).entries()) {
         // Con `fechaISO`: hay altas guardadas como DD/MM/YYYY. Un contrato sin alta también sirve, si es lo único que hay.
+        if (c?.estadoContrato === "ANULADO") continue; // lápida de un contrato anulado (etapa 2b)
         const alta = fechaISO(c?.fecha_alta_contrato);
         if (c && (!mejor || alta > mejor.alta)) mejor = { up, idx, alta };
       }
     }
-    if (!mejor) return { userProjectId: null, projectId: null, contractIndex: null, nombreProyecto: "", aviso: SIN_CONTRATO };
+    if (!mejor) return { userProjectId: null, projectId: null, contractIndex: null, contratoKey: null, nombreProyecto: "", aviso: SIN_CONTRATO };
     const baja = String(mejor.up.contracts[mejor.idx]?.fecha_baja_contrato || "");
     aviso = `Sin contrato vigente: va con su último contrato${fechaISO(baja) ? ` (terminó el ${fechaCorta(fechaISO(baja))})` : ""}.`;
   }
   const proyecto: any = await Project.findOne({ _id: mejor.up.projectId, tenantId }).select("name").lean();
-  return { userProjectId: mejor.up._id, projectId: mejor.up.projectId, contractIndex: mejor.idx, nombreProyecto: proyecto?.name || mejor.up.nombre_proyecto || "", aviso };
+  return { userProjectId: mejor.up._id, projectId: mejor.up.projectId, contractIndex: mejor.idx, contratoKey: claveEnPosicion(mejor.up.contracts, mejor.idx), nombreProyecto: proyecto?.name || mejor.up.nombre_proyecto || "", aviso };
 }
 
 /**
@@ -128,7 +130,7 @@ export async function completarContratos(lote: ILoteRecibosSueldo): Promise<bool
     // Posicional y condicionado al estado: no pisa un recibo que entre tanto cambió.
     await LoteRecibosSueldo.updateOne(
       { _id: lote._id, recibos: { $elemMatch: { _id: r._id, estado: "sin_persona" } } },
-      { $set: { "recibos.$.userProjectId": contrato.userProjectId, "recibos.$.projectId": contrato.projectId, "recibos.$.contractIndex": contrato.contractIndex, "recibos.$.nombreProyecto": contrato.nombreProyecto, "recibos.$.estado": "listo", "recibos.$.error": aviso } },
+      { $set: { "recibos.$.userProjectId": contrato.userProjectId, "recibos.$.projectId": contrato.projectId, "recibos.$.contractIndex": contrato.contractIndex, "recibos.$.contratoKey": contrato.contratoKey, "recibos.$.nombreProyecto": contrato.nombreProyecto, "recibos.$.estado": "listo", "recibos.$.error": aviso } },
     );
     cambio = true;
   }
@@ -384,6 +386,7 @@ async function armarRecibos(lote: ILoteRecibosSueldo, sabana: PDFDocument, leido
       userProjectId: contrato?.userProjectId || null,
       projectId: contrato?.projectId || null,
       contractIndex: contrato?.contractIndex ?? null,
+      contratoKey: contrato?.contratoKey ?? null,
       nombreProyecto: contrato?.nombreProyecto || "",
       asociadoPorNombre: porNombre,
       estado: u ? "listo" : "sin_persona",
@@ -441,6 +444,7 @@ export async function releerRecibo(lote: ILoteRecibosSueldo, reciboId: string): 
     r.userProjectId = contrato?.userProjectId || null;
     r.projectId = contrato?.projectId || null;
     r.contractIndex = contrato?.contractIndex ?? null;
+    r.contratoKey = contrato?.contratoKey ?? null;
     r.nombreProyecto = contrato?.nombreProyecto || "";
     r.asociadoPorNombre = porNombre;
     r.estado = u ? "listo" : "sin_persona";
@@ -464,6 +468,7 @@ export async function asignarPersona(lote: ILoteRecibosSueldo, reciboId: string,
   r.userProjectId = contrato.userProjectId;
   r.projectId = contrato.projectId;
   r.contractIndex = contrato.contractIndex;
+  r.contratoKey = contrato.contratoKey;
   r.nombreProyecto = contrato.nombreProyecto;
   r.asignadoAMano = true;
   r.estado = "listo";
@@ -537,7 +542,9 @@ async function enviarEnSegundoPlano(lote: ILoteRecibosSueldo, elegidos: any[], c
     try {
       const [user, up] = await Promise.all([User.findOne({ _id: r.userId, tenantId: lote.tenantId }).lean(), r.userProjectId ? UserProject.findById(r.userProjectId).lean() : null]);
       // Sin contrato también sale (ver `personaYContrato`): el nombre queda sin proyecto ni fechas.
-      const contract: any = (up as any)?.contracts?.[r.contractIndex ?? -1] || null;
+      // Etapa 2c: por la clave si el recibo la tiene (la posición, para lo viejo sin backfill).
+      const contract: any = (up as any)?.contracts?.[indiceDeReferencia((up as any)?.contracts, { contratoKey: r.contratoKey, indice: r.contractIndex })] || null;
+      if (contract?.estadoContrato === "ANULADO") throw new Error("El contrato de este recibo se anuló: elegí de nuevo la persona del recibo.");
       if (!user) throw new Error("La persona ya no está.");
       if (r.userProjectId && !contract) throw new Error("El contrato de la persona ya no está: elegí de nuevo la persona del recibo.");
       const empresa = contract ? undefined : await empresaDelRecibo(r.datos?.empleadorCuit);
@@ -646,6 +653,7 @@ function filaDelHistorial(lote: ILoteRecibosSueldo, r: any, quien?: any) {
     userProjectId: r.userProjectId || null,
     projectId: r.projectId || null,
     contractIndex: r.contractIndex ?? null,
+    contratoKey: r.contratoKey ?? null,
     nombreProyecto: r.nombreProyecto || "",
     asignadoAMano: !!r.asignadoAMano,
     datos,
