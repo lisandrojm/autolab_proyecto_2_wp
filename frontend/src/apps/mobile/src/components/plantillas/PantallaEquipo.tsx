@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { LoadingSpinner } from "../../../../../components/ui/LoadingSpinner";
 import { useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronRight, faClone, faEdit, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
+import { faChevronRight, faClock, faClone, faEdit, faTrash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import { plantillasEquipoAPI } from "../../../../../api/plantillasEquipo";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { etiquetaProyecto } from "./useCatalogosContratacion";
@@ -16,7 +16,7 @@ import { HojaModal } from "./HojaModal";
 import { BotonInfo } from "../ModalInfo";
 import CampoConvenio from "./CampoConvenio";
 import { ChipValoracionDelProyecto } from "../../../../../components/proyectos/ChipValoracion";
-import { CLASE_CAMPO, fechaCorta, Pill } from "./comun";
+import { CLASE_CAMPO, fechaCorta, Pill, textoDias } from "./comun";
 import { EstadoBadge } from "../../../../../components/EstadoSelect";
 import { estadoImpositivoPorTipo } from "../../../../../utils/tramiteImpositivo";
 
@@ -172,6 +172,13 @@ export default function PantallaEquipo() {
                     <span className="min-w-0 flex-1 space-y-1">
                       <span className="block truncate text-xs font-semibold text-slate-600 dark:text-slate-300">{nombreRoles(catalogos.roleFrames, x.efectivo.rolesFrame)}</span>
                       <span className={`block truncate text-base font-semibold ${persona ? "text-slate-900 dark:text-white" : "text-amber-800 dark:text-amber-300"}`}>{persona ? persona.nombre : "Sin asignar"}</span>
+                      {/* El horario que rige en ESTE puesto (el del equipo o el elegido para la persona), con sus días. */}
+                      {x.efectivo.inTime && x.efectivo.outTime && (
+                        <span className="flex items-center gap-1.5 text-xs font-semibold tabular-nums text-slate-600 dark:text-slate-300">
+                          <FontAwesomeIcon icon={faClock} className="text-slate-400" />
+                          {`${x.efectivo.inTime}–${x.efectivo.outTime} · ${x.efectivo.diasRotativos ? "Días rotativos" : textoDias(x.efectivo.diasSemana || [])}`}
+                        </span>
+                      )}
                       {(contratoDe(x) || a?.reemplazo || x.diferencias.length > 0 || avisos.length > 0 || (persona && !persona.activo)) && (
                         <span className="flex flex-wrap items-center gap-1.5">
                           {/*
