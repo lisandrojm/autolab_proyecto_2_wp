@@ -14,6 +14,8 @@ import { fechaISO, hoyArgentina } from "../utils/contratoVigencia.js";
 import { contratoEnLasFechas, superposiciones } from "../utils/superposicionContratos.js";
 import { Contrato } from "../models/Contrato.js";
 import { getArcaDefaults } from "../models/ArcaDefault.js";
+import { ArcaModalidadContratacion } from "../models/ArcaModalidadContratacion.js";
+import { ArcaModalidadLiquidacion } from "../models/ArcaModalidadLiquidacion.js";
 import { conCascada } from "../compartido/arca/cascadaArca.js";
 import { buscarTipoContrato } from "../compartido/arca/afipCompleteness.js";
 import { decidirAltaVigente, liquidacionDelAlta, mensajeMismaEmpleadora, mensajeSoloServicios } from "../compartido/altaVigente.js";
@@ -188,15 +190,26 @@ async function contratosConBajasDeArca(tenantId, userId, compromisos) {
     return { contratos: compromisosConBajasDeArca(compromisos, relaciones, cuil, cuitDe), cuil, relaciones, cuitDe, nombreEmpresa };
 }
 /**
- * La liquidación de cada tipo de contrato: el código del tipo (por `contrato_id`, o por el nombre en los
- * contratos viejos) con la cascada global, como el registro de alta (`afipCompleteness`, sin escalón de empresa).
+ * Los códigos de ARCA de cada tipo de contrato (por `contrato_id`, o por el nombre en los contratos viejos)
+ * con la cascada global, como el registro de alta (`afipCompleteness`, sin escalón de empresa): la
+ * liquidación (el código, que decide) y, para decirlo, «código - nombre» de la liquidación y de la modalidad.
  */
-async function lectorDeLiquidacion() {
-    const [tipos, dg] = await Promise.all([Contrato.find().select("name data.afipModalidadLiquidacion").lean(), getArcaDefaults().catch(() => null)]);
+async function lectorDeCodigosArca() {
+    const [tipos, dg, modalidades, liquidaciones] = await Promise.all([
+        Contrato.find().select("name data.afipModalidadLiquidacion data.afipModalidadContrato").lean(),
+        getArcaDefaults().catch(() => null),
+        ArcaModalidadContratacion.find().select("externalId name").lean(),
+        ArcaModalidadLiquidacion.find().select("externalId name").lean(),
+    ]);
     const porId = new Map(tipos.map((t) => [String(t._id), t]));
+    const num = (v) => String(Number(String(v ?? "").replace(/\D/g, "") || NaN));
+    const nombre = (catalogo, codigo) => (codigo ? catalogo.find((c) => num(c.externalId) === num(codigo))?.name || "" : "");
+    const texto = (catalogo, codigo) => (codigo ? [codigo, nombre(catalogo, codigo)].filter(Boolean).join(" - ") : "");
     return (tipo) => {
         const t = (tipo?.contrato_id && porId.get(String(tipo.contrato_id))) || buscarTipoContrato(tipos, tipo?.nombre_contrato);
-        return conCascada(t?.data?.afipModalidadLiquidacion, "tipo_contrato", "modalidadLiquidacion", undefined, dg || undefined).valor;
+        const liquidacion = conCascada(t?.data?.afipModalidadLiquidacion, "tipo_contrato", "modalidadLiquidacion", undefined, dg || undefined).valor;
+        const modalidad = conCascada(t?.data?.afipModalidadContrato, "tipo_contrato", "modalidadContratacion", undefined, dg || undefined).valor;
+        return { liquidacion, liquidacionTexto: texto(liquidaciones, liquidacion), modalidadTexto: texto(modalidades, modalidad) };
     };
 }
 export async function altasArcaEnFechas(tenantId, userId, pedido, excluir) {
@@ -206,15 +219,25 @@ export async function altasArcaEnFechas(tenantId, userId, pedido, excluir) {
     const enFechas = contratos.filter((c) => contratoEnLasFechas(pedido, [c]));
     if (enFechas.length === 0)
         return [];
-    const [tramiteDe, liquidacionDelTipo] = await Promise.all([lectorDeTramites(), lectorDeLiquidacion()]);
+    const [tramiteDe, codigosDelTipo] = await Promise.all([lectorDeTramites(), lectorDeCodigosArca()]);
     const altas = [];
     for (const c of enFechas) {
         if (tramiteDe(c.tipo) !== "alta_temprana_afip")
             continue;
         const cuit = c.empresaId ? cuitDe(c.empresaId) : "";
         const relacion = cuil && cuit ? relaciones.find((r) => r.cuil === cuil && r.empleadoraCuit === cuit && r.inicio === c.desde) : undefined;
-        const l = liquidacionDelAlta(relacion?.modLiquidacion, liquidacionDelTipo(c.tipo));
-        altas.push({ ...c, liquidacion: l.liquidacion, origenLiquidacion: l.origen, empresaNombre: c.empresaId ? nombreEmpresa(c.empresaId) : "" });
+        const delTipo = codigosDelTipo(c.tipo);
+        const l = liquidacionDelAlta(relacion?.modLiquidacion, delTipo.liquidacion);
+        altas.push({
+            ...c,
+            liquidacion: l.liquidacion,
+            origenLiquidacion: l.origen,
+            empresaNombre: c.empresaId ? nombreEmpresa(c.empresaId) : "",
+            nombreContrato: String(c.tipo?.nombre_contrato || ""),
+            // Para decirlo, lo de ARCA si está la relación; si no, lo del tipo.
+            modalidadContrato: relacion?.modalidadContrato || delTipo.modalidadTexto,
+            liquidacionTexto: l.origen === "arca" ? relacion?.modLiquidacion || "" : delTipo.liquidacionTexto,
+        });
     }
     // Rastro de cada alta que entró en la decisión: con qué baja y qué liquidación.
     for (const a of altas) {

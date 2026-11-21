@@ -68,18 +68,28 @@ const corta = (f) => {
     return y && m && d ? `${d}/${m}/${y}` : "—";
 };
 const periodo = (a) => a.hasta ? `del ${corta(a.desde)} al ${corta(a.hasta)}${a.bajaSegunArca ? " (baja según ARCA)" : ""}` : `desde el ${corta(a.desde)}, sin fecha de baja`;
+/**
+ * QUÉ ALTA ES, CON NOMBRE Y APELLIDO (pedido del 21/11/2026): el tipo de contrato, la empresa, el proyecto
+ * y el período, y entre paréntesis la modalidad de contrato y la de liquidación de ARCA. «Tiene un contrato
+ * mensual» solo no alcanzaba para entender por qué quedaba sólo Servicios.
+ */
+export function detalleDelAlta(a) {
+    const tipo = a.nombreContrato ? `«${a.nombreContrato}»` : "un contrato";
+    const empresa = a.empresaNombre ? ` con ${a.empresaNombre}` : "";
+    const extras = [a.modalidadContrato ? `modalidad «${a.modalidadContrato}»` : "", a.liquidacionTexto ? `liquidación ${a.liquidacionTexto}` : ""].filter(Boolean);
+    return `${tipo}${empresa} en ${a.proyectoNombre || "otro proyecto"}, ${periodo(a)}${extras.length ? ` (${extras.join(", ")})` : ""}`;
+}
 /** El mensaje de «sólo Servicios», igual en el formulario y en el rechazo del server. */
 export function mensajeSoloServicios(a) {
-    return `Tiene un contrato de ARCA mensual en esas fechas (${a.proyectoNombre || "otro proyecto"}, ${periodo(a)}): sólo se puede contratar con un tipo de contrato de Servicios.`;
+    return `Tiene un contrato de ARCA mensual en esas fechas: ${detalleDelAlta(a)}. Sólo se puede contratar con un tipo de contrato de Servicios.`;
 }
 /** El mensaje de «misma empleadora». */
 export function mensajeMismaEmpleadora(a) {
-    return `Ya tiene un alta por jornada con ${a.empresaNombre || "esa empresa"} en esas fechas (${a.proyectoNombre || "otro proyecto"}, ${periodo(a)}): ARCA admite una sola alta activa por empleadora. Elegí otras fechas, otra empresa o un tipo de contrato de Servicios.`;
+    return `Ya tiene un alta por jornada en esas fechas: ${detalleDelAlta(a)}. ARCA admite una sola alta activa por empleadora: elegí otras fechas, otra empresa o un tipo de contrato de Servicios.`;
 }
 /** El aviso cuando todavía no hay fechas (el puesto de un equipo): no recorta, avisa qué va a pasar. */
 export function avisoSinFechas(a) {
-    const hasta = a.hasta ? `hasta el ${corta(a.hasta)}` : "sin fecha de baja";
     return a.liquidacion === "mensual"
-        ? `Tiene un alta mensual de ARCA (${a.proyectoNombre || "otro proyecto"}, ${hasta}): si las fechas la pisan, sólo se va a poder contratar por Servicios.`
-        : `Tiene un alta por jornada de ARCA (${a.proyectoNombre || "otro proyecto"}, ${hasta}): si las fechas la pisan, con esa misma empresa sólo por Servicios.`;
+        ? `Tiene un alta mensual de ARCA: ${detalleDelAlta(a)}. Si las fechas la pisan, sólo se va a poder contratar por Servicios.`
+        : `Tiene un alta por jornada de ARCA: ${detalleDelAlta(a)}. Si las fechas la pisan, con esa misma empresa sólo por Servicios.`;
 }

@@ -21,6 +21,9 @@ export interface AltaArcaEnFechas extends CompromisoExistente {
     liquidacion: Liquidacion;
     origenLiquidacion: "arca" | "tipo" | "sin_dato";
     empresaNombre: string;
+    nombreContrato: string;
+    modalidadContrato: string;
+    liquidacionTexto: string;
 }
 /**
  * Los contratos DE ARCA (trámite `alta_temprana_afip`) que la persona ya tiene en esas fechas, cada uno

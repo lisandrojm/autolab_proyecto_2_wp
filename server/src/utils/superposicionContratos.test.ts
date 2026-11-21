@@ -171,5 +171,5 @@ test("contrato en las fechas: una solicitud pendiente no cuenta y sin fecha no h
 });
 
 test("el mensaje dice dónde está el contrato y que sólo queda Servicios", () => {
-  assert.match(mensajeSoloServicios(conFechas("2023-06-01", "")), /La Nación \| LN\+, desde el 01\/06\/2023, sin fecha de baja\): sólo se puede contratar con un tipo de contrato de Servicios/);
+  assert.match(mensajeSoloServicios(conFechas("2023-06-01", "")), /en La Nación \| LN\+, desde el 01\/06\/2023, sin fecha de baja\. Sólo se puede contratar con un tipo de contrato de Servicios/);
 });

@@ -46,6 +46,12 @@ export interface AltaExistente {
     empresaId?: string;
     empresaNombre?: string;
     liquidacion: Liquidacion;
+    /** El tipo de contrato («Tiempo Indeterminado», «Jornada»…). */
+    nombreContrato?: string;
+    /** La modalidad de contrato de ARCA, como la dice ARCA o el código del tipo con su nombre. */
+    modalidadContrato?: string;
+    /** La modalidad de liquidación, ídem («MES», «1 - Mensual»…). */
+    liquidacionTexto?: string;
     /** `hasta` es la baja según ARCA. */
     bajaSegunArca?: unknown;
 }
@@ -61,9 +67,17 @@ export interface DecisionAltaVigente<T extends AltaExistente = AltaExistente> {
  * (la vuelve a mirar quien la sepa: la aprobación).
  */
 export declare function decidirAltaVigente<T extends AltaExistente>(altasEnFechas: T[], empresaId?: string | null): DecisionAltaVigente<T>;
+type Detalle = Pick<AltaExistente, "proyectoNombre" | "desde" | "hasta" | "bajaSegunArca" | "empresaNombre" | "nombreContrato" | "modalidadContrato" | "liquidacionTexto">;
+/**
+ * QUÉ ALTA ES, CON NOMBRE Y APELLIDO (pedido del 21/11/2026): el tipo de contrato, la empresa, el proyecto
+ * y el período, y entre paréntesis la modalidad de contrato y la de liquidación de ARCA. «Tiene un contrato
+ * mensual» solo no alcanzaba para entender por qué quedaba sólo Servicios.
+ */
+export declare function detalleDelAlta(a: Detalle): string;
 /** El mensaje de «sólo Servicios», igual en el formulario y en el rechazo del server. */
-export declare function mensajeSoloServicios(a: Pick<AltaExistente, "proyectoNombre" | "desde" | "hasta" | "bajaSegunArca">): string;
+export declare function mensajeSoloServicios(a: Detalle): string;
 /** El mensaje de «misma empleadora». */
-export declare function mensajeMismaEmpleadora(a: Pick<AltaExistente, "proyectoNombre" | "desde" | "hasta" | "bajaSegunArca" | "empresaNombre">): string;
+export declare function mensajeMismaEmpleadora(a: Detalle): string;
 /** El aviso cuando todavía no hay fechas (el puesto de un equipo): no recorta, avisa qué va a pasar. */
-export declare function avisoSinFechas(a: Pick<AltaExistente, "proyectoNombre" | "desde" | "hasta" | "liquidacion">): string;
+export declare function avisoSinFechas(a: Detalle & Pick<AltaExistente, "liquidacion">): string;
+export {};

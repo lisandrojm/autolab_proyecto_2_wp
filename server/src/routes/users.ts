@@ -2560,7 +2560,7 @@ router.post("/contrato-en-fechas", requireTenant, authenticateToken, requireAnyP
       if (up && Number.isInteger(indice) && indice >= 0) excluido = { userProjectId: String(up._id), contractIndex: indice };
     }
     const d = await decisionAltaDePersona(req.tenantObjectId!, userId ? String(userId) : undefined, { desde: String(desde || ""), hasta: String(hasta || ""), fechas: Array.isArray(fechas) ? fechas.map(String) : undefined }, empresaId ? String(empresaId) : null, excluido);
-    const resumen = (a: NonNullable<typeof d.soloServicios>, mensaje: string) => ({ proyectoNombre: a.proyectoNombre, desde: a.desde, hasta: a.hasta, liquidacion: a.liquidacion, empresaNombre: a.empresaNombre, mensaje });
+    const resumen = (a: NonNullable<typeof d.soloServicios>, mensaje: string) => ({ proyectoNombre: a.proyectoNombre, desde: a.desde, hasta: a.hasta, liquidacion: a.liquidacion, empresaNombre: a.empresaNombre, nombreContrato: a.nombreContrato, modalidadContrato: a.modalidadContrato, liquidacionTexto: a.liquidacionTexto, mensaje });
     res.json({
       contrato: d.soloServicios ? resumen(d.soloServicios, d.mensaje) : null,
       mismaEmpleadora: !d.soloServicios && d.mismaEmpleadora ? resumen(d.mismaEmpleadora, d.mensaje) : null,

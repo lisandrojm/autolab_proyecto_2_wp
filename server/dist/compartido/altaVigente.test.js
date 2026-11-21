@@ -37,10 +37,11 @@ test("un alta por jornada: misma empresa frena, otra empresa deja", () => {
 test("sin altas en las fechas, nada", () => {
     assert.deepEqual(decidirAltaVigente([], "E1"), { soloServicios: null, mismaEmpleadora: null });
 });
-test("mensajes", () => {
-    assert.match(mensajeSoloServicios(alta()), /mensual en esas fechas .*del 01\/11\/2026 al 22\/11\/2026.*Servicios/);
-    assert.match(mensajeSoloServicios(alta({ hasta: "" })), /sin fecha de baja/);
-    assert.match(mensajeMismaEmpleadora(alta({ liquidacion: "jornal" })), /jornada con 2030 S\.R\.L\..*una sola alta activa por empleadora/);
-    assert.match(avisoSinFechas(alta()), /hasta el 22\/11\/2026.*sólo se va a poder contratar por Servicios/);
+test("mensajes: dicen qué alta es, con tipo, empresa, modalidad y liquidación", () => {
+    const indeterminado = alta({ hasta: "", nombreContrato: "Tiempo Indeterminado", empresaNombre: "FZERO S.R.L", modalidadContrato: "A tiempo completo indeterminado/Trabajo permanente", liquidacionTexto: "MES" });
+    assert.equal(mensajeSoloServicios(indeterminado), "Tiene un contrato de ARCA mensual en esas fechas: «Tiempo Indeterminado» con FZERO S.R.L en La Nación | LN+, desde el 01/05/2026, sin fecha de baja (modalidad «A tiempo completo indeterminado/Trabajo permanente», liquidación MES). Sólo se puede contratar con un tipo de contrato de Servicios.".replace("01/05", "01/11"));
+    assert.ok(mensajeSoloServicios(alta()).includes("mensual en esas fechas: un contrato con 2030 S.R.L. en La Nación | LN+, del 01/11/2026 al 22/11/2026. Sólo"));
+    assert.match(mensajeMismaEmpleadora(alta({ liquidacion: "jornal" })), /por jornada en esas fechas: .*2030 S.R.L..*una sola alta activa por empleadora/);
+    assert.match(avisoSinFechas(indeterminado), /^Tiene un alta mensual de ARCA: «Tiempo Indeterminado» con FZERO.*sólo se va a poder contratar por Servicios/);
     assert.match(avisoSinFechas(alta({ liquidacion: "jornal" })), /por jornada.*misma empresa/);
 });

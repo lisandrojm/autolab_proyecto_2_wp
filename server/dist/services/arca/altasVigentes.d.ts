@@ -45,6 +45,8 @@ export interface RelacionArcaResumida {
     situacionBaja?: string;
     /** La modalidad de liquidación tal como la escribe ARCA («MES», «JORNAL»…): ver `compartido/altaVigente.ts`. */
     modLiquidacion?: string;
+    /** La modalidad de contrato tal como la escribe ARCA («A tiempo completo indeterminado/Trabajo permanente»). */
+    modalidadContrato?: string;
 }
 /**
  * Las Relaciones Laborales de ARCA de esas personas (con todas las empleadoras), resumidas. Con `desde`

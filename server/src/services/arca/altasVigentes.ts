@@ -112,6 +112,8 @@ export interface RelacionArcaResumida {
   situacionBaja?: string;
   /** La modalidad de liquidación tal como la escribe ARCA («MES», «JORNAL»…): ver `compartido/altaVigente.ts`. */
   modLiquidacion?: string;
+  /** La modalidad de contrato tal como la escribe ARCA («A tiempo completo indeterminado/Trabajo permanente»). */
+  modalidadContrato?: string;
 }
 
 /**
@@ -124,9 +126,9 @@ export async function relacionesArcaDe(tenantId: Types.ObjectId | string, cuils:
   if (lista.length === 0) return [];
   const filtro: any = { tenantId: new Types.ObjectId(String(tenantId)), cuil: { $in: lista } };
   if (desde && /^\d{4}-\d{2}-\d{2}$/.test(desde)) filtro.$or = [{ fechaFin: null }, { situacionBaja: { $in: ["", null] } }, { fechaFin: { $gte: new Date(`${desde}T00:00:00.000Z`) } }];
-  const rels: any[] = await RelacionLaboralArca.find(filtro).select("-_id cuil empleadoraCuit fechaInicio fechaFin situacionBaja modLiquidacion").lean();
+  const rels: any[] = await RelacionLaboralArca.find(filtro).select("-_id cuil empleadoraCuit fechaInicio fechaFin situacionBaja modLiquidacion modalidadContrato").lean();
   const iso = (d: unknown) => (d ? new Date(d as any).toISOString().slice(0, 10) : "");
-  return rels.map((r) => ({ cuil: r.cuil, empleadoraCuit: r.empleadoraCuit, inicio: iso(r.fechaInicio), fin: iso(r.fechaFin), cerrada: !!String(r.situacionBaja || "").trim(), situacionBaja: String(r.situacionBaja || "").trim(), modLiquidacion: String(r.modLiquidacion || "").trim() }));
+  return rels.map((r) => ({ cuil: r.cuil, empleadoraCuit: r.empleadoraCuit, inicio: iso(r.fechaInicio), fin: iso(r.fechaFin), cerrada: !!String(r.situacionBaja || "").trim(), situacionBaja: String(r.situacionBaja || "").trim(), modLiquidacion: String(r.modLiquidacion || "").trim(), modalidadContrato: String(r.modalidadContrato || "").trim() }));
 }
 
 /**
