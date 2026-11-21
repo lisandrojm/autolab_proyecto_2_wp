@@ -77,7 +77,7 @@ import { sedeElegida, sedesDelContrato } from '../utils/sedesProyecto';
 import { cachedFetch } from '../utils/refCache';
 import { BotonOrden, useOrden } from '../components/ui/OrdenTabla';
 import { usePuedeAbrir } from '../hooks/usePuedeAbrir';
-import { useContratoEnFechas } from '../hooks/useContratoEnFechas';
+import { reglaDelAlta, useAltaEnFechas } from '../hooks/useContratoEnFechas';
 import { ContratoDeLaPersona } from '../components/contratos/ContratoDeLaPersona';
 import { LinkSiPuede } from '../components/LinkSiPuede';
 import { TablaConEncabezadoFijo } from '../components/ui/TablaConEncabezadoFijo';
@@ -131,6 +131,12 @@ function cantidadDeContratos(user: any, projectId?: string): number {
 }
 
 // Formatea una fecha de contrato (ISO "YYYY-MM-DD...") a d/m/yyyy sin corrimiento de zona horaria.
+/** Lo que decide la regla del alta vigente en un contrato: tipo, fechas y empresa (ver el wizard). */
+function claveDeAlta(c: any): string {
+  const dia = (v: unknown) => String(v || '').slice(0, 10);
+  return JSON.stringify([String(c?.contrato_id || ''), dia(c?.fecha_alta_contrato), dia(c?.fecha_baja_contrato), String(c?.empresaContratoId || ''), [...(c?.fechas_trabajadas || [])].map(dia).sort()]);
+}
+
 function formatContractDate(d?: string): string {
   if (!d) return '—';
   const iso = String(d).substring(0, 10);
@@ -381,6 +387,8 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   const [editingContractIndex, setEditingContractIndex] = useState<number | null>(null);
   /** La valoración con la que NACIÓ el contrato que se está editando (si salió de una excepción del proyecto). */
   const [reglaContratoEditado, setReglaContratoEditado] = useState('');
+  // Lo que decide la regla del alta vigente (tipo, fechas, empresa) del contrato que se edita, como entró al wizard.
+  const [claveAltaEditado, setClaveAltaEditado] = useState('');
   // Si el wizard se abrió para APROBAR una solicitud, guardamos su id: al guardar, el backend marca la
   // solicitud como aprobada. null = alta/edición normal.
   const [approvingSolicitudId, setApprovingSolicitudId] = useState<string | null>(null);
@@ -1708,21 +1716,28 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
   */
   const wizardEditaContrato = !approvingSolicitudId && !renovando && (editingContractIndex != null || (!!selectedUserForWizard && teamMembers.some((m) => m._id === selectedUserForWizard._id)));
   /*
-    CON UN CONTRATO EN ESAS FECHAS, SÓLO SERVICIOS (05/11/2026). Sólo en un contrato nuevo: editar uno no
-    se frena con él mismo. Sin baja cargada todavía se mira el día del alta; sin fin, sólo si el tipo lo es.
+    LA REGLA DEL ALTA VIGENTE (05/11/2026; nueva el 21/11/2026, ver `hooks/useContratoEnFechas.ts`): un alta
+    mensual en esas fechas deja sólo Servicios; una por jornada, sólo frena otra alta con la misma empresa.
+    En un contrato nuevo, siempre. EDITAR MIEMBRO: sólo si cambió lo que la decide —tipo, fechas o empresa—,
+    y sin contar el contrato que se edita; igual que el server. Sin baja cargada todavía se mira el día del
+    alta; sin fin, sólo si el tipo lo es.
   */
   const fechasDelWizard = porDiasSueltosWizard && wizardData.fechas_trabajadas.length > 0 ? [...wizardData.fechas_trabajadas].sort() : undefined;
-  const contratoEnFechas = useContratoEnFechas({
-    activo: !!selectedUserForWizard && !wizardEditaContrato,
+  const editaYCambioElAlta = wizardEditaContrato && !!claveAltaEditado && claveDeAlta(wizardData) !== claveAltaEditado;
+  const altaEnFechas = useAltaEnFechas({
+    activo: !!selectedUserForWizard && (!wizardEditaContrato || editaYCambioElAlta),
     userId: selectedUserForWizard?._id,
     desde: fechasDelWizard?.[0] || wizardData.fecha_alta_contrato,
     hasta: fechasDelWizard ? fechasDelWizard[fechasDelWizard.length - 1] : indeterminadoWizard ? '' : wizardData.fecha_baja_contrato || wizardData.fecha_alta_contrato,
     fechas: fechasDelWizard,
+    empresaId: wizardData.empresaContratoId || null,
+    excluir: wizardEditaContrato && project?._id ? { projectId: String(project._id), contractIndex: editingContractIndex ?? null } : null,
   });
+  const contratoEnFechas = reglaDelAlta(altaEnFechas).soloServicios ? { mensaje: reglaDelAlta(altaEnFechas).soloServicios } : null;
   const tiposParaElegir = useMemo(() => {
     const activos = tiposDeContratoActivos(contratos, wizardData.contrato_id);
     return contratoEnFechas ? activos.filter((c) => tramitePorContrato.get(c._id) === 'constancia_cuit') : activos;
-  }, [contratos, wizardData.contrato_id, contratoEnFechas, tramitePorContrato]);
+  }, [contratos, wizardData.contrato_id, contratoEnFechas?.mensaje, tramitePorContrato]);
   const contratoArcaNoPermitido = !!contratoEnFechas && tramitePorContrato.get(wizardData.contrato_id) === 'alta_temprana_afip';
   const valoracionProyectoId = wizardEditaContrato ? reglaContratoEditado || idValoracionDe(project?.valoracionId) : valoracionParaRol(project, wizardData.rol_frame_id, wizardData.contrato_id);
   /*
@@ -2664,6 +2679,7 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     // El último de verdad: una lápida (contrato anulado) no tiene regla (etapa 2b).
     const editado = contratoPorIndice || [...contratosDelProyecto].reverse().find((c: any) => c?.estadoContrato !== 'ANULADO') || null;
     setReglaContratoEditado(String(editado?.valoracion_regla_id?._id || editado?.valoracion_regla_id || ''));
+    setClaveAltaEditado(editado ? claveDeAlta(editado) : '');
     setAvisoConvenio('');
 
     const contratoInicial = contratos.find((c) => c._id === (deLaSolicitud.contrato_id ?? initialContratoId));

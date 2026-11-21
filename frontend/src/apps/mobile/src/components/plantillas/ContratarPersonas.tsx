@@ -27,7 +27,7 @@ import { SelectorPersona } from "./SelectorPersona";
 import { clavePuntual, contratoDelPuesto, EstadoContratar, guardarEstado, leerEstado, pedidosDe, puntualLimpio } from "./estadoContratar";
 import { estadoDe, nombreRoles, proyectoDelEquipo, PuestoDelEquipo, puestosDe, rutas } from "./equipoUtil";
 import { AvisoSoloServicios, contratosParaElegir, porDiasSueltos } from "./Condiciones";
-import { useContratoEnFechas } from "../../../../../hooks/useContratoEnFechas";
+import { reglaDelAlta, useAltaEnFechas } from "../../../../../hooks/useContratoEnFechas";
 import { PASOS_CONTRATAR } from "./Pasos";
 import { AIRE, MARGEN, Rotulo, pastillaDe } from "./piezas";
 import { CLASE_HORA, fechaCorta, pesos, Pill, textoHorario } from "./comun";
@@ -324,8 +324,9 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
   const hasta = sueltos ? fechas[fechas.length - 1] || "" : hastaPropio;
   const periodo = periodoDeCalculo(desde, hasta, indeterminado);
   // Con un contrato de ARCA en SUS fechas, sólo Servicios (la regla del alta individual; el server la revisa al contratar).
-  const contratoEnFechas = useContratoEnFechas({ activo: !d.excluido, userId: persona?._id, desde, hasta: sueltos ? hasta : indeterminado ? "" : hasta || desde, fechas: sueltos ? fechas : undefined });
-  const soloServicios = contratoEnFechas?.mensaje || "";
+  // Con la empresa del equipo: un alta por jornada con OTRA empresa no traba (ver `compartido/altaVigente.ts` del server).
+  const altaEnFechas = useAltaEnFechas({ activo: !d.excluido, userId: persona?._id, desde, hasta: sueltos ? hasta : indeterminado ? "" : hasta || desde, fechas: sueltos ? fechas : undefined, empresaId: empresaId || null });
+  const soloServicios = reglaDelAlta(altaEnFechas).soloServicios;
   const mult = Number(contratoDoc?.data?.multiplicadorDiario) > 0 ? Number(contratoDoc.data.multiplicadorDiario) : 1;
   const jornadasDelTipo = Number(contratoDoc?.data?.cantidadJornadas) > 0 ? Number(contratoDoc.data.cantidadJornadas) : null;
   const escalaBase = importePorJornadaDeCategoria(categoriaActual || undefined, 1, jornadasDelTipo);

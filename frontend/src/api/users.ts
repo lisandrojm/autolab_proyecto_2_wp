@@ -49,12 +49,24 @@ export interface PedidoParaSuperposicion {
   shiftIds?: string[];
 }
 
-/** El contrato que la persona ya tiene en las fechas pedidas: con uno, sólo se la contrata por Servicios. */
+/** Un alta de ARCA que la persona ya tiene en las fechas pedidas (ver `compartido/altaVigente.ts` del server). */
 export interface ContratoEnFechas {
   proyectoNombre: string;
   desde: string;
   hasta: string;
   mensaje: string;
+  liquidacion?: "jornal" | "mensual";
+  empresaNombre?: string;
+}
+
+/** Lo que la regla del alta vigente dice para esas fechas. */
+export interface AltaEnFechas {
+  /** Un alta mensual: sólo Servicios. */
+  contrato: ContratoEnFechas | null;
+  /** Un alta por jornada con la MISMA empresa: con ella, sólo Servicios. */
+  mismaEmpleadora: ContratoEnFechas | null;
+  /** Qué va a pasar, para cuando todavía no hay fechas. */
+  aviso: string;
 }
 
 /** El contrato de la persona en cualquier proyecto: el vigente (primero el indeterminado) o el último. */
@@ -952,9 +964,9 @@ class UsersAPI {
     return data?.contrato || null;
   }
 
-  async contratoEnFechas(userId: string, periodo: { desde: string; hasta: string; fechas?: string[] }): Promise<ContratoEnFechas | null> {
+  async contratoEnFechas(userId: string, periodo: { desde: string; hasta: string; fechas?: string[]; empresaId?: string; excluir?: { projectId: string; contractIndex?: number | null } }): Promise<AltaEnFechas> {
     const { data } = await axios.post(`/users/contrato-en-fechas`, { userId, ...periodo }, { headers: this.getHeaders() });
-    return data?.contrato || null;
+    return { contrato: data?.contrato || null, mismaEmpleadora: data?.mismaEmpleadora || null, aviso: data?.aviso || "" };
   }
 
   async superposiciones(userId: string, pedido: PedidoParaSuperposicion, excluirSolicitudId?: string): Promise<AvisoSuperposicion[]> {

@@ -127,6 +127,8 @@ interface FilasProps {
   infoContrato?: ReactNode;
   /** La persona tiene un contrato de ARCA vigente: el mensaje (ver `AvisoSoloServicios`). */
   soloServicios?: string | null;
+  /** Un alta que PODRÍA trabar según las fechas (todavía no hay): sólo se avisa, no recorta los tipos. */
+  avisoAlta?: string | null;
 }
 
 /**
@@ -134,7 +136,7 @@ interface FilasProps {
  * badge de trámite), y debajo, en su tarjeta, área y turno (abre su hoja), horario y días (se editan
  * acá mismo).
  */
-export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, onAbrirTurno, onCambio, distintas, sinHorario, infoContrato, soloServicios }: FilasProps) {
+export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, onAbrirTurno, onCambio, distintas, sinHorario, infoContrato, soloServicios, avisoAlta }: FilasProps) {
   const turno = nombreTurno(areas, valores.areaId, valores.shiftId);
   const sueltos = porDiasSueltos(catalogos, valores.contratoId);
   const dias = valores.diasSemana || [];
@@ -143,6 +145,7 @@ export function FilasCondiciones({ valores, areas, catalogos, onAbrirContrato, o
     <div className="space-y-3">
     <CampoTipoContrato contratos={catalogos.contratos} contratoId={valores.contratoId || ""} tramitePorContrato={catalogos.tramitePorContrato} estados={catalogos.estados} onAbrir={onAbrirContrato} marca={<>{marca("contrato")}{infoContrato && <span className="font-normal normal-case tracking-normal">{infoContrato}</span>}</>} />
     <AvisoSoloServicios mensaje={soloServicios} contratoId={valores.contratoId} catalogos={catalogos} />
+    {!soloServicios && avisoAlta && <p className="rounded-lg bg-amber-50 p-2 text-xs font-semibold text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">{avisoAlta}</p>}
 
     <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-slate-700 dark:border-slate-700 dark:bg-slate-800/70">
       <button type="button" onClick={onAbrirTurno} className="flex min-h-[56px] w-full items-center gap-3 px-3 py-2 text-left">

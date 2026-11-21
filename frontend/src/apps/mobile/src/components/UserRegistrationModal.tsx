@@ -11,7 +11,7 @@ import { AyudaImportes, PROPS_IMPORTES_MOVIL } from "./contratacion/AyudaImporte
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faTimes, faBriefcase, faClock, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { AvisoSuperposicion, usersAPI } from "../../../../api/users";
-import { useContratoEnFechas } from "../../../../hooks/useContratoEnFechas";
+import { reglaDelAlta, useAltaEnFechas } from "../../../../hooks/useContratoEnFechas";
 import { ContratoDeLaPersona } from "../../../../components/contratos/ContratoDeLaPersona";
 import { DiasDeTrabajo, semanaDelTipoDeContrato } from "../../../../components/contratos/DiasDeTrabajo";
 import { JornadasSolicitud } from "../../../../components/contratacion/JornadasSolicitud";
@@ -1913,21 +1913,23 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
   */
   const diasMarcados = porDiasSueltos && formData.fechasTrabajadas.length > 0 ? [...formData.fechasTrabajadas].sort() : undefined;
   /*
-    SIN FECHAS TODAVÍA, SE MIRA HOY (21/11/2026). El tipo de contrato se elige antes que los días (ver el
-    bloque del tipo), así que sin esto la lista ofrecía todo: quien tiene un alta de ARCA vigente —un
-    tiempo indeterminado, por ejemplo— tiene que ver sólo los de Servicios desde el principio. Al cargar
-    las fechas se vuelve a mirar con ellas.
+    SIN FECHAS TODAVÍA, DE HOY EN ADELANTE (21/11/2026). El tipo de contrato se elige antes que los días,
+    así que se mira desde hoy sin fin: un alta SIN baja (un indeterminado) recorta ya a Servicios; una que
+    termina (una jornada, un plazo fijo que vence mañana) sólo avisa, y al cargar las fechas se vuelve a
+    mirar con ellas (ver `reglaDelAlta`). Con la empresa del contrato: una jornada con OTRA empresa no frena.
   */
   const hayFechasParaContrato = !!(diasMarcados?.length || formData.startDate);
-  const contratoEnFechas = useContratoEnFechas({
+  const altaEnFechas = useAltaEnFechas({
     activo: isOpen,
     userId: selectedUser?._id,
     desde: diasMarcados?.[0] || formData.startDate || fechaDeHoy(),
-    hasta: diasMarcados ? diasMarcados[diasMarcados.length - 1] : !hayFechasParaContrato ? fechaDeHoy() : indeterminado ? "" : formData.dueDate || formData.startDate,
+    hasta: diasMarcados ? diasMarcados[diasMarcados.length - 1] : !hayFechasParaContrato ? "" : indeterminado ? "" : formData.dueDate || formData.startDate,
     fechas: diasMarcados,
+    empresaId: formData.empresaContratoId || null,
   });
-  const contratosElegibles = contratoEnFechas ? contratos.filter((c) => tramitePorContrato.get(c._id) === "constancia_cuit") : contratos;
-  const contratoArcaNoPermitido = !!contratoEnFechas && formData.tipoImpositivo === "alta_temprana_afip";
+  const reglaAlta = reglaDelAlta(altaEnFechas, !hayFechasParaContrato);
+  const contratosElegibles = reglaAlta.soloServicios ? contratos.filter((c) => tramitePorContrato.get(c._id) === "constancia_cuit") : contratos;
+  const contratoArcaNoPermitido = !!reglaAlta.soloServicios && formData.tipoImpositivo === "alta_temprana_afip";
 
   /*
     Cambiar a tiempo indeterminado BORRA la fecha de baja que hubiera quedado cargada.
@@ -2180,7 +2182,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
       return;
     }
     if (contratoArcaNoPermitido) {
-      sweetAlert.warning("Tipo de contrato", contratoEnFechas!.mensaje);
+      sweetAlert.warning("Tipo de contrato", reglaAlta.soloServicios);
       return;
     }
     if (horarioExcedido) {
@@ -2675,7 +2677,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         */}
         <div className="space-y-2">
           <CampoTipoContrato contratos={contratos} contratoId={formData.contratoId} tramitePorContrato={tramitePorContrato} estados={impositivos} onAbrir={() => setContratoModalOpen(true)} />
-          {contratoEnFechas && <p className={`text-[11px] font-medium ${contratoArcaNoPermitido ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>{hayFechasParaContrato ? contratoEnFechas.mensaje : contratoEnFechas.mensaje.replace("Tiene un contrato de ARCA en esas fechas", "Tiene un alta de ARCA vigente")}</p>}
+          {(reglaAlta.soloServicios || reglaAlta.aviso) && <p className={`text-[11px] font-medium ${contratoArcaNoPermitido ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>{reglaAlta.soloServicios ? (hayFechasParaContrato ? reglaAlta.soloServicios : reglaAlta.soloServicios.replace(/en esas fechas/, "vigente")) : reglaAlta.aviso}</p>}
           {contratoElegido && (limiteHoras != null || limiteDias != null) && (
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
               {limiteHoras != null && (
