@@ -185,8 +185,8 @@ export function reemplazoDe(a: any): { replacedUserId: string; motivoReemplazoId
  * guarda, así si después se cambia el puesto, el cambio llega también a este equipo.
  */
 async function condicionesDesde(p: any, puesto: any, body: any, acc: Acceso, equipo?: any): Promise<Record<string, any> | null> {
+  // El rol también se pisa por equipo (21/11/2026): `leerPuesto` ya exige que no venga vacío.
   const pedido = leerPuesto(body, acc);
-  delete pedido.rolesFrame;
   // Se compara con lo que el puesto tendría en el equipo SIN diferencia: la del equipo manda.
   const base = puestoEnEquipo(puesto, null, equipo);
   const c: Record<string, any> = {};
@@ -214,7 +214,7 @@ const usaElPuesto = (equipo: any, puestoId: any) => !(equipo?.asignaciones || []
 const vacia = (a: any) => !a.userId && !a.condiciones && !a.excluido && !reemplazoDe(a);
 
 /** Condiciones para devolver al cliente: ids como texto. */
-const condicionesParaMostrar = (c: any) => (c ? Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v instanceof Types.ObjectId ? String(v) : v])) : null);
+const condicionesParaMostrar = (c: any) => (c ? Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v instanceof Types.ObjectId ? String(v) : Array.isArray(v) ? v.map((x) => (x instanceof Types.ObjectId ? String(x) : x)) : v])) : null);
 
 /** Lo que cada persona ya tiene en CUALQUIER proyecto (contratos y solicitudes pendientes), por `userId`. */
 type Compromisos = Map<string, CompromisoExistente[]>;
@@ -321,7 +321,7 @@ export async function obtenerPlantilla(acc: Acceso, id: string) {
   const p: any = (await cargar(acc, id)).toObject();
   const userIds = (p.equipos || []).flatMap((e: any) => (e.asignaciones || []).flatMap((a: any) => [a.userId, reemplazoDe(a)?.replacedUserId])).filter(idOk);
   const [personas, porDiasSueltos, compromisos]: [any[], (id: string) => boolean, Compromisos] = await Promise.all([
-    userIds.length ? User.find({ _id: { $in: userIds }, tenantId: acc.tenantId }).select("firstName lastName email metadata.fullName metadata.activo metadata.cuit").lean() : Promise.resolve([]),
+    userIds.length ? User.find({ _id: { $in: userIds }, tenantId: acc.tenantId }).select("firstName lastName email metadata.fullName metadata.activo metadata.cuit metadata.roles_frame").lean() : Promise.resolve([]),
     contratosPorDiasSueltos([p]),
     compromisosDeLasPlantillas(acc.tenantId, [p]),
   ]);
@@ -347,6 +347,8 @@ export async function obtenerPlantilla(acc: Acceso, id: string) {
           userId: a.userId ? String(a.userId) : null,
           nombre: !a.userId ? "" : u ? nombreDe(u) : "Persona no encontrada",
           cuit: u?.metadata?.cuit || "",
+          // Los roles empresa de su ficha: el puesto ofrece elegir entre ellos (21/11/2026).
+          rolesFrame: ((u?.metadata?.roles_frame || []) as any[]).map(String),
           activo: !!u && u.metadata?.activo !== false,
           condiciones: condicionesParaMostrar(a.condiciones),
           excluido: !!a.excluido,

@@ -19,6 +19,10 @@ import { jornadasCalculadasDelPedido, mesesEquivalentes, periodoDeCalculo } from
 import { marcasParaSelector } from "./PantallaEquipo";
 import { nombreRoles, proyectoDelEquipo, puestosDe, rutas } from "./equipoUtil";
 import { formatCuit } from "../../../../../utils/cuit";
+import { CampoRolesEmpresa, ModalOtroRol } from "../contratacion/SelectorRolEmpresa";
+import { areasAPI, Area } from "../../../../../api/areas";
+import { usersAPI } from "../../../../../api/users";
+import { fuzzyMatch } from "../../../../../utils/searchHelpers";
 
 /*
   PANTALLA 4 · UN PUESTO DE UN EQUIPO.
@@ -44,6 +48,23 @@ export default function DetallePuesto() {
   const [motivoPendiente, setMotivoPendiente] = useState("");
   const [verTodasDelConvenio, setVerTodasDelConvenio] = useState(false);
   const [verAvisos, setVerAvisos] = useState(false);
+  /*
+    EL ROL EMPRESA DEL PUESTO EN ESTE EQUIPO (21/11/2026), con la UI de la Solicitud de Contratación. Por
+    defecto, el del grupo; se puede elegir otro de los de la ficha de la persona o sumar uno («Otro rol»),
+    que se guarda en su ficha en el momento. La categoría se vuelve a calcular para el rol elegido.
+  */
+  const [rolModal, setRolModal] = useState(false);
+  const [busquedaRol, setBusquedaRol] = useState("");
+  const [rolesSumados, setRolesSumados] = useState<string[]>([]);
+  const [rolesQuitados, setRolesQuitados] = useState<string[]>([]);
+  const [agregadosAFicha, setAgregadosAFicha] = useState<string[]>([]);
+  const [areasConRoles, setAreasConRoles] = useState<Area[]>([]);
+  useEffect(() => {
+    areasAPI
+      .listAll()
+      .then(setAreasConRoles)
+      .catch(() => setAreasConRoles([]));
+  }, []);
   const equipo = p?.equipos.find((e) => e._id === equipoId);
   const numero = Number(n);
   const puesto: Puesto | undefined = p?.integrantes[numero - 1];
@@ -90,13 +111,19 @@ export default function DetallePuesto() {
     regla del alta individual, sin que nadie la elija. Se guarda porque acá se edita la base del
     puesto; al contratar, la misma regla se aplica al vuelo (ver `pedidosDe`).
   */
-  const categoriaPorDefecto = x && !x.efectivo.categoriaSatId && catalogos.categoriasCargadas ? catalogos.categoriaPorDefectoPara(proyecto, empresaDelEquipo, convenioDelEquipo, puesto?.rolesFrame || [], x?.efectivo.contratoId) : "";
+  const categoriaPorDefecto = x && !x.efectivo.categoriaSatId && catalogos.categoriasCargadas ? catalogos.categoriaPorDefectoPara(proyecto, empresaDelEquipo, convenioDelEquipo, x.efectivo.rolesFrame?.length ? x.efectivo.rolesFrame : puesto?.rolesFrame || [], x?.efectivo.contratoId) : "";
   useEffect(() => {
     if (categoriaPorDefecto) void cambiar({ categoriaSatId: categoriaPorDefecto }, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoriaPorDefecto, numero, equipoId]);
 
   const a = x?.asignacion;
+  useEffect(() => {
+    setRolesSumados([]);
+    setRolesQuitados([]);
+    setBusquedaRol("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [numero, equipoId, a?.userId]);
   useEffect(() => {
     setVerAvisos(false);
     setReemplazoAbierto(!!a?.reemplazo);
@@ -124,7 +151,9 @@ export default function DetallePuesto() {
   if (noEsta || (p && (!equipo || !puesto))) return <Pantalla titulo="Puesto" atras={atras}><Vacio texto="Este puesto ya no está." accion="Volver al equipo" onAccion={() => navigate(atras)} /></Pantalla>;
   if (!p || !equipo || !puesto) return <Pantalla titulo="Puesto" atras={atras} listo={false}><LoadingSpinner message="Cargando datos..." /></Pantalla>;
 
-  const rol = nombreRoles(catalogos.roleFrames, puesto.rolesFrame);
+  // El rol que rige en este equipo (el elegido para la persona, o el del grupo).
+  const rolesDelPuesto = x?.efectivo.rolesFrame?.length ? x.efectivo.rolesFrame : puesto.rolesFrame;
+  const rol = nombreRoles(catalogos.roleFrames, rolesDelPuesto);
   const contexto = `${equipo.nombre} · ${p.nombre}`;
 
   // Sacado de este equipo: sólo se puede volver a usar.
@@ -180,7 +209,7 @@ export default function DetallePuesto() {
   /** `auto`: un guardado que no hizo la persona (la categoría por defecto, el importe diferido): no marca cambios. */
   const cambiar = (cambios: Record<string, any>, auto = false) => {
     if (!auto) setCambiadoEn(numero);
-    const cuerpo = { areaId: efectivo.areaId, shiftId: efectivo.shiftId, inTime: efectivo.inTime, outTime: efectivo.outTime, diasSemana: efectivo.diasSemana, diasPorSemana: efectivo.diasPorSemana, diasRotativos: efectivo.diasRotativos, contratoId: efectivo.contratoId, nombreContrato: efectivo.nombreContrato, tipoImpositivo: efectivo.tipoImpositivo, categoriaSatId: efectivo.categoriaSatId, dailyRateManual: efectivo.dailyRateManual, ...cambios };
+    const cuerpo = { rolesFrame: efectivo.rolesFrame?.length ? efectivo.rolesFrame : puesto.rolesFrame, areaId: efectivo.areaId, shiftId: efectivo.shiftId, inTime: efectivo.inTime, outTime: efectivo.outTime, diasSemana: efectivo.diasSemana, diasPorSemana: efectivo.diasPorSemana, diasRotativos: efectivo.diasRotativos, contratoId: efectivo.contratoId, nombreContrato: efectivo.nombreContrato, tipoImpositivo: efectivo.tipoImpositivo, categoriaSatId: efectivo.categoriaSatId, dailyRateManual: efectivo.dailyRateManual, ...cambios };
     return guardar(() => plantillasEquipoAPI.condiciones(p._id, equipo._id, puesto._id, cuerpo as any));
   };
   const volverAlEquipo = () => void cambiar({ areaId: base.areaId, shiftId: base.shiftId, inTime: base.inTime, outTime: base.outTime, diasSemana: base.diasSemana, diasPorSemana: base.diasPorSemana, diasRotativos: base.diasRotativos, contratoId: base.contratoId, nombreContrato: base.nombreContrato, tipoImpositivo: base.tipoImpositivo });
@@ -191,7 +220,35 @@ export default function DetallePuesto() {
   const empresa = empresaDelEquipo;
   const convenio = convenioDelEquipo;
   // La oferta de categorías con la misma regla del alta individual: las del nivel del proyecto, y «ver todas» si no está la que se busca.
-  const oferta = catalogos.categoriasPara(proyecto, empresa, convenio, puesto.rolesFrame, verTodasDelConvenio, false, x.efectivo.contratoId);
+  const oferta = catalogos.categoriasPara(proyecto, empresa, convenio, rolesDelPuesto, verTodasDelConvenio, false, x.efectivo.contratoId);
+
+  // ── Rol empresa: las opciones (el del grupo, los de la ficha, los sumados) y el catálogo para «Otro rol» ──
+  const rolesDeLaFicha = persona ? [...(a?.rolesFrame || []), ...agregadosAFicha] : null;
+  const idsDeAreasDelProyecto = new Set((areas || []).map((o) => o.areaId));
+  const rolesDeLasAreas = new Set(areasConRoles.filter((ar) => idsDeAreasDelProyecto.has(ar._id)).flatMap((ar) => ar.rolesFrame || []));
+  const acotadoPorArea = rolesDeLasAreas.size > 0;
+  const idsOpciones = [...new Set([...puesto.rolesFrame, ...(rolesDeLaFicha || []).filter((id) => !acotadoPorArea || rolesDeLasAreas.has(id)), ...rolesSumados, ...rolesDelPuesto])].filter((id) => !rolesQuitados.includes(id) || rolesDelPuesto.includes(id));
+  const opcionesDeRol = idsOpciones.map((id) => catalogos.roleFrames.find((rf) => rf._id === id)).filter((rf): rf is NonNullable<typeof rf> => !!rf);
+  const rolesParaOtro = catalogos.roleFrames.filter((rf) => !idsOpciones.includes(rf._id) && (!acotadoPorArea || rolesDeLasAreas.has(rf._id)) && (!busquedaRol.trim() || fuzzyMatch(rf.name, busquedaRol)));
+  const elegirRol = async (id: string) => {
+    setRolesQuitados((l) => l.filter((y) => y !== id));
+    if (rolesDelPuesto.length === 1 && rolesDelPuesto[0] === id) return;
+    if (!idsOpciones.includes(id)) setRolesSumados((l) => [...l, id]);
+    // La categoría, la del rol nuevo (con su valoración); el importe fijado a mano era de la otra: vuelve a la escala.
+    const categoria = catalogos.categoriaPorDefectoPara(proyecto, empresaDelEquipo, convenioDelEquipo, [id], x.efectivo.contratoId) || null;
+    const r = await cambiar({ rolesFrame: [id], categoriaSatId: categoria, dailyRateManual: null });
+    if (!r) return;
+    // Un rol que no estaba en su ficha se le agrega ya: es un dato de la persona, no de este equipo.
+    if (persona?.userId && rolesDeLaFicha && !rolesDeLaFicha.includes(id)) {
+      try {
+        await usersAPI.agregarRolesFrame(persona.userId, [id]);
+        setAgregadosAFicha((l) => [...l, id]);
+        void sweetAlert.success("Rol agregado", `«${catalogos.roleFrames.find((rf) => rf._id === id)?.name || "El rol"}» quedó en la ficha de ${persona.nombre}.`);
+      } catch {
+        void sweetAlert.warning("No se agregó a la ficha", "El puesto quedó con ese rol, pero no se pudo sumar a la ficha de la persona.");
+      }
+    }
+  };
   const categoriaActual = categoriaDelPuesto || null;
   const diferencia = diferenciaContraEscala(escala, importe);
   /*
@@ -269,6 +326,23 @@ export default function DetallePuesto() {
               )}
             </div>
           )}
+        </div>
+      </Seccion>
+
+      <Seccion>
+        <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800/70">
+          <CampoRolesEmpresa
+            opciones={opcionesDeRol}
+            elegidos={rolesDelPuesto}
+            rolesDeLaFicha={rolesDeLaFicha}
+            onElegir={(id) => void elegirRol(id)}
+            onQuitar={(rf) => setRolesQuitados((l) => [...l, rf._id])}
+            onOtro={() => setRolModal(true)}
+            sinQuitarElegido
+            vacio="Elegí el rol con «Otro rol»."
+            marca={puesto.rolesFrame[0] && rolesDelPuesto[0] !== puesto.rolesFrame[0] ? <span className="rounded bg-amber-100 px-1.5 text-[10px] font-bold text-amber-900 dark:bg-amber-500/20 dark:text-amber-200">distinto del grupo</span> : undefined}
+            nota={<p className="text-[11px] text-slate-500 dark:text-slate-400">La categoría se elige para este rol.{persona ? " Un rol nuevo se le agrega a la ficha de la persona." : ""}</p>}
+          />
         </div>
       </Seccion>
 
@@ -386,7 +460,7 @@ export default function DetallePuesto() {
         titulo={`Puesto ${numero} · ${rol}`}
         subtitulo={equipo.nombre}
         projectId={equipo.projectId}
-        rol={catalogos.roleFrames.find((y) => y._id === puesto.rolesFrame[0])?.name}
+        rol={catalogos.roleFrames.find((y) => y._id === rolesDelPuesto[0])?.name}
         marcas={marcas}
         onElegir={(pe) => void guardarCambio(() => plantillasEquipoAPI.asignar(p._id, equipo._id, puesto._id, pe._id))}
       />
@@ -408,6 +482,20 @@ export default function DetallePuesto() {
         onVerTodasDelConvenio={() => setVerTodasDelConvenio(true)}
         categoriaId={efectivo.categoriaSatId || ""}
         onElegir={(id) => void cambiar({ categoriaSatId: id || null })}
+      />
+      <ModalOtroRol
+        abierto={rolModal}
+        onCerrar={() => setRolModal(false)}
+        subtitulo={persona ? "El que elijas se le agrega a la ficha de la persona" : "El oficio de quien ocupe este puesto en el equipo"}
+        aviso={acotadoPorArea ? `Sólo los roles de las áreas del proyecto (${areasConRoles.filter((ar) => idsDeAreasDelProyecto.has(ar._id) && (ar.rolesFrame || []).length > 0).map((ar) => ar.name).join(", ")}).` : null}
+        busqueda={busquedaRol}
+        onBusqueda={setBusquedaRol}
+        roles={rolesParaOtro}
+        onElegir={(id) => {
+          setRolModal(false);
+          setBusquedaRol("");
+          void elegirRol(id);
+        }}
       />
       <HojasCondiciones cual={hoja === "contrato" || hoja === "turno" ? hoja : null} onCerrar={() => setHoja(null)} titulo={`Puesto ${numero}`} areas={areas} catalogos={catalogos} valores={efectivo} onCambio={(c) => void cambiar(c)} />
     </Pantalla>

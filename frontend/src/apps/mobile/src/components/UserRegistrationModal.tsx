@@ -4,11 +4,12 @@ import { valoracionesDeCategoria } from "@compartido/valoracionesDeCategoria";
 import { Modal } from "./Modal";
 import { CampoTipoContrato, ModalTipoContrato } from "./contratacion/SelectorTipoContrato";
 import { CampoCategoria, ModalCategoria } from "./contratacion/SelectorCategoria";
+import { CampoRolesEmpresa, ModalOtroRol } from "./contratacion/SelectorRolEmpresa";
 import { BloqueReemplazo } from "./contratacion/BloqueReemplazo";
 import { CampoComentarios } from "./contratacion/CampoComentarios";
 import { AyudaImportes, PROPS_IMPORTES_MOVIL } from "./contratacion/AyudaImportes";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faTimes, faBriefcase, faClock, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight, faCircleInfo, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faTimes, faBriefcase, faClock, faArrowRight, faSearch, faFilter, faPlus, faBuilding, faFileContract, faLink, faSpinner, faCircleQuestion, faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { AvisoSuperposicion, usersAPI } from "../../../../api/users";
 import { useContratoEnFechas } from "../../../../hooks/useContratoEnFechas";
 import { ContratoDeLaPersona } from "../../../../components/contratos/ContratoDeLaPersona";
@@ -2551,53 +2552,22 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
               Los roles salen de los que ya tiene la persona; si el nombre se escribió a mano —alguien
               que todavía no es usuario— se ofrecen todos.
             */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                <FontAwesomeIcon icon={faBriefcase} className="text-blue-500 text-[10px]" />
-                Rol/es Empresa*
-              </label>
-              {/* Por qué la lista no trae todos los oficios: sólo los de las áreas del proyecto. */}
-              {proyectoElegido && (
-                <button type="button" onClick={() => setInfoRolesOpen(true)} title="Qué roles se ofrecen y por qué" className="text-blue-500 hover:text-blue-600 shrink-0">
-                  <FontAwesomeIcon icon={faCircleInfo} className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
             {/*
               COMO EN EL ESCRITORIO (02/11/2026): los roles uno debajo del otro, se marca UNO; el tacho, afuera
-              de la opción, lo saca de las opciones de esta solicitud; «+ Otro rol» suma uno del catálogo.
+              de la opción, lo saca de las opciones de esta solicitud; «+ Otro rol» suma uno del catálogo. El
+              campo es compartido con los puestos de los Equipos (`contratacion/SelectorRolEmpresa`).
             */}
-            {opcionesDeRol.length === 0 ? (
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">{selectedUser ? "La persona no tiene roles en su ficha: elegí uno con «Otro rol»." : "Elegí el rol con «Otro rol»."}</p>
-            ) : (
-              <div className="space-y-1.5">
-                {opcionesDeRol.map((rf) => {
-                  const elegido = formData.roleFrameIds.includes(rf._id);
-                  const nuevo = !!selectedUser && !rolesDelUsuario.includes(rf._id);
-                  return (
-                    <div key={rf._id} className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => elegirRol(rf._id)}
-                        aria-pressed={elegido}
-                        className={`flex flex-1 min-w-0 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${elegido ? "border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20 dark:bg-blue-900/20 dark:text-blue-300" : "border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200"}`}
-                      >
-                        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${elegido ? "border-blue-600 bg-blue-600" : "border-slate-400"}`}>{elegido && <span className="h-1.5 w-1.5 rounded-full bg-white" />}</span>
-                        <span className="flex-1 truncate font-semibold">{rf.name}</span>
-                        {nuevo && <span className="shrink-0 rounded-full border border-amber-300 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-600 dark:border-amber-700 dark:text-amber-400">nuevo</span>}
-                      </button>
-                      <button type="button" onClick={() => void quitarOpcionDeRol(rf)} title={`Quitar ${rf.name}`} aria-label={`Quitar ${rf.name}`} className="shrink-0 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-400 active:bg-red-50 hover:text-red-500 dark:border-slate-700">
-                        <FontAwesomeIcon icon={faTrash} className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            <button type="button" onClick={() => setRolModalOpen(true)} title="Buscar otro rol empresa" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400">
-              <FontAwesomeIcon icon={faPlus} className="h-3 w-3" /> Otro rol
-            </button>
-            {rolesNuevosParaLaFicha.length > 0 && <p className="text-[11px] text-amber-600 dark:text-amber-400">{rolesElegidos.filter((rf) => rolesNuevosParaLaFicha.includes(rf._id)).map((rf) => `«${rf.name}»`).join(", ")} no estaba en su ficha: se le agrega al guardar.</p>}
+            <CampoRolesEmpresa
+              opciones={opcionesDeRol}
+              elegidos={formData.roleFrameIds}
+              rolesDeLaFicha={selectedUser ? rolesDelUsuario : null}
+              onElegir={elegirRol}
+              onQuitar={(rf) => void quitarOpcionDeRol(rf)}
+              onOtro={() => setRolModalOpen(true)}
+              onInfo={proyectoElegido ? () => setInfoRolesOpen(true) : undefined}
+              vacio={selectedUser ? "La persona no tiene roles en su ficha: elegí uno con «Otro rol»." : "Elegí el rol con «Otro rol»."}
+              nota={rolesNuevosParaLaFicha.length > 0 ? <p className="text-[11px] text-amber-600 dark:text-amber-400">{rolesElegidos.filter((rf) => rolesNuevosParaLaFicha.includes(rf._id)).map((rf) => `«${rf.name}»`).join(", ")} no estaba en su ficha: se le agrega al guardar.</p> : null}
+            />
           </div>
 
           {/*
@@ -3410,77 +3380,31 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
 
         {/* Rol empresa: misma ventana que en Usuarios —buscador arriba, grilla con lugar para leer—
             porque el catálogo tiene cientos de especialidades. */}
-        <Modal
-          isOpen={rolModalOpen}
-          onClose={() => setRolModalOpen(false)}
-          title="Otro rol empresa"
-          subtitle={selectedUser ? "El que elijas se le agrega a la ficha de la persona al guardar" : "El oficio con el que la persona trabaja en este proyecto"}
-          size="lg"
-          zIndex={80}
-          footer={
-            <div className="flex w-full justify-between items-center gap-3">
-              <span />
-              <button type="button" onClick={() => setRolModalOpen(false)} className="px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 font-bold text-sm text-slate-600 dark:text-slate-300">
-                Cancelar
-              </button>
-            </div>
+        <ModalOtroRol
+          abierto={rolModalOpen}
+          onCerrar={() => setRolModalOpen(false)}
+          subtitulo={selectedUser ? "El que elijas se le agrega a la ficha de la persona al guardar" : "El oficio con el que la persona trabaja en este proyecto"}
+          aviso={
+            !proyectoElegido
+              ? null
+              : rolesAcotadosPorArea && coordinaEnElProyecto
+                ? `Como supervisor, sólo los roles de las áreas que supervisás (${areasParaRoles.filter((a) => a.rolesFrame.length > 0).map((a) => a.nombre).join(", ")}). Para otro rol, lo pide quien supervisa esa área o el coordinador del proyecto.`
+                : rolesAcotadosPorArea
+                  ? `Sólo los roles de las áreas del proyecto (${areasDelProyectoConRoles.filter((a) => a.rolesFrame.length > 0).map((a) => a.nombre).join(", ")}). Tocá para ver cómo sumar otros.`
+                  : areasDelProyecto === null
+                    ? "Buscando las áreas del proyecto…"
+                    : "El proyecto no tiene áreas con roles asignados: se muestran todos. Tocá para ver cómo acotarlos."
           }
-        >
-          <div className="space-y-3">
-            {/* Se dice qué va a pasar antes de que pase: el oficio nuevo queda en la ficha de la
-                persona, no sólo en esta solicitud. */}
-            {proyectoElegido && (
-              <button type="button" onClick={() => setInfoRolesOpen(true)} className="w-full text-left rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[11px] text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300 flex items-start gap-2">
-                <FontAwesomeIcon icon={faCircleInfo} className="mt-0.5 shrink-0" />
-                <span>
-                  {rolesAcotadosPorArea && coordinaEnElProyecto
-                    ? `Como supervisor, sólo los roles de las áreas que supervisás (${areasParaRoles.filter((a) => a.rolesFrame.length > 0).map((a) => a.nombre).join(", ")}). Para otro rol, lo pide quien supervisa esa área o el coordinador del proyecto.`
-                    : rolesAcotadosPorArea
-                    ? `Sólo los roles de las áreas del proyecto (${areasDelProyectoConRoles.filter((a) => a.rolesFrame.length > 0).map((a) => a.nombre).join(", ")}). Tocá para ver cómo sumar otros.`
-                    : areasDelProyecto === null
-                      ? "Buscando las áreas del proyecto…"
-                      : "El proyecto no tiene áreas con roles asignados: se muestran todos. Tocá para ver cómo acotarlos."}
-                </span>
-              </button>
-            )}
-            <div className="relative group">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
-                <FontAwesomeIcon icon={faSearch} className="text-sm" />
-              </div>
-              <input
-                type="text"
-                autoFocus
-                value={rolSearchTerm}
-                onChange={(e) => setRolSearchTerm(e.target.value)}
-                autoComplete="off"
-                className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-11 pr-4 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-white"
-                placeholder="Buscar especialidad..."
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[45vh] overflow-y-auto pr-1">
-              {rolesParaOtro.length === 0 ? (
-                <p className="col-span-full py-8 text-center text-xs text-slate-400 italic">{rolSearchTerm ? `No se encontraron especialidades que coincidan con "${rolSearchTerm}"` : "No hay roles para ofrecer."}</p>
-              ) : (
-                rolesParaOtro.map((rf) => (
-                  // Como en el escritorio: tocar uno lo elige (queda marcado en la lista) y cierra.
-                  <button
-                    key={rf._id}
-                    type="button"
-                    onClick={() => {
-                      elegirRol(rf._id);
-                      setRolModalOpen(false);
-                      setRolSearchTerm("");
-                    }}
-                    className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-left text-sm text-slate-700 transition-all hover:border-blue-400 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200"
-                  >
-                    {rf.name}
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        </Modal>
+          onAviso={() => setInfoRolesOpen(true)}
+          busqueda={rolSearchTerm}
+          onBusqueda={setRolSearchTerm}
+          roles={rolesParaOtro}
+          onElegir={(id) => {
+            elegirRol(id);
+            setRolModalOpen(false);
+            setRolSearchTerm("");
+          }}
+        />
 
         {/* Qué roles se ofrecen y por qué: las áreas del proyecto y sus roles, y cómo sumar otro. */}
         <Modal isOpen={infoRolesOpen} onClose={() => setInfoRolesOpen(false)} title="Roles empresa que se ofrecen" subtitle={proyectoElegido ? etiquetaProyecto(proyectoElegido) : undefined} size="md" zIndex={95} footer={<div className="flex justify-end"><button type="button" onClick={() => setInfoRolesOpen(false)} className="bg-blue-500 text-white px-6 py-2 rounded-lg font-bold text-sm">Entendido</button></div>}>

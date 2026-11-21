@@ -170,7 +170,7 @@ export default function PantallaEquipo() {
                   <button type="button" onClick={() => navigate(rutas.puesto(p._id, equipo._id, x.n))} className="flex min-h-[60px] min-w-0 flex-1 items-center gap-3 py-2 pl-3 text-left">
                     <span className="w-6 shrink-0 text-center text-sm font-bold tabular-nums text-slate-600 dark:text-slate-300">{x.n}</span>
                     <span className="min-w-0 flex-1 space-y-1">
-                      <span className="block truncate text-xs font-semibold text-slate-600 dark:text-slate-300">{nombreRoles(catalogos.roleFrames, x.puesto.rolesFrame)}</span>
+                      <span className="block truncate text-xs font-semibold text-slate-600 dark:text-slate-300">{nombreRoles(catalogos.roleFrames, x.efectivo.rolesFrame)}</span>
                       <span className={`block truncate text-base font-semibold ${persona ? "text-slate-900 dark:text-white" : "text-amber-800 dark:text-amber-300"}`}>{persona ? persona.nombre : "Sin asignar"}</span>
                       {(contratoDe(x) || a?.reemplazo || x.diferencias.length > 0 || avisos.length > 0 || (persona && !persona.activo)) && (
                         <span className="flex flex-wrap items-center gap-1.5">

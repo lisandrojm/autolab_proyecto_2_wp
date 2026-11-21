@@ -33,7 +33,7 @@ export interface Puesto {
 }
 
 /** Lo que un equipo pisa de un puesto (sólo lo que difiere; lo demás sale del puesto). */
-export type Condiciones = Partial<Pick<Puesto, "areaId" | "shiftId" | "inTime" | "outTime" | "diasSemana" | "diasPorSemana" | "diasRotativos" | "categoriaSatId" | "dailyRateManual" | "escalaAlFijar" | "comentarios" | "contratoId" | "nombreContrato" | "tipoImpositivo">>;
+export type Condiciones = Partial<Pick<Puesto, "rolesFrame" | "areaId" | "shiftId" | "inTime" | "outTime" | "diasSemana" | "diasPorSemana" | "diasRotativos" | "categoriaSatId" | "dailyRateManual" | "escalaAlFijar" | "comentarios" | "contratoId" | "nombreContrato" | "tipoImpositivo">>;
 
 /** Quién ocupa un puesto en un equipo y con qué condiciones propias. */
 export interface Asignacion {
@@ -43,6 +43,8 @@ export interface Asignacion {
   nombre: string;
   /** El CUIT de la persona, sin formato; vacío si no lo tiene cargado. */
   cuit?: string;
+  /** Los roles empresa de su ficha (21/11/2026): el puesto ofrece elegir entre ellos. Sin el server nuevo, no viene. */
+  rolesFrame?: string[];
   condiciones: Condiciones | null;
   /** El equipo no usa este puesto (sigue en la plantilla para los demás equipos). */
   excluido: boolean;

@@ -315,7 +315,7 @@ export default function ContratarRevision() {
                           <p className={`truncate text-sm font-bold ${x.errores.length ? "text-red-800 dark:text-red-200" : "text-slate-900 dark:text-white"}`}>{x.nombre}</p>
                           <span className="shrink-0 text-sm font-bold tabular-nums text-slate-900 dark:text-white">{pesos(x.importes.total)}</span>
                         </div>
-                        <p className="truncate text-xs text-slate-600 dark:text-slate-300">{pe ? nombreRoles(catalogos.roleFrames, pe.puesto.rolesFrame) : ""}</p>
+                        <p className="truncate text-xs text-slate-600 dark:text-slate-300">{pe ? nombreRoles(catalogos.roleFrames, pe.efectivo.rolesFrame) : ""}</p>
                         <p className="truncate text-xs text-slate-500 dark:text-slate-400">
                           {x.categoriaNombre || (x.origenImporte === "servicios" ? "Servicio" : "Sin categoría")} · {x.jornadas} × {pesos(x.importes.jornada)}
                         </p>

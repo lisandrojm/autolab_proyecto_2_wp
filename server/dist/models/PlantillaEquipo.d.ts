@@ -67,6 +67,8 @@ export interface IPuesto {
  * el servicio): lo que no está sale del puesto, así un cambio en el puesto llega a todos sus equipos.
  */
 export interface ICondiciones {
+    /** El rol empresa de quien ocupa el puesto en ESTE equipo, si no es el del grupo (21/11/2026). */
+    rolesFrame?: Types.ObjectId[];
     areaId?: Types.ObjectId | null;
     shiftId?: Types.ObjectId | null;
     inTime?: string | null;
@@ -82,8 +84,11 @@ export interface ICondiciones {
     nombreContrato?: string | null;
     tipoImpositivo?: string | null;
 }
-/** Los campos de un puesto que un equipo puede pisar (todos menos el rol y el orden). */
-export declare const CAMPOS_DE_CONDICIONES: readonly ["areaId", "shiftId", "inTime", "outTime", "diasSemana", "diasPorSemana", "diasRotativos", "categoriaSatId", "dailyRateManual", "comentarios", "contratoId", "nombreContrato", "tipoImpositivo"];
+/**
+ * Los campos de un puesto que un equipo puede pisar (todos menos el orden). El ROL también (21/11/2026):
+ * el grupo dice «Director de Programas», pero la persona de este equipo puede ir con otro de sus roles.
+ */
+export declare const CAMPOS_DE_CONDICIONES: readonly ["rolesFrame", "areaId", "shiftId", "inTime", "outTime", "diasSemana", "diasPorSemana", "diasRotativos", "categoriaSatId", "dailyRateManual", "comentarios", "contratoId", "nombreContrato", "tipoImpositivo"];
 /** Las condiciones que un equipo pone para todos sus puestos. */
 export declare const CAMPOS_DE_EQUIPO: readonly ["contratoId", "nombreContrato", "tipoImpositivo", "areaId", "shiftId", "inTime", "outTime", "diasSemana", "diasPorSemana", "diasRotativos"];
 /** A quién reemplaza quien ocupa el puesto, y por qué (los motivos de Novedades). */

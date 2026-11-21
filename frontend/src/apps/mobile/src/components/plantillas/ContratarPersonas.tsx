@@ -183,7 +183,7 @@ export default function ContratarPersonas() {
                           vistazo si vale la pena abrir la fila. Antes cada renglón mostraba lo que tenía, y
                           catorce renglones distintos no se comparan.
                         */}
-                        <span className="block truncate text-xs font-semibold text-slate-600 dark:text-slate-300">{nombreRoles(catalogos.roleFrames, x.puesto.rolesFrame)}</span>
+                        <span className="block truncate text-xs font-semibold text-slate-600 dark:text-slate-300">{nombreRoles(catalogos.roleFrames, x.efectivo.rolesFrame)}</span>
                         {/* La persona en verde: es un puesto cubierto. Sin persona, en ámbar: el server no la deja pasar. */}
                         <span className="flex flex-wrap items-center gap-1.5">
                           {nombre ? (
@@ -283,7 +283,7 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
   */
   const { proyecto, empresaId, convenioId } = proyectoDelEquipo(catalogos, equipo);
   // Sin categoría en el puesto, rige la del nivel del proyecto (la misma que manda `pedidosDe`): ya viene elegida.
-  const categoriaPorDefecto = x.efectivo.categoriaSatId ? "" : catalogos.categoriaPorDefectoPara(proyecto, empresaId, convenioId, x.puesto.rolesFrame, x.efectivo.contratoId);
+  const categoriaPorDefecto = x.efectivo.categoriaSatId ? "" : catalogos.categoriaPorDefectoPara(proyecto, empresaId, convenioId, x.efectivo.rolesFrame, x.efectivo.contratoId);
   const base = {
     contratoId: estado.contratoId || x.efectivo.contratoId || "",
     inTime: x.efectivo.inTime || "",
@@ -297,7 +297,7 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
   const indeterminado = !!contratoDoc?.data?.esTiempoIndeterminado;
   // Sin convenio ni categoría según el trámite: hoy ninguno (ver `tramiteSinConvenioNiCategoria`).
   const esServicios = tramiteSinConvenioNiCategoria(catalogos.tramitePorContrato.get(contratoRige));
-  const oferta = catalogos.categoriasPara(proyecto, empresaId, convenioId, x.puesto.rolesFrame, verTodasDelConvenio, false, x.efectivo.contratoId);
+  const oferta = catalogos.categoriasPara(proyecto, empresaId, convenioId, x.efectivo.rolesFrame, verTodasDelConvenio, false, x.efectivo.contratoId);
   const categoriaIdActual = d.categoriaSatId ?? base.categoriaSatId;
   const categoriaActual = catalogos.categoriasSat.find((c) => c._id === categoriaIdActual) || null;
   const cct = catalogos.cctDeConvenio(convenioId);
@@ -379,7 +379,7 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
     return Object.keys(puntualLimpio(r)).length ? r : null;
   };
 
-  const rol = nombreRoles(catalogos.roleFrames, x.puesto.rolesFrame);
+  const rol = nombreRoles(catalogos.roleFrames, x.efectivo.rolesFrame);
   const claseBoton = (on: boolean) => `min-h-[44px] rounded-full px-4 text-sm font-semibold ${on ? "bg-blue-600 text-white" : "border border-slate-300 text-slate-800 dark:border-slate-600 dark:text-slate-100"}`;
   const marca = (on: boolean) => (on ? <span className="ml-1.5 rounded bg-amber-100 px-1 text-[11px] font-bold text-amber-900 dark:bg-amber-500/20 dark:text-amber-200">sólo esta vez</span> : null);
 
@@ -566,7 +566,7 @@ export function HojaPuntual({ equipo, x, fila, estado, onCerrar, onGuardar }: Ho
         titulo={`Puesto ${x.n} · ${rol}`}
         subtitulo={`${equipo.nombre} · sólo esta vez`}
         projectId={equipo.projectId}
-        rol={catalogos.roleFrames.find((y) => y._id === x.puesto.rolesFrame[0])?.name}
+        rol={catalogos.roleFrames.find((y) => y._id === x.efectivo.rolesFrame[0])?.name}
         onElegir={(pe) => {
           setNombres((n) => ({ ...n, [pe._id]: pe.nombre }));
           cambiar({ userId: pe._id });
