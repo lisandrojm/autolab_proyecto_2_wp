@@ -2687,6 +2687,37 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         )}
 
         {/*
+          EL TIPO DE CONTRATO, ANTES DE LAS FECHAS (pedido del 21/11/2026). El calendario de abajo depende de
+          él: con un tipo de días sueltos se marcan los días uno por uno; con uno de período, desde y hasta.
+          Elegir las fechas primero obligaba a volver a marcarlas al cambiar de tipo. La regla de las fechas
+          sigue: si en esas fechas ya tiene un contrato de ARCA, sólo vale uno de Servicios (el aviso sale
+          abajo de este campo apenas se cargan las fechas, y no se puede enviar).
+
+          El trámite (ARCA o Servicios) se deduce del tipo y se muestra al lado, de sólo lectura: va ANTES de
+          convenio, categoría e importe porque decide si hacen falta.
+        */}
+        <div className="space-y-2">
+          <CampoTipoContrato contratos={contratos} contratoId={formData.contratoId} tramitePorContrato={tramitePorContrato} estados={impositivos} onAbrir={() => setContratoModalOpen(true)} />
+          {contratoEnFechas && <p className={`text-[11px] font-medium ${contratoArcaNoPermitido ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>{contratoEnFechas.mensaje}</p>}
+          {contratoElegido && (limiteHoras != null || limiteDias != null) && (
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
+              {limiteHoras != null && (
+                <span>
+                  <strong className="text-slate-900 dark:text-white">{limiteHoras}</strong> h por jornada
+                </span>
+              )}
+              {limiteDias != null && (
+                <span>
+                  <strong className="text-slate-900 dark:text-white">{limiteDias}</strong> días por semana
+                </span>
+              )}
+              <span className="text-[11px] text-slate-400">Limitan el horario y los días de abajo.</span>
+            </p>
+          )}
+        </div>
+
+
+        {/*
           DESDE / HASTA, SIEMPRE A LA VISTA. Todo lo de abajo —días, jornadas, importes— depende de estas
           fechas: queda pegado debajo del título al bajar, para no perder de vista de qué período se habla.
           Los márgenes negativos compensan el padding del cuerpo del Modal, así el fondo tapa de lado a lado.
@@ -2702,7 +2733,13 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
             cada uno es una jornada; se puede marcar uno solo. Un período ahí mentiría: diría que
             trabaja los treinta días del tramo cuando son tres salteados.
           */}
-          {porDiasSueltos ? (
+          {/* SIN TIPO DE CONTRATO NO SE ELIGEN FECHAS: de él depende si son días sueltos o un período. */}
+          {!formData.contratoId && contratos.length > 0 ? (
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Días que trabaja</p>
+              <p className="flex h-12 items-center rounded-xl border border-dashed border-slate-300 px-4 text-sm text-slate-400 dark:border-slate-600">Elegí primero el tipo de contrato</p>
+            </div>
+          ) : porDiasSueltos ? (
             <div className="space-y-1">
               {/*
                 SE PUEDEN MARCAR DÍAS QUE YA PASARON (pedido del 08/10/2026).
@@ -2762,49 +2799,6 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         </div>
 
         {/*
-          EL TIPO DE CONTRATO, y el trámite DEDUCIDO de él. Va DESPUÉS de las fechas (05/11/2026): con un
-          contrato en esas fechas sólo se ofrecen los de Servicios. Va ANTES de convenio, categoría e importe
-          porque decide si hacen falta: con un tipo de Servicios (constancia de CUIT) no hay convenio
-          ni categoría, y el importe se carga a mano. Elegirlo después obligaba a completar dos campos
-          que el tipo de contrato podía terminar escondiendo.
-
-          Antes acá se elegía «Tipo de alta» —ARCA o Servicios— y el tipo de contrato se cargaba
-          después, al aprobar. Era pedir el dato de arriba y dejar el de abajo para otro momento: el
-          trámite no es una opción independiente, lo declara el tipo de contrato a través de sus
-          plantillas. Elegir «Pedido de ARCA» y después un tipo que resulta ser de Servicios daba una
-          solicitud que se contradecía a sí misma.
-
-          Ahora se elige lo concreto —«Jornada», «Plazo fijo 5x7»— y el trámite se muestra al lado,
-          de sólo lectura, con el mismo badge del ABM que usa el escritorio. Quien pide el alta sabe
-          qué contrato va a firmar esa persona; el trámite es una consecuencia.
-        */}
-        <div className="space-y-2">
-          <CampoTipoContrato contratos={contratos} contratoId={formData.contratoId} tramitePorContrato={tramitePorContrato} estados={impositivos} onAbrir={() => {
-            if (!formData.startDate && formData.fechasTrabajadas.length === 0) {
-              sweetAlert.warning("Primero la fecha", "Cargá la fecha de inicio: de eso depende qué tipos de contrato se pueden usar.");
-              return;
-            }
-            setContratoModalOpen(true);
-          }} />
-          {contratoEnFechas && <p className={`text-[11px] font-medium ${contratoArcaNoPermitido ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>{contratoEnFechas.mensaje}</p>}
-          {contratoElegido && (limiteHoras != null || limiteDias != null) && (
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
-              {limiteHoras != null && (
-                <span>
-                  <strong className="text-slate-900 dark:text-white">{limiteHoras}</strong> h por jornada
-                </span>
-              )}
-              {limiteDias != null && (
-                <span>
-                  <strong className="text-slate-900 dark:text-white">{limiteDias}</strong> días por semana
-                </span>
-              )}
-              <span className="text-[11px] text-slate-400">Limitan el horario y los días de abajo.</span>
-            </p>
-          )}
-        </div>
-
-        {/*
           HASTA QUE HAYA FECHAS NO SE MUESTRA NADA DE LO DE ABAJO (pedido del 09/10/2026).
 
           Área y turno, días, jornadas e importes dependen del período: sin fechas quedaban a la vista
@@ -2813,7 +2807,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         */}
         {!hayFechasCargadas ? (
           <p className="rounded-lg border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500 dark:border-slate-600 dark:text-slate-400">
-            {porDiasSueltos ? "Marcá los días que trabaja" : indeterminado ? "Cargá la fecha de inicio" : "Cargá desde y hasta"} para seguir: el área y turno, los días y los importes dependen de las fechas.
+            {!formData.contratoId && contratos.length > 0 ? "Elegí el tipo de contrato y las fechas" : porDiasSueltos ? "Marcá los días que trabaja" : indeterminado ? "Cargá la fecha de inicio" : "Cargá desde y hasta"} para seguir: el área y turno, los días y los importes dependen de las fechas.
           </p>
         ) : (
         <>
