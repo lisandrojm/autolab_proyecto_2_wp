@@ -223,7 +223,8 @@ export default function DetallePuesto() {
   const oferta = catalogos.categoriasPara(proyecto, empresa, convenio, rolesDelPuesto, verTodasDelConvenio, false, x.efectivo.contratoId);
 
   // ── Rol empresa: las opciones (el del grupo, los de la ficha, los sumados) y el catálogo para «Otro rol» ──
-  const rolesDeLaFicha = persona ? [...(a?.rolesFrame || []), ...agregadosAFicha] : null;
+  // Sin `rolesFrame` (server anterior) no se sabe qué tiene en la ficha: no se marca nada como «nuevo».
+  const rolesDeLaFicha = persona && Array.isArray(a?.rolesFrame) ? [...a!.rolesFrame!, ...agregadosAFicha] : null;
   const idsDeAreasDelProyecto = new Set((areas || []).map((o) => o.areaId));
   const rolesDeLasAreas = new Set(areasConRoles.filter((ar) => idsDeAreasDelProyecto.has(ar._id)).flatMap((ar) => ar.rolesFrame || []));
   const acotadoPorArea = rolesDeLasAreas.size > 0;
@@ -314,7 +315,7 @@ export default function DetallePuesto() {
             <div className="mt-3 rounded-xl bg-red-50 p-2 dark:bg-red-500/10">
               <button type="button" onClick={() => setVerAvisos((v) => !v)} aria-expanded={verAvisos} className="flex min-h-[40px] w-full items-center gap-2 text-left text-sm font-semibold text-red-800 dark:text-red-200">
                 <FontAwesomeIcon icon={faTriangleExclamation} />
-                <span className="flex-1">{avisos.length === 1 ? "Se superpone con otro compromiso" : `Se superpone con ${avisos.length} compromisos`}</span>
+                <span className="flex-1">{avisos.length === 1 ? "Se puede superponer con 1 compromiso al elegir la fecha" : `Se pueden superponer con ${avisos.length} compromisos al elegir las fechas`}</span>
                 <span className="text-xs underline">{verAvisos ? "Ocultar" : "Ver"}</span>
               </button>
               {verAvisos && (
