@@ -117,11 +117,8 @@ export function contratoEnLasFechas<T extends CompromisoExistente>(pedido: Pick<
   return existentes.find((e) => e.origen === "contrato" && seCruzan(e)) || null;
 }
 
-/** El mensaje de la regla, igual en el formulario y en el rechazo del server. */
-export function mensajeSoloServicios(c: Pick<CompromisoExistente, "proyectoNombre" | "desde" | "hasta" | "bajaSegunArca">): string {
-  const periodo = c.hasta ? `del ${corta(c.desde)} al ${corta(c.hasta)}${c.bajaSegunArca ? " (baja según ARCA)" : ""}` : `desde el ${corta(c.desde)}, sin fecha de baja`;
-  return `Tiene un contrato de ARCA en esas fechas (${c.proyectoNombre || "otro proyecto"}, ${periodo}): sólo se puede contratar con un tipo de contrato de Servicios.`;
-}
+/** El mensaje de la regla vive con la regla (`compartido/altaVigente.ts`, 21/11/2026). */
+export { mensajeSoloServicios } from "../compartido/altaVigente.js";
 
 /**
  * ¿Se pisan dos horarios de un mismo día? Un turno que cruza la medianoche (18:00 a 00:00, 22:00 a 06:00)

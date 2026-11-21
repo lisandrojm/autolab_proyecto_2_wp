@@ -2056,11 +2056,15 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         const hayIndice = contractIndex !== undefined && contractIndex !== null && contractIndex !== "";
         const esContratoNuevo = !hayIndice && !isUpdate;
         let contratoPrevio = null;
+        let refPrevio = null;
         if (!esContratoNuevo) {
-            const up = await UserProject.findOne({ userId, projectId: project._id }).select("contracts.valoracion_regla_id contracts.modalidadId contracts.estadoContrato").lean();
+            const up = await UserProject.findOne({ userId, projectId: project._id }).select("contracts.valoracion_regla_id contracts.modalidadId contracts.estadoContrato contracts.contrato_id contracts.tipo_contrato_id contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.fechas_trabajadas contracts.empresaContratoId").lean();
             const lista = up?.contracts || [];
             // Sin índice, el último de verdad: una lápida no tiene regla de valoración (etapa 2b).
-            contratoPrevio = hayIndice ? lista[Number(contractIndex)] : lista[ultimoNoAnulado(lista)];
+            const indicePrevio = hayIndice ? Number(contractIndex) : ultimoNoAnulado(lista);
+            contratoPrevio = lista[indicePrevio];
+            if (up && contratoPrevio)
+                refPrevio = { userProjectId: String(up._id), contractIndex: indicePrevio };
         }
         const regla = await reglaDeValoracion({ proyecto: project, contrato: esContratoNuevo ? contract : { ...contract, valoracion_regla_id: contratoPrevio?.valoracion_regla_id }, esNuevo: esContratoNuevo });
         const veredicto = await revisarValoracion({ regla, rolFrameId: contract.rol_frame_id, categoriaSatId: contract.categoria_sat_id, motivo: contract.valoracionOverride?.motivo });
@@ -2108,12 +2112,26 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
           contrato NUEVO (agregar, aprobar, renovar): editar uno que ya existe no se frena con él mismo, y
           «Agregar con contrato vigente» (`origenContrato`) es una copia del que ya tiene, no un alta.
         */
-        if (esContratoNuevo && !contract.origenContrato) {
+        /*
+          EDITAR MIEMBRO (21/11/2026): también se revisa al editar un contrato si cambió lo que decide la regla
+          —el tipo, las fechas o la empresa—, sin contarlo a él mismo. Un cambio de horario o de categoría en un
+          contrato viejo no se frena con altas que llegaron después.
+        */
+        const dia = (v) => fechaISO(String(v || ""));
+        const cambioLoQueDecide = !esContratoNuevo &&
+            !!contratoPrevio &&
+            (String(contratoPrevio.contrato_id || "") !== String(contract.contrato_id || "") ||
+                String(contratoPrevio.tipo_contrato_id ?? "") !== String(contract.tipo_contrato_id ?? "") ||
+                dia(contratoPrevio.fecha_alta_contrato) !== dia(contract.fecha_alta_contrato) ||
+                dia(contratoPrevio.fecha_baja_contrato) !== dia(contract.fecha_baja_contrato) ||
+                String(contratoPrevio.empresaContratoId || "") !== String(contract.empresaContratoId || "") ||
+                JSON.stringify([...(contratoPrevio.fechas_trabajadas || [])].map(dia).sort()) !== JSON.stringify(fechasSueltas.map(dia)));
+        if ((esContratoNuevo && !contract.origenContrato) || cambioLoQueDecide) {
             const rechazoArca = await rechazoAltaArcaConContrato(project.tenantId, String(userId), estado?.data?.tipoImpositivo, {
                 desde: String(contract.fecha_alta_contrato || "").slice(0, 10),
                 hasta: String(contract.fecha_baja_contrato || "").slice(0, 10),
                 fechas: fechasSueltas.length > 0 ? fechasSueltas : undefined,
-            });
+            }, contract.empresaContratoId ? String(contract.empresaContratoId) : null, esContratoNuevo ? null : refPrevio);
             if (rechazoArca)
                 return res.status(422).json({ error: rechazoArca });
         }

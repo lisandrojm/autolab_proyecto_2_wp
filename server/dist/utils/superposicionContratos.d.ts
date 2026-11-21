@@ -88,8 +88,8 @@ export interface Superposicion {
  * todavía no son un contrato.
  */
 export declare function contratoEnLasFechas<T extends CompromisoExistente>(pedido: Pick<PedidoDeAlta, "desde" | "hasta" | "fechas">, existentes: T[]): T | null;
-/** El mensaje de la regla, igual en el formulario y en el rechazo del server. */
-export declare function mensajeSoloServicios(c: Pick<CompromisoExistente, "proyectoNombre" | "desde" | "hasta" | "bajaSegunArca">): string;
+/** El mensaje de la regla vive con la regla (`compartido/altaVigente.ts`, 21/11/2026). */
+export { mensajeSoloServicios } from "../compartido/altaVigente.js";
 /**
  * ¿Se pisan dos horarios de un mismo día? Un turno que cruza la medianoche (18:00 a 00:00, 22:00 a 06:00)
  * termina al día siguiente: se lo compara también corrido un día para cada lado. Tocarse en el borde

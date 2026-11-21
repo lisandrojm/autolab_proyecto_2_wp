@@ -77,9 +77,9 @@ export async function relacionesArcaDe(tenantId, cuils, desde) {
     const filtro = { tenantId: new Types.ObjectId(String(tenantId)), cuil: { $in: lista } };
     if (desde && /^\d{4}-\d{2}-\d{2}$/.test(desde))
         filtro.$or = [{ fechaFin: null }, { situacionBaja: { $in: ["", null] } }, { fechaFin: { $gte: new Date(`${desde}T00:00:00.000Z`) } }];
-    const rels = await RelacionLaboralArca.find(filtro).select("-_id cuil empleadoraCuit fechaInicio fechaFin situacionBaja").lean();
+    const rels = await RelacionLaboralArca.find(filtro).select("-_id cuil empleadoraCuit fechaInicio fechaFin situacionBaja modLiquidacion").lean();
     const iso = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
-    return rels.map((r) => ({ cuil: r.cuil, empleadoraCuit: r.empleadoraCuit, inicio: iso(r.fechaInicio), fin: iso(r.fechaFin), cerrada: !!String(r.situacionBaja || "").trim(), situacionBaja: String(r.situacionBaja || "").trim() }));
+    return rels.map((r) => ({ cuil: r.cuil, empleadoraCuit: r.empleadoraCuit, inicio: iso(r.fechaInicio), fin: iso(r.fechaFin), cerrada: !!String(r.situacionBaja || "").trim(), situacionBaja: String(r.situacionBaja || "").trim(), modLiquidacion: String(r.modLiquidacion || "").trim() }));
 }
 /**
  * Cuándo fue la última sincronización de Relaciones Laborales que leyó bien cada empleadora (CUIT →

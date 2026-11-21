@@ -20,8 +20,8 @@ import { borrarContratoDeSolicitud, buscarContratoDeSolicitud, datosDeSolicitud 
 import { Notification } from "../models/Notification.js";
 import { olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 import { quitarDelConteo, sumarAlConteo } from "../services/conteoUsuariosTenant.js";
-import { contratoDePersonaEnFechas, pedidoDesdeSolicitud, rechazoAltaArcaConContrato, superposicionesDeAlta } from "../services/superposicion.js";
-import { mensajeSoloServicios } from "../utils/superposicionContratos.js";
+import { decisionAltaDePersona, pedidoDesdeSolicitud, rechazoAltaArcaConContrato, superposicionesDeAlta, tramiteDelTipo } from "../services/superposicion.js";
+import { avisoSinFechas } from "../compartido/altaVigente.js";
 import { efectosDeSolicitudEditada, efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "../services/solicitudes.js";
 import { Area } from "../models/Area.js";
 import { Shift } from "../models/Shift.js";
@@ -2468,13 +2468,20 @@ router.post("/superposiciones", requireTenant, authenticateToken, requireAnyPerm
 /*
   ¿LA PERSONA YA TIENE UN CONTRATO EN ESAS FECHAS? Si tiene, sólo se la contrata por Servicios: los
   formularios de alta lo preguntan al cargar las fechas, antes de ofrecer los tipos de contrato. `hasta`
-  vacío es sin fin. Regla en `contratoEnLasFechas`; el guardado la vuelve a revisar.
+  vacío es sin fin. Regla en `compartido/altaVigente.ts` (21/11/2026): un alta MENSUAL deja sólo Servicios
+  (`contrato`); una por JORNADA, sólo frena otra alta con la misma empresa (`mismaEmpleadora`, con
+  `empresaId`). `aviso`: lo que va a pasar, para cuando todavía no hay fechas. El guardado la vuelve a revisar.
 */
 router.post("/contrato-en-fechas", requireTenant, authenticateToken, requireAnyPermission("admin_users:view", MOBILE_USERS), async (req, res) => {
     try {
-        const { userId, desde, hasta, fechas } = req.body || {};
-        const contrato = await contratoDePersonaEnFechas(req.tenantObjectId, userId ? String(userId) : undefined, { desde: String(desde || ""), hasta: String(hasta || ""), fechas: Array.isArray(fechas) ? fechas.map(String) : undefined });
-        res.json({ contrato: contrato ? { proyectoNombre: contrato.proyectoNombre, desde: contrato.desde, hasta: contrato.hasta, mensaje: mensajeSoloServicios(contrato) } : null });
+        const { userId, desde, hasta, fechas, empresaId } = req.body || {};
+        const d = await decisionAltaDePersona(req.tenantObjectId, userId ? String(userId) : undefined, { desde: String(desde || ""), hasta: String(hasta || ""), fechas: Array.isArray(fechas) ? fechas.map(String) : undefined }, empresaId ? String(empresaId) : null);
+        const resumen = (a, mensaje) => ({ proyectoNombre: a.proyectoNombre, desde: a.desde, hasta: a.hasta, liquidacion: a.liquidacion, empresaNombre: a.empresaNombre, mensaje });
+        res.json({
+            contrato: d.soloServicios ? resumen(d.soloServicios, d.mensaje) : null,
+            mismaEmpleadora: !d.soloServicios && d.mismaEmpleadora ? resumen(d.mismaEmpleadora, d.mensaje) : null,
+            aviso: d.altas[0] ? avisoSinFechas(d.soloServicios || d.altas[0]) : "",
+        });
     }
     catch (error) {
         console.error("Contrato en fechas error:", error);
@@ -2493,7 +2500,9 @@ router.post("/", requireTenant, authenticateToken, permisoParaCrearUsuario, asyn
             const m = data.metadata;
             // Sólo el alta individual: las masivas (plantillas, reemplazos) tienen su propia revisión por lote.
             const pedido = pedidoDesdeSolicitud(m);
-            const rechazo = (await rechazoAltaArcaConContrato(req.tenantObjectId, m.solicitudUserId ? String(m.solicitudUserId) : undefined, m.tipoImpositivo, pedido)) || (await prepararSolicitudNueva(req.tenantObjectId, req.user.userId, m));
+            // El trámite del TIPO elegido (no el que dice el cliente, que puede venir de un formulario viejo); sin tipo, el del cliente.
+            const tramite = (await tramiteDelTipo(m.contratoId)) || m.tipoImpositivo;
+            const rechazo = (await rechazoAltaArcaConContrato(req.tenantObjectId, m.solicitudUserId ? String(m.solicitudUserId) : undefined, tramite, pedido, m.empresaContratoId ? String(m.empresaContratoId) : null)) || (await prepararSolicitudNueva(req.tenantObjectId, req.user.userId, m));
             if (rechazo) {
                 res.status(400).json({ error: rechazo });
                 return;

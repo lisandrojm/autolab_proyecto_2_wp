@@ -11,7 +11,12 @@ import { plantillaDelContrato } from "../compartido/plantillaDelContrato.js";
 // El `populate("clientId")` necesita el modelo registrado; no se depende de que otro archivo lo haya cargado.
 import "../models/Client.js";
 import { fechaISO, hoyArgentina } from "../utils/contratoVigencia.js";
-import { contratoEnLasFechas, mensajeSoloServicios, superposiciones } from "../utils/superposicionContratos.js";
+import { contratoEnLasFechas, superposiciones } from "../utils/superposicionContratos.js";
+import { Contrato } from "../models/Contrato.js";
+import { getArcaDefaults } from "../models/ArcaDefault.js";
+import { conCascada } from "../compartido/arca/cascadaArca.js";
+import { buscarTipoContrato } from "../compartido/arca/afipCompleteness.js";
+import { decidirAltaVigente, liquidacionDelAlta, mensajeMismaEmpleadora, mensajeSoloServicios } from "../compartido/altaVigente.js";
 /*
   SUPERPOSICIÓN DE UN ALTA CON LO QUE LA PERSONA YA TIENE: la parte que toca la base.
 
@@ -91,6 +96,9 @@ export async function compromisosDePersona(tenantId, userId, excluirSolicitudId)
             const desde = fechaISO(c.fecha_alta_contrato);
             if (!desde)
                 continue;
+            // Un contrato anulado (la lápida que queda en su lugar) no compromete a nadie: ni avisa ni traba.
+            if (c.estadoContrato === "ANULADO")
+                continue;
             compromisos.push({
                 origen: "contrato",
                 proyectoNombre: nombreDe.get(String(a.projectId)) || a.nombre_proyecto || "",
@@ -158,42 +166,83 @@ export function compromisosConBajasDeArca(compromisos, relaciones, cuil, cuitDe)
     });
 }
 const digitos = (v) => String(v ?? "").replace(/\D/g, "");
-/** Los contratos de la persona con las bajas de ARCA aplicadas (ver `compromisosConBajasDeArca`). */
+/**
+ * Los contratos de la persona con las bajas de ARCA aplicadas (ver `compromisosConBajasDeArca`), y lo que
+ * hizo falta para eso: el CUIL, el CUIT y el nombre de cada empresa y las relaciones de ARCA (de ahí sale
+ * también la liquidación de cada alta, ver `altasArcaEnFechas`).
+ */
 async function contratosConBajasDeArca(tenantId, userId, compromisos) {
     const empresaIds = [...new Set(compromisos.map((c) => c.empresaId || "").filter((id) => Types.ObjectId.isValid(id)))];
+    const vacio = { contratos: compromisos, cuil: "", relaciones: [], cuitDe: (_id) => "", nombreEmpresa: (_id) => "" };
     if (empresaIds.length === 0)
-        return compromisos;
-    const [usuario, empresas] = await Promise.all([User.findById(userId).select("metadata.cuit").lean(), Company.find({ _id: { $in: empresaIds } }).select("cuit").lean()]);
+        return vacio;
+    const [usuario, empresas] = await Promise.all([User.findById(userId).select("metadata.cuit").lean(), Company.find({ _id: { $in: empresaIds } }).select("cuit name").lean()]);
+    const cuits = new Map(empresas.map((e) => [String(e._id), digitos(e.cuit)]));
+    const nombres = new Map(empresas.map((e) => [String(e._id), String(e.name || "")]));
+    const cuitDe = (id) => cuits.get(id) || "";
+    const nombreEmpresa = (id) => nombres.get(id) || "";
     const cuil = digitos(usuario?.metadata?.cuit);
     if (cuil.length !== 11)
-        return compromisos;
-    const cuitDe = new Map(empresas.map((e) => [String(e._id), digitos(e.cuit)]));
-    return compromisosConBajasDeArca(compromisos, await relacionesArcaDe(tenantId, [cuil]), cuil, (id) => cuitDe.get(id) || "");
+        return { ...vacio, cuitDe, nombreEmpresa };
+    const relaciones = await relacionesArcaDe(tenantId, [cuil]);
+    return { contratos: compromisosConBajasDeArca(compromisos, relaciones, cuil, cuitDe), cuil, relaciones, cuitDe, nombreEmpresa };
 }
-/** El contrato DE ARCA que la persona ya tiene en esas fechas, si tiene. Uno de Servicios no traba nada. */
-export async function contratoDePersonaEnFechas(tenantId, userId, pedido) {
+/**
+ * La liquidación de cada tipo de contrato: el código del tipo (por `contrato_id`, o por el nombre en los
+ * contratos viejos) con la cascada global, como el registro de alta (`afipCompleteness`, sin escalón de empresa).
+ */
+async function lectorDeLiquidacion() {
+    const [tipos, dg] = await Promise.all([Contrato.find().select("name data.afipModalidadLiquidacion").lean(), getArcaDefaults().catch(() => null)]);
+    const porId = new Map(tipos.map((t) => [String(t._id), t]));
+    return (tipo) => {
+        const t = (tipo?.contrato_id && porId.get(String(tipo.contrato_id))) || buscarTipoContrato(tipos, tipo?.nombre_contrato);
+        return conCascada(t?.data?.afipModalidadLiquidacion, "tipo_contrato", "modalidadLiquidacion", undefined, dg || undefined).valor;
+    };
+}
+export async function altasArcaEnFechas(tenantId, userId, pedido, excluir) {
     if (!userId)
-        return null;
-    const contratos = await contratosConBajasDeArca(tenantId, userId, await compromisosDePersona(tenantId, userId));
+        return [];
+    const { contratos, cuil, relaciones, cuitDe, nombreEmpresa } = await contratosConBajasDeArca(tenantId, userId, (await compromisosDePersona(tenantId, userId)).filter((c) => c.origen === "contrato" && !(excluir && c.ref?.userProjectId === excluir.userProjectId && c.ref?.contractIndex === excluir.contractIndex)));
     const enFechas = contratos.filter((c) => contratoEnLasFechas(pedido, [c]));
-    const tramiteDe = enFechas.length ? await lectorDeTramites() : null;
-    const bloquea = enFechas.find((c) => tramiteDe(c.tipo) === "alta_temprana_afip") || null;
-    // Rastro de cada baja de ARCA que se aplicó: qué contrato, qué baja tenía, cuál puso ARCA y si al final bloqueó.
-    for (const c of contratos) {
-        if (!c.bajaSegunArca)
+    if (enFechas.length === 0)
+        return [];
+    const [tramiteDe, liquidacionDelTipo] = await Promise.all([lectorDeTramites(), lectorDeLiquidacion()]);
+    const altas = [];
+    for (const c of enFechas) {
+        if (tramiteDe(c.tipo) !== "alta_temprana_afip")
             continue;
-        const pedidoTexto = pedido.fechas?.length ? `${pedido.fechas.length} día(s) desde ${pedido.fechas[0]}` : `${pedido.desde} → ${pedido.hasta || "sin fin"}`;
-        console.log(`[solo-servicios] user ${userId}: contrato ${c.ref?.userProjectId}#${c.ref?.contractIndex} (${c.proyectoNombre || "?"}, alta ${c.desde}, baja en el contrato ${c.bajaSegunArca.hastaContrato || "ninguna"}) ` +
-            `→ baja de ARCA ${c.hasta} (empleadora ${c.bajaSegunArca.empleadoraCuit}); pedido ${pedidoTexto}: ${bloquea === c ? "BLOQUEA igual (la baja de ARCA es posterior)" : enFechas.includes(c) ? "se pisa pero no es de ARCA" : "ya no se pisa"}`);
+        const cuit = c.empresaId ? cuitDe(c.empresaId) : "";
+        const relacion = cuil && cuit ? relaciones.find((r) => r.cuil === cuil && r.empleadoraCuit === cuit && r.inicio === c.desde) : undefined;
+        const l = liquidacionDelAlta(relacion?.modLiquidacion, liquidacionDelTipo(c.tipo));
+        altas.push({ ...c, liquidacion: l.liquidacion, origenLiquidacion: l.origen, empresaNombre: c.empresaId ? nombreEmpresa(c.empresaId) : "" });
     }
-    return bloquea;
+    // Rastro de cada alta que entró en la decisión: con qué baja y qué liquidación.
+    for (const a of altas) {
+        console.log(`[alta-vigente] user ${userId}: contrato ${a.ref?.userProjectId}#${a.ref?.contractIndex} (${a.proyectoNombre || "?"}, ${a.desde} → ${a.hasta || "sin baja"}${a.bajaSegunArca ? ` según ARCA; en el contrato ${a.bajaSegunArca.hastaContrato || "sin baja"}` : ""}) ` +
+            `liquidación ${a.liquidacion} (${a.origenLiquidacion}), empresa ${a.empresaNombre || a.empresaId || "?"}`);
+    }
+    return altas;
 }
-/** Por qué este alta ante ARCA no se puede hacer, o `null`. Sólo frena el trámite de ARCA, no el de Servicios. */
-export async function rechazoAltaArcaConContrato(tenantId, userId, tramite, pedido) {
+/** La regla de `compartido/altaVigente.ts` sobre las altas de la persona en esas fechas. */
+export async function decisionAltaDePersona(tenantId, userId, pedido, empresaId, excluir) {
+    const altas = await altasArcaEnFechas(tenantId, userId, pedido, excluir);
+    const d = decidirAltaVigente(altas, empresaId);
+    return { ...d, altas, mensaje: d.soloServicios ? mensajeSoloServicios(d.soloServicios) : d.mismaEmpleadora ? mensajeMismaEmpleadora(d.mismaEmpleadora) : "" };
+}
+/**
+ * Por qué este alta ante ARCA no se puede hacer, o `null`. Sólo frena el trámite de ARCA, no el de
+ * Servicios. `empresaId`: la empresa del contrato nuevo (sin ella no se revisa la misma empleadora).
+ */
+export async function rechazoAltaArcaConContrato(tenantId, userId, tramite, pedido, empresaId, excluir) {
     if (tramite !== "alta_temprana_afip")
         return null;
-    const contrato = await contratoDePersonaEnFechas(tenantId, userId, pedido);
-    return contrato ? mensajeSoloServicios(contrato) : null;
+    return (await decisionAltaDePersona(tenantId, userId, pedido, empresaId, excluir)).mensaje || null;
+}
+/** El trámite de un tipo de contrato por su `_id` (tipo → plantilla → estado impositivo), o `null`. */
+export async function tramiteDelTipo(contratoId) {
+    if (!contratoId || !Types.ObjectId.isValid(String(contratoId)))
+        return null;
+    return (await lectorDeTramites())({ contrato_id: String(contratoId) });
 }
 /** Los avisos de superposición de un alta para una persona. `[]` si no es una persona registrada. */
 export async function superposicionesDeAlta(tenantId, userId, pedido, excluirSolicitudId) {

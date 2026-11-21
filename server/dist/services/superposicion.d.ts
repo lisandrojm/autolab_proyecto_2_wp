@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import { type RelacionArcaResumida } from "./arca/altasVigentes.js";
 import "../models/Client.js";
 import { CompromisoExistente, PedidoDeAlta, Superposicion } from "../utils/superposicionContratos.js";
+import { type Liquidacion } from "../compartido/altaVigente.js";
 /** El pedido tal como viaja en la solicitud (`metadata` del payload). */
 export declare function pedidoDesdeSolicitud(m: any): PedidoDeAlta;
 /** Todo lo que la persona ya tiene comprometido: contratos (todos los proyectos) y solicitudes pendientes. */
@@ -15,9 +16,41 @@ export declare function compromisosDePersona(tenantId: Types.ObjectId, userId: s
  * `cuitDe`: `empresaId` → CUIT. Puro.
  */
 export declare function compromisosConBajasDeArca(compromisos: CompromisoExistente[], relaciones: RelacionArcaResumida[], cuil: string, cuitDe: (empresaId: string) => string): CompromisoExistente[];
-/** El contrato DE ARCA que la persona ya tiene en esas fechas, si tiene. Uno de Servicios no traba nada. */
-export declare function contratoDePersonaEnFechas(tenantId: Types.ObjectId, userId: string | undefined, pedido: Pick<PedidoDeAlta, "desde" | "hasta" | "fechas">): Promise<CompromisoExistente | null>;
-/** Por qué este alta ante ARCA no se puede hacer, o `null`. Sólo frena el trámite de ARCA, no el de Servicios. */
-export declare function rechazoAltaArcaConContrato(tenantId: Types.ObjectId, userId: string | undefined, tramite: unknown, pedido: Pick<PedidoDeAlta, "desde" | "hasta" | "fechas">): Promise<string | null>;
+/** Un contrato de ARCA de la persona que se cruza con lo pedido, con su liquidación y su empresa. */
+export interface AltaArcaEnFechas extends CompromisoExistente {
+    liquidacion: Liquidacion;
+    origenLiquidacion: "arca" | "tipo" | "sin_dato";
+    empresaNombre: string;
+}
+/**
+ * Los contratos DE ARCA (trámite `alta_temprana_afip`) que la persona ya tiene en esas fechas, cada uno
+ * con su liquidación: la de su relación en ARCA (misma persona, misma empleadora, misma fecha de alta) y,
+ * si no está, la de su tipo de contrato. Uno de Servicios no cuenta.
+ */
+/** El contrato que se está editando: no se frena consigo mismo. */
+export type ContratoExcluido = {
+    userProjectId: string;
+    contractIndex: number;
+} | null | undefined;
+export declare function altasArcaEnFechas(tenantId: Types.ObjectId, userId: string | undefined, pedido: Pick<PedidoDeAlta, "desde" | "hasta" | "fechas">, excluir?: ContratoExcluido): Promise<AltaArcaEnFechas[]>;
+export interface DecisionAlta {
+    /** Un alta mensual en esas fechas: sólo Servicios. */
+    soloServicios: AltaArcaEnFechas | null;
+    /** Un alta por jornada con la misma empresa en esas fechas: no otra alta de ARCA con ella. */
+    mismaEmpleadora: AltaArcaEnFechas | null;
+    /** El primero de los dos, ya dicho. Vacío si nada frena. */
+    mensaje: string;
+    /** Todas las altas de ARCA en esas fechas, frenen o no (para avisar cuando todavía no hay fechas). */
+    altas: AltaArcaEnFechas[];
+}
+/** La regla de `compartido/altaVigente.ts` sobre las altas de la persona en esas fechas. */
+export declare function decisionAltaDePersona(tenantId: Types.ObjectId, userId: string | undefined, pedido: Pick<PedidoDeAlta, "desde" | "hasta" | "fechas">, empresaId?: string | null, excluir?: ContratoExcluido): Promise<DecisionAlta>;
+/**
+ * Por qué este alta ante ARCA no se puede hacer, o `null`. Sólo frena el trámite de ARCA, no el de
+ * Servicios. `empresaId`: la empresa del contrato nuevo (sin ella no se revisa la misma empleadora).
+ */
+export declare function rechazoAltaArcaConContrato(tenantId: Types.ObjectId, userId: string | undefined, tramite: unknown, pedido: Pick<PedidoDeAlta, "desde" | "hasta" | "fechas">, empresaId?: string | null, excluir?: ContratoExcluido): Promise<string | null>;
+/** El trámite de un tipo de contrato por su `_id` (tipo → plantilla → estado impositivo), o `null`. */
+export declare function tramiteDelTipo(contratoId: unknown): Promise<string | null>;
 /** Los avisos de superposición de un alta para una persona. `[]` si no es una persona registrada. */
 export declare function superposicionesDeAlta(tenantId: Types.ObjectId, userId: string | undefined, pedido: PedidoDeAlta, excluirSolicitudId?: string): Promise<Superposicion[]>;

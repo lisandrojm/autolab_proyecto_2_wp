@@ -43,6 +43,8 @@ export interface RelacionArcaResumida {
     cerrada?: boolean;
     /** El motivo de baja de ARCA («Renuncia…», «Vencimiento…»): la regla distingue un hecho de la granularidad. */
     situacionBaja?: string;
+    /** La modalidad de liquidación tal como la escribe ARCA («MES», «JORNAL»…): ver `compartido/altaVigente.ts`. */
+    modLiquidacion?: string;
 }
 /**
  * Las Relaciones Laborales de ARCA de esas personas (con todas las empleadoras), resumidas. Con `desde`

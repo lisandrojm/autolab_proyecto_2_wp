@@ -12,8 +12,8 @@ import { RequestConfig } from "../models/RequestConfig.js";
 import { importePorJornada } from "../compartido/jornadas.js";
 import { armarPayloadDeSolicitud } from "../compartido/solicitudDeContratacion.js";
 import { Contexto, erroresDelLote, FechasDeContratacion, IntegranteParaPlan, MAX_INTEGRANTES_POR_LOTE, PlanDeLote, planDeLote, PlantillaParaPlan, Puntual } from "../utils/planDeLote.js";
-import { compromisosDePersona, contratoDePersonaEnFechas, superposicionesDeAlta, pedidoDesdeSolicitud } from "./superposicion.js";
-import { choquesDelEquipo, CompromisoExistente, mensajeSoloServicios, superposiciones } from "../utils/superposicionContratos.js";
+import { compromisosDePersona, decisionAltaDePersona, superposicionesDeAlta, pedidoDesdeSolicitud } from "./superposicion.js";
+import { choquesDelEquipo, CompromisoExistente, superposiciones } from "../utils/superposicionContratos.js";
 import { hoyArgentina } from "../utils/contratoVigencia.js";
 import { efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "./solicitudes.js";
 import { createUserSchema, normalizarRolesFrame } from "../validators/usuarioSchemas.js";
@@ -980,7 +980,7 @@ export async function planificarVarios(tenantId: Types.ObjectId, p: any, bodies:
       const numero = new Map(integrantes.map((i, n) => [i._id, n + 1]));
       const conFechas = borrador.filas
         .filter((f) => !f.excluido && f.datos && (f.datos.startDate || f.datos.fechasTrabajadas.length))
-        .map((f) => ({ k, f, pedido: pedidoDesdeSolicitud(armarPayloadDeSolicitud(f.datos!).metadata), etiqueta: `puesto ${numero.get(f.integranteId)}`, equipo: nombreEquipo.get(equipoId) || "" }));
+        .map((f) => ({ k, f, empresaId: String((armarPayloadDeSolicitud(f.datos!).metadata as any)?.empresaContratoId || ""), pedido: pedidoDesdeSolicitud(armarPayloadDeSolicitud(f.datos!).metadata), etiqueta: `puesto ${numero.get(f.integranteId)}`, equipo: nombreEquipo.get(equipoId) || "" }));
       return { plantilla, integrantes, fechas, puntuales, ctx, conFechas };
     }),
   );
@@ -988,8 +988,9 @@ export async function planificarVarios(tenantId: Types.ObjectId, p: any, bodies:
   const hoy = hoyArgentina();
   await Promise.all(
     todas.map(async (x) => {
-      const [avisos, contratoArca] = await Promise.all([superposicionesDeAlta(tenantId, x.f.userId, x.pedido), contratoDePersonaEnFechas(tenantId, x.f.userId, x.pedido)]);
-      if (contratoArca) partes[x.k].ctx.soloServicios!.set(x.f.integranteId, mensajeSoloServicios(contratoArca));
+      // La regla del alta individual (`compartido/altaVigente.ts`): mensual → sólo Servicios; jornada → no con la misma empresa. Acá avisa, no frena (ver `planDeLote`).
+      const [avisos, decision] = await Promise.all([superposicionesDeAlta(tenantId, x.f.userId, x.pedido), decisionAltaDePersona(tenantId, x.f.userId, x.pedido, x.empresaId || null)]);
+      if (decision.mensaje) partes[x.k].ctx.soloServicios!.set(x.f.integranteId, decision.mensaje);
       // La misma persona en otro puesto de ESTA contratación (de este equipo o de otro): todavía no existe en la base.
       const otrosPuestos: CompromisoExistente[] = todas
         .filter((o) => o !== x && o.f.userId === x.f.userId)
