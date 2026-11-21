@@ -368,6 +368,10 @@ export default function DetallePuesto() {
           </div>
         ) : (
           <div className="flex gap-2">
+            {/* Sin cambios, Cancelar sale del puesto y vuelve al equipo: más angosto, el recorrido es lo principal. */}
+            <button type="button" onClick={() => navigate(atras)} disabled={guardandoPie} className="flex h-12 w-24 shrink-0 items-center justify-center rounded-xl text-sm font-bold disabled:opacity-30 border border-slate-300 text-slate-800 dark:border-slate-600 dark:text-slate-100">
+              Cancelar
+            </button>
             <button type="button" onClick={() => anterior && void irA(anterior.n)} disabled={!anterior || guardandoPie} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold disabled:opacity-30 border border-slate-300 text-slate-800 dark:border-slate-600 dark:text-slate-100">
               <FontAwesomeIcon icon={faChevronLeft} />
               Puesto anterior
@@ -420,7 +424,7 @@ export default function DetallePuesto() {
             <div className="rounded-xl bg-red-50 p-2 dark:bg-red-500/10">
               <button type="button" onClick={() => setVerAvisos((v) => !v)} aria-expanded={verAvisos} className="flex min-h-[40px] w-full items-center gap-2 text-left text-sm font-semibold text-red-800 dark:text-red-200">
                 <FontAwesomeIcon icon={faTriangleExclamation} />
-                <span className="flex-1">{avisos.length === 1 ? "Se puede superponer con 1 compromiso al elegir la fecha" : `Se pueden superponer con ${avisos.length} compromisos al elegir las fechas`}</span>
+                <span className="flex-1">{avisos.length === 1 ? "Se puede superponer con 1 compromiso al contratar al equipo en ciertas fechas" : `Se pueden superponer con ${avisos.length} compromisos al contratar al equipo en ciertas fechas`}</span>
                 <span className="text-xs underline">{verAvisos ? "Ocultar" : "Ver"}</span>
               </button>
               {verAvisos && (
