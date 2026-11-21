@@ -120,7 +120,6 @@ export default function DetallePuesto() {
 
   const a = x?.asignacion;
   /*
-<<<<<<< HEAD
     LA FOTO DEL PUESTO AL ENTRAR (21/11/2026). Cada cambio se guarda apenas se elige —así funcionan las
     plantillas—, pero el pie ahora ofrece Cancelar: vuelve el puesto a como estaba al entrar o al último
     «Guardar». Se fotografían las condiciones (rol, contrato, área, horario, días, categoría, importe), la
@@ -163,14 +162,13 @@ export default function DetallePuesto() {
     setBusquedaRol("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numero, equipoId, a?.userId]);
-=======
+  /*
     ¿TIENE UN CONTRATO DE ARCA VIGENTE HOY? Entonces el puesto sólo se ofrece por Servicios (la regla del
     alta individual). Acá no hay fechas todavía —son de cada contratación—: se mira hoy, y al contratar
     el server revisa con las fechas de esa vez.
   */
   const hoyISO = new Date().toLocaleDateString("en-CA");
   const contratoVigente = useContratoEnFechas({ activo: !!a?.userId, userId: a?.userId || undefined, desde: hoyISO, hasta: hoyISO });
->>>>>>> 4e65ef497ce5e4b571996f4c000d7f82a82ec916
   useEffect(() => {
     setVerAvisos(false);
     setReemplazoAbierto(!!a?.reemplazo);
@@ -590,7 +588,6 @@ export default function DetallePuesto() {
         categoriaId={efectivo.categoriaSatId || ""}
         onElegir={(id) => void cambiar({ categoriaSatId: id || null })}
       />
-<<<<<<< HEAD
       <ModalOtroRol
         abierto={rolModal}
         onCerrar={() => setRolModal(false)}
@@ -605,10 +602,7 @@ export default function DetallePuesto() {
           void elegirRol(id);
         }}
       />
-      <HojasCondiciones cual={hoja === "contrato" || hoja === "turno" ? hoja : null} onCerrar={() => setHoja(null)} titulo={`Puesto ${numero}`} areas={areas} catalogos={catalogos} valores={efectivo} onCambio={(c) => void cambiar(c)} />
-=======
       <HojasCondiciones cual={hoja === "contrato" || hoja === "turno" ? hoja : null} onCerrar={() => setHoja(null)} titulo={`Puesto ${numero}`} areas={areas} catalogos={catalogos} valores={efectivo} onCambio={(c) => void cambiar(c)} soloServicios={contratoVigente?.mensaje} />
->>>>>>> 4e65ef497ce5e4b571996f4c000d7f82a82ec916
     </Pantalla>
   );
 }
