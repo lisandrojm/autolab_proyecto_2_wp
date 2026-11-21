@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { IconDefinition, faArrowLeft, faCircleInfo, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
-import { useAuthStore } from "../../../../stores/authStore";
+import { salirDeLaApp } from "../utils/salirDeLaApp";
 import { ModalInfo } from "./ModalInfo";
 
 interface SectionHeaderProps {
@@ -39,13 +39,7 @@ interface SectionHeaderProps {
  * al inicio. La «i» explica qué se hace ahí: el que entra por primera vez no tiene a quién preguntar.
  */
 export default function SectionHeader({ icon, titulo, subtitulo, info, onBack, extra, acciones }: SectionHeaderProps) {
-  const { logout } = useAuthStore();
   const [verInfo, setVerInfo] = useState(false);
-
-  const salir = () => {
-    logout();
-    window.location.href = "/login";
-  };
 
   return (
     <>
@@ -69,7 +63,7 @@ export default function SectionHeader({ icon, titulo, subtitulo, info, onBack, e
               {subtitulo && <p className="truncate text-xs text-slate-500 dark:text-slate-400">{subtitulo}</p>}
             </div>
           </div>
-          <button onClick={salir} aria-label="Cerrar sesión" className="flex h-10 w-10 shrink-0 items-center justify-center rounded text-red-600 transition-colors hover:text-gray-800 dark:text-red-400 dark:hover:text-gray-300">
+          <button onClick={() => void salirDeLaApp()} aria-label="Salir de la aplicación" className="flex h-10 w-10 shrink-0 items-center justify-center rounded text-red-600 transition-colors hover:text-gray-800 dark:text-red-400 dark:hover:text-gray-300">
             <FontAwesomeIcon icon={faSignOutAlt} className="h-5 w-5" />
           </button>
         </div>

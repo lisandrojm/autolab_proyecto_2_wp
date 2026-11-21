@@ -1,7 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { IconDefinition, faArrowLeft, faCheck, faChevronRight, faCircleExclamation, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { IconDefinition, faArrowLeft, faCheck, faChevronRight, faCircleExclamation, faSignOutAlt, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { salirDeLaApp } from "../../utils/salirDeLaApp";
 import { usePlantillas } from "./contexto";
 import { Pasos } from "./Pasos";
 
@@ -178,6 +179,10 @@ export function Pantalla({ titulo, contexto, atras, children, boton, notaBoton, 
             )}
           </div>
           <EstadoGuardado estado={estado} />
+          {/* Salir de la aplicación, como en el encabezado de cualquier sección (ver SectionHeader): rojo, a la derecha, y pregunta antes. */}
+          <button type="button" onClick={() => void salirDeLaApp()} aria-label="Salir de la aplicación" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-red-600 transition-colors hover:text-gray-800 dark:text-red-400 dark:hover:text-gray-300">
+            <FontAwesomeIcon icon={faSignOutAlt} className="h-5 w-5" />
+          </button>
         </div>
         {/*
           LOS NÚMEROS, ADENTRO DEL MARGEN DE LA PANTALLA.

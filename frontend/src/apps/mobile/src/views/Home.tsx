@@ -8,6 +8,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell, faCalendar, faCircleCheck, faLink, faShoppingCart, faSignOutAlt, faUmbrellaBeach, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { ViewType } from "../types";
 import { useAuthStore } from "../../../../stores/authStore";
+import { salirDeLaApp } from "../utils/salirDeLaApp";
 import { useNotifications } from "../hooks/useNotifications";
 import { useRefrescoEnFoco } from "../hooks/useRefrescoEnFoco";
 import UserHeader from "../components/UserHeader";
@@ -40,7 +41,7 @@ interface HomeProps {
 }
 
 export default function Home({ onNavigate }: HomeProps) {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const { notifications, unreadCount, loading: notifLoading, porTipo } = useNotifications();
   /*
     LOS NÚMEROS DE LAS TARJETAS: lo que pasó y todavía no se miró.
@@ -309,10 +310,7 @@ export default function Home({ onNavigate }: HomeProps) {
     .map((action) => (enDesarrollo(action.view as ViewType) ? { ...action, disabled: true } : action))
     .sort((a, b) => posicion(a.view as ViewType) - posicion(b.view as ViewType));
 
-  const handleLogout = () => {
-    logout();
-    window.location.href = "/login";
-  };
+  const handleLogout = () => void salirDeLaApp();
 
   return (
     <div className="flex-1 pb-24">

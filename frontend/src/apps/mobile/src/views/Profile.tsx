@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faPhone, faBriefcase, faCalendar, faSignOutAlt, faClock, faUser, faMapMarkerAlt, faUniversity, faPenToSquare , faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { useAuthStore } from '../../../../stores/authStore';
 import { sweetAlert } from '../utils/sweetAlert';
+import { salirDeLaApp } from '../utils/salirDeLaApp';
 import { useProfile } from '../hooks/useProfile';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -31,7 +32,7 @@ const InfoRow = ({ label, value }: { label: string; value?: React.ReactNode }) =
  */
 export default function Profile({ onChangePersonalData, onBack }: { onChangePersonalData?: () => void; onBack?: () => void }) {
   const { profile, stats, loading } = useProfile();
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
 
   // Datos del registro (Historial y Contacto → tabs) + catálogos para resolver IDs → nombres.
   const [activeInfoTab, setActiveInfoTab] = useState<RegistroInfoTab>('general');
@@ -155,13 +156,7 @@ export default function Profile({ onChangePersonalData, onBack }: { onChangePers
 
   const seniority = calculateTotalSeniority();
 
-  const handleLogout = async () => {
-    const result = await sweetAlert.confirm('¿Cerrar sesión?', '¿Estás seguro de que deseas salir?', 'Sí, cerrar sesión', 'Cancelar');
-    if (result.isConfirmed) {
-      logout();
-      await sweetAlert.success('Sesión cerrada', 'Has salido correctamente');
-    }
-  };
+  const handleLogout = () => void salirDeLaApp();
 
   return (
     <div className="flex-1 pb-24 px-4 pt-4 space-y-4 animate-in fade-in duration-500">

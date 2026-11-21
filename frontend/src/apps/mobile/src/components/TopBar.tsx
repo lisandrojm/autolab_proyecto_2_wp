@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
 import { useAuthStore } from "../../../../stores/authStore";
+import { salirDeLaApp } from "../utils/salirDeLaApp";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 
@@ -13,7 +14,7 @@ interface TopBarProps {
 }
 
 export default function TopBar({ title, hasNotifications = false, onNotificationClick, userRole, userName }: TopBarProps) {
-  const { logout, user, tenantId } = useAuthStore();
+  const { user, tenantId } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,10 +26,7 @@ export default function TopBar({ title, hasNotifications = false, onNotification
     }
   }, [user, tenantId]);
 
-  const handleLogout = () => {
-    logout();
-    window.location.href = "/login";
-  };
+  const handleLogout = () => void salirDeLaApp();
 
   const roleConfig = {
     coordinator: {
