@@ -1912,11 +1912,18 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
     hay uno elegido, no se manda. Sin «Hasta» cargado se mira el día de inicio; sin fin, sólo si el tipo lo es.
   */
   const diasMarcados = porDiasSueltos && formData.fechasTrabajadas.length > 0 ? [...formData.fechasTrabajadas].sort() : undefined;
+  /*
+    SIN FECHAS TODAVÍA, SE MIRA HOY (21/11/2026). El tipo de contrato se elige antes que los días (ver el
+    bloque del tipo), así que sin esto la lista ofrecía todo: quien tiene un alta de ARCA vigente —un
+    tiempo indeterminado, por ejemplo— tiene que ver sólo los de Servicios desde el principio. Al cargar
+    las fechas se vuelve a mirar con ellas.
+  */
+  const hayFechasParaContrato = !!(diasMarcados?.length || formData.startDate);
   const contratoEnFechas = useContratoEnFechas({
     activo: isOpen,
     userId: selectedUser?._id,
-    desde: diasMarcados?.[0] || formData.startDate,
-    hasta: diasMarcados ? diasMarcados[diasMarcados.length - 1] : indeterminado ? "" : formData.dueDate || formData.startDate,
+    desde: diasMarcados?.[0] || formData.startDate || fechaDeHoy(),
+    hasta: diasMarcados ? diasMarcados[diasMarcados.length - 1] : !hayFechasParaContrato ? fechaDeHoy() : indeterminado ? "" : formData.dueDate || formData.startDate,
     fechas: diasMarcados,
   });
   const contratosElegibles = contratoEnFechas ? contratos.filter((c) => tramitePorContrato.get(c._id) === "constancia_cuit") : contratos;
@@ -2668,7 +2675,7 @@ export const UserRegistrationModal: React.FC<UserRegistrationModalProps> = ({ is
         */}
         <div className="space-y-2">
           <CampoTipoContrato contratos={contratos} contratoId={formData.contratoId} tramitePorContrato={tramitePorContrato} estados={impositivos} onAbrir={() => setContratoModalOpen(true)} />
-          {contratoEnFechas && <p className={`text-[11px] font-medium ${contratoArcaNoPermitido ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>{contratoEnFechas.mensaje}</p>}
+          {contratoEnFechas && <p className={`text-[11px] font-medium ${contratoArcaNoPermitido ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>{hayFechasParaContrato ? contratoEnFechas.mensaje : contratoEnFechas.mensaje.replace("Tiene un contrato de ARCA en esas fechas", "Tiene un alta de ARCA vigente")}</p>}
           {contratoElegido && (limiteHoras != null || limiteDias != null) && (
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
               {limiteHoras != null && (
