@@ -118,6 +118,43 @@ export default function DetallePuesto() {
   }, [categoriaPorDefecto, numero, equipoId]);
 
   const a = x?.asignacion;
+  /*
+    LA FOTO DEL PUESTO AL ENTRAR (21/11/2026). Cada cambio se guarda apenas se elige —así funcionan las
+    plantillas—, pero el pie ahora ofrece Cancelar: vuelve el puesto a como estaba al entrar o al último
+    «Guardar». Se fotografían las condiciones (rol, contrato, área, horario, días, categoría, importe), la
+    persona y el reemplazo. Un rol que se sumó a la ficha de la persona no se saca: es un dato de ella.
+  */
+  const [versionFoto, setVersionFoto] = useState(0);
+  const foto = useRef<{ clave: string; cond: Record<string, any>; userId: string | null; reemplazo: { replacedUserId: string; motivoReemplazoId: string | null } | null } | null>(null);
+  const fotoActual = () =>
+    x
+      ? {
+          cond: {
+            rolesFrame: x.efectivo.rolesFrame?.length ? x.efectivo.rolesFrame : puesto?.rolesFrame || [],
+            areaId: x.efectivo.areaId ?? null,
+            shiftId: x.efectivo.shiftId ?? null,
+            inTime: x.efectivo.inTime ?? null,
+            outTime: x.efectivo.outTime ?? null,
+            diasSemana: x.efectivo.diasSemana || [],
+            diasPorSemana: x.efectivo.diasPorSemana ?? null,
+            diasRotativos: !!x.efectivo.diasRotativos,
+            contratoId: x.efectivo.contratoId ?? null,
+            nombreContrato: x.efectivo.nombreContrato ?? null,
+            tipoImpositivo: x.efectivo.tipoImpositivo ?? null,
+            categoriaSatId: x.efectivo.categoriaSatId ?? null,
+            dailyRateManual: x.efectivo.dailyRateManual ?? null,
+          },
+          userId: x.asignacion?.userId || null,
+          reemplazo: x.asignacion?.reemplazo ? { replacedUserId: x.asignacion.reemplazo.replacedUserId, motivoReemplazoId: x.asignacion.reemplazo.motivoReemplazoId || null } : null,
+        }
+      : null;
+  const claveFoto = `${equipoId}:${numero}:${versionFoto}`;
+  useEffect(() => {
+    if (!x || foto.current?.clave === claveFoto) return;
+    const f = fotoActual();
+    if (f) foto.current = { clave: claveFoto, ...f };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claveFoto, !!x]);
   useEffect(() => {
     setRolesSumados([]);
     setRolesQuitados([]);
@@ -196,6 +233,7 @@ export default function DetallePuesto() {
         if (!r) return; // `guardar` ya avisó que no se guardó
       }
       tocoImporte.current = false;
+      setVersionFoto((v) => v + 1);
       if (siguiente) {
         setCambiadoEn(null);
         await sweetAlert.success("Puesto guardado", `Puesto ${numero} · ${rol}`);
@@ -204,6 +242,28 @@ export default function DetallePuesto() {
         // Al inicio de Plantillas (pedido del 23/10/2026), no a la pantalla del equipo.
         navigate(rutas.lista);
       }
+    } finally {
+      setGuardandoPie(false);
+    }
+  };
+
+  /** Cancelar: el puesto vuelve a la foto (persona, reemplazo y condiciones), y el pie, a recorrer puestos. */
+  const cancelarCambios = async () => {
+    if (guardandoPie) return;
+    const f = foto.current;
+    setGuardandoPie(true);
+    try {
+      const ahora = fotoActual();
+      if (f && ahora) {
+        if (ahora.userId !== f.userId && !(await guardar(() => plantillasEquipoAPI.asignar(p._id, equipo._id, puesto._id, f.userId)))) return;
+        if (JSON.stringify(ahora.reemplazo) !== JSON.stringify(f.reemplazo) && !(await guardar(() => plantillasEquipoAPI.reemplazo(p._id, equipo._id, puesto._id, f.reemplazo ? f.reemplazo : { quitar: true })))) return;
+        if (JSON.stringify(ahora.cond) !== JSON.stringify(f.cond) && !(await cambiar(f.cond, true))) return;
+      }
+      tocoImporte.current = false;
+      setMotivoPendiente("");
+      setReemplazoAbierto(!!f?.reemplazo);
+      setImporte(f?.cond.dailyRateManual != null ? String(f.cond.dailyRateManual) : escala ? String(escala) : "");
+      setCambiadoEn(null);
     } finally {
       setGuardandoPie(false);
     }
@@ -284,30 +344,39 @@ export default function DetallePuesto() {
       atras={atras}
       pie={
         /*
-          FIJO ABAJO (21/11/2026): arriba, recorrer los puestos; abajo, Cancelar y Guardar. Cancelar vuelve al
-          equipo sin mandar el importe que se estaba escribiendo (lo demás se guarda al elegirlo, como siempre).
+          FIJO ABAJO, UNA FILA, TODOS DEL MISMO ALTO (21/11/2026). Primero se decide sobre ESTE puesto: con un
+          cambio sin confirmar, Cancelar (vuelve a como estaba) y Guardar; recién sin cambios, recorrer los
+          puestos. En el último, «Guardar equipo» lleva al inicio de Plantillas.
         */
-        <div className="space-y-2">
+        conCambios ? (
           <div className="flex gap-2">
-            <button type="button" onClick={() => anterior && void irA(anterior.n)} disabled={!anterior || guardandoPie} className="flex min-h-[40px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 disabled:opacity-30 dark:border-slate-600 dark:text-slate-100">
+            <button type="button" onClick={() => void cancelarCambios()} disabled={guardandoPie} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold disabled:opacity-30 border border-slate-300 text-slate-800 dark:border-slate-600 dark:text-slate-100">
+              Cancelar
+            </button>
+            <button type="button" onClick={() => void guardarPuesto()} disabled={guardandoPie} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold disabled:opacity-30 bg-blue-600 text-white">
+              <FontAwesomeIcon icon={guardandoPie ? faSpinner : faCheck} spin={guardandoPie} />
+              Guardar
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <button type="button" onClick={() => anterior && void irA(anterior.n)} disabled={!anterior || guardandoPie} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold disabled:opacity-30 border border-slate-300 text-slate-800 dark:border-slate-600 dark:text-slate-100">
               <FontAwesomeIcon icon={faChevronLeft} />
               Puesto anterior
             </button>
-            <button type="button" onClick={() => siguiente && void irA(siguiente.n)} disabled={!siguiente || guardandoPie} className="flex min-h-[40px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 disabled:opacity-30 dark:border-slate-600 dark:text-slate-100">
-              Puesto siguiente
-              <FontAwesomeIcon icon={faChevronRight} />
-            </button>
+            {siguiente ? (
+              <button type="button" onClick={() => void irA(siguiente.n)} disabled={guardandoPie} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold disabled:opacity-30 border border-slate-300 text-slate-800 dark:border-slate-600 dark:text-slate-100">
+                Puesto siguiente
+                <FontAwesomeIcon icon={faChevronRight} />
+              </button>
+            ) : (
+              <button type="button" onClick={() => void guardarPuesto()} disabled={guardandoPie} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold disabled:opacity-30 bg-blue-600 text-white">
+                <FontAwesomeIcon icon={guardandoPie ? faSpinner : faCheck} spin={guardandoPie} />
+                Guardar equipo
+              </button>
+            )}
           </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => navigate(atras)} disabled={guardandoPie} className="flex min-h-[48px] flex-1 items-center justify-center rounded-xl border border-slate-300 text-sm font-bold text-slate-800 dark:border-slate-600 dark:text-slate-100">
-              Cancelar
-            </button>
-            <button type="button" onClick={() => void guardarPuesto()} disabled={guardandoPie} className={`flex min-h-[48px] flex-[2] items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-bold text-white disabled:opacity-60 ${conCambios ? "ring-2 ring-blue-300 dark:ring-blue-400/60" : ""}`}>
-              <FontAwesomeIcon icon={guardandoPie ? faSpinner : faCheck} spin={guardandoPie} />
-              {siguiente ? "Guardar" : "Guardar equipo"}
-            </button>
-          </div>
-        </div>
+        )
       }
     >
       {/*
