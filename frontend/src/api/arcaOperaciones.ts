@@ -19,33 +19,6 @@ export interface ReferenciaContratoArca {
   relacion?: { empleadoraCuit: string; cuil: string; fechaInicio: string } | null;
 }
 
-/** La decisión de la regla compartida (`server/src/compartido/arca/relacionParaOperar.ts`). */
-export interface DecisionRelacionArca {
-  puede: boolean;
-  motivo: string;
-  via: "weprodu" | "verificacion" | "adoptada" | "espejo" | null;
-}
-
-/** Un contrato de WeProdu de una relación de ARCA (misma persona, empleadora y fecha de alta). */
-export interface ContratoDeRelacionArca {
-  userProjectId: string;
-  contratoKey: string | null;
-  posicion: number;
-  proyecto: string;
-  contrato: string;
-  alta: string;
-  baja: string;
-  relacionArca: DecisionRelacionArca;
-}
-
-/** Cómo se opera una relación vista desde ARCA: con su contrato, eligiendo entre varios, o sin contrato. */
-export interface ComoSeOperaArca {
-  modo: "contrato" | "elegir" | "sin_contrato" | null;
-  puede: boolean;
-  motivo: string;
-  contratos: ContratoDeRelacionArca[];
-}
-
 /*
   BAJAS ARCA: la lista (`GET /arca/operaciones/lista`, `server/src/services/arca/listaBajasArca.ts`). Una fila por
   relación viva en ARCA sobre la que se puede operar, cada una con exactamente una situación. Todo lo decide el server.

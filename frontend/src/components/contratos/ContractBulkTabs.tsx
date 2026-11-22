@@ -59,14 +59,6 @@ import { useAnchoAcciones } from '../ui/useAnchoAcciones';
 import { avisoForzarAlta, libreDesdeTrasAlta } from '@compartido/arca/vigenciaAltaPresentada';
 import { esClicDeLaFila, useAprobarSolicitudEnModal, useVerContratoEnModal } from './editarContratoEnModal';
 import { eliminarSolicitudConfirmando, rechazarSolicitudConMotivo } from '../solicitudes/accionesSolicitud';
-import { OperacionArcaModal } from './OperacionArcaModal';
-
-/*
-  «CON RELACIÓN PARA OPERAR» (22/11/2026, pedido del usuario): los contratos con el ícono «Relación en ARCA», para
-  quien tiene que dar de baja varios. Sólo en el padrón: las demás pantallas siguen con `OPCIONES_FILTRO_ARCA`.
-*/
-const PARA_OPERAR = 'para_operar';
-const OPCIONES_ARCA_PADRON: { label: string; value: string }[] = [...OPCIONES_FILTRO_ARCA, { label: 'Con relación para operar', value: PARA_OPERAR }];
 
 const obrasSocialesApi = createSimpleCatalogApi('/obras-sociales');
 const CLAVE_CACHE_OBRAS_SOCIALES = claveCacheCatalogo('/obras-sociales');
@@ -4339,8 +4331,6 @@ export const ContractBulkContratadosTab: React.FC<{
   const [filterReemplazo, setFilterReemplazo] = useState('');
   const [filterArca, setFilterArca] = useState('');
   const [filterImpositivo, setFilterImpositivo] = useState<string[]>([]);
-  // El contrato cuyo panel de Modificaciones y Bajas está abierto (ícono «Relación en ARCA» de Acciones).
-  const [operandoArca, setOperandoArca] = useState<FilaPadron | null>(null);
   // Sólo para ordenar el filtro de Tipo de contrato como en Configuración → Contratos.
   const [tiposContrato, setTiposContrato] = useState<ContratoItem[]>([]);
   useEffect(() => {
@@ -4450,8 +4440,7 @@ export const ContractBulkContratadosTab: React.FC<{
     return rows.filter((r) => {
       // Una solicitud todavía no es un contrato: ni vigente ni no vigente, ni tiene usuario activo, roles o reemplazo.
       if ((filterVigencia || filterUserStatus || filterRolMobile || filterReemplazo) && r.solicitudPendienteId) return false;
-      // La misma condición que el ícono: la decide el server con `relacionParaOperar`.
-      if (filterArca === PARA_OPERAR ? !r.relacionArca?.puede : filterArca && situacionDe.get(r)?.grupo !== filterArca) return false;
+      if (filterArca && situacionDe.get(r)?.grupo !== filterArca) return false;
       if (filterImpositivo.length > 0 && !filterImpositivo.includes(impositivoDe.get(r)?.name || '')) return false;
       if (!pasaFiltrosDeContrato(r, { usuarios: filterUserStatus, vigencia: filterVigencia, novedades: filterRolMobile, tipoContrato: filterTipoContrato, estadoContrato: filterEstado, reemplazo: filterReemplazo })) return false;
       if (q && ![r.userName, r.userEmail, r.clientName, r.projectName, r.nombre_contrato, r.cuit].some((v) => String(v || '').toLowerCase().includes(q))) return false;
@@ -4516,7 +4505,7 @@ export const ContractBulkContratadosTab: React.FC<{
               { label: 'Estado de usuarios', value: filterUserStatus, onChange: setFilterUserStatus, options: OPCIONES_ESTADO_USUARIOS },
               { label: 'Contratos', value: filterVigencia, onChange: setFilterVigencia, options: OPCIONES_VIGENCIA },
               // Qué está dado de alta en ARCA y qué no (09/11/2026, pedido del usuario).
-              { label: 'ARCA', value: filterArca, onChange: setFilterArca, options: OPCIONES_ARCA_PADRON },
+              { label: 'ARCA', value: filterArca, onChange: setFilterArca, options: OPCIONES_FILTRO_ARCA },
             ]}
             // Tipo de contrato y estado: varios a la vez, en el modal de casillas (07/11/2026, pedido del usuario).
             multiSelectFilters={[
@@ -4681,7 +4670,7 @@ export const ContractBulkContratadosTab: React.FC<{
                     <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       <FechaHoraCelda valor={r.fecha_carga} vacio={<span className="text-gray-300 dark:text-gray-600" title="Contrato sin fecha de carga">—</span>} />
                     </td>
-                    {pendiente ? <AccionesSolicitudPendiente r={r} onCambio={() => load(true)} /> : <ContractActionsCell record={r} onDeleted={() => load(true)} onOperarArca={r.relacionArca?.puede ? () => setOperandoArca(r) : undefined} />}
+                    {pendiente ? <AccionesSolicitudPendiente r={r} onCambio={() => load(true)} /> : <ContractActionsCell record={r} onDeleted={() => load(true)} />}
                   </tr>
                 );
               })}
@@ -4690,15 +4679,6 @@ export const ContractBulkContratadosTab: React.FC<{
           <Paginador pagina={pag.pagina} totalPaginas={pag.totalPaginas} total={pag.total} desde={pag.desde} mostrados={pag.visibles.length} onPagina={pag.setPagina} />
         </div>
         </>
-      )}
-      {/* El MISMO panel que se abría desde «Todos los contratos» de la persona (Modificaciones y Bajas). */}
-      {operandoArca && (
-        <OperacionArcaModal
-          isOpen
-          onClose={() => setOperandoArca(null)}
-          ref_={{ userProjectId: String(operandoArca._id), contratoKey: operandoArca.contratoKey || null, contractIndex: operandoArca.contractIndex }}
-          onHecho={() => load(true)}
-        />
       )}
     </div>
   );

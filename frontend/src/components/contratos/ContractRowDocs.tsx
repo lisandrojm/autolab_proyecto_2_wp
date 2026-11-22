@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFilePdf, faUpload, faDownload, faSpinner, faLock, faEdit, faTrash, faFlagCheckered, faLandmark } from "@fortawesome/free-solid-svg-icons";
+import { faFilePdf, faUpload, faDownload, faSpinner, faLock, faEdit, faTrash, faFlagCheckered } from "@fortawesome/free-solid-svg-icons";
 import { ContractOverviewRow, Contract, AltaArcaPresentada } from "../../api/users";
 import type { OperacionArcaPresentada } from "@compartido/arca/tiposArca";
 import { ContratoFrameItem, contratoFrameAPI } from "../../api/contratosFrame";
@@ -353,12 +353,7 @@ export const ContractActionsHeader: React.FC = () => <th className="col-acciones
 export const ContractActionsButtons: React.FC<{
   record: ContractOverviewRow;
   onDeleted: () => void;
-  /**
-   * Baja, modificación o anulación de la relación en ARCA (22/11/2026). Sólo la pasa la bandeja Contratos, y sólo
-   * cuando hay una relación sobre la cual operar (`record.relacionArca.puede`): si no viene, no hay ícono.
-   */
-  onOperarArca?: () => void;
-}> = ({ record, onDeleted, onOperarArca }) => {
+}> = ({ record, onDeleted }) => {
   const navigate = useNavigate();
   const editarEnModal = useEditarContratoEnModal();
   const [borrando, setBorrando] = useState(false);
@@ -403,19 +398,6 @@ export const ContractActionsButtons: React.FC<{
       <button type="button" onClick={editar} title="Editar este contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
         <FontAwesomeIcon icon={faEdit} className="h-4 w-4" />
       </button>
-      {onOperarArca && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOperarArca();
-          }}
-          title="Baja, modificación o anulación de la relación en ARCA"
-          className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-        >
-          <FontAwesomeIcon icon={faLandmark} className="h-4 w-4" />
-        </button>
-      )}
       <button type="button" onClick={eliminar} disabled={borrando} title="Anular este contrato" className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
         <FontAwesomeIcon icon={borrando ? faSpinner : faTrash} spin={borrando} className="h-4 w-4" />
       </button>
@@ -424,9 +406,9 @@ export const ContractActionsButtons: React.FC<{
 };
 
 /** Los mismos botones como celda de tabla. */
-export const ContractActionsCell: React.FC<{ record: ContractOverviewRow; onDeleted: () => void; onOperarArca?: () => void }> = ({ record, onDeleted, onOperarArca }) => (
+export const ContractActionsCell: React.FC<{ record: ContractOverviewRow; onDeleted: () => void }> = ({ record, onDeleted }) => (
   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-    <ContractActionsButtons record={record} onDeleted={onDeleted} onOperarArca={onOperarArca} />
+    <ContractActionsButtons record={record} onDeleted={onDeleted} />
   </td>
 );
 

@@ -3,8 +3,8 @@
  * un contrato puede ir a Relaciones Laborales → Modificaciones y Bajas (baja, modificación o anulación). La
  * usan los dos lados, así nunca dicen cosas distintas:
  *   · el panel (`services/arca/reglasOperacionRelacion.ts`), antes de mirar la operación pedida;
- *   · la bandeja Contratos (`contracts-overview` → `relacionArca`), para mostrar o no el ícono y para el filtro
- *     «Con relación para operar».
+ *   · la lista de Gestión › Bajas ARCA (`services/arca/listaBajasArca.ts`, vía `relacionesOperables.ts`), que es
+ *     el único lugar desde donde se da de baja: los íconos de la bandeja Contratos y de Antigüedad ARCA se sacaron.
  *
  * La relación existe si el alta está presentada (desde WeProdu, hallada al verificar o adoptada) o si el
  * espejo de Relaciones Laborales tiene una con la MISMA empleadora, el mismo CUIL y la misma fecha de inicio.
@@ -14,8 +14,7 @@
  * operación reciente hecha desde WeProdu (una baja de los últimos 30 días se puede anular; una sin confirmar
  * hay que mirarla). Una relación cerrada hace años no necesita el botón. La fecha de fin es la de ARCA (el espejo);
  * si el espejo todavía no la tiene, la baja del contrato: las altas presentadas desde WeProdu quedan en ARCA con ese
- * mismo fin (353 de 353, ver el Glosario de ARCA). Lo usan también Antigüedad ARCA y A.R.C.A Bajas
- * (`services/arca/relacionesOperables.ts`): los tres lugares dicen lo mismo.
+ * mismo fin (353 de 353, ver el Glosario de ARCA).
  *
  * Pura: el espejo lo resuelve quien llama (`enEspejo`, `fin`).
  */

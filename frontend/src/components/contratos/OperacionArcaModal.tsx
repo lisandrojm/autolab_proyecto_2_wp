@@ -263,7 +263,7 @@ export const OperacionArcaModal: React.FC<Props> = ({ isOpen, onClose, ref_, zIn
                 <FontAwesomeIcon icon={faTriangleExclamation} className="h-5 w-5 mt-0.5 shrink-0" />
                 <div>
                   <p className="font-bold">Esta relación no tiene contrato en WeProdu</p>
-                  <p className="text-sm mt-0.5">La operación se hace en ARCA igual, pero el resultado no se va a poder guardar en ningún contrato de WeProdu. Queda sólo en el registro de operaciones (A.R.C.A Bajas › Operaciones), que es también lo que impide mandarla dos veces.</p>
+                  <p className="text-sm mt-0.5">La operación se hace en ARCA igual, pero el resultado no se va a poder guardar en ningún contrato de WeProdu. Queda sólo en el registro de operaciones (Bajas ARCA › Operaciones), que es también lo que impide mandarla dos veces.</p>
                 </div>
               </div>
             )}

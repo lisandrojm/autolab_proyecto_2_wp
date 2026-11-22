@@ -1,5 +1,4 @@
 import axios from "./axiosConfig";
-import type { ComoSeOperaArca } from "./arcaOperaciones";
 
 /**
  * Relaciones laborales según ARCA y antigüedad de cada persona (Documentos → «Antigüedad ARCA»).
@@ -47,8 +46,6 @@ export interface RelacionLaboral {
   tipoServicio: string;
   origen: "seed-dropbox" | "sync";
   sincronizadoEl: string;
-  /** Cómo se opera esta relación en ARCA (el ícono de Antigüedad ARCA); `null` si el server no lo pudo ver. */
-  operar?: (ComoSeOperaArca & { estado: string }) | null;
 }
 
 export interface ConfigSyncRelaciones {

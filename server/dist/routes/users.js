@@ -20,9 +20,7 @@ import { borrarContratoDeSolicitud, buscarContratoDeSolicitud, datosDeSolicitud 
 import { Notification } from "../models/Notification.js";
 import { olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 import { quitarDelConteo, sumarAlConteo } from "../services/conteoUsuariosTenant.js";
-import { decisionAltaDePersona, lectorDeTramites, pedidoDesdeSolicitud, rechazoAltaArcaConContrato, superposicionesDeAlta, tramiteDelTipo } from "../services/superposicion.js";
-import { finConocido, operacionReciente, relacionParaOperar, TRAMITE_ALTA_ARCA } from "../compartido/arca/relacionParaOperar.js";
-import { RelacionLaboralArca } from "../models/RelacionLaboralArca.js";
+import { decisionAltaDePersona, pedidoDesdeSolicitud, rechazoAltaArcaConContrato, superposicionesDeAlta, tramiteDelTipo } from "../services/superposicion.js";
 import { avisoSinFechas } from "../compartido/altaVigente.js";
 import { ultimoNoAnulado } from "../utils/anulacionContrato.js";
 import { efectosDeSolicitudEditada, efectosDeSolicitudNueva, prepararSolicitudNueva, rolesPorDefecto } from "../services/solicitudes.js";
@@ -1039,8 +1037,6 @@ const CAMPOS_FILA_CONTRATO = [
     "categoria_sat_id", "rol_frame_id", "sede_id", "tipo_contrato_id", "sucursalArcaId", "actividadArca",
     "obraSocialId", "obraSocialOrigen", "obraSocialConstatadaEn", "obraSocialConstatadaEl", "obraSocialNoFigura", "obraSocialBloqueada",
     "sinCuitValidacion", "puestoDesempenado", "contrato_id",
-    // La identidad del contrato y si está anulado: el ícono «Relación en ARCA» de Contratos abre el panel por su clave.
-    "contratoKey", "estadoContrato",
     // La solicitud que lo originó: de ella sale el comentario de quien pidió el alta y si es una renovación.
     "solicitudId",
     // La retribución pactada de ARCA sale de uno de estos según la modalidad de liquidación (`retribucionPactada.ts`).
@@ -1156,10 +1152,8 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         const projectIds = projectsList.map((p) => p._id);
         // Empresas por proyecto, con fallback a todas las del ABM cuando el proyecto no tiene ninguna
         // configurada (mismo criterio que GET /:id/all-contracts, si no no habría con qué generar el PDF).
-        const companies = await Company.find({}).select("razonSocial cuit").lean();
+        const companies = await Company.find({}).select("razonSocial").lean();
         const companyMap = new Map(companies.map((c) => [String(c._id), c.razonSocial]));
-        // El CUIT de cada empleadora: con él se busca la relación del contrato en el espejo de ARCA (padrón).
-        const cuitDeEmpresa = new Map(companies.map((c) => [String(c._id), String(c.cuit || "").replace(/\D/g, "")]));
         const allEmpresas = companies.map((c) => ({ id: String(c._id), label: c.razonSocial || "" })).filter((e) => e.label);
         const toEmpresas = (ids = []) => {
             const fromProject = (ids || []).map((id) => ({ id: String(id), label: companyMap.get(String(id)) || "" })).filter((e) => e.label);
@@ -1631,8 +1625,6 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
         const centroCostoPorProyecto = new Map();
         // Sólo el padrón (Contratados): la constancia de ARCA de cada contrato, para la columna «ARCA».
         let constanciaPorContrato = new Map();
-        // Sólo el padrón: si hay una relación en ARCA sobre la cual operar (el ícono «Relación en ARCA» y su filtro).
-        const relacionPorFila = new Map();
         const consultasUltimo = pageRows
             .map((r) => {
             const c = contratoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || {};
@@ -1700,52 +1692,6 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                     console.error("contracts-overview: no pude leer las constancias de ARCA:", e?.message || e);
                 }
             })(),
-            (async () => {
-                /*
-                  ¿HAY UNA RELACIÓN EN ARCA SOBRE LA CUAL OPERAR? (22/11/2026). La misma condición que el panel de
-                  Modificaciones y Bajas (`compartido/arca/relacionParaOperar.ts`). El espejo se pregunta por las filas
-                  de trámite ARCA, por CUIL y fecha de inicio a la vez, y sólo trae empleadora, CUIL, inicio y fin: de él
-                  salen si la relación existe (las altas hechas a mano que no se adoptaron) y si sigue abierta o termina
-                  de hoy en adelante. Viajan pocas relaciones, que es lo que cuesta contra Atlas.
-                */
-                if (!todosLosContratos || pageRows.length === 0)
-                    return;
-                try {
-                    const tramiteDe = await lectorDeTramites();
-                    const datos = pageRows.map((r) => {
-                        const c = contratoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || {};
-                        return {
-                            clave: claveFila(r._id, Number(r.contractIndex) || 0),
-                            tramite: tramiteDe({ nombre_contrato: c.nombre_contrato, tipo_contrato_id: c.tipo_contrato_id, contrato_id: c.contrato_id }),
-                            estadoContrato: String(c.estadoContrato || ""),
-                            cuil: String(r.cuit || "").replace(/\D/g, ""),
-                            empresaCuit: c.empresaContratoId ? cuitDeEmpresa.get(String(c.empresaContratoId)) || "" : "",
-                            alta: fechaISO(c.fecha_alta_contrato) || "",
-                            altaArcaPresentada: c.altaArcaPresentada ? { resultado: c.altaArcaPresentada.resultado, via: c.altaArcaPresentada.via } : null,
-                            baja: fechaISO(c.fecha_baja_contrato) || "",
-                            marcas: [c.bajaArcaPresentada, c.modificacionArcaPresentada, c.anulacionArcaPresentada],
-                        };
-                    });
-                    const aBuscar = datos.filter((d) => d.tramite === TRAMITE_ALTA_ARCA && d.estadoContrato !== "ANULADO" && d.cuil.length === 11 && d.empresaCuit.length === 11 && /^\d{4}-\d{2}-\d{2}$/.test(d.alta));
-                    const hoy = hoyArgentina();
-                    const enEspejo = new Map();
-                    if (aBuscar.length > 0) {
-                        const rels = await RelacionLaboralArca.find({ tenantId: req.tenantObjectId, cuil: { $in: [...new Set(aBuscar.map((d) => d.cuil))] }, fechaInicio: { $in: [...new Set(aBuscar.map((d) => d.alta))].map((f) => new Date(`${f}T00:00:00.000Z`)) } })
-                            .select("-_id empleadoraCuit cuil fechaInicio fechaFin")
-                            .lean();
-                        for (const x of rels)
-                            enEspejo.set(`${x.empleadoraCuit}|${x.cuil}|${new Date(x.fechaInicio).toISOString().slice(0, 10)}`, x.fechaFin ? new Date(x.fechaFin).toISOString().slice(0, 10) : "");
-                    }
-                    for (const { baja, marcas, ...d } of datos) {
-                        const k = `${d.empresaCuit}|${d.cuil}|${d.alta}`;
-                        const esta = enEspejo.has(k);
-                        relacionPorFila.set(d.clave, relacionParaOperar({ ...d, enEspejo: esta, hoy, fin: finConocido({ enEspejo: esta, finEspejo: enEspejo.get(k), bajaContrato: baja }), operacionReciente: operacionReciente(marcas, hoy) }));
-                    }
-                }
-                catch (e) {
-                    console.error("contracts-overview: no pude ver las relaciones de ARCA para operar:", e?.message || e);
-                }
-            })(),
         ]);
         /*
           ÁREA Y TURNO DE CADA CONTRATO, ya con nombre (columna «Área / Turno», 11/11/2026). Las filas de
@@ -1795,8 +1741,7 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
                 solicitante: c.solicitudId ? solicitantePorSolicitud.get(String(c.solicitudId)) || null : null,
                 ultimoContrato: ultimoPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || null,
                 centroCosto: centroCostoPorProyecto.get(String(r.projectId)) || "",
-                ...(todosLosContratos ? { constanciaArca: constanciaPorContrato.get(claveFila(r._id, Number(r.contractIndex) || 0)) || null, relacionArca: relacionPorFila.get(claveFila(r._id, Number(r.contractIndex) || 0)) || null } : {}),
-                contratoKey: c.contratoKey ? String(c.contratoKey) : null,
+                ...(todosLosContratos ? { constanciaArca: constanciaPorContrato.get(claveFila(r._id, Number(r.contractIndex) || 0)) || null } : {}),
                 nombre_contrato: c.nombre_contrato || "",
                 nombre_estado_empleado: c.nombre_estado_empleado || "",
                 nombre_sede: c.nombre_sede || "",
