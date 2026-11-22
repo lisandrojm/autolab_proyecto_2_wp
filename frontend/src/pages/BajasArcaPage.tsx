@@ -1,32 +1,42 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLandmark, faMagnifyingGlass, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faLandmark, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
+import { SearchAndFilters, type FilterOption } from "../components/ui/SearchAndFilters";
+import { BotonOrden, useOrdenTabla } from "../components/ui/OrdenTabla";
 import { EncabezadoSincronizacionArca } from "../components/arca/EncabezadoSincronizacionArca";
 import { OperacionesArcaHistorial } from "../components/arca/OperacionesArcaHistorial";
 import { OperacionArcaModal } from "../components/contratos/OperacionArcaModal";
 import { fechaHoraCorta as fechaHora, hayMovimientos, MovimientosBajasArca as Movimientos, resumenDeConteos } from "../components/arca/MovimientosBajasArca";
-import { arcaOperacionesAPI, SITUACIONES_BAJA_ARCA, type ConteosBajaArca, type FilaBajaArca, type ListaBajasArca, type ReferenciaContratoArca, type SituacionBajaArca } from "../api/arcaOperaciones";
+import { TIPOS_DE_RELACION } from "@compartido/arca/modalidadArca";
+import { arcaOperacionesAPI, SITUACIONES_BAJA_ARCA, type ConteosBajaArca, type EnWeproduBajaArca, type FilaBajaArca, type ListaBajasArca, type MotivoBloqueoBajaArca, type ReferenciaContratoArca, type SituacionBajaArca } from "../api/arcaOperaciones";
 
 /*
   BAJAS ARCA (22/11/2026, pedido del usuario): UNA sola lista, y el único lugar desde donde se da de baja una
   relación en ARCA. Reemplaza a «A.R.C.A Bajas» (Pendientes / Operaciones / Para revisar) y a los íconos que había en
   la bandeja Contratos y en Antigüedad ARCA.
 
-  Una fila por relación viva en ARCA sobre la que se puede operar, con exactamente UNA situación (1 a 5). La
-  situación, el orden, los conteos y lo que queda afuera los decide el server (`services/arca/listaBajasArca.ts`),
-  con la regla compartida de «se puede operar»; acá sólo se filtra y se dibuja.
+  Una fila por CADA relación viva del espejo de ARCA (abierta, o con fin de hoy en adelante). La situación (1 a 6),
+  el orden, los conteos, el tipo y las filas bloqueadas los decide el server (`services/arca/listaBajasArca.ts`),
+  con la regla compartida de «se puede operar»; acá sólo se filtra, se ordena y se dibuja.
 
-   - Los chips filtran por situación y SIEMPRE muestran su conteo, también apagados. La 5 (indeterminado vigente)
-     arranca apagada porque es inventario, no trabajo: 58 contra 8 al 22/11. Pero son la población de Becerini y
-     Pereda, los que nadie cierra hasta que alguien no puede dar un alta: el número queda a la vista.
-   - El buscador busca en TODAS las situaciones, estén o no prendidos sus chips, y avisa si la persona tiene una
-     relación viva que no está en la lista y por qué (plazo vigente, varios contratos…).
+   - SIN CHIPS: el patrón del resto de la app. Buscador + embudo que abre «Filtros avanzados», con el contador de
+     filtros activos en el botón y lo aplicado como etiquetas que se quitan con la ✕. Sólo filtros que tienen que
+     ver con bajas: empresa, tipo, situación, qué hay en WeProdu, proyecto, fecha de inicio y «sólo pendientes».
+   - SIN NINGÚN FILTRO SE VE TODO, ordenado por situación (1 a 6) y, dentro de cada una, por días desde el fin. El
+     pie dice el total, que tiene que ser igual a las relaciones vivas del espejo (el server las cuenta aparte): si
+     no coincide, la lista tiene un error y se avisa en rojo.
+   - El número del menú sigue siendo la suma de 1 a 4: el trabajo pendiente. La 5 y la 6 son inventario.
+   - Las filas BLOQUEADAS (la misma relación en varios proyectos: Quinteiro, Yorio) se ven, al final, con el botón
+     deshabilitado y el motivo. Siguen también en Auditoría ARCA. La lista no elige un contrato por su cuenta.
+   - Las relaciones declaradas con la modalidad de directores (LRT) llevan una advertencia en la fila; el panel
+     muestra la misma (`compartido/arca/modalidadArca.ts`).
+   - El botón «Excel» de la tabla exporta lo que está dibujado: lo filtrado.
    - «Operaciones» (lo que se mandó y su resultado) es la segunda pestaña.
-   - Debajo de los chips, la foto de la corrida de las 06:00 y qué cambió desde entonces: un número que cambia
+   - Debajo de los filtros, la foto de la corrida de las 06:00 y qué cambió desde entonces: un número que cambia
      tiene que poder explicarse. «Sincronizar ahora» no reemplaza la foto, pero el encabezado muestra la diferencia
      contra ella apenas termina, y la lista se actualiza con lo que trajo.
 */
@@ -34,34 +44,57 @@ import { arcaOperacionesAPI, SITUACIONES_BAJA_ARCA, type ConteosBajaArca, type F
 type Pestana = "bajas" | "operaciones";
 
 const DIAS_PLAZO_BAJA = 5;
-const SITUACIONES: SituacionBajaArca[] = [1, 2, 3, 4, 5];
-const PRENDIDAS_POR_DEFECTO: SituacionBajaArca[] = [1, 2, 3, 4];
+const SITUACIONES: SituacionBajaArca[] = [1, 2, 3, 4, 5, 6];
 const fmtCuil = (c: string) => (c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}` : c);
 const fechaCorta = (iso?: string | null) => (iso && /^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : "—");
 const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const th = "px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 text-left";
 const td = "px-4 py-3 text-sm text-gray-700 dark:text-gray-300";
 
-const TONO: Record<SituacionBajaArca, { chip: string; punto: string }> = {
-  1: { chip: "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-200 dark:border-red-800", punto: "bg-red-500" },
-  2: { chip: "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/30 dark:text-orange-200 dark:border-orange-800", punto: "bg-orange-500" },
-  3: { chip: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-700", punto: "bg-amber-500" },
-  4: { chip: "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-200 dark:border-purple-800", punto: "bg-purple-500" },
-  5: { chip: "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600", punto: "bg-gray-400" },
+const TONO: Record<SituacionBajaArca, string> = {
+  1: "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-200 dark:border-red-800",
+  2: "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/30 dark:text-orange-200 dark:border-orange-800",
+  3: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-700",
+  4: "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-200 dark:border-purple-800",
+  5: "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600",
+  6: "bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/30 dark:text-sky-200 dark:border-sky-800",
 };
+const TONO_BLOQUEADA = "bg-white text-gray-600 border-dashed border-gray-400 dark:bg-gray-900 dark:text-gray-300 dark:border-gray-500";
 
-const conteoDe = (c: ConteosBajaArca, s: SituacionBajaArca) => c[`s${s}` as "s1"];
+/** Las filas bloqueadas no tienen número de situación: en el filtro y en el pie van por su motivo. */
+const ETIQUETA_BLOQUEO: Record<MotivoBloqueoBajaArca, string> = { varios_proyectos: "Varios proyectos", varios_contratos: "Contrato duplicado", baja_presentada: "Baja ya presentada", no_se_opera: "No se opera" };
+const BLOQUEOS = Object.keys(ETIQUETA_BLOQUEO) as MotivoBloqueoBajaArca[];
+const claveDeSituacion = (f: FilaBajaArca) => (f.situacion !== null ? String(f.situacion) : `b:${f.bloqueo?.motivo || ""}`);
+const esPendiente = (f: FilaBajaArca) => f.situacion !== null && f.situacion <= 4;
+
+const EN_WEPRODU: { value: EnWeproduBajaArca; label: string }[] = [
+  { value: "con_contrato", label: "Con contrato" },
+  { value: "sin_contrato", label: "Sin contrato (la persona tiene ficha)" },
+  { value: "sin_ficha", label: "Persona sin ficha" },
+];
+
+const conteoDe = (c: ConteosBajaArca, s: SituacionBajaArca) => c[`s${s}` as "s1"] ?? 0;
+const porNombre = (a: FilterOption, b: FilterOption) => a.label.localeCompare(b.label, "es");
 
 export const BajasArcaPage: React.FC = () => {
   const [pestana, setPestana] = useState<Pestana>("bajas");
   const [lista, setLista] = useState<ListaBajasArca | null>(null);
   const [error, setError] = useState("");
-  const [prendidas, setPrendidas] = useState<Set<SituacionBajaArca>>(new Set(PRENDIDAS_POR_DEFECTO));
-  const [buscar, setBuscar] = useState("");
   const [verCambios, setVerCambios] = useState(false);
   const [ayuda, setAyuda] = useState(false);
   // Se guarda el objeto: el panel vuelve a leer cuando cambia la referencia, y uno nuevo en cada render lo haría leer sin parar.
   const [operando, setOperando] = useState<ReferenciaContratoArca | null>(null);
+
+  // Los filtros. Vacíos = sin filtrar: la lista muestra todo.
+  const [buscar, setBuscar] = useState("");
+  const [empresas, setEmpresas] = useState<string[]>([]);
+  const [tipos, setTipos] = useState<string[]>([]);
+  const [situaciones, setSituaciones] = useState<string[]>([]);
+  const [proyectos, setProyectos] = useState<string[]>([]);
+  const [enWeprodu, setEnWeprodu] = useState("");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
+  const [soloPendientes, setSoloPendientes] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
@@ -73,30 +106,69 @@ export const BajasArcaPage: React.FC = () => {
   }, []);
   useEffect(() => { void cargar(); }, [cargar]);
 
+  const todas = useMemo(() => lista?.filas || [], [lista]);
+
+  // Las opciones salen de lo que hay en la lista: no se ofrece filtrar por algo que no existe.
+  const opciones = useMemo(() => {
+    const empresa = new Map<string, string>();
+    const tipo = new Set<string>();
+    const proyecto = new Set<string>();
+    const bloqueo = new Set<MotivoBloqueoBajaArca>(["varios_proyectos"]);
+    for (const f of todas) {
+      empresa.set(f.empleadoraCuit, f.empleadora);
+      tipo.add(f.tipo);
+      for (const p of f.proyectos) proyecto.add(p);
+      if (f.bloqueo) bloqueo.add(f.bloqueo.motivo);
+    }
+    const otrosTipos = [...tipo].filter((t) => !TIPOS_DE_RELACION.includes(t)).sort((a, b) => a.localeCompare(b, "es"));
+    return {
+      empresas: [...empresa].map(([value, label]) => ({ value, label })).sort(porNombre),
+      // Indeterminado, plazo fijo y jornada siempre; el resto (directores LRT u otro), sólo si hay alguno.
+      tipos: [...TIPOS_DE_RELACION.filter((t, i) => i < 3 || tipo.has(t)), ...otrosTipos].map((t) => ({ value: t, label: t })),
+      situaciones: [...SITUACIONES.map((s) => ({ value: String(s), label: `${s}. ${SITUACIONES_BAJA_ARCA[s]}` })), ...BLOQUEOS.filter((m) => bloqueo.has(m)).map((m) => ({ value: `b:${m}`, label: ETIQUETA_BLOQUEO[m] }))],
+      proyectos: [...proyecto].map((p) => ({ value: p, label: p })).sort(porNombre),
+    };
+  }, [todas]);
+
   const q = sinTildes(buscar.trim());
   const qDigitos = buscar.replace(/\D/g, "");
-  const coincide = useCallback((x: { persona: string; cuil: string; empleadora: string }) => sinTildes(`${x.persona} ${x.empleadora}`).includes(q) || (qDigitos.length >= 3 && x.cuil.includes(qDigitos)), [q, qDigitos]);
-  // Con texto en el buscador se busca en TODAS las situaciones, estén o no prendidos sus chips.
-  const filas = useMemo(() => (lista?.filas || []).filter((f) => (q ? coincide(f) : prendidas.has(f.situacion))), [lista, q, coincide, prendidas]);
-  const fueraQueCoinciden = useMemo(() => (q ? (lista?.fuera || []).filter(coincide) : []), [lista, q, coincide]);
+  const filtradas = useMemo(
+    () =>
+      todas.filter(
+        (f) =>
+          (!q || sinTildes(`${f.persona} ${f.empleadora}`).includes(q) || (qDigitos.length >= 3 && f.cuil.includes(qDigitos))) &&
+          (!empresas.length || empresas.includes(f.empleadoraCuit)) &&
+          (!tipos.length || tipos.includes(f.tipo)) &&
+          (!situaciones.length || situaciones.includes(claveDeSituacion(f))) &&
+          // Una relación en varios proyectos aparece al filtrar por cualquiera de ellos.
+          (!proyectos.length || f.proyectos.some((p) => proyectos.includes(p))) &&
+          (!enWeprodu || f.enWeprodu === enWeprodu) &&
+          (!desde || f.inicio >= desde) &&
+          (!hasta || f.inicio <= hasta) &&
+          (!soloPendientes || esPendiente(f)),
+      ),
+    [todas, q, qDigitos, empresas, tipos, situaciones, proyectos, enWeprodu, desde, hasta, soloPendientes],
+  );
+  // Sin orden elegido queda el del server: situación 1 a 6 (las bloqueadas al final) y días desde el fin.
+  const { ordenados: filas, orden, alternar } = useOrdenTabla(filtradas, {
+    empresa: (f) => f.empleadora,
+    tipo: (f) => f.tipo,
+    inicio: (f) => f.inicio,
+    situacion: (f) => f.situacion ?? 90 + BLOQUEOS.indexOf(f.bloqueo?.motivo as MotivoBloqueoBajaArca),
+  });
 
-  const alternar = (s: SituacionBajaArca) => setPrendidas((p) => { const n = new Set(p); if (n.has(s)) n.delete(s); else n.add(s); return n; });
   const abrir = (f: FilaBajaArca) =>
     setOperando(f.contrato ? { userProjectId: f.contrato.userProjectId, contratoKey: f.contrato.contratoKey, contractIndex: f.contrato.posicion } : { userProjectId: "", relacion: { empleadoraCuit: f.empleadoraCuit, cuil: f.cuil, fechaInicio: f.inicio } });
 
   const c = lista?.conteos;
-  const fueraTexto = c
-    ? [
-        c.fuera.plazo_vigente ? `${c.fuera.plazo_vigente} ${c.fuera.plazo_vigente === 1 ? "plazo vigente" : "plazos vigentes"} que ARCA cierra sola` : "",
-        c.fuera.baja_presentada ? `${c.fuera.baja_presentada} con la baja ya presentada, esperando la sincronización` : "",
-        c.fuera.no_se_opera ? `${c.fuera.no_se_opera} que no se pueden operar (alta sin confirmar o anulada)` : "",
-      ].filter(Boolean)
-    : [];
+  const hayFiltros = !!q || empresas.length > 0 || tipos.length > 0 || situaciones.length > 0 || proyectos.length > 0 || !!enWeprodu || !!desde || !!hasta || soloPendientes;
+  const noCoincide = !!lista && lista.filas.length !== lista.vivasEnEspejo;
+  const bloqueadasDelPie = c ? BLOQUEOS.filter((m) => c.bloqueadas?.[m]).map((m) => `${ETIQUETA_BLOQUEO[m].toLowerCase()}: ${c.bloqueadas![m]}`) : [];
 
   return (
     <PageLayout
       title="Bajas ARCA"
-      subtitle="Las relaciones laborales vivas en ARCA y qué hay que hacer con cada una. Es el único lugar desde donde se da de baja."
+      subtitle="Todas las relaciones laborales vivas en ARCA y qué hay que hacer con cada una. Es el único lugar desde donde se da de baja."
       faIcon={{ icon: faLandmark }}
       itemCount={c ? c.pendientes : undefined}
       infoModal={{
@@ -107,15 +179,18 @@ export const BajasArcaPage: React.FC = () => {
         size: "md",
         content: (
           <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
-            <p>Una fila por relación laboral <strong>viva en ARCA</strong> (abierta, o con fecha de fin de hoy en adelante) sobre la que se puede operar. Cada fila tiene una sola situación:</p>
+            <p>Una fila por cada relación laboral <strong>viva en ARCA</strong> (abierta, o con fecha de fin de hoy en adelante): todas las que hoy se pueden dar de baja. Cada fila tiene una sola situación:</p>
             <ol className="list-decimal list-inside space-y-1">
               <li><strong>Terminado en WeProdu:</strong> el contrato tiene fecha de baja pasada y en ARCA la relación sigue abierta. Falta presentar la baja.</li>
               <li><strong>Termina antes de su fecha:</strong> contrato a plazo cuya baja en WeProdu es anterior al fin que tiene ARCA.</li>
               <li><strong>Baja presentada, sin confirmar:</strong> se mandó desde acá y no se leyó el resultado, o quedó en error de navegación. Mirá la relación en ARCA antes de volver a mandar.</li>
               <li><strong>Sin contrato en WeProdu:</strong> ARCA tiene la relación y WeProdu no tiene un contrato con esa persona, empleadora y fecha de inicio. La fila dice si la persona no tiene ficha o si tiene ficha pero no ese contrato: alguien de laboral tiene que decir si falta cargar el contrato o sobra la relación.</li>
-              <li><strong>Indeterminado vigente:</strong> abierto de los dos lados. Es inventario, no trabajo pendiente: no suma al número del menú y su chip arranca apagado.</li>
+              <li><strong>Indeterminado vigente:</strong> abierto de los dos lados. Es inventario, no trabajo pendiente.</li>
+              <li><strong>Plazo vigente:</strong> plazo fijo o jornada que ARCA cierra sola en su fecha. También es inventario, pero se puede dar de baja antes de su fecha.</li>
             </ol>
-            <p><strong>No entran:</strong> las relaciones cerradas, los plazos vigentes que ARCA cierra sola en su fecha, y las relaciones con varios contratos en WeProdu. Esas están en Documentos › Auditoría ARCA: si es un contrato duplicado, se anula el que sobra y la relación aparece acá; si es la misma relación en varios proyectos, se resuelve a mano (esta lista no elige un contrato por su cuenta).</p>
+            <p>El número del menú es la suma de las situaciones 1 a 4: lo pendiente. La 5 y la 6 no cuentan.</p>
+            <p><strong>Con el botón deshabilitado</strong> quedan las relaciones que desde acá no se pueden operar, con el motivo en la fila. Hoy son las que están cargadas en varios proyectos: se resuelven a mano (esta lista no elige un contrato por su cuenta) y están también en Documentos › Auditoría ARCA.</p>
+            <p>El embudo abre los <strong>filtros</strong> (empresa, tipo, situación, contrato en WeProdu, proyecto, fecha de inicio, sólo pendientes); sin ninguno se ve todo. El botón «Excel» exporta lo que está filtrado.</p>
             <p>ARCA pide informar la baja dentro de los {DIAS_PLAZO_BAJA} días corridos del fin; pasado ese plazo puede observarla. Por eso, dentro de cada situación, van primero las que llevan más días.</p>
             <p>Todo sale de la última sincronización con ARCA: si algo cambió hoy en ARCA, sincronizá primero.</p>
           </div>
@@ -138,7 +213,7 @@ export const BajasArcaPage: React.FC = () => {
               className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${pestana === p.clave ? "border-blue-600 text-blue-700 dark:text-blue-300" : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
             >
               {p.label}
-              {p.cantidad !== undefined && <span className={`ml-2 px-1.5 py-0.5 rounded-full text-[11px] ${p.cantidad ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" : "bg-gray-100 text-gray-500 dark:bg-gray-800"}`}>{p.cantidad}</span>}
+              {p.cantidad !== undefined && <span title="Pendientes: la suma de las situaciones 1 a 4." className={`ml-2 px-1.5 py-0.5 rounded-full text-[11px] ${p.cantidad ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" : "bg-gray-100 text-gray-500 dark:bg-gray-800"}`}>{p.cantidad}</span>}
             </button>
           ))}
         </div>
@@ -151,38 +226,20 @@ export const BajasArcaPage: React.FC = () => {
           !error && <div className="flex justify-center py-16"><LoadingSpinner /></div>
         ) : (
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative">
-                <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                <input value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por persona, CUIL o empleadora…" className="input-field text-sm w-80 max-w-full pl-9 pr-8" />
-                {buscar && (
-                  <button type="button" onClick={() => setBuscar("")} title="Limpiar" className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600">
-                    <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-              {/* Los chips: el conteo se muestra SIEMPRE, prendido o apagado. */}
-              <div className="flex flex-wrap items-center gap-2">
-                {SITUACIONES.map((s) => {
-                  const prendido = prendidas.has(s);
-                  return (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => alternar(s)}
-                      aria-pressed={prendido}
-                      title={`${prendido ? "Se muestra" : "No se muestra"}. Tocá para ${prendido ? "ocultar" : "mostrar"} «${SITUACIONES_BAJA_ARCA[s]}».${s === 5 ? " Es inventario: no suma al número del menú." : ""}`}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold transition-colors ${prendido ? TONO[s].chip : "bg-white text-gray-500 border-gray-300 dark:bg-gray-900 dark:text-gray-400 dark:border-gray-700"} ${q ? "opacity-60" : ""}`}
-                    >
-                      <span className={`h-2 w-2 rounded-full ${prendido ? TONO[s].punto : "bg-gray-300 dark:bg-gray-600"}`} />
-                      {s}. {SITUACIONES_BAJA_ARCA[s]}
-                      <span className="tabular-nums font-bold">{conteoDe(c, s)}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            {q && <p className="text-xs text-gray-500">Con texto en el buscador se busca en todas las situaciones, estén o no prendidos sus chips.</p>}
+            <SearchAndFilters
+              searchTerm={buscar}
+              onSearchChange={setBuscar}
+              searchPlaceholder="Buscar por persona, CUIL o empresa…"
+              dateFilter={{ label: "Fecha de inicio", startDate: desde, endDate: hasta, onStartDateChange: setDesde, onEndDateChange: setHasta }}
+              selectFilters={[{ label: "Contrato en WeProdu", value: enWeprodu, onChange: setEnWeprodu, options: EN_WEPRODU, placeholder: "Con o sin contrato" }]}
+              multiSelectFilters={[
+                { label: "Empresa", values: empresas, onChange: setEmpresas, options: opciones.empresas, placeholder: "Todas las empresas" },
+                { label: "Tipo de contrato", values: tipos, onChange: setTipos, options: opciones.tipos, placeholder: "Todos los tipos" },
+                { label: "Situación", values: situaciones, onChange: setSituaciones, options: opciones.situaciones, placeholder: "Todas las situaciones" },
+                { label: "Proyecto", values: proyectos, onChange: setProyectos, options: opciones.proyectos, placeholder: "Todos los proyectos" },
+              ]}
+              switchFilters={[{ label: "Solo pendientes (situaciones 1 a 4)", value: soloPendientes, onChange: setSoloPendientes }]}
+            />
 
             {/* La foto de la corrida de las 06:00 y qué cambió desde entonces. */}
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-2 text-xs text-gray-600 dark:text-gray-400">
@@ -197,7 +254,7 @@ export const BajasArcaPage: React.FC = () => {
                   )}
                 </p>
               ) : (
-                <p>Todavía no hay una corrida automática guardada: la sincronización de las 06:00 deja la foto de esta lista (cuántas hay en cada situación y cuáles) para poder decir después qué cambió y por qué.</p>
+                <p>Todavía no hay una corrida automática guardada: la sincronización de las 06:00 deja la foto de esta lista (cuántas hay en cada una de las seis situaciones y cuáles) para poder decir después qué cambió y por qué.</p>
               )}
               {hayMovimientos(lista.desdeLaCorrida) && <Movimientos m={lista.desdeLaCorrida!} />}
               {verCambios &&
@@ -211,31 +268,32 @@ export const BajasArcaPage: React.FC = () => {
             </div>
 
             {filas.length === 0 ? (
-              <p className="text-sm text-gray-500 py-10 text-center">
-                {q
-                  ? "Ninguna relación de la lista coincide con la búsqueda."
-                  : c.pendientes === 0 && !prendidas.has(5)
-                    ? `No hay nada pendiente. Hay ${c.s5} ${c.s5 === 1 ? "relación abierta" : "relaciones abiertas"} de los dos lados (situación 5): prendé su chip para verlas.`
-                    : "No hay relaciones en las situaciones elegidas."}
-              </p>
+              <p className="text-sm text-gray-500 py-10 text-center">{hayFiltros ? "Ninguna relación coincide con la búsqueda y los filtros." : "No hay relaciones vivas en ARCA."}</p>
             ) : (
-              <TablaConEncabezadoFijo className="rounded-xl border border-gray-200 dark:border-gray-700" tabla="min-w-full">
+              <TablaConEncabezadoFijo className="rounded-xl border border-gray-200 dark:border-gray-700" tabla="min-w-full" exportar="Bajas ARCA">
                 <thead>
                   <tr>
                     <th className={th}>Persona</th>
                     <th className={th}>CUIL</th>
-                    <th className={th}>Empleadora</th>
-                    <th className={th}>Tipo de contrato</th>
-                    <th className={th}>Inicio</th>
+                    <th className={th}><BotonOrden columna="empresa" orden={orden} onAlternar={alternar}>Empresa</BotonOrden></th>
+                    <th className={th}><BotonOrden columna="tipo" orden={orden} onAlternar={alternar}>Tipo de contrato</BotonOrden></th>
+                    <th className={th}><BotonOrden columna="inicio" orden={orden} onAlternar={alternar}>Inicio</BotonOrden></th>
                     <th className={th}>Fin en WeProdu</th>
                     <th className={th}>Días desde el fin</th>
-                    <th className={th}>Situación</th>
+                    <th className={th}><BotonOrden columna="situacion" orden={orden} onAlternar={alternar}>Situación</BotonOrden></th>
                     <th className={`${th} col-acciones`}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filas.map((f) => {
                     const vencido = (f.diasDesdeFin ?? 0) > DIAS_PLAZO_BAJA;
+                    const ayudaDelBoton = f.bloqueo
+                      ? f.bloqueo.texto
+                      : f.situacion === 3
+                        ? "Abre el panel de la relación: muestra lo que se mandó. Mirá ARCA antes de volver a mandar."
+                        : f.contrato
+                          ? `Abre el panel de la relación en ARCA con este contrato, con la fecha de fin del contrato ya cargada.${f.situacion === 6 ? " Es un plazo vigente: ARCA lo cierra sola en su fecha, pero se puede dar de baja antes." : ""}`
+                          : "Abre el panel «sin contrato»: la operación se hace en ARCA igual y queda en el registro de operaciones.";
                     return (
                       <tr key={f.clave} className="border-t border-gray-100 dark:border-gray-800 align-top">
                         <td className={`${td} font-medium text-gray-900 dark:text-gray-100`}>{f.persona || "—"}</td>
@@ -248,7 +306,10 @@ export const BajasArcaPage: React.FC = () => {
                               <span className="block text-xs text-gray-500">{f.proyecto}</span>
                             </>
                           ) : (
-                            <span className="text-xs text-gray-500" title="No hay contrato en WeProdu: es la modalidad que tiene la relación en ARCA.">En ARCA: {f.modalidadArca || "—"}</span>
+                            <>
+                              {f.tipo}
+                              <span className="block text-xs text-gray-500" title="No hay contrato en WeProdu: es la modalidad que declara ARCA para esta relación.">En ARCA: {f.modalidadArca || "sin modalidad"}</span>
+                            </>
                           )}
                         </td>
                         <td className={`${td} whitespace-nowrap`}>{fechaCorta(f.inicio)}</td>
@@ -263,25 +324,33 @@ export const BajasArcaPage: React.FC = () => {
                           )}
                         </td>
                         <td className={td}>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-semibold whitespace-nowrap ${TONO[f.situacion].chip}`}>{f.situacion}. {SITUACIONES_BAJA_ARCA[f.situacion]}</span>
+                          {f.situacion !== null ? (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-semibold whitespace-nowrap ${TONO[f.situacion]}`}>{f.situacion}. {SITUACIONES_BAJA_ARCA[f.situacion]}</span>
+                          ) : (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-semibold whitespace-nowrap ${TONO_BLOQUEADA}`}>{f.bloqueo?.etiqueta || "No se opera"}</span>
+                          )}
                           {f.detalle && <span className={`block mt-1 text-xs ${f.sinFicha ? "font-semibold text-purple-700 dark:text-purple-300" : "text-gray-500"}`}>{f.detalle}</span>}
+                          {f.bloqueo && <span className="block mt-1 text-xs text-gray-600 dark:text-gray-400 max-w-xs">{f.bloqueo.texto}</span>}
+                          {f.advertencia && (
+                            <span className="mt-1 flex items-start gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300 max-w-xs">
+                              <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                              {f.advertencia}
+                            </span>
+                          )}
                         </td>
                         <td className={`${td} col-acciones`}>
-                          <button
-                            type="button"
-                            onClick={() => abrir(f)}
-                            title={
-                              f.situacion === 3
-                                ? "Abre el panel de la relación: muestra lo que se mandó. Mirá ARCA antes de volver a mandar."
-                                : f.contrato
-                                  ? "Abre el panel de la relación en ARCA con este contrato, con la fecha de fin del contrato ya cargada."
-                                  : "Abre el panel «sin contrato»: la operación se hace en ARCA igual y queda en el registro de operaciones."
-                            }
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors whitespace-nowrap"
-                          >
-                            <FontAwesomeIcon icon={faLandmark} className="h-3.5 w-3.5" />
-                            {f.situacion === 3 ? "Revisar" : "Dar de baja"}
-                          </button>
+                          {/* El `title` va en el span: un botón deshabilitado no muestra el suyo. */}
+                          <span title={ayudaDelBoton} className="inline-block">
+                            <button
+                              type="button"
+                              onClick={() => abrir(f)}
+                              disabled={!!f.bloqueo}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-semibold whitespace-nowrap transition-colors ${f.bloqueo ? "text-gray-400 dark:text-gray-500 opacity-60 cursor-not-allowed" : "text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40"}`}
+                            >
+                              <FontAwesomeIcon icon={faLandmark} className="h-3.5 w-3.5" />
+                              {f.situacion === 3 ? "Revisar" : "Dar de baja"}
+                            </button>
+                          </span>
                         </td>
                       </tr>
                     );
@@ -290,35 +359,26 @@ export const BajasArcaPage: React.FC = () => {
               </TablaConEncabezadoFijo>
             )}
 
-            {/* Buscó a alguien que tiene una relación viva en ARCA pero no está en la lista: se dice por qué. */}
-            {fueraQueCoinciden.length > 0 && (
-              <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 text-xs text-blue-900 dark:text-blue-200">
-                <p className="font-semibold">Con una relación viva en ARCA que no está en esta lista:</p>
-                <ul className="mt-1 space-y-0.5">
-                  {fueraQueCoinciden.map((x) => (
-                    <li key={x.clave}>
-                      <strong>{x.persona}</strong> · {x.empleadora} · desde el {fechaCorta(x.inicio)}: {x.texto}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <p className="text-xs text-gray-500">
-              {c.fuera.varios_contratos ? (
-                <>
-                  {c.fuera.varios_contratos} {c.fuera.varios_contratos === 1 ? "relación viva tiene" : "relaciones vivas tienen"} varios contratos en WeProdu y no se {c.fuera.varios_contratos === 1 ? "puede" : "pueden"} dar de baja hasta anular el duplicado: {c.fuera.varios_contratos === 1 ? "está" : "están"} en{" "}
-                  <Link to="/documents" className="underline hover:text-gray-700 dark:hover:text-gray-300">Documentos › Auditoría ARCA</Link>.{" "}
-                </>
+            {/* EL PIE: el total, que tiene que ser igual a las relaciones vivas del espejo. */}
+            <div className="text-xs text-gray-500 space-y-1">
+              <p>
+                {hayFiltros ? <>Mostrando <strong>{filas.length}</strong> de </> : null}
+                <strong>{lista.filas.length}</strong> {lista.filas.length === 1 ? "relación viva" : "relaciones vivas"} en ARCA · {SITUACIONES.map((s) => `${s}: ${conteoDe(c, s)}`).join(" · ")}
+                {bloqueadasDelPie.length > 0 && <> · {bloqueadasDelPie.join(" · ")}</>}. Pendientes (1 a 4): <strong>{c.pendientes}</strong>.
+              </p>
+              {noCoincide && (
+                <p className="rounded border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-2 py-1.5 font-semibold text-red-700 dark:text-red-300">
+                  <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 mr-1.5" />
+                  La lista tiene {lista.filas.length} filas y el espejo de ARCA tiene {lista.vivasEnEspejo} relaciones vivas. Tienen que coincidir: es un error de la lista, no de los datos. Avisá a sistemas.
+                </p>
+              )}
+              {(c.bloqueadas?.varios_proyectos || c.bloqueadas?.varios_contratos) ? (
+                <p>
+                  Las relaciones con varios contratos en WeProdu están también en{" "}
+                  <Link to="/documents" className="underline hover:text-gray-700 dark:hover:text-gray-300">Documentos › Auditoría ARCA</Link>: si es la misma relación en varios proyectos, se resuelve a mano; si es un contrato duplicado, se anula el que sobra y la fila toma su situación.
+                </p>
               ) : null}
-              {c.fuera.varios_proyectos ? (
-                <>
-                  {c.fuera.varios_proyectos} {c.fuera.varios_proyectos === 1 ? "relación viva es" : "relaciones vivas son"} la misma relación cargada en varios proyectos: se {c.fuera.varios_proyectos === 1 ? "resuelve" : "resuelven"} a mano ({c.fuera.varios_proyectos === 1 ? "está" : "están"} en{" "}
-                  <Link to="/documents" className="underline hover:text-gray-700 dark:hover:text-gray-300">Documentos › Auditoría ARCA</Link>). Esta lista no elige un contrato por su cuenta.{" "}
-                </>
-              ) : null}
-              {fueraTexto.length > 0 && <>Tampoco están en la lista: {fueraTexto.join(" · ")}.</>}
-            </p>
+            </div>
           </div>
         )}
       </div>

@@ -23,6 +23,8 @@ export interface DateRangeFilter {
   endDate: string;
   onStartDateChange: (value: string) => void;
   onEndDateChange: (value: string) => void;
+  /** De qué fecha se trata («Fecha de inicio»): titula la sección del modal y la etiqueta del filtro aplicado. Sin esto, «Filtrar por Fecha». */
+  label?: string;
 }
 
 export interface SelectFilter {
@@ -249,6 +251,11 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
   };
 
   const getDateBadgeText = () => {
+    const texto = textoDelRangoDeFechas();
+    return dateFilter?.label && texto ? `${dateFilter.label}: ${texto.charAt(0).toLowerCase()}${texto.slice(1)}` : texto;
+  };
+
+  const textoDelRangoDeFechas = () => {
     if (!dateFilter) return "";
 
     if (dateFilter.startDate && dateFilter.endDate) {
@@ -461,7 +468,7 @@ export const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({ searchTerm, 
             {/* Date Filter Section */}
             {dateFilter && (
               <div className="space-y-3 pb-4 border-b border-gray-200 dark:border-gray-700">
-                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Filtrar por Fecha</h4>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{dateFilter.label || "Filtrar por Fecha"}</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Desde</label>

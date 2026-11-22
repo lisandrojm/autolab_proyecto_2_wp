@@ -9,7 +9,9 @@ import { SITUACIONES_BAJA_ARCA, type ConteosBajaArca, type ListaBajasArca, type 
 */
 
 export const fechaHoraCorta = (iso?: string | null) => (iso ? new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
-export const resumenDeConteos = (c: ConteosBajaArca) => `${c.pendientes} ${c.pendientes === 1 ? "pendiente" : "pendientes"} (1: ${c.s1} · 2: ${c.s2} · 3: ${c.s3} · 4: ${c.s4}) y ${c.s5} de inventario`;
+/** «8 pendientes (1: 0 · 2: 0 · 3: 0 · 4: 8) y 98 de inventario (5: 68 · 6: 30)». Una foto anterior a la situación 6 no la trae. */
+export const resumenDeConteos = (c: ConteosBajaArca) =>
+  `${c.pendientes} ${c.pendientes === 1 ? "pendiente" : "pendientes"} (1: ${c.s1} · 2: ${c.s2} · 3: ${c.s3} · 4: ${c.s4}) y ${c.s5 + (c.s6 ?? 0)} de inventario (5: ${c.s5}${c.s6 === undefined ? "" : ` · 6: ${c.s6}`})`;
 export const hayMovimientos = (m?: MovimientosBajaArca | null) => !!m && (m.entraron.length > 0 || m.salieron.length > 0 || m.cambiaron.length > 0);
 
 export const MovimientosBajasArca: React.FC<{ m: MovimientosBajaArca }> = ({ m }) => (

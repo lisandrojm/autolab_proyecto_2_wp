@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faCircleQuestion, faCircleXmark, faFlask, faPaperPlane, faSpinner, faStop, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { Modal } from "../ui/Modal";
 import { sweetAlert } from "../../utils/sweetAlert";
+import { advertenciaDeModalidad } from "@compartido/arca/modalidadArca";
 import { arcaOperacionesAPI, NOMBRE_OPERACION_ARCA, type DatosOperacionArca, type EstadoOperacionArca, type OperacionArca, type ReferenciaContratoArca, type RelacionParaOperar, type RespuestaPlanArca } from "../../api/arcaOperaciones";
 
 /*
@@ -264,6 +265,16 @@ export const OperacionArcaModal: React.FC<Props> = ({ isOpen, onClose, ref_, zIn
                 <div>
                   <p className="font-bold">Esta relación no tiene contrato en WeProdu</p>
                   <p className="text-sm mt-0.5">La operación se hace en ARCA igual, pero el resultado no se va a poder guardar en ningún contrato de WeProdu. Queda sólo en el registro de operaciones (Bajas ARCA › Operaciones), que es también lo que impide mandarla dos veces.</p>
+                </div>
+              </div>
+            )}
+            {/* MODALIDAD DE DIRECTORES (LRT, 22/11/2026): la misma advertencia que lleva la fila en Bajas ARCA. No frena nada. */}
+            {advertenciaDeModalidad(info.espejo?.modalidadTexto) && (
+              <div className="rounded-lg border-2 border-amber-400 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-600 p-3 text-amber-900 dark:text-amber-200 flex items-start gap-2">
+                <FontAwesomeIcon icon={faTriangleExclamation} className="h-5 w-5 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-bold">{advertenciaDeModalidad(info.espejo?.modalidadTexto)}</p>
+                  <p className="text-sm mt-0.5">En ARCA esta relación está declarada como «{info.espejo?.modalidadTexto}».</p>
                 </div>
               </div>
             )}

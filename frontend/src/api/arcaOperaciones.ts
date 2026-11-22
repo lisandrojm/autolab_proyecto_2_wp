@@ -23,14 +23,19 @@ export interface ReferenciaContratoArca {
   BAJAS ARCA: la lista (`GET /arca/operaciones/lista`, `server/src/services/arca/listaBajasArca.ts`). Una fila por
   relación viva en ARCA sobre la que se puede operar, cada una con exactamente una situación. Todo lo decide el server.
 */
-export type SituacionBajaArca = 1 | 2 | 3 | 4 | 5;
+export type SituacionBajaArca = 1 | 2 | 3 | 4 | 5 | 6;
 export const SITUACIONES_BAJA_ARCA: Record<SituacionBajaArca, string> = {
   1: "Terminado en WeProdu",
   2: "Termina antes de su fecha",
   3: "Baja presentada, sin confirmar",
   4: "Sin contrato en WeProdu",
   5: "Indeterminado vigente",
+  6: "Plazo vigente",
 };
+
+/** Por qué una relación viva está en la lista sin poder operarse desde acá (botón deshabilitado). */
+export type MotivoBloqueoBajaArca = "varios_contratos" | "varios_proyectos" | "baja_presentada" | "no_se_opera";
+export type EnWeproduBajaArca = "con_contrato" | "sin_contrato" | "sin_ficha";
 
 export interface FilaBajaArca {
   clave: string;
@@ -41,32 +46,27 @@ export interface FilaBajaArca {
   userId: string | null;
   /** La persona no tiene ficha en WeProdu (distinto de «ficha sin contrato con esa alta»). */
   sinFicha: boolean;
+  /** Qué hay en WeProdu de esta relación: un contrato (o varios), la ficha sin ese contrato, o ni la ficha. */
+  enWeprodu: EnWeproduBajaArca;
   inicio: string;
   finArca: string;
   modalidadArca: string;
-  /** El tipo de contrato de WeProdu; "" sin contrato (se muestra la modalidad de ARCA). */
+  /** El tipo por el que se filtra y se ordena: el de WeProdu si hay contrato; si no, la modalidad que declara ARCA. */
+  tipo: string;
+  /** El nombre del tipo de contrato de WeProdu; "" sin contrato (se muestra la modalidad de ARCA). */
   tipoContrato: string;
   proyecto: string;
+  proyectos: string[];
   finWeprodu: string;
   diasDesdeFin: number | null;
-  situacion: SituacionBajaArca;
+  /** `null` = fila bloqueada (ver `bloqueo`). */
+  situacion: SituacionBajaArca | null;
+  bloqueo: { motivo: MotivoBloqueoBajaArca; etiqueta: string; texto: string } | null;
   detalle: string;
+  /** Advertencia visible en la fila y en el panel (la modalidad de directores, LRT). "" si ninguna. */
+  advertencia: string;
   /** Con qué contrato abre el panel; `null` = modo «sin contrato». */
   contrato: { userProjectId: string; contratoKey: string | null; posicion: number } | null;
-}
-
-export type MotivoFueraBajaArca = "cerrada" | "varios_contratos" | "varios_proyectos" | "plazo_vigente" | "baja_presentada" | "no_se_opera";
-
-/** Una relación viva en ARCA que NO está en la lista, y por qué. */
-export interface FilaFueraBajaArca {
-  clave: string;
-  empleadora: string;
-  cuil: string;
-  persona: string;
-  inicio: string;
-  finArca: string;
-  motivo: MotivoFueraBajaArca;
-  texto: string;
 }
 
 export interface ConteosBajaArca {
@@ -75,9 +75,14 @@ export interface ConteosBajaArca {
   s3: number;
   s4: number;
   s5: number;
-  /** La suma de 1 a 4: el número del menú. La 5 es inventario. */
+  /** Las fotos guardadas antes de la situación 6 no lo traen. */
+  s6?: number;
+  /** La suma de 1 a 4: el número del menú. La 5 y la 6 son inventario. */
   pendientes: number;
-  fuera: Partial<Record<MotivoFueraBajaArca, number>>;
+  /** Las filas sin situación (botón deshabilitado), por motivo. */
+  bloqueadas?: Partial<Record<MotivoBloqueoBajaArca, number>>;
+  /** Todas las filas: tiene que ser igual a las relaciones vivas del espejo. */
+  total?: number;
 }
 
 export interface MovimientosBajaArca {
@@ -88,9 +93,11 @@ export interface MovimientosBajaArca {
 
 export interface ListaBajasArca {
   hoy: string;
+  /** TODAS las relaciones vivas del espejo: con situación (1 a 6) o bloqueadas. */
   filas: FilaBajaArca[];
-  fuera: FilaFueraBajaArca[];
   conteos: ConteosBajaArca;
+  /** Las relaciones vivas del espejo, contadas aparte: si no coincide con las filas, la lista tiene un error. */
+  vivasEnEspejo: number;
   /** La foto de la última corrida automática (06:00), si hubo. */
   corrida: { el: string; conteos: ConteosBajaArca } | null;
   /** Qué cambió entre esa foto y ahora. */
@@ -103,6 +110,8 @@ export interface RelacionEspejoArca {
   inicio: string;
   fin: string;
   situacionBaja: string;
+  /** La modalidad como la declara ARCA (texto): para la advertencia de directores (LRT). */
+  modalidadTexto?: string;
   retribucion?: number | null;
   sincronizadoEl?: string;
 }
