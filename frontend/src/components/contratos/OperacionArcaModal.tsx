@@ -41,6 +41,9 @@ const Chip: React.FC<{ texto: string; tono?: "verde" | "rojo" | "ambar" | "gris"
   return <span title={title} className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${clase}`}>{texto}</span>;
 };
 
+/** Un botón deshabilitado del pie: sin el color de botón (ni el primario), opaco, y que no invite a apretarlo. */
+const CLASE_DESHABILITADO = "text-sm inline-flex items-center gap-1.5 font-medium py-2 px-4 rounded border border-gray-300 bg-transparent text-gray-500 opacity-50 cursor-not-allowed dark:border-gray-600 dark:text-gray-400";
+
 const tonoDeMarca = (r?: string) => (r === "presentada" ? "verde" : r === "fallida" ? "rojo" : r === "anulada" ? "gris" : r ? "ambar" : "gris");
 
 export const OperacionArcaModal: React.FC<Props> = ({ isOpen, onClose, ref_, zIndex = 80, onHecho }) => {
@@ -192,7 +195,13 @@ export const OperacionArcaModal: React.FC<Props> = ({ isOpen, onClose, ref_, zIn
 
   const corriendo = !!estado?.corriendo;
   const res = estado && !estado.corriendo ? estado.resultado : undefined;
-  const puedeEnviar = !!plan?.plan.puede && !corriendo && !arrancando;
+  /*
+    QUÉ FALTA, EN EL TITLE DEL BOTÓN DESHABILITADO (22/11/2026, pedido del usuario). Un «Enviar a ARCA» deshabilitado
+    que se ve igual que uno activo enseña que apretarlo no hace nada, hasta el día que sí lo hace: deshabilitado
+    pierde el estilo de botón, queda opaco y dice qué falta, en el orden en que se resuelve.
+  */
+  const faltaParaProbar = corriendo || arrancando ? "Hay una operación de ARCA en curso: esperá a que termine." : !plan ? "Primero tocá «Ver plan»: así se ve exactamente qué se mandaría." : !plan.plan.puede ? plan.plan.motivo || "El plan no se puede mandar a ARCA." : "";
+  const faltaParaEnviar = faltaParaProbar || (!probadoEnSeco ? "Hacé primero la prueba en seco: así se ve lo que ARCA tiene y lo que se va a escribir." : "");
   const marcas = info?.contrato.marcas;
   const c = info?.contrato;
   const ev = estado?.eventos || [];
@@ -219,14 +228,19 @@ export const OperacionArcaModal: React.FC<Props> = ({ isOpen, onClose, ref_, zIn
           {planeando ? <FontAwesomeIcon icon={faSpinner} spin className="h-3.5 w-3.5" /> : null}
           Ver plan
         </button>
-        <button type="button" onClick={() => arrancar(false)} disabled={!puedeEnviar} title="Entra a ARCA, lee la relación, completa el formulario, muestra lo que mandaría y lo cancela. Nada queda en ARCA." className="btn-secondary text-sm inline-flex items-center gap-1.5">
-          <FontAwesomeIcon icon={faFlask} className="h-3.5 w-3.5" />
-          Probar en seco
-        </button>
-        <button type="button" onClick={() => arrancar(true)} disabled={!puedeEnviar || !probadoEnSeco} title={probadoEnSeco ? "Confirma en ARCA. No se deshace." : "Primero probá en seco: así se ve lo que ARCA tiene y lo que se va a escribir."} className="btn-primary text-sm inline-flex items-center gap-1.5">
-          <FontAwesomeIcon icon={faPaperPlane} className="h-3.5 w-3.5" />
-          Enviar a ARCA
-        </button>
+        {/* El title va también en un span: hay navegadores que no muestran el de un botón deshabilitado. */}
+        <span title={faltaParaProbar || undefined}>
+          <button type="button" onClick={() => arrancar(false)} disabled={!!faltaParaProbar} title={faltaParaProbar || "Entra a ARCA, lee la relación, completa el formulario, muestra lo que mandaría y lo cancela. Nada queda en ARCA."} className={faltaParaProbar ? CLASE_DESHABILITADO : "btn-secondary text-sm inline-flex items-center gap-1.5"}>
+            <FontAwesomeIcon icon={faFlask} className="h-3.5 w-3.5" />
+            Probar en seco
+          </button>
+        </span>
+        <span title={faltaParaEnviar || undefined}>
+          <button type="button" onClick={() => arrancar(true)} disabled={!!faltaParaEnviar} title={faltaParaEnviar || "Confirma en ARCA. No se deshace."} className={faltaParaEnviar ? CLASE_DESHABILITADO : "btn-primary text-sm inline-flex items-center gap-1.5"}>
+            <FontAwesomeIcon icon={faPaperPlane} className="h-3.5 w-3.5" />
+            Enviar a ARCA
+          </button>
+        </span>
       </div>
     </div>
   );
