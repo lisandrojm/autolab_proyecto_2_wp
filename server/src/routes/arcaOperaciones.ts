@@ -145,7 +145,7 @@ router.get("/historial", requireTenant, authenticateToken, permiso, async (req: 
     const logs: any[] = await ArcaAltasLog.find(filtro)
       .sort({ createdAt: -1 })
       .limit(limite)
-      .select("tipo createdAt usuarioId empresaId empresaCuit empresaRazonSocial enSeco resultado irreversible error textoArca contratos duracionMs operacion.que operacion.payload operacion.relacion operacion.acuse operacion.clase operacion.cambios operacion.leidoDe operacion.pantallaDesconocida operacion.textoNuevo operacion.enRojo")
+      .select("tipo createdAt usuarioId empresaId empresaCuit empresaRazonSocial enSeco resultado irreversible error textoArca contratos duracionMs operacion.que operacion.sinContrato operacion.payload operacion.relacion operacion.acuse operacion.clase operacion.cambios operacion.leidoDe operacion.pantallaDesconocida operacion.textoNuevo operacion.enRojo")
       .populate("usuarioId", "firstName lastName")
       .lean();
     res.json(

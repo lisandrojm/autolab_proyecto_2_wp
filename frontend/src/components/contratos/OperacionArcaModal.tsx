@@ -257,6 +257,16 @@ export const OperacionArcaModal: React.FC<Props> = ({ isOpen, onClose, ref_, zIn
         )}
         {info && c && (
           <>
+            {/* SIN CONTRATO (22/11/2026): bien visible, porque cambia dónde queda el resultado. */}
+            {info.sinContrato && (
+              <div className="rounded-lg border-2 border-amber-400 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-600 p-3 text-amber-900 dark:text-amber-200 flex items-start gap-2">
+                <FontAwesomeIcon icon={faTriangleExclamation} className="h-5 w-5 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-bold">Esta relación no tiene contrato en WeProdu</p>
+                  <p className="text-sm mt-0.5">La operación se hace en ARCA igual, pero el resultado no se va a poder guardar en ningún contrato de WeProdu. Queda sólo en el registro de operaciones (A.R.C.A Bajas › Operaciones), que es también lo que impide mandarla dos veces.</p>
+                </div>
+              </div>
+            )}
             {/* El contrato y lo que ARCA sabe */}
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-1.5">
               <p className="font-semibold text-gray-900 dark:text-white">

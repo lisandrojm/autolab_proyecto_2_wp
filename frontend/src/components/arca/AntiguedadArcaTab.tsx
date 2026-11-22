@@ -73,6 +73,16 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
     }
   };
 
+  /** Después de una operación en ARCA: vuelve a leer las relaciones de esa persona (el ícono y las marcas cambian). */
+  const recargarRelaciones = async (cuil: string) => {
+    try {
+      const lista = await arcaRelacionesAPI.relacionesDe(cuil);
+      setRelaciones((r) => ({ ...r, [cuil]: lista }));
+    } catch {
+      /* Si falla, queda lo que había: al volver a desplegar se pide de nuevo. */
+    }
+  };
+
   const { ordenados, orden, alternar } = useOrdenTabla(
     filas,
     useMemo(() => ({
@@ -160,7 +170,7 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
                         {rel === "cargando" || !rel ? (
                           <span className="text-xs text-gray-500"><FontAwesomeIcon icon={faSpinner} spin /> Cargando relaciones…</span>
                         ) : (
-                          <TablaRelacionesArca relaciones={rel} razonSocialDe={razonSocialDe} />
+                          <TablaRelacionesArca relaciones={rel} razonSocialDe={razonSocialDe} operable onHecho={() => void recargarRelaciones(f.cuil)} />
                         )}
                       </td>
                     </tr>

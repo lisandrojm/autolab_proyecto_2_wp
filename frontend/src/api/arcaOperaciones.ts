@@ -11,9 +11,55 @@ export type OperacionArca = "baja" | "modificacion" | "anulacion";
 export const NOMBRE_OPERACION_ARCA: Record<OperacionArca, string> = { baja: "Baja", modificacion: "Modificación", anulacion: "Anulación" };
 
 export interface ReferenciaContratoArca {
+  /** "" en modo «sin contrato». */
   userProjectId: string;
   contratoKey?: string | null;
   contractIndex?: number | null;
+  /** Modo «sin contrato»: la relación de ARCA misma (empleadora, CUIL y fecha de inicio), cuando no hay contrato en WeProdu. */
+  relacion?: { empleadoraCuit: string; cuil: string; fechaInicio: string } | null;
+}
+
+/** La decisión de la regla compartida (`server/src/compartido/arca/relacionParaOperar.ts`). */
+export interface DecisionRelacionArca {
+  puede: boolean;
+  motivo: string;
+  via: "weprodu" | "verificacion" | "adoptada" | "espejo" | null;
+}
+
+/** Un contrato de WeProdu de una relación de ARCA (misma persona, empleadora y fecha de alta). */
+export interface ContratoDeRelacionArca {
+  userProjectId: string;
+  contratoKey: string | null;
+  posicion: number;
+  proyecto: string;
+  contrato: string;
+  alta: string;
+  baja: string;
+  relacionArca: DecisionRelacionArca;
+}
+
+/** Cómo se opera una relación vista desde ARCA: con su contrato, eligiendo entre varios, o sin contrato. */
+export interface ComoSeOperaArca {
+  modo: "contrato" | "elegir" | "sin_contrato" | null;
+  puede: boolean;
+  motivo: string;
+  contratos: ContratoDeRelacionArca[];
+}
+
+/** Una relación de la cola de A.R.C.A Bajas (`GET /arca/operaciones/cola`). */
+export interface RelacionOperableArca extends ComoSeOperaArca {
+  clave: string;
+  empleadoraCuit: string;
+  empleadora: string;
+  cuil: string;
+  persona: string;
+  userId: string | null;
+  inicio: string;
+  fin: string;
+  situacionBaja: string;
+  modalidadContrato: string;
+  estado: "abierta" | "fin_futuro" | "cerrada_reciente" | "cerrada";
+  diasDesdeFinContrato: number | null;
 }
 
 export interface RelacionEspejoArca {
@@ -45,6 +91,8 @@ export interface RelacionParaOperar {
   camposModificables: Array<{ campo: string; etiqueta: string }>;
   enSecoForzado: boolean;
   ocupadaPor: string | null;
+  /** La relación no tiene contrato en WeProdu: el resultado no se guarda en ningún contrato. */
+  sinContrato?: boolean;
 }
 
 export interface PlanOperacionArca {
@@ -125,14 +173,20 @@ export interface RegistroOperacionArca {
   error: string;
   textoArca: string;
   contrato: { userProjectId: string; contractIndex: number; contratoKey: string | null; cuil: string; nombre: string; resultado: string; motivo: string } | null;
-  operacion: { que?: "alta" | "baja"; payload?: Record<string, unknown>; relacion?: Record<string, unknown>; acuse?: Record<string, unknown>; clase?: string; cambios?: Array<{ campo: string; antes: string; despues: string }>; leidoDe?: string; pantallaDesconocida?: boolean };
+  operacion: { sinContrato?: boolean; que?: "alta" | "baja"; payload?: Record<string, unknown>; relacion?: Record<string, unknown>; acuse?: Record<string, unknown>; clase?: string; cambios?: Array<{ campo: string; antes: string; despues: string }>; leidoDe?: string; pantallaDesconocida?: boolean };
   duracionMs?: number;
 }
 
 export const arcaOperacionesAPI = {
   /** El contrato, sus marcas, lo que el espejo sabe y la tabla de motivos de baja. No toca ARCA. */
   async relacion(ref: ReferenciaContratoArca): Promise<RelacionParaOperar> {
-    const { data } = await axios.get("/arca/operaciones/relacion", { params: { userProjectId: ref.userProjectId, contratoKey: ref.contratoKey || undefined, contractIndex: ref.contratoKey ? undefined : ref.contractIndex ?? undefined } });
+    const sinContrato = !ref.userProjectId && ref.relacion ? { relCuit: ref.relacion.empleadoraCuit, relCuil: ref.relacion.cuil, relInicio: ref.relacion.fechaInicio } : {};
+    const { data } = await axios.get("/arca/operaciones/relacion", { params: { userProjectId: ref.userProjectId || undefined, contratoKey: ref.contratoKey || undefined, contractIndex: ref.contratoKey ? undefined : ref.contractIndex ?? undefined, ...sinContrato } });
+    return data;
+  },
+  /** La cola de A.R.C.A Bajas: las relaciones abiertas, con fin futuro o cerradas hace poco, y cómo se opera cada una. No toca ARCA. */
+  async cola(): Promise<{ hoy: string; relaciones: RelacionOperableArca[] }> {
+    const { data } = await axios.get("/arca/operaciones/cola");
     return data;
   },
   /** Qué se mandaría y si se puede. No toca ARCA. */

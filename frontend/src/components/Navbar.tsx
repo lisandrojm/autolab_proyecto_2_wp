@@ -164,7 +164,7 @@ const USUARIOS_PATHS_GENERAL = [USUARIOS_PATH, '/areas', '/modalidades', '/shift
  */
 const CONTRATACION_BLOQUES: { titulo: string; paths: string[] }[] = [
   { titulo: 'Flujo', paths: BANDEJAS.map((b) => b.ruta) },
-  { titulo: 'Gestión', paths: ['/admin/renovaciones', '/admin/recibos-sueldo'] },
+  { titulo: 'Gestión', paths: ['/admin/renovaciones', '/admin/recibos-sueldo', '/admin/arca-bajas'] },
   { titulo: 'Automatizaciones y archivo', paths: ['/admin/validacion-obras-sociales', '/admin/presentaciones-arca', '/admin/descargas-arca', '/documents', '/admin/plantillas-equipo', '/admin/contratos-sin-dias'] },
 ];
 const CONTRATACION_PATHS = CONTRATACION_BLOQUES.flatMap((b) => b.paths);
@@ -496,6 +496,8 @@ export const MobileNavbar: React.FC = () => {
       if (puedeAbrir('/admin/recibos-sueldo')) base.push({ permiso: 'admin_contracts:view', path: '/admin/recibos-sueldo', icon: faReceipt, label: 'Recibos de sueldo', scope: 'global' });
       // Los contratos vencidos sin otro vigente en el proyecto: el acceso simple para renovarlos.
       if (puedeAbrir('/admin/renovaciones')) base.push({ permiso: 'admin_contracts:view', path: '/admin/renovaciones', icon: faRotateRight, label: 'Renovaciones', scope: 'global' });
+      // La cola de bajas en ARCA: contratos terminados con la relación abierta, las operaciones hechas y lo que hay que revisar.
+      if (puedeAbrir('/admin/arca-bajas')) base.push({ permiso: 'admin_contracts:view', path: '/admin/arca-bajas', icon: faLandmark, label: 'A.R.C.A Bajas', scope: 'global' });
       // Las altas que se presentan solas a las 14 h del día de alta, con su cuenta regresiva.
       if (puedeAbrir('/admin/presentaciones-arca')) base.push({ permiso: 'admin_contracts:view', path: '/admin/presentaciones-arca', icon: faClock, label: 'A.R.C.A Altas Automáticas', scope: 'global' });
       if (puedeAbrir('/admin/descargas-arca')) base.push({ permiso: 'admin_contracts:view', path: '/admin/descargas-arca', icon: faFileArrowDown, label: 'A.R.C.A Descargas Automáticas', scope: 'global' });

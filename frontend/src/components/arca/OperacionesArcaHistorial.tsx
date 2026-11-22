@@ -108,6 +108,7 @@ export const OperacionesArcaHistorial: React.FC<{ userProjectId?: string; contra
                     {!userProjectId && (
                       <td className="py-2 pr-3">
                         {f.contrato?.nombre || "—"}
+                        {f.operacion?.sinContrato && <span className="ml-2 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 text-[10px] font-bold uppercase" title="La relación no tenía contrato en WeProdu: el resultado quedó sólo en este registro.">sin contrato</span>}
                         <div className="text-gray-500">{f.contrato?.cuil}</div>
                       </td>
                     )}

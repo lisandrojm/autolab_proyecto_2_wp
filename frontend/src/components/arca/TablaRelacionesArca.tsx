@@ -1,6 +1,7 @@
 import React from "react";
 import type { RelacionLaboral } from "../../api/arcaRelaciones";
 import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
+import { BotonOperarRelacionArca } from "./OperarRelacionArca";
 
 /*
   EL DETALLE DE LAS RELACIONES LABORALES DE UNA PERSONA SEGÚN ARCA, de la más nueva a la más vieja (así
@@ -12,7 +13,12 @@ export const fechaCortaArca = (iso: string | null | undefined) => (iso && /^\d{4
 const importe = (n: number | null) => (n === null || n === undefined ? "—" : n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 const th = "px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 text-left";
 
-export const TablaRelacionesArca: React.FC<{ relaciones: RelacionLaboral[]; razonSocialDe: (cuit: string) => string }> = ({ relaciones, razonSocialDe }) => (
+/*
+  CON `operable` (Antigüedad ARCA, 22/11/2026) cada relación abierta o con algo que operar lleva el ícono «Relación en
+  ARCA», que abre el mismo panel que la bandeja Contratos. Una relación cerrada hace años no lo lleva: la celda queda
+  vacía. Lo decide el server (`operar`), con la misma regla en los tres lugares.
+*/
+export const TablaRelacionesArca: React.FC<{ relaciones: RelacionLaboral[]; razonSocialDe: (cuit: string) => string; operable?: boolean; onHecho?: () => void }> = ({ relaciones, razonSocialDe, operable = false, onHecho }) => (
   <TablaConEncabezadoFijo tabla="min-w-full text-xs">
     <thead>
       <tr>
@@ -24,6 +30,7 @@ export const TablaRelacionesArca: React.FC<{ relaciones: RelacionLaboral[]; razo
         <th className={th}>Obra social</th>
         <th className={th}>Retribución</th>
         <th className={th}>Baja</th>
+        {operable && <th className={th}>ARCA</th>}
       </tr>
     </thead>
     <tbody>
@@ -42,6 +49,11 @@ export const TablaRelacionesArca: React.FC<{ relaciones: RelacionLaboral[]; razo
             {importe(r.retribucionPactada)} <span className="text-gray-400">{r.modLiquidacion}</span>
           </td>
           <td className="px-4 py-2 max-w-[220px]">{r.situacionBaja}</td>
+          {operable && (
+            <td className="px-4 py-2 whitespace-nowrap">
+              <BotonOperarRelacionArca relacion={{ empleadoraCuit: r.empleadoraCuit, cuil: r.cuil, inicio: String(r.fechaInicio || "").slice(0, 10) }} operar={r.operar} onHecho={onHecho} />
+            </td>
+          )}
         </tr>
       ))}
     </tbody>
