@@ -115,6 +115,8 @@ const tenantSchema = new Schema({
                 reintento: { dia: { type: String }, numero: { type: Number }, desde: { type: Date } },
                 // Los totales de la auditoría ARCA (etapa 5), para el contador.
                 auditoria: { el: { type: Date }, totales: { type: Schema.Types.Mixed } },
+                // Bajas ARCA: conteos por situación, la foto de la corrida de las 06:00 y los movimientos entre corridas.
+                bajasArca: { actual: { type: Schema.Types.Mixed }, corrida: { type: Schema.Types.Mixed }, movimientos: { type: [Schema.Types.Mixed], default: undefined } },
             },
         },
         dropboxSign: {

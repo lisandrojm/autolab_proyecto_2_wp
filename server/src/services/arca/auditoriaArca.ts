@@ -16,6 +16,10 @@
  *                       se solapa con contratos de esa persona y empleadora: la misma relación con otra
  *                       fecha (Valentina Pellegrini: 07/02 vs 10/02/2025) o un tramo de ARCA que WeProdu
  *                       tiene por jornadas. No se alinea sola (decisión del 18/11).
+ *  - relacionVariosContratos una relación VIVA en ARCA (abierta, o con fin de hoy en adelante) con VARIOS contratos
+ *                       en WeProdu de la misma persona, empleadora y fecha de alta (22/11/2026). Bajas ARCA no las
+ *                       lista: no se pueden dar de baja desde WeProdu hasta anular el duplicado. Sale de la misma
+ *                       función que arma esa lista (`listaBajasArca`), para que los dos lugares no difieran.
  *  - discrepanciasFrame lo que FRAME manda distinto de WeProdu y el import no pisó (vacío mientras el import
  *                       esté pausado; el contador tenía que vivir en un lugar que alguien mire).
  *
@@ -39,6 +43,7 @@ import { fechaISO } from "../../utils/contratoVigencia.js";
 import { UMBRAL_GRANULARIDAD_DIAS } from "../../utils/bajasArcaContrato.js";
 import { relacionesSinContratoExacto } from "../../utils/auditoriaArca.js";
 import { cargarContextoArca, planDeBajasArca, type ItemBajaArca } from "./bajasArcaContratos.js";
+import { listaBajasArca } from "./listaBajasArca.js";
 
 const BASE = "integrations.arcaSimplificacion.sincronizacionRelaciones";
 const dig = (v: unknown) => String(v ?? "").replace(/\D/g, "");
@@ -58,6 +63,18 @@ export interface ItemRelacionSinContrato {
   situacionBaja: string;
   /** Los contratos solapados, del más cercano al más lejano. `dias` positivo = ARCA empieza después. */
   contratos: { contratoKey: string; userProjectId: string; posicion: number; proyecto: string; contrato: string; alta: string; baja: string; dias: number }[];
+}
+
+/** Una relación viva en ARCA con varios contratos en WeProdu (misma persona, empleadora y fecha de alta). */
+export interface ItemRelacionVariosContratos {
+  userId: string;
+  persona: string;
+  cuil: string;
+  empleadora: string;
+  empleadoraCuit: string;
+  inicio: string;
+  fin: string;
+  contratos: { contratoKey: string | null; userProjectId: string; posicion: number; proyecto: string; contrato: string; alta: string; baja: string }[];
 }
 
 export interface ItemDiscrepanciaFrame {
@@ -80,6 +97,8 @@ export interface TotalesAuditoria {
   revisionManual: number;
   granularidad: number;
   relacionSinContrato: number;
+  /** Desde el 22/11/2026. Los totales guardados antes no lo traen. */
+  relacionVariosContratos?: number;
   discrepanciasFrame: number;
   total: number;
   /** Altas hechas a mano donde ARCA termina después que el contrato: histórico, sin acción. NO suma al total. */
@@ -94,6 +113,7 @@ export interface AuditoriaArca {
   revisionManual: ItemAuditoriaBaja[];
   granularidad: ItemAuditoriaBaja[];
   relacionSinContrato: ItemRelacionSinContrato[];
+  relacionVariosContratos: ItemRelacionVariosContratos[];
   discrepanciasFrame: ItemDiscrepanciaFrame[];
   totales: TotalesAuditoria;
 }
@@ -102,8 +122,21 @@ const sinCrudos = ({ bajaCruda: _b, altaCruda: _a, ...x }: ItemBajaArca): ItemAu
 
 export async function auditoriaArca(tenantId: Types.ObjectId | string): Promise<AuditoriaArca> {
   const tid = new Types.ObjectId(String(tenantId));
-  const ctx = await cargarContextoArca(tid);
+  // La lista de Bajas ARCA se calcula en paralelo: de ahí salen las relaciones con varios contratos.
+  const [ctx, bajas] = await Promise.all([cargarContextoArca(tid), listaBajasArca(tid)]);
   const plan = await planDeBajasArca(tid, { contexto: ctx });
+  const relacionVariosContratos: ItemRelacionVariosContratos[] = bajas.fuera
+    .filter((x) => x.motivo === "varios_contratos")
+    .map((x) => ({
+      userId: x.userId || "",
+      persona: x.persona,
+      cuil: x.cuil,
+      empleadora: x.empleadora,
+      empleadoraCuit: x.empleadoraCuit,
+      inicio: x.inicio,
+      fin: x.finArca,
+      contratos: x.contratos.map((c) => ({ contratoKey: c.contratoKey, userProjectId: c.userProjectId, posicion: c.posicion, proyecto: c.proyecto, contrato: c.contrato, alta: c.alta, baja: c.baja })),
+    }));
 
   // Lo que sale del clasificador de bajas.
   const faltaBajaArca = plan.items.filter((x) => x.tipo === "arca_abierta").map(sinCrudos);
@@ -180,11 +213,12 @@ export async function auditoriaArca(tenantId: Types.ObjectId | string): Promise<
     revisionManual: revisionManual.length,
     granularidad: granularidad.length,
     relacionSinContrato: relacionSinContrato.length,
+    relacionVariosContratos: relacionVariosContratos.length,
     discrepanciasFrame: discrepanciasFrame.length,
-    total: faltaBajaArca.length + revisionManual.length + granularidad.length + relacionSinContrato.length + discrepanciasFrame.length,
+    total: faltaBajaArca.length + revisionManual.length + granularidad.length + relacionSinContrato.length + relacionVariosContratos.length + discrepanciasFrame.length,
     historicasArcaPosterior,
   };
-  return { hoy: ctx.hoy, espejoAl: ctx.espejoAl, calculadoEl: new Date().toISOString(), faltaBajaArca, revisionManual, granularidad, relacionSinContrato, discrepanciasFrame, totales };
+  return { hoy: ctx.hoy, espejoAl: ctx.espejoAl, calculadoEl: new Date().toISOString(), faltaBajaArca, revisionManual, granularidad, relacionSinContrato, relacionVariosContratos, discrepanciasFrame, totales };
 }
 
 /** Deja los totales en el tenant: es lo que lee el contador sin recalcular. */
@@ -203,7 +237,7 @@ export async function recalcularAuditoriaArca(tenantId: string): Promise<Totales
   try {
     const a = await auditoriaArca(tenantId);
     await guardarTotalesAuditoria(tenantId, a.totales);
-    console.log(`[auditoria-arca] ${tenantId}: ${a.totales.total} para mirar (falta baja en ARCA ${a.totales.faltaBajaArca} · revisión manual ${a.totales.revisionManual} · granularidad ${a.totales.granularidad} · relación sin contrato exacto ${a.totales.relacionSinContrato} · FRAME ${a.totales.discrepanciasFrame})`);
+    console.log(`[auditoria-arca] ${tenantId}: ${a.totales.total} para mirar (falta baja en ARCA ${a.totales.faltaBajaArca} · revisión manual ${a.totales.revisionManual} · granularidad ${a.totales.granularidad} · relación sin contrato exacto ${a.totales.relacionSinContrato} · relación con varios contratos ${a.totales.relacionVariosContratos ?? 0} · FRAME ${a.totales.discrepanciasFrame})`);
     return a.totales;
   } catch (e: any) {
     console.error(`[auditoria-arca] ${tenantId}: falló:`, e?.message || e);

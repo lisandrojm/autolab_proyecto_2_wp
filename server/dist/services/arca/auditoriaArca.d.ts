@@ -16,6 +16,10 @@
  *                       se solapa con contratos de esa persona y empleadora: la misma relación con otra
  *                       fecha (Valentina Pellegrini: 07/02 vs 10/02/2025) o un tramo de ARCA que WeProdu
  *                       tiene por jornadas. No se alinea sola (decisión del 18/11).
+ *  - relacionVariosContratos una relación VIVA en ARCA (abierta, o con fin de hoy en adelante) con VARIOS contratos
+ *                       en WeProdu de la misma persona, empleadora y fecha de alta (22/11/2026). Bajas ARCA no las
+ *                       lista: no se pueden dar de baja desde WeProdu hasta anular el duplicado. Sale de la misma
+ *                       función que arma esa lista (`listaBajasArca`), para que los dos lugares no difieran.
  *  - discrepanciasFrame lo que FRAME manda distinto de WeProdu y el import no pisó (vacío mientras el import
  *                       esté pausado; el contador tenía que vivir en un lugar que alguien mire).
  *
@@ -56,6 +60,25 @@ export interface ItemRelacionSinContrato {
         dias: number;
     }[];
 }
+/** Una relación viva en ARCA con varios contratos en WeProdu (misma persona, empleadora y fecha de alta). */
+export interface ItemRelacionVariosContratos {
+    userId: string;
+    persona: string;
+    cuil: string;
+    empleadora: string;
+    empleadoraCuit: string;
+    inicio: string;
+    fin: string;
+    contratos: {
+        contratoKey: string | null;
+        userProjectId: string;
+        posicion: number;
+        proyecto: string;
+        contrato: string;
+        alta: string;
+        baja: string;
+    }[];
+}
 export interface ItemDiscrepanciaFrame {
     _id: string;
     userId: string;
@@ -75,6 +98,8 @@ export interface TotalesAuditoria {
     revisionManual: number;
     granularidad: number;
     relacionSinContrato: number;
+    /** Desde el 22/11/2026. Los totales guardados antes no lo traen. */
+    relacionVariosContratos?: number;
     discrepanciasFrame: number;
     total: number;
     /** Altas hechas a mano donde ARCA termina después que el contrato: histórico, sin acción. NO suma al total. */
@@ -88,6 +113,7 @@ export interface AuditoriaArca {
     revisionManual: ItemAuditoriaBaja[];
     granularidad: ItemAuditoriaBaja[];
     relacionSinContrato: ItemRelacionSinContrato[];
+    relacionVariosContratos: ItemRelacionVariosContratos[];
     discrepanciasFrame: ItemDiscrepanciaFrame[];
     totales: TotalesAuditoria;
 }

@@ -1,8 +1,8 @@
 /**
  * LAS RELACIONES DE ARCA SOBRE LAS QUE SE PUEDE OPERAR, VISTAS DESDE ARCA (22/11/2026).
  *
- * La bandeja Contratos parte del contrato. Antigüedad ARCA y A.R.C.A Bajas parten de la RELACIÓN (una fila del
- * espejo de Relaciones Laborales), y una relación puede tener un contrato en WeProdu, varios o ninguno:
+ * Gestión › Bajas ARCA (`listaBajasArca.ts`) parte de la RELACIÓN (una fila del espejo de Relaciones Laborales), y
+ * una relación puede tener un contrato en WeProdu, varios o ninguno:
  *
  *   · `contrato`      un solo contrato con esa persona, empleadora y fecha de alta: el panel abre con él.
  *   · `elegir`        varios: hay que elegir cuál antes de abrir.
@@ -11,8 +11,8 @@
  *                     de operaciones (`registroOperaciones.ts`).
  *   · `null`          no hay nada que operar (y `motivo` dice por qué).
  *
- * LA DECISIÓN ES LA DE SIEMPRE: `compartido/arca/relacionParaOperar.ts`, la misma que usan el panel y la bandeja
- * Contratos, contrato por contrato. Acá sólo se arma con qué llamarla. Un contrato de Servicios con la misma fecha
+ * LA DECISIÓN ES LA DE SIEMPRE: `compartido/arca/relacionParaOperar.ts`, la misma que usa el panel, contrato por
+ * contrato. Acá sólo se arma con qué llamarla. Un contrato de Servicios con la misma fecha
  * de alta no cuenta como contrato de la relación: Servicios no tiene relación en ARCA.
  *
  * LIVIANA A PROPÓSITO (la base está lejos): de los contratos sólo viajan los que empiezan en la fecha de inicio de
@@ -21,7 +21,7 @@
 import { Types } from "mongoose";
 import { type RelacionParaOperar } from "../../compartido/arca/relacionParaOperar.js";
 import { type MarcasDeRegistro } from "./registroOperaciones.js";
-/** Hasta cuántos días atrás una relación cerrada se sigue mostrando (apagado por defecto en la cola). */
+/** Hasta cuántos días atrás una relación cerrada cuenta como «cerrada hace poco» (`estadoDeRelacion`). */
 export declare const DIAS_CERRADA_RECIENTE = 30;
 export type EstadoDeRelacion = "abierta" | "fin_futuro" | "cerrada_reciente" | "cerrada";
 export type ModoDeOperar = "contrato" | "elegir" | "sin_contrato";
@@ -35,6 +35,12 @@ export interface ContratoDeRelacion {
     baja: string;
     /** La decisión de la regla compartida para ESTE contrato. */
     relacionArca: RelacionParaOperar;
+    /** La baja presentada desde WeProdu en este contrato (`bajaArcaPresentada`), si hay. */
+    bajaPresentada: {
+        resultado: string;
+        clase: string;
+        fecha: string;
+    } | null;
 }
 export interface RelacionOperable {
     clave: string;
@@ -57,6 +63,11 @@ export interface RelacionOperable {
     motivo: string;
     /** Modo `contrato` con el contrato ya terminado en WeProdu: cuántos días pasaron desde su fin. */
     diasDesdeFinContrato: number | null;
+    /** La baja de esta relación en el registro de operaciones (lo que hay cuando no tiene contrato donde marcarla). */
+    bajaEnRegistro: {
+        resultado: string;
+        fecha: string;
+    } | null;
 }
 /** El estado de una relación por su fecha de fin. Pura. */
 export declare function estadoDeRelacion(fin: string, hoy: string): EstadoDeRelacion;
@@ -78,6 +89,12 @@ export interface ContratoCandidato {
         resultado?: string;
         fecha?: unknown;
     } | null | undefined>;
+    /** La marca de la baja (`bajaArcaPresentada`), con su clase: para saber si quedó sin confirmar. */
+    marcaBaja?: {
+        resultado?: string;
+        clase?: string;
+        fecha?: unknown;
+    } | null;
 }
 /**
  * CÓMO SE OPERA UNA RELACIÓN, dados los contratos de WeProdu que empiezan ese día con esa empleadora. Pura: es la

@@ -9,7 +9,7 @@ import { enSecoForzado } from "../services/arca/corridaAltas.js";
 import { arrancarOperacionRelacion, corridaOperacionDe, detenerOperacion } from "../services/arca/corridaOperacionRelacion.js";
 import { OperacionInvalida, contextoDeOperacion, planOperacion, situacionesDeBaja } from "../services/arca/operacionRelacion.js";
 import { CAMPOS_MODIFICABLES, ETIQUETA_CAMPO, type TipoOperacion } from "../services/arca/reglasOperacionRelacion.js";
-import { relacionesOperables } from "../services/arca/relacionesOperables.js";
+import { guardadoBajasArca, listaBajasArcaConFoto } from "../services/arca/listaBajasArca.js";
 
 /**
  * BAJA, MODIFICACIÓN Y ANULACIÓN DE UNA RELACIÓN LABORAL EN ARCA (Relaciones Laborales → Modificaciones y Bajas,
@@ -21,6 +21,8 @@ import { relacionesOperables } from "../services/arca/relacionesOperables.js";
  *   GET  /arca/operaciones/corrida   estado y eventos de la operación en curso (o la última)
  *   POST /arca/operaciones/corrida/detener
  *   GET  /arca/operaciones/historial?userProjectId=&contratoKey=&limit=
+ *   GET  /arca/operaciones/lista           Bajas ARCA: una fila por relación viva, con su situación (no toca ARCA)
+ *   GET  /arca/operaciones/lista/resumen   los conteos guardados (el número del menú)
  */
 const router = Router();
 const permiso = requirePermission("admin_contracts:view");
@@ -120,14 +122,23 @@ router.post("/corrida/detener", requireTenant, authenticateToken, permiso, async
 });
 
 /**
- * GET /arca/operaciones/cola — LA COLA DE A.R.C.A BAJAS: las relaciones de ARCA abiertas, las que terminan de hoy en
- * adelante y las cerradas en los últimos 30 días, cada una con cómo se opera (`relacionesOperables.ts`). La pantalla
- * las reparte: «Pendientes» (un contrato terminado en WeProdu con la relación abierta en ARCA) y «Para revisar» (sin
- * contrato, o con varios). Sólo lee el espejo: no abre ARCA.
+ * GET /arca/operaciones/lista — BAJAS ARCA: una fila por relación viva en ARCA sobre la que se puede operar, cada una
+ * con su situación (1 a 5), los conteos, lo que quedó afuera y por qué, y qué cambió desde la corrida de las 06:00
+ * (`services/arca/listaBajasArca.ts`). Sólo lee el espejo: no abre ARCA. Deja los conteos guardados para el menú.
  */
-router.get("/cola", requireTenant, authenticateToken, permiso, async (req: AuthenticatedRequest & TenantRequest, res) => {
+router.get("/lista", requireTenant, authenticateToken, permiso, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
-    res.json(await relacionesOperables(req.tenantObjectId as Types.ObjectId));
+    res.json(await listaBajasArcaConFoto(req.tenantObjectId as Types.ObjectId));
+  } catch (e) {
+    errorDe(res, e);
+  }
+});
+
+/** GET /arca/operaciones/lista/resumen — los conteos guardados (barato: el número del menú). No recalcula. */
+router.get("/lista/resumen", requireTenant, authenticateToken, permiso, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const g = await guardadoBajasArca(req.tenantObjectId as Types.ObjectId);
+    res.json({ el: g.actual?.el || null, conteos: g.actual?.conteos || null });
   } catch (e) {
     errorDe(res, e);
   }

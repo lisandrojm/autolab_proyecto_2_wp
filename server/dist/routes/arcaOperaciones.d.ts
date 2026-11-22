@@ -8,6 +8,8 @@
  *   GET  /arca/operaciones/corrida   estado y eventos de la operación en curso (o la última)
  *   POST /arca/operaciones/corrida/detener
  *   GET  /arca/operaciones/historial?userProjectId=&contratoKey=&limit=
+ *   GET  /arca/operaciones/lista           Bajas ARCA: una fila por relación viva, con su situación (no toca ARCA)
+ *   GET  /arca/operaciones/lista/resumen   los conteos guardados (el número del menú)
  */
 declare const router: import("express-serve-static-core").Router;
 export { router as arcaOperacionesRoutes };

@@ -209,6 +209,8 @@ export interface ITenant extends Document {
         reintento?: { dia?: string; numero?: number; desde?: Date | null };
         /** Los totales de la auditoría ARCA (etapa 5): lo que lee el contador sin recalcular (`services/arca/auditoriaArca.ts`). */
         auditoria?: { el?: Date; totales?: any };
+        /** Bajas ARCA (`services/arca/listaBajasArca.ts`): los conteos por situación de ahora, la foto de la última corrida y qué cambió en cada una. */
+        bajasArca?: { actual?: { el?: Date; conteos?: any }; corrida?: { el?: Date; conteos?: any; filas?: any[] }; movimientos?: any[] };
       };
     };
     /**
@@ -458,6 +460,8 @@ const tenantSchema = new Schema<ITenant>(
           reintento: { dia: { type: String }, numero: { type: Number }, desde: { type: Date } },
           // Los totales de la auditoría ARCA (etapa 5), para el contador.
           auditoria: { el: { type: Date }, totales: { type: Schema.Types.Mixed } },
+          // Bajas ARCA: conteos por situación, la foto de la corrida de las 06:00 y los movimientos entre corridas.
+          bajasArca: { actual: { type: Schema.Types.Mixed }, corrida: { type: Schema.Types.Mixed }, movimientos: { type: [Schema.Types.Mixed], default: undefined } },
         },
       },
       dropboxSign: {

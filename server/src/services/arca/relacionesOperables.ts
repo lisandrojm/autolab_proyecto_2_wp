@@ -1,8 +1,8 @@
 /**
  * LAS RELACIONES DE ARCA SOBRE LAS QUE SE PUEDE OPERAR, VISTAS DESDE ARCA (22/11/2026).
  *
- * La bandeja Contratos parte del contrato. Antigüedad ARCA y A.R.C.A Bajas parten de la RELACIÓN (una fila del
- * espejo de Relaciones Laborales), y una relación puede tener un contrato en WeProdu, varios o ninguno:
+ * Gestión › Bajas ARCA (`listaBajasArca.ts`) parte de la RELACIÓN (una fila del espejo de Relaciones Laborales), y
+ * una relación puede tener un contrato en WeProdu, varios o ninguno:
  *
  *   · `contrato`      un solo contrato con esa persona, empleadora y fecha de alta: el panel abre con él.
  *   · `elegir`        varios: hay que elegir cuál antes de abrir.
@@ -11,8 +11,8 @@
  *                     de operaciones (`registroOperaciones.ts`).
  *   · `null`          no hay nada que operar (y `motivo` dice por qué).
  *
- * LA DECISIÓN ES LA DE SIEMPRE: `compartido/arca/relacionParaOperar.ts`, la misma que usan el panel y la bandeja
- * Contratos, contrato por contrato. Acá sólo se arma con qué llamarla. Un contrato de Servicios con la misma fecha
+ * LA DECISIÓN ES LA DE SIEMPRE: `compartido/arca/relacionParaOperar.ts`, la misma que usa el panel, contrato por
+ * contrato. Acá sólo se arma con qué llamarla. Un contrato de Servicios con la misma fecha
  * de alta no cuenta como contrato de la relación: Servicios no tiene relación en ARCA.
  *
  * LIVIANA A PROPÓSITO (la base está lejos): de los contratos sólo viajan los que empiezan en la fecha de inicio de
@@ -52,7 +52,7 @@ async function usuariosDeCuils(tid: Types.ObjectId, cuils: string[]): Promise<an
   return todos.filter((u) => buscados.has(dig(u.metadata?.cuit)));
 }
 
-/** Hasta cuántos días atrás una relación cerrada se sigue mostrando (apagado por defecto en la cola). */
+/** Hasta cuántos días atrás una relación cerrada cuenta como «cerrada hace poco» (`estadoDeRelacion`). */
 export const DIAS_CERRADA_RECIENTE = 30;
 
 export type EstadoDeRelacion = "abierta" | "fin_futuro" | "cerrada_reciente" | "cerrada";
@@ -68,6 +68,8 @@ export interface ContratoDeRelacion {
   baja: string;
   /** La decisión de la regla compartida para ESTE contrato. */
   relacionArca: RelacionParaOperar;
+  /** La baja presentada desde WeProdu en este contrato (`bajaArcaPresentada`), si hay. */
+  bajaPresentada: { resultado: string; clase: string; fecha: string } | null;
 }
 
 export interface RelacionOperable {
@@ -91,6 +93,8 @@ export interface RelacionOperable {
   motivo: string;
   /** Modo `contrato` con el contrato ya terminado en WeProdu: cuántos días pasaron desde su fin. */
   diasDesdeFinContrato: number | null;
+  /** La baja de esta relación en el registro de operaciones (lo que hay cuando no tiene contrato donde marcarla). */
+  bajaEnRegistro: { resultado: string; fecha: string } | null;
 }
 
 /** El estado de una relación por su fecha de fin. Pura. */
@@ -112,6 +116,8 @@ export interface ContratoCandidato {
   tramite: string | null;
   altaArcaPresentada: { resultado?: string; via?: string } | null;
   marcas: Array<{ resultado?: string; fecha?: unknown } | null | undefined>;
+  /** La marca de la baja (`bajaArcaPresentada`), con su clase: para saber si quedó sin confirmar. */
+  marcaBaja?: { resultado?: string; clase?: string; fecha?: unknown } | null;
 }
 
 /**
@@ -135,6 +141,7 @@ export function modoDeOperar(
     contrato: c.contrato,
     alta: c.alta,
     baja: c.baja,
+    bajaPresentada: c.marcaBaja?.resultado ? { resultado: String(c.marcaBaja.resultado), clase: String(c.marcaBaja.clase || ""), fecha: c.marcaBaja.fecha ? new Date(c.marcaBaja.fecha as any).toISOString() : "" } : null,
     relacionArca: relacionParaOperar({
       tramite: c.tramite,
       estadoContrato: c.estadoContrato,
@@ -174,8 +181,7 @@ export interface FiltroRelaciones {
   cuil?: string;
   /** UNA relación (el panel, en modo «sin contrato»). */
   relacion?: { empleadoraCuit: string; cuil: string; fechaInicio: string };
-  // Sin ninguno de los dos: las abiertas, las que terminan de hoy en adelante y las cerradas en los últimos
-  // `DIAS_CERRADA_RECIENTE` días, de todas las personas (A.R.C.A Bajas).
+  // Sin ninguno de los dos: las VIVAS de todas las personas (abiertas, o con fin de hoy en adelante): Bajas ARCA.
 }
 
 export async function relacionesOperables(tenantId: Types.ObjectId | string, filtro: FiltroRelaciones = {}): Promise<{ hoy: string; relaciones: RelacionOperable[] }> {
@@ -186,7 +192,7 @@ export async function relacionesOperables(tenantId: Types.ObjectId | string, fil
     if (!/^\d{4}-\d{2}-\d{2}$/.test(filtro.relacion.fechaInicio)) return { hoy, relaciones: [] };
     Object.assign(q, { empleadoraCuit: dig(filtro.relacion.empleadoraCuit), cuil: dig(filtro.relacion.cuil), fechaInicio: new Date(`${filtro.relacion.fechaInicio}T00:00:00.000Z`) });
   } else if (filtro.cuil) q.cuil = dig(filtro.cuil);
-  else q.$or = [{ fechaFin: null }, { fechaFin: { $gte: new Date(`${menosDias(hoy, DIAS_CERRADA_RECIENTE)}T00:00:00.000Z`) } }];
+  else q.$or = [{ fechaFin: null }, { fechaFin: { $gte: new Date(`${hoy}T00:00:00.000Z`) } }];
   const rels: any[] = await RelacionLaboralArca.find(q).select("-_id empleadoraCuit cuil apellidoNombre fechaInicio fechaFin situacionBaja modalidadContrato").lean();
   if (!rels.length) return { hoy, relaciones: [] };
 
@@ -231,7 +237,7 @@ export async function relacionesOperables(tenantId: Types.ObjectId | string, fil
                   contrato_id: "$$p.c.contrato_id",
                   altaRes: "$$p.c.altaArcaPresentada.resultado",
                   altaVia: "$$p.c.altaArcaPresentada.via",
-                  mBaja: marca("bajaArcaPresentada"),
+                  mBaja: { ...marca("bajaArcaPresentada"), clase: "$$p.c.bajaArcaPresentada.clase" },
                   mMod: marca("modificacionArcaPresentada"),
                   mAnu: marca("anulacionArcaPresentada"),
                 },
@@ -262,6 +268,7 @@ export async function relacionesOperables(tenantId: Types.ObjectId | string, fil
         tramite: tramiteDe({ nombre_contrato: c.nombre_contrato, tipo_contrato_id: c.tipo_contrato_id, contrato_id: c.contrato_id }),
         altaArcaPresentada: c.altaRes ? { resultado: c.altaRes, via: c.altaVia } : null,
         marcas: [c.mBaja, c.mMod, c.mAnu],
+        marcaBaja: c.mBaja || null,
       });
     }
   }
@@ -273,6 +280,7 @@ export async function relacionesOperables(tenantId: Types.ObjectId | string, fil
     const fin = iso(r.fechaFin);
     const clave = claveDeRelacion(empleadoraCuit, cuil, inicio);
     const u = usuarioPorCuil.get(cuil);
+    const reg = registro.get(clave) || SIN_MARCAS;
     return {
       clave,
       empleadoraCuit,
@@ -285,7 +293,8 @@ export async function relacionesOperables(tenantId: Types.ObjectId | string, fil
       situacionBaja: String(r.situacionBaja || ""),
       modalidadContrato: String(r.modalidadContrato || ""),
       estado: estadoDeRelacion(fin, hoy),
-      ...modoDeOperar({ empleadoraCuit, cuil, inicio, fin }, candidatos.get(clave) || [], registro.get(clave) || SIN_MARCAS, hoy),
+      ...modoDeOperar({ empleadoraCuit, cuil, inicio, fin }, candidatos.get(clave) || [], reg, hoy),
+      bajaEnRegistro: reg.baja?.resultado ? { resultado: String(reg.baja.resultado), fecha: reg.baja.fecha ? new Date(reg.baja.fecha).toISOString() : "" } : null,
     };
   });
   return { hoy, relaciones };

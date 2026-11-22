@@ -217,6 +217,19 @@ export interface ITenant extends Document {
                     el?: Date;
                     totales?: any;
                 };
+                /** Bajas ARCA (`services/arca/listaBajasArca.ts`): los conteos por situación de ahora, la foto de la última corrida y qué cambió en cada una. */
+                bajasArca?: {
+                    actual?: {
+                        el?: Date;
+                        conteos?: any;
+                    };
+                    corrida?: {
+                        el?: Date;
+                        conteos?: any;
+                        filas?: any[];
+                    };
+                    movimientos?: any[];
+                };
             };
         };
         /**

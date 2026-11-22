@@ -5,6 +5,7 @@ import { sincronizarRelacionesTenant } from "./sincronizarRelaciones.js";
 import { CandadoArcaOcupado } from "./candadoArca.js";
 import { aplicarBajasArcaAutomaticas } from "./bajasArcaAutomaticas.js";
 import { recalcularAuditoriaArca } from "./auditoriaArca.js";
+import { guardarCorridaBajasArca } from "./listaBajasArca.js";
 
 /**
  * EL HORARIO DE LA SINCRONIZACIÓN DE RELACIONES LABORALES: una vez por día, a la hora que configuró
@@ -115,6 +116,8 @@ async function tick() {
         if (!resumen.error) await aplicarBajasArcaAutomaticas(id, resumen.empresas.filter((e) => e.error).map((e) => String(e.cuit || "").replace(/\D/g, "")));
         // Etapa 5: con el espejo y las bajas al día, los totales de lo que no encaja (para el contador).
         if (!resumen.error) await recalcularAuditoriaArca(id);
+        // Bajas ARCA: la foto de la lista (conteos por situación y quién está en cuál) y qué cambió desde la corrida anterior.
+        if (!resumen.error) await guardarCorridaBajasArca(id);
       } catch (e: any) {
         if (e instanceof CandadoArcaOcupado) {
           // ARCA está ocupada: se devuelve lo tomado para volver a probar en el próximo tick.

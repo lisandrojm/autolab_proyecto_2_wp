@@ -16,6 +16,10 @@
  *                       se solapa con contratos de esa persona y empleadora: la misma relación con otra
  *                       fecha (Valentina Pellegrini: 07/02 vs 10/02/2025) o un tramo de ARCA que WeProdu
  *                       tiene por jornadas. No se alinea sola (decisión del 18/11).
+ *  - relacionVariosContratos una relación VIVA en ARCA (abierta, o con fin de hoy en adelante) con VARIOS contratos
+ *                       en WeProdu de la misma persona, empleadora y fecha de alta (22/11/2026). Bajas ARCA no las
+ *                       lista: no se pueden dar de baja desde WeProdu hasta anular el duplicado. Sale de la misma
+ *                       función que arma esa lista (`listaBajasArca`), para que los dos lugares no difieran.
  *  - discrepanciasFrame lo que FRAME manda distinto de WeProdu y el import no pisó (vacío mientras el import
  *                       esté pausado; el contador tenía que vivir en un lugar que alguien mire).
  *
@@ -39,14 +43,28 @@ import { fechaISO } from "../../utils/contratoVigencia.js";
 import { UMBRAL_GRANULARIDAD_DIAS } from "../../utils/bajasArcaContrato.js";
 import { relacionesSinContratoExacto } from "../../utils/auditoriaArca.js";
 import { cargarContextoArca, planDeBajasArca } from "./bajasArcaContratos.js";
+import { listaBajasArca } from "./listaBajasArca.js";
 const BASE = "integrations.arcaSimplificacion.sincronizacionRelaciones";
 const dig = (v) => String(v ?? "").replace(/\D/g, "");
 const fechaDe = (v) => (v instanceof Date ? v.toISOString().slice(0, 10) : fechaISO(v));
 const sinCrudos = ({ bajaCruda: _b, altaCruda: _a, ...x }) => x;
 export async function auditoriaArca(tenantId) {
     const tid = new Types.ObjectId(String(tenantId));
-    const ctx = await cargarContextoArca(tid);
+    // La lista de Bajas ARCA se calcula en paralelo: de ahí salen las relaciones con varios contratos.
+    const [ctx, bajas] = await Promise.all([cargarContextoArca(tid), listaBajasArca(tid)]);
     const plan = await planDeBajasArca(tid, { contexto: ctx });
+    const relacionVariosContratos = bajas.fuera
+        .filter((x) => x.motivo === "varios_contratos")
+        .map((x) => ({
+        userId: x.userId || "",
+        persona: x.persona,
+        cuil: x.cuil,
+        empleadora: x.empleadora,
+        empleadoraCuit: x.empleadoraCuit,
+        inicio: x.inicio,
+        fin: x.finArca,
+        contratos: x.contratos.map((c) => ({ contratoKey: c.contratoKey, userProjectId: c.userProjectId, posicion: c.posicion, proyecto: c.proyecto, contrato: c.contrato, alta: c.alta, baja: c.baja })),
+    }));
     // Lo que sale del clasificador de bajas.
     const faltaBajaArca = plan.items.filter((x) => x.tipo === "arca_abierta").map(sinCrudos);
     // ARCA termina después que el contrato: histórico si el alta se cargó a mano; para mirar si salió de WeProdu.
@@ -123,11 +141,12 @@ export async function auditoriaArca(tenantId) {
         revisionManual: revisionManual.length,
         granularidad: granularidad.length,
         relacionSinContrato: relacionSinContrato.length,
+        relacionVariosContratos: relacionVariosContratos.length,
         discrepanciasFrame: discrepanciasFrame.length,
-        total: faltaBajaArca.length + revisionManual.length + granularidad.length + relacionSinContrato.length + discrepanciasFrame.length,
+        total: faltaBajaArca.length + revisionManual.length + granularidad.length + relacionSinContrato.length + relacionVariosContratos.length + discrepanciasFrame.length,
         historicasArcaPosterior,
     };
-    return { hoy: ctx.hoy, espejoAl: ctx.espejoAl, calculadoEl: new Date().toISOString(), faltaBajaArca, revisionManual, granularidad, relacionSinContrato, discrepanciasFrame, totales };
+    return { hoy: ctx.hoy, espejoAl: ctx.espejoAl, calculadoEl: new Date().toISOString(), faltaBajaArca, revisionManual, granularidad, relacionSinContrato, relacionVariosContratos, discrepanciasFrame, totales };
 }
 /** Deja los totales en el tenant: es lo que lee el contador sin recalcular. */
 export async function guardarTotalesAuditoria(tenantId, totales, el = new Date()) {
@@ -143,7 +162,7 @@ export async function recalcularAuditoriaArca(tenantId) {
     try {
         const a = await auditoriaArca(tenantId);
         await guardarTotalesAuditoria(tenantId, a.totales);
-        console.log(`[auditoria-arca] ${tenantId}: ${a.totales.total} para mirar (falta baja en ARCA ${a.totales.faltaBajaArca} · revisión manual ${a.totales.revisionManual} · granularidad ${a.totales.granularidad} · relación sin contrato exacto ${a.totales.relacionSinContrato} · FRAME ${a.totales.discrepanciasFrame})`);
+        console.log(`[auditoria-arca] ${tenantId}: ${a.totales.total} para mirar (falta baja en ARCA ${a.totales.faltaBajaArca} · revisión manual ${a.totales.revisionManual} · granularidad ${a.totales.granularidad} · relación sin contrato exacto ${a.totales.relacionSinContrato} · relación con varios contratos ${a.totales.relacionVariosContratos ?? 0} · FRAME ${a.totales.discrepanciasFrame})`);
         return a.totales;
     }
     catch (e) {
