@@ -1,12 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLandmark, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faFileExcel, faLandmark, faSpinner, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
 import { SearchAndFilters, type FilterOption } from "../components/ui/SearchAndFilters";
 import { BotonOrden, useOrdenTabla } from "../components/ui/OrdenTabla";
+import { Paginador, POR_PAGINA } from "../components/ui/Paginador";
+import { nombreDeArchivo } from "../utils/exportarTablaExcel";
+import { sweetAlert } from "../utils/sweetAlert";
 import { EncabezadoSincronizacionArca } from "../components/arca/EncabezadoSincronizacionArca";
 import { OperacionesArcaHistorial } from "../components/arca/OperacionesArcaHistorial";
 import { OperacionArcaModal } from "../components/contratos/OperacionArcaModal";
@@ -34,7 +37,11 @@ import { arcaOperacionesAPI, SITUACIONES_BAJA_ARCA, type ConteosBajaArca, type E
      deshabilitado y el motivo. Siguen también en Auditoría ARCA. La lista no elige un contrato por su cuenta.
    - Las relaciones declaradas con la modalidad de directores (LRT) llevan una advertencia en la fila; el panel
      muestra la misma (`compartido/arca/modalidadArca.ts`).
-   - El botón «Excel» de la tabla exporta lo que está dibujado: lo filtrado.
+   - PAGINADA (50 por página, `ui/Paginador`): la lista está entera en memoria, así que el buscador, los filtros y
+     el orden trabajan siempre sobre el total y lo que se recorta es lo que se dibuja. El número entre paréntesis
+     del título es el total de la lista (con filtros, cuántas coinciden); lo pendiente está en la pestaña y el menú.
+   - El botón «Excel» exporta TODO lo filtrado, en el orden elegido, no sólo la página: por eso es propio y no el de
+     la tabla, que baja lo que está dibujado.
    - «Operaciones» (lo que se mandó y su resultado) es la segunda pestaña.
    - Debajo de los filtros, la foto de la corrida de las 06:00 y qué cambió desde entonces: un número que cambia
      tiene que poder explicarse. «Sincronizar ahora» no reemplaza la foto, pero el encabezado muestra la diferencia
@@ -95,6 +102,8 @@ export const BajasArcaPage: React.FC = () => {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [soloPendientes, setSoloPendientes] = useState(false);
+  const [pagina, setPagina] = useState(1);
+  const [exportando, setExportando] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
@@ -157,6 +166,50 @@ export const BajasArcaPage: React.FC = () => {
     situacion: (f) => f.situacion ?? 90 + BLOQUEOS.indexOf(f.bloqueo?.motivo as MotivoBloqueoBajaArca),
   });
 
+  // Cambiar la búsqueda, un filtro o el orden vuelve a la primera página: lo que se buscaba puede no estar en la que se miraba.
+  useEffect(() => { setPagina(1); }, [q, qDigitos, empresas, tipos, situaciones, proyectos, enWeprodu, desde, hasta, soloPendientes, orden]);
+  const paginas = Math.max(1, Math.ceil(filas.length / POR_PAGINA));
+  // Si la lista se achicó (una sincronización, una baja), no quedarse en una página que ya no existe.
+  const paginaActual = Math.min(pagina, paginas);
+  const visibles = useMemo(() => filas.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA), [filas, paginaActual]);
+
+  /** TODO lo filtrado, en el orden que se ve, no sólo la página. */
+  const exportar = async () => {
+    if (exportando || !filas.length) return;
+    setExportando(true);
+    try {
+      const XLSX = await import("xlsx");
+      const encabezado = ["Persona", "CUIL", "Empresa", "Tipo", "Tipo de contrato en WeProdu", "Proyecto", "Modalidad en ARCA", "Inicio", "Fin en ARCA", "Fin en WeProdu", "Días desde el fin", "Situación", "Detalle", "Advertencia"];
+      const fecha = (iso: string) => (iso ? fechaCorta(iso) : "");
+      const cuerpo = filas.map((f) => [
+        f.persona,
+        fmtCuil(f.cuil),
+        f.empleadora,
+        f.tipo,
+        f.tipoContrato,
+        f.proyecto,
+        f.modalidadArca,
+        fecha(f.inicio),
+        fecha(f.finArca),
+        fecha(f.finWeprodu),
+        f.diasDesdeFin ?? "",
+        f.situacion !== null ? `${f.situacion}. ${SITUACIONES_BAJA_ARCA[f.situacion]}` : f.bloqueo?.etiqueta || "",
+        f.bloqueo ? f.bloqueo.texto : f.detalle,
+        f.advertencia,
+      ]);
+      const hoja = XLSX.utils.aoa_to_sheet([encabezado, ...cuerpo]);
+      hoja["!cols"] = encabezado.map((h, i) => ({ wch: Math.min(60, Math.max(h.length, ...cuerpo.map((r) => String(r[i] ?? "").length)) + 2) }));
+      const libro = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(libro, hoja, "Bajas ARCA");
+      const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date());
+      XLSX.writeFile(libro, `${nombreDeArchivo("Bajas ARCA")}-${hoy}.xlsx`);
+    } catch (e: any) {
+      sweetAlert.error("No se pudo exportar", e?.message || "No se pudo armar el archivo de Excel.");
+    } finally {
+      setExportando(false);
+    }
+  };
+
   const abrir = (f: FilaBajaArca) =>
     setOperando(f.contrato ? { userProjectId: f.contrato.userProjectId, contratoKey: f.contrato.contratoKey, contractIndex: f.contrato.posicion } : { userProjectId: "", relacion: { empleadoraCuit: f.empleadoraCuit, cuil: f.cuil, fechaInicio: f.inicio } });
 
@@ -170,7 +223,7 @@ export const BajasArcaPage: React.FC = () => {
       title="Bajas ARCA"
       subtitle="Todas las relaciones laborales vivas en ARCA y qué hay que hacer con cada una. Es el único lugar desde donde se da de baja."
       faIcon={{ icon: faLandmark }}
-      itemCount={c ? c.pendientes : undefined}
+      itemCount={lista ? filas.length : undefined}
       infoModal={{
         isOpen: ayuda,
         onOpen: () => setAyuda(true),
@@ -190,7 +243,7 @@ export const BajasArcaPage: React.FC = () => {
             </ol>
             <p>El número del menú es la suma de las situaciones 1 a 4: lo pendiente. La 5 y la 6 no cuentan.</p>
             <p><strong>Con el botón deshabilitado</strong> quedan las relaciones que desde acá no se pueden operar, con el motivo en la fila. Hoy son las que están cargadas en varios proyectos: se resuelven a mano (esta lista no elige un contrato por su cuenta) y están también en Documentos › Auditoría ARCA.</p>
-            <p>El embudo abre los <strong>filtros</strong> (empresa, tipo, situación, contrato en WeProdu, proyecto, fecha de inicio, sólo pendientes); sin ninguno se ve todo. El botón «Excel» exporta lo que está filtrado.</p>
+            <p>El embudo abre los <strong>filtros</strong> (empresa, tipo, situación, contrato en WeProdu, proyecto, fecha de inicio, sólo pendientes); sin ninguno se ve todo. El número al lado del título es el total de la lista (con filtros, cuántas coinciden). Se ven de a {POR_PAGINA}; el botón «Excel» exporta todo lo filtrado, no sólo la página.</p>
             <p>ARCA pide informar la baja dentro de los {DIAS_PLAZO_BAJA} días corridos del fin; pasado ese plazo puede observarla. Por eso, dentro de cada situación, van primero las que llevan más días.</p>
             <p>Todo sale de la última sincronización con ARCA: si algo cambió hoy en ARCA, sincronizá primero.</p>
           </div>
@@ -270,7 +323,14 @@ export const BajasArcaPage: React.FC = () => {
             {filas.length === 0 ? (
               <p className="text-sm text-gray-500 py-10 text-center">{hayFiltros ? "Ninguna relación coincide con la búsqueda y los filtros." : "No hay relaciones vivas en ARCA."}</p>
             ) : (
-              <TablaConEncabezadoFijo className="rounded-xl border border-gray-200 dark:border-gray-700" tabla="min-w-full" exportar="Bajas ARCA">
+              <>
+              <div className="flex justify-end">
+                <button type="button" onClick={() => void exportar()} disabled={exportando} title={`Exportar a Excel ${filas.length === 1 ? "la relación" : `las ${filas.length} relaciones`} de la lista${hayFiltros ? " (lo filtrado)" : ""}, no sólo esta página`} className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50">
+                  <FontAwesomeIcon icon={exportando ? faSpinner : faFileExcel} spin={exportando} />
+                  Excel
+                </button>
+              </div>
+              <TablaConEncabezadoFijo className="rounded-xl border border-gray-200 dark:border-gray-700" tabla="min-w-full" sinExportar>
                 <thead>
                   <tr>
                     <th className={th}>Persona</th>
@@ -285,7 +345,7 @@ export const BajasArcaPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filas.map((f) => {
+                  {visibles.map((f) => {
                     const vencido = (f.diasDesdeFin ?? 0) > DIAS_PLAZO_BAJA;
                     const ayudaDelBoton = f.bloqueo
                       ? f.bloqueo.texto
@@ -357,6 +417,8 @@ export const BajasArcaPage: React.FC = () => {
                   })}
                 </tbody>
               </TablaConEncabezadoFijo>
+              <Paginador total={filas.length} pagina={paginaActual} onCambiar={setPagina} entidadPlural="relaciones" />
+              </>
             )}
 
             {/* EL PIE: el total, que tiene que ser igual a las relaciones vivas del espejo. */}
