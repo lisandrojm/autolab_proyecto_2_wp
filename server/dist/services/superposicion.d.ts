@@ -8,6 +8,16 @@ export declare function pedidoDesdeSolicitud(m: any): PedidoDeAlta;
 /** Todo lo que la persona ya tiene comprometido: contratos (todos los proyectos) y solicitudes pendientes. */
 export declare function compromisosDePersona(tenantId: Types.ObjectId, userId: string, excluirSolicitudId?: string): Promise<CompromisoExistente[]>;
 /**
+ * Lee el trámite de un contrato: tipo → plantilla → el estado impositivo que la reclama, el mismo camino
+ * que el tag de las pantallas (`estadoImpositivoDelContrato`). No se usa el estado del contrato: avanza por
+ * el circuito y deja de decir el trámite. Sin plantilla o sin estado que la reclame, `null`: no se adivina.
+ */
+/**
+ * El trámite (`alta_temprana_afip`, `constancia_cuit`…) del tipo de cada contrato, con las plantillas y los
+ * estados impositivos leídos UNA vez. Lo usan también la bandeja Contratos y el panel de Modificaciones y Bajas.
+ */
+export declare function lectorDeTramites(): Promise<(tipo: CompromisoExistente["tipo"]) => string | null>;
+/**
  * LAS BAJAS DE ARCA SOBRE LOS CONTRATOS (18/11/2026). Un contrato a tiempo indeterminado sin fecha de baja
  * en WeProdu cubre cualquier fecha futura, aunque en ARCA la relación ya terminó: la baja llega al espejo
  * (`RelacionLaboralArca`) pero no al contrato. Antes de mirar si se pisa, cada contrato toma la baja de
@@ -54,6 +64,12 @@ export declare function decisionAltaDePersona(tenantId: Types.ObjectId, userId: 
  */
 export declare function rechazoAltaArcaConContrato(tenantId: Types.ObjectId, userId: string | undefined, tramite: unknown, pedido: Pick<PedidoDeAlta, "desde" | "hasta" | "fechas">, empresaId?: string | null, excluir?: ContratoExcluido): Promise<string | null>;
 /** El trámite de un tipo de contrato por su `_id` (tipo → plantilla → estado impositivo), o `null`. */
+/** El trámite del tipo de UN contrato (por su `contrato_id`, o por el nombre en los viejos). */
+export declare function tramiteDelContrato(c: {
+    nombre_contrato?: string;
+    tipo_contrato_id?: unknown;
+    contrato_id?: unknown;
+}): Promise<string | null>;
 export declare function tramiteDelTipo(contratoId: unknown): Promise<string | null>;
 /** Los avisos de superposición de un alta para una persona. `[]` si no es una persona registrada. */
 export declare function superposicionesDeAlta(tenantId: Types.ObjectId, userId: string | undefined, pedido: PedidoDeAlta, excluirSolicitudId?: string): Promise<Superposicion[]>;

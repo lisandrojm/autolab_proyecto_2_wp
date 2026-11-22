@@ -13,6 +13,8 @@
  * manda. El espejo se sincroniza una vez por día: la lectura definitiva la hace el motor en vivo, antes de operar.
  */
 
+import { relacionParaOperar } from "../../compartido/arca/relacionParaOperar.js";
+
 export type TipoOperacion = "baja" | "modificacion" | "anulacion";
 
 export const NOMBRE_OPERACION: Record<TipoOperacion, string> = { baja: "la baja", modificacion: "la modificación", anulacion: "la anulación" };
@@ -54,12 +56,15 @@ export interface MarcaOperacion {
 
 /** Lo que las reglas necesitan del contrato. */
 export interface ContratoParaOperar {
+  /** El trámite del tipo (`alta_temprana_afip`…): un Servicios no tiene relación en ARCA. Sin resolver, no se mira. */
+  tramite?: string | null;
+  estadoContrato?: string | null;
   cuil: string;
   empresaCuit: string;
   /** "YYYY-MM-DD" */
   alta: string;
   baja: string;
-  altaArcaPresentada?: { resultado?: string; cat?: string } | null;
+  altaArcaPresentada?: { resultado?: string; cat?: string; via?: string } | null;
   bajaArcaPresentada?: MarcaOperacion | null;
   modificacionArcaPresentada?: MarcaOperacion | null;
   anulacionArcaPresentada?: MarcaOperacion | null;
@@ -119,19 +124,14 @@ const motivoDeMarca = (m: MarcaOperacion, que: string): string => {
   return `${que} se mandó a ARCA${cuando} y no se pudo leer el resultado: mirá la relación en ARCA antes de volver a intentar.`;
 };
 
-/** Lo que las tres operaciones exigen del contrato antes de mirar la suya. "" si está todo. */
-function prerrequisitos(c: ContratoParaOperar): string {
-  if (dig(c.cuil).length !== 11) return "La persona no tiene un CUIL de 11 dígitos.";
-  if (dig(c.empresaCuit).length !== 11) return "La empleadora del contrato no tiene CUIT: sin eso no se puede elegir en ARCA.";
-  if (!esISO(c.alta)) return "El contrato no tiene una fecha de alta válida.";
-  const r = String(c.altaArcaPresentada?.resultado || "");
-  if (r === "presentando" || r === "indeterminado") return "El alta de este contrato está sin confirmar en ARCA: primero resolvé eso (mirala en Relaciones Laborales → Consultas).";
-  if (r === "anulada") return "El alta de este contrato fue anulada en ARCA: ya no hay relación sobre la que operar.";
-  return "";
+/**
+ * Lo que las tres operaciones exigen antes de mirar la suya: que haya una relación en ARCA sobre la cual operar.
+ * Es la MISMA condición que decide el ícono de la bandeja Contratos (`compartido/arca/relacionParaOperar.ts`).
+ * "" si está todo.
+ */
+function prerrequisitos(c: ContratoParaOperar, espejo: RelacionEspejo | null): string {
+  return relacionParaOperar({ tramite: c.tramite, estadoContrato: c.estadoContrato, cuil: c.cuil, empresaCuit: c.empresaCuit, alta: c.alta, altaArcaPresentada: c.altaArcaPresentada, enEspejo: !!espejo && espejo.inicio === c.alta }).motivo;
 }
-
-/** Hay una relación en ARCA sobre la que operar: el alta presentada desde WeProdu, o la relación en el espejo con el mismo inicio. */
-const hayRelacion = (c: ContratoParaOperar, espejo: RelacionEspejo | null) => c.altaArcaPresentada?.resultado === "presentada" || (!!espejo && espejo.inicio === c.alta);
 
 export function planDeBaja(c: ContratoParaOperar, espejo: RelacionEspejo | null, datos: DatosBaja, hoy: string, catalogo?: Map<string, string>): PlanOperacion {
   const avisos: string[] = [];
@@ -141,12 +141,11 @@ export function planDeBaja(c: ContratoParaOperar, espejo: RelacionEspejo | null,
   const payload: Record<string, unknown> = { fechaFin, situacionBaja, ...(fechaTelegrama ? { fechaTelegrama } : {}) };
   const no = (motivo: string): PlanOperacion => ({ op: "baja", puede: false, motivo, avisos, payload });
 
-  const pre = prerrequisitos(c);
+  const pre = prerrequisitos(c, espejo);
   if (pre) return no(pre);
-  if (!hayRelacion(c, espejo)) return no("Este contrato no tiene el alta presentada en ARCA ni figura en las Relaciones Laborales sincronizadas: no hay relación a la que darle la baja.");
   if (!esISO(fechaFin)) return no("Falta la fecha de fin de la baja (el contrato no tiene fecha de baja y no se indicó una).");
   if (fechaFin < c.alta) return no(`La fecha de fin (${corta(fechaFin)}) es anterior al alta (${corta(c.alta)}).`);
-  if (!situacionBaja) return no("Falta el motivo de la baja (situación de baja de ARCA).");
+  if (!situacionBaja) return no("Elegí el motivo de la baja (situación de baja de ARCA).");
   if (catalogo && !catalogo.has(situacionBaja)) return no(`El motivo «${situacionBaja}» no está en la tabla de situaciones de baja de ARCA.`);
   if (fechaTelegrama && !esISO(fechaTelegrama)) return no("La fecha del telegrama tiene que ser aaaa-mm-dd.");
   if (marcaTraba(c.bajaArcaPresentada)) return no(motivoDeMarca(c.bajaArcaPresentada!, "La baja"));
@@ -187,9 +186,8 @@ export function planDeModificacion(c: ContratoParaOperar, espejo: RelacionEspejo
   const payload: Record<string, unknown> = { ...cambios, ...(datos?.obraSocialTexto ? { obraSocialTexto: datos.obraSocialTexto } : {}) };
   const no = (motivo: string): PlanOperacion => ({ op: "modificacion", puede: false, motivo, avisos, payload });
 
-  const pre = prerrequisitos(c);
+  const pre = prerrequisitos(c, espejo);
   if (pre) return no(pre);
-  if (!hayRelacion(c, espejo)) return no("Este contrato no tiene el alta presentada en ARCA ni figura en las Relaciones Laborales sincronizadas: no hay relación que modificar.");
   const desconocidos = Object.keys(datos?.cambios || {}).filter((k) => !(CAMPOS_MODIFICABLES as readonly string[]).includes(k));
   if (desconocidos.length) return no(`No se puede modificar: ${desconocidos.join(", ")}. Campos posibles: ${CAMPOS_MODIFICABLES.join(", ")}.`);
   if (Object.keys(cambios).length === 0) return no("No se indicó ningún cambio.");
@@ -224,9 +222,8 @@ export function planDeAnulacion(c: ContratoParaOperar, espejo: RelacionEspejo | 
   const no = (motivo: string): PlanOperacion => ({ op: "anulacion", puede: false, motivo, avisos, payload });
 
   if (que !== "alta" && que !== "baja") return no("Hay que decir qué se anula: el alta o la baja.");
-  const pre = prerrequisitos(c);
+  const pre = prerrequisitos(c, espejo);
   if (pre) return no(pre);
-  if (!hayRelacion(c, espejo)) return no("Este contrato no tiene el alta presentada en ARCA ni figura en las Relaciones Laborales sincronizadas: no hay nada que anular.");
   const a = c.anulacionArcaPresentada;
   if (a?.resultado === "presentando" || a?.resultado === "indeterminado") return no(motivoDeMarca(a, "La anulación"));
   if (a?.resultado === "presentada" && a.que === que) return no(`${que === "alta" ? "El alta" : "La baja"} ya se anuló en ARCA el ${new Date(a.fecha || Date.now()).toLocaleDateString("es-AR")}.`);

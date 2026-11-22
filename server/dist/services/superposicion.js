@@ -133,7 +133,11 @@ export async function compromisosDePersona(tenantId, userId, excluirSolicitudId)
  * que el tag de las pantallas (`estadoImpositivoDelContrato`). No se usa el estado del contrato: avanza por
  * el circuito y deja de decir el trámite. Sin plantilla o sin estado que la reclame, `null`: no se adivina.
  */
-async function lectorDeTramites() {
+/**
+ * El trámite (`alta_temprana_afip`, `constancia_cuit`…) del tipo de cada contrato, con las plantillas y los
+ * estados impositivos leídos UNA vez. Lo usan también la bandeja Contratos y el panel de Modificaciones y Bajas.
+ */
+export async function lectorDeTramites() {
     const [plantillas, estados] = await Promise.all([
         ContratoFrame.find().select("name data.id data.nombre contratoId contratoIds").lean(),
         Info.find({ type: "estado-empleado", "data.esImpositivo": true }).select("data.tipoImpositivo data.contratoFrameIds").lean(),
@@ -262,6 +266,10 @@ export async function rechazoAltaArcaConContrato(tenantId, userId, tramite, pedi
     return (await decisionAltaDePersona(tenantId, userId, pedido, empresaId, excluir)).mensaje || null;
 }
 /** El trámite de un tipo de contrato por su `_id` (tipo → plantilla → estado impositivo), o `null`. */
+/** El trámite del tipo de UN contrato (por su `contrato_id`, o por el nombre en los viejos). */
+export async function tramiteDelContrato(c) {
+    return (await lectorDeTramites())({ nombre_contrato: c.nombre_contrato, tipo_contrato_id: c.tipo_contrato_id, contrato_id: c.contrato_id });
+}
 export async function tramiteDelTipo(contratoId) {
     if (!contratoId || !Types.ObjectId.isValid(String(contratoId)))
         return null;

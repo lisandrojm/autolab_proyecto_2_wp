@@ -16,6 +16,7 @@ import { RelacionLaboralArca } from "../../models/RelacionLaboralArca.js";
 import { ArcaSituacionBaja } from "../../models/ArcaSituacionBaja.js";
 import { indiceDeReferencia } from "../../utils/identidadContrato.js";
 import { fechaISO, hoyArgentina } from "../../utils/contratoVigencia.js";
+import { tramiteDelContrato } from "../superposicion.js";
 import { planDeOperacion, type ContratoParaOperar, type DatosOperacion, type PlanOperacion, type RelacionEspejo, type TipoOperacion } from "./reglasOperacionRelacion.js";
 
 export class OperacionInvalida extends Error {
@@ -101,7 +102,11 @@ export async function contextoDeOperacion(tenantObjectId: Types.ObjectId, ref: R
   const empresaCuit = dig(e.cuit);
   const alta = fechaISO(contrato.fecha_alta_contrato) || "";
   const baja = fechaISO(contrato.fecha_baja_contrato) || "";
-  const espejo = cuil.length === 11 && empresaCuit.length === 11 ? await espejoDe(tenantObjectId, empresaCuit, cuil, alta) : null;
+  const [espejo, tramite] = await Promise.all([
+    cuil.length === 11 && empresaCuit.length === 11 ? espejoDe(tenantObjectId, empresaCuit, cuil, alta) : Promise.resolve(null),
+    // Un Servicios no tiene relación en ARCA: la misma condición que el ícono de la bandeja (`relacionParaOperar`).
+    tramiteDelContrato({ nombre_contrato: contrato.nombre_contrato, tipo_contrato_id: contrato.tipo_contrato_id, contrato_id: contrato.contrato_id }).catch(() => undefined),
+  ]);
   const contratoKey = contrato.contratoKey ? String(contrato.contratoKey) : null;
   return {
     up,
@@ -112,6 +117,8 @@ export async function contextoDeOperacion(tenantObjectId: Types.ObjectId, ref: R
     empresa: { _id: String(e._id), cuit: empresaCuit, razonSocial: String(e.razonSocial || "") },
     espejo,
     paraReglas: {
+      tramite,
+      estadoContrato: String(contrato.estadoContrato || ""),
       cuil,
       empresaCuit,
       alta,

@@ -36,6 +36,9 @@ export interface MarcaOperacion {
 }
 /** Lo que las reglas necesitan del contrato. */
 export interface ContratoParaOperar {
+    /** El trámite del tipo (`alta_temprana_afip`…): un Servicios no tiene relación en ARCA. Sin resolver, no se mira. */
+    tramite?: string | null;
+    estadoContrato?: string | null;
     cuil: string;
     empresaCuit: string;
     /** "YYYY-MM-DD" */
@@ -44,6 +47,7 @@ export interface ContratoParaOperar {
     altaArcaPresentada?: {
         resultado?: string;
         cat?: string;
+        via?: string;
     } | null;
     bajaArcaPresentada?: MarcaOperacion | null;
     modificacionArcaPresentada?: MarcaOperacion | null;

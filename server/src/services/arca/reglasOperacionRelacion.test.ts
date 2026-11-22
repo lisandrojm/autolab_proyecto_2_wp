@@ -42,7 +42,7 @@ describe("baja", () => {
   });
   it("fin anterior al alta, motivo vacío o fuera de la tabla, telegrama mal escrito: no", () => {
     assert.match(planDeBaja(contrato(), espejo(), { fechaFin: "2026-10-01", situacionBaja: "99" }, HOY).motivo, /anterior al alta/);
-    assert.match(planDeBaja(contrato(), espejo(), { situacionBaja: "" }, HOY).motivo, /Falta el motivo/);
+    assert.match(planDeBaja(contrato(), espejo(), { situacionBaja: "" }, HOY).motivo, /Elegí el motivo/);
     assert.match(planDeBaja(contrato(), espejo(), { situacionBaja: "77" }, HOY, CATALOGO).motivo, /no está en la tabla/);
     assert.match(planDeBaja(contrato(), espejo(), { situacionBaja: "21", fechaTelegrama: "15/11/2026" }, HOY).motivo, /telegrama/);
   });
