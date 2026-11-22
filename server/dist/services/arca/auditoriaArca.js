@@ -54,7 +54,7 @@ export async function auditoriaArca(tenantId) {
     // La lista de Bajas ARCA se calcula en paralelo: de ahí salen las relaciones con varios contratos.
     const [ctx, bajas] = await Promise.all([cargarContextoArca(tid), listaBajasArca(tid)]);
     const plan = await planDeBajasArca(tid, { contexto: ctx });
-    const relacionVariosContratos = bajas.fuera
+    const relacionVariosContratos = bajas.bloqueadas
         .filter((x) => x.motivo === "varios_contratos" || x.motivo === "varios_proyectos")
         .map((x) => ({
         userId: x.userId || "",

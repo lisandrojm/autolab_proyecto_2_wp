@@ -76,6 +76,8 @@ export interface RelacionEspejo {
   fin: string;
   situacionBaja: string;
   modalidad?: string;
+  /** La modalidad como la declara ARCA en el TXT (texto, no código): sólo para mostrar y advertir (`compartido/arca/modalidadArca.ts`). */
+  modalidadTexto?: string;
   retribucion?: number | null;
   obraSocial?: string;
   sincronizadoEl?: string;

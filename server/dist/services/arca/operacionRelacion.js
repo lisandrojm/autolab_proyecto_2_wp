@@ -53,6 +53,8 @@ export async function espejoDe(tenantObjectId, empleadoraCuit, cuil, alta) {
         fin: r.fechaFin ? iso(r.fechaFin) : "",
         situacionBaja: String(r.situacionBaja || ""),
         // El TXT trae la modalidad y la obra social como TEXTO, no como código: no se comparan con los códigos del formulario.
+        // La modalidad viaja aparte, como texto, para la advertencia de directores (LRT) del panel.
+        modalidadTexto: String(r.modalidadContrato || ""),
         retribucion: r.retribucionPactada ?? null,
         sincronizadoEl: r.sincronizadoEl ? new Date(r.sincronizadoEl).toISOString() : undefined,
     };

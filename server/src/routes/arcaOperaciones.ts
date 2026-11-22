@@ -122,8 +122,9 @@ router.post("/corrida/detener", requireTenant, authenticateToken, permiso, async
 });
 
 /**
- * GET /arca/operaciones/lista — BAJAS ARCA: una fila por relación viva en ARCA sobre la que se puede operar, cada una
- * con su situación (1 a 5), los conteos, lo que quedó afuera y por qué, y qué cambió desde la corrida de las 06:00
+ * GET /arca/operaciones/lista — BAJAS ARCA: una fila por CADA relación viva del espejo, con su situación (1 a 6) o,
+ * si desde acá no se puede operar, el motivo del bloqueo; los conteos, cuántas vivas hay en el espejo (tiene que
+ * coincidir con las filas) y qué cambió desde la corrida de las 06:00
  * (`services/arca/listaBajasArca.ts`). Sólo lee el espejo: no abre ARCA. Deja los conteos guardados para el menú.
  */
 router.get("/lista", requireTenant, authenticateToken, permiso, async (req: AuthenticatedRequest & TenantRequest, res) => {

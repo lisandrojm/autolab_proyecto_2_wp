@@ -35,7 +35,15 @@ test("5 · indeterminado vigente: abierto de los dos lados; también si WeProdu 
     assert.equal(sit({ bajaContrato: HOY }).situacion, 5);
     assert.equal(sit({ bajaContrato: "2026-12-15" }).situacion, 5);
 });
-test("lo que no entra, con su motivo", () => {
+test("6 · plazo vigente: ARCA lo cierra sola en su fecha, pero es una fila y se puede dar de baja antes", () => {
+    // El mismo fin en los dos lados, WeProdu sin baja, o WeProdu más largo.
+    assert.deepEqual(sit({ estado: "fin_futuro", finArca: "2026-12-31", bajaContrato: "2026-12-31" }), { situacion: 6, fuera: null });
+    assert.equal(sit({ estado: "fin_futuro", finArca: "2026-12-31", bajaContrato: "" }).situacion, 6);
+    assert.equal(sit({ estado: "fin_futuro", finArca: "2026-12-31", bajaContrato: "2027-01-31" }).situacion, 6);
+    // Termina hoy en ARCA: sigue viva hasta que la sincronización la traiga cerrada.
+    assert.equal(sit({ estado: "fin_futuro", finArca: HOY, bajaContrato: HOY }).situacion, 6);
+});
+test("lo que no tiene situación, con su motivo: una cerrada no es de la lista y el resto son filas bloqueadas", () => {
     assert.deepEqual(sit({ estado: "cerrada_reciente", finArca: "2026-11-10" }), { situacion: null, fuera: "cerrada" });
     assert.deepEqual(sit({ contratos: 2 }), { situacion: null, fuera: "varios_contratos" });
     // Varios contratos gana aunque haya una baja sin confirmar en uno: no se sabe de cuál es la relación.
@@ -43,10 +51,6 @@ test("lo que no entra, con su motivo", () => {
     // La misma relación en varios proyectos (Quinteiro, Yorio) no es un duplicado: se resuelve a mano, la lista no elige.
     assert.equal(sit({ contratos: 5, proyectos: 5 }).fuera, "varios_proyectos");
     assert.equal(sit({ contratos: 3, proyectos: 2 }).fuera, "varios_proyectos");
-    // Plazo vigente con el mismo fin en los dos lados (o WeProdu sin baja, o más largo): ARCA lo cierra sola.
-    assert.equal(sit({ estado: "fin_futuro", finArca: "2026-12-31", bajaContrato: "2026-12-31" }).fuera, "plazo_vigente");
-    assert.equal(sit({ estado: "fin_futuro", finArca: "2026-12-31", bajaContrato: "" }).fuera, "plazo_vigente");
-    assert.equal(sit({ estado: "fin_futuro", finArca: "2026-12-31", bajaContrato: "2027-01-31" }).fuera, "plazo_vigente");
     // La regla compartida dice que no (alta sin confirmar, anulada…).
     assert.equal(sit({ puede: false }).fuera, "no_se_opera");
     // La baja ya se presentó y ARCA la tomó: falta que la sincronización la traiga cerrada.
@@ -81,7 +85,7 @@ const rel = (x = {}) => {
         contratos,
     };
 };
-test("la lista: una situación por fila, ordenada 1 a 5 y por días desde el fin, con los conteos y lo que queda afuera", () => {
+test("la lista: TODAS las relaciones vivas, una situación por fila, ordenada 1 a 6 y por días desde el fin; las bloqueadas al final", () => {
     const lista = armarListaBajas([
         rel({ persona: "Vigente" }),
         rel({ persona: "Terminó hace 3", contratos: [contrato({ baja: "2026-11-19" })] }),
@@ -92,15 +96,17 @@ test("la lista: una situación por fila, ordenada 1 a 5 y por días desde el fin
         rel({ persona: "Sin confirmar", contratos: [contrato({ baja: "2026-11-01", bajaPresentada: { resultado: "indeterminado", clase: "", fecha: "2026-11-20T12:00:00.000Z" } })] }),
         rel({ persona: "Duplicado", contratos: [contrato(), contrato({ contratoKey: "k2", posicion: 1 })] }),
         rel({ persona: "En dos proyectos", contratos: [contrato(), contrato({ userProjectId: "up2", contratoKey: "k3", proyecto: "PRODUCTORA" })] }),
-        rel({ persona: "Plazo vigente", estado: "fin_futuro", fin: "2026-12-31", contratos: [contrato({ baja: "2026-12-31" })] }),
+        rel({ persona: "Plazo vigente", estado: "fin_futuro", fin: "2026-12-31", modalidadContrato: "A tiempo completo determinado (contrato a plazo fijo)", contratos: [contrato({ contrato: "Jornada", baja: "2026-12-31" })] }),
+        rel({ persona: "Director", userId: null, contratos: [], modalidadContrato: "LRT(Direc.SA, Municip.Org.cent.y descent.Emp.Mixta,docent.priv.opúbl.de jurisd.incorp. o no al SIJP" }),
         rel({ persona: "Cerrada", estado: "cerrada_reciente", fin: "2026-11-10" }),
     ], HOY);
-    assert.deepEqual(lista.filas.map((f) => `${f.situacion} ${f.persona}`), ["1 Terminó hace 10", "1 Terminó hace 3", "2 Antes de su fecha", "3 Sin confirmar", "4 Ficha sin contrato", "4 Sin ficha", "5 Vigente"]);
-    assert.deepEqual(lista.conteos, { s1: 2, s2: 1, s3: 1, s4: 2, s5: 1, pendientes: 6, fuera: { varios_contratos: 1, varios_proyectos: 1, plazo_vigente: 1 } });
-    // Las cerradas no se listan ni afuera: la lista es de relaciones vivas.
-    assert.deepEqual(lista.fuera.map((f) => `${f.persona}: ${f.motivo}`), ["Duplicado: varios_contratos", "En dos proyectos: varios_proyectos", "Plazo vigente: plazo_vigente"]);
-    assert.match(lista.fuera[1].texto, /^Misma relación en varios proyectos: resolver a mano/);
-    assert.equal(lista.fuera[0].contratos.length, 2);
+    assert.deepEqual(lista.filas.map((f) => `${f.situacion} ${f.persona}`), ["1 Terminó hace 10", "1 Terminó hace 3", "2 Antes de su fecha", "3 Sin confirmar", "4 Director", "4 Ficha sin contrato", "4 Sin ficha", "5 Vigente", "6 Plazo vigente", "null Duplicado", "null En dos proyectos"]);
+    // La lista suma TODAS las vivas (la cerrada no es una fila): es lo que la pantalla compara con el espejo.
+    assert.deepEqual(lista.conteos, { s1: 2, s2: 1, s3: 1, s4: 3, s5: 1, s6: 1, pendientes: 7, bloqueadas: { varios_contratos: 1, varios_proyectos: 1 }, total: 11 });
+    assert.equal(lista.filas.length, 11);
+    assert.deepEqual(lista.bloqueadas.map((f) => `${f.persona}: ${f.motivo}`), ["Duplicado: varios_contratos", "En dos proyectos: varios_proyectos"]);
+    assert.match(lista.bloqueadas[1].texto, /^Misma relación en varios proyectos: resolver a mano/);
+    assert.equal(lista.bloqueadas[0].contratos.length, 2);
     const de = (p) => lista.filas.find((f) => f.persona === p);
     assert.equal(de("Terminó hace 10").diasDesdeFin, 10);
     assert.equal(de("Terminó hace 10").finWeprodu, "2026-11-12");
@@ -115,6 +121,27 @@ test("la lista: una situación por fila, ordenada 1 a 5 y por días desde el fin
     assert.equal(de("Antes de su fecha").detalle, "En ARCA termina el 31/12/2026");
     assert.equal(de("Antes de su fecha").tipoContrato, "Plazo fijo 5x7");
     assert.match(de("Sin confirmar").detalle, /^Se mandó el 20\/11\/2026 y no se leyó el resultado/);
+    // La 6 dice cuándo la cierra ARCA, y abre el panel con su contrato como cualquier otra.
+    assert.equal(de("Plazo vigente").detalle, "ARCA lo cierra solo el 31/12/2026");
+    assert.equal(de("Plazo vigente").bloqueo, null);
+    assert.deepEqual(de("Plazo vigente").contrato, { userProjectId: "up1", contratoKey: "k1", posicion: 0 });
+    // El tipo: con contrato manda WeProdu (la jornada está declarada en ARCA como plazo fijo); sin contrato, la modalidad de ARCA.
+    assert.equal(de("Plazo vigente").tipo, "Jornada");
+    assert.equal(de("Vigente").tipo, "Indeterminado");
+    assert.equal(de("Director").tipo, "Directores (LRT)");
+    assert.equal(de("Director").advertencia, "Modalidad de directores (LRT): confirmar antes de dar de baja");
+    assert.equal(de("Vigente").advertencia, "");
+    assert.deepEqual([de("Vigente").enWeprodu, de("Ficha sin contrato").enWeprodu, de("Sin ficha").enWeprodu], ["con_contrato", "sin_contrato", "sin_ficha"]);
+    // Las bloqueadas se ven, sin situación y con el motivo; la de varios proyectos trae todos sus proyectos para el filtro.
+    const varios = de("En dos proyectos");
+    assert.equal(varios.situacion, null);
+    assert.equal(varios.bloqueo?.motivo, "varios_proyectos");
+    assert.equal(varios.bloqueo?.etiqueta, "Varios proyectos");
+    assert.match(varios.bloqueo?.texto || "", /^Misma relación en varios proyectos: resolver a mano/);
+    assert.deepEqual(varios.proyectos, ["LN+", "PRODUCTORA"]);
+    assert.equal(varios.tipo, "Indeterminado");
+    assert.equal(varios.enWeprodu, "con_contrato");
+    assert.equal(de("Duplicado").bloqueo?.motivo, "varios_contratos");
 });
 test("sin contrato, la baja sin confirmar sale del registro de operaciones", () => {
     const lista = armarListaBajas([rel({ contratos: [], bajaEnRegistro: { resultado: "presentando", fecha: "2026-11-21T10:00:00.000Z" } })], HOY);
@@ -134,4 +161,8 @@ test("movimientos entre dos corridas: quién entró, quién salió (y a dónde) 
     assert.deepEqual(m.cambiaron, [{ clave: "a", persona: "A", de: 5, a: 1 }]);
     assert.equal(sinMovimientos(m), false);
     assert.equal(sinMovimientos(movimientosEntre(antes, antes)), true);
+    // Una fila que pasa a bloqueada «salió» de su situación, y se dice a dónde fue.
+    assert.equal(movimientosEntre([f("q", 5)], [], [{ clave: "q", motivo: "varios_proyectos" }]).salieron[0].ahora, "ahora está en varios proyectos (botón deshabilitado; Auditoría ARCA)");
+    // Un plazo que vence antes de su fecha cambia de la 6 a la 2.
+    assert.deepEqual(movimientosEntre([f("p", 6)], [f("p", 2)]).cambiaron, [{ clave: "p", persona: "P", de: 6, a: 2 }]);
 });
