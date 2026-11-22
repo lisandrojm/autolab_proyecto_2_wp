@@ -16,6 +16,11 @@
  *   · DOS CLASES DE FALLO: `regla_arca` (ARCA rechazó o no habilita: el texto literal) y `navegacion` (sesión,
  *     pantalla, timeout: se puede reintentar). Van en la marca, en el log y en los eventos.
  *
+ *   · SIN CONTRATO (22/11/2026): una relación de ARCA que ningún contrato de WeProdu explica se opera igual. No hay
+ *     contrato que marcar: el rastro antes del click y el resultado van al log, con la clave de la relación
+ *     (`operacion.claveRelacion`), y de ahí salen las marcas que traban (`registroOperaciones.ts`). Si el log no se
+ *     pudo crear, no se confirma nada.
+ *
  * El núcleo (`ejecutarOperacion`) no toca Mongo ni Playwright: recibe el motor y el guardado por parámetro, y así
  * se prueba con un ARCA simulado (`corridaOperacionRelacion.test.ts`).
  */

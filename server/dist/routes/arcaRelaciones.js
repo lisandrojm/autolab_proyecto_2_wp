@@ -15,6 +15,7 @@ import { hoyArgentina } from "../utils/contratoVigencia.js";
 import { isoDe } from "../services/arca/relacionesArcaStore.js";
 import { aplicarBajasArca, planDeBajasArca } from "../services/arca/bajasArcaContratos.js";
 import { auditoriaArca, guardarTotalesAuditoria, recalcularAuditoriaArca, totalesGuardados } from "../services/arca/auditoriaArca.js";
+import { relacionesOperables } from "../services/arca/relacionesOperables.js";
 /**
  * RELACIONES LABORALES DE ARCA Y ANTIGÜEDAD: lo que se lee en la pestaña «Antigüedad ARCA» de
  * Documentos y lo que la hace sincronizar. Nada de acá escribe en ARCA; la sincronización sólo lee.
@@ -96,8 +97,19 @@ router.get("/persona/:cuil", requireTenant, authenticateToken, permiso, async (r
             res.status(400).json({ error: "CUIL inválido." });
             return;
         }
-        const docs = await RelacionLaboralArca.find({ tenantId: req.tenantObjectId, cuil }).sort({ fechaInicio: -1 }).select("-rawLinea").lean();
-        res.json(docs.map((d) => ({ ...d, fechaInicio: isoDe(d.fechaInicio), fechaFin: isoDe(d.fechaFin) })));
+        // Cada relación con cómo se opera en ARCA (el ícono de Antigüedad ARCA): la misma regla que la bandeja Contratos.
+        const [docs, operables] = await Promise.all([
+            RelacionLaboralArca.find({ tenantId: req.tenantObjectId, cuil }).sort({ fechaInicio: -1 }).select("-rawLinea").lean(),
+            relacionesOperables(req.tenantObjectId, { cuil }).catch((e) => {
+                console.error("relaciones de la persona: no pude ver cómo se operan:", e?.message || e);
+                return { hoy: "", relaciones: [] };
+            }),
+        ]);
+        const operar = new Map(operables.relaciones.map((x) => [x.clave, x]));
+        res.json(docs.map((d) => {
+            const o = operar.get(`${d.empleadoraCuit}|${d.cuil}|${isoDe(d.fechaInicio)}`);
+            return { ...d, fechaInicio: isoDe(d.fechaInicio), fechaFin: isoDe(d.fechaFin), operar: o ? { modo: o.modo, puede: o.puede, motivo: o.motivo, estado: o.estado, contratos: o.contratos } : null };
+        }));
     }
     catch (e) {
         errorDe(res, e);

@@ -13,7 +13,7 @@
  * manda. El espejo se sincroniza una vez por día: la lectura definitiva la hace el motor en vivo, antes de operar.
  */
 
-import { relacionParaOperar } from "../../compartido/arca/relacionParaOperar.js";
+import { finConocido, operacionReciente, relacionParaOperar } from "../../compartido/arca/relacionParaOperar.js";
 
 export type TipoOperacion = "baja" | "modificacion" | "anulacion";
 
@@ -129,8 +129,20 @@ const motivoDeMarca = (m: MarcaOperacion, que: string): string => {
  * Es la MISMA condición que decide el ícono de la bandeja Contratos (`compartido/arca/relacionParaOperar.ts`).
  * "" si está todo.
  */
-function prerrequisitos(c: ContratoParaOperar, espejo: RelacionEspejo | null): string {
-  return relacionParaOperar({ tramite: c.tramite, estadoContrato: c.estadoContrato, cuil: c.cuil, empresaCuit: c.empresaCuit, alta: c.alta, altaArcaPresentada: c.altaArcaPresentada, enEspejo: !!espejo && espejo.inicio === c.alta }).motivo;
+function prerrequisitos(c: ContratoParaOperar, espejo: RelacionEspejo | null, hoy: string): string {
+  const enEspejo = !!espejo && espejo.inicio === c.alta;
+  return relacionParaOperar({
+    tramite: c.tramite,
+    estadoContrato: c.estadoContrato,
+    cuil: c.cuil,
+    empresaCuit: c.empresaCuit,
+    alta: c.alta,
+    altaArcaPresentada: c.altaArcaPresentada,
+    enEspejo,
+    hoy,
+    fin: finConocido({ enEspejo, finEspejo: espejo?.fin, bajaContrato: c.baja }),
+    operacionReciente: operacionReciente([c.bajaArcaPresentada, c.modificacionArcaPresentada, c.anulacionArcaPresentada], hoy),
+  }).motivo;
 }
 
 export function planDeBaja(c: ContratoParaOperar, espejo: RelacionEspejo | null, datos: DatosBaja, hoy: string, catalogo?: Map<string, string>): PlanOperacion {
@@ -141,7 +153,7 @@ export function planDeBaja(c: ContratoParaOperar, espejo: RelacionEspejo | null,
   const payload: Record<string, unknown> = { fechaFin, situacionBaja, ...(fechaTelegrama ? { fechaTelegrama } : {}) };
   const no = (motivo: string): PlanOperacion => ({ op: "baja", puede: false, motivo, avisos, payload });
 
-  const pre = prerrequisitos(c, espejo);
+  const pre = prerrequisitos(c, espejo, hoy);
   if (pre) return no(pre);
   if (!esISO(fechaFin)) return no("Falta la fecha de fin de la baja (el contrato no tiene fecha de baja y no se indicó una).");
   if (fechaFin < c.alta) return no(`La fecha de fin (${corta(fechaFin)}) es anterior al alta (${corta(c.alta)}).`);
@@ -186,7 +198,7 @@ export function planDeModificacion(c: ContratoParaOperar, espejo: RelacionEspejo
   const payload: Record<string, unknown> = { ...cambios, ...(datos?.obraSocialTexto ? { obraSocialTexto: datos.obraSocialTexto } : {}) };
   const no = (motivo: string): PlanOperacion => ({ op: "modificacion", puede: false, motivo, avisos, payload });
 
-  const pre = prerrequisitos(c, espejo);
+  const pre = prerrequisitos(c, espejo, hoy);
   if (pre) return no(pre);
   const desconocidos = Object.keys(datos?.cambios || {}).filter((k) => !(CAMPOS_MODIFICABLES as readonly string[]).includes(k));
   if (desconocidos.length) return no(`No se puede modificar: ${desconocidos.join(", ")}. Campos posibles: ${CAMPOS_MODIFICABLES.join(", ")}.`);
@@ -222,7 +234,7 @@ export function planDeAnulacion(c: ContratoParaOperar, espejo: RelacionEspejo | 
   const no = (motivo: string): PlanOperacion => ({ op: "anulacion", puede: false, motivo, avisos, payload });
 
   if (que !== "alta" && que !== "baja") return no("Hay que decir qué se anula: el alta o la baja.");
-  const pre = prerrequisitos(c, espejo);
+  const pre = prerrequisitos(c, espejo, hoy);
   if (pre) return no(pre);
   const a = c.anulacionArcaPresentada;
   if (a?.resultado === "presentando" || a?.resultado === "indeterminado") return no(motivoDeMarca(a, "La anulación"));

@@ -9,6 +9,7 @@ import { enSecoForzado } from "../services/arca/corridaAltas.js";
 import { arrancarOperacionRelacion, corridaOperacionDe, detenerOperacion } from "../services/arca/corridaOperacionRelacion.js";
 import { OperacionInvalida, contextoDeOperacion, planOperacion, situacionesDeBaja } from "../services/arca/operacionRelacion.js";
 import { CAMPOS_MODIFICABLES, ETIQUETA_CAMPO } from "../services/arca/reglasOperacionRelacion.js";
+import { relacionesOperables } from "../services/arca/relacionesOperables.js";
 /**
  * BAJA, MODIFICACIÓN Y ANULACIÓN DE UNA RELACIÓN LABORAL EN ARCA (Relaciones Laborales → Modificaciones y Bajas,
  * 20/11/2026). Ver `services/arca/corridaOperacionRelacion.ts`. Mismo permiso que las altas.
@@ -30,7 +31,13 @@ const errorDe = (res, e) => {
         return res.status(409).json({ error: e.message, ocupadaPor: e.tipo });
     return res.status(e?.status || 400).json({ error: String(e?.message || e) });
 };
+/** La relación de ARCA misma (modo «sin contrato»): en el cuerpo como `relacion`, o en la query como relCuit/relCuil/relInicio. */
+const relacionDe = (src) => {
+    const r = src?.relacion && typeof src.relacion === "object" ? src.relacion : src?.relCuit ? { empleadoraCuit: src.relCuit, cuil: src.relCuil, fechaInicio: src.relInicio } : null;
+    return r ? { empleadoraCuit: String(r.empleadoraCuit || ""), cuil: String(r.cuil || ""), fechaInicio: String(r.fechaInicio || "") } : null;
+};
 const refDe = (src) => ({
+    relacion: relacionDe(src),
     userProjectId: String(src?.userProjectId || ""),
     contratoKey: src?.contratoKey ? String(src.contratoKey) : null,
     contractIndex: src?.contractIndex === undefined || src?.contractIndex === null || src?.contractIndex === "" ? null : Number(src.contractIndex),
@@ -50,6 +57,8 @@ router.get("/relacion", requireTenant, authenticateToken, permiso, async (req, r
             empresa: ctx.empresa,
             contrato: ctx.resumen,
             espejo: ctx.espejo,
+            // La relación no tiene contrato en WeProdu: el panel lo avisa bien visible.
+            sinContrato: ctx.sinContrato,
             situacionesBaja: await situacionesDeBaja(),
             camposModificables: CAMPOS_MODIFICABLES.map((c) => ({ campo: c, etiqueta: ETIQUETA_CAMPO[c] })),
             enSecoForzado: enSecoForzado(),
@@ -104,6 +113,20 @@ router.get("/corrida", requireTenant, authenticateToken, permiso, async (req, re
 router.post("/corrida/detener", requireTenant, authenticateToken, permiso, async (req, res) => {
     const r = detenerOperacion(String(req.tenantObjectId));
     res.status(r.detenida ? 200 : 409).json(r);
+});
+/**
+ * GET /arca/operaciones/cola — LA COLA DE A.R.C.A BAJAS: las relaciones de ARCA abiertas, las que terminan de hoy en
+ * adelante y las cerradas en los últimos 30 días, cada una con cómo se opera (`relacionesOperables.ts`). La pantalla
+ * las reparte: «Pendientes» (un contrato terminado en WeProdu con la relación abierta en ARCA) y «Para revisar» (sin
+ * contrato, o con varios). Sólo lee el espejo: no abre ARCA.
+ */
+router.get("/cola", requireTenant, authenticateToken, permiso, async (req, res) => {
+    try {
+        res.json(await relacionesOperables(req.tenantObjectId));
+    }
+    catch (e) {
+        errorDe(res, e);
+    }
 });
 /** El registro de las operaciones (bajas, modificaciones, anulaciones), las últimas 200, de un contrato si se pide. El HTML no viaja. */
 router.get("/historial", requireTenant, authenticateToken, permiso, async (req, res) => {

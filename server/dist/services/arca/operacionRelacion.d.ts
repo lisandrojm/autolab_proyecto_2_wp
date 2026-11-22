@@ -6,6 +6,11 @@
  *
  * El contrato se nombra por su `contratoKey` cuando la tiene; si no, por su posición, y en los dos casos se
  * comprueba que la posición resuelta sea un contrato operable (no una lápida) de un proyecto del tenant.
+ *
+ * MODO «SIN CONTRATO» (22/11/2026): una relación de ARCA que ningún contrato de WeProdu explica (las altas viejas
+ * hechas a mano) se nombra por la relación misma —empleadora, CUIL y fecha de inicio— y se opera igual. No hay
+ * contrato donde guardar el resultado: las marcas que impiden mandar dos veces lo mismo salen del registro de
+ * operaciones (`registroOperaciones.ts`). Si la relación SÍ tiene un contrato, este modo se niega: se opera desde él.
  */
 import { Types } from "mongoose";
 import { type ContratoParaOperar, type DatosOperacion, type PlanOperacion, type RelacionEspejo, type TipoOperacion } from "./reglasOperacionRelacion.js";
@@ -18,6 +23,12 @@ export interface ReferenciaContrato {
     userProjectId: string;
     contratoKey?: string | null;
     contractIndex?: number | null;
+    /** Modo «sin contrato»: la relación de ARCA misma, cuando no hay `userProjectId`. */
+    relacion?: {
+        empleadoraCuit: string;
+        cuil: string;
+        fechaInicio: string;
+    } | null;
 }
 export interface ResumenContratoOperable {
     userProjectId: string;
@@ -36,10 +47,15 @@ export interface ResumenContratoOperable {
     };
 }
 export interface ContextoOperacion {
+    /** `null` en modo «sin contrato». */
     up: any;
     idx: number;
     contrato: any;
     contratoKey: string | null;
+    /** La relación no tiene contrato en WeProdu: el resultado no se guarda en ninguno, sólo en el registro. */
+    sinContrato: boolean;
+    /** Empleadora + CUIL + fecha de inicio: la identidad de la relación en el registro de operaciones. */
+    claveRelacion: string;
     persona: {
         userId: string;
         nombre: string;
@@ -71,6 +87,7 @@ export interface PlanConContexto {
         contrato: ResumenContratoOperable;
         espejo: RelacionEspejo | null;
         situacionTexto?: string;
+        sinContrato: boolean;
     };
     /** Lo que la corrida necesita y no viaja a la pantalla. */
     ctx: ContextoOperacion;

@@ -6,6 +6,11 @@
  *
  * El contrato se nombra por su `contratoKey` cuando la tiene; si no, por su posición, y en los dos casos se
  * comprueba que la posición resuelta sea un contrato operable (no una lápida) de un proyecto del tenant.
+ *
+ * MODO «SIN CONTRATO» (22/11/2026): una relación de ARCA que ningún contrato de WeProdu explica (las altas viejas
+ * hechas a mano) se nombra por la relación misma —empleadora, CUIL y fecha de inicio— y se opera igual. No hay
+ * contrato donde guardar el resultado: las marcas que impiden mandar dos veces lo mismo salen del registro de
+ * operaciones (`registroOperaciones.ts`). Si la relación SÍ tiene un contrato, este modo se niega: se opera desde él.
  */
 import { Types } from "mongoose";
 import UserProject from "../../models/UserProject.js";
@@ -17,6 +22,9 @@ import { ArcaSituacionBaja } from "../../models/ArcaSituacionBaja.js";
 import { indiceDeReferencia } from "../../utils/identidadContrato.js";
 import { fechaISO, hoyArgentina } from "../../utils/contratoVigencia.js";
 import { tramiteDelContrato } from "../superposicion.js";
+import { claveDeRelacion, marcasDeRegistro, SIN_MARCAS } from "./registroOperaciones.js";
+import { relacionesOperables } from "./relacionesOperables.js";
+import { marcaTraba } from "./reglasOperacionRelacion.js";
 import { planDeOperacion, type ContratoParaOperar, type DatosOperacion, type PlanOperacion, type RelacionEspejo, type TipoOperacion } from "./reglasOperacionRelacion.js";
 
 export class OperacionInvalida extends Error {
@@ -36,6 +44,8 @@ export interface ReferenciaContrato {
   userProjectId: string;
   contratoKey?: string | null;
   contractIndex?: number | null;
+  /** Modo «sin contrato»: la relación de ARCA misma, cuando no hay `userProjectId`. */
+  relacion?: { empleadoraCuit: string; cuil: string; fechaInicio: string } | null;
 }
 
 export interface ResumenContratoOperable {
@@ -51,10 +61,15 @@ export interface ResumenContratoOperable {
 }
 
 export interface ContextoOperacion {
+  /** `null` en modo «sin contrato». */
   up: any;
   idx: number;
   contrato: any;
   contratoKey: string | null;
+  /** La relación no tiene contrato en WeProdu: el resultado no se guarda en ninguno, sólo en el registro. */
+  sinContrato: boolean;
+  /** Empleadora + CUIL + fecha de inicio: la identidad de la relación en el registro de operaciones. */
+  claveRelacion: string;
   persona: { userId: string; nombre: string; cuil: string };
   empresa: { _id: string; cuit: string; razonSocial: string };
   espejo: RelacionEspejo | null;
@@ -83,7 +98,49 @@ export async function espejoDe(tenantObjectId: Types.ObjectId, empleadoraCuit: s
   };
 }
 
+/** El contexto de una relación SIN contrato en WeProdu. Se niega si la relación tiene uno: se opera desde él. */
+async function contextoSinContrato(tenantObjectId: Types.ObjectId, rel: NonNullable<ReferenciaContrato["relacion"]>): Promise<ContextoOperacion> {
+  const empleadoraCuit = dig(rel.empleadoraCuit);
+  const cuil = dig(rel.cuil);
+  const inicio = String(rel.fechaInicio || "").slice(0, 10);
+  if (empleadoraCuit.length !== 11 || cuil.length !== 11 || !/^\d{4}-\d{2}-\d{2}$/.test(inicio)) throw new OperacionInvalida("Relación mal identificada: hacen falta el CUIT de la empleadora, el CUIL y la fecha de inicio.");
+  const { relaciones } = await relacionesOperables(tenantObjectId, { relacion: { empleadoraCuit, cuil, fechaInicio: inicio } });
+  const r = relaciones[0];
+  if (!r) throw new OperacionInvalida("Esa relación no figura en las Relaciones Laborales sincronizadas desde ARCA.");
+  if (r.contratos.length > 0) throw new OperacionInvalida("Esta relación tiene un contrato en WeProdu: se opera desde el contrato, no «sin contrato».");
+  const e: any = ((await Company.find({}).select("cuit razonSocial").lean()) as any[]).find((x) => dig(x.cuit) === empleadoraCuit) || null;
+  const claveRelacion = claveDeRelacion(empleadoraCuit, cuil, inicio);
+  const reg = (await marcasDeRegistro(tenantObjectId, [claveRelacion])).get(claveRelacion) || SIN_MARCAS;
+  const espejo = await espejoDe(tenantObjectId, empleadoraCuit, cuil, inicio);
+  const altaAnulada = reg.altaAnulada ? { resultado: "anulada" } : null;
+  const razonSocial = String(e?.razonSocial || r.empleadora || empleadoraCuit);
+  return {
+    up: null,
+    idx: -1,
+    contrato: null,
+    contratoKey: null,
+    sinContrato: true,
+    claveRelacion,
+    persona: { userId: r.userId || "", nombre: r.persona || cuil, cuil },
+    empresa: { _id: e ? String(e._id) : "", cuit: empleadoraCuit, razonSocial },
+    espejo,
+    paraReglas: { cuil, empresaCuit: empleadoraCuit, alta: inicio, baja: "", altaArcaPresentada: altaAnulada, bajaArcaPresentada: reg.baja, modificacionArcaPresentada: reg.modificacion, anulacionArcaPresentada: reg.anulacion },
+    resumen: {
+      userProjectId: "",
+      contratoKey: null,
+      posicion: -1,
+      nombre_contrato: "Sin contrato en WeProdu",
+      alta: inicio,
+      baja: "",
+      nombre_empresa_contrato: razonSocial,
+      estadoContrato: "",
+      marcas: { alta: altaAnulada, baja: reg.baja, modificacion: reg.modificacion, anulacion: reg.anulacion },
+    },
+  };
+}
+
 export async function contextoDeOperacion(tenantObjectId: Types.ObjectId, ref: ReferenciaContrato): Promise<ContextoOperacion> {
+  if (!String(ref.userProjectId || "") && ref.relacion) return contextoSinContrato(tenantObjectId, ref.relacion);
   if (!Types.ObjectId.isValid(String(ref.userProjectId || ""))) throw new OperacionInvalida("Contrato mal identificado.");
   const up: any = await UserProject.findById(ref.userProjectId).lean();
   if (!up) throw new OperacionInvalida("No se encontró el vínculo del contrato.");
@@ -108,11 +165,20 @@ export async function contextoDeOperacion(tenantObjectId: Types.ObjectId, ref: R
     tramiteDelContrato({ nombre_contrato: contrato.nombre_contrato, tipo_contrato_id: contrato.tipo_contrato_id, contrato_id: contrato.contrato_id }).catch(() => undefined),
   ]);
   const contratoKey = contrato.contratoKey ? String(contrato.contratoKey) : null;
+  /*
+    LAS MARCAS DEL REGISTRO TAMBIÉN TRABAN. Si esta relación se operó antes «sin contrato» (el contrato se cargó
+    después), el contrato no tiene la marca pero el registro sí: donde el contrato no dice nada, vale el registro.
+  */
+  const claveRelacion = claveDeRelacion(empresaCuit, cuil, alta);
+  const reg = cuil.length === 11 && empresaCuit.length === 11 && alta ? (await marcasDeRegistro(tenantObjectId, [claveRelacion])).get(claveRelacion) || SIN_MARCAS : SIN_MARCAS;
+  const marca = (delContrato: any, delRegistro: any) => (!delContrato && marcaTraba(delRegistro) ? delRegistro : delContrato || null);
   return {
     up,
     idx,
     contrato,
     contratoKey,
+    sinContrato: false,
+    claveRelacion,
     persona: { userId: String(up.userId), nombre: `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email || "(sin nombre)", cuil },
     empresa: { _id: String(e._id), cuit: empresaCuit, razonSocial: String(e.razonSocial || "") },
     espejo,
@@ -124,9 +190,9 @@ export async function contextoDeOperacion(tenantObjectId: Types.ObjectId, ref: R
       alta,
       baja,
       altaArcaPresentada: contrato.altaArcaPresentada || null,
-      bajaArcaPresentada: contrato.bajaArcaPresentada || null,
-      modificacionArcaPresentada: contrato.modificacionArcaPresentada || null,
-      anulacionArcaPresentada: contrato.anulacionArcaPresentada || null,
+      bajaArcaPresentada: marca(contrato.bajaArcaPresentada, reg.baja),
+      modificacionArcaPresentada: marca(contrato.modificacionArcaPresentada, reg.modificacion),
+      anulacionArcaPresentada: marca(contrato.anulacionArcaPresentada, reg.anulacion),
     },
     resumen: {
       userProjectId: String(up._id),
@@ -145,7 +211,7 @@ export async function contextoDeOperacion(tenantObjectId: Types.ObjectId, ref: R
 export interface PlanConContexto {
   plan: PlanOperacion;
   hoy: string;
-  contexto: { persona: ContextoOperacion["persona"]; empresa: ContextoOperacion["empresa"]; contrato: ResumenContratoOperable; espejo: RelacionEspejo | null; situacionTexto?: string };
+  contexto: { persona: ContextoOperacion["persona"]; empresa: ContextoOperacion["empresa"]; contrato: ResumenContratoOperable; espejo: RelacionEspejo | null; situacionTexto?: string; sinContrato: boolean };
   /** Lo que la corrida necesita y no viaja a la pantalla. */
   ctx: ContextoOperacion;
 }
@@ -157,5 +223,5 @@ export async function planOperacion(tenantObjectId: Types.ObjectId, o: { op: Tip
   const catalogo = o.op === "baja" ? new Map((await situacionesDeBaja()).map((s) => [s.codigo, s.descripcion])) : undefined;
   const plan = planDeOperacion(o.op, ctx.paraReglas, ctx.espejo, o.datos, hoy, catalogo && catalogo.size > 0 ? catalogo : undefined);
   const situacionTexto = o.op === "baja" && catalogo ? catalogo.get(String((plan.payload as any).situacionBaja || "")) : undefined;
-  return { plan, hoy, contexto: { persona: ctx.persona, empresa: ctx.empresa, contrato: ctx.resumen, espejo: ctx.espejo, ...(situacionTexto ? { situacionTexto } : {}) }, ctx };
+  return { plan, hoy, contexto: { persona: ctx.persona, empresa: ctx.empresa, contrato: ctx.resumen, espejo: ctx.espejo, sinContrato: ctx.sinContrato, ...(situacionTexto ? { situacionTexto } : {}) }, ctx };
 }

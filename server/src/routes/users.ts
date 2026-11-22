@@ -21,7 +21,7 @@ import { Notification } from "../models/Notification.js";
 import { olvidarContratosPorVencer } from "../services/contratosPorVencer.js";
 import { quitarDelConteo, sumarAlConteo } from "../services/conteoUsuariosTenant.js";
 import { decisionAltaDePersona, lectorDeTramites, pedidoDesdeSolicitud, rechazoAltaArcaConContrato, superposicionesDeAlta, tramiteDelTipo } from "../services/superposicion.js";
-import { relacionParaOperar, TRAMITE_ALTA_ARCA, type RelacionParaOperar } from "../compartido/arca/relacionParaOperar.js";
+import { finConocido, operacionReciente, relacionParaOperar, TRAMITE_ALTA_ARCA, type RelacionParaOperar } from "../compartido/arca/relacionParaOperar.js";
 import { RelacionLaboralArca } from "../models/RelacionLaboralArca.js";
 import { avisoSinFechas } from "../compartido/altaVigente.js";
 import { ultimoNoAnulado } from "../utils/anulacionContrato.js";
@@ -1758,9 +1758,10 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
       (async () => {
         /*
           ¿HAY UNA RELACIÓN EN ARCA SOBRE LA CUAL OPERAR? (22/11/2026). La misma condición que el panel de
-          Modificaciones y Bajas (`compartido/arca/relacionParaOperar.ts`). El espejo sólo se pregunta por las
-          filas de ARCA SIN alta presentada —las altas hechas a mano que no se adoptaron—, y por CUIL y fecha
-          de inicio a la vez: viajan pocas relaciones, que es lo que cuesta contra Atlas.
+          Modificaciones y Bajas (`compartido/arca/relacionParaOperar.ts`). El espejo se pregunta por las filas
+          de trámite ARCA, por CUIL y fecha de inicio a la vez, y sólo trae empleadora, CUIL, inicio y fin: de él
+          salen si la relación existe (las altas hechas a mano que no se adoptaron) y si sigue abierta o termina
+          de hoy en adelante. Viajan pocas relaciones, que es lo que cuesta contra Atlas.
         */
         if (!todosLosContratos || pageRows.length === 0) return;
         try {
@@ -1775,17 +1776,24 @@ router.get("/contracts-overview", requireTenant, authenticateToken, requirePermi
               empresaCuit: c.empresaContratoId ? cuitDeEmpresa.get(String(c.empresaContratoId)) || "" : "",
               alta: fechaISO(c.fecha_alta_contrato) || "",
               altaArcaPresentada: c.altaArcaPresentada ? { resultado: c.altaArcaPresentada.resultado, via: c.altaArcaPresentada.via } : null,
+              baja: fechaISO(c.fecha_baja_contrato) || "",
+              marcas: [c.bajaArcaPresentada, c.modificacionArcaPresentada, c.anulacionArcaPresentada],
             };
           });
-          const aBuscar = datos.filter((d) => d.tramite === TRAMITE_ALTA_ARCA && d.altaArcaPresentada?.resultado !== "presentada" && d.cuil.length === 11 && d.empresaCuit.length === 11 && /^\d{4}-\d{2}-\d{2}$/.test(d.alta));
-          const enEspejo = new Set<string>();
+          const aBuscar = datos.filter((d) => d.tramite === TRAMITE_ALTA_ARCA && d.estadoContrato !== "ANULADO" && d.cuil.length === 11 && d.empresaCuit.length === 11 && /^\d{4}-\d{2}-\d{2}$/.test(d.alta));
+          const hoy = hoyArgentina();
+          const enEspejo = new Map<string, string>();
           if (aBuscar.length > 0) {
             const rels: any[] = await RelacionLaboralArca.find({ tenantId: req.tenantObjectId, cuil: { $in: [...new Set(aBuscar.map((d) => d.cuil))] }, fechaInicio: { $in: [...new Set(aBuscar.map((d) => d.alta))].map((f) => new Date(`${f}T00:00:00.000Z`)) } })
-              .select("-_id empleadoraCuit cuil fechaInicio")
+              .select("-_id empleadoraCuit cuil fechaInicio fechaFin")
               .lean();
-            for (const x of rels) enEspejo.add(`${x.empleadoraCuit}|${x.cuil}|${new Date(x.fechaInicio).toISOString().slice(0, 10)}`);
+            for (const x of rels) enEspejo.set(`${x.empleadoraCuit}|${x.cuil}|${new Date(x.fechaInicio).toISOString().slice(0, 10)}`, x.fechaFin ? new Date(x.fechaFin).toISOString().slice(0, 10) : "");
           }
-          for (const d of datos) relacionPorFila.set(d.clave, relacionParaOperar({ ...d, enEspejo: enEspejo.has(`${d.empresaCuit}|${d.cuil}|${d.alta}`) }));
+          for (const { baja, marcas, ...d } of datos) {
+            const k = `${d.empresaCuit}|${d.cuil}|${d.alta}`;
+            const esta = enEspejo.has(k);
+            relacionPorFila.set(d.clave, relacionParaOperar({ ...d, enEspejo: esta, hoy, fin: finConocido({ enEspejo: esta, finEspejo: enEspejo.get(k), bajaContrato: baja }), operacionReciente: operacionReciente(marcas, hoy) }));
+          }
         } catch (e: any) {
           console.error("contracts-overview: no pude ver las relaciones de ARCA para operar:", e?.message || e);
         }

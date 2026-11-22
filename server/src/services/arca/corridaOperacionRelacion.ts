@@ -16,6 +16,11 @@
  *   · DOS CLASES DE FALLO: `regla_arca` (ARCA rechazó o no habilita: el texto literal) y `navegacion` (sesión,
  *     pantalla, timeout: se puede reintentar). Van en la marca, en el log y en los eventos.
  *
+ *   · SIN CONTRATO (22/11/2026): una relación de ARCA que ningún contrato de WeProdu explica se opera igual. No hay
+ *     contrato que marcar: el rastro antes del click y el resultado van al log, con la clave de la relación
+ *     (`operacion.claveRelacion`), y de ahí salen las marcas que traban (`registroOperaciones.ts`). Si el log no se
+ *     pudo crear, no se confirma nada.
+ *
  * El núcleo (`ejecutarOperacion`) no toca Mongo ni Playwright: recibe el motor y el guardado por parámetro, y así
  * se prueba con un ARCA simulado (`corridaOperacionRelacion.test.ts`).
  */
@@ -233,8 +238,9 @@ async function correr(o: { corrida: CorridaOperacion; ctx: ContextoOperacion; te
   const que = op === "anulacion" ? ((corrida.plan.payload as any).que as "alta" | "baja") : undefined;
 
   /** Escribe campos del contrato por su clave (o por la posición resuelta si no tiene clave), auditado por los hooks del modelo. */
-  const escribir = (set: Record<string, unknown>) =>
-    enContexto({ motivo: motivoAuditoria }, () => {
+  const escribir = (set: Record<string, unknown>): Promise<unknown> =>
+    // Sin contrato no hay dónde: el rastro y el resultado van sólo al log (ver `guardar`).
+    ctx.sinContrato ? Promise.resolve() : enContexto({ motivo: motivoAuditoria }, () => {
       const conClave = Object.fromEntries(Object.entries(set).map(([k, v]) => [key ? `contracts.$[c].${k}` : `contracts.${ctx.idx}.${k}`, v]));
       return key ? UserProject.updateOne({ _id: ctx.up._id, "contracts.contratoKey": key }, { $set: conClave }, { arrayFilters: [{ "c.contratoKey": key }] }).exec() : UserProject.updateOne({ _id: ctx.up._id }, { $set: conClave }).exec();
     });
@@ -244,14 +250,15 @@ async function correr(o: { corrida: CorridaOperacion; ctx: ContextoOperacion; te
     tenantId: tenantObjectId,
     tipo: op,
     usuarioId: usuario || undefined,
-    empresaId: new Types.ObjectId(ctx.empresa._id),
+    empresaId: Types.ObjectId.isValid(ctx.empresa._id) ? new Types.ObjectId(ctx.empresa._id) : undefined,
     empresaCuit: ctx.empresa.cuit,
     empresaRazonSocial: ctx.empresa.razonSocial,
     enSeco: corrida.enSeco,
-    contratos: [{ userProjectId: new Types.ObjectId(ctx.resumen.userProjectId), contractIndex: ctx.idx, contratoKey: key, cuil: ctx.persona.cuil, nombre: ctx.persona.nombre, resultado: "pendiente" }],
+    contratos: [{ userProjectId: ctx.sinContrato ? undefined : new Types.ObjectId(ctx.resumen.userProjectId), contractIndex: ctx.idx, contratoKey: key, cuil: ctx.persona.cuil, nombre: ctx.persona.nombre, resultado: "pendiente" }],
     resultado: "en_curso",
     irreversible: false,
-    operacion: { que, payload: corrida.plan.payload },
+    // La clave de la relación va SIEMPRE: con ella se reconstruyen las marcas cuando no hay contrato.
+    operacion: { que, payload: corrida.plan.payload, claveRelacion: ctx.claveRelacion, sinContrato: ctx.sinContrato || undefined },
   }).catch((e: any) => {
     console.error("Operaciones ARCA: no pude crear el log:", e?.message || e);
     return null;
@@ -260,12 +267,20 @@ async function correr(o: { corrida: CorridaOperacion; ctx: ContextoOperacion; te
 
   const guardar: GuardadoOperacion = {
     presentando: async (payload) => {
+      if (ctx.sinContrato) {
+        // El rastro es el log: sin él (o si no se puede escribir) no se confirma. Sin `catch` a propósito.
+        if (!log) throw new Error("No se pudo dejar el registro de la operación: no se confirma nada en ARCA.");
+        await ArcaAltasLog.updateOne({ _id: log._id }, { $set: { irreversible: true, "contratos.0.resultado": "presentando", "operacion.payload": payload } });
+        return;
+      }
       // Sin `catch` a propósito: si no se puede dejar el rastro, el motor no confirma.
       await escribir({ [campo]: { via: "modificaciones", fecha: new Date(), resultado: "presentando", payload, que, logId: log?._id, usuarioId: usuario } });
       if (log) await ArcaAltasLog.updateOne({ _id: log._id }, { $set: { irreversible: true, "contratos.0.resultado": "presentando", "operacion.payload": payload } }).catch(() => {});
     },
     resultado: async (r) => {
       const x = resultadoParaMarca(r);
+      // Sin contrato, la marca ES el resultado del log: se escribe apenas se lee, no recién al cerrar la corrida.
+      if (ctx.sinContrato && log) await ArcaAltasLog.updateOne({ _id: log._id }, { $set: { resultado: x.log, "contratos.0.resultado": x.log, "operacion.acuse": r.acuse || undefined } }).catch((e: any) => console.error("Operaciones ARCA: no pude guardar el resultado en el registro:", e?.message || e));
       const marca: Record<string, unknown> = {
         via: "modificaciones",
         fecha: new Date(),
@@ -349,7 +364,7 @@ async function correr(o: { corrida: CorridaOperacion; ctx: ContextoOperacion; te
             htmlResultado: res?.html,
             "contratos.0.resultado": res ? (res.resultado === "seco" ? "seco" : x!.log) : "fallo",
             "contratos.0.motivo": res?.motivo,
-            operacion: { que, payload: res?.payload || corrida.plan.payload, relacion: res?.relacion, acuse: res?.acuse, clase: res?.clase || (error ? "navegacion" : ""), cambios: res?.cambios, textoNuevo: res?.textoNuevo, enRojo: res?.enRojo, leidoDe: res?.leidoDe, pantallaDesconocida: res?.pantallaDesconocida || undefined },
+            operacion: { claveRelacion: ctx.claveRelacion, sinContrato: ctx.sinContrato || undefined, que, payload: res?.payload || corrida.plan.payload, relacion: res?.relacion, acuse: res?.acuse, clase: res?.clase || (error ? "navegacion" : ""), cambios: res?.cambios, textoNuevo: res?.textoNuevo, enRojo: res?.enRojo, leidoDe: res?.leidoDe, pantallaDesconocida: res?.pantallaDesconocida || undefined },
           },
         },
       ).catch((e: any) => console.error("Operaciones ARCA: no pude cerrar el log:", e?.message || e));
