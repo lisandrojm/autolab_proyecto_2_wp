@@ -69,7 +69,8 @@ export async function auditoriaArca(tenantId) {
         const cuil = dig(u.metadata.cuit);
         porPersona.set(cuil, { userId: String(up.userId), persona: `${u.firstName || ""} ${u.lastName || ""}`.trim() });
         (up.contracts || []).forEach((c, i) => {
-            if (!c?.contratoKey || !c.empresaContratoId)
+            // Servicios no cuenta como contrato de ninguna relación (ver `sinRelacionEnArca`).
+            if (!c?.contratoKey || !c.empresaContratoId || ctx.esServicios(c))
                 return;
             const e = ctx.empresa.get(String(c.empresaContratoId));
             if (!e)

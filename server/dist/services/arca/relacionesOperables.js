@@ -26,7 +26,7 @@ import { RelacionLaboralArca } from "../../models/RelacionLaboralArca.js";
 import { fechaISO, hoyArgentina } from "../../utils/contratoVigencia.js";
 import { fechaISOExpr } from "../../utils/contratosQueRigen.js";
 import { lectorDeTramites } from "../superposicion.js";
-import { operacionReciente, relacionParaOperar } from "../../compartido/arca/relacionParaOperar.js";
+import { operacionReciente, relacionParaOperar, sinRelacionEnArca } from "../../compartido/arca/relacionParaOperar.js";
 import { claveDeRelacion, marcasDeRegistro, SIN_MARCAS } from "./registroOperaciones.js";
 const dig = (v) => String(v ?? "").replace(/\D/g, "");
 const iso = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
@@ -67,7 +67,7 @@ export function estadoDeRelacion(fin, hoy) {
 export function modoDeOperar(rel, contratos, registro, hoy) {
     const marcasRegistro = [registro.baja, registro.modificacion, registro.anulacion];
     // Servicios no tiene relación en ARCA: un Servicios que empieza el mismo día no es el contrato de esta relación.
-    const suyos = contratos.filter((c) => c.estadoContrato !== "ANULADO" && c.tramite !== "constancia_cuit");
+    const suyos = contratos.filter((c) => c.estadoContrato !== "ANULADO" && !sinRelacionEnArca(c.tramite));
     const vistos = suyos.map((c) => ({
         userProjectId: c.userProjectId,
         contratoKey: c.contratoKey,

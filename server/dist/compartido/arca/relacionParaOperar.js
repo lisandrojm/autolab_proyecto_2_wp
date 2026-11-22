@@ -20,6 +20,15 @@
  * Pura: el espejo lo resuelve quien llama (`enEspejo`, `fin`).
  */
 export const TRAMITE_ALTA_ARCA = "alta_temprana_afip";
+export const TRAMITE_SERVICIOS = "constancia_cuit";
+/**
+ * UN CONTRATO DE SERVICIOS NO TIENE RELACIÓN LABORAL EN ARCA (22/11/2026). Ninguna relación del espejo es «la suya»,
+ * aunque empiece el mismo día con la misma empleadora: esa relación es de otro contrato de la persona (un plazo fijo
+ * que arranca ese día, casos Castro y Martínez). Lo usan los dos lados que emparejan contratos con relaciones:
+ * el panel (`relacionesOperables.ts`) y el comparador que escribe bajas solo (`bajasArcaContratos.ts`). Sólo excluye
+ * lo que se sabe que es Servicios: un tipo sin trámite identificado no se excluye.
+ */
+export const sinRelacionEnArca = (tramite) => tramite === TRAMITE_SERVICIOS;
 const dig = (s) => String(s ?? "").replace(/\D/g, "");
 const esISO = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
 /** Cuántos días una operación hecha desde WeProdu deja la relación a mano (para anularla o corregirla). */

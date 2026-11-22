@@ -37,6 +37,11 @@ export const IMPORT_FRAME_PAUSADO = {
  * Lo ya importado no se toca. Las diferencias que quedaron entre lo importado y ARCA son un conjunto histórico
  * cerrado (ver el Glosario de ARCA y `services/arca/auditoriaArca.ts`). Reactivarla es cambiar este archivo.
  */
+/*
+  PARA REVISAR AL PUBLICAR (Lisandro): el texto de `nota` es el que se ve en la pantalla de importación y el que queda
+  guardado en `importconfigs`. La decisión de deprecar es del 22/11/2026; la RAZÓN que dice la nota la redactó Claude
+  y falta que la confirme Lisandro. Si es otra, se corrige acá: el cron la vuelve a escribir sola en la configuración.
+*/
 export const IMPORT_FRAME_DEPRECADO = {
   deprecado: true,
   desde: "22/11/2026",

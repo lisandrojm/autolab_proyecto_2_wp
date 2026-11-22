@@ -72,6 +72,11 @@ export interface ContextoArca {
         nombre: string;
     }>;
     relsPorCuil: Map<string, RelacionArca[]>;
+    /**
+     * ¿Es un contrato de Servicios? Servicios no tiene relación en ARCA: no se empareja con ninguna, aunque comparta
+     * la fecha de alta y la empleadora con otro contrato de la persona (`sinRelacionEnArca`, la misma regla del panel).
+     */
+    esServicios: (contrato: any) => boolean;
 }
 export declare function cargarContextoArca(tenantId: Types.ObjectId | string, opciones?: {
     userIds?: string[];

@@ -21,6 +21,16 @@
  */
 
 export const TRAMITE_ALTA_ARCA = "alta_temprana_afip";
+export const TRAMITE_SERVICIOS = "constancia_cuit";
+
+/**
+ * UN CONTRATO DE SERVICIOS NO TIENE RELACIÓN LABORAL EN ARCA (22/11/2026). Ninguna relación del espejo es «la suya»,
+ * aunque empiece el mismo día con la misma empleadora: esa relación es de otro contrato de la persona (un plazo fijo
+ * que arranca ese día, casos Castro y Martínez). Lo usan los dos lados que emparejan contratos con relaciones:
+ * el panel (`relacionesOperables.ts`) y el comparador que escribe bajas solo (`bajasArcaContratos.ts`). Sólo excluye
+ * lo que se sabe que es Servicios: un tipo sin trámite identificado no se excluye.
+ */
+export const sinRelacionEnArca = (tramite: string | null | undefined): boolean => tramite === TRAMITE_SERVICIOS;
 
 export interface ContratoParaRelacion {
   /**

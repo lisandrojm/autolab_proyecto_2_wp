@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { finConocido, operacionReciente, relacionParaOperar, type ContratoParaRelacion } from "./relacionParaOperar.js";
+import { finConocido, operacionReciente, relacionParaOperar, sinRelacionEnArca, type ContratoParaRelacion } from "./relacionParaOperar.js";
 
 const c = (x: Partial<ContratoParaRelacion> = {}): ContratoParaRelacion => ({ tramite: "alta_temprana_afip", cuil: "20111111112", empresaCuit: "30222222223", alta: "2026-10-01", altaArcaPresentada: null, enEspejo: false, ...x });
 
@@ -84,4 +84,12 @@ test("fin conocido: el del espejo si está; si no, la baja del contrato", () => 
   assert.equal(finConocido({ enEspejo: true, finEspejo: "", bajaContrato: "2026-11-01" }), "");
   assert.equal(finConocido({ enEspejo: true, finEspejo: "2026-11-30", bajaContrato: "2026-11-01" }), "2026-11-30");
   assert.equal(finConocido({ enEspejo: false, finEspejo: "", bajaContrato: "2026-11-01T00:00:00.000Z" }), "2026-11-01");
+});
+
+test("Servicios no tiene relación en ARCA; un tipo sin trámite identificado no se excluye", () => {
+  assert.equal(sinRelacionEnArca("constancia_cuit"), true);
+  assert.equal(sinRelacionEnArca("alta_temprana_afip"), false);
+  assert.equal(sinRelacionEnArca("sin_cuit"), false);
+  assert.equal(sinRelacionEnArca(null), false);
+  assert.equal(sinRelacionEnArca(undefined), false);
 });

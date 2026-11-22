@@ -26,6 +26,8 @@ import { fechaISO, hoyArgentina } from "../../utils/contratoVigencia.js";
 import { bajaConFormatoDelAlta, cambioDeBajaSegunArca, type RelacionArca, type TipoCambioBaja } from "../../utils/bajasArcaContrato.js";
 import { enContexto } from "../../utils/contextoAuditoria.js";
 import { estadoAlEscribir } from "../estadoContratoAlGuardar.js";
+import { lectorDeTramites } from "../superposicion.js";
+import { sinRelacionEnArca } from "../../compartido/arca/relacionParaOperar.js";
 
 const dig = (v: unknown) => String(v ?? "").replace(/\D/g, "");
 const iso = (d: unknown) => (d ? new Date(d as any).toISOString().slice(0, 10) : "");
@@ -81,6 +83,11 @@ export interface ContextoArca {
   /** Empleadoras por id: CUIT y razón social. */
   empresa: Map<string, { cuit: string; nombre: string }>;
   relsPorCuil: Map<string, RelacionArca[]>;
+  /**
+   * ¿Es un contrato de Servicios? Servicios no tiene relación en ARCA: no se empareja con ninguna, aunque comparta
+   * la fecha de alta y la empleadora con otro contrato de la persona (`sinRelacionEnArca`, la misma regla del panel).
+   */
+  esServicios: (contrato: any) => boolean;
 }
 
 export async function cargarContextoArca(tenantId: Types.ObjectId | string, opciones: { userIds?: string[] } = {}): Promise<ContextoArca> {
@@ -92,32 +99,35 @@ export async function cargarContextoArca(tenantId: Types.ObjectId | string, opci
   const porUsuario = new Map(usuarios.filter((u) => dig(u.metadata?.cuit).length === 11).map((u) => [String(u._id), u]));
   const cuils = [...new Set([...porUsuario.values()].map((u) => dig(u.metadata.cuit)))];
 
-  const [ups, empresas, rels, t]: [any[], any[], any[], any] = await Promise.all([
+  const [ups, empresas, rels, t, tramiteDe]: [any[], any[], any[], any, Awaited<ReturnType<typeof lectorDeTramites>>] = await Promise.all([
     // Sin filtrar por empleadora acá: en un array, `contracts.empresaContratoId: {$ne: null}` exige que
     // NINGÚN contrato la tenga vacía, y una lápida (sin datos) dejaba afuera el vínculo entero (Barbona).
     UserProject.find({ userId: { $in: [...porUsuario.keys()].map((x) => new Types.ObjectId(x)) } })
-      .select("userId nombre_proyecto contracts.contratoKey contracts.estadoContrato contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.empresaContratoId contracts.nombre_contrato contracts.altaArcaPresentada.resultado contracts.altaArcaPresentada.via")
+      .select("userId nombre_proyecto contracts.contratoKey contracts.estadoContrato contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.empresaContratoId contracts.nombre_contrato contracts.tipo_contrato_id contracts.contrato_id contracts.altaArcaPresentada.resultado contracts.altaArcaPresentada.via")
       .lean(),
     Company.find({}).select("cuit razonSocial").lean(),
     cuils.length ? RelacionLaboralArca.find({ tenantId: tid, cuil: { $in: cuils } }).select("-_id cuil empleadoraCuit fechaInicio fechaFin situacionBaja").lean() : Promise.resolve([]),
     Tenant.findById(tid).select("integrations.arcaSimplificacion.sincronizacionRelaciones.ultimaSync.fecha").lean(),
+    lectorDeTramites(),
   ]);
+  const esServicios = (c: any) => sinRelacionEnArca(tramiteDe({ nombre_contrato: c?.nombre_contrato, tipo_contrato_id: c?.tipo_contrato_id, contrato_id: c?.contrato_id }));
   const empresa = new Map(empresas.map((e) => [String(e._id), { cuit: dig(e.cuit), nombre: String(e.razonSocial || "") }]));
   const relaciones: RelacionArca[] = rels.map((r) => ({ cuil: r.cuil, empleadoraCuit: r.empleadoraCuit, inicio: iso(r.fechaInicio), fin: iso(r.fechaFin), situacionBaja: r.situacionBaja || "" }));
   const relsPorCuil = new Map<string, RelacionArca[]>();
   for (const r of relaciones) (relsPorCuil.get(r.cuil) || relsPorCuil.set(r.cuil, []).get(r.cuil)!).push(r);
-  return { hoy, espejoAl: t?.integrations?.arcaSimplificacion?.sincronizacionRelaciones?.ultimaSync?.fecha || null, porUsuario, ups, empresa, relsPorCuil };
+  return { hoy, espejoAl: t?.integrations?.arcaSimplificacion?.sincronizacionRelaciones?.ultimaSync?.fecha || null, porUsuario, ups, empresa, relsPorCuil, esServicios };
 }
 
 export async function planDeBajasArca(tenantId: Types.ObjectId | string, opciones: { userIds?: string[]; contexto?: ContextoArca } = {}): Promise<PlanBajasArca> {
   const tid = new Types.ObjectId(String(tenantId));
-  const { hoy, espejoAl, porUsuario, ups, empresa, relsPorCuil } = opciones.contexto || (await cargarContextoArca(tid, { userIds: opciones.userIds }));
+  const { hoy, espejoAl, porUsuario, ups, empresa, relsPorCuil, esServicios } = opciones.contexto || (await cargarContextoArca(tid, { userIds: opciones.userIds }));
 
   // Para el paraguas: las altas de todos los contratos no anulados de cada persona, por empleadora (en
   // cualquier proyecto).
   const altasPorPersonaYEmpresa = new Map<string, string[]>();
   for (const up of ups) for (const c of up.contracts || []) {
-    if (!c?.contratoKey || !c.empresaContratoId || c.estadoContrato === "ANULADO") continue;
+    // Sin los de Servicios: su alta no explica ningún tramo de ARCA (no tienen relación).
+    if (!c?.contratoKey || !c.empresaContratoId || c.estadoContrato === "ANULADO" || esServicios(c)) continue;
     const k = `${up.userId}|${c.empresaContratoId}`;
     (altasPorPersonaYEmpresa.get(k) || altasPorPersonaYEmpresa.set(k, []).get(k)!).push(fechaDe(c.fecha_alta_contrato));
   }
@@ -129,7 +139,8 @@ export async function planDeBajasArca(tenantId: Types.ObjectId | string, opcione
     const suyas = relsPorCuil.get(cuil) || [];
     if (!suyas.length) continue;
     (up.contracts || []).forEach((c: any, i: number) => {
-      if (!c?.contratoKey || !c.empresaContratoId) return;
+      // Un Servicios no recibe bajas de ARCA: la relación que empieza ese día es de otro contrato de la persona.
+      if (!c?.contratoKey || !c.empresaContratoId || esServicios(c)) return;
       const e = empresa.get(String(c.empresaContratoId));
       if (!e) return;
       const alta = fechaDe(c.fecha_alta_contrato);
