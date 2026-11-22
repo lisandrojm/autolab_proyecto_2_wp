@@ -13,8 +13,12 @@
  *   5. Indeterminado vigente           abierto de los dos lados. Inventario, no trabajo: no suma al total del menú.
  *
  * QUÉ NO ENTRA (y por qué, en `fuera`): relaciones cerradas; plazos vigentes que ARCA cierra sola; las que tienen
- * VARIOS contratos candidatos (van a Auditoría ARCA › «Relación con varios contratos»: no se pueden dar de baja desde
- * WeProdu hasta anular el duplicado); las que la regla compartida dice que no se operan (alta sin confirmar o
+ * VARIOS contratos candidatos (van a Auditoría ARCA › «Relación con varios contratos»). Son dos cosas distintas:
+ *   · `varios_contratos`: duplicados dentro del MISMO proyecto. Se anula el que sobra y la relación entra a la lista.
+ *   · `varios_proyectos`: la misma relación cargada en VARIOS proyectos («agregar miembro»: Quinteiro, Yorio). No es
+ *     un problema de datos sino una decisión que WeProdu modela mal, y se resuelve A MANO. La lista NO elige un
+ *     contrato «principal»: la baja en ARCA quedaría atada a un proyecto arbitrario y el resto seguiría vigente.
+ * Tampoco entran las que la regla compartida dice que no se operan (alta sin confirmar o
  * anulada); y las que ya tienen la baja presentada y confirmada (falta que la sincronización la traiga cerrada).
  * Servicios y anulados no cuentan como contrato de ninguna relación (`relacionesOperables.ts`).
  *
@@ -33,7 +37,7 @@ import { Types } from "mongoose";
 import { type ContratoDeRelacion, type RelacionOperable } from "./relacionesOperables.js";
 export type SituacionBajaArca = 1 | 2 | 3 | 4 | 5;
 export declare const SITUACIONES_BAJA_ARCA: Record<SituacionBajaArca, string>;
-export type MotivoFuera = "cerrada" | "varios_contratos" | "plazo_vigente" | "baja_presentada" | "no_se_opera";
+export type MotivoFuera = "cerrada" | "varios_contratos" | "varios_proyectos" | "plazo_vigente" | "baja_presentada" | "no_se_opera";
 export declare const MOTIVOS_FUERA: Record<MotivoFuera, string>;
 export interface MarcaDeBaja {
     resultado?: string;
@@ -48,6 +52,8 @@ export interface DatosParaSituacion {
     finArca: string;
     /** Cuántos contratos de WeProdu tiene la relación (sin anulados ni Servicios). */
     contratos: number;
+    /** En cuántos proyectos (vínculos) distintos están esos contratos. */
+    proyectos: number;
     /** La regla compartida dice que hay algo que operar. */
     puede: boolean;
     /** La baja del contrato en WeProdu ("" = sin baja). Sólo con UN contrato. */

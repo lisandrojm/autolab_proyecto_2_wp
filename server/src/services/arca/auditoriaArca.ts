@@ -18,7 +18,8 @@
  *                       tiene por jornadas. No se alinea sola (decisión del 18/11).
  *  - relacionVariosContratos una relación VIVA en ARCA (abierta, o con fin de hoy en adelante) con VARIOS contratos
  *                       en WeProdu de la misma persona, empleadora y fecha de alta (22/11/2026). Bajas ARCA no las
- *                       lista: no se pueden dar de baja desde WeProdu hasta anular el duplicado. Sale de la misma
+ *                       lista. Dos casos, y cada fila dice cuál: el contrato DUPLICADO en un mismo proyecto (se anula
+ *                       el que sobra) y la MISMA RELACIÓN EN VARIOS PROYECTOS, que se resuelve a mano. Sale de la misma
  *                       función que arma esa lista (`listaBajasArca`), para que los dos lugares no difieran.
  *  - discrepanciasFrame lo que FRAME manda distinto de WeProdu y el import no pisó (vacío mientras el import
  *                       esté pausado; el contador tenía que vivir en un lugar que alguien mire).
@@ -74,6 +75,10 @@ export interface ItemRelacionVariosContratos {
   empleadoraCuit: string;
   inicio: string;
   fin: string;
+  /** `duplicado`: varios contratos en un mismo proyecto. `varios_proyectos`: la misma relación en varios proyectos. */
+  tipo: "duplicado" | "varios_proyectos";
+  /** Lo que la fila dice que hay que hacer. */
+  nota: string;
   contratos: { contratoKey: string | null; userProjectId: string; posicion: number; proyecto: string; contrato: string; alta: string; baja: string }[];
 }
 
@@ -126,7 +131,7 @@ export async function auditoriaArca(tenantId: Types.ObjectId | string): Promise<
   const [ctx, bajas] = await Promise.all([cargarContextoArca(tid), listaBajasArca(tid)]);
   const plan = await planDeBajasArca(tid, { contexto: ctx });
   const relacionVariosContratos: ItemRelacionVariosContratos[] = bajas.fuera
-    .filter((x) => x.motivo === "varios_contratos")
+    .filter((x) => x.motivo === "varios_contratos" || x.motivo === "varios_proyectos")
     .map((x) => ({
       userId: x.userId || "",
       persona: x.persona,
@@ -135,6 +140,8 @@ export async function auditoriaArca(tenantId: Types.ObjectId | string): Promise<
       empleadoraCuit: x.empleadoraCuit,
       inicio: x.inicio,
       fin: x.finArca,
+      tipo: x.motivo === "varios_proyectos" ? ("varios_proyectos" as const) : ("duplicado" as const),
+      nota: x.motivo === "varios_proyectos" ? "Misma relación en varios proyectos: resolver a mano" : "Contrato duplicado en el mismo proyecto: anular el que sobra",
       contratos: x.contratos.map((c) => ({ contratoKey: c.contratoKey, userProjectId: c.userProjectId, posicion: c.posicion, proyecto: c.proyecto, contrato: c.contrato, alta: c.alta, baja: c.baja })),
     }));
 

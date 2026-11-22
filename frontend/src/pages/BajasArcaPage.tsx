@@ -8,7 +8,8 @@ import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo"
 import { EncabezadoSincronizacionArca } from "../components/arca/EncabezadoSincronizacionArca";
 import { OperacionesArcaHistorial } from "../components/arca/OperacionesArcaHistorial";
 import { OperacionArcaModal } from "../components/contratos/OperacionArcaModal";
-import { arcaOperacionesAPI, SITUACIONES_BAJA_ARCA, type ConteosBajaArca, type FilaBajaArca, type ListaBajasArca, type MovimientosBajaArca, type ReferenciaContratoArca, type SituacionBajaArca } from "../api/arcaOperaciones";
+import { fechaHoraCorta as fechaHora, hayMovimientos, MovimientosBajasArca as Movimientos, resumenDeConteos } from "../components/arca/MovimientosBajasArca";
+import { arcaOperacionesAPI, SITUACIONES_BAJA_ARCA, type ConteosBajaArca, type FilaBajaArca, type ListaBajasArca, type ReferenciaContratoArca, type SituacionBajaArca } from "../api/arcaOperaciones";
 
 /*
   BAJAS ARCA (22/11/2026, pedido del usuario): UNA sola lista, y el único lugar desde donde se da de baja una
@@ -26,7 +27,8 @@ import { arcaOperacionesAPI, SITUACIONES_BAJA_ARCA, type ConteosBajaArca, type F
      relación viva que no está en la lista y por qué (plazo vigente, varios contratos…).
    - «Operaciones» (lo que se mandó y su resultado) es la segunda pestaña.
    - Debajo de los chips, la foto de la corrida de las 06:00 y qué cambió desde entonces: un número que cambia
-     tiene que poder explicarse.
+     tiene que poder explicarse. «Sincronizar ahora» no reemplaza la foto, pero el encabezado muestra la diferencia
+     contra ella apenas termina, y la lista se actualiza con lo que trajo.
 */
 
 type Pestana = "bajas" | "operaciones";
@@ -36,7 +38,6 @@ const SITUACIONES: SituacionBajaArca[] = [1, 2, 3, 4, 5];
 const PRENDIDAS_POR_DEFECTO: SituacionBajaArca[] = [1, 2, 3, 4];
 const fmtCuil = (c: string) => (c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}` : c);
 const fechaCorta = (iso?: string | null) => (iso && /^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : "—");
-const fechaHora = (iso?: string | null) => (iso ? new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—");
 const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const th = "px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 text-left";
 const td = "px-4 py-3 text-sm text-gray-700 dark:text-gray-300";
@@ -50,22 +51,6 @@ const TONO: Record<SituacionBajaArca, { chip: string; punto: string }> = {
 };
 
 const conteoDe = (c: ConteosBajaArca, s: SituacionBajaArca) => c[`s${s}` as "s1"];
-const resumenDeConteos = (c: ConteosBajaArca) => `${c.pendientes} ${c.pendientes === 1 ? "pendiente" : "pendientes"} (1: ${c.s1} · 2: ${c.s2} · 3: ${c.s3} · 4: ${c.s4}) y ${c.s5} de inventario`;
-const hayMovimientos = (m?: MovimientosBajaArca | null) => !!m && (m.entraron.length > 0 || m.salieron.length > 0 || m.cambiaron.length > 0);
-
-const Movimientos: React.FC<{ m: MovimientosBajaArca }> = ({ m }) => (
-  <ul className="mt-1 space-y-0.5 text-xs text-gray-600 dark:text-gray-400">
-    {m.entraron.map((x) => (
-      <li key={`e-${x.clave}`}><span className="font-semibold text-gray-800 dark:text-gray-200">Entró</span> {x.persona} · {x.situacion}. {SITUACIONES_BAJA_ARCA[x.situacion]}</li>
-    ))}
-    {m.salieron.map((x) => (
-      <li key={`s-${x.clave}`}><span className="font-semibold text-gray-800 dark:text-gray-200">Salió</span> {x.persona} (estaba en {x.situacion}. {SITUACIONES_BAJA_ARCA[x.situacion]}): {x.ahora}</li>
-    ))}
-    {m.cambiaron.map((x) => (
-      <li key={`c-${x.clave}`}><span className="font-semibold text-gray-800 dark:text-gray-200">Cambió</span> {x.persona}: de {x.de}. {SITUACIONES_BAJA_ARCA[x.de]} a {x.a}. {SITUACIONES_BAJA_ARCA[x.a]}</li>
-    ))}
-  </ul>
-);
 
 export const BajasArcaPage: React.FC = () => {
   const [pestana, setPestana] = useState<Pestana>("bajas");
@@ -130,7 +115,7 @@ export const BajasArcaPage: React.FC = () => {
               <li><strong>Sin contrato en WeProdu:</strong> ARCA tiene la relación y WeProdu no tiene un contrato con esa persona, empleadora y fecha de inicio. La fila dice si la persona no tiene ficha o si tiene ficha pero no ese contrato: alguien de laboral tiene que decir si falta cargar el contrato o sobra la relación.</li>
               <li><strong>Indeterminado vigente:</strong> abierto de los dos lados. Es inventario, no trabajo pendiente: no suma al número del menú y su chip arranca apagado.</li>
             </ol>
-            <p><strong>No entran:</strong> las relaciones cerradas, los plazos vigentes que ARCA cierra sola en su fecha, y las relaciones con varios contratos en WeProdu (esas están en Documentos › Auditoría ARCA: no se pueden dar de baja hasta anular el duplicado).</p>
+            <p><strong>No entran:</strong> las relaciones cerradas, los plazos vigentes que ARCA cierra sola en su fecha, y las relaciones con varios contratos en WeProdu. Esas están en Documentos › Auditoría ARCA: si es un contrato duplicado, se anula el que sobra y la relación aparece acá; si es la misma relación en varios proyectos, se resuelve a mano (esta lista no elige un contrato por su cuenta).</p>
             <p>ARCA pide informar la baja dentro de los {DIAS_PLAZO_BAJA} días corridos del fin; pasado ese plazo puede observarla. Por eso, dentro de cada situación, van primero las que llevan más días.</p>
             <p>Todo sale de la última sincronización con ARCA: si algo cambió hoy en ARCA, sincronizá primero.</p>
           </div>
@@ -139,7 +124,7 @@ export const BajasArcaPage: React.FC = () => {
       shouldShowInfo
     >
       <div className="space-y-6">
-        <EncabezadoSincronizacionArca onSincronizada={() => void cargar()} />
+        <EncabezadoSincronizacionArca onSincronizada={(l) => (l ? setLista(l) : void cargar())} />
 
         <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 dark:border-gray-700">
           {([
@@ -324,6 +309,12 @@ export const BajasArcaPage: React.FC = () => {
                 <>
                   {c.fuera.varios_contratos} {c.fuera.varios_contratos === 1 ? "relación viva tiene" : "relaciones vivas tienen"} varios contratos en WeProdu y no se {c.fuera.varios_contratos === 1 ? "puede" : "pueden"} dar de baja hasta anular el duplicado: {c.fuera.varios_contratos === 1 ? "está" : "están"} en{" "}
                   <Link to="/documents" className="underline hover:text-gray-700 dark:hover:text-gray-300">Documentos › Auditoría ARCA</Link>.{" "}
+                </>
+              ) : null}
+              {c.fuera.varios_proyectos ? (
+                <>
+                  {c.fuera.varios_proyectos} {c.fuera.varios_proyectos === 1 ? "relación viva es" : "relaciones vivas son"} la misma relación cargada en varios proyectos: se {c.fuera.varios_proyectos === 1 ? "resuelve" : "resuelven"} a mano ({c.fuera.varios_proyectos === 1 ? "está" : "están"} en{" "}
+                  <Link to="/documents" className="underline hover:text-gray-700 dark:hover:text-gray-300">Documentos › Auditoría ARCA</Link>). Esta lista no elige un contrato por su cuenta.{" "}
                 </>
               ) : null}
               {fueraTexto.length > 0 && <>Tampoco están en la lista: {fueraTexto.join(" · ")}.</>}

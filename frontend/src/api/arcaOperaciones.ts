@@ -55,7 +55,7 @@ export interface FilaBajaArca {
   contrato: { userProjectId: string; contratoKey: string | null; posicion: number } | null;
 }
 
-export type MotivoFueraBajaArca = "cerrada" | "varios_contratos" | "plazo_vigente" | "baja_presentada" | "no_se_opera";
+export type MotivoFueraBajaArca = "cerrada" | "varios_contratos" | "varios_proyectos" | "plazo_vigente" | "baja_presentada" | "no_se_opera";
 
 /** Una relación viva en ARCA que NO está en la lista, y por qué. */
 export interface FilaFueraBajaArca {

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { armarListaBajas, bajaSinConfirmar, movimientosEntre, sinMovimientos, situacionDeBaja } from "./listaBajasArca.js";
 const HOY = "2026-11-22";
-const datos = (x = {}) => ({ estado: "abierta", finArca: "", contratos: 1, puede: true, bajaContrato: "", baja: null, ...x });
+const datos = (x = {}) => ({ estado: "abierta", finArca: "", contratos: 1, proyectos: 1, puede: true, bajaContrato: "", baja: null, ...x });
 const sit = (x = {}) => situacionDeBaja(datos(x), HOY);
 test("1 · terminado en WeProdu: baja pasada y ARCA abierta", () => {
     assert.deepEqual(sit({ bajaContrato: "2026-11-12" }), { situacion: 1, fuera: null });
@@ -40,6 +40,9 @@ test("lo que no entra, con su motivo", () => {
     assert.deepEqual(sit({ contratos: 2 }), { situacion: null, fuera: "varios_contratos" });
     // Varios contratos gana aunque haya una baja sin confirmar en uno: no se sabe de cuál es la relación.
     assert.equal(sit({ contratos: 3, bajaContrato: "2026-11-12" }).fuera, "varios_contratos");
+    // La misma relación en varios proyectos (Quinteiro, Yorio) no es un duplicado: se resuelve a mano, la lista no elige.
+    assert.equal(sit({ contratos: 5, proyectos: 5 }).fuera, "varios_proyectos");
+    assert.equal(sit({ contratos: 3, proyectos: 2 }).fuera, "varios_proyectos");
     // Plazo vigente con el mismo fin en los dos lados (o WeProdu sin baja, o más largo): ARCA lo cierra sola.
     assert.equal(sit({ estado: "fin_futuro", finArca: "2026-12-31", bajaContrato: "2026-12-31" }).fuera, "plazo_vigente");
     assert.equal(sit({ estado: "fin_futuro", finArca: "2026-12-31", bajaContrato: "" }).fuera, "plazo_vigente");
@@ -88,13 +91,15 @@ test("la lista: una situación por fila, ordenada 1 a 5 y por días desde el fin
         rel({ persona: "Antes de su fecha", estado: "fin_futuro", fin: "2026-12-31", contratos: [contrato({ contrato: "Plazo fijo 5x7", baja: "2026-11-30" })] }),
         rel({ persona: "Sin confirmar", contratos: [contrato({ baja: "2026-11-01", bajaPresentada: { resultado: "indeterminado", clase: "", fecha: "2026-11-20T12:00:00.000Z" } })] }),
         rel({ persona: "Duplicado", contratos: [contrato(), contrato({ contratoKey: "k2", posicion: 1 })] }),
+        rel({ persona: "En dos proyectos", contratos: [contrato(), contrato({ userProjectId: "up2", contratoKey: "k3", proyecto: "PRODUCTORA" })] }),
         rel({ persona: "Plazo vigente", estado: "fin_futuro", fin: "2026-12-31", contratos: [contrato({ baja: "2026-12-31" })] }),
         rel({ persona: "Cerrada", estado: "cerrada_reciente", fin: "2026-11-10" }),
     ], HOY);
     assert.deepEqual(lista.filas.map((f) => `${f.situacion} ${f.persona}`), ["1 Terminó hace 10", "1 Terminó hace 3", "2 Antes de su fecha", "3 Sin confirmar", "4 Ficha sin contrato", "4 Sin ficha", "5 Vigente"]);
-    assert.deepEqual(lista.conteos, { s1: 2, s2: 1, s3: 1, s4: 2, s5: 1, pendientes: 6, fuera: { varios_contratos: 1, plazo_vigente: 1 } });
+    assert.deepEqual(lista.conteos, { s1: 2, s2: 1, s3: 1, s4: 2, s5: 1, pendientes: 6, fuera: { varios_contratos: 1, varios_proyectos: 1, plazo_vigente: 1 } });
     // Las cerradas no se listan ni afuera: la lista es de relaciones vivas.
-    assert.deepEqual(lista.fuera.map((f) => `${f.persona}: ${f.motivo}`), ["Duplicado: varios_contratos", "Plazo vigente: plazo_vigente"]);
+    assert.deepEqual(lista.fuera.map((f) => `${f.persona}: ${f.motivo}`), ["Duplicado: varios_contratos", "En dos proyectos: varios_proyectos", "Plazo vigente: plazo_vigente"]);
+    assert.match(lista.fuera[1].texto, /^Misma relación en varios proyectos: resolver a mano/);
     assert.equal(lista.fuera[0].contratos.length, 2);
     const de = (p) => lista.filas.find((f) => f.persona === p);
     assert.equal(de("Terminó hace 10").diasDesdeFin, 10);

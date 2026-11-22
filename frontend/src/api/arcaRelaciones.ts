@@ -155,6 +155,9 @@ export interface ItemRelacionVariosContratos {
   empleadoraCuit: string;
   inicio: string;
   fin: string;
+  /** `duplicado`: varios contratos en un mismo proyecto. `varios_proyectos`: la misma relación en varios proyectos (se resuelve a mano). */
+  tipo?: "duplicado" | "varios_proyectos";
+  nota?: string;
   contratos: { contratoKey: string | null; userProjectId: string; posicion: number; proyecto: string; contrato: string; alta: string; baja: string }[];
 }
 export interface ItemDiscrepanciaFrame {

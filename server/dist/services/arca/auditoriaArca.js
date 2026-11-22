@@ -18,7 +18,8 @@
  *                       tiene por jornadas. No se alinea sola (decisión del 18/11).
  *  - relacionVariosContratos una relación VIVA en ARCA (abierta, o con fin de hoy en adelante) con VARIOS contratos
  *                       en WeProdu de la misma persona, empleadora y fecha de alta (22/11/2026). Bajas ARCA no las
- *                       lista: no se pueden dar de baja desde WeProdu hasta anular el duplicado. Sale de la misma
+ *                       lista. Dos casos, y cada fila dice cuál: el contrato DUPLICADO en un mismo proyecto (se anula
+ *                       el que sobra) y la MISMA RELACIÓN EN VARIOS PROYECTOS, que se resuelve a mano. Sale de la misma
  *                       función que arma esa lista (`listaBajasArca`), para que los dos lugares no difieran.
  *  - discrepanciasFrame lo que FRAME manda distinto de WeProdu y el import no pisó (vacío mientras el import
  *                       esté pausado; el contador tenía que vivir en un lugar que alguien mire).
@@ -54,7 +55,7 @@ export async function auditoriaArca(tenantId) {
     const [ctx, bajas] = await Promise.all([cargarContextoArca(tid), listaBajasArca(tid)]);
     const plan = await planDeBajasArca(tid, { contexto: ctx });
     const relacionVariosContratos = bajas.fuera
-        .filter((x) => x.motivo === "varios_contratos")
+        .filter((x) => x.motivo === "varios_contratos" || x.motivo === "varios_proyectos")
         .map((x) => ({
         userId: x.userId || "",
         persona: x.persona,
@@ -63,6 +64,8 @@ export async function auditoriaArca(tenantId) {
         empleadoraCuit: x.empleadoraCuit,
         inicio: x.inicio,
         fin: x.finArca,
+        tipo: x.motivo === "varios_proyectos" ? "varios_proyectos" : "duplicado",
+        nota: x.motivo === "varios_proyectos" ? "Misma relación en varios proyectos: resolver a mano" : "Contrato duplicado en el mismo proyecto: anular el que sobra",
         contratos: x.contratos.map((c) => ({ contratoKey: c.contratoKey, userProjectId: c.userProjectId, posicion: c.posicion, proyecto: c.proyecto, contrato: c.contrato, alta: c.alta, baja: c.baja })),
     }));
     // Lo que sale del clasificador de bajas.

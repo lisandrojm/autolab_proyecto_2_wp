@@ -6,6 +6,8 @@ import { sweetAlert } from "../../utils/sweetAlert";
 import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 import { SincronizarBajasModal } from "./SincronizarBajasModal";
 import { GlosarioArca } from "./GlosarioArca";
+import { BajasArcaDespuesDeSincronizar } from "./MovimientosBajasArca";
+import { arcaOperacionesAPI, type ListaBajasArca } from "../../api/arcaOperaciones";
 
 /*
   LA SINCRONIZACIÓN CON ARCA, EN UN SOLO COMPONENTE (22/11/2026): cuándo corre sola, cómo le fue la última vez,
@@ -16,6 +18,10 @@ import { GlosarioArca } from "./GlosarioArca";
    - «N altas históricas hechas a mano donde ARCA termina después que el contrato · no requieren acción»: una
      diferencia ya investigada (ver `GlosarioArca`), que no es trabajo de nadie.
   Antes iban sumados en un solo «838 para que mire una persona»: un contador que mezcla las dos cosas no lo mira nadie.
+
+  CUANDO TERMINA UNA SINCRONIZACIÓN CON LA PANTALLA ABIERTA (el caso de «Sincronizar ahora») se vuelve a calcular la
+  lista de Bajas ARCA y se muestra qué cambió respecto de la última foto de la corrida automática. La foto NO se
+  reemplaza (la guarda sólo la corrida de las 06:00), pero el que aprieta el botón a mano ve qué cambió.
 */
 
 const fechaHora = (iso: string) => new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -33,14 +39,18 @@ const td = "px-4 py-3 text-sm text-gray-700 dark:text-gray-300";
 export const EncabezadoSincronizacionArca: React.FC<{
   /** Cada vez que se lee el estado (la pantalla que lo usa puede necesitarlo). */
   onEstado?: (e: EstadoSyncRelaciones) => void;
-  /** Terminó una sincronización con la pantalla abierta: hay que volver a leer lo que dependa del espejo. */
-  onSincronizada?: () => void;
+  /**
+   * Terminó una sincronización con la pantalla abierta: hay que volver a leer lo que dependa del espejo. Llega la
+   * lista de Bajas ARCA recién calculada, si se pudo leer (quien la muestra no tiene que pedirla otra vez).
+   */
+  onSincronizada?: (bajas?: ListaBajasArca) => void;
 }> = ({ onEstado, onSincronizada }) => {
   const [estado, setEstado] = useState<EstadoSyncRelaciones | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [verUltima, setVerUltima] = useState(false);
   const [verBajas, setVerBajas] = useState(false);
   const [verGlosario, setVerGlosario] = useState(false);
+  const [bajasTrasSync, setBajasTrasSync] = useState<ListaBajasArca | null>(null);
   const ultimaSyncVista = useRef<string | null>(null);
   const alEstado = useRef(onEstado);
   alEstado.current = onEstado;
@@ -67,7 +77,16 @@ export const EncabezadoSincronizacionArca: React.FC<{
   }, [enCurso, cargarEstado]);
   useEffect(() => {
     const fecha = estado?.ultimaSync?.fecha || null;
-    if (ultimaSyncVista.current && fecha && fecha !== ultimaSyncVista.current) alSincronizar.current?.();
+    if (ultimaSyncVista.current && fecha && fecha !== ultimaSyncVista.current) {
+      // La lista de Bajas ARCA con lo que trajo la sincronización, y su diferencia contra la última foto.
+      arcaOperacionesAPI
+        .lista()
+        .then((l) => {
+          setBajasTrasSync(l);
+          alSincronizar.current?.(l);
+        })
+        .catch(() => alSincronizar.current?.());
+    }
     ultimaSyncVista.current = fecha;
   }, [estado?.ultimaSync?.fecha]);
 
@@ -238,6 +257,11 @@ export const EncabezadoSincronizacionArca: React.FC<{
               </tbody>
             </TablaConEncabezadoFijo>
           )}
+        </div>
+      )}
+      {bajasTrasSync && (
+        <div className="mt-3">
+          <BajasArcaDespuesDeSincronizar lista={bajasTrasSync} onCerrar={() => setBajasTrasSync(null)} />
         </div>
       )}
     </div>

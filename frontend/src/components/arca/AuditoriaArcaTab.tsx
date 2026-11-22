@@ -64,6 +64,7 @@ const FilaVarios: React.FC<{ x: ItemRelacionVariosContratos }> = ({ x }) => (
     {tdPersona(x.persona, x.empleadora)}
     <td className="px-2 py-1.5 whitespace-nowrap">
       <span className="font-semibold text-gray-900 dark:text-white">{fecha(x.inicio)} → {x.fin ? fecha(x.fin) : "abierta"}</span>
+      {x.nota && <div className={`mt-0.5 text-[11px] font-semibold whitespace-normal max-w-[220px] ${x.tipo === "varios_proyectos" ? "text-purple-700 dark:text-purple-300" : "text-amber-700 dark:text-amber-400"}`}>{x.nota}</div>}
     </td>
     <td className="px-2 py-1.5 text-gray-700 dark:text-gray-300">
       {x.contratos.map((c) => (
@@ -189,8 +190,8 @@ export const AuditoriaArcaTab: React.FC<{ onCountChange?: (n: number | undefined
       </Seccion>
 
       <Seccion titulo="Relación con varios contratos" n={a.totales.relacionVariosContratos ?? 0} abierta={abiertas.has("relacionVariosContratos")} onToggle={() => toggle("relacionVariosContratos")}
-        explicacion="Una relación viva en ARCA (abierta, o con fin de hoy en adelante) que en WeProdu coincide con varios contratos de la misma persona, empleadora y fecha de alta: un contrato duplicado, o el mismo contrato cargado en varios proyectos. Mientras esté así NO se puede dar de baja desde WeProdu: Gestión › Bajas ARCA no la lista, porque no se sabe en qué contrato guardar el resultado."
-        queHacer="anular el contrato que sobra (el que no tiene recibos, área ni sueldo cargado), nombrándolo por su clave. Cuando queda uno solo, la relación sale de acá y aparece en Bajas ARCA."
+        explicacion="Una relación viva en ARCA (abierta, o con fin de hoy en adelante) que en WeProdu coincide con varios contratos de la misma persona, empleadora y fecha de alta. Son dos casos y cada fila dice cuál: un contrato duplicado dentro del mismo proyecto, o la misma relación cargada en varios proyectos (una persona por tiempo indeterminado sumada a varios proyectos con «agregar miembro»). Mientras esté así NO se puede dar de baja desde WeProdu: Gestión › Bajas ARCA no la lista y no elige un contrato por su cuenta, porque la baja en ARCA quedaría atada a un solo proyecto y el resto seguiría vigente."
+        queHacer="si es un duplicado, anular el contrato que sobra (el que no tiene recibos, área ni sueldo), nombrándolo por su clave: cuando queda uno solo, la relación sale de acá y aparece en Bajas ARCA. Si es la misma relación en varios proyectos, resolver a mano: la baja se presenta en ARCA y se carga la fecha de baja en cada contrato."
         encabezados={["Persona", "Relación en ARCA", "Contratos de WeProdu con esa alta"]}>
         {(a.relacionVariosContratos || []).map((x) => <FilaVarios key={`${x.cuil}|${x.empleadoraCuit}|${x.inicio}`} x={x} />)}
       </Seccion>

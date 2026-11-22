@@ -13,8 +13,12 @@
  *   5. Indeterminado vigente           abierto de los dos lados. Inventario, no trabajo: no suma al total del menú.
  *
  * QUÉ NO ENTRA (y por qué, en `fuera`): relaciones cerradas; plazos vigentes que ARCA cierra sola; las que tienen
- * VARIOS contratos candidatos (van a Auditoría ARCA › «Relación con varios contratos»: no se pueden dar de baja desde
- * WeProdu hasta anular el duplicado); las que la regla compartida dice que no se operan (alta sin confirmar o
+ * VARIOS contratos candidatos (van a Auditoría ARCA › «Relación con varios contratos»). Son dos cosas distintas:
+ *   · `varios_contratos`: duplicados dentro del MISMO proyecto. Se anula el que sobra y la relación entra a la lista.
+ *   · `varios_proyectos`: la misma relación cargada en VARIOS proyectos («agregar miembro»: Quinteiro, Yorio). No es
+ *     un problema de datos sino una decisión que WeProdu modela mal, y se resuelve A MANO. La lista NO elige un
+ *     contrato «principal»: la baja en ARCA quedaría atada a un proyecto arbitrario y el resto seguiría vigente.
+ * Tampoco entran las que la regla compartida dice que no se operan (alta sin confirmar o
  * anulada); y las que ya tienen la baja presentada y confirmada (falta que la sincronización la traiga cerrada).
  * Servicios y anulados no cuentan como contrato de ninguna relación (`relacionesOperables.ts`).
  *
@@ -42,10 +46,11 @@ export const SITUACIONES_BAJA_ARCA: Record<SituacionBajaArca, string> = {
   5: "Indeterminado vigente",
 };
 
-export type MotivoFuera = "cerrada" | "varios_contratos" | "plazo_vigente" | "baja_presentada" | "no_se_opera";
+export type MotivoFuera = "cerrada" | "varios_contratos" | "varios_proyectos" | "plazo_vigente" | "baja_presentada" | "no_se_opera";
 export const MOTIVOS_FUERA: Record<MotivoFuera, string> = {
   cerrada: "La relación ya está cerrada en ARCA.",
   varios_contratos: "Tiene varios contratos en WeProdu con esa alta y empleadora: está en Auditoría ARCA › «Relación con varios contratos». No se puede dar de baja desde WeProdu hasta anular el duplicado.",
+  varios_proyectos: "Misma relación en varios proyectos: resolver a mano. Está en Auditoría ARCA › «Relación con varios contratos»; desde acá no se da de baja porque quedaría atada a un solo proyecto.",
   plazo_vigente: "Plazo vigente que ARCA cierra sola en su fecha. Si termina antes, cargá la baja en el contrato y aparece acá.",
   baja_presentada: "La baja ya se presentó desde WeProdu y ARCA la tomó: falta que la sincronización la traiga cerrada.",
   no_se_opera: "No hay nada que operar.",
@@ -77,6 +82,8 @@ export interface DatosParaSituacion {
   finArca: string;
   /** Cuántos contratos de WeProdu tiene la relación (sin anulados ni Servicios). */
   contratos: number;
+  /** En cuántos proyectos (vínculos) distintos están esos contratos. */
+  proyectos: number;
   /** La regla compartida dice que hay algo que operar. */
   puede: boolean;
   /** La baja del contrato en WeProdu ("" = sin baja). Sólo con UN contrato. */
@@ -90,7 +97,7 @@ export function situacionDeBaja(d: DatosParaSituacion, hoy: string): { situacion
   const fuera = (m: MotivoFuera) => ({ situacion: null, fuera: m });
   const en = (s: SituacionBajaArca) => ({ situacion: s, fuera: null });
   if (d.estado !== "abierta" && d.estado !== "fin_futuro") return fuera("cerrada");
-  if (d.contratos > 1) return fuera("varios_contratos");
+  if (d.contratos > 1) return fuera(d.proyectos > 1 ? "varios_proyectos" : "varios_contratos");
   if (!d.puede) return fuera("no_se_opera");
   if (String(d.baja?.resultado || "") === "presentada") return fuera("baja_presentada");
   if (bajaSinConfirmar(d.baja)) return en(3);
@@ -181,7 +188,7 @@ export function armarListaBajas(relaciones: RelacionOperable[], hoy: string): Li
   for (const r of relaciones) {
     const unico = r.contratos.length === 1 ? r.contratos[0] : null;
     const baja: MarcaDeBaja | null = unico?.bajaPresentada || r.bajaEnRegistro || null;
-    const s = situacionDeBaja({ estado: r.estado, finArca: r.fin, contratos: r.contratos.length, puede: r.puede, bajaContrato: unico?.baja || "", baja }, hoy);
+    const s = situacionDeBaja({ estado: r.estado, finArca: r.fin, contratos: r.contratos.length, proyectos: new Set(r.contratos.map((c) => c.userProjectId)).size, puede: r.puede, bajaContrato: unico?.baja || "", baja }, hoy);
     const comun = { clave: r.clave, empleadoraCuit: r.empleadoraCuit, empleadora: r.empleadora, cuil: r.cuil, persona: r.persona, userId: r.userId, inicio: r.inicio, finArca: r.fin };
     if (s.situacion === null) {
       if (s.fuera === "cerrada") continue;
@@ -243,7 +250,7 @@ export function movimientosEntre(antes: FilaDeFoto[], ahora: FilaDeFoto[], fuera
   const eraDe = new Map(antes.map((f) => [f.clave, f]));
   const esDe = new Map(ahora.map((f) => [f.clave, f]));
   const fueraDe = new Map(fuera.map((f) => [f.clave, f.motivo]));
-  const AHORA: Record<MotivoFuera, string> = { cerrada: "se cerró en ARCA", varios_contratos: "ahora tiene varios contratos (Auditoría ARCA)", plazo_vigente: "es un plazo vigente que ARCA cierra sola", baja_presentada: "se presentó la baja y ARCA la tomó", no_se_opera: "ya no hay nada que operar" };
+  const AHORA: Record<MotivoFuera, string> = { cerrada: "se cerró en ARCA", varios_contratos: "ahora tiene varios contratos (Auditoría ARCA)", varios_proyectos: "ahora está en varios proyectos (Auditoría ARCA)", plazo_vigente: "es un plazo vigente que ARCA cierra sola", baja_presentada: "se presentó la baja y ARCA la tomó", no_se_opera: "ya no hay nada que operar" };
   return {
     entraron: ahora.filter((f) => !eraDe.has(f.clave)),
     salieron: antes.filter((f) => !esDe.has(f.clave)).map((f) => ({ ...f, ahora: AHORA[fueraDe.get(f.clave) || "cerrada"] })),
