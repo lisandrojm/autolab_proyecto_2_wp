@@ -13,6 +13,7 @@ import { faDropbox } from '@fortawesome/free-brands-svg-icons';
 import { Logo } from '../components/ui/Logo';
 import axios from '../api/axiosConfig';
 import { arcaRelacionesAPI } from '../api/arcaRelaciones';
+import { arcaOperacionesAPI } from '../api/arcaOperaciones';
 import { SettingsModal } from './SettingsModal';
 import { useClientContextStore } from '../stores/clientContextStore';
 import { useEmpresaContextStore } from '../stores/empresaContextStore';
@@ -428,6 +429,17 @@ export const MobileNavbar: React.FC = () => {
     arcaRelacionesAPI.auditoriaResumen().then((r) => setAuditoriaArca(r.totales?.total ?? undefined)).catch(() => {});
   }, [user, puedeAbrir]);
 
+  /*
+    BAJAS ARCA (22/11/2026): el número es la suma de las situaciones 1 a 4 (lo que hay que hacer). La 5 —indeterminados
+    vigentes— es inventario y no cuenta. Son los conteos que el server deja guardados (cada corrida de las 06:00 y cada
+    vez que se abre la lista): no recalcula nada.
+  */
+  const [bajasArca, setBajasArca] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    if (!user || !puedeAbrir('/admin/arca-bajas')) return;
+    arcaOperacionesAPI.listaResumen().then((r) => setBajasArca(r.conteos?.pendientes ?? undefined)).catch(() => {});
+  }, [user, puedeAbrir]);
+
   const menuItems = useMemo(() => {
     const isSuperAdminTenant = user?.tenantSlug === 'superadmin';
 
@@ -496,8 +508,8 @@ export const MobileNavbar: React.FC = () => {
       if (puedeAbrir('/admin/recibos-sueldo')) base.push({ permiso: 'admin_contracts:view', path: '/admin/recibos-sueldo', icon: faReceipt, label: 'Recibos de sueldo', scope: 'global' });
       // Los contratos vencidos sin otro vigente en el proyecto: el acceso simple para renovarlos.
       if (puedeAbrir('/admin/renovaciones')) base.push({ permiso: 'admin_contracts:view', path: '/admin/renovaciones', icon: faRotateRight, label: 'Renovaciones', scope: 'global' });
-      // La cola de bajas en ARCA: contratos terminados con la relación abierta, las operaciones hechas y lo que hay que revisar.
-      if (puedeAbrir('/admin/arca-bajas')) base.push({ permiso: 'admin_contracts:view', path: '/admin/arca-bajas', icon: faLandmark, label: 'A.R.C.A Bajas', scope: 'global' });
+      // Bajas ARCA: la lista de relaciones vivas en ARCA con su situación; el único lugar desde donde se da de baja.
+      if (puedeAbrir('/admin/arca-bajas')) base.push({ permiso: 'admin_contracts:view', path: '/admin/arca-bajas', icon: faLandmark, label: 'Bajas ARCA', scope: 'global', pendientes: bajasArca, title: bajasArca ? `Bajas ARCA: ${bajasArca} ${bajasArca === 1 ? 'relación' : 'relaciones'} para resolver` : undefined });
       // Las altas que se presentan solas a las 14 h del día de alta, con su cuenta regresiva.
       if (puedeAbrir('/admin/presentaciones-arca')) base.push({ permiso: 'admin_contracts:view', path: '/admin/presentaciones-arca', icon: faClock, label: 'A.R.C.A Altas Automáticas', scope: 'global' });
       if (puedeAbrir('/admin/descargas-arca')) base.push({ permiso: 'admin_contracts:view', path: '/admin/descargas-arca', icon: faFileArrowDown, label: 'A.R.C.A Descargas Automáticas', scope: 'global' });
@@ -612,7 +624,7 @@ export const MobileNavbar: React.FC = () => {
     }
 
     return base;
-  }, [puedeAbrir, adminCounts, user?.tenantSlug, contadores, auditoriaArca]);
+  }, [puedeAbrir, adminCounts, user?.tenantSlug, contadores, auditoriaArca, bajasArca]);
 
   const handleMenuClick = () => {};
 

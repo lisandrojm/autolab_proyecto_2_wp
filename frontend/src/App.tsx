@@ -31,7 +31,7 @@ import { ArcaAltasAutomaticasConfigPage } from "./pages/ArcaAltasAutomaticasConf
 import { ArcaDescargaConstanciasConfigPage } from "./pages/ArcaDescargaConstanciasConfigPage";
 import { DescargasArcaPage } from "./pages/DescargasArcaPage";
 import { RecibosSueldoPage } from "./pages/RecibosSueldoPage";
-import { ArcaBajasPage } from "./pages/ArcaBajasPage";
+import { BajasArcaPage } from "./pages/BajasArcaPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
 import { BANDEJAS, RUTA_CONTRATACION, rutaNuevaDeContratos, type ClaveBandeja } from "./config/bandejasContratacion";
 
@@ -383,7 +383,7 @@ function App() {
                 path="/admin/arca-bajas"
                 element={
                   <ProtectedRoute>
-                    <ArcaBajasPage />
+                    <BajasArcaPage />
                   </ProtectedRoute>
                 }
               />

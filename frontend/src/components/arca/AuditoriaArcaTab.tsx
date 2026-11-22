@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faChevronRight, faCircleCheck, faRotate } from "@fortawesome/free-solid-svg-icons";
-import { arcaRelacionesAPI, type AuditoriaArca, type ItemAuditoriaBaja, type ItemDiscrepanciaFrame, type ItemRelacionSinContrato } from "../../api/arcaRelaciones";
+import { arcaRelacionesAPI, type AuditoriaArca, type ItemAuditoriaBaja, type ItemDiscrepanciaFrame, type ItemRelacionSinContrato, type ItemRelacionVariosContratos } from "../../api/arcaRelaciones";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
 import { sweetAlert } from "../../utils/sweetAlert";
@@ -55,6 +55,23 @@ const FilaRelacion: React.FC<{ x: ItemRelacionSinContrato }> = ({ x }) => (
         </div>
       ))}
       {x.contratos.length > 5 && <div className="text-[11px] text-gray-500">y {x.contratos.length - 5} más dentro de esa relación</div>}
+    </td>
+  </tr>
+);
+
+const FilaVarios: React.FC<{ x: ItemRelacionVariosContratos }> = ({ x }) => (
+  <tr className="border-t border-gray-100 dark:border-gray-700 align-top">
+    {tdPersona(x.persona, x.empleadora)}
+    <td className="px-2 py-1.5 whitespace-nowrap">
+      <span className="font-semibold text-gray-900 dark:text-white">{fecha(x.inicio)} → {x.fin ? fecha(x.fin) : "abierta"}</span>
+    </td>
+    <td className="px-2 py-1.5 text-gray-700 dark:text-gray-300">
+      {x.contratos.map((c) => (
+        <div key={`${c.userProjectId}-${c.posicion}`} className="whitespace-nowrap">
+          {c.contrato} · {c.proyecto || "(sin proyecto)"} · {fecha(c.alta)} → {c.baja ? fecha(c.baja) : "abierto"}
+          {c.contratoKey && <span className="ml-1 text-[11px] text-gray-400 font-mono" title="La clave del contrato: es con lo que se lo nombra para anularlo.">{c.contratoKey}</span>}
+        </div>
+      ))}
     </td>
   </tr>
 );
@@ -169,6 +186,13 @@ export const AuditoriaArcaTab: React.FC<{ onCountChange?: (n: number | undefined
         queHacer="quien lleve laboral decide cuál es la fecha correcta y corrige el contrato (o ARCA)."
         encabezados={["Persona", "Relación en ARCA", "Contratos de WeProdu que se solapan"]}>
         {a.relacionSinContrato.map((x) => <FilaRelacion key={`${x.cuil}|${x.empleadoraCuit}|${x.inicio}`} x={x} />)}
+      </Seccion>
+
+      <Seccion titulo="Relación con varios contratos" n={a.totales.relacionVariosContratos ?? 0} abierta={abiertas.has("relacionVariosContratos")} onToggle={() => toggle("relacionVariosContratos")}
+        explicacion="Una relación viva en ARCA (abierta, o con fin de hoy en adelante) que en WeProdu coincide con varios contratos de la misma persona, empleadora y fecha de alta: un contrato duplicado, o el mismo contrato cargado en varios proyectos. Mientras esté así NO se puede dar de baja desde WeProdu: Gestión › Bajas ARCA no la lista, porque no se sabe en qué contrato guardar el resultado."
+        queHacer="anular el contrato que sobra (el que no tiene recibos, área ni sueldo cargado), nombrándolo por su clave. Cuando queda uno solo, la relación sale de acá y aparece en Bajas ARCA."
+        encabezados={["Persona", "Relación en ARCA", "Contratos de WeProdu con esa alta"]}>
+        {(a.relacionVariosContratos || []).map((x) => <FilaVarios key={`${x.cuil}|${x.empleadoraCuit}|${x.inicio}`} x={x} />)}
       </Seccion>
 
       <Seccion titulo="Discrepancias con FRAME" n={a.totales.discrepanciasFrame} abierta={abiertas.has("discrepanciasFrame")} onToggle={() => toggle("discrepanciasFrame")}

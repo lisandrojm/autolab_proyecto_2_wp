@@ -46,20 +46,84 @@ export interface ComoSeOperaArca {
   contratos: ContratoDeRelacionArca[];
 }
 
-/** Una relación de la cola de A.R.C.A Bajas (`GET /arca/operaciones/cola`). */
-export interface RelacionOperableArca extends ComoSeOperaArca {
+/*
+  BAJAS ARCA: la lista (`GET /arca/operaciones/lista`, `server/src/services/arca/listaBajasArca.ts`). Una fila por
+  relación viva en ARCA sobre la que se puede operar, cada una con exactamente una situación. Todo lo decide el server.
+*/
+export type SituacionBajaArca = 1 | 2 | 3 | 4 | 5;
+export const SITUACIONES_BAJA_ARCA: Record<SituacionBajaArca, string> = {
+  1: "Terminado en WeProdu",
+  2: "Termina antes de su fecha",
+  3: "Baja presentada, sin confirmar",
+  4: "Sin contrato en WeProdu",
+  5: "Indeterminado vigente",
+};
+
+export interface FilaBajaArca {
   clave: string;
   empleadoraCuit: string;
   empleadora: string;
   cuil: string;
   persona: string;
   userId: string | null;
+  /** La persona no tiene ficha en WeProdu (distinto de «ficha sin contrato con esa alta»). */
+  sinFicha: boolean;
   inicio: string;
-  fin: string;
-  situacionBaja: string;
-  modalidadContrato: string;
-  estado: "abierta" | "fin_futuro" | "cerrada_reciente" | "cerrada";
-  diasDesdeFinContrato: number | null;
+  finArca: string;
+  modalidadArca: string;
+  /** El tipo de contrato de WeProdu; "" sin contrato (se muestra la modalidad de ARCA). */
+  tipoContrato: string;
+  proyecto: string;
+  finWeprodu: string;
+  diasDesdeFin: number | null;
+  situacion: SituacionBajaArca;
+  detalle: string;
+  /** Con qué contrato abre el panel; `null` = modo «sin contrato». */
+  contrato: { userProjectId: string; contratoKey: string | null; posicion: number } | null;
+}
+
+export type MotivoFueraBajaArca = "cerrada" | "varios_contratos" | "plazo_vigente" | "baja_presentada" | "no_se_opera";
+
+/** Una relación viva en ARCA que NO está en la lista, y por qué. */
+export interface FilaFueraBajaArca {
+  clave: string;
+  empleadora: string;
+  cuil: string;
+  persona: string;
+  inicio: string;
+  finArca: string;
+  motivo: MotivoFueraBajaArca;
+  texto: string;
+}
+
+export interface ConteosBajaArca {
+  s1: number;
+  s2: number;
+  s3: number;
+  s4: number;
+  s5: number;
+  /** La suma de 1 a 4: el número del menú. La 5 es inventario. */
+  pendientes: number;
+  fuera: Partial<Record<MotivoFueraBajaArca, number>>;
+}
+
+export interface MovimientosBajaArca {
+  entraron: { clave: string; persona: string; situacion: SituacionBajaArca }[];
+  salieron: { clave: string; persona: string; situacion: SituacionBajaArca; ahora: string }[];
+  cambiaron: { clave: string; persona: string; de: SituacionBajaArca; a: SituacionBajaArca }[];
+}
+
+export interface ListaBajasArca {
+  hoy: string;
+  filas: FilaBajaArca[];
+  fuera: FilaFueraBajaArca[];
+  conteos: ConteosBajaArca;
+  /** La foto de la última corrida automática (06:00), si hubo. */
+  corrida: { el: string; conteos: ConteosBajaArca } | null;
+  /** Qué cambió entre esa foto y ahora. */
+  desdeLaCorrida: MovimientosBajaArca | null;
+  /** Qué cambió en cada corrida respecto de la anterior, de la más nueva a la más vieja. */
+  movimientos: ({ el: string; conteos: ConteosBajaArca } & MovimientosBajaArca)[];
 }
 
 export interface RelacionEspejoArca {
@@ -184,9 +248,14 @@ export const arcaOperacionesAPI = {
     const { data } = await axios.get("/arca/operaciones/relacion", { params: { userProjectId: ref.userProjectId || undefined, contratoKey: ref.contratoKey || undefined, contractIndex: ref.contratoKey ? undefined : ref.contractIndex ?? undefined, ...sinContrato } });
     return data;
   },
-  /** La cola de A.R.C.A Bajas: las relaciones abiertas, con fin futuro o cerradas hace poco, y cómo se opera cada una. No toca ARCA. */
-  async cola(): Promise<{ hoy: string; relaciones: RelacionOperableArca[] }> {
-    const { data } = await axios.get("/arca/operaciones/cola");
+  /** Bajas ARCA: la lista con la situación de cada relación viva, los conteos y qué cambió desde la corrida de las 06:00. No toca ARCA. */
+  async lista(): Promise<ListaBajasArca> {
+    const { data } = await axios.get("/arca/operaciones/lista");
+    return data;
+  },
+  /** Los conteos guardados de Bajas ARCA (barato: el número del menú). */
+  async listaResumen(): Promise<{ el: string | null; conteos: ConteosBajaArca | null }> {
+    const { data } = await axios.get("/arca/operaciones/lista/resumen");
     return data;
   },
   /** Qué se mandaría y si se puede. No toca ARCA. */

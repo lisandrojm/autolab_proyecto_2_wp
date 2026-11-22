@@ -4,7 +4,7 @@ import { Modal } from "../ui/Modal";
 /*
   EL GLOSARIO DE ARCA (22/11/2026, pedido del usuario): qué quiere decir cada número de la barra de
   sincronización, y lo que ya se investigó para que nadie lo vuelva a abrir. Se abre desde la barra
-  («ver glosario») en Antigüedad ARCA y en A.R.C.A Bajas.
+  («ver glosario») en Antigüedad ARCA y en Bajas ARCA.
 */
 
 const Termino: React.FC<{ titulo: string; children: React.ReactNode }> = ({ titulo, children }) => (
@@ -37,7 +37,7 @@ export const GlosarioArca: React.FC<{ isOpen: boolean; onClose: () => void; zInd
         <p>Como ya no se importa de FRAME (deprecado en noviembre de 2026), es un conjunto histórico cerrado: no crece y no se corrige. Si un alta presentada desde WeProdu apareciera con ARCA terminando después, no se cuenta acá: va a «para que mire una persona».</p>
       </Termino>
       <Termino titulo="Relación para operar">
-        <p>Una relación sobre la que se puede presentar una baja, una modificación o una anulación en ARCA: el contrato es de trámite ARCA y no está anulado, la relación existe (alta presentada, adoptada o leída en la sincronización) y está abierta, termina de hoy en adelante, o tiene una operación reciente hecha desde WeProdu. La misma regla decide el ícono en Contratos, en Antigüedad ARCA y en A.R.C.A Bajas.</p>
+        <p>Una relación sobre la que se puede presentar una baja, una modificación o una anulación en ARCA: el contrato es de trámite ARCA y no está anulado, la relación existe (alta presentada, adoptada o leída en la sincronización) y está abierta, termina de hoy en adelante, o tiene una operación reciente hecha desde WeProdu. Es la regla que usan el panel y la lista de Gestión › Bajas ARCA, el único lugar desde donde se da de baja.</p>
       </Termino>
     </dl>
   </Modal>

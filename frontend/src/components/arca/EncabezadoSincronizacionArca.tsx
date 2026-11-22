@@ -9,7 +9,7 @@ import { GlosarioArca } from "./GlosarioArca";
 
 /*
   LA SINCRONIZACIÓN CON ARCA, EN UN SOLO COMPONENTE (22/11/2026): cuándo corre sola, cómo le fue la última vez,
-  qué trajo y «Sincronizar ahora». Lo usan Documentos › Antigüedad ARCA y Gestión › A.R.C.A Bajas.
+  qué trajo y «Sincronizar ahora». Lo usan Documentos › Antigüedad ARCA y Gestión › Bajas ARCA.
 
   LOS DOS NÚMEROS DE LA BARRA SON COSAS DISTINTAS, y por eso van en dos líneas y en dos tonos:
    - «N para que mire una persona»: el total de la Auditoría ARCA. Es trabajo pendiente.

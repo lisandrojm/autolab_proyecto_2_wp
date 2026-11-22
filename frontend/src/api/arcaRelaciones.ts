@@ -149,6 +149,17 @@ export interface ItemRelacionSinContrato {
   /** Los contratos solapados, del más cercano al más lejano. `dias` positivo = ARCA empieza después. */
   contratos: { contratoKey: string; userProjectId: string; posicion: number; proyecto: string; contrato: string; alta: string; baja: string; dias: number }[];
 }
+/** Una relación viva en ARCA con varios contratos en WeProdu (misma persona, empleadora y fecha de alta). */
+export interface ItemRelacionVariosContratos {
+  userId: string;
+  persona: string;
+  cuil: string;
+  empleadora: string;
+  empleadoraCuit: string;
+  inicio: string;
+  fin: string;
+  contratos: { contratoKey: string | null; userProjectId: string; posicion: number; proyecto: string; contrato: string; alta: string; baja: string }[];
+}
 export interface ItemDiscrepanciaFrame {
   _id: string;
   userId: string;
@@ -168,6 +179,8 @@ export interface TotalesAuditoria {
   revisionManual: number;
   granularidad: number;
   relacionSinContrato: number;
+  /** Desde el 22/11/2026: los totales guardados antes no lo traen. */
+  relacionVariosContratos?: number;
   discrepanciasFrame: number;
   total: number;
   /** Altas hechas a mano donde ARCA termina después que el contrato: histórico, sin acción. No suma al total. */
@@ -181,6 +194,7 @@ export interface AuditoriaArca {
   revisionManual: ItemAuditoriaBaja[];
   granularidad: ItemAuditoriaBaja[];
   relacionSinContrato: ItemRelacionSinContrato[];
+  relacionVariosContratos?: ItemRelacionVariosContratos[];
   discrepanciasFrame: ItemDiscrepanciaFrame[];
   totales: TotalesAuditoria;
 }
