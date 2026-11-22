@@ -7,6 +7,7 @@
  * frontend los reexportan, así que el resto de la aplicación no cambió sus imports.
  */
 import type { EstadoCategoriaArca } from "../catalogoArca.js";
+import type { RelacionParaOperar } from "./relacionParaOperar.js";
 /** Un documento de respaldo del flujo "Sin CUIT" (extranjeros con el trámite de ARCA pendiente). */
 export interface SinCuitDocumento {
     tipo: "pasaporte" | "dni_precario" | "residencia_tramite" | "cuil_provisorio" | "otro";
@@ -181,6 +182,10 @@ export interface ContractOverviewRow {
     bajaArcaPresentada?: OperacionArcaPresentada | null;
     modificacionArcaPresentada?: OperacionArcaPresentada | null;
     anulacionArcaPresentada?: OperacionArcaPresentada | null;
+    /** Sólo el padrón (Contratos): si hay una relación en ARCA sobre la cual operar, con la condición del panel (`relacionParaOperar`). */
+    relacionArca?: RelacionParaOperar | null;
+    /** La identidad del contrato: el panel de Modificaciones y Bajas lo abre por ella. */
+    contratoKey?: string | null;
     /** Datos leídos del PDF de la Constancia de CUIT de ARCA ("YYYY-MM-DD"). Vale un mes: la vigencia marca cuándo hay que volver a pedirla. */
     constanciaVigenciaDesde?: string;
     constanciaVigenciaHasta?: string;
