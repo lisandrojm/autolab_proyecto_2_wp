@@ -7,5 +7,7 @@ const importConfigSchema = new Schema({
     sinceDays: { type: Number, default: undefined },
     lastRun: { type: Date },
     nextRun: { type: Date },
+    deprecadoDesde: { type: String },
+    nota: { type: String },
 }, { timestamps: true });
 export const ImportConfig = mongoose.model("ImportConfig", importConfigSchema);

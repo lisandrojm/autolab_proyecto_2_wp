@@ -23,6 +23,24 @@ export const IMPORT_FRAME_PAUSADO = {
     advertencia: "Sincronizar trae todo FRAME de nuevo sobre la base. Es una operación, no una prueba: hacerla con una copia fresca de la base, el log a mano y revisión después.",
     discrepancias: "Mientras no se sincronice, el registro de discrepancias con FRAME queda vacío: no registra nada.",
 };
+/**
+ * Y DESDE NOVIEMBRE DE 2026 ESTÁ DEPRECADA (decisión del usuario, 22/11/2026): ya no se importa de FRAME.
+ *
+ * Por qué queda escrito acá y en la pantalla: el cron estuvo apagado «desde el 12/06 y nadie sabe por qué», y el
+ * botón «Sincronizar Ahora» seguía ahí para que alguien lo apretara un año después. Ahora:
+ *  - disparar la sincronización y prender la automática contestan 410, sin confirmación que valga;
+ *  - el cron no corre aunque la configuración diga otra cosa, y la deja en `isEnabled: false` con esta nota
+ *    (`deprecadoDesde` y `nota` en `importconfigs`);
+ *  - la pantalla muestra el botón deshabilitado y dice desde cuándo y por qué.
+ * Lo ya importado no se toca. Las diferencias que quedaron entre lo importado y ARCA son un conjunto histórico
+ * cerrado (ver el Glosario de ARCA y `services/arca/auditoriaArca.ts`). Reactivarla es cambiar este archivo.
+ */
+export const IMPORT_FRAME_DEPRECADO = {
+    deprecado: true,
+    desde: "22/11/2026",
+    desdeTexto: "noviembre de 2026",
+    nota: "Deprecada desde noviembre de 2026 (decisión del 22/11/2026): ya no se importa de FRAME. Los contratos se cargan en WeProdu y las altas de ARCA se presentan desde acá. Volver a sincronizar traería todo FRAME de nuevo sobre la base.",
+};
 /** La fecha de una corrida como la muestra la pantalla y como hay que escribirla: DD/MM/AAAA, hora argentina. */
 export function fechaDeCorrida(fecha) {
     if (!fecha)

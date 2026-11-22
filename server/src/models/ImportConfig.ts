@@ -8,6 +8,9 @@ export interface IImportConfig extends Document {
   sinceDays?: number;
   lastRun?: Date;
   nextRun?: Date;
+  /** La importación quedó deprecada (ver `utils/importFramePausado.ts`): desde cuándo y por qué, junto al `isEnabled: false`. */
+  deprecadoDesde?: string;
+  nota?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,6 +24,8 @@ const importConfigSchema = new Schema<IImportConfig>(
     sinceDays: { type: Number, default: undefined },
     lastRun: { type: Date },
     nextRun: { type: Date },
+    deprecadoDesde: { type: String },
+    nota: { type: String },
   },
   { timestamps: true }
 );

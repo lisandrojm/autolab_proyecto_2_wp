@@ -49,7 +49,7 @@ import "../models/Client.js";
 import { ImportConfig } from "../models/ImportConfig.js";
 import { ImportHistory } from "../models/ImportHistory.js";
 import { AuditoriaContrato } from "../models/AuditoriaContrato.js";
-import { IMPORT_FRAME_PAUSADO, confirmacionValida, fechaDeCorrida } from "../utils/importFramePausado.js";
+import { IMPORT_FRAME_DEPRECADO, IMPORT_FRAME_PAUSADO, confirmacionValida, fechaDeCorrida } from "../utils/importFramePausado.js";
 import { ExternalApiService } from "../services/externalApiService.js";
 
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
@@ -4157,6 +4157,20 @@ router.post("/import/config", requireTenant, authenticateToken, requirePermissio
       });
     }
 
+    // Deprecada desde noviembre de 2026: la automática no se prende más, y la configuración queda en false con la nota.
+    if (IMPORT_FRAME_DEPRECADO.deprecado) {
+      if (isEnabled === true) {
+        res.status(410).json({ codigo: "IMPORT_FRAME_DEPRECADO", ...IMPORT_FRAME_DEPRECADO, error: `La importación de FRAME está deprecada desde ${IMPORT_FRAME_DEPRECADO.desdeTexto}: no se puede prender la automática. ${IMPORT_FRAME_DEPRECADO.nota}` });
+        return;
+      }
+      config.isEnabled = false;
+      config.nextRun = undefined;
+      config.deprecadoDesde = IMPORT_FRAME_DEPRECADO.desde;
+      config.nota = IMPORT_FRAME_DEPRECADO.nota;
+      await config.save();
+      res.json(config);
+      return;
+    }
     // Prender el cron es sincronizar cada N horas: pide la misma confirmación (ver `utils/importFramePausado.ts`).
     if (isEnabled === true && !wasEnabled) {
       const ultima = await ImportHistory.findOne({ tenantId: req.tenantObjectId }).sort({ createdAt: -1 }).select("createdAt").lean();
@@ -4220,7 +4234,7 @@ router.get("/import/estado", requireTenant, authenticateToken, requirePermission
       ImportHistory.findOne({ tenantId: req.tenantObjectId }).sort({ createdAt: -1 }).select("createdAt").lean(),
       ImportConfig.findOne({ tenantId: req.tenantObjectId }).select("isEnabled").lean(),
     ]);
-    res.json({ ...IMPORT_FRAME_PAUSADO, cronEncendido: !!(config as any)?.isEnabled, ultimaSync: fechaDeCorrida((ultima as any)?.createdAt) || null });
+    res.json({ ...IMPORT_FRAME_PAUSADO, cronEncendido: !!(config as any)?.isEnabled, ultimaSync: fechaDeCorrida((ultima as any)?.createdAt) || null, deprecado: IMPORT_FRAME_DEPRECADO.deprecado ? IMPORT_FRAME_DEPRECADO : null });
   } catch (error) {
     console.error("Get import estado error:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -4313,6 +4327,12 @@ router.post("/import/trigger", requireTenant, authenticateToken, requirePermissi
     const userId = req.user?.userId;
     if (!userId) {
       res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    // Deprecada desde noviembre de 2026 (ver `utils/importFramePausado.ts`): no se sincroniza más, con o sin confirmación.
+    if (IMPORT_FRAME_DEPRECADO.deprecado) {
+      res.status(410).json({ codigo: "IMPORT_FRAME_DEPRECADO", ...IMPORT_FRAME_DEPRECADO, error: `La importación de FRAME está deprecada desde ${IMPORT_FRAME_DEPRECADO.desdeTexto}. ${IMPORT_FRAME_DEPRECADO.nota}` });
       return;
     }
 

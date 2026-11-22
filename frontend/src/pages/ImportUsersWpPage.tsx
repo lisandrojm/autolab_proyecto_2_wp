@@ -24,6 +24,8 @@ interface EstadoImportacion {
   discrepancias: string;
   cronEncendido: boolean;
   ultimaSync: string | null;
+  /** Deprecada (noviembre de 2026): el botón queda deshabilitado y se dice desde cuándo y por qué. */
+  deprecado?: { desde: string; desdeTexto: string; nota: string } | null;
 }
 
 interface SyncStats {
@@ -192,6 +194,8 @@ export const ImportUsersWpPage: React.FC = () => {
     clic. El server exige la misma fecha (428 sin ella), así que esto no se saltea desde otro lado.
   */
   const handleManualSync = async () => {
+    // Deprecada: el botón está deshabilitado y el server contesta 410; esto es sólo por si alguien llega igual.
+    if (estado?.deprecado) return;
     const ultima = estado?.ultimaSync || "";
     const esperada = ultima || "PRIMERA";
     const r = await Swal.fire({
@@ -293,6 +297,17 @@ export const ImportUsersWpPage: React.FC = () => {
             </div>
             
             <div className="p-5 flex-1 space-y-6">
+              {/* DEPRECADA (22/11/2026): desde cuándo y por qué, a la vista, para que nadie apriete el botón dentro de un año. */}
+              {estado?.deprecado && (
+                <div className="p-4 rounded-xl border border-red-300 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 mb-2">
+                    <FontAwesomeIcon icon={faExclamationTriangle} />
+                    Importación de FRAME deprecada desde {estado.deprecado.desdeTexto}
+                  </h3>
+                  <p className="text-xs leading-relaxed">{estado.deprecado.nota}</p>
+                  <p className="text-xs leading-relaxed mt-1.5">«Sincronizar Ahora» está deshabilitado y la sincronización automática queda apagada: el servidor no la corre ni deja prenderla. Lo ya importado no se toca; esta pantalla queda para consultar el historial.</p>
+                </div>
+              )}
               {/* Por qué está pausada: que dentro de un año no sea otra vez una conjetura. */}
               <div className="p-4 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
                 <h3 className="text-sm font-semibold flex items-center gap-2 mb-2">
@@ -413,8 +428,9 @@ export const ImportUsersWpPage: React.FC = () => {
             <div className="p-5 bg-gray-50/20 dark:bg-gray-900/40 border-t border-gray-200 dark:border-gray-700/80 flex justify-end">
               <button
                 onClick={handleManualSync}
-                disabled={loading}
-                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm w-full sm:w-auto"
+                disabled={loading || !!estado?.deprecado}
+                title={estado?.deprecado ? `Deprecado desde ${estado.deprecado.desdeTexto}: ya no se importa de FRAME.` : undefined}
+                className={estado?.deprecado ? "flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold border border-gray-300 bg-transparent text-gray-500 opacity-60 cursor-not-allowed dark:border-gray-600 dark:text-gray-400 w-full sm:w-auto" : "flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm w-full sm:w-auto"}
               >
                 {loading ? (
                   <>
@@ -424,7 +440,7 @@ export const ImportUsersWpPage: React.FC = () => {
                 ) : (
                   <>
                     <FontAwesomeIcon icon={faArrowRotateRight} className="mr-3" />
-                    Sincronizar Ahora
+                    {estado?.deprecado ? "Sincronizar Ahora (deprecado)" : "Sincronizar Ahora"}
                   </>
                 )}
               </button>

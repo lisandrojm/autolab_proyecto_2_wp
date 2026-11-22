@@ -7,6 +7,9 @@ export interface IImportConfig extends Document {
     sinceDays?: number;
     lastRun?: Date;
     nextRun?: Date;
+    /** La importación quedó deprecada (ver `utils/importFramePausado.ts`): desde cuándo y por qué, junto al `isEnabled: false`. */
+    deprecadoDesde?: string;
+    nota?: string;
     createdAt: Date;
     updatedAt: Date;
 }

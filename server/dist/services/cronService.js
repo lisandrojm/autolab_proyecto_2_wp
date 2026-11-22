@@ -1,5 +1,6 @@
 import { ImportConfig } from "../models/ImportConfig.js";
 import { ExternalApiService } from "./externalApiService.js";
+import { IMPORT_FRAME_DEPRECADO } from "../utils/importFramePausado.js";
 const externalApi = new ExternalApiService();
 let isCronRunning = false;
 export const initCronScheduler = () => {
@@ -28,6 +29,17 @@ const checkAndRunImports = async () => {
     }
     isCronRunning = true;
     try {
+        /*
+          DEPRECADA (noviembre de 2026): no corre aunque la configuración diga otra cosa, y la configuración queda en
+          false con la nota de por qué. Así nadie la encuentra «apagada y no se sabe por qué».
+        */
+        if (IMPORT_FRAME_DEPRECADO.deprecado) {
+            const r = await ImportConfig.updateMany({ $or: [{ isEnabled: true }, { nota: { $ne: IMPORT_FRAME_DEPRECADO.nota } }] }, { $set: { isEnabled: false, deprecadoDesde: IMPORT_FRAME_DEPRECADO.desde, nota: IMPORT_FRAME_DEPRECADO.nota }, $unset: { nextRun: 1 } });
+            if (r.modifiedCount)
+                console.log(`[CRON SERVICE] Importación de FRAME deprecada: ${r.modifiedCount} configuración(es) quedaron en false con la nota.`);
+            isCronRunning = false;
+            return;
+        }
         const now = new Date();
         // Find configurations that are enabled and due to run (nextRun <= now or nextRun is null)
         const configs = await ImportConfig.find({
