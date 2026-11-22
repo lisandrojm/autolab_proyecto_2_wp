@@ -14,7 +14,7 @@ import { yaPasoLaHora } from "../services/arca/horarioAltasAutomaticas.js";
 import { hoyArgentina } from "../utils/contratoVigencia.js";
 import { isoDe } from "../services/arca/relacionesArcaStore.js";
 import { aplicarBajasArca, planDeBajasArca } from "../services/arca/bajasArcaContratos.js";
-import { auditoriaArca, guardarTotalesAuditoria, totalesGuardados } from "../services/arca/auditoriaArca.js";
+import { auditoriaArca, guardarTotalesAuditoria, recalcularAuditoriaArca, totalesGuardados } from "../services/arca/auditoriaArca.js";
 
 /**
  * RELACIONES LABORALES DE ARCA Y ANTIGÜEDAD: lo que se lee en la pestaña «Antigüedad ARCA» de
@@ -128,6 +128,9 @@ router.post("/personas", requireTenant, authenticateToken, permiso, async (req: 
   }
 });
 
+/** Tenants cuya auditoría se está recalculando por detrás (para no dispararla dos veces). */
+const recalculando = new Set<string>();
+
 /** GET /arca/relaciones/estado — la sincronización: config, en curso, última corrida y totales. */
 router.get("/estado", requireTenant, authenticateToken, permiso, async (req: AuthenticatedRequest & TenantRequest, res) => {
   try {
@@ -140,7 +143,16 @@ router.get("/estado", requireTenant, authenticateToken, permiso, async (req: Aut
     ]);
     const sr = t?.integrations?.arcaSimplificacion?.sincronizacionRelaciones || {};
     const ocupada = quienTiene(tenantId);
+    /*
+      Los totales de la auditoría son lo que dice la barra («N para que mire una persona» y, aparte, las altas
+      históricas). Los guardados antes del 22/11/2026 no traen las históricas: se recalculan una vez, por detrás.
+    */
+    if (sr.auditoria?.totales && sr.auditoria.totales.historicasArcaPosterior === undefined && !recalculando.has(tenantId)) {
+      recalculando.add(tenantId);
+      void recalcularAuditoriaArca(tenantId).finally(() => recalculando.delete(tenantId));
+    }
     res.json({
+      auditoria: sr.auditoria ? { el: sr.auditoria.el || null, totales: sr.auditoria.totales || null } : null,
       config: configSyncDe(sr),
       ultimoDia: sr.ultimoDia || null,
       ultimaSync: sr.ultimaSync || null,

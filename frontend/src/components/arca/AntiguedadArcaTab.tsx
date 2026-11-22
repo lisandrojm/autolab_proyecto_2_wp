@@ -1,13 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faRotate, faSpinner, faCircleCheck, faCircleXmark, faChevronDown, faChevronRight, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { faSpinner, faChevronDown, faChevronRight, faCircleInfo } from "@fortawesome/free-solid-svg-icons";
 import { arcaRelacionesAPI, type AntiguedadFila, type EmpresaConCuit, type EstadoSyncRelaciones, type RelacionLaboral } from "../../api/arcaRelaciones";
 import { BotonOrden, useOrdenTabla } from "../ui/OrdenTabla";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { TablaRelacionesArca } from "./TablaRelacionesArca";
 import { TablaConEncabezadoFijo } from "../ui/TablaConEncabezadoFijo";
-import { SincronizarBajasModal } from "./SincronizarBajasModal";
+import { EncabezadoSincronizacionArca } from "./EncabezadoSincronizacionArca";
 
 /*
   ANTIGÜEDAD SEGÚN ARCA: la copia local de las relaciones laborales de Simplificación Registral y la
@@ -19,14 +19,6 @@ import { SincronizarBajasModal } from "./SincronizarBajasModal";
 
 const fmtCuil = (c: string) => (c.length === 11 ? `${c.slice(0, 2)}-${c.slice(2, 10)}-${c.slice(10)}` : c);
 const fechaCorta = (iso: string | null | undefined) => (iso && /^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : "—");
-const fechaHora = (iso: string) => new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-const hace = (iso: string) => {
-  const min = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
-  if (min < 1) return "recién";
-  if (min < 60) return `hace ${min} min`;
-  const h = Math.round(min / 60);
-  return h < 48 ? `hace ${h} h` : `hace ${Math.round(h / 24)} días`;
-};
 /** "5,53 años"; los días van debajo, en gris. */
 const anios = (a: number) => `${a.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} años`;
 const dias = (d: number) => `${d.toLocaleString("es-AR")} días`;
@@ -45,19 +37,8 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
   const [qAplicada, setQAplicada] = useState("");
   const [abierta, setAbierta] = useState<string | null>(null);
   const [relaciones, setRelaciones] = useState<Record<string, RelacionLaboral[] | "cargando">>({});
-  const [guardando, setGuardando] = useState(false);
-  const [verUltima, setVerUltima] = useState(false);
-  const ultimaSyncVista = useRef<string | null>(null);
 
   const razonSocialDe = useCallback((cuit: string) => empresas.find((e) => e.cuit === cuit)?.razonSocial || cuit, [empresas]);
-
-  const cargarEstado = useCallback(async () => {
-    try {
-      setEstado(await arcaRelacionesAPI.estado());
-    } catch (err: any) {
-      sweetAlert.error("No se pudo cargar el estado", err?.response?.data?.error || err?.message || "");
-    }
-  }, []);
 
   const cargarFilas = useCallback(async () => {
     try {
@@ -73,51 +54,9 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
     }
   }, [empresaCuit, qAplicada, onCountChange]);
 
-  useEffect(() => { void cargarEstado(); }, [cargarEstado]);
   useEffect(() => { void cargarFilas(); }, [cargarFilas]);
   // La búsqueda va al server, con una pausa corta para no pedir por cada tecla.
   useEffect(() => { const t = setTimeout(() => setQAplicada(q.trim()), 350); return () => clearTimeout(t); }, [q]);
-
-  // Mientras hay una sincronización en curso se mira cada 4 s; si no, cada minuto. Al terminar, se recarga la tabla.
-  const enCurso = !!estado?.enCurso;
-  useEffect(() => {
-    const id = setInterval(() => void cargarEstado(), enCurso ? 4_000 : 60_000);
-    return () => clearInterval(id);
-  }, [enCurso, cargarEstado]);
-  useEffect(() => {
-    const fecha = estado?.ultimaSync?.fecha || null;
-    if (ultimaSyncVista.current && fecha && fecha !== ultimaSyncVista.current) void cargarFilas();
-    ultimaSyncVista.current = fecha;
-  }, [estado?.ultimaSync?.fecha, cargarFilas]);
-
-  const cambiarConfig = async (cambios: Partial<EstadoSyncRelaciones["config"]>) => {
-    if (cambios.activa === true) {
-      const r = await sweetAlert.confirm("Activar la sincronización automática", `Todos los días a las ${estado?.config.hora || "06:00"} se leen en ARCA los movimientos del mes de cada empleadora (altas y bajas) y se actualiza la antigüedad. Sólo lee: no presenta nada.`, "Sí, activar", "Cancelar");
-      if (!r.isConfirmed) return;
-    }
-    setGuardando(true);
-    try {
-      const cfg = await arcaRelacionesAPI.setConfig(cambios);
-      setEstado((e) => (e ? { ...e, config: cfg } : e));
-      sweetAlert.success("Guardado", cfg.activa ? `Sincroniza sola todos los días a las ${cfg.hora}.` : "La sincronización automática queda apagada.");
-    } catch (err: any) {
-      sweetAlert.error("No se pudo guardar", err?.response?.data?.error || err?.message || "");
-    } finally {
-      setGuardando(false);
-    }
-  };
-
-  const sincronizarAhora = async () => {
-    const meses = estado?.config.meses || 1;
-    const r = await sweetAlert.confirm("Sincronizar ahora", `Se abre la sesión de ARCA y se leen los movimientos de ${meses === 1 ? "este mes" : `los últimos ${meses} meses`} de cada empleadora. Tarda unos minutos; se puede seguir acá.`, "Sí, sincronizar", "Cancelar");
-    if (!r.isConfirmed) return;
-    try {
-      await arcaRelacionesAPI.sincronizar();
-      await cargarEstado();
-    } catch (err: any) {
-      sweetAlert.error("No arrancó", err?.response?.data?.error || err?.message || "");
-    }
-  };
 
   const toggleFila = async (cuil: string) => {
     if (abierta === cuil) { setAbierta(null); return; }
@@ -147,131 +86,10 @@ export const AntiguedadArcaTab: React.FC<{ onCountChange?: (n: number | undefine
     { columna: "colaborador", direccion: "asc", porDefecto: true },
   );
 
-  const [verBajas, setVerBajas] = useState(false);
-  const ultima = estado?.ultimaSync || null;
-  const puedeSincronizar = !!estado && !estado.enCurso && !estado.arcaOcupadaPor && estado.hayCredenciales;
-
   return (
     <div className="space-y-6">
-      <SincronizarBajasModal isOpen={verBajas} onClose={() => setVerBajas(false)} />
-      {/* La sincronización */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-[260px]">
-            <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-              Sincronización con ARCA
-              {estado && (
-                <label className="inline-flex items-center gap-2 cursor-pointer select-none ml-2" title={estado.config.activa ? "Desactivar la sincronización diaria" : "Activar la sincronización diaria"}>
-                  <input type="checkbox" className="sr-only peer" checked={estado.config.activa} disabled={guardando} onChange={(e) => void cambiarConfig({ activa: e.target.checked })} />
-                  <span className="relative w-11 h-6 rounded-full bg-gray-300 dark:bg-gray-600 peer-checked:bg-green-600 peer-disabled:opacity-50 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-5" />
-                  <span className={`text-xs font-semibold ${estado.config.activa ? "text-green-600 dark:text-green-400" : "text-gray-500"}`}>{estado.config.activa ? "Automática" : "Apagada"}</span>
-                </label>
-              )}
-            </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Lee en ARCA los movimientos del mes (altas y bajas) de cada empleadora y recalcula la antigüedad. Sólo lee: no presenta nada.
-            </p>
-            {estado && (
-              <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-gray-600 dark:text-gray-300">
-                <label className="flex items-center gap-1.5">
-                  Hora
-                  <input type="time" className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs" defaultValue={estado.config.hora} key={estado.config.hora} disabled={guardando} onBlur={(e) => { if (e.target.value && e.target.value !== estado.config.hora) void cambiarConfig({ hora: e.target.value }); }} />
-                </label>
-                <label className="flex items-center gap-1.5">
-                  Meses hacia atrás
-                  <select className="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs" value={estado.config.meses} disabled={guardando} onChange={(e) => void cambiarConfig({ meses: Number(e.target.value) })}>
-                    {[1, 2, 3, 6, 12].map((n) => <option key={n} value={n}>{n}</option>)}
-                  </select>
-                </label>
-                <span className="text-gray-400">
-                  {estado.totales.relaciones.toLocaleString("es-AR")} relaciones · {estado.totales.personas.toLocaleString("es-AR")} personas
-                </span>
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <button
-              type="button"
-              onClick={() => void sincronizarAhora()}
-              disabled={!puedeSincronizar}
-              title={!estado?.hayCredenciales ? "Faltan las credenciales de ARCA (Configuración → ARCA → Conexión)" : estado?.arcaOcupadaPor ? `ARCA está ocupada por ${estado.arcaOcupadaPor}` : estado?.enCurso ? "Ya está sincronizando" : "Leer ahora los movimientos en ARCA"}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <FontAwesomeIcon icon={estado?.enCurso ? faSpinner : faRotate} spin={!!estado?.enCurso} />
-              {estado?.enCurso ? "Sincronizando…" : "Sincronizar ahora"}
-            </button>
-            {/* Lleva a los CONTRATOS las bajas que el espejo ya tiene (etapa 3, paso 2): no abre ARCA. */}
-            <button
-              type="button"
-              onClick={() => setVerBajas(true)}
-              disabled={!!estado?.enCurso}
-              title={estado?.enCurso ? "Esperá a que termine la sincronización: las bajas salen del espejo actualizado" : "Escribir en los contratos las bajas que ARCA ya tiene (con misma persona, empleadora y fecha de alta)"}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-600 text-blue-700 dark:text-blue-300 text-sm font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Sincronizar bajas a contratos
-            </button>
-            {estado?.arcaOcupadaPor && <span className="text-[11px] text-amber-600">ARCA está ocupada por {estado.arcaOcupadaPor}.</span>}
-          </div>
-        </div>
-
-        {estado?.enCurso && (
-          <div className="mt-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 text-xs text-blue-900 dark:text-blue-200">
-            <p className="font-semibold">En curso desde {fechaHora(estado.enCurso.desde)}{estado.enCurso.automatica ? " (automática)" : ""}</p>
-            <ul className="mt-1 space-y-0.5 max-h-40 overflow-y-auto font-mono">
-              {estado.enCurso.progreso.slice(-12).map((p, i) => <li key={i}>{p}</li>)}
-            </ul>
-          </div>
-        )}
-
-        {ultima && !estado?.enCurso && (
-          <div className="mt-3 text-xs">
-            <button type="button" onClick={() => setVerUltima((v) => !v)} className="inline-flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:underline">
-              <FontAwesomeIcon icon={verUltima ? faChevronDown : faChevronRight} className="h-3 w-3" />
-              <FontAwesomeIcon icon={ultima.error ? faCircleXmark : faCircleCheck} className={ultima.error ? "text-red-500" : "text-green-500"} />
-              Última sincronización {hace(ultima.fecha)} ({fechaHora(ultima.fecha)}{ultima.automatica ? ", automática" : ""}) · {ultima.meses.join(", ")} ·{" "}
-              {`${ultima.empresas.reduce((s, e) => s + e.nuevas, 0)} nuevas, ${ultima.empresas.reduce((s, e) => s + e.actualizadas, 0)} actualizadas, ${ultima.empresas.reduce((s, e) => s + e.bajasAplicadas, 0)} bajas · ${Math.round(ultima.duracionMs / 1000)} s`}
-              {ultima.error && <span className="text-red-600"> · {ultima.error}</span>}
-            </button>
-            {ultima.htmlGuardado && <p className="mt-1 text-[11px] text-amber-600">Se guardó una pantalla de ARCA para revisar: <code>{ultima.htmlGuardado}</code></p>}
-            {/* Las bajas de ARCA que la corrida automática aplicó sola a los contratos, o frenó por el tope. */}
-            {ultima.bajasContratos && (
-              <p className={`mt-1 text-[11px] font-semibold ${ultima.bajasContratos.frenada || ultima.bajasContratos.error ? "text-red-600" : "text-gray-600 dark:text-gray-300"}`}>
-                {ultima.bajasContratos.error
-                  ? `Bajas de ARCA a contratos: falló (${ultima.bajasContratos.error}).`
-                  : ultima.bajasContratos.frenada
-                    ? `Bajas de ARCA a contratos: FRENADA. Iban a aplicarse ${ultima.bajasContratos.aplicables} y el tope es ${ultima.bajasContratos.tope}: no se escribió ninguna. Revisalas en «Sincronizar bajas a contratos».`
-                    : `Bajas de ARCA a contratos: ${ultima.bajasContratos.aplicadas} aplicadas solas · ${ultima.bajasContratos.listadas} para que mire una persona${ultima.bajasContratos.excluidasPorEmpleadora ? ` · ${ultima.bajasContratos.excluidasPorEmpleadora} sin aplicar por una empleadora con error` : ""}${ultima.bajasContratos.cambiaron ? ` · ${ultima.bajasContratos.cambiaron} cambiaron en el medio` : ""}`}
-              </p>
-            )}
-            {verUltima && (
-              <TablaConEncabezadoFijo className="mt-2" tabla="min-w-[480px] text-xs">
-                <thead>
-                  <tr>
-                    <th className={th}>Empleadora</th>
-                    <th className={th}>Meses</th>
-                    <th className={th}>Nuevas</th>
-                    <th className={th}>Actualizadas</th>
-                    <th className={th}>Bajas</th>
-                    <th className={th}>Sin cambios</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ultima.empresas.map((e) => (
-                    <tr key={e.cuit} className="border-t border-gray-100 dark:border-gray-800">
-                      <td className={td}>{e.razonSocial}{e.error && <p className="text-red-600 text-[11px]">{e.error}</p>}</td>
-                      <td className={td}>{e.meses.map((m) => `${m.mes}: ${m.resultado === "sin_datos" ? "sin movimientos" : m.resultado === "ok" ? `${m.filas} filas en ${m.paginas} pág.${m.descartes ? ` (${m.descartes} sin leer)` : ""}` : m.error || "error"}`).join(" · ")}</td>
-                      <td className={td}>{e.nuevas}</td>
-                      <td className={td}>{e.actualizadas}</td>
-                      <td className={td}>{e.bajasAplicadas}</td>
-                      <td className={td}>{e.sinCambios}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </TablaConEncabezadoFijo>
-            )}
-          </div>
-        )}
-      </div>
+      {/* La sincronización: el mismo encabezado que A.R.C.A Bajas (`EncabezadoSincronizacionArca`). */}
+      <EncabezadoSincronizacionArca onEstado={setEstado} onSincronizada={() => void cargarFilas()} />
 
       {/* Filtros */}
       <div className="flex flex-wrap items-center gap-3">

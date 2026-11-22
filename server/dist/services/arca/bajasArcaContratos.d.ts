@@ -35,6 +35,11 @@ export interface ItemBajaArca {
     tipo: TipoCambioBaja;
     aplicar: boolean;
     alerta?: string;
+    /**
+     * El alta de este contrato se presentó desde WeProdu (Carga Masiva o Altas Masivas). Si no, alguien la cargó a
+     * mano en ARCA: son las que explican el «ARCA termina después que el contrato» (ver `auditoriaArca.ts`).
+     */
+    altaDesdeWeprodu: boolean;
     diasAntesDelFin?: number;
     /** Los tramos de ARCA mirados (por tramos, granularidad, revisión manual). */
     tramos?: {

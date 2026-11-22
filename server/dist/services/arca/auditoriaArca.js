@@ -19,6 +19,15 @@
  *  - discrepanciasFrame lo que FRAME manda distinto de WeProdu y el import no pisó (vacío mientras el import
  *                       esté pausado; el contador tenía que vivir en un lugar que alguien mire).
  *
+ * Y LO QUE NO ES PARA MIRAR, contado aparte (`historicasArcaPosterior`, fuera del total): contratos cuya alta se
+ * cargó A MANO en ARCA y donde ARCA termina DESPUÉS que el contrato. Hallazgo del 22/11/2026, sobre los 5.712
+ * contratos con relación exacta y las dos fechas de fin: las 353 altas presentadas desde WeProdu (con su registro
+ * guardado) tienen en ARCA el mismo fin que se mandó, que es la baja del contrato; los 831 casos son todos de
+ * altas hechas a mano entre 2024 y 2026 (545 con un día de más, sin patrón: no depende del tipo ni de que el
+ * horario cruce la medianoche). La convención de WeProdu y la de ARCA es la misma. Como ya no se importa de FRAME
+ * (deprecado en noviembre de 2026), es un conjunto histórico cerrado: no crece y no requiere acción. Si un alta
+ * presentada DESDE WeProdu apareciera con ARCA terminando después, eso sí es para mirar y va a `revisionManual`.
+ *
  * Los TOTALES se guardan en el tenant (`sincronizacionRelaciones.auditoria`) después de cada corrida
  * automática y cada vez que alguien abre la pestaña: así el contador del menú no recalcula nada.
  */
@@ -40,7 +49,13 @@ export async function auditoriaArca(tenantId) {
     const plan = await planDeBajasArca(tid, { contexto: ctx });
     // Lo que sale del clasificador de bajas.
     const faltaBajaArca = plan.items.filter((x) => x.tipo === "arca_abierta").map(sinCrudos);
-    const revisionManual = plan.items.filter((x) => x.tipo === "revision_manual").map(sinCrudos);
+    // ARCA termina después que el contrato: histórico si el alta se cargó a mano; para mirar si salió de WeProdu.
+    const posteriores = plan.items.filter((x) => x.tipo === "arca_posterior");
+    const historicasArcaPosterior = posteriores.filter((x) => !x.altaDesdeWeprodu).length;
+    const revisionManual = [
+        ...plan.items.filter((x) => x.tipo === "revision_manual"),
+        ...posteriores.filter((x) => x.altaDesdeWeprodu).map((x) => ({ ...x, alerta: "ARCA termina después que el contrato y el alta se presentó desde WeProdu: no es una de las históricas hechas a mano" })),
+    ].map(sinCrudos);
     const granularidad = plan.items.filter((x) => x.tipo === "arca_granularidad" && (x.diasAntesDelFin ?? 0) > UMBRAL_GRANULARIDAD_DIAS).map(sinCrudos);
     // Relaciones de ARCA sin contrato exacto (regla pura en `utils/auditoriaArca.ts`).
     const porClave = new Map();
@@ -109,6 +124,7 @@ export async function auditoriaArca(tenantId) {
         relacionSinContrato: relacionSinContrato.length,
         discrepanciasFrame: discrepanciasFrame.length,
         total: faltaBajaArca.length + revisionManual.length + granularidad.length + relacionSinContrato.length + discrepanciasFrame.length,
+        historicasArcaPosterior,
     };
     return { hoy: ctx.hoy, espejoAl: ctx.espejoAl, calculadoEl: new Date().toISOString(), faltaBajaArca, revisionManual, granularidad, relacionSinContrato, discrepanciasFrame, totales };
 }

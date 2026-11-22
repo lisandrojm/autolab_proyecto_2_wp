@@ -89,6 +89,8 @@ export interface EstadoSyncRelaciones {
   hayCredenciales: boolean;
   totales: { relaciones: number; personas: number };
   hoy: string;
+  /** Los totales guardados de la Auditoría ARCA: lo que dice la barra («N para que mire una persona» y las históricas). */
+  auditoria?: { el: string | null; totales: TotalesAuditoria | null } | null;
 }
 
 /** Una relación resumida, para la columna «Contratos en ARCA» de Contratación → Contratos. */
@@ -165,6 +167,8 @@ export interface TotalesAuditoria {
   relacionSinContrato: number;
   discrepanciasFrame: number;
   total: number;
+  /** Altas hechas a mano donde ARCA termina después que el contrato: histórico, sin acción. No suma al total. */
+  historicasArcaPosterior?: number;
 }
 export interface AuditoriaArca {
   hoy: string;

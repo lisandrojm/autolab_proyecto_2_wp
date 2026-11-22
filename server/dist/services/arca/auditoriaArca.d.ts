@@ -19,6 +19,15 @@
  *  - discrepanciasFrame lo que FRAME manda distinto de WeProdu y el import no pisó (vacío mientras el import
  *                       esté pausado; el contador tenía que vivir en un lugar que alguien mire).
  *
+ * Y LO QUE NO ES PARA MIRAR, contado aparte (`historicasArcaPosterior`, fuera del total): contratos cuya alta se
+ * cargó A MANO en ARCA y donde ARCA termina DESPUÉS que el contrato. Hallazgo del 22/11/2026, sobre los 5.712
+ * contratos con relación exacta y las dos fechas de fin: las 353 altas presentadas desde WeProdu (con su registro
+ * guardado) tienen en ARCA el mismo fin que se mandó, que es la baja del contrato; los 831 casos son todos de
+ * altas hechas a mano entre 2024 y 2026 (545 con un día de más, sin patrón: no depende del tipo ni de que el
+ * horario cruce la medianoche). La convención de WeProdu y la de ARCA es la misma. Como ya no se importa de FRAME
+ * (deprecado en noviembre de 2026), es un conjunto histórico cerrado: no crece y no requiere acción. Si un alta
+ * presentada DESDE WeProdu apareciera con ARCA terminando después, eso sí es para mirar y va a `revisionManual`.
+ *
  * Los TOTALES se guardan en el tenant (`sincronizacionRelaciones.auditoria`) después de cada corrida
  * automática y cada vez que alguien abre la pestaña: así el contador del menú no recalcula nada.
  */
@@ -68,6 +77,8 @@ export interface TotalesAuditoria {
     relacionSinContrato: number;
     discrepanciasFrame: number;
     total: number;
+    /** Altas hechas a mano donde ARCA termina después que el contrato: histórico, sin acción. NO suma al total. */
+    historicasArcaPosterior?: number;
 }
 export interface AuditoriaArca {
     hoy: string;

@@ -42,7 +42,7 @@ export async function cargarContextoArca(tenantId, opciones = {}) {
         // Sin filtrar por empleadora acá: en un array, `contracts.empresaContratoId: {$ne: null}` exige que
         // NINGÚN contrato la tenga vacía, y una lápida (sin datos) dejaba afuera el vínculo entero (Barbona).
         UserProject.find({ userId: { $in: [...porUsuario.keys()].map((x) => new Types.ObjectId(x)) } })
-            .select("userId nombre_proyecto contracts.contratoKey contracts.estadoContrato contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.empresaContratoId contracts.nombre_contrato")
+            .select("userId nombre_proyecto contracts.contratoKey contracts.estadoContrato contracts.fecha_alta_contrato contracts.fecha_baja_contrato contracts.empresaContratoId contracts.nombre_contrato contracts.altaArcaPresentada.resultado contracts.altaArcaPresentada.via")
             .lean(),
         Company.find({}).select("cuit razonSocial").lean(),
         cuils.length ? RelacionLaboralArca.find({ tenantId: tid, cuil: { $in: cuils } }).select("-_id cuil empleadoraCuit fechaInicio fechaFin situacionBaja").lean() : Promise.resolve([]),
@@ -103,6 +103,7 @@ export async function planDeBajasArca(tenantId, opciones = {}) {
                 empleadoraCuit: e.cuit,
                 bajaCruda: c.fecha_baja_contrato ?? null,
                 altaCruda: c.fecha_alta_contrato,
+                altaDesdeWeprodu: c.altaArcaPresentada?.resultado === "presentada" && ["carga_masiva", "altas_masivas"].includes(String(c.altaArcaPresentada?.via || "")),
                 ...cambio,
             });
         });
