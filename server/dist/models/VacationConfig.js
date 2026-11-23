@@ -8,6 +8,8 @@ const EmbeddedOverlapSchema = new Schema({
     description: { type: String },
     isActive: { type: Boolean, default: true },
     useActiveContractSchedule: { type: Boolean, default: false },
+    prioridad: { type: String, enum: ["ninguna", "antiguedad"], default: "ninguna" },
+    diasPorTurno: { type: Number, default: 3, min: 1, max: 30 },
 }, { _id: true });
 // ─────────────────────────────────────────────────────────────────────────────
 // VacationConfig Schema
@@ -85,6 +87,8 @@ const VacationConfigSchema = new Schema({
         minDiasPorTramo: { type: Number, default: 7, min: 1, max: 60 },
         // Los tipos de contrato con que arranca tildada una campaña nueva. Vacío = todos los habilitados.
         tiposContratoInvitar: { type: [String], default: [] },
+        // En qué días de la semana puede empezar un tramo (0 = domingo). Vacío = cualquier día.
+        diasDeInicio: { type: [Number], default: [] },
     },
     // Antigüedad por empresa. Con estos defaults, un tenant que nunca lo tocó lee «empresa vigente».
     computoAntiguedad: {

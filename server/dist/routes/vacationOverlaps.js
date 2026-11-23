@@ -4,6 +4,11 @@ import mongoose from "mongoose";
 import { VacationConfig } from "../models/VacationConfig.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
+import { recalcularTurnosDelTenant } from "../services/vacaciones/turnosDeEleccion.js";
+/** Los turnos de las campañas lanzadas dependen de las reglas: se rearman en segundo plano después de cada cambio. */
+const rearmarTurnos = (tenantId) => {
+    void recalcularTurnosDelTenant(tenantId).catch((e) => console.error("[turnos-vacaciones] al rearmar:", e?.message || e));
+};
 const router = Router();
 const baseOverlapSchema = z.object({
     areaId: z.string().optional(),
@@ -14,6 +19,8 @@ const baseOverlapSchema = z.object({
     description: z.string().optional(),
     isActive: z.boolean().default(true),
     useActiveContractSchedule: z.boolean().default(false),
+    prioridad: z.enum(["ninguna", "antiguedad"]).optional(),
+    diasPorTurno: z.number().int().min(1, "El turno es de al menos 1 día").max(30, "El turno es de hasta 30 días").optional(),
 });
 const vacationOverlapSchema = baseOverlapSchema;
 const populateOverlap = async (overlap) => {
@@ -23,6 +30,8 @@ const populateOverlap = async (overlap) => {
         description: overlap.description,
         isActive: overlap.isActive,
         useActiveContractSchedule: overlap.useActiveContractSchedule || false,
+        prioridad: overlap.prioridad === "antiguedad" ? "antiguedad" : "ninguna",
+        diasPorTurno: overlap.diasPorTurno || 3,
     };
     if (overlap.clientId) {
         try {
@@ -108,6 +117,8 @@ router.post("/", requireTenant, authenticateToken, async (req, res) => {
             description: data.description,
             isActive: data.isActive,
             useActiveContractSchedule: data.useActiveContractSchedule || false,
+            prioridad: data.prioridad || "ninguna",
+            diasPorTurno: data.diasPorTurno || 3,
         };
         if (data.clientId)
             newOverlap.clientId = new mongoose.Types.ObjectId(data.clientId);
@@ -119,6 +130,8 @@ router.post("/", requireTenant, authenticateToken, async (req, res) => {
             newOverlap.roleFrameId = new mongoose.Types.ObjectId(data.roleFrameId);
         config.overlaps.push(newOverlap);
         await config.save();
+        if (newOverlap.prioridad === "antiguedad")
+            rearmarTurnos(req.tenantObjectId);
         const response = await populateOverlap(newOverlap);
         res.status(201).json(response);
     }
@@ -180,7 +193,14 @@ router.put("/:id", requireTenant, authenticateToken, async (req, res) => {
             config.overlaps[overlapIndex].isActive = data.isActive;
         if (data.useActiveContractSchedule !== undefined)
             config.overlaps[overlapIndex].useActiveContractSchedule = data.useActiveContractSchedule;
+        const teniaOrden = current.prioridad === "antiguedad";
+        if (data.prioridad !== undefined)
+            config.overlaps[overlapIndex].prioridad = data.prioridad;
+        if (data.diasPorTurno !== undefined)
+            config.overlaps[overlapIndex].diasPorTurno = data.diasPorTurno;
         await config.save();
+        if (teniaOrden || config.overlaps[overlapIndex].prioridad === "antiguedad")
+            rearmarTurnos(req.tenantObjectId);
         const response = await populateOverlap(config.overlaps[overlapIndex]);
         res.json(response);
     }
@@ -204,8 +224,11 @@ router.delete("/:id", requireTenant, authenticateToken, async (req, res) => {
         if (overlapIndex === -1) {
             return res.status(404).json({ error: "Regla no encontrada" });
         }
+        const teniaOrden = config.overlaps[overlapIndex].prioridad === "antiguedad";
         config.overlaps.splice(overlapIndex, 1);
         await config.save();
+        if (teniaOrden)
+            rearmarTurnos(req.tenantObjectId);
         res.json({ message: "Regla eliminada correctamente" });
     }
     catch (error) {

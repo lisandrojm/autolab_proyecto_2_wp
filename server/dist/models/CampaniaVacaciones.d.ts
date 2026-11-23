@@ -1,5 +1,5 @@
 import mongoose, { Document, Types } from "mongoose";
-import type { EstadoInvitacion } from "../compartido/vacaciones/campania.js";
+import type { EstadoInvitacion, TurnoDeEleccion } from "../compartido/vacaciones/campania.js";
 /**
  * ═══════════════════════════════════════════════════════════════════════
  * CAMPAÑA DE GOCE DE VACACIONES (15/11/2026)
@@ -27,6 +27,8 @@ export interface ICampaniaVacaciones extends Document {
     plazoParaDefinirDias: number;
     avisoMinimoDias: number;
     minDiasPorTramo: number;
+    /** En qué días de la semana puede empezar un tramo (0 = domingo … 6 = sábado). Vacío = cualquier día. Se edita lanzada. */
+    diasDeInicio: number[];
     /** "YYYY-MM-DD": se fija al lanzarla (hoy + plazo). */
     fechaLimite?: string | null;
     /**
@@ -136,6 +138,12 @@ export interface IInvitacionVacaciones extends Document {
         porUserId?: Types.ObjectId | null;
         automatico: boolean;
     }[];
+    /**
+     * SU TURNO PARA ELEGIR (23/11/2026): uno por cada regla de solapamiento con orden por antigüedad que la alcanza
+     * (ver `TurnoDeEleccion` en `compartido/vacaciones/campania.ts`). Vacío = elige cuando quiere. Lo arma
+     * `services/vacaciones/turnosDeEleccion.ts`.
+     */
+    turnos: TurnoDeEleccion[];
     createdAt: Date;
     updatedAt: Date;
 }

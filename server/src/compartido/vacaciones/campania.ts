@@ -10,6 +10,9 @@
  *   · El empleador fija las fechas; dejar elegir primero es una cortesía interna.
  *   · Aviso por escrito con al menos 30 días antes del INICIO (el CCT puede pedir más).
  *   · Fraccionar (tramos de 7 días o más) sólo por acuerdo: si asigna la empresa, UN TRAMO CONTINUO.
+ *     Desde el 23/11/2026, en orden de fecha cada tramo lleva al menos el mínimo o, si quedan menos, todos los que
+ *     quedan; con menos del mínimo en total no se fracciona (ver `validarPropuesta`).
+ *   · Los días de la semana en que puede EMPEZAR un tramo (23/11/2026, `diasDeInicio`; vacío = cualquier día).
  *   · NUNCA se compensa en dinero con la relación vigente (art. 156): esto no existe acá como opción.
  *
  * Fechas en "YYYY-MM-DD" sin Date de por medio (como `planVacaciones/fechas`). Las comparten el server
@@ -35,9 +38,43 @@ export interface ConfigCampania {
    */
   /** Los tipos del catálogo (`_id` de `contratos`), no el número de FRAME: ver `vacaciones/tipoDeContrato.ts`. */
   tiposContratoInvitar: string[];
+  /**
+   * En qué días de la semana puede EMPEZAR un tramo (0 = domingo … 6 = sábado). Vacío = cualquier día. Una campaña
+   * nueva lo copia; en una lanzada se cambia desde «Editar».
+   */
+  diasDeInicio: number[];
 }
 
-export const CONFIG_CAMPANIA_POR_DEFECTO: ConfigCampania = { activa: false, plazoParaDefinirDias: 14, avisoMinimoDias: 30, minDiasPorTramo: 7, tiposContratoInvitar: [] };
+export const CONFIG_CAMPANIA_POR_DEFECTO: ConfigCampania = { activa: false, plazoParaDefinirDias: 14, avisoMinimoDias: 30, minDiasPorTramo: 7, tiposContratoInvitar: [], diasDeInicio: [] };
+
+/** Los días de la semana, como los da `getUTCDay` (0 = domingo). */
+export const DIAS_DE_LA_SEMANA = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"] as const;
+
+/**
+ * Los días de inicio tal como se guardan: enteros de 0 a 6, sin repetir, en orden de lunes a domingo. Los siete
+ * marcados es lo mismo que ninguno (cualquier día) y se guarda vacío.
+ */
+export function normalizarDiasDeInicio(v: unknown): number[] {
+  if (!Array.isArray(v)) return [];
+  const dias = [...new Set(v.filter((x) => x !== null && x !== undefined && x !== "").map((x) => Math.round(Number(x))).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))];
+  if (dias.length === 7) return [];
+  return dias.sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+}
+
+/** «cualquier día», «los lunes», «los lunes o viernes», «los lunes, miércoles o viernes». */
+export function textoDiasDeInicio(dias: number[] | null | undefined): string {
+  const d = normalizarDiasDeInicio(dias);
+  if (d.length === 0) return "cualquier día";
+  const plural = (n: number) => (n === 6 || n === 0 ? `${DIAS_DE_LA_SEMANA[n]}s` : DIAS_DE_LA_SEMANA[n]);
+  const nombres = d.map(plural);
+  return `los ${nombres.length === 1 ? nombres[0] : `${nombres.slice(0, -1).join(", ")} o ${nombres[nombres.length - 1]}`}`;
+}
+
+/** ¿Puede empezar ese día? Sin días configurados, siempre. */
+export const puedeEmpezar = (desde: string, dias: number[] | null | undefined): boolean => {
+  const d = normalizarDiasDeInicio(dias);
+  return d.length === 0 || d.includes(new Date(`${desde}T12:00:00Z`).getUTCDay());
+};
 
 /**
  * Qué pasa si la persona no elige, y cómo asigna la empresa. Son constantes y no configuración: NO hay
@@ -60,6 +97,7 @@ export function normalizarConfigCampania(v: any): ConfigCampania {
     avisoMinimoDias: entero(v?.avisoMinimoDias, d.avisoMinimoDias, 0, 180),
     minDiasPorTramo: entero(v?.minDiasPorTramo, d.minDiasPorTramo, 1, 60),
     tiposContratoInvitar: normalizarTiposContrato(v?.tiposContratoInvitar),
+    diasDeInicio: normalizarDiasDeInicio(v?.diasDeInicio),
   };
 }
 
@@ -249,8 +287,11 @@ export function alertasDeLanzamiento(o: { hoy: string; plazoDias: number; avisoD
  * LA PROPUESTA DE LA PERSONA: uno o más tramos.
  *  · Cada tramo dentro de la ventana de la campaña (y de la suya, si su área o proyecto tiene otra).
  *  · Ninguno empieza antes de `hoy + aviso`: el aviso por escrito sale al aprobarse, y tiene que llegar.
- *  · Los tramos no se pisan, y si son varios, cada uno de al menos `minPorTramo` días (fraccionar es un
- *    acuerdo: proponerlo la persona y aprobarlo la empresa es ese acuerdo).
+ *  · Cada tramo empieza en uno de los días de inicio de la campaña (`diasDeInicio`; vacío = cualquier día).
+ *  · Los tramos no se pisan. Al fraccionar (fraccionar es un acuerdo: proponerlo la persona y aprobarlo la
+ *    empresa es ese acuerdo), EN ORDEN DE FECHA cada tramo lleva al menos `minPorTramo` días o, si quedan menos,
+ *    todos los que quedan: sólo el último puede ser más corto. Con menos de `minPorTramo` días en total no se
+ *    fracciona: van seguidos, en un solo tramo (23/11/2026).
  *  · La suma da los días disponibles: sin acumulación pactada (segunda etapa) no quedan días sueltos.
  * Devuelve los errores, en castellano; vacío = está bien.
  */
@@ -263,11 +304,13 @@ export function validarPropuesta(o: {
   avisoDias: number;
   minPorTramo: number;
   diasCorridos: boolean;
+  diasDeInicio?: number[] | null;
 }): string[] {
   const errores: string[] = [];
   const tramos = o.tramos || [];
   if (tramos.length === 0) return ["Elegí al menos un tramo."];
   const desdeMinimo = primerInicioPosible(o.hoy, o.avisoDias);
+  const diasDeInicio = normalizarDiasDeInicio(o.diasDeInicio);
 
   tramos.forEach((t, i) => {
     const n = tramos.length > 1 ? ` ${i + 1}` : "";
@@ -278,8 +321,30 @@ export function validarPropuesta(o: {
     if (t.desde < o.ventana.desde || t.hasta > o.ventana.hasta) errores.push(`El tramo${n} se sale de la ventana (${fechaCorta(o.ventana.desde)} al ${fechaCorta(o.ventana.hasta)}).`);
     else if (o.ventanaPersona && !rangoPermitido(t.desde, t.hasta, o.ventanaPersona)) errores.push(`El tramo${n} se sale de tu ventana de goce (${textoDeVentana(o.ventanaPersona)}).`);
     if (t.desde < desdeMinimo) errores.push(`El tramo${n} empieza muy pronto: hace falta avisar con ${o.avisoDias} días, así que puede empezar desde el ${fechaCorta(desdeMinimo)}.`);
-    if (tramos.length > 1 && contarDiasTramo(t, o.diasCorridos) < o.minPorTramo) errores.push(`El tramo${n} tiene menos de ${o.minPorTramo} días: al fraccionar, cada parte tiene que tener al menos ${o.minPorTramo}.`);
+    if (!puedeEmpezar(t.desde, diasDeInicio)) errores.push(`El tramo${n} empieza un ${DIAS_DE_LA_SEMANA[diaDeSemana(t.desde)]}: las vacaciones pueden empezar sólo ${textoDiasDeInicio(diasDeInicio)}.`);
   });
+
+  // Fraccionar: en orden de fecha, cada tramo con el mínimo o, si quedan menos, con todos los que quedan.
+  if (tramos.length > 1) {
+    if (o.diasDisponibles < o.minPorTramo) {
+      errores.push(`Con ${o.diasDisponibles} día(s) no se puede fraccionar: van todos seguidos, en un solo tramo (cada tramo tiene que tener al menos ${o.minPorTramo}).`);
+    } else {
+      const enOrden = tramos.map((t, i) => ({ t, i })).filter(({ t }) => esISO(t.desde) && esISO(t.hasta) && t.hasta >= t.desde).sort((a, b) => a.t.desde.localeCompare(b.t.desde));
+      let quedan = o.diasDisponibles;
+      for (const { t, i } of enOrden) {
+        const dias = contarDiasTramo(t, o.diasCorridos);
+        const minimo = Math.min(o.minPorTramo, Math.max(0, quedan));
+        if (dias < minimo) {
+          errores.push(
+            minimo === o.minPorTramo
+              ? `El tramo ${i + 1} tiene menos de ${o.minPorTramo} días: al fraccionar, cada parte tiene que tener al menos ${o.minPorTramo} (sólo la última puede ser más corta, si quedan menos).`
+              : `El tramo ${i + 1} tiene ${dias} día(s) y quedan ${quedan}: con menos de ${o.minPorTramo} van todos juntos, en el último tramo.`,
+          );
+        }
+        quedan -= dias;
+      }
+    }
+  }
 
   for (let i = 0; i < tramos.length; i++) for (let j = i + 1; j < tramos.length; j++) if (sePisan(tramos[i], tramos[j])) errores.push(`Los tramos ${i + 1} y ${j + 1} se pisan.`);
 
@@ -310,13 +375,15 @@ export function validarOtorgamiento(o: { hoy: string; desde: string; hasta: stri
  * bloqueado (topes de solapamiento del área, otras vacaciones). Continuo siempre: la empresa no
  * fracciona sin acuerdo. `null` si no entra en ningún lado.
  */
-export function sugerirTramoUnico(o: { dias: number; ventana: VentanaDeCampania; desdeMinimo: string; diasCorridos: boolean; ventanaPersona?: VentanaEfectiva | null; bloqueadas?: Iterable<string> }): Tramo | null {
+export function sugerirTramoUnico(o: { dias: number; ventana: VentanaDeCampania; desdeMinimo: string; diasCorridos: boolean; ventanaPersona?: VentanaEfectiva | null; bloqueadas?: Iterable<string>; diasDeInicio?: number[] | null }): Tramo | null {
   if (!(o.dias > 0)) return null;
   const bloqueadas = new Set(o.bloqueadas || []);
   let desde = o.desdeMinimo > o.ventana.desde ? o.desdeMinimo : o.ventana.desde;
   for (let guarda = 0; guarda < 400 && desde <= o.ventana.hasta; guarda++, desde = sumarDias(desde, 1)) {
     // Con días hábiles, el tramo arranca un día hábil: empezar un sábado «regala» el fin de semana.
     if (!o.diasCorridos && [0, 6].includes(diaDeSemana(desde))) continue;
+    // Empieza en uno de los días de inicio de la campaña, como lo que elige la persona.
+    if (!puedeEmpezar(desde, o.diasDeInicio)) continue;
     const hasta = hastaParaDias(desde, o.dias, o.diasCorridos);
     if (hasta > o.ventana.hasta) return null;
     if (o.ventanaPersona && !rangoPermitido(desde, hasta, o.ventanaPersona)) continue;
@@ -396,4 +463,104 @@ export function alertasDeInvitacion(o: { estado: EstadoInvitacion; fechaLimite: 
     if (diasHasta(o.hoy, inicio) < o.avisoDias) alertas.push({ nivel: "error", codigo: "aviso_insuficiente", mensaje: `Lo propuesto empieza el ${fechaCorta(inicio)}: aprobándolo hoy ya no se llega al aviso de ${o.avisoDias} días.` });
   }
   return alertas;
+}
+
+/* ─────────────────────────── Turnos para elegir, por antigüedad ─────────────────────────── */
+
+/**
+ * QUIÉN ELIGE PRIMERO (23/11/2026). Una regla de solapamiento puede ordenar la elección de las personas que alcanza
+ * (las del mismo rol, en su ámbito) por ANTIGÜEDAD: la más antigua elige primero, pero con un turno de
+ * `diasPorTurno` días para no frenar a las demás.
+ *  · El turno de la persona en el lugar k (desde 0) empieza en `base + k × diasPorTurno`. `base` es el día en que
+ *    se armaron los turnos (el lanzamiento, o el día en que se prendió el orden en una campaña que ya corría).
+ *  · Se le abre antes si todas las que tiene adelante ya eligieron (o ya no pueden elegir).
+ *  · Si no elige en su turno no pierde nada salvo la prioridad: puede elegir hasta la fecha límite, como todas.
+ *  · Si el turno empezaría después de la fecha límite, se recorta a la fecha límite (`recortado`) y el tablero
+ *    lo avisa: el grupo es largo para el plazo.
+ */
+export interface TurnoDeEleccion {
+  /** La regla de solapamiento y su ámbito (proyecto × área): un grupo. */
+  grupo: string;
+  reglaId: string;
+  regla: string;
+  /** Su lugar en el grupo (desde 1) y cuántas son. */
+  orden: number;
+  de: number;
+  base: string;
+  diasPorTurno: number;
+  /** Desde qué día puede elegir aunque las de adelante no hayan elegido. */
+  desde: string;
+  /** Las invitaciones que tiene adelante. */
+  delante: string[];
+  recortado: boolean;
+}
+
+export interface MiembroDelTurno {
+  invitacionId: string;
+  nombre: string;
+  /** Días de antigüedad (más = más antigua). */
+  antiguedadDias: number;
+  /** Fecha de ingreso, para desempatar (la más vieja primero). */
+  ingreso?: string | null;
+}
+
+/** De la más antigua a la más nueva; a igual antigüedad, la de ingreso más viejo y después por nombre. */
+export function ordenarPorAntiguedad<T extends MiembroDelTurno>(miembros: T[]): T[] {
+  return [...miembros].sort((a, b) => b.antiguedadDias - a.antiguedadDias || String(a.ingreso || "9999").localeCompare(String(b.ingreso || "9999")) || a.nombre.localeCompare(b.nombre, "es"));
+}
+
+/** Los turnos de un grupo: uno por persona, en orden de antigüedad. Un grupo de una sola persona no tiene turnos. */
+export function armarTurnos(o: { grupo: string; reglaId: string; regla: string; miembros: MiembroDelTurno[]; base: string; diasPorTurno: number; fechaLimite: string }): Map<string, TurnoDeEleccion> {
+  const out = new Map<string, TurnoDeEleccion>();
+  if (o.miembros.length < 2) return out;
+  const orden = ordenarPorAntiguedad(o.miembros);
+  const paso = Math.max(1, Math.round(o.diasPorTurno || 1));
+  orden.forEach((m, k) => {
+    const calculado = sumarDias(o.base, k * paso);
+    const recortado = !!o.fechaLimite && calculado > o.fechaLimite;
+    out.set(m.invitacionId, {
+      grupo: o.grupo,
+      reglaId: o.reglaId,
+      regla: o.regla,
+      orden: k + 1,
+      de: orden.length,
+      base: o.base,
+      diasPorTurno: paso,
+      desde: recortado ? o.fechaLimite : calculado,
+      delante: orden.slice(0, k).map((x) => x.invitacionId),
+      recortado,
+    });
+  });
+  return out;
+}
+
+export interface EstadoDelTurno {
+  abierto: boolean;
+  /** Desde cuándo puede elegir sin esperar (el más tardío de sus turnos); null si no tiene turnos. */
+  desde: string | null;
+  /** Cuántas de las que tiene adelante todavía no eligieron. */
+  esperando: number;
+  orden: number | null;
+  de: number | null;
+  regla: string | null;
+}
+
+/**
+ * ¿Ya puede elegir? Con varios grupos (varias reglas), tiene que estar abierto en todos. `yaEligio`: si la
+ * invitación de adelante ya no está esperando para elegir (propuso, se le otorgó, venció…).
+ */
+export function estadoDelTurno(turnos: TurnoDeEleccion[] | null | undefined, hoy: string, yaEligio: (invitacionId: string) => boolean): EstadoDelTurno {
+  const lista = turnos || [];
+  if (lista.length === 0) return { abierto: true, desde: null, esperando: 0, orden: null, de: null, regla: null };
+  let abierto = true;
+  let esperando = 0;
+  let peor: TurnoDeEleccion = lista[0];
+  for (const t of lista) {
+    const faltan = t.delante.filter((id) => !yaEligio(id)).length;
+    const abiertoAca = hoy >= t.desde || faltan === 0;
+    if (!abiertoAca) abierto = false;
+    esperando = Math.max(esperando, abiertoAca ? 0 : faltan);
+    if (t.desde > peor.desde) peor = t;
+  }
+  return { abierto, desde: peor.desde, esperando, orden: peor.orden, de: peor.de, regla: peor.regla };
 }

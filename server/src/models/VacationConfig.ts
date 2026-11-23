@@ -15,6 +15,12 @@ export interface IEmbeddedOverlap {
   description?: string;
   isActive: boolean;
   useActiveContractSchedule?: boolean;
+  /**
+   * QUIÉN ELIGE PRIMERO en la campaña de goce (23/11/2026): «ninguna» = la que pide primero; «antiguedad» = las que
+   * alcanza la regla eligen por turnos, la más antigua primero, con `diasPorTurno` días cada una.
+   */
+  prioridad?: "ninguna" | "antiguedad";
+  diasPorTurno?: number;
 }
 
 const EmbeddedOverlapSchema = new Schema<IEmbeddedOverlap>(
@@ -27,6 +33,8 @@ const EmbeddedOverlapSchema = new Schema<IEmbeddedOverlap>(
     description: { type: String },
     isActive: { type: Boolean, default: true },
     useActiveContractSchedule: { type: Boolean, default: false },
+    prioridad: { type: String, enum: ["ninguna", "antiguedad"], default: "ninguna" },
+    diasPorTurno: { type: Number, default: 3, min: 1, max: 30 },
   },
   { _id: true },
 );
@@ -57,7 +65,7 @@ export interface IVacationConfig extends Document {
    * eligen, que la empresa asigne un tramo único. Reglas en `compartido/vacaciones/campania.ts`. No hay
    * opción de pagar en lugar de gozar: no es configurable porque no existe.
    */
-  campania?: { activa: boolean; plazoParaDefinirDias: number; avisoMinimoDias: number; minDiasPorTramo: number; tiposContratoInvitar?: string[] };
+  campania?: { activa: boolean; plazoParaDefinirDias: number; avisoMinimoDias: number; minDiasPorTramo: number; tiposContratoInvitar?: string[]; diasDeInicio?: number[] };
   /**
    * DE QUÉ EMPLEADORA SE TOMA LA ANTIGÜEDAD (15/11/2026). Ya no se suman los días de todas: cuenta la
    * de una sola (ver `empresaDeComputo` en utils/antiguedadArca.ts).
@@ -175,6 +183,8 @@ const VacationConfigSchema = new Schema<IVacationConfig>(
       minDiasPorTramo: { type: Number, default: 7, min: 1, max: 60 },
       // Los tipos de contrato con que arranca tildada una campaña nueva. Vacío = todos los habilitados.
       tiposContratoInvitar: { type: [String], default: [] },
+      // En qué días de la semana puede empezar un tramo (0 = domingo). Vacío = cualquier día.
+      diasDeInicio: { type: [Number], default: [] },
     },
     // Antigüedad por empresa. Con estos defaults, un tenant que nunca lo tocó lee «empresa vigente».
     computoAntiguedad: {

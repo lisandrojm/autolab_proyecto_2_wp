@@ -109,6 +109,21 @@ export declare function cambiarFechaLimite(tid: Types.ObjectId, id: string, nuev
     invitaciones: number;
     primeraAsignacion: string;
 }>;
+/**
+ * LOS DÍAS DE LA SEMANA EN QUE PUEDE EMPEZAR UN TRAMO (23/11/2026), en borrador o lanzada. Vale para lo que se
+ * proponga y se sugiera desde ahora: lo ya propuesto u otorgado no se toca. Vacío = cualquier día.
+ */
+export declare function cambiarDiasDeInicio(tid: Types.ObjectId, id: string, dias: unknown, actorId: string | null): Promise<{
+    diasDeInicio: number[];
+    aplicado: boolean;
+}>;
+/** Rearma los turnos por antigüedad de una campaña lanzada (también se rearman solos al cambiar una regla). */
+export declare function rearmarTurnos(tid: Types.ObjectId, id: string): Promise<{
+    grupos: number;
+    conTurno: number;
+    recortados: number;
+    cambiadas: number;
+}>;
 export declare function cerrarCampania(tid: Types.ObjectId, id: string, actorId: string): Promise<import("mongoose").Document<unknown, {}, ICampaniaVacaciones, {}, {}> & ICampaniaVacaciones & Required<{
     _id: Types.ObjectId;
 }> & {
@@ -167,6 +182,7 @@ export declare function miInvitacion(tid: Types.ObjectId, userId: string): Promi
             porUserId?: Types.ObjectId | null;
             automatico: boolean;
         }[];
+        turnos: import("../../compartido/vacaciones/campania.js").TurnoDeEleccion[];
         createdAt: Date;
         updatedAt: Date;
         _id: Types.ObjectId;
@@ -190,12 +206,15 @@ export declare function miInvitacion(tid: Types.ObjectId, userId: string): Promi
         ventanaHasta: string;
         avisoMinimoDias: number;
         minDiasPorTramo: number;
+        diasDeInicio: number[];
         fechaLimite: string;
     };
     estadoVisible: import("../../compartido/vacaciones/campania.js").EstadoVisible;
     diasDisponibles: number;
     diasParaLaFechaLimite: number;
     puedeProponer: boolean;
+    /** Su turno para elegir por antigüedad, si tiene: si ya se abrió, desde cuándo y cuántas espera. */
+    turno: import("../../compartido/vacaciones/campania.js").EstadoDelTurno;
     primerInicioPosible: string;
     vacaciones: (import("mongoose").FlattenMaps<IVacation> & Required<{
         _id: Types.ObjectId;
@@ -253,6 +272,7 @@ export declare function acusarInvitacion(tid: Types.ObjectId, userId: string): P
             porUserId?: Types.ObjectId | null;
             automatico: boolean;
         }[];
+        turnos: import("../../compartido/vacaciones/campania.js").TurnoDeEleccion[];
         createdAt: Date;
         updatedAt: Date;
         _id: Types.ObjectId;
@@ -276,12 +296,15 @@ export declare function acusarInvitacion(tid: Types.ObjectId, userId: string): P
         ventanaHasta: string;
         avisoMinimoDias: number;
         minDiasPorTramo: number;
+        diasDeInicio: number[];
         fechaLimite: string;
     };
     estadoVisible: import("../../compartido/vacaciones/campania.js").EstadoVisible;
     diasDisponibles: number;
     diasParaLaFechaLimite: number;
     puedeProponer: boolean;
+    /** Su turno para elegir por antigüedad, si tiene: si ya se abrió, desde cuándo y cuántas espera. */
+    turno: import("../../compartido/vacaciones/campania.js").EstadoDelTurno;
     primerInicioPosible: string;
     vacaciones: (import("mongoose").FlattenMaps<IVacation> & Required<{
         _id: Types.ObjectId;
@@ -343,6 +366,7 @@ export declare function proponerFechas(tid: Types.ObjectId, userId: string, tram
             porUserId?: Types.ObjectId | null;
             automatico: boolean;
         }[];
+        turnos: import("../../compartido/vacaciones/campania.js").TurnoDeEleccion[];
         createdAt: Date;
         updatedAt: Date;
         _id: Types.ObjectId;
@@ -366,12 +390,15 @@ export declare function proponerFechas(tid: Types.ObjectId, userId: string, tram
         ventanaHasta: string;
         avisoMinimoDias: number;
         minDiasPorTramo: number;
+        diasDeInicio: number[];
         fechaLimite: string;
     };
     estadoVisible: import("../../compartido/vacaciones/campania.js").EstadoVisible;
     diasDisponibles: number;
     diasParaLaFechaLimite: number;
     puedeProponer: boolean;
+    /** Su turno para elegir por antigüedad, si tiene: si ya se abrió, desde cuándo y cuántas espera. */
+    turno: import("../../compartido/vacaciones/campania.js").EstadoDelTurno;
     primerInicioPosible: string;
     vacaciones: (import("mongoose").FlattenMaps<IVacation> & Required<{
         _id: Types.ObjectId;
@@ -433,6 +460,7 @@ export declare function cancelarPropuesta(tid: Types.ObjectId, userId: string): 
             porUserId?: Types.ObjectId | null;
             automatico: boolean;
         }[];
+        turnos: import("../../compartido/vacaciones/campania.js").TurnoDeEleccion[];
         createdAt: Date;
         updatedAt: Date;
         _id: Types.ObjectId;
@@ -456,12 +484,15 @@ export declare function cancelarPropuesta(tid: Types.ObjectId, userId: string): 
         ventanaHasta: string;
         avisoMinimoDias: number;
         minDiasPorTramo: number;
+        diasDeInicio: number[];
         fechaLimite: string;
     };
     estadoVisible: import("../../compartido/vacaciones/campania.js").EstadoVisible;
     diasDisponibles: number;
     diasParaLaFechaLimite: number;
     puedeProponer: boolean;
+    /** Su turno para elegir por antigüedad, si tiene: si ya se abrió, desde cuándo y cuántas espera. */
+    turno: import("../../compartido/vacaciones/campania.js").EstadoDelTurno;
     primerInicioPosible: string;
     vacaciones: (import("mongoose").FlattenMaps<IVacation> & Required<{
         _id: Types.ObjectId;
@@ -519,6 +550,7 @@ export declare function acusarOtorgamiento(tid: Types.ObjectId, userId: string):
             porUserId?: Types.ObjectId | null;
             automatico: boolean;
         }[];
+        turnos: import("../../compartido/vacaciones/campania.js").TurnoDeEleccion[];
         createdAt: Date;
         updatedAt: Date;
         _id: Types.ObjectId;
@@ -542,12 +574,15 @@ export declare function acusarOtorgamiento(tid: Types.ObjectId, userId: string):
         ventanaHasta: string;
         avisoMinimoDias: number;
         minDiasPorTramo: number;
+        diasDeInicio: number[];
         fechaLimite: string;
     };
     estadoVisible: import("../../compartido/vacaciones/campania.js").EstadoVisible;
     diasDisponibles: number;
     diasParaLaFechaLimite: number;
     puedeProponer: boolean;
+    /** Su turno para elegir por antigüedad, si tiene: si ya se abrió, desde cuándo y cuántas espera. */
+    turno: import("../../compartido/vacaciones/campania.js").EstadoDelTurno;
     primerInicioPosible: string;
     vacaciones: (import("mongoose").FlattenMaps<IVacation> & Required<{
         _id: Types.ObjectId;

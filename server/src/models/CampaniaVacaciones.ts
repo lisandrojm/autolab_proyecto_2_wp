@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
-import type { EstadoInvitacion } from "../compartido/vacaciones/campania.js";
+import type { EstadoInvitacion, TurnoDeEleccion } from "../compartido/vacaciones/campania.js";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -30,6 +30,8 @@ export interface ICampaniaVacaciones extends Document {
   plazoParaDefinirDias: number;
   avisoMinimoDias: number;
   minDiasPorTramo: number;
+  /** En qué días de la semana puede empezar un tramo (0 = domingo … 6 = sábado). Vacío = cualquier día. Se edita lanzada. */
+  diasDeInicio: number[];
   /** "YYYY-MM-DD": se fija al lanzarla (hoy + plazo). */
   fechaLimite?: string | null;
   /**
@@ -68,6 +70,7 @@ const campaniaSchema = new Schema<ICampaniaVacaciones>(
     plazoParaDefinirDias: { type: Number, required: true },
     avisoMinimoDias: { type: Number, required: true },
     minDiasPorTramo: { type: Number, required: true },
+    diasDeInicio: { type: [Number], default: [] },
     fechaLimite: { type: String, default: null },
     tiposContratoInvitar: { type: [String], default: [] },
     lanzamiento: {
@@ -131,6 +134,12 @@ export interface IInvitacionVacaciones extends Document {
   acuseOtorgamientoAt?: Date | null;
   historial: { accion: string; porUserId?: Types.ObjectId | null; at: Date; detalle?: string }[];
   recordatorios: { at: Date; porUserId?: Types.ObjectId | null; automatico: boolean }[];
+  /**
+   * SU TURNO PARA ELEGIR (23/11/2026): uno por cada regla de solapamiento con orden por antigüedad que la alcanza
+   * (ver `TurnoDeEleccion` en `compartido/vacaciones/campania.ts`). Vacío = elige cuando quiere. Lo arma
+   * `services/vacaciones/turnosDeEleccion.ts`.
+   */
+  turnos: TurnoDeEleccion[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -178,6 +187,10 @@ const invitacionSchema = new Schema<IInvitacionVacaciones>(
     acuseOtorgamientoAt: { type: Date, default: null },
     historial: [{ _id: false, accion: String, porUserId: { type: Schema.Types.ObjectId, ref: "User" }, at: Date, detalle: String }],
     recordatorios: [{ _id: false, at: Date, porUserId: { type: Schema.Types.ObjectId, ref: "User" }, automatico: Boolean }],
+    turnos: {
+      type: [{ _id: false, grupo: String, reglaId: String, regla: String, orden: Number, de: Number, base: String, diasPorTurno: Number, desde: String, delante: [String], recortado: Boolean }],
+      default: [],
+    },
   },
   { timestamps: true, collection: "invitaciones_vacaciones" },
 );

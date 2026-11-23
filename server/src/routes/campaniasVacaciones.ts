@@ -11,6 +11,8 @@ import {
   cargarCampania,
   cerrarCampania,
   cambiarFechaLimite,
+  cambiarDiasDeInicio,
+  rearmarTurnos,
   confirmarAsignaciones,
   crearCampania,
   editarAsignacion,
@@ -85,6 +87,10 @@ campaniasVacacionesRoutes.put("/:id/invitaciones/:invId/asignacion", soloAdmin, 
 campaniasVacacionesRoutes.post("/:id/confirmar-asignaciones", soloAdmin, manejar(async (req) => confirmarAsignaciones(tid(req), String(req.params.id), Array.isArray(req.body?.invitacionIds) ? req.body.invitacionIds.map(String) : undefined, yo(req))));
 // Cambiar la fecha límite para elegir de una campaña lanzada (la de la campaña y la de cada invitación a la que le corre el plazo).
 campaniasVacacionesRoutes.put("/:id/fecha-limite", soloAdmin, manejar(async (req) => cambiarFechaLimite(tid(req), String(req.params.id), req.body?.fechaLimite, yo(req))));
+// Los días de la semana en que puede empezar un tramo (borrador o lanzada). Vacío = cualquier día.
+campaniasVacacionesRoutes.put("/:id/dias-de-inicio", soloAdmin, manejar(async (req) => cambiarDiasDeInicio(tid(req), String(req.params.id), req.body?.diasDeInicio, yo(req))));
+// Rearmar los turnos por antigüedad (se rearman solos al cambiar una regla de solapamiento con orden).
+campaniasVacacionesRoutes.post("/:id/turnos", soloAdmin, manejar(async (req) => rearmarTurnos(tid(req), String(req.params.id))));
 campaniasVacacionesRoutes.post("/:id/cerrar", soloAdmin, manejar(async (req) => cerrarCampania(tid(req), String(req.params.id), yo(req))));
 campaniasVacacionesRoutes.get(
   "/:id/reporte.csv",

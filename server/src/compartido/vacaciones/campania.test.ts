@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { motivoDeNoInvitar, normalizarTiposContrato, resumenDeInvitables, alertasDeInvitacion, alertasDeLanzamiento, contarDiasTramo, estadoVisible, hastaParaDias, normalizarConfigCampania, sugerirTramoUnico, validarOtorgamiento, validarPropuesta, ventanaDeLaTemporada } from "./campania.js";
+import { armarTurnos, estadoDelTurno, normalizarDiasDeInicio, textoDiasDeInicio, motivoDeNoInvitar, normalizarTiposContrato, resumenDeInvitables, alertasDeInvitacion, alertasDeLanzamiento, contarDiasTramo, estadoVisible, hastaParaDias, normalizarConfigCampania, sugerirTramoUnico, validarOtorgamiento, validarPropuesta, ventanaDeLaTemporada } from "./campania.js";
 
 /** Dos tipos del catálogo (`contratos`): la campaña elige por su `_id`, no por el número de FRAME. */
 const TI = "6a6a6d75bcadd1748056908d";
@@ -10,8 +10,8 @@ const VENTANA = { desde: "2026-11-01", hasta: "2027-04-30" };
 const base = { ventana: VENTANA, hoy: "2026-11-15", avisoDias: 30, minPorTramo: 7, diasCorridos: true };
 
 test("config: lo que falta o viene mal cae al de por defecto", () => {
-  assert.deepEqual(normalizarConfigCampania(undefined), { activa: false, plazoParaDefinirDias: 14, avisoMinimoDias: 30, minDiasPorTramo: 7, tiposContratoInvitar: [] });
-  assert.deepEqual(normalizarConfigCampania({ activa: true, plazoParaDefinirDias: "20", avisoMinimoDias: -3, minDiasPorTramo: 0 }), { activa: true, plazoParaDefinirDias: 20, avisoMinimoDias: 30, minDiasPorTramo: 7, tiposContratoInvitar: [] });
+  assert.deepEqual(normalizarConfigCampania(undefined), { activa: false, plazoParaDefinirDias: 14, avisoMinimoDias: 30, minDiasPorTramo: 7, tiposContratoInvitar: [], diasDeInicio: [] });
+  assert.deepEqual(normalizarConfigCampania({ activa: true, plazoParaDefinirDias: "20", avisoMinimoDias: -3, minDiasPorTramo: 0 }), { activa: true, plazoParaDefinirDias: 20, avisoMinimoDias: 30, minDiasPorTramo: 7, tiposContratoInvitar: [], diasDeInicio: [] });
   assert.deepEqual(normalizarConfigCampania({ tiposContratoInvitar: [PF, 3, TI, null, "x", PF] }).tiposContratoInvitar, [TI, PF].sort());
 });
 
@@ -54,7 +54,7 @@ test("propuesta: un tramo con todos los días, bien", () => {
 
 test("propuesta: fraccionada en dos de 7, bien; con un tramo corto, error", () => {
   assert.deepEqual(validarPropuesta({ ...base, tramos: [{ desde: "2027-01-04", hasta: "2027-01-10" }, { desde: "2027-02-01", hasta: "2027-02-07" }], diasDisponibles: 14 }), []);
-  const e = validarPropuesta({ ...base, tramos: [{ desde: "2027-01-04", hasta: "2027-01-12" }, { desde: "2027-02-01", hasta: "2027-02-05" }], diasDisponibles: 14 });
+  const e = validarPropuesta({ ...base, tramos: [{ desde: "2027-01-04", hasta: "2027-01-08" }, { desde: "2027-02-01", hasta: "2027-02-09" }], diasDisponibles: 14 });
   assert.ok(e.some((m) => /menos de 7/.test(m)));
 });
 
@@ -148,4 +148,69 @@ test("tipos: la vista previa da lo mismo que decidir persona por persona (lo que
     const reales = personas.filter((tipoContratoId) => !motivoDeNoInvitar({ tipoContratoId, seleccion, deshabilitados: [EVENTUAL] })).length;
     assert.equal(resumenDeInvitables(POBLACION, seleccion, [EVENTUAL]).invitar, reales);
   }
+});
+
+test("fraccionar: en orden de fecha, cada tramo con el mínimo salvo el último si quedan menos", () => {
+  const p = (diasDisponibles: number, ...tramos: [string, string][]) => validarPropuesta({ ...base, diasDisponibles, tramos: tramos.map(([desde, hasta]) => ({ desde, hasta })) });
+  // 10 días: 7 + 3 está bien; 3 + 7 no (el primero tiene que tener 7).
+  assert.deepEqual(p(10, ["2027-01-04", "2027-01-10"], ["2027-02-01", "2027-02-03"]), []);
+  assert.ok(p(10, ["2027-01-04", "2027-01-06"], ["2027-02-01", "2027-02-07"]).some((m) => /tramo 1 tiene menos de 7/.test(m)));
+  // El orden es el de las fechas, no el de carga: 3 (en febrero) + 7 (en enero) está bien.
+  assert.deepEqual(p(10, ["2027-02-01", "2027-02-03"], ["2027-01-04", "2027-01-10"]), []);
+  // 14 días: 8 + 6 está bien (después del primero quedan 6); 7 + 3 + 4 no (con 7 que quedan, el segundo lleva 7).
+  assert.deepEqual(p(14, ["2027-01-04", "2027-01-11"], ["2027-02-01", "2027-02-06"]), []);
+  assert.ok(p(14, ["2027-01-04", "2027-01-10"], ["2027-02-01", "2027-02-03"], ["2027-03-01", "2027-03-04"]).some((m) => /tramo 2 tiene menos de 7/.test(m)));
+  // 17 días: 7 + 7 + 3 está bien.
+  assert.deepEqual(p(17, ["2027-01-04", "2027-01-10"], ["2027-02-01", "2027-02-07"], ["2027-03-01", "2027-03-03"]), []);
+  // 10 días: 7 + 2 + 1 no (con 3 que quedan, van juntos).
+  assert.ok(p(10, ["2027-01-04", "2027-01-10"], ["2027-02-01", "2027-02-02"], ["2027-03-01", "2027-03-01"]).some((m) => /quedan 3/.test(m)));
+});
+
+test("fraccionar: con menos del mínimo en total no se fracciona; un solo tramo, bien", () => {
+  assert.ok(validarPropuesta({ ...base, diasDisponibles: 5, tramos: [{ desde: "2027-01-04", hasta: "2027-01-05" }, { desde: "2027-02-01", hasta: "2027-02-03" }] }).some((m) => /no se puede fraccionar/.test(m)));
+  assert.deepEqual(validarPropuesta({ ...base, diasDisponibles: 5, tramos: [{ desde: "2027-01-04", hasta: "2027-01-08" }] }), []);
+});
+
+test("días de inicio: se guardan sin repetir y los siete son cualquier día", () => {
+  assert.deepEqual(normalizarDiasDeInicio([5, 1, 1, 9, "2", null]), [1, 2, 5]);
+  assert.deepEqual(normalizarDiasDeInicio([0, 1, 2, 3, 4, 5, 6]), []);
+  assert.deepEqual(normalizarDiasDeInicio([0, 1]), [1, 0]);
+  assert.deepEqual(normalizarDiasDeInicio("x"), []);
+  assert.equal(textoDiasDeInicio([]), "cualquier día");
+  assert.equal(textoDiasDeInicio([1]), "los lunes");
+  assert.equal(textoDiasDeInicio([1, 5]), "los lunes o viernes");
+  assert.equal(textoDiasDeInicio([6, 1, 3]), "los lunes, miércoles o sábados");
+  assert.deepEqual(normalizarConfigCampania({ diasDeInicio: [1] }).diasDeInicio, [1]);
+});
+
+test("días de inicio: la propuesta y la sugerencia empiezan un día permitido", () => {
+  // 04/01/2027 es lunes; 05/01, martes.
+  assert.deepEqual(validarPropuesta({ ...base, diasDeInicio: [1], tramos: [{ desde: "2027-01-04", hasta: "2027-01-17" }], diasDisponibles: 14 }), []);
+  assert.ok(validarPropuesta({ ...base, diasDeInicio: [1], tramos: [{ desde: "2027-01-05", hasta: "2027-01-18" }], diasDisponibles: 14 }).some((m) => /empieza un martes.*sólo los lunes/.test(m)));
+  // 15/12/2026 es martes: la sugerencia arranca el lunes 21.
+  assert.equal(sugerirTramoUnico({ dias: 14, ventana: VENTANA, desdeMinimo: "2026-12-15", diasCorridos: true, diasDeInicio: [1] })?.desde, "2026-12-21");
+});
+
+test("turnos: la más antigua primero, uno cada N días, recortado a la fecha límite", () => {
+  const miembros = [
+    { invitacionId: "b", nombre: "Beto", antiguedadDias: 400 },
+    { invitacionId: "a", nombre: "Ana", antiguedadDias: 2000 },
+    { invitacionId: "c", nombre: "Carla", antiguedadDias: 400, ingreso: "2020-01-01" },
+  ];
+  const t = armarTurnos({ grupo: "g", reglaId: "r", regla: "Animador 2D", miembros, base: "2026-11-23", diasPorTurno: 3, fechaLimite: "2026-11-27" });
+  assert.deepEqual([...t.values()].map((x) => [x.orden, x.desde, x.recortado]), [[1, "2026-11-23", false], [2, "2026-11-26", false], [3, "2026-11-27", true]]);
+  assert.equal(t.get("a")?.orden, 1);
+  assert.equal(t.get("c")?.orden, 2); // empata con Beto en antigüedad, ingresó antes
+  assert.deepEqual(t.get("b")?.delante, ["a", "c"]);
+  assert.equal(armarTurnos({ grupo: "g", reglaId: "r", regla: "", miembros: [miembros[0]], base: "2026-11-23", diasPorTurno: 3, fechaLimite: "" }).size, 0);
+});
+
+test("turnos: abierto por fecha o porque las de adelante ya eligieron", () => {
+  const t = armarTurnos({ grupo: "g", reglaId: "r", regla: "Animador 2D", miembros: [{ invitacionId: "a", nombre: "A", antiguedadDias: 9 }, { invitacionId: "b", nombre: "B", antiguedadDias: 1 }], base: "2026-11-23", diasPorTurno: 3, fechaLimite: "2026-12-18" });
+  const deB = [t.get("b")!];
+  assert.deepEqual(estadoDelTurno(deB, "2026-11-24", () => false), { abierto: false, desde: "2026-11-26", esperando: 1, orden: 2, de: 2, regla: "Animador 2D" });
+  assert.equal(estadoDelTurno(deB, "2026-11-24", (id) => id === "a").abierto, true);
+  assert.equal(estadoDelTurno(deB, "2026-11-26", () => false).abierto, true);
+  assert.equal(estadoDelTurno([t.get("a")!], "2026-11-23", () => false).abierto, true);
+  assert.equal(estadoDelTurno([], "2026-11-23", () => false).abierto, true);
 });

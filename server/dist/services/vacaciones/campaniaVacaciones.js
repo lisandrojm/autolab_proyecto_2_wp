@@ -7,13 +7,14 @@ import { Notification } from "../../models/Notification.js";
 import { hoyArgentina } from "../../utils/contratoVigencia.js";
 import { diasHasta, fechaCorta, sumarDias } from "../../compartido/planVacaciones/fechas.js";
 import { normalizarVentana, rangoPermitido } from "../../compartido/ventanaGoce.js";
-import { ETIQUETA_ESTADO, OTORGADOS, PUEDE_PROPONER, RESUELTOS, alertasDeInvitacion, alertasDeLanzamiento, contarDiasTramo, estadoVisible, fechaLimite as calcularFechaLimite, motivoDeNoInvitar, normalizarConfigCampania, normalizarTiposContrato, primerInicioPosible, sugerirTramoUnico, validarOtorgamiento, validarPropuesta, ventanaDeLaTemporada, } from "../../compartido/vacaciones/campania.js";
+import { ETIQUETA_ESTADO, OTORGADOS, PUEDE_PROPONER, RESUELTOS, alertasDeInvitacion, alertasDeLanzamiento, contarDiasTramo, estadoVisible, fechaLimite as calcularFechaLimite, motivoDeNoInvitar, normalizarConfigCampania, normalizarDiasDeInicio, normalizarTiposContrato, textoDiasDeInicio, primerInicioPosible, sugerirTramoUnico, validarOtorgamiento, validarPropuesta, ventanaDeLaTemporada, } from "../../compartido/vacaciones/campania.js";
 import { NOVEDAD_CAMPANIA_INVITACION, NOVEDAD_CAMPANIA_RECORDATORIO, NOVEDAD_VACACION_OTORGADA, notificar } from "../novedadesNotificaciones.js";
 import { saldosDeVacaciones } from "./saldos.js";
 import { cargarCatalogoDeTipos, tiposSinVacacionesDe } from "./tiposDeContrato.js";
 import { ErrorVacacion, adjustBalanceOnRequestChange, configsEfectivasEnLote, crearVacacionParaPersona, preAprobarVacacion } from "./crearVacacion.js";
 import { aprobarComoAdmin, iniciarAprobacion } from "./aprobacionPorEtapas.js";
 import { fechasBloqueadas } from "./solapamiento.js";
+import { estadoDelTurnoDe, recalcularTurnos } from "./turnosDeEleccion.js";
 /**
  * ═══════════════════════════════════════════════════════════════════════
  * CAMPAÑA DE GOCE DE VACACIONES (15/11/2026): el circuito
@@ -85,6 +86,7 @@ export async function crearCampania(tid, actorId, body) {
         plazoParaDefinirDias: cfg.plazoParaDefinirDias,
         avisoMinimoDias: cfg.avisoMinimoDias,
         minDiasPorTramo: cfg.minDiasPorTramo,
+        diasDeInicio: cfg.diasDeInicio,
         tiposContratoInvitar: cfg.tiposContratoInvitar,
         estado: "borrador",
         creadaPor: oid(actorId),
@@ -132,6 +134,15 @@ export async function tablero(tid, id) {
         };
     });
     const alertas = c.estado === "borrador" ? alertasDeLanzamiento({ hoy, plazoDias: c.plazoParaDefinirDias, avisoDias: c.avisoMinimoDias, ventana: ventanaDe(c) }) : [];
+    // Turnos por antigüedad que no entran antes de la fecha límite: el grupo es largo para el plazo.
+    const recortadas = invitaciones.filter((i) => (i.turnos || []).some((t) => t.recortado) && PUEDE_PROPONER.includes(i.estado));
+    if (c.estado === "lanzada" && recortadas.length) {
+        alertas.push({
+            nivel: "aviso",
+            codigo: "turnos_recortados",
+            mensaje: `A ${recortadas.length} persona(s) el turno por antigüedad no les llega antes de la fecha límite: arrancan el último día (${fechaCorta(c.fechaLimite || "")}). Acortá los días de turno de la regla o mové la fecha límite.`,
+        });
+    }
     return { campania: c.toObject(), invitaciones: filas, conteos, alertas, hoy };
 }
 /**
@@ -254,6 +265,8 @@ export async function lanzarCampania(tid, id, actorId, tipos) {
     c.lanzadaPor = oid(actorId);
     c.lanzadaAt = new Date();
     await c.save();
+    // Quién elige primero, por antigüedad, en las reglas de solapamiento que lo piden.
+    await recalcularTurnos(tid, c).catch((e) => console.error("[CAMPANIA] turnos al lanzar:", e?.message || e));
     // Un aviso por persona (cada uno dice sus días): un solo insertMany, no 1.500 viajes a la base.
     if (docs.length) {
         await Notification.insertMany(docs.map((d) => ({
@@ -309,7 +322,7 @@ export async function sugerirAsignacion(tid, c, inv) {
     for (const v of propias)
         for (let d = iso(v.startDate), guarda = 0; d <= iso(v.endDate) && guarda < 400; d = sumarDias(d, 1), guarda++)
             bloqueadas.add(d);
-    const t = sugerirTramoUnico({ dias, ventana: ventanaDe(c), desdeMinimo: primerInicioPosible(hoy, c.avisoMinimoDias), diasCorridos: inv.diasCorridos, ventanaPersona: inv.ventanaPersona?.enabled ? inv.ventanaPersona : null, bloqueadas });
+    const t = sugerirTramoUnico({ dias, ventana: ventanaDe(c), desdeMinimo: primerInicioPosible(hoy, c.avisoMinimoDias), diasCorridos: inv.diasCorridos, ventanaPersona: inv.ventanaPersona?.enabled ? inv.ventanaPersona : null, bloqueadas, diasDeInicio: c.diasDeInicio });
     inv.asignacion = t
         ? { desde: t.desde, hasta: t.hasta, dias, sugeridaAt: new Date(), problema: null }
         : { desde: "", hasta: "", dias, sugeridaAt: new Date(), problema: `No entra un tramo continuo de ${dias} días antes del cierre de la ventana (${fechaCorta(c.ventanaHasta)}) respetando el aviso y los topes del área. Elegí las fechas a mano.` };
@@ -441,6 +454,32 @@ export async function cambiarFechaLimite(tid, id, nueva, actorId, opciones = {})
     console.log(`[campania-vacaciones] ${String(c._id)}: ${detalle} (${afectadas} invitaciones)`);
     return { ...resumen, aplicado: true };
 }
+/**
+ * LOS DÍAS DE LA SEMANA EN QUE PUEDE EMPEZAR UN TRAMO (23/11/2026), en borrador o lanzada. Vale para lo que se
+ * proponga y se sugiera desde ahora: lo ya propuesto u otorgado no se toca. Vacío = cualquier día.
+ */
+export async function cambiarDiasDeInicio(tid, id, dias, actorId) {
+    const c = await cargarCampania(tid, id);
+    if (c.estado === "cerrada")
+        throw new ErrorVacacion("La campaña está cerrada.");
+    if (dias !== undefined && dias !== null && !Array.isArray(dias))
+        throw new ErrorVacacion("Los días de inicio tienen que ser una lista.");
+    const anterior = normalizarDiasDeInicio(c.diasDeInicio);
+    const nuevos = normalizarDiasDeInicio(dias);
+    if (anterior.join(",") === nuevos.join(","))
+        return { diasDeInicio: nuevos, aplicado: false };
+    c.diasDeInicio = nuevos;
+    await c.save();
+    console.log(`[campania-vacaciones] ${String(c._id)}: días de inicio de ${textoDiasDeInicio(anterior)} a ${textoDiasDeInicio(nuevos)} (por ${actorId || "—"})`);
+    return { diasDeInicio: nuevos, aplicado: true };
+}
+/** Rearma los turnos por antigüedad de una campaña lanzada (también se rearman solos al cambiar una regla). */
+export async function rearmarTurnos(tid, id) {
+    const c = await cargarCampania(tid, id);
+    if (c.estado !== "lanzada")
+        throw new ErrorVacacion("Los turnos se arman en una campaña lanzada.");
+    return recalcularTurnos(tid, c);
+}
 export async function cerrarCampania(tid, id, actorId) {
     const c = await cargarCampania(tid, id);
     if (c.estado === "cerrada")
@@ -495,20 +534,25 @@ export async function miInvitacion(tid, userId) {
     const hoy = hoyArgentina();
     const idsVac = [...(inv.tramos || []).map((t) => t.vacationId), inv.asignacion?.vacationId].filter(Boolean);
     const vacaciones = idsVac.length ? await Vacation.find({ _id: { $in: idsVac } }).select("status startDate endDate daysRequested pdfPreAprobacionUrl").lean() : [];
-    const puedeProponer = PUEDE_PROPONER.includes(inv.estado) && hoy <= inv.fechaLimite;
-    const diasDisponibles = puedeProponer ? await diasAhora(tid, userId, c.anio) : inv.diasDisponibles;
+    // En plazo, pero puede tener que esperar su turno (eligen primero las más antiguas de su rol).
+    const enPlazo = PUEDE_PROPONER.includes(inv.estado) && hoy <= inv.fechaLimite;
+    const turno = inv.turnos?.length ? await estadoDelTurnoDe(inv, hoy) : null;
+    const puedeProponer = enPlazo && (turno?.abierto ?? true);
+    const diasDisponibles = enPlazo ? await diasAhora(tid, userId, c.anio) : inv.diasDisponibles;
     const otorgada = OTORGADOS.includes(inv.estado);
     const { historial: _h, ...resto } = inv.toObject();
     return {
         invitacion: resto,
-        campania: { _id: c._id, nombre: c.nombre, anio: c.anio, ventanaDesde: c.ventanaDesde, ventanaHasta: c.ventanaHasta, avisoMinimoDias: c.avisoMinimoDias, minDiasPorTramo: c.minDiasPorTramo, fechaLimite: inv.fechaLimite },
+        campania: { _id: c._id, nombre: c.nombre, anio: c.anio, ventanaDesde: c.ventanaDesde, ventanaHasta: c.ventanaHasta, avisoMinimoDias: c.avisoMinimoDias, minDiasPorTramo: c.minDiasPorTramo, diasDeInicio: normalizarDiasDeInicio(c.diasDeInicio), fechaLimite: inv.fechaLimite },
         estadoVisible: estadoVisible(inv.estado, fechasDe(inv), hoy),
         diasDisponibles,
         diasParaLaFechaLimite: diasHasta(hoy, inv.fechaLimite),
         puedeProponer,
+        /** Su turno para elegir por antigüedad, si tiene: si ya se abrió, desde cuándo y cuántas espera. */
+        turno: turno && enPlazo ? turno : null,
         primerInicioPosible: primerInicioPosible(hoy, c.avisoMinimoDias),
         vacaciones,
-        pendienteDeAccion: puedeProponer || inv.estado === "propuso_fechas" || inv.estado === "vencido_sin_definir" || (otorgada && !inv.acuseOtorgamientoAt),
+        pendienteDeAccion: enPlazo || inv.estado === "propuso_fechas" || inv.estado === "vencido_sin_definir" || (otorgada && !inv.acuseOtorgamientoAt),
         hoy,
     };
 }
@@ -545,9 +589,14 @@ export async function proponerFechas(tid, userId, tramos) {
         throw new ErrorVacacion(inv.estado === "propuso_fechas" ? "Ya propusiste tus fechas: esperá la aprobación." : "Ya no se pueden proponer fechas en esta campaña.");
     if (hoy > inv.fechaLimite)
         throw new ErrorVacacion(`El plazo para elegir venció el ${fechaCorta(inv.fechaLimite)}: la empresa te asigna las fechas.`);
+    if (inv.turnos?.length) {
+        const turno = await estadoDelTurnoDe(inv, hoy);
+        if (!turno.abierto)
+            throw new ErrorVacacion(`Todavía no es tu turno: en tu rol eligen primero las personas con más antigüedad (${turno.regla}). Podés elegir desde el ${fechaCorta(turno.desde || "")}, o antes si ya eligieron las ${turno.esperando} que tenés adelante.`);
+    }
     const limpios = (Array.isArray(tramos) ? tramos : []).map((t) => ({ desde: String(t?.desde || "").slice(0, 10), hasta: String(t?.hasta || "").slice(0, 10) }));
     const dias = await diasAhora(tid, userId, c.anio);
-    const errores = validarPropuesta({ tramos: limpios, diasDisponibles: dias, ventana: ventanaDe(c), ventanaPersona: inv.ventanaPersona?.enabled ? inv.ventanaPersona : null, hoy, avisoDias: c.avisoMinimoDias, minPorTramo: c.minDiasPorTramo, diasCorridos: inv.diasCorridos });
+    const errores = validarPropuesta({ tramos: limpios, diasDisponibles: dias, ventana: ventanaDe(c), ventanaPersona: inv.ventanaPersona?.enabled ? inv.ventanaPersona : null, hoy, avisoDias: c.avisoMinimoDias, minPorTramo: c.minDiasPorTramo, diasCorridos: inv.diasCorridos, diasDeInicio: c.diasDeInicio });
     if (errores.length)
         throw new ErrorVacacion(errores.join(" "));
     const creadas = [];

@@ -9,6 +9,12 @@ export interface IEmbeddedOverlap {
     description?: string;
     isActive: boolean;
     useActiveContractSchedule?: boolean;
+    /**
+     * QUIÉN ELIGE PRIMERO en la campaña de goce (23/11/2026): «ninguna» = la que pide primero; «antiguedad» = las que
+     * alcanza la regla eligen por turnos, la más antigua primero, con `diasPorTurno` días cada una.
+     */
+    prioridad?: "ninguna" | "antiguedad";
+    diasPorTurno?: number;
 }
 export interface IVacationConfig extends Document {
     tenantId: Types.ObjectId;
@@ -42,6 +48,7 @@ export interface IVacationConfig extends Document {
         avisoMinimoDias: number;
         minDiasPorTramo: number;
         tiposContratoInvitar?: string[];
+        diasDeInicio?: number[];
     };
     /**
      * DE QUÉ EMPLEADORA SE TOMA LA ANTIGÜEDAD (15/11/2026). Ya no se suman los días de todas: cuenta la

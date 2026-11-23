@@ -8,6 +8,7 @@ const campaniaSchema = new Schema({
     plazoParaDefinirDias: { type: Number, required: true },
     avisoMinimoDias: { type: Number, required: true },
     minDiasPorTramo: { type: Number, required: true },
+    diasDeInicio: { type: [Number], default: [] },
     fechaLimite: { type: String, default: null },
     tiposContratoInvitar: { type: [String], default: [] },
     lanzamiento: {
@@ -64,5 +65,9 @@ const invitacionSchema = new Schema({
     acuseOtorgamientoAt: { type: Date, default: null },
     historial: [{ _id: false, accion: String, porUserId: { type: Schema.Types.ObjectId, ref: "User" }, at: Date, detalle: String }],
     recordatorios: [{ _id: false, at: Date, porUserId: { type: Schema.Types.ObjectId, ref: "User" }, automatico: Boolean }],
+    turnos: {
+        type: [{ _id: false, grupo: String, reglaId: String, regla: String, orden: Number, de: Number, base: String, diasPorTurno: Number, desde: String, delante: [String], recortado: Boolean }],
+        default: [],
+    },
 }, { timestamps: true, collection: "invitaciones_vacaciones" });
 export const InvitacionVacaciones = mongoose.model("InvitacionVacaciones", invitacionSchema);
