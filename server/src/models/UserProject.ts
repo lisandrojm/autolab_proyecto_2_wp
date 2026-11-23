@@ -63,6 +63,13 @@ interface IContract {
   estadoContrato?: "VIGENTE" | "FINALIZADO" | "SIN_DETERMINAR" | "ANULADO";
   estadoContratoMotivo?: string;
   origenBaja?: string;
+  /**
+   * EL MOTIVO DE LA BAJA PARA ARCA (22/11/2026): el código de la situación de baja (tabla de ARCA) y, sólo si es
+   * renuncia, la fecha del telegrama. Los carga una persona; nunca hay un motivo por defecto. Ver
+   * `compartido/arca/motivoBaja.ts`. NO confundir con `bajaArca.situacionBaja`, que es lo que ARCA informó.
+   */
+  motivoBajaArca?: string;
+  fechaTelegramaBaja?: string;
   bajaArca?: { fin?: string; situacionBaja?: string; empleadoraCuit?: string; bajaAnterior?: string | null; aplicadaEl?: Date; tipo?: string };
   anulacion?: { el: Date; por?: Types.ObjectId | null; porNombre?: string; motivo?: string; claveFrame?: string; claveIdentidad?: string };
   proyecto_id: number;
@@ -531,6 +538,8 @@ const contractSchema = new Schema<IContract>(
     estadoContratoMotivo: { type: String },
     /** De dónde salió la baja: "ARCA_SYNC" = la escribió «Sincronizar bajas» con evidencia fuerte (etapa 3, paso 2). */
     origenBaja: { type: String },
+    motivoBajaArca: { type: String },
+    fechaTelegramaBaja: { type: String },
     bajaArca: {
       type: new Schema({ fin: String, situacionBaja: String, empleadoraCuit: String, bajaAnterior: String, aplicadaEl: Date, tipo: String }, { _id: false }),
       default: undefined,

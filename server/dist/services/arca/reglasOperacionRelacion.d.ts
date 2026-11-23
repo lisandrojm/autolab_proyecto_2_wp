@@ -19,7 +19,7 @@ export declare const CAMPOS_MODIFICABLES: readonly ["fechaInicio", "fechaFin", "
 export type CampoModificable = (typeof CAMPOS_MODIFICABLES)[number];
 export declare const ETIQUETA_CAMPO: Record<CampoModificable, string>;
 /** Código de ARCA de «Renuncia del trabajador / ART.240 - LCT»: la única situación que lleva fecha de telegrama. */
-export declare const SITUACION_RENUNCIA = "21";
+export { SITUACION_RENUNCIA } from "../../compartido/arca/motivoBaja.js";
 /** Plazo de la RG 2988 para informar la baja: dentro de los 5 días corridos del cese. Aviso, no bloqueo: lo decide ARCA. */
 export declare const DIAS_PLAZO_BAJA = 5;
 export interface MarcaOperacion {

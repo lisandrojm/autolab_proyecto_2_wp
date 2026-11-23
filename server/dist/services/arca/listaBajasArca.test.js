@@ -143,6 +143,33 @@ test("la lista: TODAS las relaciones vivas, una situación por fila, ordenada 1 
     assert.equal(varios.enWeprodu, "con_contrato");
     assert.equal(de("Duplicado").bloqueo?.motivo, "varios_contratos");
 });
+test("el motivo de baja de la fila y lo que falta para presentar: sólo se exige en las situaciones 1 y 2", () => {
+    const SITUACIONES = new Map([["21", "Renuncia del trabajador"], ["99", "Vencimiento de contrato"]]);
+    const lista = armarListaBajas([
+        rel({ persona: "Terminó sin motivo", contratos: [contrato({ baja: "2026-11-12" })] }),
+        rel({ persona: "Renunció sin telegrama", contratos: [contrato({ baja: "2026-11-12", motivoBaja: "21" })] }),
+        rel({ persona: "Renunció completo", contratos: [contrato({ baja: "2026-11-12", motivoBaja: "21", fechaTelegrama: "2026-11-10" })] }),
+        rel({ persona: "Venció", contratos: [contrato({ baja: "2026-11-12", motivoBaja: "99" })] }),
+        rel({ persona: "Vigente sin motivo" }),
+        rel({ persona: "Vigente que renunció", contratos: [contrato({ motivoBaja: "21" })] }),
+        rel({ persona: "Sin contrato", contratos: [] }),
+    ], HOY, SITUACIONES);
+    const de = (p) => lista.filas.find((f) => f.persona === p);
+    assert.equal(de("Terminó sin motivo").falta, "motivo");
+    assert.equal(de("Terminó sin motivo").motivoBaja, null);
+    assert.equal(de("Renunció sin telegrama").falta, "telegrama");
+    assert.equal(de("Renunció completo").falta, "");
+    assert.deepEqual(de("Renunció completo").motivoBaja, { codigo: "21", descripcion: "Renuncia del trabajador", fechaTelegrama: "2026-11-10" });
+    assert.equal(de("Venció").falta, "");
+    assert.equal(de("Venció").motivoBaja?.descripcion, "Vencimiento de contrato");
+    // Lo que no hay que presentar no «falta»: un vigente sin motivo está bien como está.
+    assert.equal(de("Vigente sin motivo").falta, "");
+    // Pero una renuncia ya cargada sin telegrama se marca en cualquier situación.
+    assert.equal(de("Vigente que renunció").falta, "telegrama");
+    // Sin contrato no hay dónde guardar el motivo: se elige en el panel.
+    assert.equal(de("Sin contrato").falta, "");
+    assert.equal(de("Sin contrato").motivoBaja, null);
+});
 test("sin contrato, la baja sin confirmar sale del registro de operaciones", () => {
     const lista = armarListaBajas([rel({ contratos: [], bajaEnRegistro: { resultado: "presentando", fecha: "2026-11-21T10:00:00.000Z" } })], HOY);
     assert.equal(lista.filas[0].situacion, 3);

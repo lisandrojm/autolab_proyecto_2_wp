@@ -13,6 +13,7 @@
  * operaciones (`registroOperaciones.ts`). Si la relación SÍ tiene un contrato, este modo se niega: se opera desde él.
  */
 import { Types } from "mongoose";
+import { type MotivoDeBaja } from "../../compartido/arca/motivoBaja.js";
 import { type ContratoParaOperar, type DatosOperacion, type PlanOperacion, type RelacionEspejo, type TipoOperacion } from "./reglasOperacionRelacion.js";
 export declare class OperacionInvalida extends Error {
     plan?: PlanOperacion;
@@ -39,6 +40,9 @@ export interface ResumenContratoOperable {
     baja: string;
     nombre_empresa_contrato: string;
     estadoContrato: string;
+    /** El motivo de baja cargado en el contrato (código de ARCA) y la fecha de telegrama: el panel los trae precargados. */
+    motivoBajaArca: string;
+    fechaTelegramaBaja: string;
     marcas: {
         alta: any;
         baja: any;
@@ -78,6 +82,16 @@ export declare function situacionesDeBaja(): Promise<Array<{
 /** La relación del contrato en el espejo de Relaciones Laborales (misma empleadora, CUIL y fecha de inicio exacta). */
 export declare function espejoDe(tenantObjectId: Types.ObjectId, empleadoraCuit: string, cuil: string, alta: string): Promise<RelacionEspejo | null>;
 export declare function contextoDeOperacion(tenantObjectId: Types.ObjectId, ref: ReferenciaContrato): Promise<ContextoOperacion>;
+/**
+ * GUARDA EN EL CONTRATO EL MOTIVO DE BAJA Y LA FECHA DE TELEGRAMA (desde la fila de Bajas ARCA). No toca ARCA.
+ * Queda auditado como cualquier cambio del contrato (los hooks del modelo, a nombre de quien lo hizo). Una relación
+ * sin contrato no tiene dónde guardarlo: ahí el motivo se elige en el panel al mandar. Con la baja ya mandada no se
+ * cambia: lo que viajó a ARCA está en la operación.
+ */
+export declare function guardarMotivoDeBaja(tenantObjectId: Types.ObjectId, ref: ReferenciaContrato, entrada: {
+    motivo?: unknown;
+    fechaTelegrama?: unknown;
+}): Promise<MotivoDeBaja>;
 export interface PlanConContexto {
     plan: PlanOperacion;
     hoy: string;

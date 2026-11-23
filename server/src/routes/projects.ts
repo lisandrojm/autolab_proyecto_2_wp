@@ -123,6 +123,8 @@ function sumarAlFiltro(filter: any, condicion: Record<string, unknown>): void {
 import { ActivityLogGeneralConfig } from "../models/ActivityLogGeneralConfig.js";
 import { NOVEDAD_SOLICITUD_APROBADA, nombreDePersona, notificar } from "../services/novedadesNotificaciones.js";
 import { esContratoVigente, fechaISO, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
+import { ArcaSituacionBaja } from "../models/ArcaSituacionBaja.js";
+import { motivoDeBajaParaGuardar } from "../compartido/arca/motivoBaja.js";
 import { rechazoAltaArcaConContrato } from "../services/superposicion.js";
 import { filaDelEquipoTrasGuardar, firmaDeAreas, rolDelEquipoTrasGuardar, tieneRol } from "../compartido/configDelEquipo.js";
 import { cambiosDeAreas, fotoDeAreas, registrarCambiosDelEquipo, type CambioDelEquipo } from "../services/historialEquipo.js";
@@ -2429,6 +2431,17 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
     }
     Object.assign(contract, modalidad);
 
+    // El motivo de baja para ARCA y la fecha de telegrama (sólo con renuncia): `compartido/arca/motivoBaja.ts`.
+    if (contract.motivoBajaArca !== undefined || contract.fechaTelegramaBaja !== undefined) {
+      try {
+        const codigos = new Set<string>(((await ArcaSituacionBaja.find().select("externalId").lean()) as any[]).map((d) => String(d.externalId || "").trim()).filter(Boolean));
+        Object.assign(contract, motivoDeBajaParaGuardar({ motivo: contract.motivoBajaArca, fechaTelegrama: contract.fechaTelegramaBaja }, codigos));
+      } catch (e: any) {
+        res.status(400).json({ error: String(e?.message || e) });
+        return;
+      }
+    }
+
     const enrichedContract = {
       ...contract,
       /*
@@ -2554,6 +2567,10 @@ router.post("/projects/:projectId/assign-member", requireTenant, authenticateTok
         if ((prevContract as any).origenBaja && fechaISO(String((enrichedContract as any).fecha_baja_contrato || "")) === fechaISO(String((prevContract as any).fecha_baja_contrato || ""))) {
           (enrichedContract as any).origenBaja = (prevContract as any).origenBaja;
           (enrichedContract as any).bajaArca = (prevContract as any).bajaArca;
+        }
+        // El motivo de baja se puede cargar desde Bajas ARCA: un guardado que no lo manda no lo borra.
+        for (const campo of ["motivoBajaArca", "fechaTelegramaBaja"]) {
+          if ((enrichedContract as any)[campo] === undefined && (prevContract as any)[campo] !== undefined) (enrichedContract as any)[campo] = (prevContract as any)[campo];
         }
         // Lo de Firma digital tampoco lo conoce el wizard: los PDFs generados, si ya se envió a firmar y
         // el texto de Contrato/Release custom. Sin arrastrarlos, editar el contrato borraba el texto

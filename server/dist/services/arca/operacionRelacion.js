@@ -25,6 +25,7 @@ import { tramiteDelContrato } from "../superposicion.js";
 import { claveDeRelacion, marcasDeRegistro, SIN_MARCAS } from "./registroOperaciones.js";
 import { relacionesOperables } from "./relacionesOperables.js";
 import { marcaTraba } from "./reglasOperacionRelacion.js";
+import { motivoDeBajaParaGuardar } from "../../compartido/arca/motivoBaja.js";
 import { planDeOperacion } from "./reglasOperacionRelacion.js";
 export class OperacionInvalida extends Error {
     plan;
@@ -98,6 +99,8 @@ async function contextoSinContrato(tenantObjectId, rel) {
             baja: "",
             nombre_empresa_contrato: razonSocial,
             estadoContrato: "",
+            motivoBajaArca: "",
+            fechaTelegramaBaja: "",
             marcas: { alta: altaAnulada, baja: reg.baja, modificacion: reg.modificacion, anulacion: reg.anulacion },
         },
     };
@@ -174,9 +177,48 @@ export async function contextoDeOperacion(tenantObjectId, ref) {
             baja,
             nombre_empresa_contrato: String(contrato.nombre_empresa_contrato || e.razonSocial || ""),
             estadoContrato: String(contrato.estadoContrato || ""),
+            motivoBajaArca: String(contrato.motivoBajaArca || ""),
+            fechaTelegramaBaja: String(contrato.fechaTelegramaBaja || ""),
             marcas: { alta: contrato.altaArcaPresentada || null, baja: contrato.bajaArcaPresentada || null, modificacion: contrato.modificacionArcaPresentada || null, anulacion: contrato.anulacionArcaPresentada || null },
         },
     };
+}
+/**
+ * GUARDA EN EL CONTRATO EL MOTIVO DE BAJA Y LA FECHA DE TELEGRAMA (desde la fila de Bajas ARCA). No toca ARCA.
+ * Queda auditado como cualquier cambio del contrato (los hooks del modelo, a nombre de quien lo hizo). Una relación
+ * sin contrato no tiene dónde guardarlo: ahí el motivo se elige en el panel al mandar. Con la baja ya mandada no se
+ * cambia: lo que viajó a ARCA está en la operación.
+ */
+export async function guardarMotivoDeBaja(tenantObjectId, ref, entrada) {
+    const ctx = await contextoDeOperacion(tenantObjectId, ref);
+    if (ctx.sinContrato || !ctx.up)
+        throw new OperacionInvalida("Esta relación no tiene contrato en WeProdu: el motivo se elige en el panel, al mandar la baja.");
+    if (marcaTraba(ctx.paraReglas.bajaArcaPresentada))
+        throw new OperacionInvalida("La baja de este contrato ya se mandó a ARCA: el motivo que viajó está en la operación (Bajas ARCA › Operaciones).");
+    const codigos = new Set((await situacionesDeBaja()).map((s) => s.codigo));
+    let guardar;
+    try {
+        guardar = motivoDeBajaParaGuardar(entrada, codigos);
+    }
+    catch (e) {
+        throw new OperacionInvalida(String(e?.message || e));
+    }
+    // Por clave, nunca por posición; un contrato sin clave (no debería quedar ninguno) va por su posición.
+    const filtro = { _id: ctx.up._id };
+    const set = {};
+    if (ctx.contratoKey) {
+        filtro["contracts.contratoKey"] = new Types.ObjectId(ctx.contratoKey);
+        set["contracts.$.motivoBajaArca"] = guardar.motivoBajaArca;
+        set["contracts.$.fechaTelegramaBaja"] = guardar.fechaTelegramaBaja;
+    }
+    else {
+        set[`contracts.${ctx.idx}.motivoBajaArca`] = guardar.motivoBajaArca;
+        set[`contracts.${ctx.idx}.fechaTelegramaBaja`] = guardar.fechaTelegramaBaja;
+    }
+    const r = await UserProject.updateOne(filtro, { $set: set });
+    if (!r.matchedCount)
+        throw new OperacionInvalida("No se encontró el contrato para guardar el motivo.");
+    return guardar;
 }
 /** El plan de una operación: qué se mandaría y si se puede, SIN tocar ARCA. */
 export async function planOperacion(tenantObjectId, o) {

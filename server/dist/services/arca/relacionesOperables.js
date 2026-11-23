@@ -76,6 +76,8 @@ export function modoDeOperar(rel, contratos, registro, hoy) {
         contrato: c.contrato,
         alta: c.alta,
         baja: c.baja,
+        motivoBaja: String(c.motivoBaja || ""),
+        fechaTelegrama: String(c.fechaTelegrama || ""),
         bajaPresentada: c.marcaBaja?.resultado ? { resultado: String(c.marcaBaja.resultado), clase: String(c.marcaBaja.clase || ""), fecha: c.marcaBaja.fecha ? new Date(c.marcaBaja.fecha).toISOString() : "" } : null,
         relacionArca: relacionParaOperar({
             tramite: c.tramite,
@@ -166,6 +168,8 @@ export async function relacionesOperables(tenantId, filtro = {}) {
                                 nombre_contrato: "$$p.c.nombre_contrato",
                                 tipo_contrato_id: "$$p.c.tipo_contrato_id",
                                 contrato_id: "$$p.c.contrato_id",
+                                motivoBaja: "$$p.c.motivoBajaArca",
+                                fechaTelegrama: "$$p.c.fechaTelegramaBaja",
                                 altaRes: "$$p.c.altaArcaPresentada.resultado",
                                 altaVia: "$$p.c.altaArcaPresentada.via",
                                 mBaja: { ...marca("bajaArcaPresentada"), clase: "$$p.c.bajaArcaPresentada.clase" },
@@ -201,6 +205,8 @@ export async function relacionesOperables(tenantId, filtro = {}) {
                 altaArcaPresentada: c.altaRes ? { resultado: c.altaRes, via: c.altaVia } : null,
                 marcas: [c.mBaja, c.mMod, c.mAnu],
                 marcaBaja: c.mBaja || null,
+                motivoBaja: String(c.motivoBaja || ""),
+                fechaTelegrama: String(c.fechaTelegrama || ""),
             });
         }
     }

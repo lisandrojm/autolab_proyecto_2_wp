@@ -30,6 +30,8 @@ const contractSchema = new Schema({
     estadoContratoMotivo: { type: String },
     /** De dónde salió la baja: "ARCA_SYNC" = la escribió «Sincronizar bajas» con evidencia fuerte (etapa 3, paso 2). */
     origenBaja: { type: String },
+    motivoBajaArca: { type: String },
+    fechaTelegramaBaja: { type: String },
     bajaArca: {
         type: new Schema({ fin: String, situacionBaja: String, empleadoraCuit: String, bajaAnterior: String, aplicadaEl: Date, tipo: String }, { _id: false }),
         default: undefined,

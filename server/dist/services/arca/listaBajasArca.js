@@ -46,6 +46,8 @@ import { Tenant } from "../../models/Tenant.js";
 import { RelacionLaboralArca } from "../../models/RelacionLaboralArca.js";
 import { hoyArgentina } from "../../utils/contratoVigencia.js";
 import { advertenciaDeModalidad, tipoDeRelacion } from "../../compartido/arca/modalidadArca.js";
+import { esRenuncia, faltaParaPresentar } from "../../compartido/arca/motivoBaja.js";
+import { situacionesDeBaja } from "./operacionRelacion.js";
 import { relacionesOperables } from "./relacionesOperables.js";
 export const SITUACIONES_BAJA_ARCA = {
     1: "Terminado en WeProdu",
@@ -117,7 +119,7 @@ const detalleDe = (situacion, r, c, baja, hoy) => {
     return "";
 };
 /** Arma la lista a partir de las relaciones vivas y cómo se opera cada una. Pura. */
-export function armarListaBajas(relaciones, hoy) {
+export function armarListaBajas(relaciones, hoy, situaciones = new Map()) {
     const filas = [];
     const bloqueadas = [];
     for (const r of relaciones) {
@@ -135,6 +137,9 @@ export function armarListaBajas(relaciones, hoy) {
             bloqueadas.push({ ...comun, motivo: s.fuera, texto, contratos: r.contratos });
         }
         const nombres = [...new Set(r.contratos.map((c) => c.contrato).filter(Boolean))];
+        const motivo = String(unico?.motivoBaja || "");
+        const telegrama = String(unico?.fechaTelegrama || "");
+        const aPresentar = s.situacion === 1 || s.situacion === 2;
         const proyectos = [...new Set(r.contratos.map((c) => c.proyecto).filter(Boolean))];
         filas.push({
             ...comun,
@@ -151,6 +156,8 @@ export function armarListaBajas(relaciones, hoy) {
             bloqueo,
             detalle: s.situacion === null ? "" : detalleDe(s.situacion, r, unico, baja, hoy),
             advertencia: advertenciaDeModalidad(r.modalidadContrato),
+            motivoBaja: motivo ? { codigo: motivo, descripcion: situaciones.get(motivo) || "", fechaTelegrama: telegrama } : null,
+            falta: !unico ? "" : aPresentar ? faltaParaPresentar({ motivoBajaArca: motivo, fechaTelegramaBaja: telegrama }) : esRenuncia(motivo) && !telegrama ? "telegrama" : "",
             contrato: unico ? { userProjectId: unico.userProjectId, contratoKey: unico.contratoKey, posicion: unico.posicion } : null,
         });
     }
@@ -175,11 +182,13 @@ export function contar(filas) {
  */
 export async function listaBajasArca(tenantId) {
     const desde = new Date(`${hoyArgentina()}T00:00:00.000Z`);
-    const [{ hoy, relaciones }, vivasEnEspejo] = await Promise.all([
+    const [{ hoy, relaciones }, situacionesBaja, vivasEnEspejo] = await Promise.all([
         relacionesOperables(tenantId),
+        // La tabla de motivos de ARCA: para decir el motivo de cada contrato y para que la pantalla lo deje elegir.
+        situacionesDeBaja(),
         RelacionLaboralArca.countDocuments({ tenantId: new Types.ObjectId(String(tenantId)), $or: [{ fechaFin: null }, { fechaFin: { $gte: desde } }] }),
     ]);
-    return { ...armarListaBajas(relaciones, hoy), vivasEnEspejo };
+    return { ...armarListaBajas(relaciones, hoy, new Map(situacionesBaja.map((s) => [s.codigo, s.descripcion]))), vivasEnEspejo, situacionesBaja };
 }
 export const sinMovimientos = (m) => !m.entraron.length && !m.salieron.length && !m.cambiaron.length;
 const AHORA = {

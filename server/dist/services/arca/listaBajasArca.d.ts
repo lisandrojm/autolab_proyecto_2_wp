@@ -42,6 +42,7 @@
  * explicarse.
  */
 import { Types } from "mongoose";
+import { type FaltaParaPresentar } from "../../compartido/arca/motivoBaja.js";
 import { type ContratoDeRelacion, type RelacionOperable } from "./relacionesOperables.js";
 export type SituacionBajaArca = 1 | 2 | 3 | 4 | 5 | 6;
 export declare const SITUACIONES_BAJA_ARCA: Record<SituacionBajaArca, string>;
@@ -123,6 +124,17 @@ export interface FilaBajaArca {
     detalle: string;
     /** Advertencia visible en la fila y en el panel (hoy: la modalidad de directores, LRT). "" si ninguna. */
     advertencia: string;
+    /** El motivo de baja cargado en el contrato (`null` = sin motivo, o la relación no tiene un único contrato). */
+    motivoBaja: {
+        codigo: string;
+        descripcion: string;
+        fechaTelegrama: string;
+    } | null;
+    /**
+     * Lo que falta para presentar la baja sin que nadie elija nada: en las situaciones 1 y 2 (lo que hay que
+     * presentar), el motivo o el telegrama de una renuncia; en las demás, sólo el telegrama de una renuncia ya cargada.
+     */
+    falta: FaltaParaPresentar;
     /** Con qué contrato abre el panel; `null` = modo «sin contrato». */
     contrato: {
         userProjectId: string;
@@ -165,7 +177,7 @@ export interface ListaBajasArca {
     conteos: ConteosBajaArca;
 }
 /** Arma la lista a partir de las relaciones vivas y cómo se opera cada una. Pura. */
-export declare function armarListaBajas(relaciones: RelacionOperable[], hoy: string): ListaBajasArca;
+export declare function armarListaBajas(relaciones: RelacionOperable[], hoy: string, situaciones?: Map<string, string>): ListaBajasArca;
 export declare function contar(filas: {
     situacion: SituacionBajaArca | null;
     bloqueo?: {
@@ -178,6 +190,10 @@ export declare function contar(filas: {
  */
 export declare function listaBajasArca(tenantId: Types.ObjectId | string): Promise<ListaBajasArca & {
     vivasEnEspejo: number;
+    situacionesBaja: Array<{
+        codigo: string;
+        descripcion: string;
+    }>;
 }>;
 /** Una fila CON situación (1 a 6). Las bloqueadas no van en la foto: si una fila pasa a bloqueada, «salió» y se dice a dónde. */
 export interface FilaDeFoto {
@@ -236,6 +252,10 @@ export declare function guardarCorridaBajasArca(tenantId: Types.ObjectId | strin
 /** La lista con lo guardado: lo que pide la pantalla. Deja los conteos de ahora para el menú. */
 export declare function listaBajasArcaConFoto(tenantId: Types.ObjectId | string): Promise<ListaBajasArca & {
     vivasEnEspejo: number;
+    situacionesBaja: Array<{
+        codigo: string;
+        descripcion: string;
+    }>;
     corrida: {
         el: string;
         conteos: ConteosBajaArca;

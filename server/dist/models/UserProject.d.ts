@@ -52,6 +52,13 @@ interface IContract {
     estadoContrato?: "VIGENTE" | "FINALIZADO" | "SIN_DETERMINAR" | "ANULADO";
     estadoContratoMotivo?: string;
     origenBaja?: string;
+    /**
+     * EL MOTIVO DE LA BAJA PARA ARCA (22/11/2026): el código de la situación de baja (tabla de ARCA) y, sólo si es
+     * renuncia, la fecha del telegrama. Los carga una persona; nunca hay un motivo por defecto. Ver
+     * `compartido/arca/motivoBaja.ts`. NO confundir con `bajaArca.situacionBaja`, que es lo que ARCA informó.
+     */
+    motivoBajaArca?: string;
+    fechaTelegramaBaja?: string;
     bajaArca?: {
         fin?: string;
         situacionBaja?: string;

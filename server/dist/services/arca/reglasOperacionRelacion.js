@@ -32,7 +32,8 @@ export const ETIQUETA_CAMPO = {
     modalidadLiquidacion: "Modalidad de liquidación",
 };
 /** Código de ARCA de «Renuncia del trabajador / ART.240 - LCT»: la única situación que lleva fecha de telegrama. */
-export const SITUACION_RENUNCIA = "21";
+export { SITUACION_RENUNCIA } from "../../compartido/arca/motivoBaja.js";
+import { SITUACION_RENUNCIA } from "../../compartido/arca/motivoBaja.js";
 /** Plazo de la RG 2988 para informar la baja: dentro de los 5 días corridos del cese. Aviso, no bloqueo: lo decide ARCA. */
 export const DIAS_PLAZO_BAJA = 5;
 const esISO = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));

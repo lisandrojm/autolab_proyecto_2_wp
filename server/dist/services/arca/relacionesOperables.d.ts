@@ -41,6 +41,9 @@ export interface ContratoDeRelacion {
         clase: string;
         fecha: string;
     } | null;
+    /** El motivo de baja cargado en el contrato (código de ARCA) y la fecha de telegrama (sólo con renuncia). */
+    motivoBaja?: string;
+    fechaTelegrama?: string;
 }
 export interface RelacionOperable {
     clave: string;
@@ -95,6 +98,8 @@ export interface ContratoCandidato {
         clase?: string;
         fecha?: unknown;
     } | null;
+    motivoBaja?: string;
+    fechaTelegrama?: string;
 }
 /**
  * CÓMO SE OPERA UNA RELACIÓN, dados los contratos de WeProdu que empiezan ese día con esa empleadora. Pura: es la

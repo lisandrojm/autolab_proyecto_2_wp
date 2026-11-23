@@ -25,6 +25,7 @@ import { tramiteDelContrato } from "../superposicion.js";
 import { claveDeRelacion, marcasDeRegistro, SIN_MARCAS } from "./registroOperaciones.js";
 import { relacionesOperables } from "./relacionesOperables.js";
 import { marcaTraba } from "./reglasOperacionRelacion.js";
+import { motivoDeBajaParaGuardar, type MotivoDeBaja } from "../../compartido/arca/motivoBaja.js";
 import { planDeOperacion, type ContratoParaOperar, type DatosOperacion, type PlanOperacion, type RelacionEspejo, type TipoOperacion } from "./reglasOperacionRelacion.js";
 
 export class OperacionInvalida extends Error {
@@ -57,6 +58,9 @@ export interface ResumenContratoOperable {
   baja: string;
   nombre_empresa_contrato: string;
   estadoContrato: string;
+  /** El motivo de baja cargado en el contrato (código de ARCA) y la fecha de telegrama: el panel los trae precargados. */
+  motivoBajaArca: string;
+  fechaTelegramaBaja: string;
   marcas: { alta: any; baja: any; modificacion: any; anulacion: any };
 }
 
@@ -136,6 +140,8 @@ async function contextoSinContrato(tenantObjectId: Types.ObjectId, rel: NonNulla
       baja: "",
       nombre_empresa_contrato: razonSocial,
       estadoContrato: "",
+      motivoBajaArca: "",
+      fechaTelegramaBaja: "",
       marcas: { alta: altaAnulada, baja: reg.baja, modificacion: reg.modificacion, anulacion: reg.anulacion },
     },
   };
@@ -205,9 +211,44 @@ export async function contextoDeOperacion(tenantObjectId: Types.ObjectId, ref: R
       baja,
       nombre_empresa_contrato: String(contrato.nombre_empresa_contrato || e.razonSocial || ""),
       estadoContrato: String(contrato.estadoContrato || ""),
+      motivoBajaArca: String(contrato.motivoBajaArca || ""),
+      fechaTelegramaBaja: String(contrato.fechaTelegramaBaja || ""),
       marcas: { alta: contrato.altaArcaPresentada || null, baja: contrato.bajaArcaPresentada || null, modificacion: contrato.modificacionArcaPresentada || null, anulacion: contrato.anulacionArcaPresentada || null },
     },
   };
+}
+
+/**
+ * GUARDA EN EL CONTRATO EL MOTIVO DE BAJA Y LA FECHA DE TELEGRAMA (desde la fila de Bajas ARCA). No toca ARCA.
+ * Queda auditado como cualquier cambio del contrato (los hooks del modelo, a nombre de quien lo hizo). Una relación
+ * sin contrato no tiene dónde guardarlo: ahí el motivo se elige en el panel al mandar. Con la baja ya mandada no se
+ * cambia: lo que viajó a ARCA está en la operación.
+ */
+export async function guardarMotivoDeBaja(tenantObjectId: Types.ObjectId, ref: ReferenciaContrato, entrada: { motivo?: unknown; fechaTelegrama?: unknown }): Promise<MotivoDeBaja> {
+  const ctx = await contextoDeOperacion(tenantObjectId, ref);
+  if (ctx.sinContrato || !ctx.up) throw new OperacionInvalida("Esta relación no tiene contrato en WeProdu: el motivo se elige en el panel, al mandar la baja.");
+  if (marcaTraba(ctx.paraReglas.bajaArcaPresentada)) throw new OperacionInvalida("La baja de este contrato ya se mandó a ARCA: el motivo que viajó está en la operación (Bajas ARCA › Operaciones).");
+  const codigos = new Set((await situacionesDeBaja()).map((s) => s.codigo));
+  let guardar: MotivoDeBaja;
+  try {
+    guardar = motivoDeBajaParaGuardar(entrada, codigos);
+  } catch (e: any) {
+    throw new OperacionInvalida(String(e?.message || e));
+  }
+  // Por clave, nunca por posición; un contrato sin clave (no debería quedar ninguno) va por su posición.
+  const filtro: Record<string, unknown> = { _id: ctx.up._id };
+  const set: Record<string, unknown> = {};
+  if (ctx.contratoKey) {
+    filtro["contracts.contratoKey"] = new Types.ObjectId(ctx.contratoKey);
+    set["contracts.$.motivoBajaArca"] = guardar.motivoBajaArca;
+    set["contracts.$.fechaTelegramaBaja"] = guardar.fechaTelegramaBaja;
+  } else {
+    set[`contracts.${ctx.idx}.motivoBajaArca`] = guardar.motivoBajaArca;
+    set[`contracts.${ctx.idx}.fechaTelegramaBaja`] = guardar.fechaTelegramaBaja;
+  }
+  const r = await UserProject.updateOne(filtro, { $set: set });
+  if (!r.matchedCount) throw new OperacionInvalida("No se encontró el contrato para guardar el motivo.");
+  return guardar;
 }
 
 export interface PlanConContexto {

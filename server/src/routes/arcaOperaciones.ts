@@ -7,7 +7,7 @@ import { ArcaAltasLog } from "../models/ArcaAltasLog.js";
 import { CandadoArcaOcupado, quienTiene } from "../services/arca/candadoArca.js";
 import { enSecoForzado } from "../services/arca/corridaAltas.js";
 import { arrancarOperacionRelacion, corridaOperacionDe, detenerOperacion } from "../services/arca/corridaOperacionRelacion.js";
-import { OperacionInvalida, contextoDeOperacion, planOperacion, situacionesDeBaja } from "../services/arca/operacionRelacion.js";
+import { OperacionInvalida, contextoDeOperacion, guardarMotivoDeBaja, planOperacion, situacionesDeBaja } from "../services/arca/operacionRelacion.js";
 import { CAMPOS_MODIFICABLES, ETIQUETA_CAMPO, type TipoOperacion } from "../services/arca/reglasOperacionRelacion.js";
 import { guardadoBajasArca, listaBajasArcaConFoto } from "../services/arca/listaBajasArca.js";
 
@@ -69,6 +69,27 @@ router.get("/relacion", requireTenant, authenticateToken, permiso, async (req: A
       enSecoForzado: enSecoForzado(),
       ocupadaPor: quienTiene(String(req.tenantObjectId))?.tipo || null,
     });
+  } catch (e) {
+    errorDe(res, e);
+  }
+});
+
+/** La tabla de motivos de baja de ARCA, para elegir el del contrato (formulario del contrato, Bajas ARCA). Sólo lectura. */
+router.get("/situaciones-baja", requireTenant, authenticateToken, async (_req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    res.json(await situacionesDeBaja());
+  } catch (e) {
+    errorDe(res, e);
+  }
+});
+
+/**
+ * PUT /arca/operaciones/motivo-baja — guarda en el contrato el motivo de baja (código de ARCA) y, sólo si es renuncia,
+ * la fecha de telegrama. No toca ARCA. Vacío = sin motivo (nunca hay uno por defecto). Queda en la auditoría del contrato.
+ */
+router.put("/motivo-baja", requireTenant, authenticateToken, permiso, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    res.json(await guardarMotivoDeBaja(req.tenantObjectId as Types.ObjectId, refDe(req.body), { motivo: req.body?.motivo, fechaTelegrama: req.body?.fechaTelegrama }));
   } catch (e) {
     errorDe(res, e);
   }

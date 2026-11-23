@@ -70,6 +70,9 @@ export interface ContratoDeRelacion {
   relacionArca: RelacionParaOperar;
   /** La baja presentada desde WeProdu en este contrato (`bajaArcaPresentada`), si hay. */
   bajaPresentada: { resultado: string; clase: string; fecha: string } | null;
+  /** El motivo de baja cargado en el contrato (código de ARCA) y la fecha de telegrama (sólo con renuncia). */
+  motivoBaja?: string;
+  fechaTelegrama?: string;
 }
 
 export interface RelacionOperable {
@@ -118,6 +121,8 @@ export interface ContratoCandidato {
   marcas: Array<{ resultado?: string; fecha?: unknown } | null | undefined>;
   /** La marca de la baja (`bajaArcaPresentada`), con su clase: para saber si quedó sin confirmar. */
   marcaBaja?: { resultado?: string; clase?: string; fecha?: unknown } | null;
+  motivoBaja?: string;
+  fechaTelegrama?: string;
 }
 
 /**
@@ -141,6 +146,8 @@ export function modoDeOperar(
     contrato: c.contrato,
     alta: c.alta,
     baja: c.baja,
+    motivoBaja: String(c.motivoBaja || ""),
+    fechaTelegrama: String(c.fechaTelegrama || ""),
     bajaPresentada: c.marcaBaja?.resultado ? { resultado: String(c.marcaBaja.resultado), clase: String(c.marcaBaja.clase || ""), fecha: c.marcaBaja.fecha ? new Date(c.marcaBaja.fecha as any).toISOString() : "" } : null,
     relacionArca: relacionParaOperar({
       tramite: c.tramite,
@@ -235,6 +242,8 @@ export async function relacionesOperables(tenantId: Types.ObjectId | string, fil
                   nombre_contrato: "$$p.c.nombre_contrato",
                   tipo_contrato_id: "$$p.c.tipo_contrato_id",
                   contrato_id: "$$p.c.contrato_id",
+                  motivoBaja: "$$p.c.motivoBajaArca",
+                  fechaTelegrama: "$$p.c.fechaTelegramaBaja",
                   altaRes: "$$p.c.altaArcaPresentada.resultado",
                   altaVia: "$$p.c.altaArcaPresentada.via",
                   mBaja: { ...marca("bajaArcaPresentada"), clase: "$$p.c.bajaArcaPresentada.clase" },
@@ -269,6 +278,8 @@ export async function relacionesOperables(tenantId: Types.ObjectId | string, fil
         altaArcaPresentada: c.altaRes ? { resultado: c.altaRes, via: c.altaVia } : null,
         marcas: [c.mBaja, c.mMod, c.mAnu],
         marcaBaja: c.mBaja || null,
+        motivoBaja: String(c.motivoBaja || ""),
+        fechaTelegrama: String(c.fechaTelegrama || ""),
       });
     }
   }

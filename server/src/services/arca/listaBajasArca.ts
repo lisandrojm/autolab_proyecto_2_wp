@@ -46,6 +46,8 @@ import { Tenant } from "../../models/Tenant.js";
 import { RelacionLaboralArca } from "../../models/RelacionLaboralArca.js";
 import { hoyArgentina } from "../../utils/contratoVigencia.js";
 import { advertenciaDeModalidad, tipoDeRelacion } from "../../compartido/arca/modalidadArca.js";
+import { esRenuncia, faltaParaPresentar, type FaltaParaPresentar } from "../../compartido/arca/motivoBaja.js";
+import { situacionesDeBaja } from "./operacionRelacion.js";
 import { relacionesOperables, type ContratoDeRelacion, type RelacionOperable } from "./relacionesOperables.js";
 
 export type SituacionBajaArca = 1 | 2 | 3 | 4 | 5 | 6;
@@ -159,6 +161,13 @@ export interface FilaBajaArca {
   detalle: string;
   /** Advertencia visible en la fila y en el panel (hoy: la modalidad de directores, LRT). "" si ninguna. */
   advertencia: string;
+  /** El motivo de baja cargado en el contrato (`null` = sin motivo, o la relación no tiene un único contrato). */
+  motivoBaja: { codigo: string; descripcion: string; fechaTelegrama: string } | null;
+  /**
+   * Lo que falta para presentar la baja sin que nadie elija nada: en las situaciones 1 y 2 (lo que hay que
+   * presentar), el motivo o el telegrama de una renuncia; en las demás, sólo el telegrama de una renuncia ya cargada.
+   */
+  falta: FaltaParaPresentar;
   /** Con qué contrato abre el panel; `null` = modo «sin contrato». */
   contrato: { userProjectId: string; contratoKey: string | null; posicion: number } | null;
 }
@@ -215,7 +224,7 @@ const detalleDe = (situacion: SituacionBajaArca, r: RelacionOperable, c: Contrat
 };
 
 /** Arma la lista a partir de las relaciones vivas y cómo se opera cada una. Pura. */
-export function armarListaBajas(relaciones: RelacionOperable[], hoy: string): ListaBajasArca {
+export function armarListaBajas(relaciones: RelacionOperable[], hoy: string, situaciones: Map<string, string> = new Map()): ListaBajasArca {
   const filas: FilaBajaArca[] = [];
   const bloqueadas: FilaBloqueada[] = [];
   for (const r of relaciones) {
@@ -232,6 +241,9 @@ export function armarListaBajas(relaciones: RelacionOperable[], hoy: string): Li
       bloqueadas.push({ ...comun, motivo: s.fuera, texto, contratos: r.contratos });
     }
     const nombres = [...new Set(r.contratos.map((c) => c.contrato).filter(Boolean))];
+    const motivo = String(unico?.motivoBaja || "");
+    const telegrama = String(unico?.fechaTelegrama || "");
+    const aPresentar = s.situacion === 1 || s.situacion === 2;
     const proyectos = [...new Set(r.contratos.map((c) => c.proyecto).filter(Boolean))];
     filas.push({
       ...comun,
@@ -248,6 +260,8 @@ export function armarListaBajas(relaciones: RelacionOperable[], hoy: string): Li
       bloqueo,
       detalle: s.situacion === null ? "" : detalleDe(s.situacion, r, unico, baja, hoy),
       advertencia: advertenciaDeModalidad(r.modalidadContrato),
+      motivoBaja: motivo ? { codigo: motivo, descripcion: situaciones.get(motivo) || "", fechaTelegrama: telegrama } : null,
+      falta: !unico ? "" : aPresentar ? faltaParaPresentar({ motivoBajaArca: motivo, fechaTelegramaBaja: telegrama }) : esRenuncia(motivo) && !telegrama ? "telegrama" : "",
       contrato: unico ? { userProjectId: unico.userProjectId, contratoKey: unico.contratoKey, posicion: unico.posicion } : null,
     });
   }
@@ -270,13 +284,15 @@ export function contar(filas: { situacion: SituacionBajaArca | null; bloqueo?: {
  * La lista de hoy, sobre el espejo. No abre ARCA. `vivasEnEspejo` se cuenta APARTE, con su propia consulta: es el
  * número contra el que la pantalla comprueba que la lista no perdió ni repitió ninguna relación.
  */
-export async function listaBajasArca(tenantId: Types.ObjectId | string): Promise<ListaBajasArca & { vivasEnEspejo: number }> {
+export async function listaBajasArca(tenantId: Types.ObjectId | string): Promise<ListaBajasArca & { vivasEnEspejo: number; situacionesBaja: Array<{ codigo: string; descripcion: string }> }> {
   const desde = new Date(`${hoyArgentina()}T00:00:00.000Z`);
-  const [{ hoy, relaciones }, vivasEnEspejo] = await Promise.all([
+  const [{ hoy, relaciones }, situacionesBaja, vivasEnEspejo] = await Promise.all([
     relacionesOperables(tenantId),
+    // La tabla de motivos de ARCA: para decir el motivo de cada contrato y para que la pantalla lo deje elegir.
+    situacionesDeBaja(),
     RelacionLaboralArca.countDocuments({ tenantId: new Types.ObjectId(String(tenantId)), $or: [{ fechaFin: null }, { fechaFin: { $gte: desde } }] }),
   ]);
-  return { ...armarListaBajas(relaciones, hoy), vivasEnEspejo };
+  return { ...armarListaBajas(relaciones, hoy, new Map(situacionesBaja.map((s) => [s.codigo, s.descripcion]))), vivasEnEspejo, situacionesBaja };
 }
 
 // ───────────────────────────── La foto de cada corrida y los movimientos ─────────────────────────────
@@ -385,7 +401,7 @@ export async function guardarCorridaBajasArca(tenantId: Types.ObjectId | string)
 }
 
 /** La lista con lo guardado: lo que pide la pantalla. Deja los conteos de ahora para el menú. */
-export async function listaBajasArcaConFoto(tenantId: Types.ObjectId | string): Promise<ListaBajasArca & { vivasEnEspejo: number; corrida: { el: string; conteos: ConteosBajaArca } | null; desdeLaCorrida: MovimientosBajaArca | null; movimientos: GuardadoBajasArca["movimientos"] }> {
+export async function listaBajasArcaConFoto(tenantId: Types.ObjectId | string): Promise<ListaBajasArca & { vivasEnEspejo: number; situacionesBaja: Array<{ codigo: string; descripcion: string }>; corrida: { el: string; conteos: ConteosBajaArca } | null; desdeLaCorrida: MovimientosBajaArca | null; movimientos: GuardadoBajasArca["movimientos"] }> {
   const [lista, guardado] = await Promise.all([listaBajasArca(tenantId), guardadoBajasArca(tenantId)]);
   await guardarConteosActuales(tenantId, lista.conteos).catch(() => {});
   return {
