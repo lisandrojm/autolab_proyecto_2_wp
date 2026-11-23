@@ -30,6 +30,7 @@ import { ValidacionObrasSocialesPage } from "./pages/ValidacionObrasSocialesPage
 import { ArcaAltasAutomaticasConfigPage } from "./pages/ArcaAltasAutomaticasConfigPage";
 import { ArcaDescargaConstanciasConfigPage } from "./pages/ArcaDescargaConstanciasConfigPage";
 import { DescargasArcaPage } from "./pages/DescargasArcaPage";
+import { BajasAutomaticasArcaPage } from "./pages/BajasAutomaticasArcaPage";
 import { RecibosSueldoPage } from "./pages/RecibosSueldoPage";
 import { BajasArcaPage } from "./pages/BajasArcaPage";
 import { SolicitudesPage } from "./pages/SolicitudesPage";
@@ -368,6 +369,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <RenovacionesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/bajas-automaticas-arca"
+                element={
+                  <ProtectedRoute>
+                    <BajasAutomaticasArcaPage />
                   </ProtectedRoute>
                 }
               />

@@ -104,6 +104,7 @@ export const OperacionesArcaHistorial: React.FC<{ userProjectId?: string; contra
                       {NOMBRE_OPERACION_ARCA[f.tipo]}
                       {f.operacion?.que ? ` (${f.operacion.que})` : ""}
                       {f.enSeco && <span className="ml-1 text-blue-700 dark:text-blue-300">· seco</span>}
+                      {f.automatica && <span className="ml-1 text-purple-700 dark:text-purple-300" title="La arrancó A.R.C.A Bajas Automáticas, sin una persona delante.">· automática</span>}
                     </td>
                     {!userProjectId && (
                       <td className="py-2 pr-3">
@@ -133,7 +134,7 @@ export const OperacionesArcaHistorial: React.FC<{ userProjectId?: string; contra
                       {f.operacion?.pantallaDesconocida && <div className="text-amber-800 dark:text-amber-300 mt-1">Pantalla desconocida guardada: hay que relevarla.</div>}
                     </td>
                     <td className="py-2 pr-3 font-mono">{acuse.length ? acuse.map(([k, v]) => `${k.toUpperCase()} ${String(v)}`).join(" · ") : f.operacion?.leidoDe === "listado" ? "leído del listado" : "—"}</td>
-                    <td className="py-2 pr-3">{f.quien || (f.enSeco ? "" : "—")}</td>
+                    <td className="py-2 pr-3">{f.quien || (f.automatica ? "Automática" : f.enSeco ? "" : "—")}</td>
                     <td className="py-2">
                       {!f.enSeco && f.resultado !== "en_curso" && (
                         <button type="button" onClick={() => verPantalla(f)} title="La pantalla de ARCA como quedó, anonimizada" className="text-gray-500 hover:text-blue-600">

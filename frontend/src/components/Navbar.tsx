@@ -166,7 +166,7 @@ const USUARIOS_PATHS_GENERAL = [USUARIOS_PATH, '/areas', '/modalidades', '/shift
 const CONTRATACION_BLOQUES: { titulo: string; paths: string[] }[] = [
   { titulo: 'Flujo', paths: BANDEJAS.map((b) => b.ruta) },
   { titulo: 'Gestión', paths: ['/admin/renovaciones', '/admin/recibos-sueldo', '/admin/arca-bajas'] },
-  { titulo: 'Automatizaciones y archivo', paths: ['/admin/validacion-obras-sociales', '/admin/presentaciones-arca', '/admin/descargas-arca', '/documents', '/admin/plantillas-equipo', '/admin/contratos-sin-dias'] },
+  { titulo: 'Automatizaciones y archivo', paths: ['/admin/validacion-obras-sociales', '/admin/presentaciones-arca', '/admin/descargas-arca', '/admin/bajas-automaticas-arca', '/documents', '/admin/plantillas-equipo', '/admin/contratos-sin-dias'] },
 ];
 const CONTRATACION_PATHS = CONTRATACION_BLOQUES.flatMap((b) => b.paths);
 /**
@@ -513,6 +513,8 @@ export const MobileNavbar: React.FC = () => {
       // Las altas que se presentan solas a las 14 h del día de alta, con su cuenta regresiva.
       if (puedeAbrir('/admin/presentaciones-arca')) base.push({ permiso: 'admin_contracts:view', path: '/admin/presentaciones-arca', icon: faClock, label: 'A.R.C.A Altas Automáticas', scope: 'global' });
       if (puedeAbrir('/admin/descargas-arca')) base.push({ permiso: 'admin_contracts:view', path: '/admin/descargas-arca', icon: faFileArrowDown, label: 'A.R.C.A Descargas Automáticas', scope: 'global' });
+      // Presenta en ARCA lo que se cerró en WeProdu (el sentido contrario de «Bajas de ARCA a contratos»). Apagada por defecto.
+      if (puedeAbrir('/admin/bajas-automaticas-arca')) base.push({ permiso: 'admin_contracts:view', path: '/admin/bajas-automaticas-arca', icon: faLandmark, label: 'A.R.C.A Bajas Automáticas', scope: 'global', title: 'A.R.C.A Bajas Automáticas (presenta en ARCA lo que se cerró en WeProdu)' });
       // Las obras sociales que esperan validarse solas, con el estado de cada una.
       if (puedeAbrir('/admin/validacion-obras-sociales')) base.push({ permiso: 'admin_contracts:view', path: '/admin/validacion-obras-sociales', icon: faShieldHeart, label: 'O.S Validación Automática', scope: 'global' });
       // Las plantillas GENERALES de equipo (puestos por rol): cada supervisor las copia en el móvil.

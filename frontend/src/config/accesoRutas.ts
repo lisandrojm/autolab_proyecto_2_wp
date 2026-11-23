@@ -85,6 +85,7 @@ export const REGLAS_RUTAS: ReglaRuta[] = [
   { path: "/admin/renovaciones", permisos: ["admin_contracts:view"] },
   { path: "/admin/presentaciones-arca", permisos: ["admin_contracts:view"] },
   { path: "/admin/descargas-arca", permisos: ["admin_contracts:view"] },
+  { path: "/admin/bajas-automaticas-arca", permisos: ["admin_contracts:view"] },
   { path: "/admin/recibos-sueldo", permisos: ["admin_contracts:view"] },
   { path: "/admin/arca-bajas", permisos: ["admin_contracts:view"] },
   { path: "/admin/validacion-obras-sociales", permisos: ["admin_contracts:view"] },

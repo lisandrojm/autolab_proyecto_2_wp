@@ -223,6 +223,8 @@ export interface RegistroOperacionArca {
   quien: string;
   empresaRazonSocial: string;
   enSeco: boolean;
+  /** La arrancó A.R.C.A Bajas Automáticas, sin una persona delante. */
+  automatica?: boolean;
   resultado: string;
   irreversible: boolean;
   error: string;
@@ -232,7 +234,65 @@ export interface RegistroOperacionArca {
   duracionMs?: number;
 }
 
+/* ── A.R.C.A Bajas Automáticas (presenta en ARCA lo que se cerró en WeProdu) ── */
+export type ModoBajasAutomaticas = "apagada" | "simular" | "presentar";
+
+export interface SalteadaBajasAutomaticas {
+  clave: string;
+  persona: string;
+  cuil: string;
+  empleadora: string;
+  situacion: number;
+  razon: "lrt" | "falta_motivo" | "falta_telegrama" | "empleadora_con_error" | "plan";
+  texto: string;
+}
+
+export interface CorridaBajasAutomaticas {
+  el: string;
+  modo: ModoBajasAutomaticas;
+  /** `false`: no llegó a mirar la lista (sincronización en curso, requisito que ya no se cumple). */
+  corrio: boolean;
+  candidatas: number;
+  paraPresentar: number;
+  presentadas: number;
+  simuladas: number;
+  salteadas: SalteadaBajasAutomaticas[];
+  items: Array<{ clave: string; persona: string; cuil: string; empleadora: string; situacion: number; resultado: "presentada" | "simulada" | "sin_confirmar" | "rechazada" | "fallida"; detalle: string; logId: string | null }>;
+  /** Por qué no se presentó ninguna o se cortó ("" si terminó). */
+  aviso: string;
+  duracionMs: number;
+  log: string[];
+}
+
+export interface EstadoBajasAutomaticas {
+  modo: ModoBajasAutomaticas;
+  nombres: Record<ModoBajasAutomaticas, string>;
+  tope: number;
+  /** Los dos escalones: una prueba en seco a mano habilita simular; una baja real confirmada, presentar. */
+  requisitos: { secoManual: { cumplido: boolean; el: string | null }; bajaConfirmada: { cumplido: boolean; el: string | null; pendientesDeSincronizar: number } };
+  /** Por qué no se puede elegir cada modo ("" = se puede). */
+  bloqueos: Record<ModoBajasAutomaticas, string>;
+  /** La sincronización de Relaciones Laborales, de la que depende: corre al final de ella. */
+  sincronizacion: { activa: boolean; hora: string; ultimoDia: string | null };
+  enSecoForzado: boolean;
+  ultimaCorrida: CorridaBajasAutomaticas | null;
+  corridas: CorridaBajasAutomaticas[];
+  cambios: Array<{ el: string; de: ModoBajasAutomaticas; a: ModoBajasAutomaticas; por: { userId: string; nombre: string } }>;
+  /** Lo que haría ahora con el espejo que hay, sin tocar ARCA. */
+  previa: { candidatas: number; paraPresentar: Array<{ clave: string; persona: string; cuil: string; empleadora: string; situacion: number; motivo: string; fechaFin: string }>; salteadas: SalteadaBajasAutomaticas[]; superaElTope: boolean };
+}
+
 export const arcaOperacionesAPI = {
+  /** A.R.C.A Bajas Automáticas: el modo, los escalones, las corridas y qué haría hoy. No toca ARCA. */
+  async automatica(): Promise<EstadoBajasAutomaticas> {
+    const { data } = await axios.get("/arca/operaciones/automatica");
+    return data;
+  },
+  /** Cambia el modo (409 con el motivo si el escalón no está cumplido). Queda registrado quién lo cambió. */
+  async setAutomatica(modo: ModoBajasAutomaticas): Promise<EstadoBajasAutomaticas> {
+    const { data } = await axios.put("/arca/operaciones/automatica", { modo });
+    return data;
+  },
   /** El contrato, sus marcas, lo que el espejo sabe y la tabla de motivos de baja. No toca ARCA. */
   async relacion(ref: ReferenciaContratoArca): Promise<RelacionParaOperar> {
     const sinContrato = !ref.userProjectId && ref.relacion ? { relCuit: ref.relacion.empleadoraCuit, relCuil: ref.relacion.cuil, relInicio: ref.relacion.fechaInicio } : {};

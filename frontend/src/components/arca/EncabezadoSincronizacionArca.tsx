@@ -211,10 +211,10 @@ export const EncabezadoSincronizacionArca: React.FC<{
           {bajas && (
             <p className={`mt-1 text-[11px] font-semibold ${bajas.frenada || bajas.error ? "text-red-600" : "text-gray-600 dark:text-gray-300"}`}>
               {bajas.error
-                ? `Bajas de ARCA a contratos: falló (${bajas.error}).`
+                ? `Bajas de ARCA a contratos (copia lo que ARCA ya tiene): falló (${bajas.error}).`
                 : bajas.frenada
-                  ? `Bajas de ARCA a contratos: FRENADA. Iban a aplicarse ${bajas.aplicables} y el tope es ${bajas.tope}: no se escribió ninguna. Revisalas en «Sincronizar bajas a contratos».`
-                  : `Bajas de ARCA a contratos: ${bajas.aplicadas} aplicadas solas${bajas.excluidasPorEmpleadora ? ` · ${bajas.excluidasPorEmpleadora} sin aplicar por una empleadora con error` : ""}${bajas.cambiaron ? ` · ${bajas.cambiaron} cambiaron en el medio` : ""}`}
+                  ? `Bajas de ARCA a contratos (copia lo que ARCA ya tiene): FRENADA. Iban a aplicarse ${bajas.aplicables} y el tope es ${bajas.tope}: no se escribió ninguna. Revisalas en «Sincronizar bajas a contratos».`
+                  : `Bajas de ARCA a contratos (copia lo que ARCA ya tiene): ${bajas.aplicadas} aplicadas solas${bajas.excluidasPorEmpleadora ? ` · ${bajas.excluidasPorEmpleadora} sin aplicar por una empleadora con error` : ""}${bajas.cambiaron ? ` · ${bajas.cambiaron} cambiaron en el medio` : ""}`}
             </p>
           )}
           {/* Lo que SÍ es trabajo pendiente: el total de la Auditoría ARCA. */}
