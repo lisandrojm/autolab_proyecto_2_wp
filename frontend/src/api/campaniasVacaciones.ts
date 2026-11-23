@@ -141,6 +141,11 @@ class CampaniasVacacionesAPI {
     const { data } = await axios.post(`${BASE}/${id}/confirmar-asignaciones`, invitacionIds ? { invitacionIds } : {});
     return data;
   }
+  /** Cambia la fecha límite para elegir de una campaña lanzada (la de la campaña y la de cada invitación a la que le corre el plazo). No avisa a nadie. */
+  async cambiarFechaLimite(id: string, fechaLimite: string): Promise<{ anterior: string; nueva: string; invitaciones: number; primeraAsignacion: string; aplicado: boolean }> {
+    const { data } = await axios.put(`${BASE}/${id}/fecha-limite`, { fechaLimite });
+    return data;
+  }
   async cerrar(id: string): Promise<Campania> {
     const { data } = await axios.post(`${BASE}/${id}/cerrar`);
     return data;
