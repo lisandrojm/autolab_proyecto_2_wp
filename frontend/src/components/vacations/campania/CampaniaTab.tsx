@@ -2,13 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faBell, faCheck, faCircleCheck, faCircleExclamation, faClockRotateLeft, faDownload, faEdit, faEye, faFilePdf, faLock, faMagnifyingGlass, faPaperPlane, faXmark, faPlus, faScaleBalanced, faSpinner, faTriangleExclamation, faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
-import { campaniasVacacionesAPI, errorDeCampania, type Alerta, type Campania, type EstadoVisible, type Invitacion, type Tablero, type VistaPreviaDeInvitacion } from "../../../api/campaniasVacaciones";
+import { campaniasVacacionesAPI, errorDeCampania, type Alerta, type Campania, type CambioDeTipos, type EstadoVisible, type Invitacion, type Tablero, type VistaPreviaDeInvitacion } from "../../../api/campaniasVacaciones";
 import { vacationConfigAPI, type TipoContratoVacaciones } from "../../../api/vacationConfig";
 import { SelectorTiposContrato } from "./SelectorTiposContrato";
 import { SelectorDiasDeInicio } from "./SelectorDiasDeInicio";
 import { sweetAlert } from "../../../utils/sweetAlert";
 import { fechaCorta, sumarDias } from "@compartido/planVacaciones/fechas";
-import { ETIQUETA_ESTADO, PUEDE_PROPONER, contarDiasTramo, estadoDelTurno, normalizarDiasDeInicio, resumenDeInvitables, textoDiasDeInicio } from "@compartido/vacaciones/campania";
+import { ETIQUETA_ESTADO, PUEDE_PROPONER, TEXTO_MOTIVO_NO_INVITAR, contarDiasTramo, estadoDelTurno, normalizarDiasDeInicio, normalizarTiposContrato, resumenDeInvitables, textoDiasDeInicio } from "@compartido/vacaciones/campania";
 import { TablaConEncabezadoFijo } from "../../ui/TablaConEncabezadoFijo";
 import { Modal } from "../../ui/Modal";
 import { LoadingSpinner } from "../../ui/LoadingSpinner";
@@ -35,8 +35,9 @@ const CLASE_ESTADO: Record<EstadoVisible, string> = {
   sin_dias_pendientes: "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400",
   en_curso: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
   gozado: "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
+  retirada: "bg-gray-100 text-gray-400 line-through dark:bg-gray-800 dark:text-gray-500",
 };
-const ORDEN_ESTADOS: EstadoVisible[] = ["invitado", "acuso_recibo", "propuso_fechas", "rechazada", "vencido_sin_definir", "aprobado_notificado", "asignado_por_empresa_notificado", "en_curso", "gozado", "sin_dias_pendientes"];
+const ORDEN_ESTADOS: EstadoVisible[] = ["invitado", "acuso_recibo", "propuso_fechas", "rechazada", "vencido_sin_definir", "aprobado_notificado", "asignado_por_empresa_notificado", "en_curso", "gozado", "sin_dias_pendientes", "retirada"];
 const CLASE_CAMPANIA: Record<Campania["estado"], string> = {
   borrador: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
   lanzada: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
@@ -203,10 +204,62 @@ const ModalEditarCampania: React.FC<{ campania: Campania; onCerrar: () => void; 
   const entra = valida && desde <= c.ventanaHasta;
   const cambiaDias = normalizarDiasDeInicio(dias).join(",") !== diasAntes.join(",");
   const cambiaFecha = lanzada && fecha !== (c.fechaLimite || "");
+
+  // Los tipos de contrato: los de la configuración global o una selección propia de esta campaña.
+  const tiposAntes = normalizarTiposContrato(c.tiposContratoInvitar);
+  const [catalogo, setCatalogo] = useState<TipoContratoVacaciones[]>([]);
+  const [tiposGlobal, setTiposGlobal] = useState<string[] | null>(null);
+  const [modoTipos, setModoTipos] = useState<"global" | "propia" | null>(null);
+  const [tiposPropios, setTiposPropios] = useState<string[]>(tiposAntes);
+  const [previaTipos, setPreviaTipos] = useState<CambioDeTipos | null>(null);
+  const [errorTipos, setErrorTipos] = useState("");
+  useEffect(() => {
+    Promise.all([vacationConfigAPI.getTiposContrato(), vacationConfigAPI.getConfig()])
+      .then(([tipos, config]) => {
+        setCatalogo(tipos);
+        const global = normalizarTiposContrato(config?.campania?.tiposContratoInvitar);
+        setTiposGlobal(global);
+        setModoTipos(global.join(",") === tiposAntes.join(",") ? "global" : "propia");
+      })
+      .catch((e) => setErrorTipos(errorDeCampania(e)));
+  }, []);
+  const tiposElegidos = modoTipos === "global" ? tiposGlobal || [] : normalizarTiposContrato(tiposPropios);
+  const cambiaTipos = modoTipos !== null && tiposElegidos.join(",") !== tiposAntes.join(",");
+  const nombreTipo = (id: string) => catalogo.find((t) => t.id === id)?.name || "(tipo sin nombre)";
+  const textoTipos = (ids: string[]) => (ids.length ? ids.map(nombreTipo).join(", ") : "todos los habilitados");
+  // Lanzada: qué haría el cambio (en seco), cada vez que cambia la selección.
+  useEffect(() => {
+    setPreviaTipos(null);
+    if (!lanzada || !cambiaTipos) return;
+    let vigente = true;
+    const t = setTimeout(() => {
+      campaniasVacacionesAPI
+        .cambiarTiposContrato(c._id, { tiposContratoInvitar: tiposElegidos, enSeco: true })
+        .then((p) => vigente && setPreviaTipos(p))
+        .catch((e) => vigente && setErrorTipos(errorDeCampania(e)));
+    }, 350);
+    return () => {
+      vigente = false;
+      clearTimeout(t);
+    };
+  }, [tiposElegidos.join(","), lanzada, cambiaTipos]);
+
   const guardar = async () => {
+    if (cambiaTipos && lanzada && previaTipos?.retirar) {
+      const r = await sweetAlert.confirm(
+        `¿Sacar a ${previaTipos.retirar} persona(s) de la campaña?`,
+        `Con ${textoTipos(tiposElegidos)}, a quien todavía no eligió y queda afuera se le retira la invitación: no elige ni se le asignan fechas en esta campaña, y no recibe ningún aviso. Quedan ${previaTipos.quedan} invitadas. Se puede volver atrás cambiando otra vez los tipos.`,
+        "Aplicar",
+      );
+      if (!r.isConfirmed) return;
+    }
     setGuardando(true);
     const hecho: string[] = [];
     try {
+      if (cambiaTipos) {
+        const r = await campaniasVacacionesAPI.cambiarTiposContrato(c._id, { tiposContratoInvitar: tiposElegidos });
+        hecho.push(lanzada ? `Tipos: ${textoTipos(tiposElegidos)}; fuera de la campaña ${r.retirar ?? 0}, vuelven ${r.vuelven ?? 0}, invitadas nuevas ${r.invitar ?? 0}.` : `Tipos: ${textoTipos(tiposElegidos)}.`);
+      }
       if (cambiaDias) {
         await campaniasVacacionesAPI.cambiarDiasDeInicio(c._id, dias);
         hecho.push(`Las vacaciones empiezan ${textoDiasDeInicio(dias)}.`);
@@ -215,7 +268,7 @@ const ModalEditarCampania: React.FC<{ campania: Campania; onCerrar: () => void; 
         const r = await campaniasVacacionesAPI.cambiarFechaLimite(c._id, fecha);
         if (r.aplicado) hecho.push(`Fecha límite al ${fechaCorta(r.nueva)} para ${r.invitaciones} persona(s).`);
       }
-      sweetAlert.success("Listo", `${hecho.join(" ") || "No cambió nada."} No se avisó a nadie.`);
+      sweetAlert.success("Listo", `${hecho.join(" ") || "No cambió nada."} No se avisó a nadie${lanzada && cambiaTipos ? " (salvo a las invitadas nuevas, que reciben la invitación)" : ""}.`);
       onGuardado();
     } catch (e) {
       sweetAlert.error(hecho.length ? `Se guardó una parte: ${hecho.join(" ")}` : "No se pudo guardar", errorDeCampania(e));
@@ -230,15 +283,56 @@ const ModalEditarCampania: React.FC<{ campania: Campania; onCerrar: () => void; 
       onClose={onCerrar}
       title="Editar campaña"
       subtitle={`${c.nombre} · ${TEXTO_CAMPANIA[c.estado].toLowerCase()}`}
-      size="md"
+      size="lg"
       footer={
         <>
           <button type="button" onClick={onCerrar} className="btn-secondary" disabled={guardando}>Cancelar</button>
-          <button type="button" onClick={() => void guardar()} className="btn-primary" disabled={guardando || (!cambiaDias && !cambiaFecha) || (cambiaFecha && !entra)}>{guardando ? "Guardando…" : "Guardar"}</button>
+          <button type="button" onClick={() => void guardar()} className="btn-primary" disabled={guardando || (!cambiaDias && !cambiaFecha && !cambiaTipos) || (cambiaFecha && !entra) || (cambiaTipos && lanzada && !previaTipos)}>{guardando ? "Guardando…" : "Guardar"}</button>
         </>
       }
     >
       <div className="space-y-5 text-sm">
+        <div className="space-y-2">
+          <p className="font-medium text-gray-800 dark:text-gray-200">Tipos de contrato que se invitan</p>
+          {errorTipos ? (
+            <p className="text-xs text-red-600">{errorTipos}</p>
+          ) : modoTipos === null ? (
+            <p className="text-xs text-gray-500">Cargando tipos…</p>
+          ) : (
+            <>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="radio" checked={modoTipos === "global"} onChange={() => setModoTipos("global")} disabled={guardando} className="mt-1" />
+                <span>
+                  Los de la configuración global: <strong>{textoTipos(tiposGlobal || [])}</strong>
+                </span>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="radio" checked={modoTipos === "propia"} onChange={() => setModoTipos("propia")} disabled={guardando} className="mt-1" />
+                <span>Elegir para esta campaña</span>
+              </label>
+              {modoTipos === "propia" && (
+                <SelectorTiposContrato tipos={catalogo} deshabilitados={catalogo.filter((t) => !t.vacationsEnabled).map((t) => t.id)} seleccion={tiposPropios} onChange={setTiposPropios} personas={Object.fromEntries(catalogo.map((t) => [t.id, t.vigentes]))} queCuenta="personas con un contrato vigente de este tipo" disabled={guardando} />
+              )}
+              <p className="text-xs text-gray-600 dark:text-gray-400">Se mira el contrato vigente de cada persona en su empresa de cómputo. Quien no tiene contrato vigente en WeProdu no se invita nunca.</p>
+              {lanzada && cambiaTipos && (
+                <div className="rounded border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200 space-y-1">
+                  {!previaTipos ? (
+                    <p>Calculando qué cambia…</p>
+                  ) : (
+                    <>
+                      <p>
+                        Quedan <strong>{previaTipos.quedan}</strong> invitadas. Se retira la invitación a <strong>{previaTipos.retirar}</strong>
+                        {previaTipos.retirar ? ` (${Object.entries(previaTipos.retirarPorMotivo || {}).map(([m, n]) => `${n}: ${TEXTO_MOTIVO_NO_INVITAR[m as keyof typeof TEXTO_MOTIVO_NO_INVITAR]}`).join("; ")})` : ""}.
+                      </p>
+                      {(previaTipos.vuelven || 0) + (previaTipos.invitar || 0) > 0 && <p>Vuelven {previaTipos.vuelven}; se invita a {previaTipos.invitar} nueva(s), que reciben la invitación en la app.</p>}
+                      {!!previaTipos.conservan && <p>{previaTipos.conservan} fuera de la selección siguen en la campaña porque ya propusieron, tienen otorgadas o vencieron.</p>}
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
         <div className="space-y-2">
           <p className="font-medium text-gray-800 dark:text-gray-200">Días en que pueden empezar las vacaciones</p>
           <SelectorDiasDeInicio value={dias} onChange={setDias} disabled={guardando} />
@@ -268,6 +362,8 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
   const [filtro, setFiltro] = useState<EstadoVisible | "">("");
   // El buscador: por nombre, sin importar mayúsculas ni acentos. Se suma al filtro por estado.
   const [busqueda, setBusqueda] = useState("");
+  // Filtro por tipo de contrato: el id del catálogo, «sin» (sin contrato vigente en WeProdu) o "" (todos).
+  const [filtroTipo, setFiltroTipo] = useState("");
   const [editando, setEditando] = useState<Invitacion | null>(null);
   const [historial, setHistorial] = useState<Invitacion | null>(null);
   // Cambiar la fecha límite para elegir (sólo lanzada).
@@ -335,7 +431,21 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
 
   // El estado de cada invitación por id: para saber si las que alguien tiene adelante en su turno ya eligieron.
   const estadoPorId = useMemo(() => new Map((datos?.invitaciones || []).map((i) => [i._id, i.estado])), [datos]);
-  const filas = useMemo(() => (datos?.invitaciones || []).filter((i) => (!filtro || i.estadoVisible === filtro) && fuzzyMatch(i.nombre, busqueda.trim())), [datos, filtro, busqueda]);
+  const filas = useMemo(
+    () => (datos?.invitaciones || []).filter((i) => (!filtro || i.estadoVisible === filtro) && (!filtroTipo || (filtroTipo === "sin" ? !i.tipoContrato : i.tipoContrato?.id === filtroTipo)) && fuzzyMatch(i.nombre, busqueda.trim())),
+    [datos, filtro, filtroTipo, busqueda],
+  );
+  // Los tipos que hay entre las invitadas, con cuántas, para el filtro.
+  const tiposEnLaCampania = useMemo(() => {
+    const m = new Map<string, { nombre: string; n: number }>();
+    for (const i of datos?.invitaciones || []) {
+      const k = i.tipoContrato?.id || "sin";
+      const g = m.get(k) || { nombre: i.tipoContrato?.nombre || "Sin contrato vigente en WeProdu", n: 0 };
+      g.n++;
+      m.set(k, g);
+    }
+    return [...m.entries()].sort((a, b) => (a[0] === "sin" ? 1 : b[0] === "sin" ? -1 : a[1].nombre.localeCompare(b[1].nombre, "es")));
+  }, [datos]);
   if (!datos) return <LoadingSpinner message="Cargando campaña..." />;
   const { campania: c, conteos } = datos;
   const vencidas = datos.invitaciones.filter((i) => i.estado === "vencido_sin_definir");
@@ -464,7 +574,17 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
               {ETIQUETA_ESTADO[e]} · {conteos[e]}
             </button>
           ))}
-          {(busqueda.trim() || filtro) && <span className="text-xs text-gray-500 dark:text-gray-400">Mostrando {filas.length} de {datos.invitaciones.length}</span>}
+          {tiposEnLaCampania.length > 0 && (
+            <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} aria-label="Tipo de contrato" className="input-field w-auto py-1.5 text-xs">
+              <option value="">Todos los tipos de contrato</option>
+              {tiposEnLaCampania.map(([id, t]) => (
+                <option key={id} value={id}>
+                  {t.nombre} · {t.n}
+                </option>
+              ))}
+            </select>
+          )}
+          {(busqueda.trim() || filtro || filtroTipo) && <span className="text-xs text-gray-500 dark:text-gray-400">Mostrando {filas.length} de {datos.invitaciones.length}</span>}
         </div>
       )}
 
@@ -475,7 +595,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
               <FontAwesomeIcon icon={faScaleBalanced} className="text-gray-400" /> A quién se invita
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              A cada persona activa con días disponibles del período {c.anio}. Podés limitarlo por tipo de contrato: se mira el <strong>contrato vigente en su empresa de cómputo</strong> (la empleadora de la que sale su antigüedad); si ahí tiene varios, el de alta más reciente.
+              A cada persona activa con días disponibles del período {c.anio} y un contrato vigente en WeProdu (quien no tiene contrato vigente no se invita). Podés limitarlo por tipo de contrato: se mira el <strong>contrato vigente en su empresa de cómputo</strong> (la empleadora de la que sale su antigüedad); si ahí tiene varios, el de alta más reciente.
             </p>
           </div>
           {errorPrevia ? (
@@ -503,6 +623,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
             <tr>
               <th className={`${th} sticky -left-px z-[15] bg-white dark:bg-gray-800 ${FIN_COL_FIJA}`}>Colaborador</th>
               <th className={th}>Días</th>
+              <th className={th}>Tipo de contrato</th>
               <th className={th}>Estado</th>
               <th className={th}>Acuse invitación</th>
               <th className={th}>Fechas</th>
@@ -514,7 +635,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
           <tbody>
             {filas.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-8 px-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                <td colSpan={9} className="py-8 px-4 text-center text-sm text-gray-500 dark:text-gray-400">
                   Nadie coincide con {busqueda.trim() ? `«${busqueda.trim()}»` : "el filtro"}{busqueda.trim() && filtro ? ` en «${ETIQUETA_ESTADO[filtro]}»` : ""}.
                 </td>
               </tr>
@@ -531,6 +652,16 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
                   ))}
                 </td>
                 <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{i.asignacion?.dias || i.diasDisponibles}</td>
+                <td className="py-3 px-4 text-sm">
+                  {i.tipoContrato ? (
+                    <>
+                      <p className="text-gray-800 dark:text-gray-200 whitespace-nowrap">{i.tipoContrato.nombre}</p>
+                      {i.tipoContrato.empresa && <p className="text-[11px] text-gray-400 whitespace-nowrap">{i.tipoContrato.empresa}</p>}
+                    </>
+                  ) : (
+                    <p className="text-amber-600 dark:text-amber-400 text-xs max-w-[10rem]" title="No tiene contrato vigente en su empresa de cómputo: no tiene tipo de contrato en la plataforma.">Sin contrato vigente en WeProdu</p>
+                  )}
+                </td>
                 <td className="py-3 px-4">
                   <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap ${CLASE_ESTADO[i.estadoVisible]}`}>{i.etiquetaEstado}</span>
                   {i.rechazo?.motivo && <p className="mt-1 text-[11px] text-red-600 dark:text-red-400 max-w-[14rem]">{i.rechazo.motivo}</p>}

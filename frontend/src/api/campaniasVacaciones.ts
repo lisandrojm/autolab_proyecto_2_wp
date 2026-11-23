@@ -32,6 +32,19 @@ export interface Campania {
   invitaciones?: { total: number; resueltas: number };
 }
 
+/** Lo que hace (o haría, en seco) cambiar los tipos de contrato de una campaña lanzada. */
+export interface CambioDeTipos {
+  tiposContratoInvitar: string[];
+  tipos?: string[];
+  retirar?: number;
+  retirarPorMotivo?: Partial<Record<"tipo_deshabilitado" | "tipo_no_incluido" | "sin_contrato_vigente", number>>;
+  vuelven?: number;
+  invitar?: number;
+  conservan?: number;
+  quedan?: number;
+  aplicado: boolean;
+}
+
 export interface Excluidas {
   tipoDeshabilitado: number;
   tipoNoIncluido: number;
@@ -78,6 +91,8 @@ export interface Invitacion {
   recordatorios: { at: string; automatico: boolean }[];
   /** Su turno para elegir por antigüedad (reglas de solapamiento con orden). Vacío = elige cuando quiere. */
   turnos?: TurnoDeEleccion[];
+  /** El tipo de su contrato vigente en la empresa de cómputo, hoy; null = sin contrato vigente en WeProdu. */
+  tipoContrato?: { id: string; nombre: string; empresa: string } | null;
   alertas: Alerta[];
 }
 
@@ -150,6 +165,14 @@ class CampaniasVacacionesAPI {
   /** Cambia la fecha límite para elegir de una campaña lanzada (la de la campaña y la de cada invitación a la que le corre el plazo). No avisa a nadie. */
   async cambiarFechaLimite(id: string, fechaLimite: string): Promise<{ anterior: string; nueva: string; invitaciones: number; primeraAsignacion: string; aplicado: boolean }> {
     const { data } = await axios.put(`${BASE}/${id}/fecha-limite`, { fechaLimite });
+    return data;
+  }
+  /**
+   * Los tipos de contrato que invita la campaña, en borrador o lanzada. Lanzada, retira la invitación a quien todavía
+   * no eligió y queda afuera, e invita a quien entra. `usarGlobal`: los de la configuración. `enSeco`: sólo la cuenta.
+   */
+  async cambiarTiposContrato(id: string, o: { tiposContratoInvitar?: string[]; usarGlobal?: boolean; enSeco?: boolean }): Promise<CambioDeTipos> {
+    const { data } = await axios.post(`${BASE}/${id}/tipos-contrato`, o);
     return data;
   }
   /** Los días de la semana en que puede empezar un tramo (borrador o lanzada). Vacío = cualquier día. */

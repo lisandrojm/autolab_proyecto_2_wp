@@ -62,6 +62,8 @@ const fechaCorta = (iso?: string | null) => (iso && /^\d{4}-\d{2}-\d{2}/.test(is
 const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const th = "px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-50 dark:bg-gray-900 text-left";
 const td = "px-4 py-3 text-sm text-gray-700 dark:text-gray-300";
+// La persona queda fija a la izquierda al desplazar la tabla (pedido del 23/11/2026), con el borde que marca el corte.
+const COL_FIJA = "sticky -left-px shadow-[inset_-2px_0_0_0_#d1d5db,4px_0_6px_-4px_rgba(0,0,0,0.25)] dark:shadow-[inset_-2px_0_0_0_#4b5563,4px_0_6px_-4px_rgba(0,0,0,0.5)]";
 
 const TONO: Record<SituacionBajaArca, string> = {
   1: "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-200 dark:border-red-800",
@@ -371,7 +373,7 @@ export const BajasArcaPage: React.FC = () => {
               <TablaConEncabezadoFijo className="rounded-xl border border-gray-200 dark:border-gray-700" tabla="min-w-full" sinExportar>
                 <thead>
                   <tr>
-                    <th className={th}>Persona</th>
+                    <th className={`${th} ${COL_FIJA} z-[15]`}>Persona</th>
                     <th className={th}>CUIL</th>
                     <th className={th}><BotonOrden columna="empresa" orden={orden} onAlternar={alternar}>Empresa</BotonOrden></th>
                     <th className={th}><BotonOrden columna="tipo" orden={orden} onAlternar={alternar}>Tipo de contrato</BotonOrden></th>
@@ -395,7 +397,7 @@ export const BajasArcaPage: React.FC = () => {
                           : "Abre el panel «sin contrato»: la operación se hace en ARCA igual y queda en el registro de operaciones.";
                     return (
                       <tr key={f.clave} className="border-t border-gray-100 dark:border-gray-800 align-top">
-                        <td className={`${td} font-medium text-gray-900 dark:text-gray-100`}>{f.persona || "—"}</td>
+                        <td className={`${td} ${COL_FIJA} z-[5] min-w-[11rem] bg-white dark:bg-gray-900 font-medium text-gray-900 dark:text-gray-100`}>{f.persona || "—"}</td>
                         <td className={`${td} whitespace-nowrap font-mono text-xs`}>{fmtCuil(f.cuil)}</td>
                         <td className={td}>{f.empleadora}</td>
                         <td className={td}>
