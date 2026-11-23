@@ -15,6 +15,11 @@ import { buscarCategoriaCompatPorLegacyId } from "../utils/categoriaCompat.js";
 import { importePorJornada } from "../compartido/jornadas.js";
 import { esLapida } from "../utils/anulacionContrato.js";
 import { fechaISO } from "../utils/contratoVigencia.js";
+import { Project } from "../models/Project.js";
+import { rolesPorDefecto } from "../services/solicitudes.js";
+import { sumarAlConteo } from "../services/conteoUsuariosTenant.js";
+import { estadoContratado } from "../services/contratadoDirecto.js";
+import { randomBytes } from "node:crypto";
 /**
  * CONTRATOS QUE FALTAN EN WEPRODU PARA RELACIONES VIVAS DE ARCA (23/11/2026, pedido del usuario: «crear los
  * contratos para los vigentes que no tienen, pero sin solicitud»).
@@ -35,9 +40,18 @@ import { fechaISO } from "../utils/contratoVigencia.js";
  * NO crea nada si la persona ya tiene un contrato con esa empleadora que se superpone con la relación (es otra
  * fecha de inicio, no un contrato que falta: Jordan, Valentina Pellegrini), ni para quien no tiene ficha.
  *
+ * SIN FICHA (`--crear-fichas --proyecto=NOMBRE`, decisión del usuario del 23/11/2026 para los directores por LRT):
+ * se crea la ficha con el CUIL y el nombre de ARCA (sin validar, sin email real ni acceso: email
+ * `arca-<cuil>@sin-email.invalid` y clave al azar) y, por cada relación, un contrato Tiempo Indeterminado en ese
+ * proyecto con la empleadora y el inicio de ARCA, la retribución pactada como bruto mensual, directo en el estado
+ * final (Contratados): es una relación que existe hace años, no se generan documentos ni se firma. El alta queda
+ * marcada presentada (`via: "externa"`) para que nadie la vuelva a presentar.
+ *
  * En seco por defecto; `--aplicar` escribe. `TENANT_SLUG` limita a un tenant.
  */
 const APLICAR = process.argv.includes("--aplicar");
+const CREAR_FICHAS = process.argv.includes("--crear-fichas");
+const PROYECTO = (process.argv.find((a) => a.startsWith("--proyecto=")) || "").slice(11);
 const NO_SE_COPIAN = new Set([
     "_id", "contratoKey", "estadoContrato", "anulacion", "solicitudId", "origen", "fecha_carga", "circuitoReparado",
     "estado_id", "nombre_estado_empleado", "contrato_id", "tipo_contrato_id", "nombre_contrato",
@@ -66,10 +80,14 @@ async function main() {
             continue;
         console.log(`== ${t.slug}: ${filas.length} relaciones vivas sin contrato en WeProdu`);
         const creados = [];
+        const sinFicha = [];
         for (const f of filas) {
             const quien = `${f.persona} (${f.cuil}) · ${f.empleadora} · ARCA ${f.inicio} → ${f.finArca || "sin fin"}`;
             if (!f.userId) {
-                console.log(`  — ${quien}: sin ficha en WeProdu, no se crea.`);
+                if (CREAR_FICHAS)
+                    sinFicha.push(f);
+                else
+                    console.log(`  — ${quien}: sin ficha en WeProdu, no se crea (ver --crear-fichas).`);
                 continue;
             }
             const ups = await UserProject.find({ userId: f.userId }).lean();
@@ -142,6 +160,8 @@ async function main() {
             await User.updateOne({ _id: f.userId }, { $set: { "metadata.activo": true } });
             console.log(`      creado en la posición ${contractIndex} (clave ${String(doc.contracts[contractIndex].contratoKey || "")}).`);
         }
+        if (sinFicha.length)
+            await crearFichas(t._id, sinFicha);
         if (APLICAR && creados.length) {
             const r = await adoptarAltasExternas({ tenantObjectId: t._id, detectadaPor: "manual", soloContratos: creados });
             for (const x of r)
@@ -152,6 +172,76 @@ async function main() {
         }
     }
     await mongoose.disconnect();
+}
+async function crearFichas(tenantId, filas) {
+    const proyecto = PROYECTO ? await Project.findOne({ tenantId, name: PROYECTO }).lean() : null;
+    if (!proyecto)
+        throw new Error(`--crear-fichas necesita --proyecto=<nombre exacto de un proyecto del tenant> («${PROYECTO}» no existe).`);
+    const tipo = await Contrato.findOne({ name: "Tiempo Indeterminado", isActive: true }).select(`name data.afipModalidadContrato ${CAMPOS_DEL_TIPO_PARA_IMPORTES}`).lean();
+    const final = await estadoContratado();
+    if (!tipo || !final?.data?.id)
+        throw new Error("Falta el tipo «Tiempo Indeterminado» o el estado final (Contratados).");
+    const porCuil = new Map();
+    for (const f of filas)
+        porCuil.set(f.cuil, [...(porCuil.get(f.cuil) || []), f]);
+    console.log(`\n  Sin ficha: ${porCuil.size} personas, ${filas.length} relaciones → fichas nuevas y «${tipo.name}» en ${proyecto.name}, estado «${final.name}».`);
+    for (const [cuil, rels] of porCuil) {
+        const arca = await RelacionLaboralArca.find({ tenantId, cuil, $or: rels.map((f) => ({ empleadoraCuit: f.empleadoraCuit, fechaInicio: new Date(`${f.inicio}T00:00:00.000Z`) })) }).lean();
+        const nombreArca = String(arca[0]?.apellidoNombre || rels[0].persona).trim().replace(/\s+/g, " ");
+        const [apellido, ...nombres] = nombreArca.split(" ");
+        const desde = rels.map((f) => f.inicio).sort()[0];
+        const yaEsta = await User.findOne({ tenantId, "metadata.cuit": { $in: [cuil, `${cuil.slice(0, 2)}-${cuil.slice(2, 10)}-${cuil.slice(10)}`] } }).select("_id").lean();
+        if (yaEsta) {
+            console.log(`  — ${nombreArca} (${cuil}): ya tiene ficha (${yaEsta._id}), no se crea otra.`);
+            continue;
+        }
+        const contratos = rels.map((f) => {
+            const r = arca.find((a) => a.empleadoraCuit === f.empleadoraCuit && dia(a.fechaInicio) === f.inicio);
+            const bruto = Number(r?.retribucionPactada) || 0;
+            return {
+                r, f,
+                c: {
+                    fecha_alta_contrato: f.inicio, fecha_baja_contrato: null,
+                    contrato_id: String(tipo._id), tipo_contrato_id: 0, nombre_contrato: tipo.name,
+                    estado_id: final.data.id, nombre_estado_empleado: final.name,
+                    empresaContratoId: String(r?.empleadoraCompanyId || ""), nombre_empresa_contrato: f.empleadora,
+                    puestoDesempenado: String(r?.puestoDesempenado || ""),
+                    nombre_categoria_sat: "Sin categoria", nombre_rol_frame: "Sin rol frame", nombre_sede: "Sin sede", nombre_area: "Sin área", nombre_turno: "Sin turno",
+                    cantidad_jornadas_laborales: 30, sueldo_jornada: Number((bruto / 30).toFixed(2)), sueldo_bruto: bruto,
+                    dias_semana: [1, 2, 3, 4, 5], dias_por_semana: 5, dias_rotativos: false,
+                    nombre_proyecto: proyecto.name, proyecto_id: proyecto.metadata?.id || proyecto.externalId,
+                    origen: "agregar_miembro",
+                    creadoDesdeArca: { el: new Date(), empleadoraCuit: f.empleadoraCuit, inicio: f.inicio, fin: null },
+                    altaArcaPresentada: { via: "externa", fecha: new Date(), resultado: "presentada", motivo: `Relación de ARCA existente desde ${f.inicio.split("-").reverse().join("/")} (${String(r?.modalidadContrato || "").slice(0, 40)}): el contrato se creó desde ARCA el 23/11/2026, no se presenta.` },
+                    fecha_carga: new Date().toISOString(),
+                },
+            };
+        });
+        console.log(`  + ${apellido} / ${nombres.join(" ")} (${cuil}), ficha desde ${desde}:`);
+        for (const x of contratos)
+            console.log(`      «${tipo.name}» ${x.f.empleadora} desde ${x.f.inicio} · bruto mensual ${x.c.sueldo_bruto} (ARCA) · ${x.c.puestoDesempenado}`);
+        if (!APLICAR)
+            continue;
+        const user = new User({
+            email: `arca-${cuil}@sin-email.invalid`,
+            password: randomBytes(24).toString("hex"),
+            firstName: nombres.join(" ") || nombreArca,
+            lastName: apellido,
+            tenantId,
+            hireDate: new Date(`${desde}T00:00:00.000Z`),
+            roles: await rolesPorDefecto(tenantId),
+            projectIds: [proyecto._id],
+            metadata: { cuit: cuil, nombre: nombres.join(" "), apellido, activo: true, fechaAlta: desde, creadoDesdeArca: true },
+        });
+        await user.save();
+        await sumarAlConteo(tenantId, user._id);
+        const up = new UserProject({ projectId: proyecto._id, userId: user._id, nombre_proyecto: proyecto.name, contracts: contratos.map((x) => x.c) });
+        await up.save();
+        await User.updateOne({ _id: user._id }, { $addToSet: { "metadata.projects": up._id } });
+        await Project.updateOne({ _id: proyecto._id }, { $addToSet: { assignedUsers: user._id } });
+        await Project.updateOne({ _id: proyecto._id, "teamConfig.userId": { $ne: user._id } }, { $push: { teamConfig: { userId: user._id, canRegister: true, useProjectSchedule: true } } });
+        console.log(`      creada la ficha ${user._id} y el vínculo ${up._id} con ${contratos.length} contrato(s).`);
+    }
 }
 main().catch(async (e) => {
     console.error(e);
