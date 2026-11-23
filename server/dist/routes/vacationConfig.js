@@ -4,10 +4,27 @@ import UserProject from "../models/UserProject.js";
 import { authenticateToken } from "../middleware/auth.js";
 import { errorDeVentana, normalizarVentana } from "../compartido/ventanaGoce.js";
 import { normalizarConfigCampania } from "../compartido/vacaciones/campania.js";
+import { cargarCatalogoDeTipos, reglasParaGuardar, tiposParaVacaciones } from "../services/vacaciones/tiposDeContrato.js";
 import { Types } from "mongoose";
 import { llevarVentanaGlobalALosPlanes } from "../services/vacaciones/ventanaYPlanes.js";
 const router = express.Router();
 router.use(authenticateToken);
+/**
+ * GET /vacation-config/tipos-contrato — LOS TIPOS DE CONTRATO PARA VACACIONES (23/11/2026): uno por tipo del catálogo
+ * (`contratos`), los activos y los inactivos que todavía tienen gente vigente, con sus códigos de ARCA, cuántas
+ * personas lo tienen vigente y si tiene vacaciones según «Visibilidad por tipo de Contrato». Lo usan esa pantalla y
+ * la campaña de goce. `contracts-available` (abajo) queda para Órdenes.
+ */
+router.get("/tipos-contrato", async (req, res) => {
+    try {
+        const config = await VacationConfig.findOne({ tenantId: req.tenantId }).select("contractRules").lean();
+        res.json(await tiposParaVacaciones(String(req.tenantId), config?.contractRules));
+    }
+    catch (error) {
+        console.error("Error fetching tipos de contrato para vacaciones:", error);
+        res.status(500).json({ error: "Error al obtener los tipos de contrato" });
+    }
+});
 router.get("/contracts-available", async (req, res) => {
     try {
         // Aggregate all unique contract types from UserProject
@@ -74,6 +91,9 @@ router.put("/", async (req, res) => {
         // La campaña de goce: números en rango (lo que venga mal cae al de por defecto) y nada más que esos cuatro campos.
         if (req.body?.campania !== undefined)
             req.body.campania = normalizarConfigCampania(req.body.campania);
+        // «Visibilidad por tipo de Contrato»: una regla por tipo del catálogo (las viejas por número de FRAME se traducen).
+        if (req.body?.contractRules !== undefined)
+            req.body.contractRules = reglasParaGuardar(req.body.contractRules, await cargarCatalogoDeTipos());
         // La antigüedad por empresa: modo conocido, empresas válidas y sin repetir, el flag como booleano.
         if (req.body?.computoAntiguedad !== undefined) {
             const c = req.body.computoAntiguedad || {};

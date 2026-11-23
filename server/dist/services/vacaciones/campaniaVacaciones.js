@@ -10,6 +10,7 @@ import { normalizarVentana, rangoPermitido } from "../../compartido/ventanaGoce.
 import { ETIQUETA_ESTADO, OTORGADOS, PUEDE_PROPONER, RESUELTOS, alertasDeInvitacion, alertasDeLanzamiento, contarDiasTramo, estadoVisible, fechaLimite as calcularFechaLimite, motivoDeNoInvitar, normalizarConfigCampania, normalizarTiposContrato, primerInicioPosible, sugerirTramoUnico, validarOtorgamiento, validarPropuesta, ventanaDeLaTemporada, } from "../../compartido/vacaciones/campania.js";
 import { NOVEDAD_CAMPANIA_INVITACION, NOVEDAD_CAMPANIA_RECORDATORIO, NOVEDAD_VACACION_OTORGADA, notificar } from "../novedadesNotificaciones.js";
 import { saldosDeVacaciones } from "./saldos.js";
+import { cargarCatalogoDeTipos, tiposSinVacacionesDe } from "./tiposDeContrato.js";
 import { ErrorVacacion, adjustBalanceOnRequestChange, configsEfectivasEnLote, crearVacacionParaPersona, preAprobarVacacion } from "./crearVacacion.js";
 import { aprobarComoAdmin, iniciarAprobacion } from "./aprobacionPorEtapas.js";
 import { fechasBloqueadas } from "./solapamiento.js";
@@ -149,10 +150,8 @@ async function personasConDias(tid, c) {
     return candidatos.filter((f) => !ya.has(String(f.userId)));
 }
 const tipoDe = (f) => f.antiguedad?.contratoVigenteComputo?.tipoContratoId ?? null;
-/** Los tipos que «Visibilidad por tipo de Contrato» deja sin vacaciones: no se invitan nunca. */
-const tiposDeshabilitados = (config) => normalizarTiposContrato((config?.contractRules || []).filter((r) => r?.vacationsEnabled === false).map((r) => r.contractId));
-/** Cuánta gente con días hay en cada tipo de contrato (el nombre, el del contrato de alguna de ellas). */
-function agruparPorTipo(personas) {
+/** Cuánta gente con días hay en cada tipo de contrato del catálogo (con su nombre del catálogo). */
+function agruparPorTipo(personas, nombreDe = new Map()) {
     const porTipo = new Map();
     let sinContrato = 0;
     for (const f of personas) {
@@ -161,7 +160,7 @@ function agruparPorTipo(personas) {
             sinContrato++;
             continue;
         }
-        const g = porTipo.get(id) || { id, nombre: "", personas: 0 };
+        const g = porTipo.get(id) || { id, nombre: nombreDe.get(id) || "", personas: 0 };
         g.personas++;
         if (!g.nombre)
             g.nombre = String(f.antiguedad?.contratoVigenteComputo?.nombre || "");
@@ -178,8 +177,8 @@ export async function vistaPreviaDeInvitacion(tid, id) {
     const c = await cargarCampania(tid, id);
     if (c.estado !== "borrador")
         throw new ErrorVacacion("La campaña ya se lanzó.");
-    const [config, personas] = await Promise.all([VacationConfig.findOne({ tenantId: tid }).select("contractRules").lean(), personasConDias(tid, c)]);
-    return { ...agruparPorTipo(personas), deshabilitados: tiposDeshabilitados(config), tiposContratoInvitar: normalizarTiposContrato(c.tiposContratoInvitar) };
+    const [config, personas, cat] = await Promise.all([VacationConfig.findOne({ tenantId: tid }).select("contractRules").lean(), personasConDias(tid, c), cargarCatalogoDeTipos()]);
+    return { ...agruparPorTipo(personas, new Map(cat.tipos.map((t) => [t._id, t.name]))), deshabilitados: await tiposSinVacacionesDe(config?.contractRules, cat), tiposContratoInvitar: normalizarTiposContrato(c.tiposContratoInvitar) };
 }
 /** A qué tipos de contrato invita la campaña (vacío = todos los habilitados). Sólo en borrador: lanzada, ya se usó. */
 export async function guardarTiposContrato(tid, id, tipos) {
@@ -211,7 +210,8 @@ export async function lanzarCampania(tid, id, actorId, tipos) {
     const limite = calcularFechaLimite(hoy, c.plazoParaDefinirDias);
     const config = await VacationConfig.findOne({ tenantId: tid }).lean();
     const seleccion = normalizarTiposContrato(c.tiposContratoInvitar);
-    const deshabilitados = tiposDeshabilitados(config);
+    const cat = await cargarCatalogoDeTipos();
+    const deshabilitados = await tiposSinVacacionesDe(config?.contractRules, cat);
     const conDias = await personasConDias(tid, c);
     const excluidas = { tipoDeshabilitado: 0, tipoNoIncluido: 0, sinContrato: 0 };
     const nuevos = conDias.filter((f) => {
@@ -249,7 +249,7 @@ export async function lanzarCampania(tid, id, actorId, tipos) {
     if (docs.length)
         await InvitacionVacaciones.insertMany(docs, { ordered: false });
     c.estado = "lanzada";
-    c.lanzamiento = { todosLosTipos: seleccion.length === 0, tipos: agruparPorTipo(nuevos).porTipo.map((t) => ({ id: t.id, nombre: t.nombre, invitadas: t.personas })), excluidas };
+    c.lanzamiento = { todosLosTipos: seleccion.length === 0, tipos: agruparPorTipo(nuevos, new Map(cat.tipos.map((t) => [t._id, t.name]))).porTipo.map((t) => ({ id: t.id, nombre: t.nombre, invitadas: t.personas })), excluidas };
     c.fechaLimite = limite;
     c.lanzadaPor = oid(actorId);
     c.lanzadaAt = new Date();

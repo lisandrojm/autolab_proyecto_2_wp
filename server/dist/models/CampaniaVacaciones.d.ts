@@ -33,15 +33,17 @@ export interface ICampaniaVacaciones extends Document {
      * A QUIÉN SE INVITA (16/11/2026): los `tipo_contrato_id` cuyo contrato vigente en la empresa de cómputo
      * hace que se invite a la persona. Vacío = todos los tipos habilitados. Se elige en borrador.
      */
-    tiposContratoInvitar: number[];
+    /** Tipos del catálogo (`_id` de `contratos`). Las lanzadas antes del 23/11/2026 pueden tener números de FRAME. */
+    tiposContratoInvitar: string[];
     /**
      * LO QUE SE USÓ AL LANZAR, para que quede escrito: los tipos que entraron (con su nombre de ese día y
      * cuántas personas), si fue «todos los habilitados», y cuántas con días quedaron afuera por cada motivo.
      */
     lanzamiento?: {
         todosLosTipos: boolean;
+        /** `id`: el tipo del catálogo; en las lanzadas antes del 23/11/2026, el número de FRAME. */
         tipos: {
-            id: number;
+            id: string | number;
             nombre: string;
             invitadas: number;
         }[];

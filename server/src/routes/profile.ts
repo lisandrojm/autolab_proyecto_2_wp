@@ -11,6 +11,7 @@ import { requireTenant, TenantRequest } from '../middleware/tenant.js';
 import { antiguedadArcaPorCuil } from '../services/arca/relacionesArcaStore.js';
 import { saldosDeVacaciones } from '../services/vacaciones/saldos.js';
 import { esContratoVigente, hoyArgentina } from '../utils/contratoVigencia.js';
+import { cargarCatalogoDeTipos, lectorDeTiposDeContrato, tiposSinVacacionesDe } from '../services/vacaciones/tiposDeContrato.js';
 
 const router = Router();
 
@@ -223,59 +224,25 @@ router.get('/', async (req: AuthenticatedRequest & TenantRequest, res) => {
     // -------------------------------------------------------------------------
     // Contract Check Logic: Disable Vacations button if contract type is blacklist
     // -------------------------------------------------------------------------
-    let vacationsEnabled = true; // Default to enabled
+    /*
+      ¿TIENE VACACIONES? (23/11/2026) Si alguno de sus contratos vigentes es de un tipo que «Visibilidad por tipo de
+      Contrato» deja sin vacaciones, no. Antes se miraba `tipo_contrato_id` (el número de FRAME), que en lo creado en
+      WeProdu es 0: una Jornada cargada en WeProdu tenía vacaciones aunque la regla de Jornada dijera que no. Ahora el
+      tipo es el del catálogo (`services/vacaciones/tiposDeContrato.ts`), y vigente es vigente de verdad
+      (`esContratoVigente`: estado, alta y baja), no sólo «sin fecha de baja pasada».
+    */
+    let vacationsEnabled = true;
     try {
-      if (user?.metadata?.projects && Array.isArray(user.metadata.projects)) {
-        // Collect all contract types from user metadata
-        // We look for the "Active" contract or just all of them?
-        // Let's assume we check against ANY active contract or generally if the user
-        // holds a contract type that is disabled.
-        // Usually a user has one main current contract per project.
-        // Let's get the list of active contract IDs the user has.
-
-        const userContractTypeIds = new Set<number>();
-
-        for (const up of user.metadata.projects) {
-          if (!up || typeof up !== 'object') continue;
-          if (Array.isArray(up.contracts)) {
-            for (const c of up.contracts) {
-              // Check if contract is active?
-              // Logic: if fecha_baja_contrato is null or future?
-              // Or just take all provided in metadata as they are usually the relevant history + current.
-              // Let's check if it has a cancellation date.
-              const isExpired = c.fecha_baja_contrato && new Date(c.fecha_baja_contrato) < new Date();
-              if (!isExpired && c.tipo_contrato_id) {
-                userContractTypeIds.add(c.tipo_contrato_id);
-              }
-            }
-          }
-        }
-
-        if (userContractTypeIds.size > 0) {
-          const VacationConfig = (await import('../models/VacationConfig.js')).VacationConfig;
-          const config = await VacationConfig.findOne({ tenantId: req.tenantObjectId });
-
-          if (config && config.contractRules && config.contractRules.length > 0) {
-            // Check if ANY of the user's active contracts is explicitly disabled.
-            // Or only if ALL are disabled? User said "si el usuario tiene ES contrato".
-            // Suggests if the user is under a specific contract type, hide it.
-            // If they have multiple, usually one is "main".
-            // Let's go with: if ANY active contract type is disabled in rules, disable it.
-            // This is safer to avoid showing it to contractors who shouldn't have it.
-
-            for (const typeId of userContractTypeIds) {
-              const rule = config.contractRules.find((r) => r.contractId === typeId);
-              if (rule && rule.vacationsEnabled === false) {
-                vacationsEnabled = false;
-                break; // One disabled contract is enough to disable the button?
-                // Or should we check if *all* are disabled?
-                // 'Si el usuario tiene ESE contrato'.
-                // If I am a full time employee AND a contractor (weird), I probably should have vacations.
-                // But usually these don't overlap.
-                // Let's stick to "If any active contract is disabled, disable".
-              }
-            }
-          }
+      const contratos = ((user?.metadata?.projects || []) as any[]).filter((up) => up && typeof up === 'object').flatMap((up) => (Array.isArray(up.contracts) ? up.contracts : []));
+      const hoyVac = hoyArgentina();
+      const vigentes = contratos.filter((c: any) => esContratoVigente(c, hoyVac));
+      if (vigentes.length > 0) {
+        const VacationConfig = (await import('../models/VacationConfig.js')).VacationConfig;
+        const config: any = await VacationConfig.findOne({ tenantId: req.tenantObjectId }).select('contractRules').lean();
+        if (config?.contractRules?.length) {
+          const cat = await cargarCatalogoDeTipos();
+          const [sinVacaciones, tipoDe] = await Promise.all([tiposSinVacacionesDe(config.contractRules, cat), lectorDeTiposDeContrato(cat)]);
+          if (sinVacaciones.length) vacationsEnabled = !vigentes.some((c: any) => sinVacaciones.includes(tipoDe(c) || ''));
         }
       }
     } catch (e) {

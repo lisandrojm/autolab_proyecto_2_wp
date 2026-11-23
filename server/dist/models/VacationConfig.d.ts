@@ -41,7 +41,7 @@ export interface IVacationConfig extends Document {
         plazoParaDefinirDias: number;
         avisoMinimoDias: number;
         minDiasPorTramo: number;
-        tiposContratoInvitar?: number[];
+        tiposContratoInvitar?: string[];
     };
     /**
      * DE QUÉ EMPLEADORA SE TOMA LA ANTIGÜEDAD (15/11/2026). Ya no se suman los días de todas: cuenta la
@@ -58,8 +58,14 @@ export interface IVacationConfig extends Document {
     requiereFirma: boolean;
     pdfId?: string;
     overlaps: IEmbeddedOverlap[];
+    /**
+     * «Visibilidad por tipo de Contrato». Desde el 23/11/2026 la clave es `tipoContratoId`, el tipo del catálogo
+     * (`contratos`). `contractId` es la clave vieja (el número de FRAME): las reglas viejas se traducen al leer
+     * (`compartido/vacaciones/tipoDeContrato.ts`) y desaparecen con el próximo guardado.
+     */
     contractRules?: {
-        contractId: number;
+        tipoContratoId?: string;
+        contractId?: number;
         contractName: string;
         vacationsEnabled: boolean;
     }[];

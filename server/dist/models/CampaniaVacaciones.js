@@ -9,11 +9,11 @@ const campaniaSchema = new Schema({
     avisoMinimoDias: { type: Number, required: true },
     minDiasPorTramo: { type: Number, required: true },
     fechaLimite: { type: String, default: null },
-    tiposContratoInvitar: { type: [Number], default: [] },
+    tiposContratoInvitar: { type: [String], default: [] },
     lanzamiento: {
         type: new Schema({
             todosLosTipos: Boolean,
-            tipos: [{ _id: false, id: Number, nombre: String, invitadas: Number }],
+            tipos: [{ _id: false, id: Schema.Types.Mixed, nombre: String, invitadas: Number }],
             excluidas: { tipoDeshabilitado: Number, tipoNoIncluido: Number, sinContrato: Number },
         }, { _id: false }),
         default: null,

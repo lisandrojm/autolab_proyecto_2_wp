@@ -39,12 +39,15 @@ export function normalizarConfigCampania(v) {
         tiposContratoInvitar: normalizarTiposContrato(v?.tiposContratoInvitar),
     };
 }
-/** La lista de tipos tal como se guarda: números, sin repetir, ordenados. Lo que no es una lista queda vacío. */
+/**
+ * La lista de tipos tal como se guarda: ids del catálogo (24 hex), sin repetir, ordenados. Lo que no es una lista
+ * queda vacío. Un número es la clave vieja (el de FRAME, 23/11/2026): se descarta, no se adivina a qué tipo era.
+ */
 export function normalizarTiposContrato(v) {
     if (!Array.isArray(v))
         return [];
-    const ids = v.filter((x) => x !== null && x !== "" && typeof x !== "boolean").map(Number).filter((n) => Number.isFinite(n));
-    return [...new Set(ids)].sort((a, b) => a - b);
+    const ids = v.filter((x) => typeof x === "string" || (x && typeof x === "object")).map((x) => String(x).trim().toLowerCase()).filter((s) => /^[0-9a-f]{24}$/.test(s));
+    return [...new Set(ids)].sort();
 }
 /** Por qué NO se invita a alguien, o `null` si se la invita. `tipoContratoId` null = sin contrato vigente de cómputo. */
 export function motivoDeNoInvitar(o) {

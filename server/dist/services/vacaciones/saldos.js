@@ -10,6 +10,7 @@ import { textoAntiguedad } from "../../compartido/antiguedadTexto.js";
 import { fechaISO, hoyArgentina } from "../../utils/contratoVigencia.js";
 import { contratosQueRigenDeLasPersonas } from "../../utils/contratosQueRigen.js";
 import { contratoVigenteDeComputo } from "../../utils/contratoDeComputo.js";
+import { lectorDeTiposDeContrato } from "./tiposDeContrato.js";
 import { baseDeAntiguedad, empresaDeComputo, isoDia } from "../../utils/antiguedadArca.js";
 export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear, opciones = {}) {
     /*
@@ -87,6 +88,8 @@ export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear,
                             nombre_contrato: "$$c.nombre_contrato",
                             // El tipo y la carga: para el contrato vigente en la empresa de cómputo (campaña de goce por tipo de contrato).
                             tipo_contrato_id: "$$c.tipo_contrato_id",
+                            // El tipo del catálogo (lo creado en WeProdu tiene `tipo_contrato_id` 0): ver `tiposDeContrato.ts`.
+                            contrato_id: "$$c.contrato_id",
                             fecha_carga: "$$c.fecha_carga",
                         },
                     },
@@ -196,6 +199,7 @@ export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear,
     const empresasDoc = await Company.find({}).select("cuit razonSocial").lean();
     const soloDigitos = (v) => String(v ?? "").replace(/\D/g, "");
     const empresaPorCuit = new Map();
+    const tipoDelContrato = await lectorDeTiposDeContrato();
     const empresaPorId = new Map();
     for (const e of empresasDoc) {
         const item = { id: String(e._id), cuit: soloDigitos(e.cuit), nombre: String(e.razonSocial || "") };
@@ -385,8 +389,8 @@ export async function saldosDeVacaciones(tenantId, tenantObjectId, selectedYear,
                 const conEmpresa = misVinculos.flatMap((v) => (v.contracts || []).map((ct) => ({ ...ct, claveEmpresa: ct.empresaContratoId ? empresaPorId.get(String(ct.empresaContratoId))?.cuit || String(ct.empresaContratoId) : "" })));
                 const ct = contratoVigenteDeComputo(conEmpresa, claveDeComputo, hoyISO);
                 if (ct) {
-                    const tipo = ct.tipo_contrato_id === null || ct.tipo_contrato_id === undefined || ct.tipo_contrato_id === "" ? NaN : Number(ct.tipo_contrato_id);
-                    contratoVigenteComputo = { tipoContratoId: Number.isFinite(tipo) ? tipo : null, nombre: String(ct.nombre_contrato || ""), alta: fechaISO(ct.fecha_alta_contrato), baja: fechaISO(ct.fecha_baja_contrato), empresa: claveDeComputo ? nombreDeEmpresa(claveDeComputo) : String(ct.nombre_empresa_contrato || "") };
+                    // El tipo del CATÁLOGO, no el número de FRAME (23/11/2026): lo creado en WeProdu tiene un 0 ahí.
+                    contratoVigenteComputo = { tipoContratoId: tipoDelContrato(ct), nombre: String(ct.nombre_contrato || ""), alta: fechaISO(ct.fecha_alta_contrato), baja: fechaISO(ct.fecha_baja_contrato), empresa: claveDeComputo ? nombreDeEmpresa(claveDeComputo) : String(ct.nombre_empresa_contrato || "") };
                 }
             }
             const cuitDe = (clave) => (empresaPorCuit.has(clave) ? clave : "");

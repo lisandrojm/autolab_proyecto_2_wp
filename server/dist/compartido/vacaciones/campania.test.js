@@ -1,12 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { motivoDeNoInvitar, normalizarTiposContrato, resumenDeInvitables, alertasDeInvitacion, alertasDeLanzamiento, contarDiasTramo, estadoVisible, hastaParaDias, normalizarConfigCampania, sugerirTramoUnico, validarOtorgamiento, validarPropuesta, ventanaDeLaTemporada } from "./campania.js";
+/** Dos tipos del catálogo (`contratos`): la campaña elige por su `_id`, no por el número de FRAME. */
+const TI = "6a6a6d75bcadd1748056908d";
+const PF = "6a6a6d74bcadd17480569075";
 const VENTANA = { desde: "2026-11-01", hasta: "2027-04-30" };
 const base = { ventana: VENTANA, hoy: "2026-11-15", avisoDias: 30, minPorTramo: 7, diasCorridos: true };
 test("config: lo que falta o viene mal cae al de por defecto", () => {
     assert.deepEqual(normalizarConfigCampania(undefined), { activa: false, plazoParaDefinirDias: 14, avisoMinimoDias: 30, minDiasPorTramo: 7, tiposContratoInvitar: [] });
     assert.deepEqual(normalizarConfigCampania({ activa: true, plazoParaDefinirDias: "20", avisoMinimoDias: -3, minDiasPorTramo: 0 }), { activa: true, plazoParaDefinirDias: 20, avisoMinimoDias: 30, minDiasPorTramo: 7, tiposContratoInvitar: [] });
-    assert.deepEqual(normalizarConfigCampania({ tiposContratoInvitar: [3, "1", 3, null, "x"] }).tiposContratoInvitar, [1, 3]);
+    assert.deepEqual(normalizarConfigCampania({ tiposContratoInvitar: [PF, 3, TI, null, "x", PF] }).tiposContratoInvitar, [TI, PF].sort());
 });
 test("días: corridos o de lunes a viernes", () => {
     // 16/11/2026 es lunes.
@@ -86,12 +89,12 @@ test("estado visible y alertas de seguimiento", () => {
     assert.ok(b.some((x) => x.codigo === "aviso_insuficiente"));
 });
 /* ─────────────────────────── A quién se invita, por tipo de contrato ─────────────────────────── */
-const INDETERMINADO = 1;
-const PLAZO_FIJO = 2;
-const EVENTUAL = 3; // deshabilitado en «Visibilidad por tipo de Contrato»
+const INDETERMINADO = TI;
+const PLAZO_FIJO = PF;
+const EVENTUAL = "6a6a6d75bcadd17480569096"; // deshabilitado en «Visibilidad por tipo de Contrato»
 const POBLACION = { porTipo: [{ id: INDETERMINADO, nombre: "Tiempo Indeterminado", personas: 40 }, { id: PLAZO_FIJO, nombre: "Plazo fijo 6x6", personas: 25 }, { id: EVENTUAL, nombre: "Eventual", personas: 10 }], sinContrato: 4 };
-test("tipos: la lista se guarda como números, sin repetir y ordenada", () => {
-    assert.deepEqual(normalizarTiposContrato([2, "1", 2, "", null, "abc", true]), [1, 2]);
+test("tipos: la lista se guarda como ids del catálogo, sin repetir y ordenada; los números viejos de FRAME se descartan", () => {
+    assert.deepEqual(normalizarTiposContrato([PF, TI.toUpperCase(), PF, "", null, "abc", true, 4, "0"]), [TI, PF].sort());
     assert.deepEqual(normalizarTiposContrato(undefined), []);
     assert.deepEqual(normalizarTiposContrato("1,2"), []);
 });

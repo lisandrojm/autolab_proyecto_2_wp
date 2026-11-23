@@ -12,7 +12,8 @@ export interface ConfigCampania {
      * Con qué tipos de contrato (`tipo_contrato_id`) arranca tildada una campaña nueva. Vacío = todos los
      * habilitados. Cada campaña guarda su propia lista: ver «A QUIÉN SE INVITA», más abajo.
      */
-    tiposContratoInvitar: number[];
+    /** Los tipos del catálogo (`_id` de `contratos`), no el número de FRAME: ver `vacaciones/tipoDeContrato.ts`. */
+    tiposContratoInvitar: string[];
 }
 export declare const CONFIG_CAMPANIA_POR_DEFECTO: ConfigCampania;
 /**
@@ -36,18 +37,21 @@ export declare function normalizarConfigCampania(v: any): ConfigCampania;
  *    contrato vigente en su empresa de cómputo (o lo tiene sin tipo) queda afuera: no hay qué comparar.
  */
 export type MotivoNoInvitar = "tipo_deshabilitado" | "tipo_no_incluido" | "sin_contrato_vigente";
-/** La lista de tipos tal como se guarda: números, sin repetir, ordenados. Lo que no es una lista queda vacío. */
-export declare function normalizarTiposContrato(v: unknown): number[];
+/**
+ * La lista de tipos tal como se guarda: ids del catálogo (24 hex), sin repetir, ordenados. Lo que no es una lista
+ * queda vacío. Un número es la clave vieja (el de FRAME, 23/11/2026): se descarta, no se adivina a qué tipo era.
+ */
+export declare function normalizarTiposContrato(v: unknown): string[];
 /** Por qué NO se invita a alguien, o `null` si se la invita. `tipoContratoId` null = sin contrato vigente de cómputo. */
 export declare function motivoDeNoInvitar(o: {
-    tipoContratoId: number | null;
-    seleccion: number[];
-    deshabilitados: number[];
+    tipoContratoId: string | null;
+    seleccion: string[];
+    deshabilitados: string[];
 }): MotivoNoInvitar | null;
 /** Cuánta gente con días hay en cada tipo de contrato (por su contrato vigente de cómputo), y cuánta sin contrato. */
 export interface PoblacionPorTipo {
     porTipo: {
-        id: number;
+        id: string;
         nombre: string;
         personas: number;
     }[];
@@ -63,7 +67,7 @@ export interface ResumenDeInvitables {
  * LA VISTA PREVIA: cuántas personas se invitarían con esa selección, y cuántas quedan afuera por cada
  * motivo. Es `motivoDeNoInvitar` aplicado grupo por grupo, así que coincide con lo que hace el lanzamiento.
  */
-export declare function resumenDeInvitables(p: PoblacionPorTipo, seleccion: number[], deshabilitados: number[]): ResumenDeInvitables;
+export declare function resumenDeInvitables(p: PoblacionPorTipo, seleccion: string[], deshabilitados: string[]): ResumenDeInvitables;
 export interface Tramo {
     desde: string;
     hasta: string;

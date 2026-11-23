@@ -36,14 +36,16 @@ export interface ICampaniaVacaciones extends Document {
    * A QUIÉN SE INVITA (16/11/2026): los `tipo_contrato_id` cuyo contrato vigente en la empresa de cómputo
    * hace que se invite a la persona. Vacío = todos los tipos habilitados. Se elige en borrador.
    */
-  tiposContratoInvitar: number[];
+  /** Tipos del catálogo (`_id` de `contratos`). Las lanzadas antes del 23/11/2026 pueden tener números de FRAME. */
+  tiposContratoInvitar: string[];
   /**
    * LO QUE SE USÓ AL LANZAR, para que quede escrito: los tipos que entraron (con su nombre de ese día y
    * cuántas personas), si fue «todos los habilitados», y cuántas con días quedaron afuera por cada motivo.
    */
   lanzamiento?: {
     todosLosTipos: boolean;
-    tipos: { id: number; nombre: string; invitadas: number }[];
+    /** `id`: el tipo del catálogo; en las lanzadas antes del 23/11/2026, el número de FRAME. */
+    tipos: { id: string | number; nombre: string; invitadas: number }[];
     excluidas: { tipoDeshabilitado: number; tipoNoIncluido: number; sinContrato: number };
   } | null;
   estado: EstadoCampania;
@@ -67,12 +69,12 @@ const campaniaSchema = new Schema<ICampaniaVacaciones>(
     avisoMinimoDias: { type: Number, required: true },
     minDiasPorTramo: { type: Number, required: true },
     fechaLimite: { type: String, default: null },
-    tiposContratoInvitar: { type: [Number], default: [] },
+    tiposContratoInvitar: { type: [String], default: [] },
     lanzamiento: {
       type: new Schema(
         {
           todosLosTipos: Boolean,
-          tipos: [{ _id: false, id: Number, nombre: String, invitadas: Number }],
+          tipos: [{ _id: false, id: Schema.Types.Mixed, nombre: String, invitadas: Number }],
           excluidas: { tipoDeshabilitado: Number, tipoNoIncluido: Number, sinContrato: Number },
         },
         { _id: false },

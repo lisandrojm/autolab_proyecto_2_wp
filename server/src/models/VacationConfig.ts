@@ -57,7 +57,7 @@ export interface IVacationConfig extends Document {
    * eligen, que la empresa asigne un tramo único. Reglas en `compartido/vacaciones/campania.ts`. No hay
    * opción de pagar en lugar de gozar: no es configurable porque no existe.
    */
-  campania?: { activa: boolean; plazoParaDefinirDias: number; avisoMinimoDias: number; minDiasPorTramo: number; tiposContratoInvitar?: number[] };
+  campania?: { activa: boolean; plazoParaDefinirDias: number; avisoMinimoDias: number; minDiasPorTramo: number; tiposContratoInvitar?: string[] };
   /**
    * DE QUÉ EMPLEADORA SE TOMA LA ANTIGÜEDAD (15/11/2026). Ya no se suman los días de todas: cuenta la
    * de una sola (ver `empresaDeComputo` en utils/antiguedadArca.ts).
@@ -73,8 +73,14 @@ export interface IVacationConfig extends Document {
   overlaps: IEmbeddedOverlap[];
 
   // Contract rules
+  /**
+   * «Visibilidad por tipo de Contrato». Desde el 23/11/2026 la clave es `tipoContratoId`, el tipo del catálogo
+   * (`contratos`). `contractId` es la clave vieja (el número de FRAME): las reglas viejas se traducen al leer
+   * (`compartido/vacaciones/tipoDeContrato.ts`) y desaparecen con el próximo guardado.
+   */
   contractRules?: {
-    contractId: number; // or string if IDs are not consistent
+    tipoContratoId?: string;
+    contractId?: number;
     contractName: string;
     vacationsEnabled: boolean;
   }[];
@@ -168,7 +174,7 @@ const VacationConfigSchema = new Schema<IVacationConfig>(
       avisoMinimoDias: { type: Number, default: 30, min: 0, max: 180 },
       minDiasPorTramo: { type: Number, default: 7, min: 1, max: 60 },
       // Los tipos de contrato con que arranca tildada una campaña nueva. Vacío = todos los habilitados.
-      tiposContratoInvitar: { type: [Number], default: [] },
+      tiposContratoInvitar: { type: [String], default: [] },
     },
     // Antigüedad por empresa. Con estos defaults, un tenant que nunca lo tocó lee «empresa vigente».
     computoAntiguedad: {
@@ -196,6 +202,7 @@ const VacationConfigSchema = new Schema<IVacationConfig>(
     contractRules: {
       type: [
         {
+          tipoContratoId: String,
           contractId: Number,
           contractName: String,
           vacationsEnabled: Boolean,

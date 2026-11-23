@@ -32,10 +32,10 @@ export declare function tablero(tid: Types.ObjectId, id: string): Promise<{
  * sin volver a pedir nada: la misma regla (`motivoDeNoInvitar`) que usa el lanzamiento.
  */
 export declare function vistaPreviaDeInvitacion(tid: Types.ObjectId, id: string): Promise<{
-    deshabilitados: number[];
-    tiposContratoInvitar: number[];
+    deshabilitados: string[];
+    tiposContratoInvitar: string[];
     porTipo: {
-        id: number;
+        id: string;
         nombre: string;
         personas: number;
     }[];
@@ -43,7 +43,7 @@ export declare function vistaPreviaDeInvitacion(tid: Types.ObjectId, id: string)
 }>;
 /** A qué tipos de contrato invita la campaña (vacío = todos los habilitados). Sólo en borrador: lanzada, ya se usó. */
 export declare function guardarTiposContrato(tid: Types.ObjectId, id: string, tipos: unknown): Promise<{
-    tiposContratoInvitar: number[];
+    tiposContratoInvitar: string[];
 }>;
 /**
  * LANZAR: una invitación por cada persona con días (`personasConDias`) cuyo contrato vigente en la empresa
