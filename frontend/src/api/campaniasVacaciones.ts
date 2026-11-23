@@ -1,5 +1,5 @@
 import axios from "./axiosConfig";
-import type { Alerta, EstadoInvitacion, EstadoVisible, PoblacionPorTipo, Tramo } from "@compartido/vacaciones/campania";
+import type { Alerta, EstadoDelTurno, EstadoInvitacion, EstadoVisible, PoblacionPorTipo, Tramo, TurnoDeEleccion } from "@compartido/vacaciones/campania";
 
 /**
  * CAMPAÑA DE GOCE DE VACACIONES: `/api/v1/campanias-vacaciones` (ver `routes/campaniasVacaciones.ts` en el
@@ -17,6 +17,8 @@ export interface Campania {
   plazoParaDefinirDias: number;
   avisoMinimoDias: number;
   minDiasPorTramo: number;
+  /** En qué días de la semana puede empezar un tramo (0 = domingo). Vacío = cualquier día. */
+  diasDeInicio?: number[];
   fechaLimite?: string | null;
   /** Los tipos del catálogo que invita (vacío = todos los habilitados). Se elige en borrador. */
   tiposContratoInvitar?: string[];
@@ -74,6 +76,8 @@ export interface Invitacion {
   acuseOtorgamientoAt?: string | null;
   historial: { accion: string; porUserId?: string | null; at: string; detalle?: string }[];
   recordatorios: { at: string; automatico: boolean }[];
+  /** Su turno para elegir por antigüedad (reglas de solapamiento con orden). Vacío = elige cuando quiere. */
+  turnos?: TurnoDeEleccion[];
   alertas: Alerta[];
 }
 
@@ -88,11 +92,13 @@ export interface Tablero {
 /** Lo que ve la persona en «Elegí tus vacaciones». */
 export interface MiInvitacion {
   invitacion: Omit<Invitacion, "estadoVisible" | "etiquetaEstado" | "alertas" | "historial">;
-  campania: { _id: string; nombre: string; anio: number; ventanaDesde: string; ventanaHasta: string; avisoMinimoDias: number; minDiasPorTramo: number; fechaLimite: string };
+  campania: { _id: string; nombre: string; anio: number; ventanaDesde: string; ventanaHasta: string; avisoMinimoDias: number; minDiasPorTramo: number; diasDeInicio?: number[]; fechaLimite: string };
   estadoVisible: EstadoVisible;
   diasDisponibles: number;
   diasParaLaFechaLimite: number;
   puedeProponer: boolean;
+  /** Si tiene que esperar su turno (eligen primero las más antiguas de su rol): desde cuándo y cuántas tiene adelante. */
+  turno?: EstadoDelTurno | null;
   primerInicioPosible: string;
   vacaciones: VacacionDeTramo[];
   pendienteDeAccion: boolean;
@@ -144,6 +150,16 @@ class CampaniasVacacionesAPI {
   /** Cambia la fecha límite para elegir de una campaña lanzada (la de la campaña y la de cada invitación a la que le corre el plazo). No avisa a nadie. */
   async cambiarFechaLimite(id: string, fechaLimite: string): Promise<{ anterior: string; nueva: string; invitaciones: number; primeraAsignacion: string; aplicado: boolean }> {
     const { data } = await axios.put(`${BASE}/${id}/fecha-limite`, { fechaLimite });
+    return data;
+  }
+  /** Los días de la semana en que puede empezar un tramo (borrador o lanzada). Vacío = cualquier día. */
+  async cambiarDiasDeInicio(id: string, diasDeInicio: number[]): Promise<{ diasDeInicio: number[]; aplicado: boolean }> {
+    const { data } = await axios.put(`${BASE}/${id}/dias-de-inicio`, { diasDeInicio });
+    return data;
+  }
+  /** Rearma los turnos por antigüedad (también se rearman solos al cambiar una regla de solapamiento con orden). */
+  async rearmarTurnos(id: string): Promise<{ grupos: number; conTurno: number; recortados: number; cambiadas: number }> {
+    const { data } = await axios.post(`${BASE}/${id}/turnos`);
     return data;
   }
   async cerrar(id: string): Promise<Campania> {

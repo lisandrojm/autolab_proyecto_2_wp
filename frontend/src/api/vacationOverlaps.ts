@@ -10,6 +10,10 @@ export interface VacationOverlap {
   description?: string;
   isActive: boolean;
   useActiveContractSchedule?: boolean;
+  /** Quién elige primero en la campaña de goce: «antiguedad» = por turnos, la más antigua primero. */
+  prioridad?: "ninguna" | "antiguedad";
+  /** Días de turno de cada persona cuando eligen por antigüedad. */
+  diasPorTurno?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -23,6 +27,8 @@ export interface VacationOverlapInput {
   description?: string;
   isActive?: boolean;
   useActiveContractSchedule?: boolean;
+  prioridad?: "ninguna" | "antiguedad";
+  diasPorTurno?: number;
 }
 
 export const vacationOverlapsAPI = {

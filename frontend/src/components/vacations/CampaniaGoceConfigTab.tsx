@@ -4,6 +4,7 @@ import { faCircleExclamation, faInfoCircle, faScaleBalanced, faSpinner, faToggle
 import { LoadingSpinner } from "../ui/LoadingSpinner";
 import { vacationConfigAPI, VacationConfig, type TipoContratoVacaciones } from "../../api/vacationConfig";
 import { SelectorTiposContrato } from "./campania/SelectorTiposContrato";
+import { SelectorDiasDeInicio } from "./campania/SelectorDiasDeInicio";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { hoyISO } from "../../utils/contratoVigencia";
 import { normalizarVentana } from "@compartido/ventanaGoce";
@@ -106,7 +107,7 @@ export const CampaniaGoceConfigTab: React.FC = () => {
           <FontAwesomeIcon icon={faScaleBalanced} /> Reglas que la campaña respeta siempre
         </p>
         <p>· El aviso por escrito sale con al menos los días de anticipación configurados antes del inicio (LCT art. 154: 30; el convenio puede pedir más).</p>
-        <p>· La persona puede fraccionar en tramos del mínimo configurado o más, y eso es un acuerdo que aprueba la empresa. Si asigna la empresa, es <strong>un tramo único continuo</strong>: no fracciona sola.</p>
+        <p>· La persona puede fraccionar, y eso es un acuerdo que aprueba la empresa: en orden de fecha, cada tramo con el mínimo configurado o más, salvo el último si quedan menos. Con menos días que el mínimo no se fracciona: van seguidos. Si asigna la empresa, es <strong>un tramo único continuo</strong>: no fracciona sola.</p>
         <p>· <strong>Nunca se paga en lugar de gozar</strong> con la relación vigente (art. 156): esa opción no existe. El pago de vacaciones no gozadas corresponde sólo al egreso.</p>
         <p>· La campaña no se cierra mientras quede alguien con días sin el otorgamiento notificado: la obligación de otorgarlas es de la empresa (art. 157).</p>
       </div>
@@ -130,7 +131,13 @@ export const CampaniaGoceConfigTab: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Campo etiqueta="Plazo para elegir" ayuda="Desde que se la invita. Pasado el plazo, asigna la empresa." value={borrador.plazoParaDefinirDias} min={1} max={120} onChange={(n) => setBorrador({ ...borrador, plazoParaDefinirDias: n })} />
           <Campo etiqueta="Aviso por escrito" ayuda="Mínimo entre el aviso y el inicio de las vacaciones." value={borrador.avisoMinimoDias} min={0} max={180} onChange={(n) => setBorrador({ ...borrador, avisoMinimoDias: n })} sufijo="días antes" />
-          <Campo etiqueta="Tramo mínimo al fraccionar" ayuda="Cada parte, cuando la persona las divide." value={borrador.minDiasPorTramo} min={1} max={60} onChange={(n) => setBorrador({ ...borrador, minDiasPorTramo: n })} />
+          <Campo etiqueta="Tramo mínimo al fraccionar" ayuda="En orden de fecha, cada parte; la última puede tener menos si quedan menos. Con menos días en total, van seguidos." value={borrador.minDiasPorTramo} min={1} max={60} onChange={(n) => setBorrador({ ...borrador, minDiasPorTramo: n })} />
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Días en que pueden empezar las vacaciones</p>
+          <SelectorDiasDeInicio value={borrador.diasDeInicio} onChange={(diasDeInicio) => setBorrador({ ...borrador, diasDeInicio })} disabled={guardando} />
+          <p className="text-xs text-gray-500 dark:text-gray-400">Cada tramo que elija la persona (y el que asigne la empresa) empieza uno de estos días. Lo copia cada campaña nueva; en una que ya está corriendo se cambia desde «Editar» en Vacaciones › Campaña.</p>
         </div>
 
         {tiposDeContrato.length > 0 && (

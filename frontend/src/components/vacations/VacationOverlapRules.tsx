@@ -26,6 +26,9 @@ const overlapSchema = z.object({
   description: z.string().optional(),
   isActive: z.boolean().default(true),
   useActiveContractSchedule: z.boolean().default(true),
+  // Quién elige primero en la campaña de goce (23/11/2026).
+  prioridad: z.enum(["ninguna", "antiguedad"]).default("ninguna"),
+  diasPorTurno: z.number({ invalid_type_error: "Poné los días de turno" }).int("Días enteros").min(1, "Al menos 1 día").max(30, "Hasta 30 días").default(3),
 });
 
 type OverlapFormData = z.infer<typeof overlapSchema>;
@@ -64,6 +67,8 @@ export const VacationOverlapRules: React.FC = () => {
       maxSimultaneousUsers: 1,
       isActive: true,
       useActiveContractSchedule: true,
+      prioridad: "ninguna",
+      diasPorTurno: 3,
     },
   });
 
@@ -283,6 +288,8 @@ export const VacationOverlapRules: React.FC = () => {
       description: "",
       isActive: true,
       useActiveContractSchedule: true,
+      prioridad: "ninguna",
+      diasPorTurno: 3,
     });
     setModalOpen(true);
   };
@@ -313,6 +320,8 @@ export const VacationOverlapRules: React.FC = () => {
       description: rule.description || "",
       isActive: rule.isActive,
       useActiveContractSchedule: rule.useActiveContractSchedule || false,
+      prioridad: rule.prioridad === "antiguedad" ? "antiguedad" : "ninguna",
+      diasPorTurno: rule.diasPorTurno || 3,
     });
     setModalOpen(true);
   };
@@ -330,6 +339,8 @@ export const VacationOverlapRules: React.FC = () => {
         description: data.description,
         isActive: data.isActive,
         useActiveContractSchedule: !!data.useActiveContractSchedule, // Ensure boolean
+        prioridad: data.prioridad,
+        diasPorTurno: data.diasPorTurno,
       };
 
       if (eligibleUsers.length > 0 && data.maxSimultaneousUsers > eligibleUsers.length) {
@@ -573,6 +584,11 @@ export const VacationOverlapRules: React.FC = () => {
                         )}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">{userCount} coincidentes</div>
+                      {rule.prioridad === "antiguedad" && (
+                        <div className="text-xs text-violet-700 dark:text-violet-300 font-medium" title="En la campaña de goce, la persona más antigua elige primero; cada una tiene estos días antes de que se le abra a la siguiente.">
+                          Eligen por antigüedad · turnos de {rule.diasPorTurno || 3} día(s)
+                        </div>
+                      )}
                     </div>
                   </td>
 
@@ -858,6 +874,27 @@ export const VacationOverlapRules: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Máximo de usuarios simultáneos</label>
             <input type="number" {...register("maxSimultaneousUsers", { valueAsNumber: true })} className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-700 dark:text-white" min={1} />
             {errors.maxSimultaneousUsers && <p className="text-xs text-red-500 mt-1">{errors.maxSimultaneousUsers.message}</p>}
+          </div>
+
+          {/* Quién elige primero en la campaña de goce, entre las personas que alcanza la regla. */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Quién elige primero (campaña de goce)</label>
+            <select {...register("prioridad")} className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-700 dark:text-white">
+              <option value="ninguna">Sin orden: la primera que pide</option>
+              <option value="antiguedad">Por antigüedad: la más antigua primero, por turnos</option>
+            </select>
+            {watch("prioridad") === "antiguedad" && (
+              <>
+                <div className="flex items-center gap-2">
+                  <input type="number" {...register("diasPorTurno", { valueAsNumber: true })} min={1} max={30} className="w-20 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-700 dark:text-white" />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">días de turno para cada persona</span>
+                </div>
+                {errors.diasPorTurno && <p className="text-xs text-red-500">{errors.diasPorTurno.message}</p>}
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Entre las personas que alcanza esta regla, elige primero la de más antigüedad. Cada una tiene estos días; pasado su turno, la siguiente puede elegir aunque la anterior no lo haya hecho (y antes, si las de adelante ya eligieron). Nadie pierde su plazo: sólo la prioridad. Se aplica también a la campaña que está corriendo.
+                </p>
+              </>
+            )}
           </div>
 
           <div>

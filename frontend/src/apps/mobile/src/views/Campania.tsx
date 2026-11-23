@@ -4,7 +4,7 @@ import { faCalendarAlt, faCheck, faCircleCheck, faClock, faFilePdf, faHourglassH
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { campaniasVacacionesAPI, errorDeCampania, type MiInvitacion, type Tramo } from "../../../../api/campaniasVacaciones";
 import { fechaCorta } from "@compartido/planVacaciones/fechas";
-import { ETIQUETA_ESTADO, OTORGADOS, contarDiasTramo, validarPropuesta } from "@compartido/vacaciones/campania";
+import { ETIQUETA_ESTADO, OTORGADOS, contarDiasTramo, normalizarDiasDeInicio, textoDiasDeInicio, validarPropuesta } from "@compartido/vacaciones/campania";
 import { getImageUrl } from "../../../../utils/imageHelpers";
 import SectionHeader from "../components/SectionHeader";
 import CalendarioVacaciones, { type ModoCalendario } from "../components/CalendarioVacaciones";
@@ -30,7 +30,7 @@ import { ViewType } from "../types";
  */
 
 const INFO =
-  "La empresa te invita a elegir tus vacaciones de la temporada dentro de la ventana, antes de la fecha límite.\n\nPodés tomarlas de una vez o dividirlas en tramos (cada uno de al menos el mínimo). Tu propuesta la aprueba tu supervisor, tu coordinador y RR.HH.; cuando se aprueba te llega el aviso por escrito y acusás recibo.\n\nSi no elegís a tiempo, la empresa te asigna un período continuo. Las vacaciones se gozan: no se pagan en lugar de tomarlas.";
+  "La empresa te invita a elegir tus vacaciones de la temporada dentro de la ventana, antes de la fecha límite.\n\nPodés tomarlas de una vez o dividirlas en tramos: en orden de fecha, cada uno de al menos el mínimo, salvo el último si te quedan menos. Si tenés menos días que el mínimo, van seguidos. Si en tu rol eligen por antigüedad, esperás tu turno. Tu propuesta la aprueba tu supervisor, tu coordinador y RR.HH.; cuando se aprueba te llega el aviso por escrito y acusás recibo.\n\nSi no elegís a tiempo, la empresa te asigna un período continuo. Las vacaciones se gozan: no se pagan en lugar de tomarlas.";
 
 const caja = "rounded-xl border bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/70";
 const TEXTO_STATUS: Record<string, string> = { pending: "Esperando aprobación", pre_approved: "Esperando a RR.HH.", approved: "Aprobada", delivered: "Aprobada", rejected: "Rechazada", cancelled: "Cancelada" };
@@ -72,7 +72,7 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
   const errores = useMemo(
     () =>
       datos && c && inv
-        ? validarPropuesta({ tramos: completos, diasDisponibles: datos.diasDisponibles, ventana: { desde: c.ventanaDesde, hasta: c.ventanaHasta }, ventanaPersona: (inv as any).ventanaPersona?.enabled ? (inv as any).ventanaPersona : null, hoy: datos.hoy, avisoDias: c.avisoMinimoDias, minPorTramo: c.minDiasPorTramo, diasCorridos })
+        ? validarPropuesta({ tramos: completos, diasDisponibles: datos.diasDisponibles, ventana: { desde: c.ventanaDesde, hasta: c.ventanaHasta }, ventanaPersona: (inv as any).ventanaPersona?.enabled ? (inv as any).ventanaPersona : null, hoy: datos.hoy, avisoDias: c.avisoMinimoDias, minPorTramo: c.minDiasPorTramo, diasCorridos, diasDeInicio: c.diasDeInicio })
         : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [datos, JSON.stringify(completos)],
@@ -145,10 +145,22 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
               </p>
             </div>
           )}
+          {/* Eligen por antigüedad en su rol: espera su turno (no pierde su plazo). */}
+          {datos.turno && !datos.turno.abierto && (
+            <div className="mt-3 rounded-lg bg-violet-50 p-3 dark:bg-violet-950/20">
+              <p className="flex items-center gap-2 text-sm font-semibold text-violet-700 dark:text-violet-300">
+                <FontAwesomeIcon icon={faHourglassHalf} />
+                Tu turno para elegir empieza el {fechaCorta(datos.turno.desde || "")}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                En tu rol eligen primero las personas con más antigüedad: sos la {datos.turno.orden}ª de {datos.turno.de}. Si las {datos.turno.esperando} que tenés adelante eligen antes, tu turno se abre antes. Tenés hasta el {fechaCorta(c.fechaLimite)} para elegir.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* El acuse de la invitación. */}
-        {!inv.acuseInvitacionAt && datos.puedeProponer && (
+        {!inv.acuseInvitacionAt && (datos.puedeProponer || (datos.turno && !datos.turno.abierto)) && (
           <button type="button" disabled={enviando} onClick={() => accion(() => campaniasVacacionesAPI.acusar(), "Registramos que recibiste la invitación.")} className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 py-3 text-sm font-bold text-primary active:scale-[0.99] disabled:opacity-50">
             <FontAwesomeIcon icon={faCircleCheck} /> Recibí la invitación
           </button>
@@ -229,7 +241,9 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
           <div className={caja}>
             <p className="mb-1 text-sm font-bold text-slate-900 dark:text-slate-100">Elegí tus fechas</p>
             <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-              Desde el {fechaCorta(desdeMinimo)} (hay que avisarte con {c.avisoMinimoDias} días) hasta el {fechaCorta(c.ventanaHasta)}. Si las dividís, cada parte de al menos {c.minDiasPorTramo} días.
+              Desde el {fechaCorta(desdeMinimo)} (hay que avisarte con {c.avisoMinimoDias} días) hasta el {fechaCorta(c.ventanaHasta)}.
+              {normalizarDiasDeInicio(c.diasDeInicio).length > 0 && <> Cada tramo empieza {textoDiasDeInicio(c.diasDeInicio)}.</>}
+              {datos.diasDisponibles < c.minDiasPorTramo ? <> Con {datos.diasDisponibles} días van seguidos, en un solo tramo.</> : <> Si las dividís, en orden de fecha cada parte de al menos {c.minDiasPorTramo} días (la última puede tener menos, si te quedan menos).</>}
             </p>
             <div className="space-y-3">
               {tramos.map((t, i) => (

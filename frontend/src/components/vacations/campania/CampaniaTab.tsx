@@ -5,9 +5,10 @@ import { faArrowLeft, faBell, faCheck, faCircleCheck, faCircleExclamation, faClo
 import { campaniasVacacionesAPI, errorDeCampania, type Alerta, type Campania, type EstadoVisible, type Invitacion, type Tablero, type VistaPreviaDeInvitacion } from "../../../api/campaniasVacaciones";
 import { vacationConfigAPI, type TipoContratoVacaciones } from "../../../api/vacationConfig";
 import { SelectorTiposContrato } from "./SelectorTiposContrato";
+import { SelectorDiasDeInicio } from "./SelectorDiasDeInicio";
 import { sweetAlert } from "../../../utils/sweetAlert";
 import { fechaCorta, sumarDias } from "@compartido/planVacaciones/fechas";
-import { ETIQUETA_ESTADO, contarDiasTramo, resumenDeInvitables } from "@compartido/vacaciones/campania";
+import { ETIQUETA_ESTADO, PUEDE_PROPONER, contarDiasTramo, estadoDelTurno, normalizarDiasDeInicio, resumenDeInvitables, textoDiasDeInicio } from "@compartido/vacaciones/campania";
 import { TablaConEncabezadoFijo } from "../../ui/TablaConEncabezadoFijo";
 import { Modal } from "../../ui/Modal";
 import { LoadingSpinner } from "../../ui/LoadingSpinner";
@@ -156,9 +157,9 @@ const ListaCampanias: React.FC<{ onAbrir: (id: string) => void }> = ({ onAbrir }
                     <button
                       type="button"
                       onClick={() => setEditando(c)}
-                      disabled={c.estado !== "lanzada"}
+                      disabled={c.estado === "cerrada"}
                       className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                      title={c.estado === "lanzada" ? "Editar: cambiar la fecha límite para elegir" : c.estado === "borrador" ? "En borrador la fecha límite todavía no existe: sale del plazo al lanzar" : "La campaña está cerrada"}
+                      title={c.estado === "cerrada" ? "La campaña está cerrada" : c.estado === "lanzada" ? "Editar: días en que pueden empezar y fecha límite para elegir" : "Editar: días en que pueden empezar"}
                     >
                       <FontAwesomeIcon icon={faEdit} />
                     </button>
@@ -170,7 +171,7 @@ const ListaCampanias: React.FC<{ onAbrir: (id: string) => void }> = ({ onAbrir }
         </TablaConEncabezadoFijo>
       )}
       {editando && (
-        <ModalFechaLimite
+        <ModalEditarCampania
           campania={editando}
           onCerrar={() => setEditando(null)}
           onGuardado={() => {
@@ -183,27 +184,42 @@ const ListaCampanias: React.FC<{ onAbrir: (id: string) => void }> = ({ onAbrir }
   );
 };
 
-/* ─────────────────────── Fecha límite ─────────────────────── */
+/* ─────────────────────── Editar campaña ─────────────────────── */
 
 /**
- * Cambiar la fecha límite para elegir de una campaña lanzada: la de la campaña y la de cada persona a la que todavía
- * le corre el plazo. De hoy en adelante y dejando lugar para asignar con el aviso dentro de la ventana. No avisa a nadie.
+ * EDITAR UNA CAMPAÑA (23/11/2026): los días de la semana en que pueden empezar las vacaciones (borrador o lanzada) y,
+ * en una lanzada, la fecha límite para elegir: la de la campaña y la de cada persona a la que todavía le corre el
+ * plazo, de hoy en adelante y dejando lugar para asignar con el aviso dentro de la ventana. No avisa a nadie.
  */
-const ModalFechaLimite: React.FC<{ campania: Campania; onCerrar: () => void; onGuardado: () => void }> = ({ campania: c, onCerrar, onGuardado }) => {
+const ModalEditarCampania: React.FC<{ campania: Campania; onCerrar: () => void; onGuardado: () => void }> = ({ campania: c, onCerrar, onGuardado }) => {
+  const lanzada = c.estado === "lanzada";
+  const diasAntes = normalizarDiasDeInicio(c.diasDeInicio);
+  const [dias, setDias] = useState<number[]>(diasAntes);
   const [fecha, setFecha] = useState(c.fechaLimite || "");
   const [guardando, setGuardando] = useState(false);
   const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
   const valida = /^\d{4}-\d{2}-\d{2}$/.test(fecha) && fecha >= hoy;
   const desde = valida ? sumarDias(fecha, c.avisoMinimoDias) : "";
   const entra = valida && desde <= c.ventanaHasta;
+  const cambiaDias = normalizarDiasDeInicio(dias).join(",") !== diasAntes.join(",");
+  const cambiaFecha = lanzada && fecha !== (c.fechaLimite || "");
   const guardar = async () => {
     setGuardando(true);
+    const hecho: string[] = [];
     try {
-      const r = await campaniasVacacionesAPI.cambiarFechaLimite(c._id, fecha);
-      sweetAlert.success("Listo", r.aplicado ? `Fecha límite al ${fechaCorta(r.nueva)} para ${r.invitaciones} persona(s). No se avisó a nadie.` : "No cambió nada: ya tenía esa fecha.");
+      if (cambiaDias) {
+        await campaniasVacacionesAPI.cambiarDiasDeInicio(c._id, dias);
+        hecho.push(`Las vacaciones empiezan ${textoDiasDeInicio(dias)}.`);
+      }
+      if (cambiaFecha) {
+        const r = await campaniasVacacionesAPI.cambiarFechaLimite(c._id, fecha);
+        if (r.aplicado) hecho.push(`Fecha límite al ${fechaCorta(r.nueva)} para ${r.invitaciones} persona(s).`);
+      }
+      sweetAlert.success("Listo", `${hecho.join(" ") || "No cambió nada."} No se avisó a nadie.`);
       onGuardado();
     } catch (e) {
-      sweetAlert.error("No se pudo cambiar la fecha límite", errorDeCampania(e));
+      sweetAlert.error(hecho.length ? `Se guardó una parte: ${hecho.join(" ")}` : "No se pudo guardar", errorDeCampania(e));
+      if (hecho.length) onGuardado();
     } finally {
       setGuardando(false);
     }
@@ -212,22 +228,33 @@ const ModalFechaLimite: React.FC<{ campania: Campania; onCerrar: () => void; onG
     <Modal
       isOpen
       onClose={onCerrar}
-      title="Cambiar la fecha límite para elegir"
-      subtitle={`${c.nombre} · hoy: hasta el ${c.fechaLimite ? fechaCorta(c.fechaLimite) : "—"}`}
-      size="sm"
+      title="Editar campaña"
+      subtitle={`${c.nombre} · ${TEXTO_CAMPANIA[c.estado].toLowerCase()}`}
+      size="md"
       footer={
         <>
           <button type="button" onClick={onCerrar} className="btn-secondary" disabled={guardando}>Cancelar</button>
-          <button type="button" onClick={() => void guardar()} className="btn-primary" disabled={!entra || guardando || fecha === c.fechaLimite}>{guardando ? "Guardando…" : "Cambiar"}</button>
+          <button type="button" onClick={() => void guardar()} className="btn-primary" disabled={guardando || (!cambiaDias && !cambiaFecha) || (cambiaFecha && !entra)}>{guardando ? "Guardando…" : "Guardar"}</button>
         </>
       }
     >
-      <div className="space-y-3 text-sm">
-        <input type="date" value={fecha} min={hoy} max={c.ventanaHasta} onChange={(e) => setFecha(e.target.value)} className="input-field w-full" />
-        <p className="text-xs text-gray-600 dark:text-gray-400">Cambia la de la campaña y la de cada persona a la que todavía le corre el plazo (las que ya tienen sus vacaciones otorgadas no se tocan). Queda en el historial de cada una. <strong>No se avisa a nadie.</strong></p>
-        {valida && entra && <p className="text-xs text-gray-600 dark:text-gray-400">A quien no elija, la empresa le asigna desde el {fechaCorta(desde)} (aviso de {c.avisoMinimoDias} días).</p>}
-        {valida && !entra && <p className="text-xs text-red-600">Con el aviso de {c.avisoMinimoDias} días, a quien no elija se le asignaría desde el {fechaCorta(desde)}, después del fin de la ventana ({fechaCorta(c.ventanaHasta)}).</p>}
-        {!valida && fecha !== "" && <p className="text-xs text-red-600">Tiene que ser de hoy en adelante.</p>}
+      <div className="space-y-5 text-sm">
+        <div className="space-y-2">
+          <p className="font-medium text-gray-800 dark:text-gray-200">Días en que pueden empezar las vacaciones</p>
+          <SelectorDiasDeInicio value={dias} onChange={setDias} disabled={guardando} />
+          <p className="text-xs text-gray-600 dark:text-gray-400">Vale para lo que se elija y se asigne desde ahora: lo ya propuesto u otorgado no se toca.</p>
+        </div>
+        {lanzada && (
+          <div className="space-y-2">
+            <p className="font-medium text-gray-800 dark:text-gray-200">Fecha límite para elegir <span className="font-normal text-gray-500">(hoy: hasta el {c.fechaLimite ? fechaCorta(c.fechaLimite) : "—"})</span></p>
+            <input type="date" value={fecha} min={hoy} max={c.ventanaHasta} onChange={(e) => setFecha(e.target.value)} className="input-field w-full" />
+            <p className="text-xs text-gray-600 dark:text-gray-400">Cambia la de la campaña y la de cada persona a la que todavía le corre el plazo (las que ya tienen sus vacaciones otorgadas no se tocan). Queda en el historial de cada una.</p>
+            {valida && entra && <p className="text-xs text-gray-600 dark:text-gray-400">A quien no elija, la empresa le asigna desde el {fechaCorta(desde)} (aviso de {c.avisoMinimoDias} días).</p>}
+            {valida && !entra && <p className="text-xs text-red-600">Con el aviso de {c.avisoMinimoDias} días, a quien no elija se le asignaría desde el {fechaCorta(desde)}, después del fin de la ventana ({fechaCorta(c.ventanaHasta)}).</p>}
+            {!valida && fecha !== "" && <p className="text-xs text-red-600">Tiene que ser de hoy en adelante.</p>}
+          </div>
+        )}
+        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">No se avisa a nadie.</p>
       </div>
     </Modal>
   );
@@ -306,6 +333,8 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
     }
   };
 
+  // El estado de cada invitación por id: para saber si las que alguien tiene adelante en su turno ya eligieron.
+  const estadoPorId = useMemo(() => new Map((datos?.invitaciones || []).map((i) => [i._id, i.estado])), [datos]);
   const filas = useMemo(() => (datos?.invitaciones || []).filter((i) => (!filtro || i.estadoVisible === filtro) && fuzzyMatch(i.nombre, busqueda.trim())), [datos, filtro, busqueda]);
   if (!datos) return <LoadingSpinner message="Cargando campaña..." />;
   const { campania: c, conteos } = datos;
@@ -368,11 +397,11 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{c.nombre}</h3>
         <span className={`inline-flex px-2 py-0.5 rounded text-xs font-bold ${CLASE_CAMPANIA[c.estado]}`}>{TEXTO_CAMPANIA[c.estado]}</span>
         <span className="text-sm text-gray-600 dark:text-gray-400">
-          Ventana {fechaCorta(c.ventanaDesde)} al {fechaCorta(c.ventanaHasta)} · aviso {c.avisoMinimoDias} días · tramo mínimo {c.minDiasPorTramo} · {c.fechaLimite ? `elegir hasta el ${fechaCorta(c.fechaLimite)}` : `plazo ${c.plazoParaDefinirDias} días desde el lanzamiento`}
+          Ventana {fechaCorta(c.ventanaDesde)} al {fechaCorta(c.ventanaHasta)} · aviso {c.avisoMinimoDias} días · tramo mínimo {c.minDiasPorTramo} · empiezan {textoDiasDeInicio(c.diasDeInicio)} · {c.fechaLimite ? `elegir hasta el ${fechaCorta(c.fechaLimite)}` : `plazo ${c.plazoParaDefinirDias} días desde el lanzamiento`}
         </span>
-        {c.estado === "lanzada" && (
-          <button type="button" onClick={() => setCambiandoLimite(true)} disabled={!!ocupado} className="text-xs text-blue-600 dark:text-blue-400 underline hover:no-underline disabled:opacity-50" title="Cambiar la fecha límite para elegir: la de la campaña y la de cada persona a la que todavía le corre el plazo">
-            cambiar fecha límite
+        {c.estado !== "cerrada" && (
+          <button type="button" onClick={() => setCambiandoLimite(true)} disabled={!!ocupado} className="text-xs text-blue-600 dark:text-blue-400 underline hover:no-underline disabled:opacity-50" title={c.estado === "lanzada" ? "Editar los días en que pueden empezar y la fecha límite para elegir" : "Editar los días en que pueden empezar"}>
+            editar
           </button>
         )}
       </div>
@@ -506,6 +535,16 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
                   <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap ${CLASE_ESTADO[i.estadoVisible]}`}>{i.etiquetaEstado}</span>
                   {i.rechazo?.motivo && <p className="mt-1 text-[11px] text-red-600 dark:text-red-400 max-w-[14rem]">{i.rechazo.motivo}</p>}
                   <p className="mt-1 text-[11px] text-gray-400 whitespace-nowrap">Límite {fechaCorta(i.fechaLimite)}</p>
+                  {i.turnos?.length && PUEDE_PROPONER.includes(i.estado)
+                    ? (() => {
+                        const t = estadoDelTurno(i.turnos, datos.hoy, (otra) => !PUEDE_PROPONER.includes(estadoPorId.get(otra) as any));
+                        return (
+                          <p className={`mt-1 text-[11px] whitespace-nowrap ${t.abierto ? "text-violet-600 dark:text-violet-300" : "text-amber-600 dark:text-amber-400"}`} title={`Eligen por antigüedad (${t.regla}). Su turno abre el ${fechaCorta(t.desde || "")}, o antes si ya eligieron las que tiene adelante.`}>
+                            Turno {t.orden} de {t.de} · {t.abierto ? "ya puede elegir" : `desde el ${fechaCorta(t.desde || "")}`}
+                          </p>
+                        );
+                      })()
+                    : null}
                 </td>
                 <td className="py-3 px-4 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{i.acuseInvitacionAt ? fechaHora(i.acuseInvitacionAt) : <span className="text-gray-400">—</span>}</td>
                 <td className="py-3 px-4 text-xs text-gray-700 dark:text-gray-300">
@@ -567,7 +606,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
 
       {editando && <ModalAsignacion campania={c} invitacion={editando} onCerrar={() => setEditando(null)} onGuardado={() => { setEditando(null); void cargar(); }} />}
       {cambiandoLimite && (
-        <ModalFechaLimite
+        <ModalEditarCampania
           campania={c}
           onCerrar={() => setCambiandoLimite(false)}
           onGuardado={() => {
