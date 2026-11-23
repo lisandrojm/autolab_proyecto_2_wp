@@ -194,6 +194,10 @@ const contractSchema = new Schema({
         type: new Schema({ nombre_proyecto: { type: String }, proyecto_id: { type: Number }, fecha_alta_contrato: { type: String } }, { _id: false }),
         default: undefined,
     },
+    creadoDesdeArca: {
+        type: new Schema({ el: Date, empleadoraCuit: String, inicio: String, fin: String, base: { type: new Schema({ userProjectId: String, posicion: Number }, { _id: false }) } }, { _id: false }),
+        default: undefined,
+    },
     areaShiftAssignments: [
         {
             areaId: { type: Schema.Types.ObjectId, ref: "Area" },

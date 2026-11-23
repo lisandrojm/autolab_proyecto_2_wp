@@ -516,6 +516,20 @@ interface IContract {
         proyecto_id?: number | null;
         fecha_alta_contrato?: string;
     } | null;
+    /**
+     * El contrato se creó para una relación VIVA de ARCA que no tenía contrato en WeProdu (script
+     * `contratosDesdeArca`, 23/11/2026): copia del último contrato con esa empleadora (`base`) y las fechas de ARCA.
+     */
+    creadoDesdeArca?: {
+        el?: Date;
+        empleadoraCuit?: string;
+        inicio?: string;
+        fin?: string | null;
+        base?: {
+            userProjectId?: string;
+            posicion?: number;
+        };
+    } | null;
     sinCuitValidacion?: {
         /** Documentación de respaldo cargada. Hace falta al menos una para poder marcar `validado`. */
         documentos: {

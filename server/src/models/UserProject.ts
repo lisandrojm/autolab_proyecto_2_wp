@@ -491,6 +491,11 @@ interface IContract {
    * copia del que tiene en ese otro proyecto. La tabla de equipo lo muestra como «Contrato de: X».
    */
   origenContrato?: { nombre_proyecto?: string; proyecto_id?: number | null; fecha_alta_contrato?: string } | null;
+  /**
+   * El contrato se creó para una relación VIVA de ARCA que no tenía contrato en WeProdu (script
+   * `contratosDesdeArca`, 23/11/2026): copia del último contrato con esa empleadora (`base`) y las fechas de ARCA.
+   */
+  creadoDesdeArca?: { el?: Date; empleadoraCuit?: string; inicio?: string; fin?: string | null; base?: { userProjectId?: string; posicion?: number } } | null;
   sinCuitValidacion?: {
     /** Documentación de respaldo cargada. Hace falta al menos una para poder marcar `validado`. */
     documentos: {
@@ -706,6 +711,10 @@ const contractSchema = new Schema<IContract>(
     origen: { type: String, enum: ["agregar_miembro"] },
     origenContrato: {
       type: new Schema({ nombre_proyecto: { type: String }, proyecto_id: { type: Number }, fecha_alta_contrato: { type: String } }, { _id: false }),
+      default: undefined,
+    },
+    creadoDesdeArca: {
+      type: new Schema({ el: Date, empleadoraCuit: String, inicio: String, fin: String, base: { type: new Schema({ userProjectId: String, posicion: Number }, { _id: false }) } }, { _id: false }),
       default: undefined,
     },
     areaShiftAssignments: [
