@@ -8,7 +8,9 @@ export type NavbarEventType =
   | "usersChanged"
   | "tasksChanged"
   /** Cambió la bandeja de Contratación (se aprobó o rechazó una solicitud): el menú recuenta. */
-  | "pendientesChanged";
+  | "pendientesChanged"
+  /** Se recalculó la lista de Bajas ARCA (se abrió, se sincronizó, se cargó un motivo): el menú vuelve a leer su número. */
+  | "bajasArcaChanged";
 
 export type ChangeAction = "create" | "update" | "delete";
 
@@ -29,6 +31,10 @@ const emitNavbarEvent = (eventType: NavbarEventType, detail: Partial<NavbarEvent
     } as NavbarEventDetail,
   });
   window.dispatchEvent(event);
+};
+
+export const emitBajasArcaChanged = () => {
+  emitNavbarEvent("bajasArcaChanged");
 };
 
 export const emitClientsChanged = (action: ChangeAction = "update", resourceId?: string) => {

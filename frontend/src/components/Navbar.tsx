@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { ClientSelector } from './ClientSelector';
 import { ClientContextMenu } from './ClientContextMenu';
@@ -430,15 +430,34 @@ export const MobileNavbar: React.FC = () => {
   }, [user, puedeAbrir]);
 
   /*
-    BAJAS ARCA (22/11/2026): el número es la suma de las situaciones 1 a 4 (lo que hay que hacer). La 5 —indeterminados
-    vigentes— es inventario y no cuenta. Son los conteos que el server deja guardados (cada corrida de las 06:00 y cada
-    vez que se abre la lista): no recalcula nada.
+    BAJAS ARCA (22/11/2026): el número es LA CANTIDAD EXACTA de la lista —todas las relaciones vivas en ARCA—, el
+    mismo que muestra la pantalla al lado del título (pedido del usuario; antes era sólo lo pendiente, que ahora va
+    en el tooltip). Y ES DINÁMICO: se vuelve a leer al navegar (con tope de frecuencia), apenas alguien recalcula la
+    lista (abrirla, sincronizar, cargar un motivo: `bajasArcaChanged`) y, si el server avisa que lo guardado estaba
+    viejo y lo está recalculando, otra vez a los segundos.
   */
-  const [bajasArca, setBajasArca] = useState<number | undefined>(undefined);
-  useEffect(() => {
-    if (!user || !puedeAbrir('/admin/arca-bajas')) return;
-    arcaOperacionesAPI.listaResumen().then((r) => setBajasArca(r.conteos?.pendientes ?? undefined)).catch(() => {});
-  }, [user, puedeAbrir]);
+  const [bajasArca, setBajasArca] = useState<{ total: number; pendientes: number } | undefined>(undefined);
+  const ultimaLecturaBajas = useRef(0);
+  const leerBajasArca = useCallback(
+    (forzar = false) => {
+      if (!user || !puedeAbrir('/admin/arca-bajas')) return;
+      if (!forzar && Date.now() - ultimaLecturaBajas.current < 30_000) return;
+      ultimaLecturaBajas.current = Date.now();
+      arcaOperacionesAPI
+        .listaResumen()
+        .then((r) => {
+          const c = r.conteos;
+          // Unos conteos guardados antes de que existiera el total: se arma con lo que traen.
+          setBajasArca(c ? { total: c.total ?? c.pendientes + c.s5 + (c.s6 ?? 0), pendientes: c.pendientes } : undefined);
+          // El server lo está recalculando en segundo plano (tarda unos segundos): se vuelve a leer una vez.
+          if (r.actualizando) window.setTimeout(() => leerBajasArca(true), 12_000);
+        })
+        .catch(() => {});
+    },
+    [user, puedeAbrir],
+  );
+  useEffect(() => { leerBajasArca(); }, [leerBajasArca, location.pathname]);
+  useEffect(() => createNavbarEventListener('bajasArcaChanged', () => leerBajasArca(true)), [leerBajasArca]);
 
   const menuItems = useMemo(() => {
     const isSuperAdminTenant = user?.tenantSlug === 'superadmin';
@@ -509,7 +528,7 @@ export const MobileNavbar: React.FC = () => {
       // Los contratos vencidos sin otro vigente en el proyecto: el acceso simple para renovarlos.
       if (puedeAbrir('/admin/renovaciones')) base.push({ permiso: 'admin_contracts:view', path: '/admin/renovaciones', icon: faRotateRight, label: 'Renovaciones', scope: 'global' });
       // Bajas ARCA: la lista de relaciones vivas en ARCA con su situación; el único lugar desde donde se da de baja.
-      if (puedeAbrir('/admin/arca-bajas')) base.push({ permiso: 'admin_contracts:view', path: '/admin/arca-bajas', icon: faLandmark, label: 'Bajas ARCA', scope: 'global', pendientes: bajasArca, title: bajasArca ? `Bajas ARCA: ${bajasArca} ${bajasArca === 1 ? 'relación' : 'relaciones'} para resolver` : undefined });
+      if (puedeAbrir('/admin/arca-bajas')) base.push({ permiso: 'admin_contracts:view', path: '/admin/arca-bajas', icon: faLandmark, label: 'Bajas ARCA', scope: 'global', pendientes: bajasArca?.total, title: bajasArca ? `Bajas ARCA: ${bajasArca.total} ${bajasArca.total === 1 ? 'relación viva' : 'relaciones vivas'} en ARCA · ${bajasArca.pendientes} para resolver (situaciones 1 a 4)` : undefined });
       // Las altas que se presentan solas a las 14 h del día de alta, con su cuenta regresiva.
       if (puedeAbrir('/admin/presentaciones-arca')) base.push({ permiso: 'admin_contracts:view', path: '/admin/presentaciones-arca', icon: faClock, label: 'A.R.C.A Altas Automáticas', scope: 'global' });
       if (puedeAbrir('/admin/descargas-arca')) base.push({ permiso: 'admin_contracts:view', path: '/admin/descargas-arca', icon: faFileArrowDown, label: 'A.R.C.A Descargas Automáticas', scope: 'global' });

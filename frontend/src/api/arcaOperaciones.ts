@@ -1,3 +1,4 @@
+import { emitBajasArcaChanged } from "../utils/navbarEvents";
 import axios from "./axiosConfig";
 import type { OperacionArcaPresentada } from "@compartido/arca/tiposArca";
 
@@ -312,10 +313,12 @@ export const arcaOperacionesAPI = {
   /** Bajas ARCA: la lista con la situación de cada relación viva, los conteos y qué cambió desde la corrida de las 06:00. No toca ARCA. */
   async lista(): Promise<ListaBajasArca> {
     const { data } = await axios.get("/arca/operaciones/lista");
+    // El server acaba de recalcular la lista y dejó los conteos: el menú los vuelve a leer ya.
+    emitBajasArcaChanged();
     return data;
   },
   /** Los conteos guardados de Bajas ARCA (barato: el número del menú). */
-  async listaResumen(): Promise<{ el: string | null; conteos: ConteosBajaArca | null }> {
+  async listaResumen(): Promise<{ el: string | null; conteos: ConteosBajaArca | null; actualizando?: boolean }> {
     const { data } = await axios.get("/arca/operaciones/lista/resumen");
     return data;
   },

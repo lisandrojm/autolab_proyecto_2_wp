@@ -9,7 +9,7 @@ import { enSecoForzado } from "../services/arca/corridaAltas.js";
 import { arrancarOperacionRelacion, corridaOperacionDe, detenerOperacion } from "../services/arca/corridaOperacionRelacion.js";
 import { OperacionInvalida, contextoDeOperacion, guardarMotivoDeBaja, planOperacion, situacionesDeBaja } from "../services/arca/operacionRelacion.js";
 import { CAMPOS_MODIFICABLES, ETIQUETA_CAMPO } from "../services/arca/reglasOperacionRelacion.js";
-import { guardadoBajasArca, listaBajasArcaConFoto } from "../services/arca/listaBajasArca.js";
+import { listaBajasArcaConFoto, resumenBajasArca } from "../services/arca/listaBajasArca.js";
 import { ModoNoPermitido, NOMBRE_MODO, TOPE_POR_CORRIDA, cambiarModo, guardadoDe, motivoParaNoElegir, previaDe, requisitosDe } from "../services/arca/presentacionBajasAutomatica.js";
 import { configSyncDe } from "../services/arca/sincronizacionRelacionesCronService.js";
 import { Tenant } from "../models/Tenant.js";
@@ -158,8 +158,8 @@ router.get("/lista", requireTenant, authenticateToken, permiso, async (req, res)
 /** GET /arca/operaciones/lista/resumen — los conteos guardados (barato: el número del menú). No recalcula. */
 router.get("/lista/resumen", requireTenant, authenticateToken, permiso, async (req, res) => {
     try {
-        const g = await guardadoBajasArca(req.tenantObjectId);
-        res.json({ el: g.actual?.el || null, conteos: g.actual?.conteos || null });
+        // Lo guardado, ya mismo; si está viejo se recalcula en segundo plano (`actualizando`) y el menú vuelve a pedir.
+        res.json(await resumenBajasArca(req.tenantObjectId));
     }
     catch (e) {
         errorDe(res, e);

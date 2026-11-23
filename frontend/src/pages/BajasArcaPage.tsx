@@ -275,7 +275,8 @@ export const BajasArcaPage: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 dark:border-gray-700">
           {([
-            { clave: "bajas", label: "Bajas", cantidad: c?.pendientes },
+            // El número de la pestaña es el TOTAL de la lista, el mismo del título y del menú. Lo pendiente va aparte, con su nombre.
+            { clave: "bajas", label: "Bajas", cantidad: lista?.filas.length },
             { clave: "operaciones", label: "Operaciones", cantidad: undefined },
           ] as { clave: Pestana; label: string; cantidad?: number }[]).map((p) => (
             <button
@@ -285,9 +286,22 @@ export const BajasArcaPage: React.FC = () => {
               className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${pestana === p.clave ? "border-blue-600 text-blue-700 dark:text-blue-300" : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
             >
               {p.label}
-              {p.cantidad !== undefined && <span title="Pendientes: la suma de las situaciones 1 a 4." className={`ml-2 px-1.5 py-0.5 rounded-full text-[11px] ${p.cantidad ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" : "bg-gray-100 text-gray-500 dark:bg-gray-800"}`}>{p.cantidad}</span>}
+              {p.cantidad !== undefined && <span title="Todas las relaciones vivas en ARCA." className="ml-2 px-1.5 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">{p.cantidad}</span>}
             </button>
           ))}
+          {/* LO PENDIENTE, con su nombre (un «8» suelto al lado del 108 no se entendía). Tocarlo prende o apaga el filtro. */}
+          {pestana === "bajas" && c && (
+            <button
+              type="button"
+              onClick={() => setSoloPendientes((v) => !v)}
+              aria-pressed={soloPendientes}
+              title={`Pendientes: las relaciones en las situaciones 1 a 4, las que hay que resolver. ${soloPendientes ? "Tocá para volver a ver todas." : "Tocá para ver sólo ésas."}`}
+              className={`ml-auto mb-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold transition-colors ${soloPendientes ? "bg-amber-500 text-white border-amber-500" : c.pendientes ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700" : "bg-gray-100 text-gray-500 border-gray-300 dark:bg-gray-800 dark:border-gray-600"}`}
+            >
+              {c.pendientes} {c.pendientes === 1 ? "pendiente" : "pendientes"}
+              <span className="font-normal opacity-80">(situaciones 1 a 4)</span>
+            </button>
+          )}
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}

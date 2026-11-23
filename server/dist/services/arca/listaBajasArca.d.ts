@@ -249,6 +249,18 @@ export declare const resumenDeConteos: (c: ConteosBajaArca) => string;
  * anterior, lo anota. Nunca tira.
  */
 export declare function guardarCorridaBajasArca(tenantId: Types.ObjectId | string): Promise<ConteosBajaArca | null>;
+/** Cada cuánto, como mucho, se recalculan los conteos para el menú cuando nadie abrió la lista. */
+export declare const MINUTOS_DE_VIGENCIA_DEL_RESUMEN = 5;
+/**
+ * LOS CONTEOS PARA EL MENÚ, QUE SE PONEN AL DÍA SOLOS. Devuelve enseguida lo guardado (no hace esperar al menú: la
+ * lista tarda unos segundos, la base está lejos) y, si tiene más de unos minutos, la recalcula en segundo plano y
+ * deja el resultado para el próximo pedido. Así el número sigue a los contratos aunque nadie abra Bajas ARCA.
+ */
+export declare function resumenBajasArca(tenantId: Types.ObjectId | string): Promise<{
+    el: string | null;
+    conteos: ConteosBajaArca | null;
+    actualizando: boolean;
+}>;
 /** La lista con lo guardado: lo que pide la pantalla. Deja los conteos de ahora para el menú. */
 export declare function listaBajasArcaConFoto(tenantId: Types.ObjectId | string): Promise<ListaBajasArca & {
     vivasEnEspejo: number;

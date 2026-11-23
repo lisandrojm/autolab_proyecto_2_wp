@@ -256,6 +256,27 @@ export async function guardarCorridaBajasArca(tenantId) {
         return null;
     }
 }
+/** Cada cuánto, como mucho, se recalculan los conteos para el menú cuando nadie abrió la lista. */
+export const MINUTOS_DE_VIGENCIA_DEL_RESUMEN = 5;
+const recalculando = new Set();
+/**
+ * LOS CONTEOS PARA EL MENÚ, QUE SE PONEN AL DÍA SOLOS. Devuelve enseguida lo guardado (no hace esperar al menú: la
+ * lista tarda unos segundos, la base está lejos) y, si tiene más de unos minutos, la recalcula en segundo plano y
+ * deja el resultado para el próximo pedido. Así el número sigue a los contratos aunque nadie abra Bajas ARCA.
+ */
+export async function resumenBajasArca(tenantId) {
+    const id = String(tenantId);
+    const g = await guardadoBajasArca(tenantId);
+    const viejo = !g.actual || Date.now() - new Date(g.actual.el).getTime() > MINUTOS_DE_VIGENCIA_DEL_RESUMEN * 60_000;
+    if (viejo && !recalculando.has(id)) {
+        recalculando.add(id);
+        void listaBajasArca(tenantId)
+            .then((l) => guardarConteosActuales(tenantId, l.conteos))
+            .catch((e) => console.error(`[bajas-arca] ${id}: no pude recalcular los conteos del menú:`, e?.message || e))
+            .finally(() => recalculando.delete(id));
+    }
+    return { el: g.actual?.el || null, conteos: g.actual?.conteos || null, actualizando: viejo };
+}
 /** La lista con lo guardado: lo que pide la pantalla. Deja los conteos de ahora para el menú. */
 export async function listaBajasArcaConFoto(tenantId) {
     const [lista, guardado] = await Promise.all([listaBajasArca(tenantId), guardadoBajasArca(tenantId)]);
