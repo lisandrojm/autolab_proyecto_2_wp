@@ -65,6 +65,10 @@ export interface FilaBajaArca {
   detalle: string;
   /** Advertencia visible en la fila y en el panel (la modalidad de directores, LRT). "" si ninguna. */
   advertencia: string;
+  /** El motivo de baja cargado en el contrato (`null` = sin motivo, o la relación no tiene un único contrato). */
+  motivoBaja: { codigo: string; descripcion: string; fechaTelegrama: string } | null;
+  /** Lo que falta para presentar la baja sin que nadie elija nada (situaciones 1 y 2; el telegrama de una renuncia, en todas). */
+  falta: "" | "motivo" | "telegrama";
   /** Con qué contrato abre el panel; `null` = modo «sin contrato». */
   contrato: { userProjectId: string; contratoKey: string | null; posicion: number } | null;
 }
@@ -98,6 +102,8 @@ export interface ListaBajasArca {
   conteos: ConteosBajaArca;
   /** Las relaciones vivas del espejo, contadas aparte: si no coincide con las filas, la lista tiene un error. */
   vivasEnEspejo: number;
+  /** La tabla de motivos de baja de ARCA, para cargar el del contrato desde la fila. */
+  situacionesBaja: Array<{ codigo: string; descripcion: string }>;
   /** La foto de la última corrida automática (06:00), si hubo. */
   corrida: { el: string; conteos: ConteosBajaArca } | null;
   /** Qué cambió entre esa foto y ahora. */
@@ -125,6 +131,9 @@ export interface ContratoOperableArca {
   baja: string;
   nombre_empresa_contrato: string;
   estadoContrato: string;
+  /** El motivo de baja cargado en el contrato y la fecha de telegrama: el panel los trae precargados. */
+  motivoBajaArca?: string;
+  fechaTelegramaBaja?: string;
   marcas: { alta: { resultado?: string; fecha?: string; cat?: string } | null; baja: OperacionArcaPresentada | null; modificacion: OperacionArcaPresentada | null; anulacion: OperacionArcaPresentada | null };
 }
 
@@ -228,6 +237,16 @@ export const arcaOperacionesAPI = {
   async relacion(ref: ReferenciaContratoArca): Promise<RelacionParaOperar> {
     const sinContrato = !ref.userProjectId && ref.relacion ? { relCuit: ref.relacion.empleadoraCuit, relCuil: ref.relacion.cuil, relInicio: ref.relacion.fechaInicio } : {};
     const { data } = await axios.get("/arca/operaciones/relacion", { params: { userProjectId: ref.userProjectId || undefined, contratoKey: ref.contratoKey || undefined, contractIndex: ref.contratoKey ? undefined : ref.contractIndex ?? undefined, ...sinContrato } });
+    return data;
+  },
+  /** Guarda en el contrato el motivo de baja (código de ARCA) y, sólo si es renuncia, la fecha de telegrama. No toca ARCA. */
+  async guardarMotivoBaja(ref: ReferenciaContratoArca, datos: { motivo: string; fechaTelegrama: string }): Promise<{ motivoBajaArca: string; fechaTelegramaBaja: string }> {
+    const { data } = await axios.put("/arca/operaciones/motivo-baja", { ...ref, ...datos });
+    return data;
+  },
+  /** La tabla de motivos de baja de ARCA (para el formulario del contrato). */
+  async situacionesBaja(): Promise<Array<{ codigo: string; descripcion: string }>> {
+    const { data } = await axios.get("/arca/operaciones/situaciones-baja");
     return data;
   },
   /** Bajas ARCA: la lista con la situación de cada relación viva, los conteos y qué cambió desde la corrida de las 06:00. No toca ARCA. */

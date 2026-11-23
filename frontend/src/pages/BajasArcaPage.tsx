@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileExcel, faLandmark, faSpinner, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { faFileExcel, faLandmark, faPen, faSpinner, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { PageLayout } from "../components/ui/PageLayout";
 import { LoadingSpinner } from "../components/ui/LoadingSpinner";
 import { TablaConEncabezadoFijo } from "../components/ui/TablaConEncabezadoFijo";
@@ -15,6 +15,8 @@ import { OperacionesArcaHistorial } from "../components/arca/OperacionesArcaHist
 import { OperacionArcaModal } from "../components/contratos/OperacionArcaModal";
 import { fechaHoraCorta as fechaHora, hayMovimientos, MovimientosBajasArca as Movimientos, resumenDeConteos } from "../components/arca/MovimientosBajasArca";
 import { TIPOS_DE_RELACION } from "@compartido/arca/modalidadArca";
+import { TEXTO_FALTA } from "@compartido/arca/motivoBaja";
+import { MotivoBajaModal } from "../components/arca/MotivoBaja";
 import { arcaOperacionesAPI, SITUACIONES_BAJA_ARCA, type ConteosBajaArca, type EnWeproduBajaArca, type FilaBajaArca, type ListaBajasArca, type MotivoBloqueoBajaArca, type ReferenciaContratoArca, type SituacionBajaArca } from "../api/arcaOperaciones";
 
 /*
@@ -40,6 +42,9 @@ import { arcaOperacionesAPI, SITUACIONES_BAJA_ARCA, type ConteosBajaArca, type E
    - PAGINADA (50 por página, `ui/Paginador`): la lista está entera en memoria, así que el buscador, los filtros y
      el orden trabajan siempre sobre el total y lo que se recorta es lo que se dibuja. El número entre paréntesis
      del título es el total de la lista (con filtros, cuántas coinciden); lo pendiente está en la pestaña y el menú.
+   - EL MOTIVO DE BAJA vive en el contrato (`compartido/arca/motivoBaja.ts`): la fila lo muestra y deja cargarlo
+     («Motivo»), sin tocar ARCA. En las situaciones 1 y 2, lo que falta para presentar se ve como «Falta el motivo» o
+     «Falta la fecha de telegrama», con su filtro. Nunca hay un motivo por defecto.
    - El botón «Excel» exporta TODO lo filtrado, en el orden elegido, no sólo la página: por eso es propio y no el de
      la tabla, que baja lo que está dibujado.
    - «Operaciones» (lo que se mandó y su resultado) es la segunda pestaña.
@@ -80,6 +85,13 @@ const EN_WEPRODU: { value: EnWeproduBajaArca; label: string }[] = [
   { value: "sin_ficha", label: "Persona sin ficha" },
 ];
 
+const FILTRO_MOTIVO = [
+  { value: "falta_motivo", label: "Falta el motivo" },
+  { value: "falta_telegrama", label: "Falta la fecha de telegrama" },
+  { value: "con_motivo", label: "Con motivo cargado" },
+];
+const pasaMotivo = (f: FilaBajaArca, filtro: string) => !filtro || (filtro === "falta_motivo" ? f.falta === "motivo" : filtro === "falta_telegrama" ? f.falta === "telegrama" : !!f.motivoBaja);
+
 const conteoDe = (c: ConteosBajaArca, s: SituacionBajaArca) => c[`s${s}` as "s1"] ?? 0;
 const porNombre = (a: FilterOption, b: FilterOption) => a.label.localeCompare(b.label, "es");
 
@@ -102,6 +114,9 @@ export const BajasArcaPage: React.FC = () => {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [soloPendientes, setSoloPendientes] = useState(false);
+  const [filtroMotivo, setFiltroMotivo] = useState("");
+  /** La fila a la que se le está cargando el motivo de baja. */
+  const [motivoDe, setMotivoDe] = useState<FilaBajaArca | null>(null);
   const [pagina, setPagina] = useState(1);
   const [exportando, setExportando] = useState(false);
 
@@ -154,9 +169,10 @@ export const BajasArcaPage: React.FC = () => {
           (!enWeprodu || f.enWeprodu === enWeprodu) &&
           (!desde || f.inicio >= desde) &&
           (!hasta || f.inicio <= hasta) &&
-          (!soloPendientes || esPendiente(f)),
+          (!soloPendientes || esPendiente(f)) &&
+          pasaMotivo(f, filtroMotivo),
       ),
-    [todas, q, qDigitos, empresas, tipos, situaciones, proyectos, enWeprodu, desde, hasta, soloPendientes],
+    [todas, q, qDigitos, empresas, tipos, situaciones, proyectos, enWeprodu, desde, hasta, soloPendientes, filtroMotivo],
   );
   // Sin orden elegido queda el del server: situación 1 a 6 (las bloqueadas al final) y días desde el fin.
   const { ordenados: filas, orden, alternar } = useOrdenTabla(filtradas, {
@@ -167,7 +183,7 @@ export const BajasArcaPage: React.FC = () => {
   });
 
   // Cambiar la búsqueda, un filtro o el orden vuelve a la primera página: lo que se buscaba puede no estar en la que se miraba.
-  useEffect(() => { setPagina(1); }, [q, qDigitos, empresas, tipos, situaciones, proyectos, enWeprodu, desde, hasta, soloPendientes, orden]);
+  useEffect(() => { setPagina(1); }, [q, qDigitos, empresas, tipos, situaciones, proyectos, enWeprodu, desde, hasta, soloPendientes, filtroMotivo, orden]);
   const paginas = Math.max(1, Math.ceil(filas.length / POR_PAGINA));
   // Si la lista se achicó (una sincronización, una baja), no quedarse en una página que ya no existe.
   const paginaActual = Math.min(pagina, paginas);
@@ -179,7 +195,7 @@ export const BajasArcaPage: React.FC = () => {
     setExportando(true);
     try {
       const XLSX = await import("xlsx");
-      const encabezado = ["Persona", "CUIL", "Empresa", "Tipo", "Tipo de contrato en WeProdu", "Proyecto", "Modalidad en ARCA", "Inicio", "Fin en ARCA", "Fin en WeProdu", "Días desde el fin", "Situación", "Detalle", "Advertencia"];
+      const encabezado = ["Persona", "CUIL", "Empresa", "Tipo", "Tipo de contrato en WeProdu", "Proyecto", "Modalidad en ARCA", "Inicio", "Fin en ARCA", "Fin en WeProdu", "Días desde el fin", "Situación", "Detalle", "Advertencia", "Motivo de baja", "Fecha de telegrama", "Falta para presentar"];
       const fecha = (iso: string) => (iso ? fechaCorta(iso) : "");
       const cuerpo = filas.map((f) => [
         f.persona,
@@ -196,6 +212,9 @@ export const BajasArcaPage: React.FC = () => {
         f.situacion !== null ? `${f.situacion}. ${SITUACIONES_BAJA_ARCA[f.situacion]}` : f.bloqueo?.etiqueta || "",
         f.bloqueo ? f.bloqueo.texto : f.detalle,
         f.advertencia,
+        f.motivoBaja ? `${f.motivoBaja.codigo}${f.motivoBaja.descripcion ? ` · ${f.motivoBaja.descripcion}` : ""}` : "",
+        fecha(f.motivoBaja?.fechaTelegrama || ""),
+        f.falta ? TEXTO_FALTA[f.falta] : "",
       ]);
       const hoja = XLSX.utils.aoa_to_sheet([encabezado, ...cuerpo]);
       hoja["!cols"] = encabezado.map((h, i) => ({ wch: Math.min(60, Math.max(h.length, ...cuerpo.map((r) => String(r[i] ?? "").length)) + 2) }));
@@ -214,7 +233,7 @@ export const BajasArcaPage: React.FC = () => {
     setOperando(f.contrato ? { userProjectId: f.contrato.userProjectId, contratoKey: f.contrato.contratoKey, contractIndex: f.contrato.posicion } : { userProjectId: "", relacion: { empleadoraCuit: f.empleadoraCuit, cuil: f.cuil, fechaInicio: f.inicio } });
 
   const c = lista?.conteos;
-  const hayFiltros = !!q || empresas.length > 0 || tipos.length > 0 || situaciones.length > 0 || proyectos.length > 0 || !!enWeprodu || !!desde || !!hasta || soloPendientes;
+  const hayFiltros = !!q || empresas.length > 0 || tipos.length > 0 || situaciones.length > 0 || proyectos.length > 0 || !!enWeprodu || !!desde || !!hasta || soloPendientes || !!filtroMotivo;
   const noCoincide = !!lista && lista.filas.length !== lista.vivasEnEspejo;
   const bloqueadasDelPie = c ? BLOQUEOS.filter((m) => c.bloqueadas?.[m]).map((m) => `${ETIQUETA_BLOQUEO[m].toLowerCase()}: ${c.bloqueadas![m]}`) : [];
 
@@ -284,7 +303,10 @@ export const BajasArcaPage: React.FC = () => {
               onSearchChange={setBuscar}
               searchPlaceholder="Buscar por persona, CUIL o empresa…"
               dateFilter={{ label: "Fecha de inicio", startDate: desde, endDate: hasta, onStartDateChange: setDesde, onEndDateChange: setHasta }}
-              selectFilters={[{ label: "Contrato en WeProdu", value: enWeprodu, onChange: setEnWeprodu, options: EN_WEPRODU, placeholder: "Con o sin contrato" }]}
+              selectFilters={[
+                { label: "Contrato en WeProdu", value: enWeprodu, onChange: setEnWeprodu, options: EN_WEPRODU, placeholder: "Con o sin contrato" },
+                { label: "Motivo de baja", value: filtroMotivo, onChange: setFiltroMotivo, options: FILTRO_MOTIVO, placeholder: "Con o sin motivo" },
+              ]}
               multiSelectFilters={[
                 { label: "Empresa", values: empresas, onChange: setEmpresas, options: opciones.empresas, placeholder: "Todas las empresas" },
                 { label: "Tipo de contrato", values: tipos, onChange: setTipos, options: opciones.tipos, placeholder: "Todos los tipos" },
@@ -391,6 +413,16 @@ export const BajasArcaPage: React.FC = () => {
                           )}
                           {f.detalle && <span className={`block mt-1 text-xs ${f.sinFicha ? "font-semibold text-purple-700 dark:text-purple-300" : "text-gray-500"}`}>{f.detalle}</span>}
                           {f.bloqueo && <span className="block mt-1 text-xs text-gray-600 dark:text-gray-400 max-w-xs">{f.bloqueo.texto}</span>}
+                          {f.motivoBaja && (
+                            <span className="block mt-1 text-xs text-gray-600 dark:text-gray-400 max-w-xs" title="El motivo de baja cargado en el contrato: con él se presenta la baja en ARCA.">
+                              Motivo: {f.motivoBaja.codigo}{f.motivoBaja.descripcion ? ` · ${f.motivoBaja.descripcion}` : ""}{f.motivoBaja.fechaTelegrama ? ` · telegrama del ${fechaCorta(f.motivoBaja.fechaTelegrama)}` : ""}
+                            </span>
+                          )}
+                          {f.falta && (
+                            <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded border border-red-300 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800 text-[11px] font-semibold whitespace-nowrap" title="Sin esto la baja no se puede presentar sin que alguien lo elija. Cargalo con «Motivo».">
+                              {TEXTO_FALTA[f.falta]}
+                            </span>
+                          )}
                           {f.advertencia && (
                             <span className="mt-1 flex items-start gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300 max-w-xs">
                               <FontAwesomeIcon icon={faTriangleExclamation} className="h-3.5 w-3.5 mt-0.5 shrink-0" />
@@ -399,6 +431,13 @@ export const BajasArcaPage: React.FC = () => {
                           )}
                         </td>
                         <td className={`${td} col-acciones`}>
+                          {/* El motivo se guarda en el contrato: hace falta UN contrato, y que la baja no se haya mandado ya. */}
+                          {f.contrato && !f.bloqueo && f.situacion !== 3 && (
+                            <button type="button" onClick={() => setMotivoDe(f)} title="Cargar o cambiar el motivo de baja del contrato (y la fecha de telegrama, si es renuncia). No manda nada a ARCA." className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-semibold whitespace-nowrap transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+                              <FontAwesomeIcon icon={faPen} className="h-3 w-3" />
+                              Motivo
+                            </button>
+                          )}
                           {/* El `title` va en el span: un botón deshabilitado no muestra el suyo. */}
                           <span title={ayudaDelBoton} className="inline-block">
                             <button
@@ -445,6 +484,17 @@ export const BajasArcaPage: React.FC = () => {
         )}
       </div>
 
+      {motivoDe?.contrato && (
+        <MotivoBajaModal
+          onClose={() => setMotivoDe(null)}
+          onGuardado={() => void cargar()}
+          ref_={{ userProjectId: motivoDe.contrato.userProjectId, contratoKey: motivoDe.contrato.contratoKey, contractIndex: motivoDe.contrato.posicion }}
+          titulo={`${motivoDe.persona} · ${motivoDe.tipoContrato}${motivoDe.proyecto ? ` (${motivoDe.proyecto})` : ""}`}
+          situaciones={lista?.situacionesBaja || []}
+          motivoInicial={motivoDe.motivoBaja?.codigo || ""}
+          telegramaInicial={motivoDe.motivoBaja?.fechaTelegrama || ""}
+        />
+      )}
       {operando && <OperacionArcaModal isOpen onClose={() => setOperando(null)} ref_={operando} onHecho={() => void cargar()} />}
     </PageLayout>
   );

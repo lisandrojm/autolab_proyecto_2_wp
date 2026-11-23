@@ -81,6 +81,9 @@ export const OperacionArcaModal: React.FC<Props> = ({ isOpen, onClose, ref_, zIn
       const r = await arcaOperacionesAPI.relacion(ref_);
       setInfo(r);
       setFechaFin(r.contrato.baja || "");
+      // El motivo de baja y la fecha de telegrama cargados en el contrato vienen puestos; se pueden cambiar acá para este envío.
+      setSituacion(r.contrato.motivoBajaArca || "");
+      setTelegrama(r.contrato.fechaTelegramaBaja || "");
       // Si la relación ya tiene baja (mandada desde acá o en el espejo), lo natural es anular la baja; si no, el alta.
       setQue(r.contrato.marcas.baja?.resultado === "presentada" || r.espejo?.fin ? "baja" : "alta");
     } catch (e: any) {
@@ -324,6 +327,7 @@ export const OperacionArcaModal: React.FC<Props> = ({ isOpen, onClose, ref_, zIn
                       </option>
                     ))}
                   </select>
+                  {!!c.motivoBajaArca && situacion === c.motivoBajaArca && <p className="text-xs text-gray-500 mt-1">Precargado del contrato.</p>}
                   {info.situacionesBaja.length === 0 && <p className="text-xs text-amber-700 mt-1">La tabla de situaciones de baja está vacía: sembrala con `npm run arca:situaciones-baja` en el servidor.</p>}
                 </label>
                 <label className="block">

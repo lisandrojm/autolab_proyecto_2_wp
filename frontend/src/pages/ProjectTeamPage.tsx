@@ -57,6 +57,8 @@ import { releasesAPI, Release } from '../api/release';
 import { companiesAPI, Company } from '../api/companies';
 import { CampoPuestoConDefaultDelServer } from '../components/contratos/CampoPuestoDesempenado';
 import { createSimpleCatalogApi, SimpleCatalogItem } from '../api/simpleCatalog';
+import { arcaOperacionesAPI } from '../api/arcaOperaciones';
+import { CamposMotivoBaja, type SituacionDeBaja } from '../components/arca/MotivoBaja';
 import { Area, areasAPI } from '../api/areas';
 import { userProjectsAPI } from '../api/userProjects';
 import { shiftsAPI, Shift } from '../api/shifts';
@@ -488,6 +490,14 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
     fecha_alta_contrato: new Date().toISOString().split('T')[0],
     fecha_baja_contrato: '',
     /*
+      El motivo de baja para ARCA y la fecha de telegrama (sólo con renuncia), junto a la fecha de baja (22/11/2026).
+      `motivoBajaTocado` no se guarda: dice si alguien los cambió en ESTE formulario. Sólo entonces viajan; si no, el
+      server conserva los del contrato (se pueden haber cargado desde Bajas ARCA y este formulario no los vio).
+    */
+    motivoBajaArca: '',
+    fechaTelegramaBaja: '',
+    motivoBajaTocado: false,
+    /*
       Los días del contrato. CAMPO PROPIO, separado de `cantidad_jornadas_laborales`.
 
       Ese otro son las jornadas TOTALES del contrato (22, 30…) y es lo que multiplica al sueldo por
@@ -568,6 +578,11 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       .list()
       .then((l) => setModalidades([...l].sort((a, b) => Number(a.orden ?? 999) - Number(b.orden ?? 999) || String(a.name).localeCompare(String(b.name)))))
       .catch(() => setModalidades([]));
+  }, []);
+  /** La tabla de motivos de baja de ARCA, para el motivo del contrato (junto a la fecha de baja). */
+  const [situacionesBaja, setSituacionesBaja] = useState<SituacionDeBaja[]>([]);
+  useEffect(() => {
+    arcaOperacionesAPI.situacionesBaja().then(setSituacionesBaja).catch(() => setSituacionesBaja([]));
   }, []);
   const modalidadPorDefectoId = String(modalidades.find((m) => m.esDefault === true && m.activo !== false)?._id || modalidades.find((m) => m.activo !== false)?._id || '');
   const [detailRefsLoaded, setDetailRefsLoaded] = useState(false);
@@ -2722,6 +2737,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
       // Renovar deja el período vacío: es lo único que cambia, y precargar el vencido invita a guardarlo igual.
       fecha_alta_contrato: sinFechasPrecargadas ? '' : formatDate(lastContract?.fecha_alta_contrato) || formatDate(new Date()),
       fecha_baja_contrato: sinFechasPrecargadas ? '' : formatDate(lastContract?.fecha_baja_contrato),
+      // El motivo de baja es del contrato que se edita: uno nuevo (o una renovación) arranca sin motivo.
+      motivoBajaArca: editaContratoExistente ? String((lastContract as any)?.motivoBajaArca || '') : '',
+      fechaTelegramaBaja: editaContratoExistente ? String((lastContract as any)?.fechaTelegramaBaja || '') : '',
+      motivoBajaTocado: false,
       cantidad_jornadas_laborales: lastContract?.cantidad_jornadas_laborales || 5,
       // Los contratos anteriores a este campo no traen días: se abren vacíos y hay que elegirlos,
       // en vez de inventar una semana que nadie declaró.
@@ -3018,6 +3037,10 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
           ...wizardData,
           ...(renovando && textoCustomDeRenovacion.current && textoCustomDeRenovacion.current.nombreContrato === wizardData.nombre_contrato ? { contenidoCustomContrato: textoCustomDeRenovacion.current.texto } : {}),
           fecha_baja_contrato: esTiempoIndeterminado && !porDiasSueltosWizard ? '' : wizardData.fecha_baja_contrato,
+          // El motivo de baja sólo viaja si se tocó acá: sin tocarlo, el server deja el que tenga el contrato.
+          motivoBajaTocado: undefined,
+          motivoBajaArca: wizardData.motivoBajaTocado ? wizardData.motivoBajaArca : undefined,
+          fechaTelegramaBaja: wizardData.motivoBajaTocado ? wizardData.fechaTelegramaBaja : undefined,
           // Sólo con días sueltos: si el tipo pasó a ser por período, los días que hubiera quedan afuera.
           fechas_trabajadas: porDiasSueltosWizard ? wizardData.fechas_trabajadas : [],
           areaId: primaryAreaId,
@@ -4941,6 +4964,22 @@ export const ProjectTeamPage: React.FC<{ soloAprobacion?: AprobacionEnModal }> =
                       </label>
                       <input type="date" className="input-field w-full text-sm" value={wizardData.fecha_baja_contrato} onChange={(e) => setWizardData((prev) => ({ ...prev, fecha_baja_contrato: e.target.value }))} />
                     </div>
+                  )}
+                  {/*
+                    EL MOTIVO DE BAJA PARA ARCA, junto a la fecha de baja. Optativo y sin valor por defecto (tampoco
+                    «vencimiento de plazo»): lo elige una persona. La fecha de telegrama sólo aparece con renuncia.
+                  */}
+                  {!(contratos.find((c) => c._id === wizardData.contrato_id)?.data.esTiempoIndeterminado ?? false) && !!wizardData.fecha_baja_contrato && (
+                    <>
+                      <CamposMotivoBaja
+                        situaciones={situacionesBaja}
+                        motivo={wizardData.motivoBajaArca}
+                        telegrama={wizardData.fechaTelegramaBaja}
+                        onCambiar={(v) => setWizardData((prev) => ({ ...prev, motivoBajaArca: v.motivo, fechaTelegramaBaja: v.telegrama, motivoBajaTocado: true }))}
+                        claseEtiqueta="block text-xs font-bold text-gray-400 uppercase tracking-widest ml-1"
+                      />
+                      <p className="md:col-span-2 -mt-2 text-xs text-gray-500">Optativo. Es el motivo con el que se presenta la baja en ARCA cuando el contrato termina; no se completa solo. También se carga desde Gestión › Bajas ARCA.</p>
+                    </>
                   )}
                 </div>
                 )}
