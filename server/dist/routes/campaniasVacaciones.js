@@ -3,7 +3,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { ErrorVacacion } from "../services/vacaciones/crearVacacion.js";
-import { acusarInvitacion, acusarOtorgamiento, cancelarPropuesta, cargarCampania, cerrarCampania, confirmarAsignaciones, crearCampania, editarAsignacion, guardarTiposContrato, lanzarCampania, listarCampanias, miInvitacion, proponerFechas, recordar, reporteCsv, sugerirAsignaciones, tablero, vistaPreviaDeInvitacion, } from "../services/vacaciones/campaniaVacaciones.js";
+import { acusarInvitacion, acusarOtorgamiento, cancelarPropuesta, cargarCampania, cerrarCampania, cambiarFechaLimite, confirmarAsignaciones, crearCampania, editarAsignacion, guardarTiposContrato, lanzarCampania, listarCampanias, miInvitacion, proponerFechas, recordar, reporteCsv, sugerirAsignaciones, tablero, vistaPreviaDeInvitacion, } from "../services/vacaciones/campaniaVacaciones.js";
 const manejar = (fn) => async (req, res) => {
     try {
         const r = await fn(req, res);
@@ -47,6 +47,8 @@ campaniasVacacionesRoutes.post("/:id/recordatorio", soloAdmin, manejar(async (re
 campaniasVacacionesRoutes.post("/:id/sugerir-asignaciones", soloAdmin, manejar(async (req) => sugerirAsignaciones(tid(req), String(req.params.id))));
 campaniasVacacionesRoutes.put("/:id/invitaciones/:invId/asignacion", soloAdmin, manejar(async (req) => editarAsignacion(tid(req), String(req.params.id), String(req.params.invId), { desde: String(req.body?.desde || ""), hasta: String(req.body?.hasta || "") }, yo(req))));
 campaniasVacacionesRoutes.post("/:id/confirmar-asignaciones", soloAdmin, manejar(async (req) => confirmarAsignaciones(tid(req), String(req.params.id), Array.isArray(req.body?.invitacionIds) ? req.body.invitacionIds.map(String) : undefined, yo(req))));
+// Cambiar la fecha límite para elegir de una campaña lanzada (la de la campaña y la de cada invitación a la que le corre el plazo).
+campaniasVacacionesRoutes.put("/:id/fecha-limite", soloAdmin, manejar(async (req) => cambiarFechaLimite(tid(req), String(req.params.id), req.body?.fechaLimite, yo(req))));
 campaniasVacacionesRoutes.post("/:id/cerrar", soloAdmin, manejar(async (req) => cerrarCampania(tid(req), String(req.params.id), yo(req))));
 campaniasVacacionesRoutes.get("/:id/reporte.csv", soloAdmin, manejar(async (req, res) => {
     const { nombre, csv } = await reporteCsv(tid(req), String(req.params.id));

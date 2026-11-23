@@ -405,6 +405,42 @@ export async function confirmarAsignaciones(tid, id, invIds, actorId) {
     return { confirmadas, fallas };
 }
 /** No se cierra «perdiendo» días: todos otorgados con aviso, o sin días que otorgar (art. 157). */
+/** Las invitaciones a las que les corre el plazo: todavía pueden elegir, o ya propusieron y nadie aprobó. */
+const CORRE_EL_PLAZO = [...PUEDE_PROPONER, "propuso_fechas"];
+/**
+ * CAMBIAR LA FECHA LÍMITE PARA ELEGIR de una campaña lanzada (23/11/2026): la de la campaña y la de cada invitación a
+ * la que todavía le corre el plazo (las otorgadas, vencidas o resueltas no se tocan). Cada una deja el cambio en su
+ * historial. No avisa a nadie: mandar el aviso es otra decisión.
+ *
+ * Tiene que ser de hoy en adelante, y dejar lugar para que la empresa asigne con el aviso por escrito dentro de la
+ * ventana (fecha + aviso ≤ fin de la ventana), que es lo que pasa con quien no elige. `enSeco`: sólo cuenta.
+ */
+export async function cambiarFechaLimite(tid, id, nueva, actorId, opciones = {}) {
+    const c = await cargarCampania(tid, id);
+    if (c.estado !== "lanzada")
+        throw new ErrorVacacion(c.estado === "borrador" ? "La campaña todavía no se lanzó: el plazo corre desde el lanzamiento." : "La campaña está cerrada.");
+    const fecha = String(nueva ?? "").trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || Number.isNaN(Date.parse(`${fecha}T00:00:00Z`)))
+        throw new ErrorVacacion("La fecha límite tiene que ser una fecha (aaaa-mm-dd).");
+    const hoy = hoyArgentina();
+    if (fecha < hoy)
+        throw new ErrorVacacion(`La fecha límite no puede ser anterior a hoy (${fechaCorta(hoy)}).`);
+    const primeraAsignacion = sumarDias(fecha, c.avisoMinimoDias);
+    if (primeraAsignacion > c.ventanaHasta)
+        throw new ErrorVacacion(`Con el aviso de ${c.avisoMinimoDias} días, a quien no elija la empresa le asignaría desde el ${fechaCorta(primeraAsignacion)}, después del fin de la ventana (${fechaCorta(c.ventanaHasta)}).`);
+    const anterior = c.fechaLimite || "";
+    const filtro = { tenantId: tid, campaniaId: c._id, estado: { $in: CORRE_EL_PLAZO } };
+    const afectadas = await InvitacionVacaciones.countDocuments(filtro);
+    const resumen = { campania: c.nombre, anterior, nueva: fecha, invitaciones: afectadas, primeraAsignacion };
+    if (opciones.enSeco || anterior === fecha)
+        return { ...resumen, aplicado: false };
+    const detalle = `La fecha límite para elegir pasó ${anterior ? `del ${fechaCorta(anterior)} ` : ""}al ${fechaCorta(fecha)}.`;
+    await InvitacionVacaciones.updateMany(filtro, { $set: { fechaLimite: fecha }, $push: { historial: paso("plazo_cambiado", actorId, detalle) } });
+    c.fechaLimite = fecha;
+    await c.save();
+    console.log(`[campania-vacaciones] ${String(c._id)}: ${detalle} (${afectadas} invitaciones)`);
+    return { ...resumen, aplicado: true };
+}
 export async function cerrarCampania(tid, id, actorId) {
     const c = await cargarCampania(tid, id);
     if (c.estado === "cerrada")

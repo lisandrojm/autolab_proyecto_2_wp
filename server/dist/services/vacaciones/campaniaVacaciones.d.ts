@@ -91,7 +91,24 @@ export declare function confirmarAsignaciones(tid: Types.ObjectId, id: string, i
         error: string;
     }[];
 }>;
-/** No se cierra «perdiendo» días: todos otorgados con aviso, o sin días que otorgar (art. 157). */
+/**
+ * CAMBIAR LA FECHA LÍMITE PARA ELEGIR de una campaña lanzada (23/11/2026): la de la campaña y la de cada invitación a
+ * la que todavía le corre el plazo (las otorgadas, vencidas o resueltas no se tocan). Cada una deja el cambio en su
+ * historial. No avisa a nadie: mandar el aviso es otra decisión.
+ *
+ * Tiene que ser de hoy en adelante, y dejar lugar para que la empresa asigne con el aviso por escrito dentro de la
+ * ventana (fecha + aviso ≤ fin de la ventana), que es lo que pasa con quien no elige. `enSeco`: sólo cuenta.
+ */
+export declare function cambiarFechaLimite(tid: Types.ObjectId, id: string, nueva: unknown, actorId: string | null, opciones?: {
+    enSeco?: boolean;
+}): Promise<{
+    aplicado: boolean;
+    campania: string;
+    anterior: string;
+    nueva: string;
+    invitaciones: number;
+    primeraAsignacion: string;
+}>;
 export declare function cerrarCampania(tid: Types.ObjectId, id: string, actorId: string): Promise<import("mongoose").Document<unknown, {}, ICampaniaVacaciones, {}, {}> & ICampaniaVacaciones & Required<{
     _id: Types.ObjectId;
 }> & {
