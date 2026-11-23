@@ -241,7 +241,7 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
           <div className={caja}>
             <p className="mb-1 text-sm font-bold text-slate-900 dark:text-slate-100">Elegí tus fechas</p>
             <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-              Desde el {fechaCorta(desdeMinimo)} (hay que avisarte con {c.avisoMinimoDias} días) hasta el {fechaCorta(c.ventanaHasta)}.
+              Desde el {fechaCorta(desdeMinimo)} hasta el {fechaCorta(c.ventanaHasta)}.
               {normalizarDiasDeInicio(c.diasDeInicio).length > 0 && <> Cada tramo empieza {textoDiasDeInicio(c.diasDeInicio)}.</>}
               {datos.diasDisponibles < c.minDiasPorTramo ? <> Con {datos.diasDisponibles} días van seguidos, en un solo tramo.</> : <> Si las dividís, en orden de fecha cada parte de al menos {c.minDiasPorTramo} días (la última puede tener menos, si te quedan menos).</>}
             </p>
