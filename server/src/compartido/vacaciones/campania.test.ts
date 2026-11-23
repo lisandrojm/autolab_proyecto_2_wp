@@ -119,10 +119,10 @@ test("tipos: la lista se guarda como ids del catálogo, sin repetir y ordenada; 
   assert.deepEqual(normalizarTiposContrato("1,2"), []);
 });
 
-test("tipos: sin selección se invita a todos (la población de siempre)", () => {
+test("tipos: sin selección se invita a todos los tipos, pero nunca a quien no tiene contrato vigente", () => {
   assert.equal(motivoDeNoInvitar({ tipoContratoId: INDETERMINADO, seleccion: [], deshabilitados: [] }), null);
-  assert.equal(motivoDeNoInvitar({ tipoContratoId: null, seleccion: [], deshabilitados: [] }), null);
-  assert.deepEqual(resumenDeInvitables(POBLACION, [], []), { invitar: 79, tipoDeshabilitado: 0, tipoNoIncluido: 0, sinContrato: 0 });
+  assert.equal(motivoDeNoInvitar({ tipoContratoId: null, seleccion: [], deshabilitados: [] }), "sin_contrato_vigente");
+  assert.deepEqual(resumenDeInvitables(POBLACION, [], []), { invitar: 75, tipoDeshabilitado: 0, tipoNoIncluido: 0, sinContrato: 4 });
 });
 
 test("tipos: con un solo tipo, sólo quien tiene el contrato vigente de cómputo de ese tipo", () => {
@@ -139,7 +139,7 @@ test("tipos: uno deshabilitado nunca se invita, ni tildado ni sin selección", (
   assert.equal(motivoDeNoInvitar({ tipoContratoId: EVENTUAL, seleccion: [EVENTUAL], deshabilitados: [EVENTUAL] }), "tipo_deshabilitado");
   assert.equal(motivoDeNoInvitar({ tipoContratoId: EVENTUAL, seleccion: [], deshabilitados: [EVENTUAL] }), "tipo_deshabilitado");
   assert.deepEqual(resumenDeInvitables(POBLACION, [INDETERMINADO, EVENTUAL], [EVENTUAL]), { invitar: 40, tipoDeshabilitado: 10, tipoNoIncluido: 25, sinContrato: 4 });
-  assert.deepEqual(resumenDeInvitables(POBLACION, [], [EVENTUAL]), { invitar: 69, tipoDeshabilitado: 10, tipoNoIncluido: 0, sinContrato: 0 });
+  assert.deepEqual(resumenDeInvitables(POBLACION, [], [EVENTUAL]), { invitar: 65, tipoDeshabilitado: 10, tipoNoIncluido: 0, sinContrato: 4 });
 });
 
 test("tipos: la vista previa da lo mismo que decidir persona por persona (lo que hace el lanzamiento)", () => {

@@ -19,6 +19,7 @@ const campaniaSchema = new Schema({
         }, { _id: false }),
         default: null,
     },
+    cambiosDeTipos: [{ _id: false, at: Date, porUserId: { type: Schema.Types.ObjectId, ref: "User" }, tipos: [String], detalle: String }],
     estado: { type: String, enum: ["borrador", "lanzada", "cerrada"], default: "borrador" },
     creadaPor: { type: Schema.Types.ObjectId, ref: "User" },
     lanzadaPor: { type: Schema.Types.ObjectId, ref: "User" },
@@ -39,7 +40,7 @@ const invitacionSchema = new Schema({
     fechaLimite: { type: String, required: true },
     estado: {
         type: String,
-        enum: ["pendiente_de_invitar", "invitado", "acuso_recibo", "propuso_fechas", "rechazada", "aprobado_notificado", "vencido_sin_definir", "asignado_por_empresa_notificado", "sin_dias_pendientes"],
+        enum: ["pendiente_de_invitar", "invitado", "acuso_recibo", "propuso_fechas", "rechazada", "aprobado_notificado", "vencido_sin_definir", "asignado_por_empresa_notificado", "sin_dias_pendientes", "retirada"],
         default: "pendiente_de_invitar",
     },
     invitadoAt: { type: Date },

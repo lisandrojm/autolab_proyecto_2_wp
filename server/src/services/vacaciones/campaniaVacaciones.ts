@@ -12,6 +12,7 @@ import {
   OTORGADOS,
   PUEDE_PROPONER,
   RESUELTOS,
+  TEXTO_MOTIVO_NO_INVITAR,
   alertasDeInvitacion,
   alertasDeLanzamiento,
   contarDiasTramo,
@@ -27,6 +28,7 @@ import {
   validarOtorgamiento,
   validarPropuesta,
   ventanaDeLaTemporada,
+  type MotivoNoInvitar,
   type PoblacionPorTipo,
   type Tramo,
 } from "../../compartido/vacaciones/campania.js";
@@ -129,6 +131,7 @@ export async function listarCampanias(tid: Types.ObjectId): Promise<any[]> {
   const porCampania = new Map<string, { total: number; resueltas: number }>();
   for (const r of conteos) {
     const k = String(r._id.c);
+    if (r._id.e === "retirada") continue;
     const acc = porCampania.get(k) || { total: 0, resueltas: 0 };
     acc.total += r.n;
     if (RESUELTOS.includes(r._id.e)) acc.resueltas += r.n;
@@ -149,6 +152,7 @@ export async function tablero(tid: Types.ObjectId, id: string): Promise<{ campan
   const idsVac = invitaciones.flatMap((i) => [...(i.tramos || []).map((t) => t.vacationId), i.asignacion?.vacationId]).filter(Boolean);
   const vacaciones = idsVac.length ? await Vacation.find({ _id: { $in: idsVac } }).select("status startDate endDate daysRequested pdfPreAprobacionUrl signatureStatus").lean() : [];
   const vacPorId = new Map(vacaciones.map((v: any) => [String(v._id), v]));
+  const tipoDeUsuario = await tiposDeContratoDe(tid, c.anio, invitaciones.map((i) => String(i.userId)));
   const conteos: Record<string, number> = {};
   const filas = invitaciones.map((i) => {
     const visible = estadoVisible(i.estado, fechasDe(i), hoy);
@@ -157,6 +161,7 @@ export async function tablero(tid: Types.ObjectId, id: string): Promise<{ campan
       ...i,
       estadoVisible: visible,
       etiquetaEstado: ETIQUETA_ESTADO[visible],
+      tipoContrato: tipoDeUsuario.get(String(i.userId)) ?? null,
       alertas: alertasDeInvitacion({ estado: i.estado, fechaLimite: i.fechaLimite, acuseInvitacionAt: i.acuseInvitacionAt, invitadoAt: i.invitadoAt, tramos: i.tramos, hoy, avisoDias: c.avisoMinimoDias }),
       tramos: (i.tramos || []).map((t) => ({ ...t, vacacion: t.vacationId ? vacPorId.get(String(t.vacationId)) || null : null })),
       vacacionAsignada: i.asignacion?.vacationId ? vacPorId.get(String(i.asignacion.vacationId)) || null : null,
@@ -192,6 +197,22 @@ async function personasConDias(tid: Types.ObjectId, c: ICampaniaVacaciones) {
 }
 
 const tipoDe = (f: any): string | null => f.antiguedad?.contratoVigenteComputo?.tipoContratoId ?? null;
+
+/**
+ * EL TIPO DE CONTRATO DE CADA PERSONA, HOY (23/11/2026): el de su contrato vigente en la empresa de cómputo, con el
+ * nombre del catálogo, o null si no tiene contrato vigente en WeProdu. Es lo mismo que mira la invitación.
+ */
+async function tiposDeContratoDe(tid: Types.ObjectId, anio: number, userIds: string[]): Promise<Map<string, { id: string; nombre: string; empresa: string } | null>> {
+  const out = new Map<string, { id: string; nombre: string; empresa: string } | null>();
+  if (userIds.length === 0) return out;
+  const [saldos, cat] = await Promise.all([saldosDeVacaciones(String(tid), tid, anio, { userIds }), cargarCatalogoDeTipos()]);
+  const nombre = new Map(cat.tipos.map((t) => [String(t._id), t.name]));
+  for (const f of saldos as any[]) {
+    const ct = f.antiguedad?.contratoVigenteComputo;
+    out.set(String(f.userId), ct?.tipoContratoId ? { id: ct.tipoContratoId, nombre: nombre.get(ct.tipoContratoId) || ct.nombre || "", empresa: ct.empresa || "" } : null);
+  }
+  return out;
+}
 
 
 /** Cuánta gente con días hay en cada tipo de contrato del catálogo (con su nombre del catálogo). */
@@ -265,6 +286,24 @@ export async function lanzarCampania(tid: Types.ObjectId, id: string, actorId: s
   });
   if (seleccion.length > 0 && nuevos.length === 0 && conDias.length > 0) throw new ErrorVacacion("Con los tipos de contrato elegidos no se invitaría a nadie: revisá la selección antes de lanzar.");
 
+  const docs = await invitar(tid, c, nuevos, config, actorId, limite);
+
+  c.estado = "lanzada";
+  c.lanzamiento = { todosLosTipos: seleccion.length === 0, tipos: agruparPorTipo(nuevos, new Map(cat.tipos.map((t) => [t._id, t.name]))).porTipo.map((t) => ({ id: t.id, nombre: t.nombre, invitadas: t.personas })), excluidas };
+  c.fechaLimite = limite;
+  c.lanzadaPor = oid(actorId);
+  c.lanzadaAt = new Date();
+  await c.save();
+  // Quién elige primero, por antigüedad, en las reglas de solapamiento que lo piden.
+  await recalcularTurnos(tid, c).catch((e) => console.error("[CAMPANIA] turnos al lanzar:", e?.message || e));
+  await avisarInvitacion(tid, c, docs, limite);
+
+  const diasMasLargo = docs.reduce((m, d) => Math.max(m, d.diasDisponibles), 0);
+  return { invitadas: docs.length, excluidas, alertas: alertasDeLanzamiento({ hoy, plazoDias: c.plazoParaDefinirDias, avisoDias: c.avisoMinimoDias, ventana: ventanaDe(c), diasMasLargo }) };
+}
+
+/** Crea las invitaciones de esas personas (con sus días, cómo se cuentan y su ventana), con fecha límite `limite`. */
+async function invitar(tid: Types.ObjectId, c: ICampaniaVacaciones, nuevos: any[], config: any, actorId: string, limite: string) {
   const perfiles = nuevos.length ? await UserProfile.find({ tenantId: tid, userId: { $in: nuevos.map((f: any) => oid(f.userId)) } }).select("userId department").lean() : [];
   const areaDe = new Map(perfiles.map((p: any) => [String(p.userId), p.department || null]));
   const configs = await configsEfectivasEnLote(tid, nuevos.map((f: any) => ({ userId: String(f.userId), projectIds: f.projectIds || [], areaNombre: areaDe.get(String(f.userId)) })), config || {});
@@ -287,17 +326,11 @@ export async function lanzarCampania(tid: Types.ObjectId, id: string, actorId: s
     };
   });
   if (docs.length) await InvitacionVacaciones.insertMany(docs, { ordered: false });
+  return docs;
+}
 
-  c.estado = "lanzada";
-  c.lanzamiento = { todosLosTipos: seleccion.length === 0, tipos: agruparPorTipo(nuevos, new Map(cat.tipos.map((t) => [t._id, t.name]))).porTipo.map((t) => ({ id: t.id, nombre: t.nombre, invitadas: t.personas })), excluidas };
-  c.fechaLimite = limite;
-  c.lanzadaPor = oid(actorId);
-  c.lanzadaAt = new Date();
-  await c.save();
-  // Quién elige primero, por antigüedad, en las reglas de solapamiento que lo piden.
-  await recalcularTurnos(tid, c).catch((e) => console.error("[CAMPANIA] turnos al lanzar:", e?.message || e));
-
-  // Un aviso por persona (cada uno dice sus días): un solo insertMany, no 1.500 viajes a la base.
+/** El aviso de la invitación, uno por persona (cada uno dice sus días): un solo insertMany, no 1.500 viajes a la base. */
+async function avisarInvitacion(tid: Types.ObjectId, c: ICampaniaVacaciones, docs: { userId: Types.ObjectId; diasDisponibles: number }[], limite: string) {
   if (docs.length) {
     await Notification.insertMany(
       docs.map((d) => ({
@@ -312,9 +345,91 @@ export async function lanzarCampania(tid: Types.ObjectId, id: string, actorId: s
       { ordered: false },
     ).catch((e) => console.error("[CAMPANIA] avisos de invitación:", e?.message || e));
   }
+}
 
-  const diasMasLargo = docs.reduce((m, d) => Math.max(m, d.diasDisponibles), 0);
-  return { invitadas: docs.length, excluidas, alertas: alertasDeLanzamiento({ hoy, plazoDias: c.plazoParaDefinirDias, avisoDias: c.avisoMinimoDias, ventana: ventanaDe(c), diasMasLargo }) };
+/**
+ * CAMBIAR LOS TIPOS DE CONTRATO DE UNA CAMPAÑA (23/11/2026). En borrador sólo se guarda la selección. Lanzada, se
+ * aplica a la gente:
+ *  · A quien todavía puede elegir (invitada, acusó recibo, rechazada) y queda fuera de la selección, se le retira la
+ *    invitación («Fuera de la campaña»): no elige acá ni se le asigna. Queda en su historial por qué.
+ *  · A quien ya propuso, tiene otorgadas o venció, no se la toca aunque su tipo quede afuera: está en camino.
+ *  · Una retirada que vuelve a entrar vuelve a estar invitada; quien tiene días y nunca se invitó, se invita (con la
+ *    fecha límite de la campaña y su aviso en la app).
+ * `usarGlobal`: toma la selección de Configuración › Campaña de goce. `enSeco`: sólo cuenta. Las retiradas no reciben
+ * ningún aviso.
+ */
+export async function cambiarTiposContrato(tid: Types.ObjectId, id: string, body: { tiposContratoInvitar?: unknown; usarGlobal?: boolean; enSeco?: boolean }, actorId: string | null) {
+  const c = await cargarCampania(tid, id);
+  if (c.estado === "cerrada") throw new ErrorVacacion("La campaña está cerrada.");
+  const config: any = await VacationConfig.findOne({ tenantId: tid }).lean();
+  if (body.tiposContratoInvitar !== undefined && body.tiposContratoInvitar !== null && !Array.isArray(body.tiposContratoInvitar)) throw new ErrorVacacion("Los tipos de contrato tienen que ser una lista.");
+  const seleccion = body.usarGlobal ? normalizarConfigCampania(config?.campania).tiposContratoInvitar : normalizarTiposContrato(body.tiposContratoInvitar);
+  if (c.estado === "borrador") {
+    if (body.enSeco) return { tiposContratoInvitar: seleccion, aplicado: false };
+    c.tiposContratoInvitar = seleccion;
+    await c.save();
+    return { tiposContratoInvitar: seleccion, aplicado: true };
+  }
+
+  const cat = await cargarCatalogoDeTipos();
+  const nombreTipo = new Map(cat.tipos.map((t) => [String(t._id), t.name]));
+  const deshabilitados = await tiposSinVacacionesDe(config?.contractRules, cat);
+  const saldos: any[] = await saldosDeVacaciones(String(tid), tid, c.anio);
+  const fila = new Map(saldos.map((f) => [String(f.userId), f]));
+  const motivoDe = (userId: string): MotivoNoInvitar | null => {
+    const f = fila.get(userId);
+    return motivoDeNoInvitar({ tipoContratoId: f ? tipoDe(f) : null, seleccion, deshabilitados });
+  };
+  const invitaciones = await InvitacionVacaciones.find({ tenantId: tid, campaniaId: c._id }).select("_id userId estado acuseInvitacionAt nombre").lean();
+  const ya = new Set(invitaciones.map((i) => String(i.userId)));
+
+  const retirar = new Map<MotivoNoInvitar, any[]>();
+  const volver: any[] = [];
+  let conservan = 0;
+  for (const i of invitaciones as any[]) {
+    const motivo = motivoDe(String(i.userId));
+    if (PUEDE_PROPONER.includes(i.estado)) {
+      if (motivo) retirar.set(motivo, [...(retirar.get(motivo) || []), i]);
+    } else if (i.estado === "retirada") {
+      const f = fila.get(String(i.userId));
+      if (!motivo && f?.metadata?.activo === true && Number(f.display?.available) > 0) volver.push(i);
+    } else if (motivo) conservan++;
+  }
+  const nuevos = saldos.filter((f) => f.metadata?.activo === true && Number(f.display?.available) > 0 && !ya.has(String(f.userId)) && !motivoDe(String(f.userId)));
+  const nRetirar = [...retirar.values()].reduce((s, l) => s + l.length, 0);
+  const quedan = invitaciones.filter((i: any) => i.estado !== "retirada").length - nRetirar + volver.length + nuevos.length;
+  const previa = {
+    tiposContratoInvitar: seleccion,
+    tipos: seleccion.length ? seleccion.map((t) => nombreTipo.get(t) || t) : ["todos los habilitados"],
+    retirar: nRetirar,
+    retirarPorMotivo: Object.fromEntries([...retirar.entries()].map(([m, l]) => [m, l.length])) as Partial<Record<MotivoNoInvitar, number>>,
+    vuelven: volver.length,
+    invitar: nuevos.length,
+    conservan,
+    quedan,
+  };
+  if (body.enSeco) return { ...previa, aplicado: false };
+
+  const hoy = hoyArgentina();
+  const limite = c.fechaLimite && c.fechaLimite >= hoy ? c.fechaLimite : calcularFechaLimite(hoy, c.plazoParaDefinirDias);
+  for (const [motivo, lista] of retirar) {
+    await InvitacionVacaciones.updateMany({ _id: { $in: lista.map((i) => i._id) } }, { $set: { estado: "retirada" }, $push: { historial: paso("retirada", actorId, `Fuera de la campaña: ${TEXTO_MOTIVO_NO_INVITAR[motivo]}.`) } } as any);
+  }
+  const conAcuse = volver.filter((i) => i.acuseInvitacionAt).map((i) => i._id);
+  const sinAcuse = volver.filter((i) => !i.acuseInvitacionAt).map((i) => i._id);
+  const vuelve = paso("reinvitada", actorId, `Vuelve a la campaña: su tipo de contrato entra en la selección. Elige hasta el ${fechaCorta(limite)}.`);
+  if (conAcuse.length) await InvitacionVacaciones.updateMany({ _id: { $in: conAcuse } }, { $set: { estado: "acuso_recibo", fechaLimite: limite }, $push: { historial: vuelve } } as any);
+  if (sinAcuse.length) await InvitacionVacaciones.updateMany({ _id: { $in: sinAcuse } }, { $set: { estado: "invitado", fechaLimite: limite }, $push: { historial: vuelve } } as any);
+  const docs = await invitar(tid, c, nuevos, config, actorId || String(c.lanzadaPor || ""), limite);
+
+  const detalle = `Tipos: ${previa.tipos.join(", ")}. Fuera de la campaña ${nRetirar}, vuelven ${volver.length}, invitadas nuevas ${docs.length}; ${conservan} fuera de la selección siguen porque ya eligieron o vencieron.`;
+  c.tiposContratoInvitar = seleccion;
+  c.cambiosDeTipos = [...(c.cambiosDeTipos || []), { at: new Date(), porUserId: actorId && Types.ObjectId.isValid(actorId) ? oid(actorId) : null, tipos: seleccion, detalle }];
+  await c.save();
+  await recalcularTurnos(tid, c).catch((e) => console.error("[CAMPANIA] turnos al cambiar tipos:", e?.message || e));
+  await avisarInvitacion(tid, c, docs, limite);
+  console.log(`[campania-vacaciones] ${String(c._id)}: ${detalle}`);
+  return { ...previa, invitar: docs.length, aplicado: true };
 }
 
 /** Recordatorio a quienes todavía pueden elegir (no propusieron). `automatico`: lo manda el barrido. */
@@ -547,7 +662,7 @@ export async function reporteCsv(tid: Types.ObjectId, id: string): Promise<{ nom
 async function invitacionActivaDe(tid: Types.ObjectId, userId: string) {
   const lanzadas = await CampaniaVacaciones.find({ tenantId: tid, estado: "lanzada" }).select("_id").lean();
   if (lanzadas.length === 0) return null;
-  return InvitacionVacaciones.findOne({ tenantId: tid, userId: oid(userId), campaniaId: { $in: lanzadas.map((c) => c._id) } }).sort({ createdAt: -1 });
+  return InvitacionVacaciones.findOne({ tenantId: tid, userId: oid(userId), campaniaId: { $in: lanzadas.map((c) => c._id) }, estado: { $ne: "retirada" } }).sort({ createdAt: -1 });
 }
 
 /** Lo que muestra «Elegí tus vacaciones» en la app. `pendienteDeAccion`: si la tarjeta tiene que estar a la vista. */

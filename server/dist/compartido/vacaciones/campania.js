@@ -83,14 +83,20 @@ export function normalizarTiposContrato(v) {
 }
 /** Por qué NO se invita a alguien, o `null` si se la invita. `tipoContratoId` null = sin contrato vigente de cómputo. */
 export function motivoDeNoInvitar(o) {
-    if (o.tipoContratoId !== null && o.deshabilitados.includes(o.tipoContratoId))
+    if (o.tipoContratoId === null)
+        return "sin_contrato_vigente";
+    if (o.deshabilitados.includes(o.tipoContratoId))
         return "tipo_deshabilitado";
     if (o.seleccion.length === 0)
         return null;
-    if (o.tipoContratoId === null)
-        return "sin_contrato_vigente";
     return o.seleccion.includes(o.tipoContratoId) ? null : "tipo_no_incluido";
 }
+/** Por qué alguien queda fuera de la campaña, para el historial y la pantalla. */
+export const TEXTO_MOTIVO_NO_INVITAR = {
+    tipo_deshabilitado: "su tipo de contrato no tiene vacaciones (Visibilidad por tipo de Contrato)",
+    tipo_no_incluido: "su tipo de contrato no está entre los que invita la campaña",
+    sin_contrato_vigente: "no tiene contrato vigente en WeProdu",
+};
 /**
  * LA VISTA PREVIA: cuántas personas se invitarían con esa selección, y cuántas quedan afuera por cada
  * motivo. Es `motivoDeNoInvitar` aplicado grupo por grupo, así que coincide con lo que hace el lanzamiento.
@@ -334,6 +340,7 @@ export const ETIQUETA_ESTADO = {
     vencido_sin_definir: "Venció sin elegir",
     asignado_por_empresa_notificado: "Asignadas por la empresa",
     sin_dias_pendientes: "Sin días pendientes",
+    retirada: "Fuera de la campaña",
     en_curso: "De vacaciones",
     gozado: "Gozadas",
 };
@@ -342,7 +349,7 @@ export const PUEDE_PROPONER = ["invitado", "acuso_recibo", "rechazada"];
 /** Los estados ya otorgados: hubo aviso por escrito. */
 export const OTORGADOS = ["aprobado_notificado", "asignado_por_empresa_notificado"];
 /** Los que ya no deben nada: otorgados con aviso, o sin días que otorgar. La campaña cierra sólo si todos están acá. */
-export const RESUELTOS = [...OTORGADOS, "sin_dias_pendientes"];
+export const RESUELTOS = [...OTORGADOS, "sin_dias_pendientes", "retirada"];
 /** «En curso» o «gozado» según las fechas otorgadas; si no, el estado guardado. */
 export function estadoVisible(estado, otorgados, hoy) {
     if (!OTORGADOS.includes(estado) || otorgados.length === 0)

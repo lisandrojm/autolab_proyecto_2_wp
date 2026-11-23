@@ -50,6 +50,8 @@ export interface ICampaniaVacaciones extends Document {
     tipos: { id: string | number; nombre: string; invitadas: number }[];
     excluidas: { tipoDeshabilitado: number; tipoNoIncluido: number; sinContrato: number };
   } | null;
+  /** Los cambios de tipos de contrato con la campaña lanzada (23/11/2026): quién, cuándo y qué movió. */
+  cambiosDeTipos?: { at: Date; porUserId?: Types.ObjectId | null; tipos: string[]; detalle: string }[];
   estado: EstadoCampania;
   creadaPor?: Types.ObjectId;
   lanzadaPor?: Types.ObjectId;
@@ -84,6 +86,7 @@ const campaniaSchema = new Schema<ICampaniaVacaciones>(
       ),
       default: null,
     },
+    cambiosDeTipos: [{ _id: false, at: Date, porUserId: { type: Schema.Types.ObjectId, ref: "User" }, tipos: [String], detalle: String }],
     estado: { type: String, enum: ["borrador", "lanzada", "cerrada"], default: "borrador" },
     creadaPor: { type: Schema.Types.ObjectId, ref: "User" },
     lanzadaPor: { type: Schema.Types.ObjectId, ref: "User" },
@@ -158,7 +161,7 @@ const invitacionSchema = new Schema<IInvitacionVacaciones>(
     fechaLimite: { type: String, required: true },
     estado: {
       type: String,
-      enum: ["pendiente_de_invitar", "invitado", "acuso_recibo", "propuso_fechas", "rechazada", "aprobado_notificado", "vencido_sin_definir", "asignado_por_empresa_notificado", "sin_dias_pendientes"],
+      enum: ["pendiente_de_invitar", "invitado", "acuso_recibo", "propuso_fechas", "rechazada", "aprobado_notificado", "vencido_sin_definir", "asignado_por_empresa_notificado", "sin_dias_pendientes", "retirada"],
       default: "pendiente_de_invitar",
     },
     invitadoAt: { type: Date },

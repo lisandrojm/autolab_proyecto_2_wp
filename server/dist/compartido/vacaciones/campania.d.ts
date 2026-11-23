@@ -48,9 +48,11 @@ export declare function normalizarConfigCampania(v: any): ConfigCampania;
  * la vista previa para que digan el mismo número:
  *  · Un tipo deshabilitado en «Visibilidad por tipo de Contrato» (`contractRules.vacationsEnabled = false`)
  *    NUNCA se invita, esté o no tildado en la campaña.
- *  · Sin selección (lista vacía) no se filtra por tipo: la población de siempre, menos los deshabilitados.
- *  · Con selección, sólo quien tiene su contrato vigente de cómputo en uno de esos tipos. Quien no tiene
- *    contrato vigente en su empresa de cómputo (o lo tiene sin tipo) queda afuera: no hay qué comparar.
+ *  · Quien no tiene contrato vigente en su empresa de cómputo (o lo tiene sin tipo) NO se invita nunca, con o sin
+ *    selección (23/11/2026): al lanzar «Vacaciones 2026/27» con «todos», 889 de las 998 invitadas no tenían contrato
+ *    vigente en WeProdu y 860 de ellas tampoco una relación viva en ARCA (ya no trabajan; sus días se pagan al egreso).
+ *  · Sin selección (lista vacía) no se filtra por tipo: todos los tipos habilitados.
+ *  · Con selección, sólo quien tiene su contrato vigente de cómputo en uno de esos tipos.
  */
 export type MotivoNoInvitar = "tipo_deshabilitado" | "tipo_no_incluido" | "sin_contrato_vigente";
 /**
@@ -64,6 +66,8 @@ export declare function motivoDeNoInvitar(o: {
     seleccion: string[];
     deshabilitados: string[];
 }): MotivoNoInvitar | null;
+/** Por qué alguien queda fuera de la campaña, para el historial y la pantalla. */
+export declare const TEXTO_MOTIVO_NO_INVITAR: Record<MotivoNoInvitar, string>;
 /** Cuánta gente con días hay en cada tipo de contrato (por su contrato vigente de cómputo), y cuánta sin contrato. */
 export interface PoblacionPorTipo {
     porTipo: {
@@ -179,7 +183,9 @@ export declare function sugerirTramoUnico(o: {
 }): Tramo | null;
 export type EstadoInvitacion = "pendiente_de_invitar" | "invitado" | "acuso_recibo" | "propuso_fechas" | "rechazada" | "aprobado_notificado" | "vencido_sin_definir" | "asignado_por_empresa_notificado"
 /** Ya no le quedan días de ese año (los tomó por otra vía): no hay nada que otorgar. */
- | "sin_dias_pendientes";
+ | "sin_dias_pendientes"
+/** Se la sacó de la campaña al cambiar los tipos de contrato (23/11/2026): no elige acá ni se le asigna. */
+ | "retirada";
 /** Lo que se muestra: el estado guardado, o «en curso» / «gozado» cuando las vacaciones otorgadas ya empezaron. */
 export type EstadoVisible = EstadoInvitacion | "en_curso" | "gozado";
 export declare const ETIQUETA_ESTADO: Record<EstadoVisible, string>;

@@ -55,6 +55,13 @@ export interface ICampaniaVacaciones extends Document {
             sinContrato: number;
         };
     } | null;
+    /** Los cambios de tipos de contrato con la campaña lanzada (23/11/2026): quién, cuándo y qué movió. */
+    cambiosDeTipos?: {
+        at: Date;
+        porUserId?: Types.ObjectId | null;
+        tipos: string[];
+        detalle: string;
+    }[];
     estado: EstadoCampania;
     creadaPor?: Types.ObjectId;
     lanzadaPor?: Types.ObjectId;

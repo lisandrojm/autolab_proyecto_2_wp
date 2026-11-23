@@ -12,6 +12,7 @@ import {
   cerrarCampania,
   cambiarFechaLimite,
   cambiarDiasDeInicio,
+  cambiarTiposContrato,
   rearmarTurnos,
   confirmarAsignaciones,
   crearCampania,
@@ -72,6 +73,8 @@ campaniasVacacionesRoutes.get("/:id", soloAdmin, manejar(async (req) => tablero(
 // A quién se invita: cuánta gente con días hay por tipo de contrato (la vista previa) y la selección de la campaña.
 campaniasVacacionesRoutes.get("/:id/vista-previa", soloAdmin, manejar(async (req) => vistaPreviaDeInvitacion(tid(req), String(req.params.id))));
 campaniasVacacionesRoutes.put("/:id/tipos-contrato", soloAdmin, manejar(async (req) => guardarTiposContrato(tid(req), String(req.params.id), req.body?.tiposContratoInvitar)));
+// Cambiar los tipos de contrato en borrador o lanzada (la lanzada retira e invita gente). `enSeco`: sólo la cuenta.
+campaniasVacacionesRoutes.post("/:id/tipos-contrato", soloAdmin, manejar(async (req) => cambiarTiposContrato(tid(req), String(req.params.id), { tiposContratoInvitar: req.body?.tiposContratoInvitar, usarGlobal: req.body?.usarGlobal === true, enSeco: req.body?.enSeco === true }, yo(req))));
 campaniasVacacionesRoutes.post("/:id/lanzar", soloAdmin, manejar(async (req) => lanzarCampania(tid(req), String(req.params.id), yo(req), req.body?.tiposContratoInvitar)));
 campaniasVacacionesRoutes.post(
   "/:id/recordatorio",

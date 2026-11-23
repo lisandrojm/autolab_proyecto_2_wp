@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 import { type ICampaniaVacaciones, type IInvitacionVacaciones } from "../../models/CampaniaVacaciones.js";
 import { type IVacation } from "../../models/Vacation.js";
-import { type Tramo } from "../../compartido/vacaciones/campania.js";
+import { type MotivoNoInvitar, type Tramo } from "../../compartido/vacaciones/campania.js";
 export declare function cargarCampania(tid: Types.ObjectId, id: string): Promise<import("mongoose").Document<unknown, {}, ICampaniaVacaciones, {}, {}> & ICampaniaVacaciones & Required<{
     _id: Types.ObjectId;
 }> & {
@@ -62,6 +62,35 @@ export declare function lanzarCampania(tid: Types.ObjectId, id: string, actorId:
         sinContrato: number;
     };
     alertas: import("../../compartido/vacaciones/campania.js").Alerta[];
+}>;
+/**
+ * CAMBIAR LOS TIPOS DE CONTRATO DE UNA CAMPAÑA (23/11/2026). En borrador sólo se guarda la selección. Lanzada, se
+ * aplica a la gente:
+ *  · A quien todavía puede elegir (invitada, acusó recibo, rechazada) y queda fuera de la selección, se le retira la
+ *    invitación («Fuera de la campaña»): no elige acá ni se le asigna. Queda en su historial por qué.
+ *  · A quien ya propuso, tiene otorgadas o venció, no se la toca aunque su tipo quede afuera: está en camino.
+ *  · Una retirada que vuelve a entrar vuelve a estar invitada; quien tiene días y nunca se invitó, se invita (con la
+ *    fecha límite de la campaña y su aviso en la app).
+ * `usarGlobal`: toma la selección de Configuración › Campaña de goce. `enSeco`: sólo cuenta. Las retiradas no reciben
+ * ningún aviso.
+ */
+export declare function cambiarTiposContrato(tid: Types.ObjectId, id: string, body: {
+    tiposContratoInvitar?: unknown;
+    usarGlobal?: boolean;
+    enSeco?: boolean;
+}, actorId: string | null): Promise<{
+    tiposContratoInvitar: string[];
+    aplicado: boolean;
+} | {
+    aplicado: boolean;
+    tiposContratoInvitar: string[];
+    tipos: string[];
+    retirar: number;
+    retirarPorMotivo: Partial<Record<MotivoNoInvitar, number>>;
+    vuelven: number;
+    invitar: number;
+    conservan: number;
+    quedan: number;
 }>;
 /** Recordatorio a quienes todavía pueden elegir (no propusieron). `automatico`: lo manda el barrido. */
 export declare function recordar(tid: Types.ObjectId, c: ICampaniaVacaciones, actorId: string | null, filtro?: Record<string, unknown>): Promise<{
