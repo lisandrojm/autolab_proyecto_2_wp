@@ -179,6 +179,8 @@ export const BajasArcaPage: React.FC = () => {
     empresa: (f) => f.empleadora,
     tipo: (f) => f.tipo,
     inicio: (f) => f.inicio,
+    // Las abiertas (sin fecha de fin en ARCA) quedan al final en las dos direcciones, como todo vacío.
+    finArca: (f) => f.finArca,
     situacion: (f) => f.situacion ?? 90 + BLOQUEOS.indexOf(f.bloqueo?.motivo as MotivoBloqueoBajaArca),
   });
 
@@ -374,6 +376,7 @@ export const BajasArcaPage: React.FC = () => {
                     <th className={th}><BotonOrden columna="empresa" orden={orden} onAlternar={alternar}>Empresa</BotonOrden></th>
                     <th className={th}><BotonOrden columna="tipo" orden={orden} onAlternar={alternar}>Tipo de contrato</BotonOrden></th>
                     <th className={th}><BotonOrden columna="inicio" orden={orden} onAlternar={alternar}>Inicio</BotonOrden></th>
+                    <th className={th}><BotonOrden columna="finArca" orden={orden} onAlternar={alternar}>Fin en ARCA</BotonOrden></th>
                     <th className={th}>Fin en WeProdu</th>
                     <th className={th}>Días desde el fin</th>
                     <th className={th}><BotonOrden columna="situacion" orden={orden} onAlternar={alternar}>Situación</BotonOrden></th>
@@ -409,6 +412,16 @@ export const BajasArcaPage: React.FC = () => {
                           )}
                         </td>
                         <td className={`${td} whitespace-nowrap`}>{fechaCorta(f.inicio)}</td>
+                        {/* La fecha de fin que tiene ARCA (del espejo de Relaciones Laborales). Sin fecha = la relación está abierta. */}
+                        <td className={`${td} whitespace-nowrap`}>
+                          {f.finArca ? (
+                            <span className={f.finWeprodu && f.finWeprodu !== f.finArca ? "font-semibold text-orange-700 dark:text-orange-300" : ""} title={f.finWeprodu && f.finWeprodu !== f.finArca ? "No coincide con la fecha de fin del contrato en WeProdu." : "La fecha de fin que tiene ARCA para esta relación."}>
+                              {fechaCorta(f.finArca)}
+                            </span>
+                          ) : (
+                            <span className="text-gray-500" title="ARCA no tiene fecha de fin para esta relación: está abierta.">Abierta</span>
+                          )}
+                        </td>
                         <td className={`${td} whitespace-nowrap`}>{fechaCorta(f.finWeprodu)}</td>
                         <td className={`${td} whitespace-nowrap`}>
                           {f.diasDesdeFin === null ? (
