@@ -91,6 +91,11 @@ const tenantSchema = new Schema({
                 ultimoDia: { type: String },
                 ultimaCorrida: { type: Schema.Types.Mixed },
             },
+            presentacionBajas: {
+                modo: { type: String },
+                cambios: { type: [Schema.Types.Mixed], default: undefined },
+                corridas: { type: [Schema.Types.Mixed], default: undefined },
+            },
             presentacionAutomatica: {
                 activa: { type: Boolean, default: false },
                 // Declarados a propósito: el esquema es `strict`, y un `$set` sobre un camino que no está

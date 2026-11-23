@@ -157,6 +157,7 @@ export interface CorridaOperacion {
     usuarioId?: string;
 }
 export declare const corridaOperacionDe: (tenantId: string) => CorridaOperacion | undefined;
+export declare const finDeOperacion: (tenantId: string) => Promise<void>;
 export declare function detenerOperacion(tenantId: string): {
     detenida: boolean;
     motivo?: string;
@@ -181,6 +182,8 @@ export declare function arrancarOperacionRelacion(opts: {
     datos: DatosOperacion;
     /** Sólo con `true` se aprieta lo que no se deshace. Sin eso, en seco. */
     confirmar?: boolean;
+    /** La arrancó el proceso automático, sin una persona delante: queda marcada así en el registro de operaciones. */
+    automatica?: boolean;
 }): Promise<{
     arrancada: true;
     enSeco: boolean;

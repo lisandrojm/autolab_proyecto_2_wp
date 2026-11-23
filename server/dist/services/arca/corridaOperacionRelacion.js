@@ -79,6 +79,9 @@ export async function ejecutarOperacion(o) {
 /** Una por tenant, en memoria, igual que la de altas (ver `corridaServidor.ts` por qué). */
 const corridas = new Map();
 export const corridaOperacionDe = (tenantId) => corridas.get(tenantId);
+/** Para quien necesita esperar el final de la operación en curso (las bajas automáticas): se resuelve cuando termina, nunca tira. */
+const finales = new Map();
+export const finDeOperacion = (tenantId) => finales.get(tenantId) || Promise.resolve();
 export function detenerOperacion(tenantId) {
     const c = corridas.get(tenantId);
     if (!c || c.terminada)
@@ -137,7 +140,7 @@ export async function arrancarOperacionRelacion(opts) {
             usuarioId: opts.usuarioId,
         };
         corridas.set(tenantId, corrida);
-        void correr({ corrida, ctx: pc.ctx, tenantObjectId: opts.tenantObjectId, usuarioId: opts.usuarioId, cred, datos: opts.datos });
+        finales.set(tenantId, correr({ corrida, ctx: pc.ctx, tenantObjectId: opts.tenantObjectId, usuarioId: opts.usuarioId, cred, datos: opts.datos, automatica: opts.automatica === true }).catch((e) => console.error("Operaciones ARCA: la corrida terminó con error:", e?.message || e)));
         return { arrancada: true, enSeco, plan: pc.plan, contexto: pc.contexto };
     }
     catch (e) {
@@ -175,6 +178,7 @@ async function correr(o) {
         empresaCuit: ctx.empresa.cuit,
         empresaRazonSocial: ctx.empresa.razonSocial,
         enSeco: corrida.enSeco,
+        automatica: o.automatica || undefined,
         contratos: [{ userProjectId: ctx.sinContrato ? undefined : new Types.ObjectId(ctx.resumen.userProjectId), contractIndex: ctx.idx, contratoKey: key, cuil: ctx.persona.cuil, nombre: ctx.persona.nombre, resultado: "pendiente" }],
         resultado: "en_curso",
         irreversible: false,

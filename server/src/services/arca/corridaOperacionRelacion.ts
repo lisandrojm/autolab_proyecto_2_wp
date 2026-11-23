@@ -152,6 +152,9 @@ export interface CorridaOperacion {
 /** Una por tenant, en memoria, igual que la de altas (ver `corridaServidor.ts` por qué). */
 const corridas = new Map<string, CorridaOperacion>();
 export const corridaOperacionDe = (tenantId: string): CorridaOperacion | undefined => corridas.get(tenantId);
+/** Para quien necesita esperar el final de la operación en curso (las bajas automáticas): se resuelve cuando termina, nunca tira. */
+const finales = new Map<string, Promise<void>>();
+export const finDeOperacion = (tenantId: string): Promise<void> => finales.get(tenantId) || Promise.resolve();
 
 export function detenerOperacion(tenantId: string): { detenida: boolean; motivo?: string } {
   const c = corridas.get(tenantId);
@@ -185,6 +188,8 @@ export async function arrancarOperacionRelacion(opts: {
   datos: DatosOperacion;
   /** Sólo con `true` se aprieta lo que no se deshace. Sin eso, en seco. */
   confirmar?: boolean;
+  /** La arrancó el proceso automático, sin una persona delante: queda marcada así en el registro de operaciones. */
+  automatica?: boolean;
 }): Promise<{ arrancada: true; enSeco: boolean; plan: PlanOperacion; contexto: PlanConContexto["contexto"] }> {
   const { tenantId, op } = opts;
   // El candado ANTES de cualquier await: dos clicks seguidos no pueden arrancar dos operaciones.
@@ -215,7 +220,10 @@ export async function arrancarOperacionRelacion(opts: {
       usuarioId: opts.usuarioId,
     };
     corridas.set(tenantId, corrida);
-    void correr({ corrida, ctx: pc.ctx, tenantObjectId: opts.tenantObjectId, usuarioId: opts.usuarioId, cred, datos: opts.datos });
+    finales.set(
+      tenantId,
+      correr({ corrida, ctx: pc.ctx, tenantObjectId: opts.tenantObjectId, usuarioId: opts.usuarioId, cred, datos: opts.datos, automatica: opts.automatica === true }).catch((e: any) => console.error("Operaciones ARCA: la corrida terminó con error:", e?.message || e)),
+    );
     return { arrancada: true, enSeco, plan: pc.plan, contexto: pc.contexto };
   } catch (e) {
     soltarCandado(tenantId, op);
@@ -223,7 +231,7 @@ export async function arrancarOperacionRelacion(opts: {
   }
 }
 
-async function correr(o: { corrida: CorridaOperacion; ctx: ContextoOperacion; tenantObjectId: Types.ObjectId; usuarioId?: string; cred: NonNullable<Awaited<ReturnType<typeof credencialesDe>>>; datos: DatosOperacion }) {
+async function correr(o: { corrida: CorridaOperacion; ctx: ContextoOperacion; tenantObjectId: Types.ObjectId; usuarioId?: string; cred: NonNullable<Awaited<ReturnType<typeof credencialesDe>>>; datos: DatosOperacion; automatica?: boolean }) {
   const { corrida, ctx, tenantObjectId, usuarioId, cred } = o;
   const op = corrida.op;
   const emitir = (e: EventoOperacion) => {
@@ -254,6 +262,7 @@ async function correr(o: { corrida: CorridaOperacion; ctx: ContextoOperacion; te
     empresaCuit: ctx.empresa.cuit,
     empresaRazonSocial: ctx.empresa.razonSocial,
     enSeco: corrida.enSeco,
+    automatica: o.automatica || undefined,
     contratos: [{ userProjectId: ctx.sinContrato ? undefined : new Types.ObjectId(ctx.resumen.userProjectId), contractIndex: ctx.idx, contratoKey: key, cuil: ctx.persona.cuil, nombre: ctx.persona.nombre, resultado: "pendiente" }],
     resultado: "en_curso",
     irreversible: false,

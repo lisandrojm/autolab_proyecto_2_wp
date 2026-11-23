@@ -176,6 +176,15 @@ export interface ITenant extends Document {
                 ultimoDia?: string;
                 ultimaCorrida?: any;
             };
+            /**
+             * A.R.C.A BAJAS AUTOMÁTICAS (de WeProdu a ARCA; ver `presentacionBajasAutomatica.ts`): el modo
+             * (apagada | simular | presentar), quién lo cambió y las últimas corridas. Apagada por defecto.
+             */
+            presentacionBajas?: {
+                modo?: string;
+                cambios?: any[];
+                corridas?: any[];
+            };
             presentacionAutomatica?: {
                 activa?: boolean;
                 /** A qué hora corre (Argentina), cuántos días de anticipación y si la cola corre además cada N minutos. Ver `horarioAltasAutomaticas.ts`. */

@@ -6,6 +6,7 @@ import { CandadoArcaOcupado } from "./candadoArca.js";
 import { aplicarBajasArcaAutomaticas } from "./bajasArcaAutomaticas.js";
 import { recalcularAuditoriaArca } from "./auditoriaArca.js";
 import { guardarCorridaBajasArca } from "./listaBajasArca.js";
+import { correrBajasAutomaticasDelCron } from "./presentacionBajasAutomatica.js";
 
 /**
  * EL HORARIO DE LA SINCRONIZACIÓN DE RELACIONES LABORALES: una vez por día, a la hora que configuró
@@ -118,6 +119,12 @@ async function tick() {
         if (!resumen.error) await recalcularAuditoriaArca(id);
         // Bajas ARCA: la foto de la lista (conteos por situación y quién está en cuál) y qué cambió desde la corrida anterior.
         if (!resumen.error) await guardarCorridaBajasArca(id);
+        /*
+          A.R.C.A BAJAS AUTOMÁTICAS, el sentido contrario (de WeProdu a ARCA; ver `presentacionBajasAutomatica.ts`): al
+          final, con el espejo del día y después de «Bajas de ARCA a contratos». Sólo tras una sincronización sana, y
+          sin las empleadoras cuya lectura falló. Apagada por defecto. Nunca tira.
+        */
+        if (!resumen.error) await correrBajasAutomaticasDelCron(id, resumen.empresas.filter((e) => e.error).map((e) => String(e.cuit || "").replace(/\D/g, "")));
       } catch (e: any) {
         if (e instanceof CandadoArcaOcupado) {
           // ARCA está ocupada: se devuelve lo tomado para volver a probar en el próximo tick.

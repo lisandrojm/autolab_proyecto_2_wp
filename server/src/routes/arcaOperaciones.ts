@@ -10,6 +10,10 @@ import { arrancarOperacionRelacion, corridaOperacionDe, detenerOperacion } from 
 import { OperacionInvalida, contextoDeOperacion, guardarMotivoDeBaja, planOperacion, situacionesDeBaja } from "../services/arca/operacionRelacion.js";
 import { CAMPOS_MODIFICABLES, ETIQUETA_CAMPO, type TipoOperacion } from "../services/arca/reglasOperacionRelacion.js";
 import { guardadoBajasArca, listaBajasArcaConFoto } from "../services/arca/listaBajasArca.js";
+import { ModoNoPermitido, NOMBRE_MODO, TOPE_POR_CORRIDA, cambiarModo, guardadoDe, motivoParaNoElegir, previaDe, requisitosDe, type ModoBajasAutomaticas } from "../services/arca/presentacionBajasAutomatica.js";
+import { configSyncDe } from "../services/arca/sincronizacionRelacionesCronService.js";
+import { Tenant } from "../models/Tenant.js";
+import { User } from "../models/User.js";
 
 /**
  * BAJA, MODIFICACIÓN Y ANULACIÓN DE UNA RELACIÓN LABORAL EN ARCA (Relaciones Laborales → Modificaciones y Bajas,
@@ -178,7 +182,7 @@ router.get("/historial", requireTenant, authenticateToken, permiso, async (req: 
     const logs: any[] = await ArcaAltasLog.find(filtro)
       .sort({ createdAt: -1 })
       .limit(limite)
-      .select("tipo createdAt usuarioId empresaId empresaCuit empresaRazonSocial enSeco resultado irreversible error textoArca contratos duracionMs operacion.que operacion.sinContrato operacion.payload operacion.relacion operacion.acuse operacion.clase operacion.cambios operacion.leidoDe operacion.pantallaDesconocida operacion.textoNuevo operacion.enRojo")
+      .select("automatica tipo createdAt usuarioId empresaId empresaCuit empresaRazonSocial enSeco resultado irreversible error textoArca contratos duracionMs operacion.que operacion.sinContrato operacion.payload operacion.relacion operacion.acuse operacion.clase operacion.cambios operacion.leidoDe operacion.pantallaDesconocida operacion.textoNuevo operacion.enRojo")
       .populate("usuarioId", "firstName lastName")
       .lean();
     res.json(
@@ -189,6 +193,8 @@ router.get("/historial", requireTenant, authenticateToken, permiso, async (req: 
         quien: l.usuarioId ? `${l.usuarioId.firstName || ""} ${l.usuarioId.lastName || ""}`.trim() : "",
         empresaRazonSocial: l.empresaRazonSocial || "",
         enSeco: !!l.enSeco,
+        // La arrancó A.R.C.A Bajas Automáticas, sin una persona delante.
+        automatica: !!l.automatica,
         resultado: l.resultado,
         irreversible: !!l.irreversible,
         error: l.error || "",
@@ -199,6 +205,54 @@ router.get("/historial", requireTenant, authenticateToken, permiso, async (req: 
       })),
     );
   } catch (e) {
+    errorDe(res, e);
+  }
+});
+
+/**
+ * A.R.C.A BAJAS AUTOMÁTICAS (presenta en ARCA lo que se cerró en WeProdu; `services/arca/presentacionBajasAutomatica.ts`).
+ * GET: el modo, los dos escalones, qué modos se pueden elegir, la sincronización de la que depende, las corridas, quién
+ * cambió el modo y qué haría hoy. No toca ARCA.
+ */
+const estadoDeAutomatica = async (tenantObjectId: Types.ObjectId) => {
+  const [guardado, requisitos, previa, t] = await Promise.all([
+    guardadoDe(tenantObjectId),
+    requisitosDe(tenantObjectId),
+    previaDe(tenantObjectId),
+    Tenant.findById(tenantObjectId).select("integrations.arcaSimplificacion.sincronizacionRelaciones.activa integrations.arcaSimplificacion.sincronizacionRelaciones.hora integrations.arcaSimplificacion.sincronizacionRelaciones.ultimoDia").lean() as Promise<any>,
+  ]);
+  const sr = t?.integrations?.arcaSimplificacion?.sincronizacionRelaciones || {};
+  const sync = configSyncDe(sr);
+  return {
+    ...guardado,
+    nombres: NOMBRE_MODO,
+    tope: TOPE_POR_CORRIDA,
+    requisitos,
+    // Por qué no se puede elegir cada modo ("" = se puede).
+    bloqueos: { apagada: "", simular: motivoParaNoElegir("simular", requisitos), presentar: motivoParaNoElegir("presentar", requisitos) },
+    sincronizacion: { activa: sync.activa, hora: sync.hora, ultimoDia: sr.ultimoDia || null },
+    enSecoForzado: enSecoForzado(),
+    previa,
+  };
+};
+
+router.get("/automatica", requireTenant, authenticateToken, permiso, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    res.json(await estadoDeAutomatica(req.tenantObjectId as Types.ObjectId));
+  } catch (e) {
+    errorDe(res, e);
+  }
+});
+
+/** PUT { modo }: cambia el modo. Exige el permiso de administración de contratos y deja quién lo cambió. */
+router.put("/automatica", requireTenant, authenticateToken, permiso, async (req: AuthenticatedRequest & TenantRequest, res) => {
+  try {
+    const u: any = req.user?.userId && Types.ObjectId.isValid(String(req.user.userId)) ? await User.findById(req.user.userId).select("firstName lastName email").lean() : null;
+    const nombre = u ? `${u.firstName || ""} ${u.lastName || ""}`.trim() || String(u.email || "") : "";
+    await cambiarModo(req.tenantObjectId as Types.ObjectId, String(req.body?.modo || "") as ModoBajasAutomaticas, { userId: String(req.user?.userId || ""), nombre });
+    res.json(await estadoDeAutomatica(req.tenantObjectId as Types.ObjectId));
+  } catch (e) {
+    if (e instanceof ModoNoPermitido) return res.status(409).json({ error: e.message });
     errorDe(res, e);
   }
 });
