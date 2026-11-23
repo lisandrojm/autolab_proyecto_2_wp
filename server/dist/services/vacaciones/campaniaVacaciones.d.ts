@@ -621,7 +621,7 @@ export declare function acusarOtorgamiento(tid: Types.ObjectId, userId: string):
     pendienteDeAccion: boolean;
     hoy: string;
 }>;
-/** Antes de que el admin apruebe una vacación de la campaña: ¿llega el aviso y termina dentro de la ventana? */
+/** Antes de que el admin apruebe una vacación de la campaña: dentro de la ventana; el aviso, sólo si la asignó la empresa. */
 export declare function erroresDeOtorgamiento(v: IVacation): Promise<string[]>;
 /** Aprobada una vacación de la campaña: si ya están aprobados todos los tramos de la propuesta, queda otorgada y notificada. */
 export declare function alAprobarseEnLaCampania(v: IVacation): Promise<void>;
@@ -629,7 +629,9 @@ export declare function alAprobarseEnLaCampania(v: IVacation): Promise<void>;
  * Rechazada o cancelada una vacación de la campaña: si la había propuesto la persona, vuelve a elegir esos
  * días (los demás tramos siguen); si la había asignado la empresa, vuelve a quedar para asignar.
  */
-export declare function alSalirDeLaCampania(v: IVacation, motivo: string, porLaPersona?: boolean): Promise<void>;
+export declare function alSalirDeLaCampania(v: IVacation, motivo: string, porLaPersona?: boolean, opciones?: {
+    eliminadaPor?: string | null;
+}): Promise<void>;
 /**
  * Lo que hace el reloj en cada campaña lanzada: la fecha límite vencida pasa a «venció sin elegir» y se
  * le sugiere el tramo único; 2 días antes del vencimiento, un recordatorio automático (uno solo).

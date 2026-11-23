@@ -110,8 +110,14 @@ export declare function hastaParaDias(desde: string, dias: number, diasCorridos:
 export declare function ventanaDeLaTemporada(hoy: string, tramo: TramoDeVentana): VentanaDeCampania;
 /** Hasta cuándo puede elegir: `hoy` + el plazo. */
 export declare const fechaLimite: (hoy: string, plazoDias: number) => string;
-/** El primer día en que pueden empezar unas vacaciones avisadas hoy. */
+/** El primer día en que pueden empezar unas vacaciones avisadas hoy (lo que ASIGNA la empresa). */
 export declare const primerInicioPosible: (hoy: string, avisoDias: number) => string;
+/**
+ * EL PRIMER DÍA QUE PUEDE PROPONER LA PERSONA (23/11/2026, regla del usuario): mañana. El aviso de `avisoMinimoDias`
+ * no corre para lo que elige ella —«la aprobación no tiene que ser 30 días antes»—: corre sólo cuando vence el plazo
+ * y la empresa le asigna las fechas (`validarOtorgamiento` con `porLaEmpresa`).
+ */
+export declare const primerInicioPropuesto: (hoy: string) => string;
 export interface Alerta {
     nivel: "error" | "aviso";
     codigo: string;
@@ -134,7 +140,8 @@ export declare function alertasDeLanzamiento(o: {
 /**
  * LA PROPUESTA DE LA PERSONA: uno o más tramos.
  *  · Cada tramo dentro de la ventana de la campaña (y de la suya, si su área o proyecto tiene otra).
- *  · Ninguno empieza antes de `hoy + aviso`: el aviso por escrito sale al aprobarse, y tiene que llegar.
+ *  · Ninguno empieza antes de mañana. El aviso de `avisoDias` NO rige acá (23/11/2026): lo eligió la persona, y la
+ *    aprobación no tiene que llegar con esa anticipación. El aviso es para lo que asigna la empresa.
  *  · Cada tramo empieza en uno de los días de inicio de la campaña (`diasDeInicio`; vacío = cualquier día).
  *  · Los tramos no se pisan. Al fraccionar (fraccionar es un acuerdo: proponerlo la persona y aprobarlo la
  *    empresa es ese acuerdo), EN ORDEN DE FECHA cada tramo lleva al menos `minPorTramo` días o, si quedan menos,
@@ -149,15 +156,17 @@ export declare function validarPropuesta(o: {
     ventana: VentanaDeCampania;
     ventanaPersona?: VentanaEfectiva | null;
     hoy: string;
-    avisoDias: number;
+    /** Ya no se usa para la propuesta (ver arriba); queda para no romper a quien lo manda. */
+    avisoDias?: number;
     minPorTramo: number;
     diasCorridos: boolean;
     diasDeInicio?: number[] | null;
 }): string[];
 /**
- * AL OTORGAR (aprobar la propuesta o confirmar lo que asigna la empresa): el aviso por escrito sale HOY,
- * así que tiene que haber al menos `aviso` días hasta el inicio, y el goce tiene que terminar dentro de la
- * ventana. Devuelve los errores; vacío = se puede otorgar.
+ * AL OTORGAR: el goce tiene que estar dentro de la ventana. El aviso de `avisoDias` sólo cuando las fechas las
+ * ASIGNA la empresa (`porLaEmpresa`: venció el plazo para elegir): el aviso por escrito sale hoy y tiene que
+ * llegar. Lo que propuso la persona se aprueba aunque falten menos días (regla del usuario, 23/11/2026); sólo no
+ * puede haber empezado. Devuelve los errores; vacío = se puede otorgar.
  */
 export declare function validarOtorgamiento(o: {
     hoy: string;
@@ -165,6 +174,7 @@ export declare function validarOtorgamiento(o: {
     hasta: string;
     avisoDias: number;
     ventana: VentanaDeCampania;
+    porLaEmpresa: boolean;
 }): string[];
 /**
  * EL TRAMO ÚNICO QUE SUGIERE EL SISTEMA para quien no eligió: el primero, desde `desdeMinimo` (hoy +
@@ -199,7 +209,8 @@ export declare const RESUELTOS: EstadoInvitacion[];
 export declare function estadoVisible(estado: EstadoInvitacion, otorgados: Tramo[], hoy: string): EstadoVisible;
 /**
  * LAS ALERTAS DE SEGUIMIENTO DE UNA PERSONA: no acusó recibo, la fecha límite está por vencer, o lo que
- * propuso ya no llega con el aviso (la jerarquía tardó en aprobar).
+ * propuso empieza pronto y todavía no se aprobó. El aviso de `avisoDias` no se mide acá: lo propuesto por la
+ * persona no lo necesita (23/11/2026).
  */
 export declare function alertasDeInvitacion(o: {
     estado: EstadoInvitacion;

@@ -35,9 +35,9 @@ test("lanzamiento tarde: el que no elige no llega a otorgarse en término", () =
     assert.ok(error);
     assert.match(error.mensaje, /tarde|a más tardar/);
 });
-test("lanzamiento: el aviso recorta el primer inicio posible", () => {
+test("lanzamiento: el aviso ya no recorta lo que elige la persona", () => {
     const a = alertasDeLanzamiento({ hoy: "2026-11-15", plazoDias: 14, avisoDias: 30, ventana: VENTANA });
-    assert.ok(a.some((x) => x.codigo === "inicio_recortado"));
+    assert.ok(!a.some((x) => x.codigo === "inicio_recortado"));
 });
 test("propuesta: un tramo con todos los días, bien", () => {
     assert.deepEqual(validarPropuesta({ ...base, tramos: [{ desde: "2027-01-04", hasta: "2027-01-17" }], diasDisponibles: 14 }), []);
@@ -47,9 +47,11 @@ test("propuesta: fraccionada en dos de 7, bien; con un tramo corto, error", () =
     const e = validarPropuesta({ ...base, tramos: [{ desde: "2027-01-04", hasta: "2027-01-08" }, { desde: "2027-02-01", hasta: "2027-02-09" }], diasDisponibles: 14 });
     assert.ok(e.some((m) => /menos de 7/.test(m)));
 });
-test("propuesta: fuera de la ventana, aviso insuficiente, suma distinta, tramos que se pisan", () => {
+test("propuesta: fuera de la ventana, ya empezada, suma distinta, tramos que se pisan", () => {
     assert.ok(validarPropuesta({ ...base, tramos: [{ desde: "2027-04-25", hasta: "2027-05-08" }], diasDisponibles: 14 }).some((m) => /ventana/.test(m)));
-    assert.ok(validarPropuesta({ ...base, tramos: [{ desde: "2026-11-20", hasta: "2026-12-03" }], diasDisponibles: 14 }).some((m) => /avisar con 30/.test(m)));
+    // El aviso no rige para lo que elige la persona: puede empezar mañana, pero no hoy.
+    assert.deepEqual(validarPropuesta({ ...base, tramos: [{ desde: "2026-11-16", hasta: "2026-11-29" }], diasDisponibles: 14 }), []);
+    assert.ok(validarPropuesta({ ...base, tramos: [{ desde: "2026-11-15", hasta: "2026-11-28" }], diasDisponibles: 14 }).some((m) => /empieza hoy/.test(m)));
     assert.ok(validarPropuesta({ ...base, tramos: [{ desde: "2027-01-04", hasta: "2027-01-13" }], diasDisponibles: 14 }).some((m) => /faltan repartir 4/.test(m)));
     assert.ok(validarPropuesta({ ...base, tramos: [{ desde: "2027-01-04", hasta: "2027-01-12" }, { desde: "2027-01-10", hasta: "2027-01-16" }], diasDisponibles: 14 }).some((m) => /se pisan/.test(m)));
 });
@@ -58,10 +60,14 @@ test("propuesta: respeta la ventana de la persona (su área o proyecto)", () => 
     assert.ok(validarPropuesta({ ...base, ventanaPersona, tramos: [{ desde: "2027-03-01", hasta: "2027-03-14" }], diasDisponibles: 14 }).some((m) => /tu ventana/.test(m)));
     assert.deepEqual(validarPropuesta({ ...base, ventanaPersona, tramos: [{ desde: "2027-01-04", hasta: "2027-01-17" }], diasDisponibles: 14 }), []);
 });
-test("otorgamiento: aviso que no llega y fin después del cierre", () => {
-    assert.deepEqual(validarOtorgamiento({ hoy: "2026-11-15", desde: "2027-01-04", hasta: "2027-01-17", avisoDias: 30, ventana: VENTANA }), []);
-    assert.ok(validarOtorgamiento({ hoy: "2026-12-20", desde: "2027-01-04", hasta: "2027-01-17", avisoDias: 30, ventana: VENTANA }).some((m) => /aviso no llega/.test(m)));
-    assert.ok(validarOtorgamiento({ hoy: "2026-11-15", desde: "2027-04-25", hasta: "2027-05-08", avisoDias: 30, ventana: VENTANA }).some((m) => /cierre de la ventana/.test(m)));
+test("otorgamiento: el aviso sólo para lo que asigna la empresa; fin después del cierre", () => {
+    const o = { hoy: "2026-12-20", desde: "2027-01-04", hasta: "2027-01-17", avisoDias: 30, ventana: VENTANA };
+    assert.deepEqual(validarOtorgamiento({ ...o, hoy: "2026-11-15", porLaEmpresa: true }), []);
+    assert.ok(validarOtorgamiento({ ...o, porLaEmpresa: true }).some((m) => /aviso no llega/.test(m)));
+    // Lo propuso la persona: se aprueba aunque falten menos de 30 días; sólo no puede haber empezado.
+    assert.deepEqual(validarOtorgamiento({ ...o, porLaEmpresa: false }), []);
+    assert.ok(validarOtorgamiento({ ...o, hoy: "2027-01-05", porLaEmpresa: false }).some((m) => /ya pasó/.test(m)));
+    assert.ok(validarOtorgamiento({ ...o, hoy: "2026-11-15", desde: "2027-04-25", hasta: "2027-05-08", porLaEmpresa: false }).some((m) => /cierre de la ventana/.test(m)));
 });
 test("sugerencia: primer tramo único libre desde hoy + aviso", () => {
     const t = sugerirTramoUnico({ dias: 14, ventana: VENTANA, desdeMinimo: "2026-12-15", diasCorridos: true });
@@ -86,7 +92,9 @@ test("estado visible y alertas de seguimiento", () => {
     const a = alertasDeInvitacion({ estado: "invitado", fechaLimite: "2026-11-16", invitadoAt: "2026-11-02", hoy: "2026-11-15", avisoDias: 30 });
     assert.deepEqual(a.map((x) => x.codigo).sort(), ["limite_por_vencer", "sin_acuse"]);
     const b = alertasDeInvitacion({ estado: "propuso_fechas", fechaLimite: "2026-11-29", tramos: [{ desde: "2026-12-10", hasta: "2026-12-23" }], hoy: "2026-11-15", avisoDias: 30 });
-    assert.ok(b.some((x) => x.codigo === "aviso_insuficiente"));
+    assert.ok(!b.some((x) => x.codigo === "aviso_insuficiente"));
+    const pronto = alertasDeInvitacion({ estado: "propuso_fechas", fechaLimite: "2026-11-29", tramos: [{ desde: "2026-11-20", hasta: "2026-12-03" }], hoy: "2026-11-15", avisoDias: 30 });
+    assert.ok(pronto.some((x) => x.codigo === "empieza_pronto"));
 });
 /* ─────────────────────────── A quién se invita, por tipo de contrato ─────────────────────────── */
 const INDETERMINADO = TI;

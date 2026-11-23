@@ -547,12 +547,24 @@ router.delete("/:id", async (req, res) => {
     const tenantId = req.tenantId;
     const { id } = req.params;
 
-    const existente = await Vacation.findOne({ _id: id, tenantId }).select("userId").lean();
+    const existente = await Vacation.findOne({ _id: id, tenantId });
     if (!existente) {
       return res.status(404).json({ error: "Solicitud no encontrada" });
     }
     if (!(await esDuenaOAdmin(req, existente))) return res.status(403).json({ error: "Sólo quien la pidió o el administrador pueden eliminarla" });
     await Vacation.deleteOne({ _id: id, tenantId });
+    /*
+      Borrarla deshace lo mismo que cancelarla (23/11/2026): los días reservados vuelven al saldo y, si era de la
+      campaña de goce, la invitación deja de apuntar a una solicitud que ya no existe (vuelve a elegir).
+    */
+    if (["pending", "pre_approved", "approved", "delivered"].includes(existente.status)) {
+      await adjustBalanceOnRequestChange(tenantId, existente.userId, existente.startDate.getFullYear(), existente.daysRequested, "cancel");
+    }
+    if (existente.campaniaId) {
+      await import("../services/vacaciones/campaniaVacaciones.js")
+        .then((m) => m.alSalirDeLaCampania(existente, "Eliminada", false, { eliminadaPor: req.user?.userId || null }))
+        .catch((e) => console.error("[CAMPANIA] eliminación:", e?.message || e));
+    }
 
     res.json({ message: "Solicitud eliminada correctamente" });
   } catch (error: any) {

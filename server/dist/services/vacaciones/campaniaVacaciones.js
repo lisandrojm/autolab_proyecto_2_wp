@@ -7,7 +7,7 @@ import { Notification } from "../../models/Notification.js";
 import { hoyArgentina } from "../../utils/contratoVigencia.js";
 import { diasHasta, fechaCorta, sumarDias } from "../../compartido/planVacaciones/fechas.js";
 import { normalizarVentana, rangoPermitido } from "../../compartido/ventanaGoce.js";
-import { ETIQUETA_ESTADO, OTORGADOS, PUEDE_PROPONER, RESUELTOS, TEXTO_MOTIVO_NO_INVITAR, alertasDeInvitacion, alertasDeLanzamiento, contarDiasTramo, estadoVisible, fechaLimite as calcularFechaLimite, motivoDeNoInvitar, normalizarConfigCampania, normalizarDiasDeInicio, normalizarTiposContrato, textoDiasDeInicio, primerInicioPosible, sugerirTramoUnico, validarOtorgamiento, validarPropuesta, ventanaDeLaTemporada, } from "../../compartido/vacaciones/campania.js";
+import { ETIQUETA_ESTADO, OTORGADOS, PUEDE_PROPONER, RESUELTOS, TEXTO_MOTIVO_NO_INVITAR, alertasDeInvitacion, alertasDeLanzamiento, contarDiasTramo, estadoVisible, fechaLimite as calcularFechaLimite, motivoDeNoInvitar, normalizarConfigCampania, normalizarDiasDeInicio, normalizarTiposContrato, textoDiasDeInicio, primerInicioPosible, primerInicioPropuesto, sugerirTramoUnico, validarOtorgamiento, validarPropuesta, ventanaDeLaTemporada, } from "../../compartido/vacaciones/campania.js";
 import { NOVEDAD_CAMPANIA_INVITACION, NOVEDAD_CAMPANIA_RECORDATORIO, NOVEDAD_VACACION_OTORGADA, notificar } from "../novedadesNotificaciones.js";
 import { saldosDeVacaciones } from "./saldos.js";
 import { cargarCatalogoDeTipos, tiposSinVacacionesDe } from "./tiposDeContrato.js";
@@ -472,7 +472,7 @@ export async function editarAsignacion(tid, id, invId, t, actorId) {
     const tiene = contarDiasTramo(t, inv.diasCorridos);
     if (tiene !== dias)
         throw new ErrorVacacion(`El tramo tiene ${tiene} días y tiene que tener ${dias}: la empresa asigna un tramo único con todos los días (no puede fraccionar sin acuerdo).`);
-    const errores = validarOtorgamiento({ hoy: hoyArgentina(), desde: t.desde, hasta: t.hasta, avisoDias: c.avisoMinimoDias, ventana: ventanaDe(c) });
+    const errores = validarOtorgamiento({ hoy: hoyArgentina(), desde: t.desde, hasta: t.hasta, avisoDias: c.avisoMinimoDias, ventana: ventanaDe(c), porLaEmpresa: true });
     if (inv.ventanaPersona?.enabled && !rangoPermitido(t.desde, t.hasta, inv.ventanaPersona))
         errores.push("Se sale de la ventana de goce de su área o proyecto.");
     if (errores.length)
@@ -492,7 +492,7 @@ async function confirmarUna(tid, c, inv, actorId) {
     const a = inv.asignacion;
     if (!a?.desde || !a?.hasta)
         throw new ErrorVacacion("Todavía no tiene fechas asignadas: sugerilas o cargalas a mano.");
-    const errores = validarOtorgamiento({ hoy: hoyArgentina(), desde: a.desde, hasta: a.hasta, avisoDias: c.avisoMinimoDias, ventana: ventanaDe(c) });
+    const errores = validarOtorgamiento({ hoy: hoyArgentina(), desde: a.desde, hasta: a.hasta, avisoDias: c.avisoMinimoDias, ventana: ventanaDe(c), porLaEmpresa: true });
     if (errores.length)
         throw new ErrorVacacion(errores.join(" "));
     const v = await crearVacacionParaPersona({
@@ -669,7 +669,8 @@ export async function miInvitacion(tid, userId) {
         puedeProponer,
         /** Su turno para elegir por antigüedad, si tiene: si ya se abrió, desde cuándo y cuántas espera. */
         turno: turno && enPlazo ? turno : null,
-        primerInicioPosible: primerInicioPosible(hoy, c.avisoMinimoDias),
+        // Lo que elige la persona no espera el aviso (23/11/2026): desde mañana.
+        primerInicioPosible: primerInicioPropuesto(hoy),
         vacaciones,
         pendienteDeAccion: enPlazo || inv.estado === "propuso_fechas" || inv.estado === "vencido_sin_definir" || (otorgada && !inv.acuseOtorgamientoAt),
         hoy,
@@ -789,14 +790,14 @@ export async function acusarOtorgamiento(tid, userId) {
     return miInvitacion(tid, userId);
 }
 /* ─────────────────────────── Enganches con aprobar / rechazar / cancelar ─────────────────────────── */
-/** Antes de que el admin apruebe una vacación de la campaña: ¿llega el aviso y termina dentro de la ventana? */
+/** Antes de que el admin apruebe una vacación de la campaña: dentro de la ventana; el aviso, sólo si la asignó la empresa. */
 export async function erroresDeOtorgamiento(v) {
     if (!v.campaniaId)
         return [];
     const c = await CampaniaVacaciones.findById(v.campaniaId).lean();
     if (!c)
         return [];
-    return validarOtorgamiento({ hoy: hoyArgentina(), desde: iso(v.startDate), hasta: iso(v.endDate), avisoDias: c.avisoMinimoDias, ventana: ventanaDe(c) });
+    return validarOtorgamiento({ hoy: hoyArgentina(), desde: iso(v.startDate), hasta: iso(v.endDate), avisoDias: c.avisoMinimoDias, ventana: ventanaDe(c), porLaEmpresa: !!v.asignadaPorEmpresa });
 }
 /** Aprobada una vacación de la campaña: si ya están aprobados todos los tramos de la propuesta, queda otorgada y notificada. */
 export async function alAprobarseEnLaCampania(v) {
@@ -826,13 +827,30 @@ export async function alAprobarseEnLaCampania(v) {
  * Rechazada o cancelada una vacación de la campaña: si la había propuesto la persona, vuelve a elegir esos
  * días (los demás tramos siguen); si la había asignado la empresa, vuelve a quedar para asignar.
  */
-export async function alSalirDeLaCampania(v, motivo, porLaPersona = false) {
+export async function alSalirDeLaCampania(v, motivo, porLaPersona = false, opciones = {}) {
     if (!v.campaniaId)
         return;
     const inv = await InvitacionVacaciones.findOne({ campaniaId: v.campaniaId, userId: v.userId });
     if (!inv)
         return;
     const periodo = periodoTexto({ desde: iso(v.startDate), hasta: iso(v.endDate) });
+    /*
+      LA SOLICITUD SE ELIMINÓ (23/11/2026, Xiara Soria Rebora): antes el borrado no avisaba a la campaña y la
+      invitación quedaba en «Propuso fechas» apuntando a una solicitud que ya no existe. Se saca el tramo y, si no le
+      queda nada propuesto, vuelve a elegir (invitado o acusó recibo), sin figurar como rechazada. Si las fechas las
+      había asignado la empresa, vale lo de siempre: queda para volver a asignar.
+    */
+    if (opciones.eliminadaPor !== undefined && !v.asignadaPorEmpresa) {
+        inv.tramos = (inv.tramos || []).filter((t) => String(t.vacationId) !== String(v._id));
+        if (inv.tramos.length === 0 && inv.estado === "propuso_fechas") {
+            inv.estado = inv.acuseInvitacionAt ? "acuso_recibo" : "invitado";
+            inv.rechazo = null;
+            inv.notificacion = null;
+        }
+        inv.historial.push(paso("solicitud_eliminada", opciones.eliminadaPor, `Se eliminó la solicitud ${periodo}${inv.tramos.length ? "" : ": vuelve a elegir"}.`));
+        await inv.save();
+        return;
+    }
     if (v.asignadaPorEmpresa) {
         inv.estado = "vencido_sin_definir";
         inv.asignacion = null;

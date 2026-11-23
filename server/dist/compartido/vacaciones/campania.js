@@ -171,8 +171,14 @@ export function ventanaDeLaTemporada(hoy, tramo) {
 }
 /** Hasta cuándo puede elegir: `hoy` + el plazo. */
 export const fechaLimite = (hoy, plazoDias) => sumarDias(hoy, plazoDias);
-/** El primer día en que pueden empezar unas vacaciones avisadas hoy. */
+/** El primer día en que pueden empezar unas vacaciones avisadas hoy (lo que ASIGNA la empresa). */
 export const primerInicioPosible = (hoy, avisoDias) => sumarDias(hoy, avisoDias);
+/**
+ * EL PRIMER DÍA QUE PUEDE PROPONER LA PERSONA (23/11/2026, regla del usuario): mañana. El aviso de `avisoMinimoDias`
+ * no corre para lo que elige ella —«la aprobación no tiene que ser 30 días antes»—: corre sólo cuando vence el plazo
+ * y la empresa le asigna las fechas (`validarOtorgamiento` con `porLaEmpresa`).
+ */
+export const primerInicioPropuesto = (hoy) => sumarDias(hoy, 1);
 /**
  * LO QUE CONVIENE SABER ANTES DE LANZAR. La cuenta que importa es la del peor caso: alguien que no elige
  * hasta la fecha límite, la empresa le asigna ese día y recién ahí corre el aviso. Si ese inicio (más los
@@ -208,17 +214,15 @@ export function alertasDeLanzamiento(o) {
     else if (diasHasta(hoy, ultimoLanzamiento) <= 7) {
         alertas.push({ nivel: "aviso", codigo: "justo", mensaje: `Queda poco margen: el último día para lanzarla y otorgar en término es el ${fechaCorta(ultimoLanzamiento)}.` });
     }
-    const primerInicio = primerInicioPosible(hoy, avisoDias) > ventana.desde ? primerInicioPosible(hoy, avisoDias) : ventana.desde;
-    if (primerInicio > ventana.desde) {
-        alertas.push({ nivel: "aviso", codigo: "inicio_recortado", mensaje: `Por el aviso de ${avisoDias} días, nadie puede empezar antes del ${fechaCorta(primerInicio)} (la ventana abre el ${fechaCorta(ventana.desde)}).` });
-    }
+    // Lo que elige la persona no espera el aviso (23/11/2026): ya no hay un «primer inicio» recortado para todos.
     return alertas;
 }
 /* ─────────────────────────── Validaciones ─────────────────────────── */
 /**
  * LA PROPUESTA DE LA PERSONA: uno o más tramos.
  *  · Cada tramo dentro de la ventana de la campaña (y de la suya, si su área o proyecto tiene otra).
- *  · Ninguno empieza antes de `hoy + aviso`: el aviso por escrito sale al aprobarse, y tiene que llegar.
+ *  · Ninguno empieza antes de mañana. El aviso de `avisoDias` NO rige acá (23/11/2026): lo eligió la persona, y la
+ *    aprobación no tiene que llegar con esa anticipación. El aviso es para lo que asigna la empresa.
  *  · Cada tramo empieza en uno de los días de inicio de la campaña (`diasDeInicio`; vacío = cualquier día).
  *  · Los tramos no se pisan. Al fraccionar (fraccionar es un acuerdo: proponerlo la persona y aprobarlo la
  *    empresa es ese acuerdo), EN ORDEN DE FECHA cada tramo lleva al menos `minPorTramo` días o, si quedan menos,
@@ -232,7 +236,7 @@ export function validarPropuesta(o) {
     const tramos = o.tramos || [];
     if (tramos.length === 0)
         return ["Elegí al menos un tramo."];
-    const desdeMinimo = primerInicioPosible(o.hoy, o.avisoDias);
+    const desdeMinimo = primerInicioPropuesto(o.hoy);
     const diasDeInicio = normalizarDiasDeInicio(o.diasDeInicio);
     tramos.forEach((t, i) => {
         const n = tramos.length > 1 ? ` ${i + 1}` : "";
@@ -245,7 +249,7 @@ export function validarPropuesta(o) {
         else if (o.ventanaPersona && !rangoPermitido(t.desde, t.hasta, o.ventanaPersona))
             errores.push(`El tramo${n} se sale de tu ventana de goce (${textoDeVentana(o.ventanaPersona)}).`);
         if (t.desde < desdeMinimo)
-            errores.push(`El tramo${n} empieza muy pronto: hace falta avisar con ${o.avisoDias} días, así que puede empezar desde el ${fechaCorta(desdeMinimo)}.`);
+            errores.push(`El tramo${n} ya empezó o empieza hoy: puede empezar desde el ${fechaCorta(desdeMinimo)}.`);
         if (!puedeEmpezar(t.desde, diasDeInicio))
             errores.push(`El tramo${n} empieza un ${DIAS_DE_LA_SEMANA[diaDeSemana(t.desde)]}: las vacaciones pueden empezar sólo ${textoDiasDeInicio(diasDeInicio)}.`);
     });
@@ -279,14 +283,17 @@ export function validarPropuesta(o) {
     return errores;
 }
 /**
- * AL OTORGAR (aprobar la propuesta o confirmar lo que asigna la empresa): el aviso por escrito sale HOY,
- * así que tiene que haber al menos `aviso` días hasta el inicio, y el goce tiene que terminar dentro de la
- * ventana. Devuelve los errores; vacío = se puede otorgar.
+ * AL OTORGAR: el goce tiene que estar dentro de la ventana. El aviso de `avisoDias` sólo cuando las fechas las
+ * ASIGNA la empresa (`porLaEmpresa`: venció el plazo para elegir): el aviso por escrito sale hoy y tiene que
+ * llegar. Lo que propuso la persona se aprueba aunque falten menos días (regla del usuario, 23/11/2026); sólo no
+ * puede haber empezado. Devuelve los errores; vacío = se puede otorgar.
  */
 export function validarOtorgamiento(o) {
     const errores = [];
     const faltan = diasHasta(o.hoy, o.desde);
-    if (!(faltan >= o.avisoDias))
+    if (!o.porLaEmpresa && !(faltan >= 0))
+        errores.push(`Empezaba el ${fechaCorta(o.desde)} y ya pasó: hay que proponer otras fechas.`);
+    if (o.porLaEmpresa && !(faltan >= o.avisoDias))
         errores.push(`El aviso no llega: empieza el ${fechaCorta(o.desde)} y hay que avisar con ${o.avisoDias} días (hoy faltan ${Math.max(0, faltan || 0)}). Mové el inicio al ${fechaCorta(primerInicioPosible(o.hoy, o.avisoDias))} o después.`);
     if (o.hasta > o.ventana.hasta)
         errores.push(`Termina el ${fechaCorta(o.hasta)}, después del cierre de la ventana (${fechaCorta(o.ventana.hasta)}).`);
@@ -364,7 +371,8 @@ export function estadoVisible(estado, otorgados, hoy) {
 }
 /**
  * LAS ALERTAS DE SEGUIMIENTO DE UNA PERSONA: no acusó recibo, la fecha límite está por vencer, o lo que
- * propuso ya no llega con el aviso (la jerarquía tardó en aprobar).
+ * propuso empieza pronto y todavía no se aprobó. El aviso de `avisoDias` no se mide acá: lo propuesto por la
+ * persona no lo necesita (23/11/2026).
  */
 export function alertasDeInvitacion(o) {
     const alertas = [];
@@ -377,8 +385,11 @@ export function alertasDeInvitacion(o) {
     }
     if (o.estado === "propuso_fechas" && o.tramos?.length) {
         const inicio = o.tramos.reduce((m, t) => (t.desde < m ? t.desde : m), o.tramos[0].desde);
-        if (diasHasta(o.hoy, inicio) < o.avisoDias)
-            alertas.push({ nivel: "error", codigo: "aviso_insuficiente", mensaje: `Lo propuesto empieza el ${fechaCorta(inicio)}: aprobándolo hoy ya no se llega al aviso de ${o.avisoDias} días.` });
+        const faltan = diasHasta(o.hoy, inicio);
+        if (faltan < 0)
+            alertas.push({ nivel: "error", codigo: "empezo_sin_aprobar", mensaje: `Lo propuesto empezaba el ${fechaCorta(inicio)} y no se aprobó: tiene que proponer otras fechas.` });
+        else if (faltan <= 7)
+            alertas.push({ nivel: "aviso", codigo: "empieza_pronto", mensaje: `Lo propuesto empieza el ${fechaCorta(inicio)} (${faltan === 0 ? "hoy" : `en ${faltan} día(s)`}) y todavía no está aprobado.` });
     }
     return alertas;
 }
