@@ -18,10 +18,11 @@ export interface Campania {
   avisoMinimoDias: number;
   minDiasPorTramo: number;
   fechaLimite?: string | null;
-  /** Los `tipo_contrato_id` que invita (vacío = todos los habilitados). Se elige en borrador. */
-  tiposContratoInvitar?: number[];
+  /** Los tipos del catálogo que invita (vacío = todos los habilitados). Se elige en borrador. */
+  tiposContratoInvitar?: string[];
   /** Lo que se usó al lanzar: los tipos que entraron y cuántas personas con días quedaron afuera. */
-  lanzamiento?: { todosLosTipos: boolean; tipos: { id: number; nombre: string; invitadas: number }[]; excluidas: Excluidas } | null;
+  /** `id`: el tipo del catálogo (en las lanzadas antes del 23/11/2026, el número de FRAME). */
+  lanzamiento?: { todosLosTipos: boolean; tipos: { id: string | number; nombre: string; invitadas: number }[]; excluidas: Excluidas } | null;
   estado: "borrador" | "lanzada" | "cerrada";
   lanzadaAt?: string;
   cerradaAt?: string;
@@ -37,8 +38,8 @@ export interface Excluidas {
 
 /** La vista previa del borrador: la gente con días por tipo de contrato, los tipos sin vacaciones y la selección guardada. */
 export interface VistaPreviaDeInvitacion extends PoblacionPorTipo {
-  deshabilitados: number[];
-  tiposContratoInvitar: number[];
+  deshabilitados: string[];
+  tiposContratoInvitar: string[];
 }
 
 export interface VacacionDeTramo {
@@ -113,7 +114,7 @@ class CampaniasVacacionesAPI {
     const { data } = await axios.get(`${BASE}/${id}`);
     return data;
   }
-  async lanzar(id: string, tiposContratoInvitar?: number[]): Promise<{ invitadas: number; excluidas?: Excluidas; alertas: Alerta[] }> {
+  async lanzar(id: string, tiposContratoInvitar?: string[]): Promise<{ invitadas: number; excluidas?: Excluidas; alertas: Alerta[] }> {
     const { data } = await axios.post(`${BASE}/${id}/lanzar`, tiposContratoInvitar ? { tiposContratoInvitar } : {});
     return data;
   }
@@ -121,7 +122,7 @@ class CampaniasVacacionesAPI {
     const { data } = await axios.get(`${BASE}/${id}/vista-previa`);
     return data;
   }
-  async guardarTiposContrato(id: string, tiposContratoInvitar: number[]): Promise<{ tiposContratoInvitar: number[] }> {
+  async guardarTiposContrato(id: string, tiposContratoInvitar: string[]): Promise<{ tiposContratoInvitar: string[] }> {
     const { data } = await axios.put(`${BASE}/${id}/tipos-contrato`, { tiposContratoInvitar });
     return data;
   }

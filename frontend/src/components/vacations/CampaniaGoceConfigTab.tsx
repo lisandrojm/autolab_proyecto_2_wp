@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleExclamation, faInfoCircle, faScaleBalanced, faSpinner, faToggleOff, faToggleOn, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { LoadingSpinner } from "../ui/LoadingSpinner";
-import { vacationConfigAPI, VacationConfig, type AvailableContract } from "../../api/vacationConfig";
+import { vacationConfigAPI, VacationConfig, type TipoContratoVacaciones } from "../../api/vacationConfig";
 import { SelectorTiposContrato } from "./campania/SelectorTiposContrato";
 import { sweetAlert } from "../../utils/sweetAlert";
 import { hoyISO } from "../../utils/contratoVigencia";
@@ -39,13 +39,13 @@ export const CampaniaGoceConfigTab: React.FC = () => {
   const [borrador, setBorrador] = useState<ConfigCampania>(normalizarConfigCampania(undefined));
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
-  const [tiposDeContrato, setTiposDeContrato] = useState<AvailableContract[]>([]);
+  const [tiposDeContrato, setTiposDeContrato] = useState<TipoContratoVacaciones[]>([]);
 
   useEffect(() => {
-    // El catálogo de tipos de contrato: si no llega, la sección de tipos no se muestra y el resto funciona igual.
+    // Los tipos del catálogo (uno por tipo, los activos): si no llegan, la sección de tipos no se muestra y el resto funciona igual.
     vacationConfigAPI
-      .getAvailableContracts()
-      .then((t) => setTiposDeContrato(t.filter((x) => x.id !== null && x.id !== undefined)))
+      .getTiposContrato()
+      .then(setTiposDeContrato)
       .catch(() => setTiposDeContrato([]));
   }, []);
 
@@ -61,7 +61,8 @@ export const CampaniaGoceConfigTab: React.FC = () => {
   }, []);
 
   const guardado = normalizarConfigCampania(config?.campania);
-  const tiposSinVacaciones = (config?.contractRules || []).filter((r) => r.vacationsEnabled === false).map((r) => r.contractId);
+  // Lo dice el server para cada tipo del catálogo (las reglas viejas por número de FRAME ya vienen traducidas).
+  const tiposSinVacaciones = tiposDeContrato.filter((t) => !t.vacationsEnabled).map((t) => t.id);
   const cambio = JSON.stringify(guardado) !== JSON.stringify(borrador);
 
   const guardar = async (nueva: ConfigCampania) => {
@@ -135,9 +136,9 @@ export const CampaniaGoceConfigTab: React.FC = () => {
         {tiposDeContrato.length > 0 && (
           <div className="space-y-2">
             <p className="text-sm font-medium text-gray-800 dark:text-gray-200">Tipos de contrato que se invitan</p>
-            <SelectorTiposContrato tipos={tiposDeContrato} deshabilitados={tiposSinVacaciones} seleccion={borrador.tiposContratoInvitar.filter((t) => !tiposSinVacaciones.includes(t))} onChange={(tiposContratoInvitar) => setBorrador({ ...borrador, tiposContratoInvitar })} disabled={guardando} />
+            <SelectorTiposContrato tipos={tiposDeContrato} personas={Object.fromEntries(tiposDeContrato.map((t) => [t.id, t.vigentes]))} queCuenta="personas con un contrato vigente de este tipo" deshabilitados={tiposSinVacaciones} seleccion={borrador.tiposContratoInvitar.filter((t) => !tiposSinVacaciones.includes(t))} onChange={(tiposContratoInvitar) => setBorrador({ ...borrador, tiposContratoInvitar })} disabled={guardando} />
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Con qué selección arranca cada campaña nueva (después se puede cambiar en la campaña, antes de lanzarla). Se invita a quien tiene de ese tipo su contrato vigente en la empresa de cómputo. Los tachados no tienen vacaciones (Visibilidad por tipo de Contrato) y no se invitan nunca.
+              Con qué selección arranca cada campaña nueva (después se puede cambiar en la campaña, antes de lanzarla). Se invita a quien tiene de ese tipo su contrato vigente en la empresa de cómputo. Los tachados no tienen vacaciones (Visibilidad por tipo de Contrato) y no se invitan nunca. Al lado de cada tipo, sus códigos de ARCA y cuántas personas lo tienen vigente hoy.
             </p>
           </div>
         )}

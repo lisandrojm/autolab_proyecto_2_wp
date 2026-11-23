@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faBell, faCheck, faCircleCheck, faCircleExclamation, faClockRotateLeft, faDownload, faEdit, faFilePdf, faLock, faMagnifyingGlass, faPaperPlane, faXmark, faPlus, faScaleBalanced, faSpinner, faTriangleExclamation, faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
 import { campaniasVacacionesAPI, errorDeCampania, type Alerta, type Campania, type EstadoVisible, type Invitacion, type Tablero, type VistaPreviaDeInvitacion } from "../../../api/campaniasVacaciones";
-import { vacationConfigAPI, type AvailableContract } from "../../../api/vacationConfig";
+import { vacationConfigAPI, type TipoContratoVacaciones } from "../../../api/vacationConfig";
 import { SelectorTiposContrato } from "./SelectorTiposContrato";
 import { sweetAlert } from "../../../utils/sweetAlert";
 import { fechaCorta } from "@compartido/planVacaciones/fechas";
@@ -162,8 +162,8 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
   const [editando, setEditando] = useState<Invitacion | null>(null);
   const [historial, setHistorial] = useState<Invitacion | null>(null);
   // A quién se invita (sólo en borrador): la selección de tipos y la gente con días por tipo, para la vista previa.
-  const [tipos, setTipos] = useState<number[]>([]);
-  const [catalogo, setCatalogo] = useState<AvailableContract[]>([]);
+  const [tipos, setTipos] = useState<string[]>([]);
+  const [catalogo, setCatalogo] = useState<TipoContratoVacaciones[]>([]);
   const [previa, setPrevia] = useState<VistaPreviaDeInvitacion | null>(null);
   const [errorPrevia, setErrorPrevia] = useState("");
   const esBorrador = datos?.campania.estado === "borrador";
@@ -173,12 +173,12 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
     let vigente = true;
     setPrevia(null);
     setErrorPrevia("");
-    Promise.all([campaniasVacacionesAPI.vistaPrevia(id), vacationConfigAPI.getAvailableContracts()])
+    Promise.all([campaniasVacacionesAPI.vistaPrevia(id), vacationConfigAPI.getTiposContrato()])
       .then(([p, contratos]) => {
         if (!vigente) return;
         setPrevia(p);
         setTipos(p.tiposContratoInvitar);
-        setCatalogo(contratos.filter((t) => t.id !== null && t.id !== undefined));
+        setCatalogo(contratos);
       })
       .catch((e) => vigente && setErrorPrevia(errorDeCampania(e)));
     return () => {
@@ -187,7 +187,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
   }, [id, esBorrador]);
 
   // Cada cambio se guarda en la campaña; si falla, vuelve a lo que estaba guardado.
-  const cambiarTipos = async (nueva: number[]) => {
+  const cambiarTipos = async (nueva: string[]) => {
     const antes = tipos;
     setTipos(nueva);
     try {
@@ -231,7 +231,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
   // Los tipos que no se invitan nunca no cuentan como tildados, aunque hayan quedado guardados.
   const seleccion = previa ? tipos.filter((t) => !previa.deshabilitados.includes(t)) : tipos;
   const resumen = previa ? resumenDeInvitables(previa, seleccion, previa.deshabilitados) : null;
-  const nombreDeTipo = (idTipo: number) => catalogo.find((t) => t.id === idTipo)?.name || previa?.porTipo.find((t) => t.id === idTipo)?.nombre || `Tipo ${idTipo}`;
+  const nombreDeTipo = (idTipo: string) => catalogo.find((t) => t.id === idTipo)?.name || previa?.porTipo.find((t) => t.id === idTipo)?.nombre || "(tipo sin nombre)";
   const textoTipos = seleccion.length ? seleccion.map(nombreDeTipo).join(", ") : "todos los habilitados";
 
   const lanzar = async () => {
@@ -366,7 +366,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
             <LoadingSpinner message="Cargando datos..." />
           ) : (
             <>
-              <SelectorTiposContrato tipos={catalogo} deshabilitados={previa.deshabilitados} seleccion={seleccion} onChange={cambiarTipos} personas={Object.fromEntries(previa.porTipo.map((t) => [t.id, t.personas]))} disabled={!!ocupado} />
+              <SelectorTiposContrato tipos={catalogo} deshabilitados={previa.deshabilitados} seleccion={seleccion} onChange={cambiarTipos} personas={Object.fromEntries(previa.porTipo.map((t) => [t.id, t.personas]))} queCuenta="personas con días disponibles, por su contrato vigente en la empresa de cómputo" disabled={!!ocupado} />
               <p className={`text-sm ${resumen.invitar > 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
                 Con esta selección se invitaría a <strong>{resumen.invitar}</strong> persona{resumen.invitar === 1 ? "" : "s"}.
               </p>
