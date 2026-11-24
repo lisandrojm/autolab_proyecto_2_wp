@@ -631,7 +631,20 @@ export declare function alAprobarseEnLaCampania(v: IVacation): Promise<void>;
  */
 export declare function alSalirDeLaCampania(v: IVacation, motivo: string, porLaPersona?: boolean, opciones?: {
     eliminadaPor?: string | null;
+    porAdmin?: boolean;
 }): Promise<void>;
+/**
+ * Borrar el registro de una persona desde la campaña (24/11/2026). Sólo si no le queda ninguna solicitud de
+ * vacaciones de la campaña: las solicitudes cuelgan de la invitación, y borrarla con solicitudes vivas las dejaría
+ * sin dueño. Primero se eliminan (o rechazan) esas solicitudes; al eliminar la última desde el admin, el registro
+ * se borra solo (ver `alSalirDeLaCampania`).
+ */
+export declare function eliminarInvitacion(tid: Types.ObjectId, campaniaId: string, invId: string, actorId: string | null): Promise<{
+    eliminada: boolean;
+    nombre: string;
+    campania: string;
+    estado: import("../../compartido/vacaciones/campania.js").EstadoInvitacion;
+}>;
 /**
  * Lo que hace el reloj en cada campaña lanzada: la fecha límite vencida pasa a «venció sin elegir» y se
  * le sugiere el tramo único; 2 días antes del vencimiento, un recordatorio automático (uno solo).

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faBell, faCheck, faCircleCheck, faCircleExclamation, faClockRotateLeft, faDownload, faEdit, faEye, faFilePdf, faLock, faPaperPlane, faPlus, faScaleBalanced, faSpinner, faTriangleExclamation, faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faBell, faCheck, faCircleCheck, faCircleExclamation, faClockRotateLeft, faDownload, faEdit, faEye, faFilePdf, faLock, faPaperPlane, faPlus, faScaleBalanced, faSpinner, faTrash, faTriangleExclamation, faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
 import { campaniasVacacionesAPI, errorDeCampania, type Alerta, type Campania, type CambioDeTipos, type EstadoVisible, type Invitacion, type Tablero, type VistaPreviaDeInvitacion } from "../../../api/campaniasVacaciones";
 import { vacationConfigAPI, type TipoContratoVacaciones } from "../../../api/vacationConfig";
 import { SelectorTiposContrato } from "./SelectorTiposContrato";
@@ -466,6 +466,20 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
     void cargar();
   }, [cargar]);
 
+  /*
+    BORRAR EL REGISTRO DE UNA PERSONA (24/11/2026): se va todo —invitación, acuse, propuesta, historial—, no queda
+    «retirada» ni nada a la vista. Si tiene solicitudes vivas de la campaña, el servidor se niega y dice cuáles:
+    se eliminan desde Vacaciones y, al eliminar la última desde el admin, el registro se borra solo.
+  */
+  const borrarRegistro = async (i: Invitacion) => {
+    const r = await sweetAlert.confirm(`Borrar el registro de ${i.nombre}`, "Se borra todo lo de esta persona en la campaña: la invitación, el acuse de recibo, lo propuesto, el aviso y el historial. Queda fuera de la campaña. Si tiene solicitudes de vacaciones de la campaña, primero hay que eliminarlas.", "Sí, borrar todo");
+    if (!r.isConfirmed) return;
+    await accion("borrar", async () => {
+      const x = await campaniasVacacionesAPI.eliminarInvitacion(id, i._id);
+      return `Se borró el registro de ${x.nombre}.`;
+    });
+  };
+
   const accion = async (clave: string, fn: () => Promise<string | void>) => {
     setOcupado(clave);
     try {
@@ -842,6 +856,11 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
                     <button type="button" onClick={() => setHistorial(i)} className="p-1.5 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" title="Historial (quién, cuándo, qué)">
                       <FontAwesomeIcon icon={faClockRotateLeft} className="h-4 w-4" />
                     </button>
+                    {c.estado !== "cerrada" && (
+                      <button type="button" onClick={() => borrarRegistro(i)} disabled={!!ocupado} className="p-1.5 rounded text-gray-500 dark:text-gray-400 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/40 dark:hover:text-red-300 disabled:opacity-50" title="Borrar el registro de la persona en la campaña (invitación, acuse, historial). Sólo sin solicitudes vivas.">
+                        <FontAwesomeIcon icon={faTrash} className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

@@ -3,7 +3,7 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireTenant } from "../middleware/tenant.js";
 import { requirePermission } from "../middleware/permissions.js";
 import { ErrorVacacion } from "../services/vacaciones/crearVacacion.js";
-import { acusarInvitacion, acusarOtorgamiento, cancelarPropuesta, cargarCampania, cerrarCampania, cambiarFechaLimite, cambiarDiasDeInicio, cambiarTiposContrato, rearmarTurnos, confirmarAsignaciones, crearCampania, editarAsignacion, guardarTiposContrato, lanzarCampania, listarCampanias, miInvitacion, proponerFechas, recordar, reporteCsv, sugerirAsignaciones, tablero, vistaPreviaDeInvitacion, } from "../services/vacaciones/campaniaVacaciones.js";
+import { acusarInvitacion, acusarOtorgamiento, cancelarPropuesta, cargarCampania, cerrarCampania, cambiarFechaLimite, cambiarDiasDeInicio, cambiarTiposContrato, rearmarTurnos, confirmarAsignaciones, crearCampania, editarAsignacion, eliminarInvitacion, guardarTiposContrato, lanzarCampania, listarCampanias, miInvitacion, proponerFechas, recordar, reporteCsv, sugerirAsignaciones, tablero, vistaPreviaDeInvitacion, } from "../services/vacaciones/campaniaVacaciones.js";
 const manejar = (fn) => async (req, res) => {
     try {
         const r = await fn(req, res);
@@ -55,6 +55,8 @@ campaniasVacacionesRoutes.put("/:id/fecha-limite", soloAdmin, manejar(async (req
 campaniasVacacionesRoutes.put("/:id/dias-de-inicio", soloAdmin, manejar(async (req) => cambiarDiasDeInicio(tid(req), String(req.params.id), req.body?.diasDeInicio, yo(req))));
 // Rearmar los turnos por antigüedad (se rearman solos al cambiar una regla de solapamiento con orden).
 campaniasVacacionesRoutes.post("/:id/turnos", soloAdmin, manejar(async (req) => rearmarTurnos(tid(req), String(req.params.id))));
+// Borrar el registro entero de una persona en la campaña (invitación, acuse, historial). Sólo sin solicitudes vivas.
+campaniasVacacionesRoutes.delete("/:id/invitaciones/:invId", soloAdmin, manejar(async (req) => eliminarInvitacion(tid(req), String(req.params.id), String(req.params.invId), yo(req))));
 campaniasVacacionesRoutes.post("/:id/cerrar", soloAdmin, manejar(async (req) => cerrarCampania(tid(req), String(req.params.id), yo(req))));
 campaniasVacacionesRoutes.get("/:id/reporte.csv", soloAdmin, manejar(async (req, res) => {
     const { nombre, csv } = await reporteCsv(tid(req), String(req.params.id));

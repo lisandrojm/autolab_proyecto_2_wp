@@ -552,6 +552,8 @@ router.delete("/:id", async (req, res) => {
       return res.status(404).json({ error: "Solicitud no encontrada" });
     }
     if (!(await esDuenaOAdmin(req, existente))) return res.status(403).json({ error: "Sólo quien la pidió o el administrador pueden eliminarla" });
+    // Si no la borra la dueña, la borra el administrador: en la campaña eso borra el registro entero (ver `alSalirDeLaCampania`).
+    const porAdmin = String(existente.userId?._id ?? existente.userId) !== String(req.user?.userId);
     await Vacation.deleteOne({ _id: id, tenantId });
     /*
       Borrarla deshace lo mismo que cancelarla (23/11/2026): los días reservados vuelven al saldo y, si era de la
@@ -562,7 +564,7 @@ router.delete("/:id", async (req, res) => {
     }
     if (existente.campaniaId) {
       await import("../services/vacaciones/campaniaVacaciones.js")
-        .then((m) => m.alSalirDeLaCampania(existente, "Eliminada", false, { eliminadaPor: req.user?.userId || null }))
+        .then((m) => m.alSalirDeLaCampania(existente, "Eliminada", false, { eliminadaPor: req.user?.userId || null, porAdmin }))
         .catch((e) => console.error("[CAMPANIA] eliminación:", e?.message || e));
     }
 

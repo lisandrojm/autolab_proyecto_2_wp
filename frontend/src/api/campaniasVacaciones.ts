@@ -195,6 +195,11 @@ class CampaniasVacacionesAPI {
     const { data } = await axios.post(`${BASE}/${id}/turnos`);
     return data;
   }
+  /** Borra el registro entero de una persona en la campaña (invitación, acuse, historial). Sólo sin solicitudes vivas. */
+  async eliminarInvitacion(id: string, invId: string): Promise<{ eliminada: boolean; nombre: string; campania: string; estado: string }> {
+    const { data } = await axios.delete(`${BASE}/${id}/invitaciones/${invId}`);
+    return data;
+  }
   async cerrar(id: string): Promise<Campania> {
     const { data } = await axios.post(`${BASE}/${id}/cerrar`);
     return data;

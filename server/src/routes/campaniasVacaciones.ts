@@ -17,6 +17,7 @@ import {
   confirmarAsignaciones,
   crearCampania,
   editarAsignacion,
+  eliminarInvitacion,
   guardarTiposContrato,
   lanzarCampania,
   listarCampanias,
@@ -94,6 +95,8 @@ campaniasVacacionesRoutes.put("/:id/fecha-limite", soloAdmin, manejar(async (req
 campaniasVacacionesRoutes.put("/:id/dias-de-inicio", soloAdmin, manejar(async (req) => cambiarDiasDeInicio(tid(req), String(req.params.id), req.body?.diasDeInicio, yo(req))));
 // Rearmar los turnos por antigüedad (se rearman solos al cambiar una regla de solapamiento con orden).
 campaniasVacacionesRoutes.post("/:id/turnos", soloAdmin, manejar(async (req) => rearmarTurnos(tid(req), String(req.params.id))));
+// Borrar el registro entero de una persona en la campaña (invitación, acuse, historial). Sólo sin solicitudes vivas.
+campaniasVacacionesRoutes.delete("/:id/invitaciones/:invId", soloAdmin, manejar(async (req) => eliminarInvitacion(tid(req), String(req.params.id), String(req.params.invId), yo(req))));
 campaniasVacacionesRoutes.post("/:id/cerrar", soloAdmin, manejar(async (req) => cerrarCampania(tid(req), String(req.params.id), yo(req))));
 campaniasVacacionesRoutes.get(
   "/:id/reporte.csv",

@@ -906,6 +906,27 @@ export async function alSalirDeLaCampania(v, motivo, porLaPersona = false, opcio
         return;
     const periodo = periodoTexto({ desde: iso(v.startDate), hasta: iso(v.endDate) });
     /*
+      LA ELIMINÓ EL ADMINISTRADOR (24/11/2026, pedido del usuario): se borra TODO el registro de la persona en la
+      campaña —invitación, acuse de recibo, propuesta, aviso, historial—, no sólo el tramo. Antes quedaba en «Acusó
+      recibo» con el acuse y la fecha a la vista, como si nada hubiera pasado. Si le queda OTRA solicitud de la
+      campaña (otro tramo o una asignación), no se borra: se saca este tramo y se anota, porque esas solicitudes
+      siguen colgando de la invitación.
+    */
+    if (opciones.eliminadaPor !== undefined && opciones.porAdmin) {
+        const otrosTramos = (inv.tramos || []).filter((t) => t.vacationId && String(t.vacationId) !== String(v._id));
+        const otraAsignacion = inv.asignacion?.vacationId && String(inv.asignacion.vacationId) !== String(v._id);
+        if (otrosTramos.length === 0 && !otraAsignacion) {
+            await borrarInvitacion(inv, `el administrador eliminó la solicitud ${periodo}`);
+            return;
+        }
+        inv.tramos = otrosTramos;
+        if (inv.asignacion?.vacationId && String(inv.asignacion.vacationId) === String(v._id))
+            inv.asignacion = null;
+        inv.historial.push(paso("solicitud_eliminada", opciones.eliminadaPor, `El administrador eliminó la solicitud ${periodo}. Le quedan ${otrosTramos.length} tramo(s)${otraAsignacion ? " y la asignación" : ""} en la campaña.`));
+        await inv.save();
+        return;
+    }
+    /*
       LA SOLICITUD SE ELIMINÓ (23/11/2026, Xiara Soria Rebora): antes el borrado no avisaba a la campaña y la
       invitación quedaba en «Propuso fechas» apuntando a una solicitud que ya no existe. Se saca el tramo y, si no le
       queda nada propuesto, vuelve a elegir (invitado o acusó recibo), sin figurar como rechazada. Si las fechas las
@@ -945,6 +966,36 @@ export async function alSalirDeLaCampania(v, motivo, porLaPersona = false, opcio
         inv.historial.push(paso("tramo_rechazado", null, `${motivo}: ${periodo}. Vuelve a elegir esos días.`));
     }
     await inv.save();
+}
+/**
+ * BORRA EL REGISTRO ENTERO de una persona en la campaña: la invitación con su acuse, propuesta, aviso, historial y
+ * recordatorios. Queda fuera de la campaña (no «retirada»: desaparece). Si la campaña está lanzada se rearman los
+ * turnos por antigüedad, que dependen de quiénes están. Se anota en la consola, porque el registro ya no existe.
+ */
+async function borrarInvitacion(inv, porque) {
+    const c = await CampaniaVacaciones.findById(inv.campaniaId);
+    await InvitacionVacaciones.deleteOne({ _id: inv._id });
+    console.log(`[campania-vacaciones] ${String(inv.campaniaId)}: se borró el registro de ${inv.nombre || String(inv.userId)} (${inv.estado}) porque ${porque}.`);
+    if (c && c.estado === "lanzada")
+        await recalcularTurnos(c.tenantId, c).catch((e) => console.error("[CAMPANIA] turnos al borrar:", e?.message || e));
+}
+/**
+ * Borrar el registro de una persona desde la campaña (24/11/2026). Sólo si no le queda ninguna solicitud de
+ * vacaciones de la campaña: las solicitudes cuelgan de la invitación, y borrarla con solicitudes vivas las dejaría
+ * sin dueño. Primero se eliminan (o rechazan) esas solicitudes; al eliminar la última desde el admin, el registro
+ * se borra solo (ver `alSalirDeLaCampania`).
+ */
+export async function eliminarInvitacion(tid, campaniaId, invId, actorId) {
+    const c = await cargarCampania(tid, campaniaId);
+    const inv = await cargarInvitacion(tid, campaniaId, invId);
+    const ids = [...(inv.tramos || []).map((t) => t.vacationId), inv.asignacion?.vacationId].filter(Boolean);
+    const vivas = ids.length ? await Vacation.find({ _id: { $in: ids }, tenantId: tid }).select("startDate endDate status").lean() : [];
+    if (vivas.length > 0) {
+        throw new ErrorVacacion(`${inv.nombre || "La persona"} tiene ${vivas.length} solicitud(es) de vacaciones de esta campaña (${vivas.map((v) => `${periodoTexto({ desde: iso(v.startDate), hasta: iso(v.endDate) })} · ${v.status}`).join("; ")}). Eliminalas desde Vacaciones y el registro se borra solo.`);
+    }
+    const nombre = inv.nombre || String(inv.userId);
+    await borrarInvitacion(inv, `lo pidió el administrador${actorId ? ` (${actorId})` : ""}`);
+    return { eliminada: true, nombre, campania: c.nombre, estado: inv.estado };
 }
 /* ─────────────────────────── El barrido ─────────────────────────── */
 /**
