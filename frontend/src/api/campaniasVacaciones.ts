@@ -22,6 +22,8 @@ export interface Campania {
   fechaLimite?: string | null;
   /** Los tipos del catálogo que invita (vacío = todos los habilitados). Se elige en borrador. */
   tiposContratoInvitar?: string[];
+  /** Los nombres de esos tipos (lo manda el tablero). */
+  tiposInvitados?: string[];
   /** Lo que se usó al lanzar: los tipos que entraron y cuántas personas con días quedaron afuera. */
   /** `id`: el tipo del catálogo (en las lanzadas antes del 23/11/2026, el número de FRAME). */
   lanzamiento?: { todosLosTipos: boolean; tipos: { id: string | number; nombre: string; invitadas: number }[]; excluidas: Excluidas } | null;
@@ -93,6 +95,11 @@ export interface Invitacion {
   turnos?: TurnoDeEleccion[];
   /** El tipo de su contrato vigente en la empresa de cómputo, hoy; null = sin contrato vigente en WeProdu. */
   tipoContrato?: { id: string; nombre: string; empresa: string } | null;
+  /**
+   * El contrato que se VE (el que rige en cualquier proyecto: el vigente o, sin vigentes, el último), con si está
+   * vigente. null = no tiene ningún contrato en WeProdu. La campaña decide con `tipoContrato`, no con éste.
+   */
+  contrato?: { nombre: string; proyecto: string; empresa: string; alta: string; baja: string; vigente: boolean } | null;
   alertas: Alerta[];
 }
 

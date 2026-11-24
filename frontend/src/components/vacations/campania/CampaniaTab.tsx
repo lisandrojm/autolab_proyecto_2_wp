@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faBell, faCheck, faCircleCheck, faCircleExclamation, faClockRotateLeft, faDownload, faEdit, faEye, faFilePdf, faLock, faMagnifyingGlass, faPaperPlane, faXmark, faPlus, faScaleBalanced, faSpinner, faTriangleExclamation, faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faBell, faBriefcase, faCheck, faCircleCheck, faCircleExclamation, faClockRotateLeft, faDownload, faEdit, faEye, faFilePdf, faLock, faPaperPlane, faPlus, faScaleBalanced, faSpinner, faTriangleExclamation, faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
 import { campaniasVacacionesAPI, errorDeCampania, type Alerta, type Campania, type CambioDeTipos, type EstadoVisible, type Invitacion, type Tablero, type VistaPreviaDeInvitacion } from "../../../api/campaniasVacaciones";
 import { vacationConfigAPI, type TipoContratoVacaciones } from "../../../api/vacationConfig";
 import { SelectorTiposContrato } from "./SelectorTiposContrato";
@@ -13,6 +13,7 @@ import { TablaConEncabezadoFijo } from "../../ui/TablaConEncabezadoFijo";
 import { Modal } from "../../ui/Modal";
 import { LoadingSpinner } from "../../ui/LoadingSpinner";
 import { fuzzyMatch } from "../../../utils/searchHelpers";
+import { SearchAndFilters, type FilterOption } from "../../ui/SearchAndFilters";
 import { getImageUrl } from "../../../utils/imageHelpers";
 
 /**
@@ -356,14 +357,54 @@ const ModalEditarCampania: React.FC<{ campania: Campania; onCerrar: () => void; 
 
 /* ─────────────────────────── Tablero ─────────────────────────── */
 
+const SIN_CONTRATO = "Sin contratos en WeProdu";
+const SIN_DATO = "(sin dato)";
+
+/**
+ * EL CONTRATO DE LA PERSONA, como en la ficha (23/11/2026, pedido del usuario): el tipo, VIGENTE / NO VIGENTE, alta,
+ * baja y el proyecto. Es el que rige (el vigente o, si no tiene, el último). Si está vigente pero no es de su
+ * empresa de cómputo, se aclara que no cuenta para la campaña (la campaña mira ése).
+ */
+const ContratoDeLaFila: React.FC<{ i: Invitacion }> = ({ i }) => {
+  const k = i.contrato;
+  if (!k) return <p className="text-amber-600 dark:text-amber-400 text-xs max-w-[10rem]">{SIN_CONTRATO}</p>;
+  return (
+    <div className="space-y-1 min-w-[10rem]">
+      <p className="text-gray-800 dark:text-gray-200 whitespace-nowrap">{k.nombre}</p>
+      <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${k.vigente ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}>
+        {k.vigente ? "Vigente" : "No vigente"}
+      </span>
+      {k.alta && <p className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">Alta: {fechaCorta(k.alta)}</p>}
+      <p className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">{k.baja ? `Baja: ${fechaCorta(k.baja)}` : "Sin baja"}</p>
+      {k.proyecto && (
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-400 text-[10px] font-bold uppercase whitespace-nowrap">
+          <FontAwesomeIcon icon={faBriefcase} className="h-2.5 w-2.5" /> {k.proyecto}
+        </span>
+      )}
+      {k.empresa && <p className="text-[11px] text-gray-400 whitespace-nowrap">{k.empresa}</p>}
+      {k.vigente && !i.tipoContrato && <p className="text-[11px] text-amber-600 dark:text-amber-400 max-w-[12rem]">No es de su empresa de cómputo: no cuenta para la campaña.</p>}
+    </div>
+  );
+};
+
 const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, onVolver }) => {
   const [datos, setDatos] = useState<Tablero | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
-  const [filtro, setFiltro] = useState<EstadoVisible | "">("");
-  // El buscador: por nombre, sin importar mayúsculas ni acentos. Se suma al filtro por estado.
+  /*
+    FILTROS (23/11/2026, pedido del usuario: «un botón de filtros con todo para poder ver lo que sirve»): el patrón de
+    la app, buscador + «Filtros avanzados», sin chips. Por defecto se ve sólo a quien está EN la campaña (sin las
+    «Fuera de la campaña»); el filtro aplicado queda a la vista y se quita con la ✕.
+  */
   const [busqueda, setBusqueda] = useState("");
-  // Filtro por tipo de contrato: el id del catálogo, «sin» (sin contrato vigente en WeProdu) o "" (todos).
-  const [filtroTipo, setFiltroTipo] = useState("");
+  const [participacion, setParticipacion] = useState("en");
+  const [estados, setEstados] = useState<string[]>([]);
+  const [tiposFiltro, setTiposFiltro] = useState<string[]>([]);
+  const [vigencia, setVigencia] = useState("");
+  const [empresasFiltro, setEmpresasFiltro] = useState<string[]>([]);
+  const [proyectosFiltro, setProyectosFiltro] = useState<string[]>([]);
+  const [acuse, setAcuse] = useState("");
+  const [cuenta, setCuenta] = useState("");
+  const [conAlertas, setConAlertas] = useState(false);
   const [editando, setEditando] = useState<Invitacion | null>(null);
   const [historial, setHistorial] = useState<Invitacion | null>(null);
   // Cambiar la fecha límite para elegir (sólo lanzada).
@@ -432,19 +473,37 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
   // El estado de cada invitación por id: para saber si las que alguien tiene adelante en su turno ya eligieron.
   const estadoPorId = useMemo(() => new Map((datos?.invitaciones || []).map((i) => [i._id, i.estado])), [datos]);
   const filas = useMemo(
-    () => (datos?.invitaciones || []).filter((i) => (!filtro || i.estadoVisible === filtro) && (!filtroTipo || (filtroTipo === "sin" ? !i.tipoContrato : i.tipoContrato?.id === filtroTipo)) && fuzzyMatch(i.nombre, busqueda.trim())),
-    [datos, filtro, filtroTipo, busqueda],
+    () =>
+      (datos?.invitaciones || []).filter((i) => {
+        const k = i.contrato;
+        if (participacion === "en" && i.estadoVisible === "retirada") return false;
+        if (participacion === "fuera" && i.estadoVisible !== "retirada") return false;
+        if (estados.length && !estados.includes(i.estadoVisible)) return false;
+        if (tiposFiltro.length && !tiposFiltro.includes(k ? k.nombre : SIN_CONTRATO)) return false;
+        if (vigencia && vigencia !== (k ? (k.vigente ? "vigente" : "no_vigente") : "sin")) return false;
+        if (empresasFiltro.length && !empresasFiltro.includes(k?.empresa || SIN_DATO)) return false;
+        if (proyectosFiltro.length && !proyectosFiltro.includes(k?.proyecto || SIN_DATO)) return false;
+        if (acuse && (acuse === "si") !== !!i.acuseInvitacionAt) return false;
+        if (cuenta && (cuenta === "si") !== !!i.tipoContrato) return false;
+        if (conAlertas && i.alertas.length === 0) return false;
+        return fuzzyMatch(i.nombre, busqueda.trim());
+      }),
+    [datos, participacion, estados, tiposFiltro, vigencia, empresasFiltro, proyectosFiltro, acuse, cuenta, conAlertas, busqueda],
   );
-  // Los tipos que hay entre las invitadas, con cuántas, para el filtro.
-  const tiposEnLaCampania = useMemo(() => {
-    const m = new Map<string, { nombre: string; n: number }>();
-    for (const i of datos?.invitaciones || []) {
-      const k = i.tipoContrato?.id || "sin";
-      const g = m.get(k) || { nombre: i.tipoContrato?.nombre || "Sin contrato vigente en WeProdu", n: 0 };
-      g.n++;
-      m.set(k, g);
-    }
-    return [...m.entries()].sort((a, b) => (a[0] === "sin" ? 1 : b[0] === "sin" ? -1 : a[1].nombre.localeCompare(b[1].nombre, "es")));
+  // Las opciones de cada filtro salen de lo que hay en la campaña, con cuántas personas tiene cada una.
+  const opciones = useMemo(() => {
+    const contar = (valores: string[]): FilterOption[] => {
+      const m = new Map<string, number>();
+      for (const v of valores) m.set(v, (m.get(v) || 0) + 1);
+      return [...m.entries()].sort((a, b) => ((a[0] === SIN_CONTRATO || a[0] === SIN_DATO) ? 1 : (b[0] === SIN_CONTRATO || b[0] === SIN_DATO) ? -1 : a[0].localeCompare(b[0], "es"))).map(([v, n]) => ({ value: v, label: `${v} · ${n}` }));
+    };
+    const inv = datos?.invitaciones || [];
+    return {
+      estados: ORDEN_ESTADOS.filter((e) => datos?.conteos[e]).map((e) => ({ value: e, label: `${ETIQUETA_ESTADO[e]} · ${datos?.conteos[e]}` })),
+      tipos: contar(inv.map((i) => i.contrato?.nombre || SIN_CONTRATO)),
+      empresas: contar(inv.map((i) => i.contrato?.empresa || SIN_DATO)),
+      proyectos: contar(inv.map((i) => i.contrato?.proyecto || SIN_DATO)),
+    };
   }, [datos]);
   if (!datos) return <LoadingSpinner message="Cargando campaña..." />;
   const { campania: c, conteos } = datos;
@@ -507,7 +566,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{c.nombre}</h3>
         <span className={`inline-flex px-2 py-0.5 rounded text-xs font-bold ${CLASE_CAMPANIA[c.estado]}`}>{TEXTO_CAMPANIA[c.estado]}</span>
         <span className="text-sm text-gray-600 dark:text-gray-400">
-          Ventana {fechaCorta(c.ventanaDesde)} al {fechaCorta(c.ventanaHasta)} · aviso {c.avisoMinimoDias} días · tramo mínimo {c.minDiasPorTramo} · empiezan {textoDiasDeInicio(c.diasDeInicio)} · {c.fechaLimite ? `elegir hasta el ${fechaCorta(c.fechaLimite)}` : `plazo ${c.plazoParaDefinirDias} días desde el lanzamiento`}
+          Ventana {fechaCorta(c.ventanaDesde)} al {fechaCorta(c.ventanaHasta)} · aviso {c.avisoMinimoDias} días · tramo mínimo {c.minDiasPorTramo} · empiezan {textoDiasDeInicio(c.diasDeInicio)} · {c.fechaLimite ? `elegir hasta el ${fechaCorta(c.fechaLimite)}` : `plazo ${c.plazoParaDefinirDias} días desde el lanzamiento`} · invita {c.tiposInvitados?.length ? c.tiposInvitados.join(", ") : "todos los tipos habilitados"}
         </span>
         {c.estado !== "cerrada" && (
           <button type="button" onClick={() => setCambiandoLimite(true)} disabled={!!ocupado} className="text-xs text-blue-600 dark:text-blue-400 underline hover:no-underline disabled:opacity-50" title={c.estado === "lanzada" ? "Editar los días en que pueden empezar y la fecha límite para elegir" : "Editar los días en que pueden empezar"}>
@@ -554,37 +613,28 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
           })}
       </div>
 
-      {/* El buscador y cuántas hay en cada estado; tocar un estado filtra la tabla. */}
+      {/* El buscador y «Filtros avanzados» (sin chips): lo aplicado queda a la vista y se quita con la ✕. */}
       {datos.invitaciones.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-full sm:w-72">
-            <FontAwesomeIcon icon={faMagnifyingGlass} className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
-            <input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar colaborador..." aria-label="Buscar colaborador" className="input-field w-full pl-9 pr-8" />
-            {busqueda && (
-              <button type="button" onClick={() => setBusqueda("")} title="Limpiar búsqueda" className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                <FontAwesomeIcon icon={faXmark} className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-          <button type="button" onClick={() => setFiltro("")} className={`px-3 py-1.5 rounded-lg border text-xs font-semibold ${!filtro ? "border-blue-500 ring-2 ring-blue-500/20" : "border-gray-200 dark:border-gray-700"} text-gray-700 dark:text-gray-200`}>
-            Todas · {datos.invitaciones.length}
-          </button>
-          {ORDEN_ESTADOS.filter((e) => conteos[e]).map((e) => (
-            <button key={e} type="button" onClick={() => setFiltro(filtro === e ? "" : e)} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${CLASE_ESTADO[e]} ${filtro === e ? "ring-2 ring-blue-500/40" : ""}`}>
-              {ETIQUETA_ESTADO[e]} · {conteos[e]}
-            </button>
-          ))}
-          {tiposEnLaCampania.length > 0 && (
-            <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} aria-label="Tipo de contrato" className="input-field w-auto py-1.5 text-xs">
-              <option value="">Todos los tipos de contrato</option>
-              {tiposEnLaCampania.map(([id, t]) => (
-                <option key={id} value={id}>
-                  {t.nombre} · {t.n}
-                </option>
-              ))}
-            </select>
-          )}
-          {(busqueda.trim() || filtro || filtroTipo) && <span className="text-xs text-gray-500 dark:text-gray-400">Mostrando {filas.length} de {datos.invitaciones.length}</span>}
+        <div className="space-y-1">
+          <SearchAndFilters
+            searchTerm={busqueda}
+            onSearchChange={setBusqueda}
+            searchPlaceholder="Buscar colaborador..."
+            selectFilters={[
+              { label: "Participación", value: participacion, onChange: setParticipacion, placeholder: `Todas (${datos.invitaciones.length})`, options: [{ value: "en", label: `En la campaña (${datos.invitaciones.length - (conteos.retirada || 0)})` }, { value: "fuera", label: `Fuera de la campaña (${conteos.retirada || 0})` }] },
+              { label: "Contrato", value: vigencia, onChange: setVigencia, placeholder: "Con o sin contrato", options: [{ value: "vigente", label: "Vigente" }, { value: "no_vigente", label: "No vigente" }, { value: "sin", label: SIN_CONTRATO }] },
+              { label: "Cuenta para la campaña", value: cuenta, onChange: setCuenta, placeholder: "Todas", options: [{ value: "si", label: "Con contrato vigente en su empresa de cómputo" }, { value: "no", label: "Sin contrato vigente en su empresa de cómputo" }] },
+              { label: "Acuse de la invitación", value: acuse, onChange: setAcuse, placeholder: "Con o sin acuse", options: [{ value: "si", label: "Acusó recibo" }, { value: "no", label: "No acusó recibo" }] },
+            ]}
+            multiSelectFilters={[
+              { label: "Estado", values: estados, onChange: setEstados, options: opciones.estados, placeholder: "Todos los estados" },
+              { label: "Tipo de contrato", values: tiposFiltro, onChange: setTiposFiltro, options: opciones.tipos, placeholder: "Todos los tipos" },
+              { label: "Empresa", values: empresasFiltro, onChange: setEmpresasFiltro, options: opciones.empresas, placeholder: "Todas las empresas" },
+              { label: "Proyecto", values: proyectosFiltro, onChange: setProyectosFiltro, options: opciones.proyectos, placeholder: "Todos los proyectos" },
+            ]}
+            switchFilters={[{ label: "Sólo con alertas", value: conAlertas, onChange: setConAlertas }]}
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400">Mostrando {filas.length} de {datos.invitaciones.length}</p>
         </div>
       )}
 
@@ -636,7 +686,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
             {filas.length === 0 && (
               <tr>
                 <td colSpan={9} className="py-8 px-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                  Nadie coincide con {busqueda.trim() ? `«${busqueda.trim()}»` : "el filtro"}{busqueda.trim() && filtro ? ` en «${ETIQUETA_ESTADO[filtro]}»` : ""}.
+                  Nadie coincide con {busqueda.trim() ? `«${busqueda.trim()}»` : "los filtros"}.
                 </td>
               </tr>
             )}
@@ -653,14 +703,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
                 </td>
                 <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{i.asignacion?.dias || i.diasDisponibles}</td>
                 <td className="py-3 px-4 text-sm">
-                  {i.tipoContrato ? (
-                    <>
-                      <p className="text-gray-800 dark:text-gray-200 whitespace-nowrap">{i.tipoContrato.nombre}</p>
-                      {i.tipoContrato.empresa && <p className="text-[11px] text-gray-400 whitespace-nowrap">{i.tipoContrato.empresa}</p>}
-                    </>
-                  ) : (
-                    <p className="text-amber-600 dark:text-amber-400 text-xs max-w-[10rem]" title="No tiene contrato vigente en su empresa de cómputo: no tiene tipo de contrato en la plataforma.">Sin contrato vigente en WeProdu</p>
-                  )}
+                  <ContratoDeLaFila i={i} />
                 </td>
                 <td className="py-3 px-4">
                   <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap ${CLASE_ESTADO[i.estadoVisible]}`}>{i.etiquetaEstado}</span>
