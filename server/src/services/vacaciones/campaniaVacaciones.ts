@@ -3,6 +3,10 @@ import { CampaniaVacaciones, InvitacionVacaciones, type ICampaniaVacaciones, typ
 import { Vacation, type IVacation } from "../../models/Vacation.js";
 import { VacationConfig } from "../../models/VacationConfig.js";
 import { UserProfile } from "../../models/UserProfile.js";
+import { User } from "../../models/User.js";
+import { Project } from "../../models/Project.js";
+import { Client } from "../../models/Client.js";
+import { etiquetaCentroCostoDe, resolverCentroCostoDeProyectos } from "../centroCostoDeProyectos.js";
 import { Notification } from "../../models/Notification.js";
 import { esContratoVigente, hoyArgentina } from "../../utils/contratoVigencia.js";
 import { contratosQueRigenDeLasPersonas } from "../../utils/contratosQueRigen.js";
@@ -155,7 +159,7 @@ export async function tablero(tid: Types.ObjectId, id: string): Promise<{ campan
   const vacaciones = idsVac.length ? await Vacation.find({ _id: { $in: idsVac } }).select("status startDate endDate daysRequested pdfPreAprobacionUrl signatureStatus").lean() : [];
   const vacPorId = new Map(vacaciones.map((v: any) => [String(v._id), v]));
   const userIds = invitaciones.map((i) => String(i.userId));
-  const [tipoDeUsuario, contratoDeUsuario] = await Promise.all([tiposDeContratoDe(tid, c.anio, userIds), contratosParaMostrar(userIds, hoy)]);
+  const [tipoDeUsuario, contratoDeUsuario, proyectosDeUsuario] = await Promise.all([tiposDeContratoDe(tid, c.anio, userIds), contratosParaMostrar(userIds, hoy), proyectosYClientesDe(tid, userIds)]);
   const conteos: Record<string, number> = {};
   const filas = invitaciones.map((i) => {
     const visible = estadoVisible(i.estado, fechasDe(i), hoy);
@@ -166,6 +170,8 @@ export async function tablero(tid: Types.ObjectId, id: string): Promise<{ campan
       etiquetaEstado: ETIQUETA_ESTADO[visible],
       tipoContrato: tipoDeUsuario.get(String(i.userId)) ?? null,
       contrato: contratoDeUsuario.get(String(i.userId)) ?? null,
+      proyectos: proyectosDeUsuario.get(String(i.userId))?.proyectos ?? [],
+      clientes: proyectosDeUsuario.get(String(i.userId))?.clientes ?? [],
       alertas: alertasDeInvitacion({ estado: i.estado, fechaLimite: i.fechaLimite, acuseInvitacionAt: i.acuseInvitacionAt, invitadoAt: i.invitadoAt, tramos: i.tramos, hoy, avisoDias: c.avisoMinimoDias }),
       tramos: (i.tramos || []).map((t) => ({ ...t, vacacion: t.vacationId ? vacPorId.get(String(t.vacationId)) || null : null })),
       vacacionAsignada: i.asignacion?.vacationId ? vacPorId.get(String(i.asignacion.vacationId)) || null : null,
@@ -186,6 +192,30 @@ export async function tablero(tid: Types.ObjectId, id: string): Promise<{ campan
   const nombreTipo = new Map(cat.tipos.map((t) => [String(t._id), t.name]));
   const tiposInvitados = (c.tiposContratoInvitar || []).map((t: any) => nombreTipo.get(String(t)) || String(t));
   return { campania: { ...c.toObject(), tiposInvitados }, invitaciones: filas, conteos, alertas, hoy };
+}
+
+/**
+ * LOS PROYECTOS Y CLIENTES DE CADA PERSONA (23/11/2026, pedido del usuario): los proyectos a los que está asignada
+ * (`projectIds`, como la lista de Usuarios), cada uno con su centro de costo, y los clientes de esos proyectos.
+ * En bloque: una consulta de personas, una de proyectos, una de clientes y la del centro de costo.
+ */
+async function proyectosYClientesDe(tid: Types.ObjectId, userIds: string[]): Promise<Map<string, { proyectos: { nombre: string; centroCosto: string; cliente: string }[]; clientes: string[] }>> {
+  const out = new Map<string, { proyectos: { nombre: string; centroCosto: string; cliente: string }[]; clientes: string[] }>();
+  if (userIds.length === 0) return out;
+  const usuarios: any[] = await User.find({ _id: { $in: userIds }, tenantId: tid }).select("projectIds").lean();
+  const idsProyectos = [...new Set(usuarios.flatMap((u) => (u.projectIds || []).map(String)))];
+  const proyectos: any[] = idsProyectos.length ? await Project.find({ _id: { $in: idsProyectos } }).select("name clientId metadata.centroCostoId metadata.centroCostoEmpresaTangoId").lean() : [];
+  await resolverCentroCostoDeProyectos(proyectos);
+  const idsClientes = [...new Set(proyectos.map((p) => String(p.clientId || "")).filter((id) => Types.ObjectId.isValid(id)))];
+  const clientes: any[] = idsClientes.length ? await Client.find({ _id: { $in: idsClientes } }).select("name").lean() : [];
+  const nombreCliente = new Map(clientes.map((c) => [String(c._id), String(c.name || "")]));
+  const proyectoPorId = new Map(proyectos.map((p) => [String(p._id), { nombre: String(p.name || ""), centroCosto: etiquetaCentroCostoDe(p), cliente: nombreCliente.get(String(p.clientId || "")) || "" }]));
+  for (const u of usuarios) {
+    const ps = (u.projectIds || []).map((id: any) => proyectoPorId.get(String(id))).filter(Boolean) as { nombre: string; centroCosto: string; cliente: string }[];
+    ps.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+    out.set(String(u._id), { proyectos: ps, clientes: [...new Set(ps.map((p) => p.cliente).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es")) });
+  }
+  return out;
 }
 
 /**
