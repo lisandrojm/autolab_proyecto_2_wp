@@ -699,6 +699,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
               <th className={th}>Días</th>
               <th className={th}>Tipo de contrato</th>
               <th className={th}>Estado</th>
+              <th className={th}>Alertas</th>
               <th className={th}>Acuse invitación</th>
               <th className={th}>Fechas</th>
               <th className={th}>Aviso escrito</th>
@@ -709,7 +710,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
           <tbody>
             {filas.length === 0 && (
               <tr>
-                <td colSpan={9} className="py-8 px-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                <td colSpan={10} className="py-8 px-4 text-center text-sm text-gray-500 dark:text-gray-400">
                   Nadie coincide con {busqueda.trim() ? `«${busqueda.trim()}»` : "los filtros"}.
                 </td>
               </tr>
@@ -718,12 +719,6 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
               <tr key={i._id} className="group border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 align-top">
                 <td className={`py-3 px-4 sticky -left-px z-[5] bg-white dark:bg-[#1b2637] group-hover:bg-gray-50 dark:group-hover:bg-[#293344] ${FIN_COL_FIJA}`}>
                   <p className="font-medium text-gray-900 dark:text-white text-sm whitespace-nowrap">{i.nombre}</p>
-                  {i.alertas.map((a) => (
-                    <p key={a.codigo} className={`mt-1 text-[11px] flex items-start gap-1 max-w-[16rem] ${a.nivel === "error" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
-                      <FontAwesomeIcon icon={a.nivel === "error" ? faCircleExclamation : faTriangleExclamation} className="mt-0.5" />
-                      {a.mensaje}
-                    </p>
-                  ))}
                 </td>
                 <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{i.asignacion?.dias || i.diasDisponibles}</td>
                 <td className="py-3 px-4 text-sm">
@@ -743,6 +738,15 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
                         );
                       })()
                     : null}
+                </td>
+                <td className="py-3 px-4 min-w-[12rem]">
+                  {i.alertas.map((a) => (
+                    <p key={a.codigo} className={`mt-1 first:mt-0 text-[11px] flex items-start gap-1 max-w-[16rem] ${a.nivel === "error" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
+                      <FontAwesomeIcon icon={a.nivel === "error" ? faCircleExclamation : faTriangleExclamation} className="mt-0.5" />
+                      {a.mensaje}
+                    </p>
+                  ))}
+                  {i.alertas.length === 0 && <span className="text-xs text-gray-400">—</span>}
                 </td>
                 <td className="py-3 px-4 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{i.acuseInvitacionAt ? fechaHora(i.acuseInvitacionAt) : <span className="text-gray-400">—</span>}</td>
                 <td className="py-3 px-4 text-xs text-gray-700 dark:text-gray-300">
