@@ -148,9 +148,23 @@ export declare function alertasDeLanzamiento(o: {
  *    todos los que quedan: sólo el último puede ser más corto. Con menos de `minPorTramo` días en total no se
  *    fracciona: van seguidos, en un solo tramo (23/11/2026).
  *  · La suma da los días disponibles: sin acumulación pactada (segunda etapa) no quedan días sueltos.
- * Devuelve los errores, en castellano; vacío = está bien.
+ * `erroresDePropuesta` los devuelve con código y tramo; `validarPropuesta`, sólo los mensajes (vacío = está bien).
  */
-export declare function validarPropuesta(o: {
+export type CodigoErrorPropuesta = "sin_tramos" | "fechas" | "ventana" | "ventana_persona" | "ya_empezo" | "dia_inicio" | "no_fraccionar" | "minimo" | "resto_junto" | "se_pisan" | "faltan" | "sobran";
+/**
+ * Un error de la propuesta, con a qué tramo apunta (24/11/2026): el calendario de la app muestra, mientras se
+ * elige un tramo, sólo los errores de ese tramo. Los de la propuesta entera (`faltan`, `sobran`, `sin_tramos`)
+ * no traen tramo.
+ */
+export interface ErrorPropuesta {
+    codigo: CodigoErrorPropuesta;
+    /** Índice (en `tramos`) del tramo al que apunta. */
+    tramo?: number;
+    /** Varios tramos: los dos que se pisan, o todos cuando no se puede fraccionar. */
+    tramos?: number[];
+    mensaje: string;
+}
+export interface PropuestaAValidar {
     tramos: Tramo[];
     diasDisponibles: number;
     ventana: VentanaDeCampania;
@@ -161,7 +175,25 @@ export declare function validarPropuesta(o: {
     minPorTramo: number;
     diasCorridos: boolean;
     diasDeInicio?: number[] | null;
-}): string[];
+}
+export declare function erroresDePropuesta(o: PropuestaAValidar): ErrorPropuesta[];
+/** Los mensajes de `erroresDePropuesta`, en castellano; vacío = está bien. Es lo que valida el server. */
+export declare function validarPropuesta(o: PropuestaAValidar): string[];
+/** Los errores que apuntan a un tramo: para mostrarlos donde se está eligiendo ese tramo. */
+export declare const erroresDelTramo: (errores: ErrorPropuesta[], i: number) => ErrorPropuesta[];
+/**
+ * CUÁNTOS DÍAS TIENE QUE TENER, COMO MÍNIMO, EL TRAMO QUE EMPIEZA EN `desde`, dados los otros tramos ya elegidos
+ * (la misma cuenta que `erroresDePropuesta`, para avisarlo en el calendario antes de confirmar): en orden de
+ * fecha, el mínimo configurado o, si antes de él ya se repartió casi todo, los que quedan. 0 cuando no hay
+ * mínimo que avisar: sin otros tramos (no se fracciona) o sin fecha de inicio.
+ */
+export declare function minimoDelTramo(o: {
+    desde: string;
+    otros: Tramo[];
+    diasDisponibles: number;
+    minPorTramo: number;
+    diasCorridos: boolean;
+}): number;
 /**
  * AL OTORGAR: el goce tiene que estar dentro de la ventana. El aviso de `avisoDias` sólo cuando las fechas las
  * ASIGNA la empresa (`porLaEmpresa`: venció el plazo para elegir): el aviso por escrito sale hoy y tiene que

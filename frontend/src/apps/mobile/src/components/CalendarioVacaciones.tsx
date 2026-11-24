@@ -5,6 +5,7 @@ import { faChevronLeft, faChevronRight, faInfoCircle, faTimes } from '@fortaweso
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isWithinInterval, isBefore, isAfter, addDays, subDays, isMonday, isSunday, isFriday, isSaturday, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { sweetAlert } from '../utils/sweetAlert';
+import { normalizarDiasDeInicio, puedeEmpezar, textoDiasDeInicio } from '@compartido/vacaciones/campania';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -19,6 +20,11 @@ import { sweetAlert } from '../utils/sweetAlert';
  * Qué días se pueden elegir lo decide quien lo usa (`permitida`: la ventana anual, la de la campaña, el
  * aviso mínimo); los días pasados, los ocupados y los que exceden `disponibles` los bloquea el calendario.
  * Lo que se valida al confirmar (fraccionamiento, saldo restante) también es de quien lo usa.
+ *
+ * LAS REGLAS DE LA CAMPAÑA SE VEN ACÁ MISMO (24/11/2026): los días en que no puede empezar un tramo
+ * (`diasDeInicio`) no se eligen como inicio; con un inicio elegido, los fines que dejan el tramo más corto que
+ * el mínimo al fraccionar (`minimo`) tampoco; y lo que todavía está mal en el tramo (`errores`, calculado por
+ * quien lo usa con las mismas reglas que el server) se muestra en rojo y no deja confirmar.
  */
 
 export type ModoCalendario = 'start' | 'end';
@@ -42,6 +48,12 @@ interface Props {
   mesInicial?: string;
   onConfirmar: () => void;
   onInfoPendientes?: () => void;
+  /** Días de la semana (0 = domingo) en que puede EMPEZAR el tramo; vacío = cualquier día. Los otros no se eligen como inicio. */
+  diasDeInicio?: number[] | null;
+  /** Cuántos días tiene que tener este tramo como mínimo (al fraccionar); 0 = nada que avisar. */
+  minimo?: number;
+  /** Lo que todavía está mal en este tramo con lo elegido: se muestra en rojo y no deja confirmar. */
+  errores?: string[];
 }
 
 const SWAL_INFO = { confirmButtonText: 'Entendido', confirmButtonColor: '#3b82f6', customClass: { popup: 'mobile-swal-popup', title: 'mobile-swal-title' } };
@@ -55,7 +67,7 @@ export function contarDiasSeleccionados(desde: string, hasta: string, diasCorrid
   return eachDayOfInterval({ start: s, end: e }).filter((d) => !isSaturday(d) && !isSunday(d)).length;
 }
 
-export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCambiar, disponibles, diasCorridos, ocupadas, pendientes, permitida, textoVentana, mesInicial, onConfirmar, onInfoPendientes }: Props) {
+export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCambiar, disponibles, diasCorridos, ocupadas, pendientes, permitida, textoVentana, mesInicial, onConfirmar, onInfoPendientes, diasDeInicio, minimo = 0, errores = [] }: Props) {
   const [viewDate, setViewDate] = useState(new Date());
 
   // Al abrir, el mes de lo elegido o el primero en que se puede elegir.
@@ -68,6 +80,10 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
   }, [modo === null]);
 
   const limite = Math.max(0, disponibles);
+  const diasQueEmpiezan = normalizarDiasDeInicio(diasDeInicio);
+  const textoEmpiezan = diasQueEmpiezan.length > 0 ? `Las vacaciones pueden empezar sólo ${textoDiasDeInicio(diasQueEmpiezan)}.` : '';
+  // Al fraccionar, el fin no puede dejar el tramo más corto que el mínimo (recortado a lo disponible, para no trabar el calendario).
+  const minimoEfectivo = Math.min(Math.max(0, minimo), limite);
 
   const returnDate = useMemo(() => {
     if (!hasta) return null;
@@ -113,6 +129,12 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
   const handleDateSelect = async (day: Date) => {
     const formattedDate = format(day, 'yyyy-MM-dd');
     if (isOccupied(day) || !permitida(formattedDate)) return;
+    // Este toque fija el INICIO (modo inicio, o un día antes del inicio elegido): tiene que ser un día en que se puede empezar.
+    const fijaInicio = modo === 'start' || (!!desde && isBefore(day, parseISO(desde)));
+    if (fijaInicio && !puedeEmpezar(formattedDate, diasQueEmpiezan)) {
+      await Swal.fire({ icon: 'info', title: 'Día de inicio', text: `${textoEmpiezan} Elegí otro día para empezar.`, ...SWAL_INFO });
+      return;
+    }
 
     let newStart = desde;
     let newEnd = hasta;
@@ -151,6 +173,10 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
         if (dias > limite) {
           // Se corre el inicio para que entre el fin de semana sin pasarse.
           newStart = format(addDays(parseISO(newStart), dias - limite), 'yyyy-MM-dd');
+          if (!puedeEmpezar(newStart, diasQueEmpiezan)) {
+            await sweetAlert.error('No entra', `Con el fin de semana el tramo se pasa de tus días y el inicio tendría que correrse a un día en que no se puede empezar. ${textoEmpiezan} Elegí otro fin.`);
+            return;
+          }
           await Swal.fire({ icon: 'info', title: 'Ajuste Automático', text: 'Se ha ajustado la fecha de inicio para incluir el fin de semana sin exceder tus días disponibles.', ...SWAL_INFO });
         }
       }
@@ -175,6 +201,7 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
           <div className="flex flex-col">
             <h3 className="font-bold text-lg text-slate-900 dark:text-white capitalize">{format(viewDate, 'MMMM yyyy', { locale: es })}</h3>
             {textoVentana && <span className="text-[11px] text-slate-500 dark:text-slate-400">Se pueden pedir {textoVentana}</span>}
+            {textoEmpiezan && <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">{textoEmpiezan}</span>}
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded p-1">
@@ -224,7 +251,11 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
               // Con el inicio elegido, los días que se pasan de lo disponible (contados como se cuentan: corridos o hábiles).
               const isExceedingLimit = modo === 'end' && !!desde && !isBefore(day, parseISO(desde)) && contarDiasSeleccionados(desde, formattedDay, diasCorridos) > limite;
               const fueraDeVentana = !permitida(formattedDay);
-              const isDisabled = isPast || isExceedingLimit || isOccupiedDay || fueraDeVentana;
+              // Un día que fijaría el inicio (modo inicio, o antes del inicio elegido) tiene que poder empezar.
+              const noPuedeEmpezar = (modo === 'start' || (!!desde && isBefore(day, parseISO(desde)))) && !puedeEmpezar(formattedDay, diasQueEmpiezan);
+              // Con el inicio elegido, un fin que deja el tramo más corto que el mínimo al fraccionar.
+              const demasiadoCorto = modo === 'end' && !!desde && minimoEfectivo > 0 && !isBefore(day, parseISO(desde)) && contarDiasSeleccionados(desde, formattedDay, diasCorridos) < minimoEfectivo;
+              const isDisabled = isPast || isExceedingLimit || isOccupiedDay || fueraDeVentana || noPuedeEmpezar || demasiadoCorto;
 
               const isSelected = isStart || isEnd || isInRange;
               const isSuggested = !isSelected && !isDisabled && !isOccupiedDay && suggestedEndDate && modo === 'end' && desde && isAfter(day, parseISO(desde)) && (isBefore(day, suggestedEndDate) || isSameDay(day, suggestedEndDate));
@@ -241,6 +272,8 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
                   classes += isPendingOcc ? ' bg-amber-200 text-amber-700 dark:bg-amber-800/40 dark:text-amber-300' : ' bg-red-200 text-red-700 dark:bg-red-800/40 dark:text-red-300';
                   classes += !prevOcc || isMonday(day) ? ' rounded-l-lg' : ' rounded-l-none';
                   classes += !nextOcc || isSunday(day) ? ' rounded-r-lg' : ' rounded-r-none';
+                } else if (demasiadoCorto) {
+                  classes += ' text-slate-400 dark:text-slate-500 rounded border border-dashed border-slate-300 dark:border-slate-600';
                 } else {
                   classes += ' text-slate-300 dark:text-slate-600 bg-slate-50 dark:bg-slate-800/20';
                 }
@@ -259,6 +292,8 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
               if (isOccupiedDay) dayTitle = isPendingOcc ? 'Vacación pendiente de otro usuario' : 'Vacación aprobada de otro usuario';
               else if (isPast) dayTitle = 'Fecha pasada';
               else if (fueraDeVentana) dayTitle = textoVentana ? `Fuera del período: se pueden pedir ${textoVentana}` : 'Fuera del período';
+              else if (noPuedeEmpezar) dayTitle = textoEmpiezan;
+              else if (demasiadoCorto) dayTitle = `Este tramo tiene que tener al menos ${minimoEfectivo} días`;
               else if (isExceedingLimit) dayTitle = 'Excede límite de días';
 
               return (
@@ -292,6 +327,15 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
               <span className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Seleccionados {diasCorridos ? '(Corr.)' : '(Háb.)'}</span>
               <span className={`text-lg font-bold ${!desde || !hasta ? 'text-slate-400' : seleccionados > disponibles ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>{seleccionados}</span>
             </div>
+            {minimoEfectivo > 0 && (
+              <>
+                <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
+                <div className="flex flex-col items-center w-full" title="Al fraccionar, cada tramo lleva al menos el mínimo; el último, los que queden">
+                  <span className="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Mínimo</span>
+                  <span className={`text-lg font-bold ${desde && hasta && seleccionados < minimoEfectivo ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>{minimoEfectivo}</span>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex flex-col gap-2 mb-4">
@@ -307,6 +351,13 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
             </div>
           </div>
 
+          {errores.length > 0 && (
+            <ul className="mb-3 space-y-1 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-900/20 dark:text-red-300">
+              {errores.map((e) => (
+                <li key={e}>· {e}</li>
+              ))}
+            </ul>
+          )}
           <div className="flex gap-3">
             <button
               type="button"
@@ -318,7 +369,7 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
             >
               Cancelar
             </button>
-            <button type="button" onClick={onConfirmar} className="flex-1 rounded-lg h-10 bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20">
+            <button type="button" onClick={onConfirmar} disabled={errores.length > 0} title={errores.length > 0 ? 'Corregí lo marcado para confirmar' : undefined} className="flex-1 rounded-lg h-10 bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 disabled:cursor-not-allowed disabled:opacity-50">
               Confirmar
             </button>
           </div>

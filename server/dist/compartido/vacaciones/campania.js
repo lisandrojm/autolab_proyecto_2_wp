@@ -217,46 +217,32 @@ export function alertasDeLanzamiento(o) {
     // Lo que elige la persona no espera el aviso (23/11/2026): ya no hay un «primer inicio» recortado para todos.
     return alertas;
 }
-/* ─────────────────────────── Validaciones ─────────────────────────── */
-/**
- * LA PROPUESTA DE LA PERSONA: uno o más tramos.
- *  · Cada tramo dentro de la ventana de la campaña (y de la suya, si su área o proyecto tiene otra).
- *  · Ninguno empieza antes de mañana. El aviso de `avisoDias` NO rige acá (23/11/2026): lo eligió la persona, y la
- *    aprobación no tiene que llegar con esa anticipación. El aviso es para lo que asigna la empresa.
- *  · Cada tramo empieza en uno de los días de inicio de la campaña (`diasDeInicio`; vacío = cualquier día).
- *  · Los tramos no se pisan. Al fraccionar (fraccionar es un acuerdo: proponerlo la persona y aprobarlo la
- *    empresa es ese acuerdo), EN ORDEN DE FECHA cada tramo lleva al menos `minPorTramo` días o, si quedan menos,
- *    todos los que quedan: sólo el último puede ser más corto. Con menos de `minPorTramo` días en total no se
- *    fracciona: van seguidos, en un solo tramo (23/11/2026).
- *  · La suma da los días disponibles: sin acumulación pactada (segunda etapa) no quedan días sueltos.
- * Devuelve los errores, en castellano; vacío = está bien.
- */
-export function validarPropuesta(o) {
+export function erroresDePropuesta(o) {
     const errores = [];
     const tramos = o.tramos || [];
     if (tramos.length === 0)
-        return ["Elegí al menos un tramo."];
+        return [{ codigo: "sin_tramos", mensaje: "Elegí al menos un tramo." }];
     const desdeMinimo = primerInicioPropuesto(o.hoy);
     const diasDeInicio = normalizarDiasDeInicio(o.diasDeInicio);
     tramos.forEach((t, i) => {
         const n = tramos.length > 1 ? ` ${i + 1}` : "";
         if (!esISO(t.desde) || !esISO(t.hasta) || t.hasta < t.desde) {
-            errores.push(`El tramo${n} no tiene fechas válidas.`);
+            errores.push({ codigo: "fechas", tramo: i, mensaje: `El tramo${n} no tiene fechas válidas.` });
             return;
         }
         if (t.desde < o.ventana.desde || t.hasta > o.ventana.hasta)
-            errores.push(`El tramo${n} se sale de la ventana (${fechaCorta(o.ventana.desde)} al ${fechaCorta(o.ventana.hasta)}).`);
+            errores.push({ codigo: "ventana", tramo: i, mensaje: `El tramo${n} se sale de la ventana (${fechaCorta(o.ventana.desde)} al ${fechaCorta(o.ventana.hasta)}).` });
         else if (o.ventanaPersona && !rangoPermitido(t.desde, t.hasta, o.ventanaPersona))
-            errores.push(`El tramo${n} se sale de tu ventana de goce (${textoDeVentana(o.ventanaPersona)}).`);
+            errores.push({ codigo: "ventana_persona", tramo: i, mensaje: `El tramo${n} se sale de tu ventana de goce (${textoDeVentana(o.ventanaPersona)}).` });
         if (t.desde < desdeMinimo)
-            errores.push(`El tramo${n} ya empezó o empieza hoy: puede empezar desde el ${fechaCorta(desdeMinimo)}.`);
+            errores.push({ codigo: "ya_empezo", tramo: i, mensaje: `El tramo${n} ya empezó o empieza hoy: puede empezar desde el ${fechaCorta(desdeMinimo)}.` });
         if (!puedeEmpezar(t.desde, diasDeInicio))
-            errores.push(`El tramo${n} empieza un ${DIAS_DE_LA_SEMANA[diaDeSemana(t.desde)]}: las vacaciones pueden empezar sólo ${textoDiasDeInicio(diasDeInicio)}.`);
+            errores.push({ codigo: "dia_inicio", tramo: i, mensaje: `El tramo${n} empieza un ${DIAS_DE_LA_SEMANA[diaDeSemana(t.desde)]}: las vacaciones pueden empezar sólo ${textoDiasDeInicio(diasDeInicio)}.` });
     });
     // Fraccionar: en orden de fecha, cada tramo con el mínimo o, si quedan menos, con todos los que quedan.
     if (tramos.length > 1) {
         if (o.diasDisponibles < o.minPorTramo) {
-            errores.push(`Con ${o.diasDisponibles} día(s) no se puede fraccionar: van todos seguidos, en un solo tramo (cada tramo tiene que tener al menos ${o.minPorTramo}).`);
+            errores.push({ codigo: "no_fraccionar", tramos: tramos.map((_, i) => i), mensaje: `Con ${o.diasDisponibles} día(s) no se puede fraccionar: van todos seguidos, en un solo tramo (cada tramo tiene que tener al menos ${o.minPorTramo}).` });
         }
         else {
             const enOrden = tramos.map((t, i) => ({ t, i })).filter(({ t }) => esISO(t.desde) && esISO(t.hasta) && t.hasta >= t.desde).sort((a, b) => a.t.desde.localeCompare(b.t.desde));
@@ -266,8 +252,8 @@ export function validarPropuesta(o) {
                 const minimo = Math.min(o.minPorTramo, Math.max(0, quedan));
                 if (dias < minimo) {
                     errores.push(minimo === o.minPorTramo
-                        ? `El tramo ${i + 1} tiene menos de ${o.minPorTramo} días: al fraccionar, cada parte tiene que tener al menos ${o.minPorTramo} (sólo la última puede ser más corta, si quedan menos).`
-                        : `El tramo ${i + 1} tiene ${dias} día(s) y quedan ${quedan}: con menos de ${o.minPorTramo} van todos juntos, en el último tramo.`);
+                        ? { codigo: "minimo", tramo: i, mensaje: `El tramo ${i + 1} tiene menos de ${o.minPorTramo} días: al fraccionar, cada parte tiene que tener al menos ${o.minPorTramo} (sólo la última puede ser más corta, si quedan menos).` }
+                        : { codigo: "resto_junto", tramo: i, mensaje: `El tramo ${i + 1} tiene ${dias} día(s) y quedan ${quedan}: con menos de ${o.minPorTramo} van todos juntos, en el último tramo.` });
                 }
                 quedan -= dias;
             }
@@ -276,11 +262,32 @@ export function validarPropuesta(o) {
     for (let i = 0; i < tramos.length; i++)
         for (let j = i + 1; j < tramos.length; j++)
             if (sePisan(tramos[i], tramos[j]))
-                errores.push(`Los tramos ${i + 1} y ${j + 1} se pisan.`);
+                errores.push({ codigo: "se_pisan", tramos: [i, j], mensaje: `Los tramos ${i + 1} y ${j + 1} se pisan.` });
     const suma = tramos.reduce((s, t) => s + (esISO(t.desde) && esISO(t.hasta) ? contarDiasTramo(t, o.diasCorridos) : 0), 0);
     if (suma !== o.diasDisponibles)
-        errores.push(suma < o.diasDisponibles ? `Te faltan repartir ${o.diasDisponibles - suma} día(s): tenés ${o.diasDisponibles}.` : `Te pasaste por ${suma - o.diasDisponibles} día(s): tenés ${o.diasDisponibles}.`);
+        errores.push(suma < o.diasDisponibles ? { codigo: "faltan", mensaje: `Te faltan repartir ${o.diasDisponibles - suma} día(s): tenés ${o.diasDisponibles}.` } : { codigo: "sobran", mensaje: `Te pasaste por ${suma - o.diasDisponibles} día(s): tenés ${o.diasDisponibles}.` });
     return errores;
+}
+/** Los mensajes de `erroresDePropuesta`, en castellano; vacío = está bien. Es lo que valida el server. */
+export function validarPropuesta(o) {
+    return erroresDePropuesta(o).map((e) => e.mensaje);
+}
+/** Los errores que apuntan a un tramo: para mostrarlos donde se está eligiendo ese tramo. */
+export const erroresDelTramo = (errores, i) => errores.filter((e) => e.tramo === i || !!e.tramos?.includes(i));
+/**
+ * CUÁNTOS DÍAS TIENE QUE TENER, COMO MÍNIMO, EL TRAMO QUE EMPIEZA EN `desde`, dados los otros tramos ya elegidos
+ * (la misma cuenta que `erroresDePropuesta`, para avisarlo en el calendario antes de confirmar): en orden de
+ * fecha, el mínimo configurado o, si antes de él ya se repartió casi todo, los que quedan. 0 cuando no hay
+ * mínimo que avisar: sin otros tramos (no se fracciona) o sin fecha de inicio.
+ */
+export function minimoDelTramo(o) {
+    const otros = (o.otros || []).filter((t) => esISO(t.desde) && esISO(t.hasta) && t.hasta >= t.desde);
+    if (otros.length === 0 || !esISO(o.desde))
+        return 0;
+    if (o.diasDisponibles < o.minPorTramo)
+        return Math.max(0, o.diasDisponibles);
+    const antes = otros.filter((t) => t.desde < o.desde).reduce((s, t) => s + contarDiasTramo(t, o.diasCorridos), 0);
+    return Math.min(o.minPorTramo, Math.max(0, o.diasDisponibles - antes));
 }
 /**
  * AL OTORGAR: el goce tiene que estar dentro de la ventana. El aviso de `avisoDias` sólo cuando las fechas las

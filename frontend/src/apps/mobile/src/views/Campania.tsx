@@ -4,7 +4,7 @@ import { faCalendarAlt, faCheck, faCircleCheck, faClock, faFilePdf, faHourglassH
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { campaniasVacacionesAPI, errorDeCampania, type MiInvitacion, type Tramo } from "../../../../api/campaniasVacaciones";
 import { fechaCorta } from "@compartido/planVacaciones/fechas";
-import { ETIQUETA_ESTADO, OTORGADOS, contarDiasTramo, normalizarDiasDeInicio, textoDiasDeInicio, validarPropuesta } from "@compartido/vacaciones/campania";
+import { ETIQUETA_ESTADO, OTORGADOS, contarDiasTramo, erroresDePropuesta, erroresDelTramo, minimoDelTramo, normalizarDiasDeInicio, textoDiasDeInicio } from "@compartido/vacaciones/campania";
 import { getImageUrl } from "../../../../utils/imageHelpers";
 import SectionHeader from "../components/SectionHeader";
 import CalendarioVacaciones, { type ModoCalendario } from "../components/CalendarioVacaciones";
@@ -67,16 +67,19 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
   const inv = datos?.invitacion;
   const c = datos?.campania;
   const diasCorridos = inv?.diasCorridos ?? true;
-  const completos = tramos.filter((t) => t.desde && t.hasta);
+  // Los tramos con las dos fechas y en qué posición de `tramos` está cada uno (los errores apuntan a `completos`).
+  const indicesCompletos = tramos.map((_, i) => i).filter((i) => tramos[i].desde && tramos[i].hasta);
+  const completos = indicesCompletos.map((i) => tramos[i]);
   const suma = completos.reduce((s, t) => s + (t.hasta >= t.desde ? contarDiasTramo(t, diasCorridos) : 0), 0);
-  const errores = useMemo(
+  const erroresDeLaPropuesta = useMemo(
     () =>
       datos && c && inv
-        ? validarPropuesta({ tramos: completos, diasDisponibles: datos.diasDisponibles, ventana: { desde: c.ventanaDesde, hasta: c.ventanaHasta }, ventanaPersona: (inv as any).ventanaPersona?.enabled ? (inv as any).ventanaPersona : null, hoy: datos.hoy, avisoDias: c.avisoMinimoDias, minPorTramo: c.minDiasPorTramo, diasCorridos, diasDeInicio: c.diasDeInicio })
+        ? erroresDePropuesta({ tramos: completos, diasDisponibles: datos.diasDisponibles, ventana: { desde: c.ventanaDesde, hasta: c.ventanaHasta }, ventanaPersona: (inv as any).ventanaPersona?.enabled ? (inv as any).ventanaPersona : null, hoy: datos.hoy, avisoDias: c.avisoMinimoDias, minPorTramo: c.minDiasPorTramo, diasCorridos, diasDeInicio: c.diasDeInicio })
         : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [datos, JSON.stringify(completos)],
   );
+  const errores = erroresDeLaPropuesta.map((e) => e.mensaje);
 
   const accion = async (fn: () => Promise<MiInvitacion | null>, ok?: string) => {
     setEnviando(true);
@@ -116,6 +119,11 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
   const otorgada = OTORGADOS.includes(inv.estado);
   const faltan = datos.diasParaLaFechaLimite;
   const ventanaPersona = (inv as any).ventanaPersona?.enabled ? (inv as any).ventanaPersona : null;
+  // Lo que el calendario avisa del tramo que se está eligiendo: su mínimo al fraccionar y lo que está mal con lo elegido hasta ahora.
+  const tramoEnEdicion = calendario ? tramos[calendario.tramo] : null;
+  const minimoDelCalendario = calendario && tramoEnEdicion ? minimoDelTramo({ desde: tramoEnEdicion.desde, otros: tramos.filter((_, k) => k !== calendario.tramo), diasDisponibles: datos.diasDisponibles, minPorTramo: c.minDiasPorTramo, diasCorridos }) : 0;
+  const kEnEdicion = calendario ? indicesCompletos.indexOf(calendario.tramo) : -1;
+  const erroresDelCalendario = kEnEdicion >= 0 ? erroresDelTramo(erroresDeLaPropuesta, kEnEdicion).map((e) => e.mensaje) : [];
 
   return (
     <div className="flex-1 pb-24">
@@ -324,6 +332,9 @@ export default function Campania({ onNavigate }: { onNavigate: (view: ViewType) 
           permitida={(f) => f >= desdeMinimo && f <= c.ventanaHasta && (!ventanaPersona || fechaPermitida(f, ventanaPersona))}
           textoVentana={`entre el ${fechaCorta(desdeMinimo)} y el ${fechaCorta(c.ventanaHasta)}${ventanaPersona ? ` (${textoDeVentana(ventanaPersona)})` : ""}`}
           mesInicial={desdeMinimo}
+          diasDeInicio={c.diasDeInicio}
+          minimo={minimoDelCalendario}
+          errores={erroresDelCalendario}
           onConfirmar={() => setCalendario(null)}
         />
       )}

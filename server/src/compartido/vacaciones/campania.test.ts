@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { armarTurnos, estadoDelTurno, normalizarDiasDeInicio, textoDiasDeInicio, motivoDeNoInvitar, normalizarTiposContrato, resumenDeInvitables, alertasDeInvitacion, alertasDeLanzamiento, contarDiasTramo, estadoVisible, hastaParaDias, normalizarConfigCampania, sugerirTramoUnico, validarOtorgamiento, validarPropuesta, ventanaDeLaTemporada } from "./campania.js";
+import { armarTurnos, erroresDePropuesta, erroresDelTramo, estadoDelTurno, minimoDelTramo, normalizarDiasDeInicio, textoDiasDeInicio, motivoDeNoInvitar, normalizarTiposContrato, resumenDeInvitables, alertasDeInvitacion, alertasDeLanzamiento, contarDiasTramo, estadoVisible, hastaParaDias, normalizarConfigCampania, sugerirTramoUnico, validarOtorgamiento, validarPropuesta, ventanaDeLaTemporada } from "./campania.js";
 
 /** Dos tipos del catálogo (`contratos`): la campaña elige por su `_id`, no por el número de FRAME. */
 const TI = "6a6a6d75bcadd1748056908d";
@@ -221,4 +221,35 @@ test("turnos: abierto por fecha o porque las de adelante ya eligieron", () => {
   assert.equal(estadoDelTurno(deB, "2026-11-26", () => false).abierto, true);
   assert.equal(estadoDelTurno([t.get("a")!], "2026-11-23", () => false).abierto, true);
   assert.equal(estadoDelTurno([], "2026-11-23", () => false).abierto, true);
+});
+
+test("errores con código y tramo: el calendario muestra sólo los del tramo que se está eligiendo", () => {
+  // 14 días, lunes: tramo 1 de 4 (corto), tramo 2 de 7 que se pisa con el 3, tramo 3 empieza un martes.
+  const e = erroresDePropuesta({ ...base, diasDeInicio: [1], diasDisponibles: 14, tramos: [{ desde: "2027-01-04", hasta: "2027-01-07" }, { desde: "2027-02-01", hasta: "2027-02-07" }, { desde: "2027-02-02", hasta: "2027-02-08" }] });
+  assert.deepEqual(e.map((x) => [x.codigo, x.tramo ?? x.tramos]), [["dia_inicio", 2], ["minimo", 0], ["se_pisan", [1, 2]], ["sobran", undefined]]);
+  assert.deepEqual(erroresDelTramo(e, 0).map((x) => x.codigo), ["minimo"]);
+  assert.deepEqual(erroresDelTramo(e, 1).map((x) => x.codigo), ["se_pisan"]);
+  assert.deepEqual(erroresDelTramo(e, 2).map((x) => x.codigo), ["dia_inicio", "se_pisan"]);
+  // Los mensajes son los mismos que validarPropuesta.
+  assert.deepEqual(validarPropuesta({ ...base, diasDisponibles: 14, tramos: [{ desde: "2027-01-04", hasta: "2027-01-07" }] }), e.filter((x) => x.codigo === "faltan" || x.codigo === "sobran").length ? ["Te faltan repartir 10 día(s): tenés 14."] : []);
+  // Con menos del mínimo en total, «no se puede fraccionar» apunta a todos los tramos.
+  const nf = erroresDePropuesta({ ...base, diasDisponibles: 5, tramos: [{ desde: "2027-01-04", hasta: "2027-01-05" }, { desde: "2027-02-01", hasta: "2027-02-03" }] });
+  assert.deepEqual(nf.find((x) => x.codigo === "no_fraccionar")?.tramos, [0, 1]);
+  assert.equal(erroresDelTramo(nf, 1).length, 1);
+  assert.deepEqual(erroresDePropuesta({ ...base, diasDisponibles: 14, tramos: [] }).map((x) => x.codigo), ["sin_tramos"]);
+});
+
+test("mínimo del tramo, para avisarlo en el calendario antes de confirmar", () => {
+  const m = (desde: string, otros: [string, string][], diasDisponibles = 10) => minimoDelTramo({ desde, otros: otros.map(([a, b]) => ({ desde: a, hasta: b })), diasDisponibles, minPorTramo: 7, diasCorridos: true });
+  // Un solo tramo: no se fracciona, nada que avisar. Sin inicio, tampoco.
+  assert.equal(m("2027-01-04", []), 0);
+  assert.equal(m("", [["2027-01-04", "2027-01-10"]]), 0);
+  // 10 días: con 7 ya elegidos en enero, el tramo de febrero lleva los 3 que quedan; uno antes de enero lleva 7.
+  assert.equal(m("2027-02-01", [["2027-01-04", "2027-01-10"]]), 3);
+  assert.equal(m("2026-12-07", [["2027-01-04", "2027-01-10"]]), 7);
+  // 17 días: 7 + 7 ya elegidos, el tercero lleva 3; con 5 en total no se fracciona: van los 5 juntos.
+  assert.equal(m("2027-03-01", [["2027-01-04", "2027-01-10"], ["2027-02-01", "2027-02-07"]], 17), 3);
+  assert.equal(m("2027-02-01", [["2027-01-04", "2027-01-05"]], 5), 5);
+  // Los otros tramos incompletos no cuentan.
+  assert.equal(m("2027-02-01", [["", ""]]), 0);
 });
