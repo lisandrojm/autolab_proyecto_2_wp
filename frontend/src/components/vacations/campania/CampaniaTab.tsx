@@ -14,6 +14,7 @@ import { Modal } from "../../ui/Modal";
 import { LoadingSpinner } from "../../ui/LoadingSpinner";
 import { fuzzyMatch } from "../../../utils/searchHelpers";
 import { SearchAndFilters, type FilterOption } from "../../ui/SearchAndFilters";
+import { CLASE_BADGE_CENTRO_COSTO } from "../../../utils/centroCosto";
 import { getImageUrl } from "../../../utils/imageHelpers";
 
 /**
@@ -409,6 +410,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
   const [vigencia, setVigencia] = useState("");
   const [empresasFiltro, setEmpresasFiltro] = useState<string[]>([]);
   const [proyectosFiltro, setProyectosFiltro] = useState<string[]>([]);
+  const [clientesFiltro, setClientesFiltro] = useState<string[]>([]);
   const [acuse, setAcuse] = useState("");
   const [cuenta, setCuenta] = useState("");
   const [conAlertas, setConAlertas] = useState(false);
@@ -489,13 +491,14 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
         if (tiposFiltro.length && !tiposFiltro.includes(k ? k.nombre : SIN_CONTRATO)) return false;
         if (vigencia && vigencia !== (k ? (k.vigente ? "vigente" : "no_vigente") : "sin")) return false;
         if (empresasFiltro.length && !empresasFiltro.includes(k?.empresa || SIN_DATO)) return false;
-        if (proyectosFiltro.length && !proyectosFiltro.includes(k?.proyecto || SIN_DATO)) return false;
+        if (proyectosFiltro.length && !(i.proyectos?.length ? i.proyectos.map((p) => p.nombre) : [SIN_DATO]).some((p) => proyectosFiltro.includes(p))) return false;
+        if (clientesFiltro.length && !(i.clientes?.length ? i.clientes : [SIN_DATO]).some((x) => clientesFiltro.includes(x))) return false;
         if (acuse && (acuse === "si") !== !!i.acuseInvitacionAt) return false;
         if (cuenta && (cuenta === "si") !== !!i.tipoContrato) return false;
         if (conAlertas && i.alertas.length === 0) return false;
         return fuzzyMatch(i.nombre, busqueda.trim());
       }),
-    [datos, participacion, estados, tiposFiltro, vigencia, empresasFiltro, proyectosFiltro, acuse, cuenta, conAlertas, busqueda],
+    [datos, participacion, estados, tiposFiltro, vigencia, empresasFiltro, proyectosFiltro, clientesFiltro, acuse, cuenta, conAlertas, busqueda],
   );
   // El número del título: las que se ven con los filtros aplicados.
   useEffect(() => {
@@ -513,7 +516,8 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
       estados: ORDEN_ESTADOS.filter((e) => datos?.conteos[e]).map((e) => ({ value: e, label: `${ETIQUETA_ESTADO[e]} · ${datos?.conteos[e]}` })),
       tipos: contar(inv.map((i) => i.contrato?.nombre || SIN_CONTRATO)),
       empresas: contar(inv.map((i) => i.contrato?.empresa || SIN_DATO)),
-      proyectos: contar(inv.map((i) => i.contrato?.proyecto || SIN_DATO)),
+      proyectos: contar(inv.flatMap((i) => (i.proyectos?.length ? i.proyectos.map((p) => p.nombre) : [SIN_DATO]))),
+      clientes: contar(inv.flatMap((i) => (i.clientes?.length ? i.clientes : [SIN_DATO]))),
     };
   }, [datos]);
   if (!datos) return <LoadingSpinner message="Cargando campaña..." />;
@@ -654,6 +658,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
               { label: "Estado", values: estados, onChange: setEstados, options: opciones.estados, placeholder: "Todos los estados" },
               { label: "Tipo de contrato", values: tiposFiltro, onChange: setTiposFiltro, options: opciones.tipos, placeholder: "Todos los tipos" },
               { label: "Empresa", values: empresasFiltro, onChange: setEmpresasFiltro, options: opciones.empresas, placeholder: "Todas las empresas" },
+              { label: "Cliente", values: clientesFiltro, onChange: setClientesFiltro, options: opciones.clientes, placeholder: "Todos los clientes" },
               { label: "Proyecto", values: proyectosFiltro, onChange: setProyectosFiltro, options: opciones.proyectos, placeholder: "Todos los proyectos" },
             ]}
             switchFilters={[{ label: "Sólo con alertas", value: conAlertas, onChange: setConAlertas }]}
@@ -696,6 +701,8 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
           <thead>
             <tr>
               <th className={`${th} sticky -left-px z-[15] bg-white dark:bg-gray-800 ${FIN_COL_FIJA}`}>Colaborador</th>
+              <th className={th}>Cliente/s</th>
+              <th className={th}>Proyecto/s</th>
               <th className={th}>Días</th>
               <th className={th}>Tipo de contrato</th>
               <th className={th}>Estado</th>
@@ -710,7 +717,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
           <tbody>
             {filas.length === 0 && (
               <tr>
-                <td colSpan={10} className="py-8 px-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                <td colSpan={12} className="py-8 px-4 text-center text-sm text-gray-500 dark:text-gray-400">
                   Nadie coincide con {busqueda.trim() ? `«${busqueda.trim()}»` : "los filtros"}.
                 </td>
               </tr>
@@ -719,6 +726,35 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
               <tr key={i._id} className="group border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 align-top">
                 <td className={`py-3 px-4 sticky -left-px z-[5] bg-white dark:bg-[#1b2637] group-hover:bg-gray-50 dark:group-hover:bg-[#293344] ${FIN_COL_FIJA}`}>
                   <p className="font-medium text-gray-900 dark:text-white text-sm whitespace-nowrap">{i.nombre}</p>
+                </td>
+                {/* Cliente/s y Proyecto/s (con el centro de costo adelante), como en la lista de Usuarios. */}
+                <td className="py-3 px-4">
+                  {i.clientes?.length ? (
+                    <div className="flex flex-col gap-1">
+                      {i.clientes.map((x) => (
+                        <span key={x} className="inline-flex w-fit items-center px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 uppercase whitespace-nowrap">{x}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400">—</span>
+                  )}
+                </td>
+                <td className="py-3 px-4">
+                  {i.proyectos?.length ? (
+                    <div className="flex flex-col gap-1">
+                      {i.proyectos.map((p) => (
+                        <span key={p.nombre} className="inline-flex items-center gap-1 whitespace-nowrap" title={p.centroCosto ? `${p.nombre} · Centro de costo ${p.centroCosto}` : p.nombre}>
+                          {p.centroCosto && <span className={`${CLASE_BADGE_CENTRO_COSTO} px-1.5 py-0.5 text-[10px]`}>{p.centroCosto}</span>}
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+                            <FontAwesomeIcon icon={faBriefcase} className="mr-1 opacity-50" />
+                            {p.nombre}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400 italic">Sin proyecto</span>
+                  )}
                 </td>
                 <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{i.asignacion?.dias || i.diasDisponibles}</td>
                 <td className="py-3 px-4 text-sm">

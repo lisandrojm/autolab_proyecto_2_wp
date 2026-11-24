@@ -100,6 +100,9 @@ export interface Invitacion {
    * vigente. null = no tiene ningún contrato en WeProdu. La campaña decide con `tipoContrato`, no con éste.
    */
   contrato?: { nombre: string; proyecto: string; empresa: string; alta: string; baja: string; vigente: boolean } | null;
+  /** Los proyectos a los que está asignada, con el código del centro de costo, y sus clientes. */
+  proyectos?: { nombre: string; centroCosto: string; cliente: string }[];
+  clientes?: string[];
   alertas: Alerta[];
 }
 
