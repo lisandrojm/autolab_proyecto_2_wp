@@ -19,12 +19,34 @@ import { generarPassword } from "../../utils/password";
 import { mensajeErrorArca } from "../../utils/errorArca";
 import { fuzzyMatch } from "../../utils/searchHelpers";
 // Las tarjetas de la app no se eligen acá: salen de los roles. Ver ese módulo.
-import { CAPACIDAD_ITEMS, MOBILE_ACTIVITY_LOGS, MOBILE_ITEMS } from "../../utils/permisosMobile";
+import { CAPACIDAD_ITEMS, MOBILE_ACTIVITY_LOGS, MOBILE_ITEMS, esCapacidad, esPermisoMobile, esPermisoPlataforma } from "../../utils/permisosMobile";
 import { esNacionalidadArgentina, tiposDocumentoParaNacionalidad, tipoDocumentoSigueValido, opcionArgentina, esCuilObligatorio, opcionesDeNacionalidad, valorDeNacionalidad, leerNacionalidadElegida, tipoDocumentoDeArca } from "../../utils/nacionalidadDocumento";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faUserShield, faEye, faEyeSlash, faMapMarkerAlt, faUniversity, faSearch, faTimes, faMobileAlt, faKey, faCheck, faXmark, faCircleInfo, faSpinner, faLandmark, faCircleCheck, faWandMagicSparkles, faPlus } from "@fortawesome/free-solid-svg-icons";
 
 type ModalTab = "general" | "domicilio" | "bancarios" | "sistema";
+
+/**
+ * Una sección de roles con su interruptor: el mismo dibujo que `SeccionPermisos` del editor de roles
+ * (Usuarios → Roles), para que las dos pantallas se lean igual. Apagada se pliega y dice «apagado».
+ */
+const SeccionRoles: React.FC<{ titulo: string; icono: any; prendida: boolean; cantidad: number; onToggle: () => void; extra?: React.ReactNode; children: React.ReactNode }> = ({ titulo, icono, prendida, cantidad, onToggle, extra, children }) => (
+  <div className={`rounded-lg border transition-colors ${prendida ? "border-gray-200 dark:border-gray-700" : "border-dashed border-gray-200 dark:border-gray-700"}`}>
+    {/* La fila NO es un botón: adentro puede haber otros. Lo clickeable es el interruptor con su etiqueta. */}
+    <div className="flex w-full items-center gap-3 px-4 py-3">
+      <button type="button" onClick={onToggle} aria-pressed={prendida} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+        <span className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${prendida ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}>
+          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${prendida ? "translate-x-4" : "translate-x-0.5"}`} />
+        </span>
+        <FontAwesomeIcon icon={icono} className={prendida ? "text-blue-600 dark:text-blue-400" : "text-gray-400"} />
+        <span className={`text-xs font-bold uppercase tracking-wider ${prendida ? "text-gray-700 dark:text-gray-200" : "text-gray-400"}`}>{titulo}</span>
+        <span className="truncate text-xs text-gray-500 dark:text-gray-400">{cantidad > 0 ? `${cantidad} rol${cantidad > 1 ? "es" : ""}` : prendida ? "sin roles todavía" : "apagado"}</span>
+      </button>
+      {extra}
+    </div>
+    {prendida && <div className="px-4 pb-4">{children}</div>}
+  </div>
+);
 
 /**
  * El orden de las pestañas, en un solo lugar.
@@ -328,8 +350,81 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
   /** Coordina turnos y los roles elegidos la dejarían sin dónde cargar novedades. El server también lo rechaza. */
   const sinNovedadesCoordinando = coordinacionBloqueada && !permisosEfectivos().has(MOBILE_ACTIVITY_LOGS);
 
+
   // Catálogos propios del modal
   const [roles, setRoles] = useState<Role[]>([]);
+
+  /*
+    LOS ROLES, EN DOS SECCIONES CON SU INTERRUPTOR: APP MOBILE Y PLATAFORMA (24/11/2026), igual que el
+    editor de roles. Un rol va a la sección de lo que abre: a App Mobile si tiene alguna tarjeta de la
+    app (o sólo capacidades de proyecto, que son cosa del equipo de campo); a Plataforma si tiene algún
+    permiso de la web (o ninguno). Un rol con las dos cosas aparece en las dos listas, con su aviso: es
+    la misma casilla, y tildarla da las dos entradas.
+
+    Lo que se guarda NO cambia: sigue siendo la lista de roles tildados (`formData.roles`). Las
+    secciones son una forma de verla y de apagar de una vez todo lo de un lado. Por eso cada sección
+    arranca prendida si la persona ya tiene algún rol de ella (y la de un usuario nuevo, con el rol por
+    defecto), y apagarla destilda sus roles después de avisar.
+  */
+  const esRolMobile = (r: Role) => (r.permissions || []).some(esPermisoMobile) || (!(r.permissions || []).some(esPermisoPlataforma) && (r.permissions || []).some(esCapacidad));
+  const esRolPlataforma = (r: Role) => (r.permissions || []).some(esPermisoPlataforma) || (r.permissions || []).length === 0;
+  const rolesVisibles = roles.filter((r) => r.name.toLowerCase() !== "superadmin");
+  const rolesMobile = rolesVisibles.filter(esRolMobile);
+  const rolesPlataforma = rolesVisibles.filter(esRolPlataforma);
+  /** Prendida a mano (true/false) o, si nadie la tocó, según tenga roles tildados. Se olvida al abrir el modal. */
+  const [seccionForzada, setSeccionForzada] = useState<{ mobile?: boolean; plataforma?: boolean }>({});
+  const tildadosDe = (lista: Role[]) => lista.filter((r) => formData.roles.includes(r._id));
+  const seccionMobile = seccionForzada.mobile ?? tildadosDe(rolesMobile).length > 0;
+  const seccionPlataforma = seccionForzada.plataforma ?? tildadosDe(rolesPlataforma).length > 0;
+
+  const toggleSeccionRoles = async (sec: "mobile" | "plataforma") => {
+    const prendida = sec === "mobile" ? seccionMobile : seccionPlataforma;
+    const nombre = sec === "mobile" ? "App Mobile" : "Plataforma";
+    if (!prendida) {
+      setSeccionForzada((prev) => ({ ...prev, [sec]: true }));
+      return;
+    }
+    // Apagar una sección destilda SUS roles, también los que además abren la otra: sin ellos no entra a este lado.
+    const tildados = tildadosDe(sec === "mobile" ? rolesMobile : rolesPlataforma);
+    if (tildados.length > 0) {
+      const result = await sweetAlert.confirm(`Apagar ${nombre}`, `Se va a destildar ${tildados.length === 1 ? "el rol" : `los ${tildados.length} roles`} de ${nombre} que tiene la persona (${tildados.map((r) => r.name).join(", ")}). ¿Continuar?`, "Sí, apagar");
+      if (!result.isConfirmed) return;
+      const ids = new Set(tildados.map((r) => r._id));
+      setFormData((prev) => ({ ...prev, roles: prev.roles.filter((id) => !ids.has(id)) }));
+    }
+    setSeccionForzada((prev) => ({ ...prev, [sec]: false }));
+  };
+
+  /** Tildar o destildar un rol, con la exclusión admin ↔ user de siempre. Tocar una casilla deja la sección prendida. */
+  const toggleRol = (r: Role, checked: boolean, sec: "mobile" | "plataforma") => {
+    let newRoles = checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
+    const name = r.name.toLowerCase();
+    if (checked) {
+      if (name === "admin") newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== "user");
+      else if (name === "user") newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== "admin");
+    }
+    setFormData((prev) => ({ ...prev, roles: newRoles }));
+    setSeccionForzada((prev) => ({ ...prev, [sec]: true }));
+  };
+
+  /** La tarjeta de un rol en una sección. `tambien` avisa que el mismo rol abre también el otro lado. */
+  const tarjetaRol = (r: Role, sec: "mobile" | "plataforma") => {
+    const tildado = formData.roles.includes(r._id);
+    const tambien = sec === "mobile" ? esRolPlataforma(r) : esRolMobile(r);
+    return (
+      <label key={`${sec}-${r._id}`} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${tildado ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200"}`}>
+        <input type="checkbox" checked={tildado} onChange={(e) => toggleRol(r, e.target.checked, sec)} className="mt-0.5 rounded text-blue-500 focus:ring-blue-500" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span>
+          {tambien && <span className="block text-[10px] text-gray-400 dark:text-gray-500">{sec === "mobile" ? "También abre la Plataforma" : "También abre la App Mobile"}</span>}
+          {(r.permissions || []).length === 0 && <span className="block text-[10px] text-amber-600 dark:text-amber-400">Sin permisos: no abre nada</span>}
+        </span>
+      </label>
+    );
+  };
+  useEffect(() => {
+    if (isOpen) setSeccionForzada({});
+  }, [isOpen, user?._id]);
   const [allRoleFrames, setAllRoleFrames] = useState<RoleFrameItem[]>([]);
   const [genders, setGenders] = useState<InfoItem[]>([]);
   const [documentTypes, setDocumentTypes] = useState<InfoItem[]>([]);
@@ -1779,45 +1874,29 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Roles de Sistema</label>
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                        <FontAwesomeIcon icon={faUserShield} className="text-gray-300" />
-                        Sistema
-                      </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {/*
-                          Se listan TODOS los roles del tenant (menos superadmin).
-
-                          Antes se escondían los que tuvieran "mobile" en el nombre, porque eran dos
-                          roles aparte que se asignaban por otro lado. Ya no hay roles de móvil: hay
-                          roles, y cada uno lleva los permisos que lleva —de la plataforma, de la app,
-                          o de las dos—. Esconder por el nombre dejaría media lista invisible.
-                        */}
-                        {roles
-                          .filter((r) => r.name.toLowerCase() !== "superadmin")
-                          .map((r) => (
-                            <label key={r._id} className={`flex items-start space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.roles.includes(r._id) ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 ring-2 ring-blue-500/20" : "bg-white border-gray-100 dark:bg-gray-800 dark:border-gray-700 hover:border-gray-200"}`}>
-                              <input
-                                type="checkbox"
-                                checked={formData.roles.includes(r._id)}
-                                onChange={(e) => {
-                                  let newRoles = e.target.checked ? [...formData.roles, r._id] : formData.roles.filter((id) => id !== r._id);
-                                  const name = r.name.toLowerCase();
-                                  if (e.target.checked) {
-                                    if (name === "admin") newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== "user");
-                                    else if (name === "user") newRoles = newRoles.filter((id) => roles.find((ro) => ro._id === id)?.name.toLowerCase() !== "admin");
-                                  }
-                                  setFormData((prev) => ({ ...prev, roles: newRoles }));
-                                }}
-                                className="mt-0.5 rounded text-blue-500 focus:ring-blue-500"
-                              />
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{r.name}</span>
-                            </label>
-                          ))}
-                      </div>
-                    </div>
-                    <div>
+                  <div className="space-y-3">
+                    {/*
+                      Se listan TODOS los roles del tenant (menos superadmin), repartidos en las dos secciones
+                      del editor de roles. Antes se escondían los que tuvieran "mobile" en el nombre; ya no hay
+                      roles de móvil: hay roles, y cada uno abre lo que abre —la app, la plataforma o las dos—.
+                    */}
+                    <SeccionRoles
+                      titulo="App Mobile"
+                      icono={faMobileAlt}
+                      prendida={seccionMobile}
+                      cantidad={tildadosDe(rolesMobile).length}
+                      onToggle={() => toggleSeccionRoles("mobile")}
+                      extra={
+                        <button type="button" onClick={() => setInfoMobile(true)} title="De dónde sale lo que ve en la app" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
+                        </button>
+                      }
+                    >
+                      {rolesMobile.length === 0 ? (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 italic">Ningún rol tiene permisos de App Mobile. Se arman en Usuarios → Roles, sección App Mobile.</p>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{rolesMobile.map((r) => tarjetaRol(r, "mobile"))}</div>
+                      )}
                       {/*
                         QUÉ VE EN LA APP: SE MUESTRA, NO SE ELIGE.
 
@@ -1826,15 +1905,8 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                         pregunta, y la de esta pantalla no sería la que manda: al cambiarle los permisos
                         al rol desde Usuarios → Roles, lo tildado acá quedaría pisado sin aviso.
                       */}
-                      <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center gap-2">
-                        <FontAwesomeIcon icon={faMobileAlt} className="text-indigo-300" />
-                        App Mobile
-                        <button type="button" onClick={() => setInfoMobile(true)} title="De dónde sale lo que ve en la app" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                          <FontAwesomeIcon icon={faCircleInfo} className="h-3 w-3" />
-                        </button>
-                      </h4>
-
-                      <div className="flex flex-wrap items-center gap-2">
+                      <p className="mt-3 text-[10px] font-black text-indigo-400 uppercase tracking-widest">Lo que ve en la app</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
                         {itemsMobileEfectivos().length > 0 ? (
                           itemsMobileEfectivos().map((label) => (
                             <span key={label} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800">
@@ -1843,32 +1915,40 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ isOpen, onClose, u
                             </span>
                           ))
                         ) : (
-                          <span className="text-sm text-gray-500 dark:text-gray-400 italic">No entra a la app: ningún rol suyo tiene permisos de App Mobile</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400 italic">No entra a la app: ningún rol tildado tiene permisos de App Mobile</span>
                         )}
                       </div>
+                      {!coordinacionBloqueada && <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Lo que ve en la app lo deciden los roles tildados en esta sección. Se arma en Usuarios → Roles, sección App Mobile.</p>}
+                    </SeccionRoles>
 
-                      {/*
-                        El aviso de coordinación. Dejar sin Novedades a alguien con turnos a cargo lo deja
-                        con equipo a cargo y sin dónde cargar sus novedades: aparecen vencidas en
-                        Cumplimiento sin que nada explique por qué. El servidor devuelve 409 igual (ver
-                        `routes/users.ts`); esto es para no enterarse recién al guardar.
-                      */}
-                      {coordinacionBloqueada && (
-                        <p className={`mt-2 text-[11px] ${sinNovedadesCoordinando ? "text-red-600 dark:text-red-400 font-medium" : "text-gray-500 dark:text-gray-400"}`}>
-                          {sinNovedadesCoordinando ? (
-                            <>
-                              Supervisa turnos en <strong>{coordinaEn.join(", ")}</strong> y así no le queda <strong>Novedades</strong>: no va a tener dónde cargarlas. Dale un rol que incluya ese permiso, o liberá la supervisión desde el equipo del proyecto.
-                            </>
-                          ) : (
-                            <>
-                              Supervisa turnos en <strong>{coordinaEn.join(", ")}</strong>, así que necesita conservar <strong>Novedades</strong>.
-                            </>
-                          )}
-                        </p>
+                    {/*
+                      El aviso de coordinación va FUERA de la sección, para que se vea también con App Mobile
+                      apagada: dejar sin Novedades a alguien con turnos a cargo lo deja con equipo a cargo y
+                      sin dónde cargar sus novedades, y aparecen vencidas en Cumplimiento sin que nada
+                      explique por qué. El servidor devuelve 409 igual (ver `routes/users.ts`); esto es para
+                      no enterarse recién al guardar.
+                    */}
+                    {coordinacionBloqueada && (
+                      <p className={`text-[11px] ${sinNovedadesCoordinando ? "text-red-600 dark:text-red-400 font-medium" : "text-gray-500 dark:text-gray-400"}`}>
+                        {sinNovedadesCoordinando ? (
+                          <>
+                            Supervisa turnos en <strong>{coordinaEn.join(", ")}</strong> y así no le queda <strong>Novedades</strong>: no va a tener dónde cargarlas. Dale un rol de App Mobile que incluya ese permiso, o liberá la supervisión desde el equipo del proyecto.
+                          </>
+                        ) : (
+                          <>
+                            Supervisa turnos en <strong>{coordinaEn.join(", ")}</strong>, así que necesita conservar <strong>Novedades</strong>.
+                          </>
+                        )}
+                      </p>
+                    )}
+
+                    <SeccionRoles titulo="Plataforma" icono={faUserShield} prendida={seccionPlataforma} cantidad={tildadosDe(rolesPlataforma).length} onToggle={() => toggleSeccionRoles("plataforma")}>
+                      {rolesPlataforma.length === 0 ? (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 italic">Ningún rol tiene permisos de Plataforma.</p>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{rolesPlataforma.map((r) => tarjetaRol(r, "plataforma"))}</div>
                       )}
-
-                      {!coordinacionBloqueada && <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Lo que ve en la app lo deciden los roles de arriba. Se arma en Usuarios → Roles, sección App Mobile.</p>}
-                    </div>
+                    </SeccionRoles>
                   </div>
                 </div>
                 {/*
