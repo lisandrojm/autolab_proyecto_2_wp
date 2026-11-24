@@ -865,7 +865,7 @@ const AsignarPersona: React.FC<{
             ))}
           </ul>
         )}
-        <p className="text-[11px] text-gray-400">El recibo se asocia al contrato vigente de esa persona. Si no tiene ninguno, queda sin persona hasta que lo tenga.</p>
+        <p className="text-[11px] text-gray-400">El recibo se asocia al contrato de esa persona en el proyecto del centro de costo con que viene nombrada la sábana (p. ej. «99_PRODUCTORA_…»); si no tiene uno ahí, a su contrato vigente más reciente, y sin ninguno vigente, al último. La fila avisa cuando no es el caso ideal.</p>
       </div>
     </Modal>
   );

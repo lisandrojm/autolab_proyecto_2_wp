@@ -14,9 +14,10 @@ import { ReciboSueldoEnviado } from "../models/ReciboSueldoEnviado.js";
 import { agruparPaginas, leerRecibo, normalizarNombre } from "../utils/reciboDeSueldo.js";
 import { normalizarCuit } from "../utils/constanciaPdf.js";
 import { Company } from "../models/Company.js";
-import { fechaISO, getContratoActivo, hoyArgentina } from "../utils/contratoVigencia.js";
+import { fechaISO, hoyArgentina } from "../utils/contratoVigencia.js";
 import { claveEnPosicion, indiceDeReferencia } from "../utils/identidadContrato.js";
-import { nombreArchivoDocumento } from "./nomenclaturaService.js";
+import { centroDeCostoDelProyecto, nombreArchivoDocumento } from "./nomenclaturaService.js";
+import { centroDeCostoDeSabana, elegirContratoDelRecibo } from "../utils/contratoDelRecibo.js";
 import { getTenantDropboxConfig, uploadFile } from "./dropboxService.js";
 import { resolverCarpetaPorProposito } from "../utils/estadoCarpetas.js";
 import { leerAnclas } from "../utils/anclasNombre.js";
@@ -63,48 +64,50 @@ async function extraerPaginas(sabana, indices) {
         doc.addPage(p);
     return Buffer.from(await doc.save());
 }
+const sabanaDe = (lote) => ({ centroDeCosto: centroDeCostoDeSabana(lote.nombreArchivo), centros: new Map() });
 const SIN_CONTRATO = "Sin ningún contrato en ningún proyecto: se envía igual, pero el archivo sale sin proyecto ni fechas de contrato.";
 const fechaCorta = (iso) => (/^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : iso);
 /*
   SIN CONTRATO VIGENTE SE ENVÍA IGUAL (13/11/2026). El recibo de un mes llega cuando el contrato de esa
   persona ya terminó (jornaleros, contratos de un mes): antes quedaba «Sin persona» y no se podía enviar.
-  Ahora va con su ÚLTIMO contrato (el de alta más reciente, en cualquier proyecto), que es el que da la
-  nomenclatura del archivo, y la fila lo avisa. Quien no tiene NINGÚN contrato también se envía: basta con
-  que el recibo tenga su persona (el nombre del archivo sale sin proyecto ni fechas, y la empresa se
-  toma del CUIT del empleador que trae el recibo). «Sin persona» queda sólo para eso: sin persona.
+  Ahora va con su ÚLTIMO contrato, que es el que da la nomenclatura del archivo, y la fila lo avisa.
+  Quien no tiene NINGÚN contrato también se envía: basta con que el recibo tenga su persona (el nombre
+  del archivo sale sin proyecto ni fechas, y la empresa se toma del CUIT del empleador que trae el
+  recibo). «Sin persona» queda sólo para eso: sin persona.
+
+  LA SÁBANA MANDA (24/11/2026). Una persona con contratos en varios proyectos salía con el proyecto
+  equivocado en el nombre del archivo (la sábana «99_PRODUCTORA_…» salió como «726_RAMON-DESARROLLO_…»
+  dos meses seguidos): entre cinco contratos de la misma fecha decidía el formato del string de la fecha
+  y el orden de Mongo, y un contrato terminado con alta más nueva le ganaba a uno vigente. Ahora el centro
+  de costo del nombre de la sábana elige el proyecto, y el desempate es por fecha ISO y vigencia real.
 */
-async function personaYContrato(tenantId, userId) {
+async function personaYContrato(tenantId, userId, sabana) {
     const vinculos = await UserProject.find({ userId }).lean();
-    const hoy = hoyArgentina();
-    let mejor = null;
+    const cc = sabana.centroDeCosto;
+    const conCentro = [];
     for (const up of vinculos) {
-        const c = getContratoActivo(up.contracts || [], hoy);
-        if (!c)
-            continue;
-        const idx = (up.contracts || []).indexOf(c);
-        const alta = String(c.fecha_alta_contrato || "");
-        if (!mejor || alta > mejor.alta)
-            mejor = { up, idx, alta };
-    }
-    let aviso = "";
-    if (!mejor) {
-        for (const up of vinculos) {
-            for (const [idx, c] of (up.contracts || []).entries()) {
-                // Con `fechaISO`: hay altas guardadas como DD/MM/YYYY. Un contrato sin alta también sirve, si es lo único que hay.
-                if (c?.estadoContrato === "ANULADO")
-                    continue; // lápida de un contrato anulado (etapa 2b)
-                const alta = fechaISO(c?.fecha_alta_contrato);
-                if (c && (!mejor || alta > mejor.alta))
-                    mejor = { up, idx, alta };
-            }
+        let centro = "";
+        if (cc) {
+            const clave = String(up.projectId || up.externalProjectId || up._id);
+            if (!sabana.centros.has(clave))
+                sabana.centros.set(clave, await centroDeCostoDelProyecto({ projectId: up.projectId, externalProjectId: up.externalProjectId }));
+            centro = sabana.centros.get(clave) || "";
         }
-        if (!mejor)
-            return { userProjectId: null, projectId: null, contractIndex: null, contratoKey: null, nombreProyecto: "", aviso: SIN_CONTRATO };
-        const baja = String(mejor.up.contracts[mejor.idx]?.fecha_baja_contrato || "");
-        aviso = `Sin contrato vigente: va con su último contrato${fechaISO(baja) ? ` (terminó el ${fechaCorta(fechaISO(baja))})` : ""}.`;
+        conCentro.push({ up, centroDeCosto: centro });
     }
-    const proyecto = await Project.findOne({ _id: mejor.up.projectId, tenantId }).select("name").lean();
-    return { userProjectId: mejor.up._id, projectId: mejor.up.projectId, contractIndex: mejor.idx, contratoKey: claveEnPosicion(mejor.up.contracts, mejor.idx), nombreProyecto: proyecto?.name || mejor.up.nombre_proyecto || "", aviso };
+    const e = elegirContratoDelRecibo(conCentro, { hoy: hoyArgentina(), centroDeCosto: cc });
+    if (!e)
+        return { userProjectId: null, projectId: null, contractIndex: null, contratoKey: null, nombreProyecto: "", aviso: SIN_CONTRATO };
+    const proyecto = await Project.findOne({ _id: e.up.projectId, tenantId }).select("name").lean();
+    const nombreProyecto = proyecto?.name || e.up.nombre_proyecto || "";
+    const baja = e.vigente ? "" : fechaISO(e.contrato?.fecha_baja_contrato);
+    const fin = baja ? ` (terminó el ${fechaCorta(baja)})` : "";
+    const aviso = cc && !e.enElCentro
+        ? `No tiene contrato en el centro de costo ${cc} de la sábana: va con su ${e.vigente ? "contrato vigente" : "último contrato"} en ${nombreProyecto || "otro proyecto"}${fin}.`
+        : !e.vigente
+            ? `Sin contrato vigente${cc ? ` en ${nombreProyecto}` : ""}: va con su último contrato${fin}.`
+            : "";
+    return { userProjectId: e.up._id, projectId: e.up.projectId, contractIndex: e.idx, contratoKey: claveEnPosicion(e.up.contracts, e.idx), nombreProyecto, aviso };
 }
 /**
  * Los recibos que quedaron «Sin persona» sólo porque la persona no tenía contrato vigente (lotes subidos
@@ -115,8 +118,9 @@ export async function completarContratos(lote) {
     if (pendientes.length === 0 || lote.estadoLote === "leyendo")
         return false;
     let cambio = false;
+    const sabana = sabanaDe(lote);
     for (const r of pendientes) {
-        const { aviso, ...contrato } = await personaYContrato(lote.tenantId, r.userId);
+        const { aviso, ...contrato } = await personaYContrato(lote.tenantId, r.userId, sabana);
         // Posicional y condicionado al estado: no pisa un recibo que entre tanto cambió.
         await LoteRecibosSueldo.updateOne({ _id: lote._id, recibos: { $elemMatch: { _id: r._id, estado: "sin_persona" } } }, { $set: { "recibos.$.userProjectId": contrato.userProjectId, "recibos.$.projectId": contrato.projectId, "recibos.$.contractIndex": contrato.contractIndex, "recibos.$.contratoKey": contrato.contratoKey, "recibos.$.nombreProyecto": contrato.nombreProyecto, "recibos.$.estado": "listo", "recibos.$.error": aviso } });
         cambio = true;
@@ -337,9 +341,10 @@ async function armarRecibos(lote, sabana, leidos) {
     const fuente = lote.fuente === "txt" ? "El TXT" : "El OCR";
     const porCuil = await usuariosPorCuil(lote.tenantId, [...new Set(leidos.map((g) => g.datos.cuil).filter(Boolean))]);
     const contratoDe = new Map();
+    const deLaSabana = sabanaDe(lote);
     const contratoDeUsuario = async (u) => {
         if (!contratoDe.has(String(u._id)))
-            contratoDe.set(String(u._id), await personaYContrato(lote.tenantId, u._id));
+            contratoDe.set(String(u._id), await personaYContrato(lote.tenantId, u._id, deLaSabana));
         return contratoDe.get(String(u._id));
     };
     const dir = dirDelLote(lote);
@@ -424,7 +429,7 @@ export async function releerRecibo(lote, reciboId) {
             u = await usuarioPorNombre(lote.tenantId, datos.nombre);
             porNombre = !!u;
         }
-        const contrato = u ? await personaYContrato(lote.tenantId, u._id) : null;
+        const contrato = u ? await personaYContrato(lote.tenantId, u._id, sabanaDe(lote)) : null;
         r.userId = u?._id || null;
         r.nombreUsuario = u ? nombreDe(u) : "";
         r.userProjectId = contrato?.userProjectId || null;
@@ -451,7 +456,7 @@ export async function asignarPersona(lote, reciboId, userId) {
     const u = await User.findOne({ _id: userId, tenantId: lote.tenantId }).select("firstName lastName email").lean();
     if (!u)
         throw new ErrorRecibos("Persona no encontrada.", 404);
-    const contrato = await personaYContrato(lote.tenantId, u._id);
+    const contrato = await personaYContrato(lote.tenantId, u._id, sabanaDe(lote));
     r.userId = u._id;
     r.nombreUsuario = nombreDe(u);
     r.userProjectId = contrato.userProjectId;
