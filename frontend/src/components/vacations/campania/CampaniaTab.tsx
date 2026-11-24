@@ -753,7 +753,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
                       ))}
                     </div>
                   ) : (
-                    <span className="text-xs text-gray-400 italic">Sin proyecto</span>
+                    i.proyectos ? <span className="text-xs text-gray-400 italic">Sin proyecto</span> : <span className="text-xs text-gray-400" title="El server todavía no manda los proyectos: falta publicarlo.">—</span>
                   )}
                 </td>
                 <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{i.asignacion?.dias || i.diasDisponibles}</td>
