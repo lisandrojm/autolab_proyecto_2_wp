@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faBell, faBriefcase, faCheck, faCircleCheck, faCircleExclamation, faClockRotateLeft, faDownload, faEdit, faEye, faFilePdf, faLock, faPaperPlane, faPlus, faScaleBalanced, faSpinner, faTriangleExclamation, faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faBell, faCheck, faCircleCheck, faCircleExclamation, faClockRotateLeft, faDownload, faEdit, faEye, faFilePdf, faLock, faPaperPlane, faPlus, faScaleBalanced, faSpinner, faTriangleExclamation, faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
 import { campaniasVacacionesAPI, errorDeCampania, type Alerta, type Campania, type CambioDeTipos, type EstadoVisible, type Invitacion, type Tablero, type VistaPreviaDeInvitacion } from "../../../api/campaniasVacaciones";
 import { vacationConfigAPI, type TipoContratoVacaciones } from "../../../api/vacationConfig";
 import { SelectorTiposContrato } from "./SelectorTiposContrato";
@@ -14,7 +14,7 @@ import { Modal } from "../../ui/Modal";
 import { LoadingSpinner } from "../../ui/LoadingSpinner";
 import { fuzzyMatch } from "../../../utils/searchHelpers";
 import { SearchAndFilters, type FilterOption } from "../../ui/SearchAndFilters";
-import { CLASE_BADGE_CENTRO_COSTO } from "../../../utils/centroCosto";
+import { BadgeCentroCosto } from "../../ui/BadgeCentroCosto";
 import { getImageUrl } from "../../../utils/imageHelpers";
 
 /**
@@ -743,12 +743,10 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
                   {proyectosDeLaFila(i).length ? (
                     <div className="flex flex-col gap-1">
                       {proyectosDeLaFila(i).map((p) => (
-                        <span key={p.nombre} className="inline-flex items-center gap-1 whitespace-nowrap" title={p.centroCosto ? `${p.nombre} · Centro de costo ${p.centroCosto}` : p.nombre}>
-                          {p.centroCosto && <span className={`${CLASE_BADGE_CENTRO_COSTO} px-1.5 py-0.5 text-[10px]`}>{p.centroCosto}</span>}
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
-                            <FontAwesomeIcon icon={faBriefcase} className="mr-1 opacity-50" />
-                            {p.nombre}
-                          </span>
+                        // Como la columna Proyecto de Contratos (24/11/2026, pedido del usuario): el centro de costo en el badge violeta, adelante del nombre.
+                        <span key={p.nombre} className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                          <BadgeCentroCosto codigo={p.centroCosto} />
+                          {p.nombre}
                         </span>
                       ))}
                     </div>
