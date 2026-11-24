@@ -368,9 +368,14 @@ const ModalEditarCampania: React.FC<{ campania: Campania; onCerrar: () => void; 
 const SIN_CONTRATO = "Sin contratos en WeProdu";
 const SIN_DATO = "(sin dato)";
 
+type ProyectoDeLaFila = { nombre: string; centroCosto: string; cliente: string };
+/** Los proyectos de la persona: los que manda el server (con el centro de costo) o, si no los manda, el del contrato. */
+const proyectosDeLaFila = (i: Invitacion): ProyectoDeLaFila[] =>
+  i.proyectos ?? (i.contrato?.proyecto ? [{ nombre: i.contrato.proyecto, centroCosto: "", cliente: "" }] : []);
+
 /**
  * EL CONTRATO DE LA PERSONA, como en la ficha (23/11/2026, pedido del usuario): el tipo, VIGENTE / NO VIGENTE, alta,
- * baja y el proyecto. Es el que rige (el vigente o, si no tiene, el último). Si está vigente pero no es de su
+ * baja y la empresa (el proyecto va en su propia columna, con el centro de costo). Es el que rige (el vigente o, si no tiene, el último). Si está vigente pero no es de su
  * empresa de cómputo, se aclara que no cuenta para la campaña (la campaña mira ése).
  */
 const ContratoDeLaFila: React.FC<{ i: Invitacion }> = ({ i }) => {
@@ -384,11 +389,6 @@ const ContratoDeLaFila: React.FC<{ i: Invitacion }> = ({ i }) => {
       </span>
       {k.alta && <p className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">Alta: {fechaCorta(k.alta)}</p>}
       <p className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">{k.baja ? `Baja: ${fechaCorta(k.baja)}` : "Sin baja"}</p>
-      {k.proyecto && (
-        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-400 text-[10px] font-bold uppercase whitespace-nowrap">
-          <FontAwesomeIcon icon={faBriefcase} className="h-2.5 w-2.5" /> {k.proyecto}
-        </span>
-      )}
       {k.empresa && <p className="text-[11px] text-gray-400 whitespace-nowrap">{k.empresa}</p>}
       {k.vigente && !i.tipoContrato && <p className="text-[11px] text-amber-600 dark:text-amber-400 max-w-[12rem]">No es de su empresa de cómputo: no cuenta para la campaña.</p>}
     </div>
@@ -491,7 +491,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
         if (tiposFiltro.length && !tiposFiltro.includes(k ? k.nombre : SIN_CONTRATO)) return false;
         if (vigencia && vigencia !== (k ? (k.vigente ? "vigente" : "no_vigente") : "sin")) return false;
         if (empresasFiltro.length && !empresasFiltro.includes(k?.empresa || SIN_DATO)) return false;
-        if (proyectosFiltro.length && !(i.proyectos?.length ? i.proyectos.map((p) => p.nombre) : [SIN_DATO]).some((p) => proyectosFiltro.includes(p))) return false;
+        if (proyectosFiltro.length && !(proyectosDeLaFila(i).length ? proyectosDeLaFila(i).map((p) => p.nombre) : [SIN_DATO]).some((p) => proyectosFiltro.includes(p))) return false;
         if (clientesFiltro.length && !(i.clientes?.length ? i.clientes : [SIN_DATO]).some((x) => clientesFiltro.includes(x))) return false;
         if (acuse && (acuse === "si") !== !!i.acuseInvitacionAt) return false;
         if (cuenta && (cuenta === "si") !== !!i.tipoContrato) return false;
@@ -516,7 +516,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
       estados: ORDEN_ESTADOS.filter((e) => datos?.conteos[e]).map((e) => ({ value: e, label: `${ETIQUETA_ESTADO[e]} · ${datos?.conteos[e]}` })),
       tipos: contar(inv.map((i) => i.contrato?.nombre || SIN_CONTRATO)),
       empresas: contar(inv.map((i) => i.contrato?.empresa || SIN_DATO)),
-      proyectos: contar(inv.flatMap((i) => (i.proyectos?.length ? i.proyectos.map((p) => p.nombre) : [SIN_DATO]))),
+      proyectos: contar(inv.flatMap((i) => (proyectosDeLaFila(i).length ? proyectosDeLaFila(i).map((p) => p.nombre) : [SIN_DATO]))),
       clientes: contar(inv.flatMap((i) => (i.clientes?.length ? i.clientes : [SIN_DATO]))),
     };
   }, [datos]);
@@ -740,9 +740,9 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
                   )}
                 </td>
                 <td className="py-3 px-4">
-                  {i.proyectos?.length ? (
+                  {proyectosDeLaFila(i).length ? (
                     <div className="flex flex-col gap-1">
-                      {i.proyectos.map((p) => (
+                      {proyectosDeLaFila(i).map((p) => (
                         <span key={p.nombre} className="inline-flex items-center gap-1 whitespace-nowrap" title={p.centroCosto ? `${p.nombre} · Centro de costo ${p.centroCosto}` : p.nombre}>
                           {p.centroCosto && <span className={`${CLASE_BADGE_CENTRO_COSTO} px-1.5 py-0.5 text-[10px]`}>{p.centroCosto}</span>}
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
@@ -753,7 +753,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
                       ))}
                     </div>
                   ) : (
-                    i.proyectos ? <span className="text-xs text-gray-400 italic">Sin proyecto</span> : <span className="text-xs text-gray-400" title="El server todavía no manda los proyectos: falta publicarlo.">—</span>
+                    <span className="text-xs text-gray-400 italic">Sin proyecto</span>
                   )}
                 </td>
                 <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{i.asignacion?.dias || i.diasDisponibles}</td>
