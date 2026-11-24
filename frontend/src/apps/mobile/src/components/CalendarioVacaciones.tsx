@@ -5,7 +5,7 @@ import { faChevronLeft, faChevronRight, faInfoCircle, faTimes } from '@fortaweso
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, isWithinInterval, isBefore, isAfter, addDays, subDays, isMonday, isSunday, isFriday, isSaturday, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { sweetAlert } from '../utils/sweetAlert';
-import { normalizarDiasDeInicio, puedeEmpezar, textoDiasDeInicio } from '@compartido/vacaciones/campania';
+import { hastaParaDias, normalizarDiasDeInicio, puedeEmpezar, textoDiasDeInicio } from '@compartido/vacaciones/campania';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════
@@ -21,9 +21,10 @@ import { normalizarDiasDeInicio, puedeEmpezar, textoDiasDeInicio } from '@compar
  * aviso mínimo); los días pasados, los ocupados y los que exceden `disponibles` los bloquea el calendario.
  * Lo que se valida al confirmar (fraccionamiento, saldo restante) también es de quien lo usa.
  *
- * LAS REGLAS DE LA CAMPAÑA SE VEN ACÁ MISMO (24/11/2026): los días en que no puede empezar un tramo
- * (`diasDeInicio`) no se eligen como inicio; con un inicio elegido, los fines que dejan el tramo más corto que
- * el mínimo al fraccionar (`minimo`) tampoco; y lo que todavía está mal en el tramo (`errores`, calculado por
+ * LAS REGLAS DE LA CAMPAÑA SE AVISAN ACÁ MISMO (24/11/2026): los días se ven todos normales (pedido del
+ * usuario: en gris «parece bloqueado»), y al tocar uno que no cumple sale el aviso y no se elige: un día en
+ * que no puede empezar un tramo (`diasDeInicio`), o un fin que deja el tramo más corto que el mínimo al
+ * fraccionar (`minimo`, con desde qué día sí). Lo que todavía está mal en el tramo (`errores`, calculado por
  * quien lo usa con las mismas reglas que el server) se muestra en rojo y no deja confirmar.
  */
 
@@ -134,6 +135,16 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
     if (fijaInicio && !puedeEmpezar(formattedDate, diasQueEmpiezan)) {
       await Swal.fire({ icon: 'info', title: 'Día de inicio', text: `${textoEmpiezan} Elegí otro día para empezar.`, ...SWAL_INFO });
       return;
+    }
+    // Este toque fija el FIN: el tramo no puede quedar más corto que el mínimo al fraccionar (contando el fin de
+    // semana que se agrega solo si termina viernes o sábado con días corridos).
+    if (modo === 'end' && desde && !fijaInicio && minimoEfectivo > 0) {
+      const finEfectivo = diasCorridos && isFriday(day) ? addDays(day, 2) : diasCorridos && isSaturday(day) ? addDays(day, 1) : day;
+      if (contarDiasSeleccionados(desde, format(finEfectivo, 'yyyy-MM-dd'), diasCorridos) < minimoEfectivo) {
+        const primerFin = format(parseISO(hastaParaDias(desde, minimoEfectivo, diasCorridos)), "EEEE d 'de' MMMM", { locale: es });
+        await Swal.fire({ icon: 'info', title: `Mínimo ${minimoEfectivo} días`, text: `${minimoEfectivo < minimo ? `Te quedan ${minimoEfectivo} días y van todos juntos` : `Al dividir las vacaciones, cada tramo tiene que tener al menos ${minimoEfectivo} días`}: elegí un fin desde el ${primerFin}.`, ...SWAL_INFO });
+        return;
+      }
     }
 
     let newStart = desde;
@@ -251,11 +262,11 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
               // Con el inicio elegido, los días que se pasan de lo disponible (contados como se cuentan: corridos o hábiles).
               const isExceedingLimit = modo === 'end' && !!desde && !isBefore(day, parseISO(desde)) && contarDiasSeleccionados(desde, formattedDay, diasCorridos) > limite;
               const fueraDeVentana = !permitida(formattedDay);
-              // Un día que fijaría el inicio (modo inicio, o antes del inicio elegido) tiene que poder empezar.
+              // Un día que fijaría el inicio (modo inicio, o antes del inicio elegido) tiene que poder empezar, y un fin no
+              // puede dejar el tramo más corto que el mínimo: se ven normales y, al tocarlos, avisan (no se deshabilitan).
               const noPuedeEmpezar = (modo === 'start' || (!!desde && isBefore(day, parseISO(desde)))) && !puedeEmpezar(formattedDay, diasQueEmpiezan);
-              // Con el inicio elegido, un fin que deja el tramo más corto que el mínimo al fraccionar.
               const demasiadoCorto = modo === 'end' && !!desde && minimoEfectivo > 0 && !isBefore(day, parseISO(desde)) && contarDiasSeleccionados(desde, formattedDay, diasCorridos) < minimoEfectivo;
-              const isDisabled = isPast || isExceedingLimit || isOccupiedDay || fueraDeVentana || noPuedeEmpezar || demasiadoCorto;
+              const isDisabled = isPast || isExceedingLimit || isOccupiedDay || fueraDeVentana;
 
               const isSelected = isStart || isEnd || isInRange;
               const isSuggested = !isSelected && !isDisabled && !isOccupiedDay && suggestedEndDate && modo === 'end' && desde && isAfter(day, parseISO(desde)) && (isBefore(day, suggestedEndDate) || isSameDay(day, suggestedEndDate));
@@ -272,8 +283,6 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
                   classes += isPendingOcc ? ' bg-amber-200 text-amber-700 dark:bg-amber-800/40 dark:text-amber-300' : ' bg-red-200 text-red-700 dark:bg-red-800/40 dark:text-red-300';
                   classes += !prevOcc || isMonday(day) ? ' rounded-l-lg' : ' rounded-l-none';
                   classes += !nextOcc || isSunday(day) ? ' rounded-r-lg' : ' rounded-r-none';
-                } else if (demasiadoCorto) {
-                  classes += ' text-slate-400 dark:text-slate-500 rounded border border-dashed border-slate-300 dark:border-slate-600';
                 } else {
                   classes += ' text-slate-300 dark:text-slate-600 bg-slate-50 dark:bg-slate-800/20';
                 }
@@ -292,9 +301,9 @@ export default function CalendarioVacaciones({ modo, setModo, desde, hasta, onCa
               if (isOccupiedDay) dayTitle = isPendingOcc ? 'Vacación pendiente de otro usuario' : 'Vacación aprobada de otro usuario';
               else if (isPast) dayTitle = 'Fecha pasada';
               else if (fueraDeVentana) dayTitle = textoVentana ? `Fuera del período: se pueden pedir ${textoVentana}` : 'Fuera del período';
+              else if (isExceedingLimit) dayTitle = 'Excede límite de días';
               else if (noPuedeEmpezar) dayTitle = textoEmpiezan;
               else if (demasiadoCorto) dayTitle = `Este tramo tiene que tener al menos ${minimoEfectivo} días`;
-              else if (isExceedingLimit) dayTitle = 'Excede límite de días';
 
               return (
                 <button type="button" key={idx} onClick={() => !isDisabled && handleDateSelect(day)} disabled={isDisabled} className={classes} title={dayTitle}>
