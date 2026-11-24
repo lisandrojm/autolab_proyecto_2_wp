@@ -706,7 +706,7 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
               <th className={th}>Días</th>
               <th className={th}>Tipo de contrato</th>
               <th className={th}>Estado</th>
-              <th className={th}>Alertas</th>
+              <th className={th}>Recibo</th>
               <th className={th}>Acuse invitación</th>
               <th className={th}>Fechas</th>
               <th className={th}>Aviso escrito</th>
@@ -774,15 +774,25 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
                         );
                       })()
                     : null}
+                  {i.alertas
+                    .filter((a) => a.codigo !== "sin_acuse")
+                    .map((a) => (
+                      <p key={a.codigo} className={`mt-1 text-[11px] flex items-start gap-1 max-w-[14rem] ${a.nivel === "error" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
+                        <FontAwesomeIcon icon={a.nivel === "error" ? faCircleExclamation : faTriangleExclamation} className="mt-0.5" />
+                        {a.mensaje}
+                      </p>
+                    ))}
                 </td>
-                <td className="py-3 px-4 min-w-[12rem]">
-                  {i.alertas.map((a) => (
-                    <p key={a.codigo} className={`mt-1 first:mt-0 text-[11px] flex items-start gap-1 max-w-[16rem] ${a.nivel === "error" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
-                      <FontAwesomeIcon icon={a.nivel === "error" ? faCircleExclamation : faTriangleExclamation} className="mt-0.5" />
-                      {a.mensaje}
-                    </p>
-                  ))}
-                  {i.alertas.length === 0 && <span className="text-xs text-gray-400">—</span>}
+                <td className="py-3 px-4">
+                  {i.acuseInvitacionAt ? (
+                    <span title={`Acusó recibo de la invitación el ${fechaHora(i.acuseInvitacionAt)}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                      <FontAwesomeIcon icon={faCircleCheck} className="h-3 w-3" /> Sí
+                    </span>
+                  ) : (
+                    <span title="No acusó recibo de la invitación" className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                      <FontAwesomeIcon icon={faTriangleExclamation} className="h-3 w-3" /> No
+                    </span>
+                  )}
                 </td>
                 <td className="py-3 px-4 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{i.acuseInvitacionAt ? fechaHora(i.acuseInvitacionAt) : <span className="text-gray-400">—</span>}</td>
                 <td className="py-3 px-4 text-xs text-gray-700 dark:text-gray-300">
