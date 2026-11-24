@@ -4,7 +4,8 @@ import { Vacation, type IVacation } from "../../models/Vacation.js";
 import { VacationConfig } from "../../models/VacationConfig.js";
 import { UserProfile } from "../../models/UserProfile.js";
 import { Notification } from "../../models/Notification.js";
-import { hoyArgentina } from "../../utils/contratoVigencia.js";
+import { esContratoVigente, hoyArgentina } from "../../utils/contratoVigencia.js";
+import { contratosQueRigenDeLasPersonas } from "../../utils/contratosQueRigen.js";
 import { diasHasta, fechaCorta, sumarDias } from "../../compartido/planVacaciones/fechas.js";
 import { normalizarVentana, rangoPermitido } from "../../compartido/ventanaGoce.js";
 import {
@@ -35,7 +36,7 @@ import {
 } from "../../compartido/vacaciones/campania.js";
 import { NOVEDAD_CAMPANIA_INVITACION, NOVEDAD_CAMPANIA_RECORDATORIO, NOVEDAD_VACACION_OTORGADA, notificar } from "../novedadesNotificaciones.js";
 import { saldosDeVacaciones } from "./saldos.js";
-import { cargarCatalogoDeTipos, tiposSinVacacionesDe } from "./tiposDeContrato.js";
+import { cargarCatalogoDeTipos, lectorDeTiposDeContrato, tiposSinVacacionesDe } from "./tiposDeContrato.js";
 import { ErrorVacacion, adjustBalanceOnRequestChange, configsEfectivasEnLote, crearVacacionParaPersona, preAprobarVacacion } from "./crearVacacion.js";
 import { aprobarComoAdmin, iniciarAprobacion } from "./aprobacionPorEtapas.js";
 import { fechasBloqueadas } from "./solapamiento.js";
@@ -153,7 +154,8 @@ export async function tablero(tid: Types.ObjectId, id: string): Promise<{ campan
   const idsVac = invitaciones.flatMap((i) => [...(i.tramos || []).map((t) => t.vacationId), i.asignacion?.vacationId]).filter(Boolean);
   const vacaciones = idsVac.length ? await Vacation.find({ _id: { $in: idsVac } }).select("status startDate endDate daysRequested pdfPreAprobacionUrl signatureStatus").lean() : [];
   const vacPorId = new Map(vacaciones.map((v: any) => [String(v._id), v]));
-  const tipoDeUsuario = await tiposDeContratoDe(tid, c.anio, invitaciones.map((i) => String(i.userId)));
+  const userIds = invitaciones.map((i) => String(i.userId));
+  const [tipoDeUsuario, contratoDeUsuario] = await Promise.all([tiposDeContratoDe(tid, c.anio, userIds), contratosParaMostrar(userIds, hoy)]);
   const conteos: Record<string, number> = {};
   const filas = invitaciones.map((i) => {
     const visible = estadoVisible(i.estado, fechasDe(i), hoy);
@@ -163,6 +165,7 @@ export async function tablero(tid: Types.ObjectId, id: string): Promise<{ campan
       estadoVisible: visible,
       etiquetaEstado: ETIQUETA_ESTADO[visible],
       tipoContrato: tipoDeUsuario.get(String(i.userId)) ?? null,
+      contrato: contratoDeUsuario.get(String(i.userId)) ?? null,
       alertas: alertasDeInvitacion({ estado: i.estado, fechaLimite: i.fechaLimite, acuseInvitacionAt: i.acuseInvitacionAt, invitadoAt: i.invitadoAt, tramos: i.tramos, hoy, avisoDias: c.avisoMinimoDias }),
       tramos: (i.tramos || []).map((t) => ({ ...t, vacacion: t.vacationId ? vacPorId.get(String(t.vacationId)) || null : null })),
       vacacionAsignada: i.asignacion?.vacationId ? vacPorId.get(String(i.asignacion.vacationId)) || null : null,
@@ -178,7 +181,45 @@ export async function tablero(tid: Types.ObjectId, id: string): Promise<{ campan
       mensaje: `A ${recortadas.length} persona(s) el turno por antigüedad no les llega antes de la fecha límite: arrancan el último día (${fechaCorta(c.fechaLimite || "")}). Acortá los días de turno de la regla o mové la fecha límite.`,
     });
   }
-  return { campania: c.toObject(), invitaciones: filas, conteos, alertas, hoy };
+  // Los nombres de los tipos que invita la campaña (vacío = todos los habilitados), para el encabezado.
+  const cat = await cargarCatalogoDeTipos();
+  const nombreTipo = new Map(cat.tipos.map((t) => [String(t._id), t.name]));
+  const tiposInvitados = (c.tiposContratoInvitar || []).map((t: any) => nombreTipo.get(String(t)) || String(t));
+  return { campania: { ...c.toObject(), tiposInvitados }, invitaciones: filas, conteos, alertas, hoy };
+}
+
+/**
+ * EL CONTRATO QUE SE VE DE CADA PERSONA (23/11/2026, pedido del usuario: «que muestre el contrato y que diga no
+ * vigente»). El que rige, en cualquier proyecto (`contratosQueRigenDeLasPersonas`): entre los vigentes manda el
+ * indeterminado; sin vigentes, el último. Es lo que la ficha muestra. La campaña igual decide con `tipoContrato`
+ * (el vigente de la empresa de cómputo): esto es para ver, no para decidir.
+ */
+async function contratosParaMostrar(userIds: string[], hoy: string): Promise<Map<string, { nombre: string; proyecto: string; empresa: string; alta: string; baja: string; vigente: boolean } | null>> {
+  const out = new Map<string, any>();
+  if (userIds.length === 0) return out;
+  const [rigen, tipoDe, cat] = await Promise.all([
+    contratosQueRigenDeLasPersonas(userIds, hoy, ["nombre_contrato", "nombre_proyecto", "nombre_empresa_contrato", "contrato_id", "tipo_contrato_id"]),
+    lectorDeTiposDeContrato(),
+    cargarCatalogoDeTipos(),
+  ]);
+  const nombreTipo = new Map(cat.tipos.map((t) => [String(t._id), t.name]));
+  for (const id of userIds) {
+    const r = rigen.get(id);
+    if (!r) {
+      out.set(id, null);
+      continue;
+    }
+    const tipoId = tipoDe(r);
+    out.set(id, {
+      nombre: (tipoId && nombreTipo.get(tipoId)) || r.nombre_contrato || "Sin tipo",
+      proyecto: r.nombre_proyecto || "",
+      empresa: r.nombre_empresa_contrato || "",
+      alta: r.fecha_alta_contrato || "",
+      baja: r.fecha_baja_contrato || "",
+      vigente: esContratoVigente(r, hoy),
+    });
+  }
+  return out;
 }
 
 /**
