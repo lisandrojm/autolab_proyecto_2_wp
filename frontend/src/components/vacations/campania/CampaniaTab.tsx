@@ -576,12 +576,25 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?:
         </button>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{c.nombre}</h3>
         <span className={`inline-flex px-2 py-0.5 rounded text-xs font-bold ${CLASE_CAMPANIA[c.estado]}`}>{TEXTO_CAMPANIA[c.estado]}</span>
-        <span className="text-sm text-gray-600 dark:text-gray-400">
-          Ventana {fechaCorta(c.ventanaDesde)} al {fechaCorta(c.ventanaHasta)} · aviso {c.avisoMinimoDias} días · tramo mínimo {c.minDiasPorTramo} · empiezan {textoDiasDeInicio(c.diasDeInicio)} · {c.fechaLimite ? `elegir hasta el ${fechaCorta(c.fechaLimite)}` : `plazo ${c.plazoParaDefinirDias} días desde el lanzamiento`} · invita {c.tiposInvitados?.length ? c.tiposInvitados.join(", ") : "todos los tipos habilitados"}
-        </span>
+        {/* Las reglas de la campaña, cada una en su badge (23/11/2026, pedido del usuario). */}
+        {(
+          [
+            ["Ventana", `${fechaCorta(c.ventanaDesde)} al ${fechaCorta(c.ventanaHasta)}`],
+            ["Aviso", `${c.avisoMinimoDias} días`],
+            ["Tramo mínimo", `${c.minDiasPorTramo} días`],
+            ["Empiezan", textoDiasDeInicio(c.diasDeInicio)],
+            c.fechaLimite ? ["Elegir hasta", fechaCorta(c.fechaLimite)] : ["Plazo", `${c.plazoParaDefinirDias} días desde el lanzamiento`],
+            ["Invita", c.tiposInvitados?.length ? c.tiposInvitados.join(", ") : "todos los tipos habilitados"],
+          ] as [string, string][]
+        ).map(([etiqueta, valor]) => (
+          <span key={etiqueta} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-gray-200 bg-gray-50 text-xs dark:border-gray-700 dark:bg-gray-800">
+            <span className="text-gray-500 dark:text-gray-400">{etiqueta}</span>
+            <span className="font-semibold text-gray-800 dark:text-gray-100">{valor}</span>
+          </span>
+        ))}
         {c.estado !== "cerrada" && (
-          <button type="button" onClick={() => setCambiandoLimite(true)} disabled={!!ocupado} className="text-xs text-blue-600 dark:text-blue-400 underline hover:no-underline disabled:opacity-50" title={c.estado === "lanzada" ? "Editar los días en que pueden empezar y la fecha límite para elegir" : "Editar los días en que pueden empezar"}>
-            editar
+          <button type="button" onClick={() => setCambiandoLimite(true)} disabled={!!ocupado} aria-label="Editar campaña" title="Editar campaña: tipos de contrato, días en que pueden empezar y fecha límite para elegir" className="h-7 w-7 inline-flex items-center justify-center rounded text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 disabled:opacity-50">
+            <FontAwesomeIcon icon={faEdit} className="h-3.5 w-3.5" />
           </button>
         )}
       </div>
