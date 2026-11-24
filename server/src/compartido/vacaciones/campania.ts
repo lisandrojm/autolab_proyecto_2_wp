@@ -397,12 +397,13 @@ export const erroresDelTramo = (errores: ErrorPropuesta[], i: number): ErrorProp
 /**
  * CUÁNTOS DÍAS TIENE QUE TENER, COMO MÍNIMO, EL TRAMO QUE EMPIEZA EN `desde`, dados los otros tramos ya elegidos
  * (la misma cuenta que `erroresDePropuesta`, para avisarlo en el calendario antes de confirmar): en orden de
- * fecha, el mínimo configurado o, si antes de él ya se repartió casi todo, los que quedan. 0 cuando no hay
- * mínimo que avisar: sin otros tramos (no se fracciona) o sin fecha de inicio.
+ * fecha, el mínimo configurado o, si antes de él ya se repartió casi todo, los que quedan. También para el
+ * PRIMER tramo, aunque todavía no haya otro (pedido del usuario, 24/11/2026: con 21 días no se elige uno solo):
+ * con el mínimo tomado, el resto se divide o va junto. 0 sólo sin fecha de inicio.
  */
 export function minimoDelTramo(o: { desde: string; otros: Tramo[]; diasDisponibles: number; minPorTramo: number; diasCorridos: boolean }): number {
   const otros = (o.otros || []).filter((t) => esISO(t.desde) && esISO(t.hasta) && t.hasta >= t.desde);
-  if (otros.length === 0 || !esISO(o.desde)) return 0;
+  if (!esISO(o.desde)) return 0;
   if (o.diasDisponibles < o.minPorTramo) return Math.max(0, o.diasDisponibles);
   const antes = otros.filter((t) => t.desde < o.desde).reduce((s, t) => s + contarDiasTramo(t, o.diasCorridos), 0);
   return Math.min(o.minPorTramo, Math.max(0, o.diasDisponibles - antes));

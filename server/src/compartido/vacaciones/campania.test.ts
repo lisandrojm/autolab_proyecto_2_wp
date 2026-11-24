@@ -241,8 +241,10 @@ test("errores con código y tramo: el calendario muestra sólo los del tramo que
 
 test("mínimo del tramo, para avisarlo en el calendario antes de confirmar", () => {
   const m = (desde: string, otros: [string, string][], diasDisponibles = 10) => minimoDelTramo({ desde, otros: otros.map(([a, b]) => ({ desde: a, hasta: b })), diasDisponibles, minPorTramo: 7, diasCorridos: true });
-  // Un solo tramo: no se fracciona, nada que avisar. Sin inicio, tampoco.
-  assert.equal(m("2027-01-04", []), 0);
+  // El primer tramo también lleva el mínimo (con 21 días no se elige uno solo). Sin inicio, nada que avisar.
+  assert.equal(m("2027-01-04", []), 7);
+  assert.equal(m("2027-01-04", [], 21), 7);
+  assert.equal(m("2027-01-04", [], 5), 5);
   assert.equal(m("", [["2027-01-04", "2027-01-10"]]), 0);
   // 10 días: con 7 ya elegidos en enero, el tramo de febrero lleva los 3 que quedan; uno antes de enero lleva 7.
   assert.equal(m("2027-02-01", [["2027-01-04", "2027-01-10"]]), 3);
@@ -251,5 +253,5 @@ test("mínimo del tramo, para avisarlo en el calendario antes de confirmar", () 
   assert.equal(m("2027-03-01", [["2027-01-04", "2027-01-10"], ["2027-02-01", "2027-02-07"]], 17), 3);
   assert.equal(m("2027-02-01", [["2027-01-04", "2027-01-05"]], 5), 5);
   // Los otros tramos incompletos no cuentan.
-  assert.equal(m("2027-02-01", [["", ""]]), 0);
+  assert.equal(m("2027-02-01", [["", ""]]), 7);
 });
