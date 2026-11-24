@@ -127,6 +127,8 @@ export const VacationsPage: React.FC = () => {
   const helpEntry = getHelp(HELP_KEY);
 
   const [openInfo, setOpenInfo] = useState(false);
+  // Lo que va entre paréntesis en «Vacaciones | Campaña»: campañas en la lista, personas filtradas en el tablero.
+  const [cantidadCampania, setCantidadCampania] = useState<number | undefined>(undefined);
   /**
    * Las dos vistas de la misma cosa: las SOLICITUDES (lo que la gente pidió) y la GESTIÓN por persona
    * (cuántos días tiene cada una y cómo van sus saldos). Estaban en módulos distintos —solicitudes en
@@ -876,7 +878,7 @@ export const VacationsPage: React.FC = () => {
       // El contador y los botones del encabezado son de las SOLICITUDES: en la Gestión contarían otra
       // cosa (personas, no pedidos) y el resumen de estados no aplica. La Gestión trae su propio título
       // con su propio contador.
-      itemCount={activeTab === 'solicitudes' ? filteredVacations.length : undefined}
+      itemCount={activeTab === 'solicitudes' ? filteredVacations.length : activeTab === 'campania' ? cantidadCampania : undefined}
       subtitle={activeTab === 'solicitudes' ? 'Gestión de solicitudes de vacaciones del personal' : undefined}
       faIcon={{ icon: faCalendar }}
       infoModal={{
@@ -954,7 +956,7 @@ export const VacationsPage: React.FC = () => {
       }
     >
       {activeTab === 'campania' ? (
-        <CampaniaTab />
+        <CampaniaTab onCantidad={setCantidadCampania} />
       ) : activeTab === 'plan' ? (
         <PlanesPorProyectoTab />
       ) : activeTab === 'gestion' ? (

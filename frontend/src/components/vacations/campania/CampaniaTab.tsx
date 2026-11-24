@@ -63,7 +63,11 @@ const Alertas: React.FC<{ alertas: Alerta[] }> = ({ alertas }) =>
     </div>
   );
 
-export const CampaniaTab: React.FC = () => {
+/**
+ * `onCantidad`: lo que va entre paréntesis en el título de la página (23/11/2026, pedido del usuario). En la lista,
+ * cuántas campañas; en el tablero, cuántas personas se están mostrando con los filtros aplicados.
+ */
+export const CampaniaTab: React.FC<{ onCantidad?: (n: number | undefined) => void }> = ({ onCantidad }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const campaniaId = new URLSearchParams(location.search).get("campaniaId") || "";
@@ -73,13 +77,16 @@ export const CampaniaTab: React.FC = () => {
     else q.delete("campaniaId");
     navigate({ search: q.toString() ? `?${q.toString()}` : "" });
   };
-  return campaniaId ? <TableroCampania id={campaniaId} onVolver={() => abrir("")} /> : <ListaCampanias onAbrir={abrir} />;
+  return campaniaId ? <TableroCampania id={campaniaId} onVolver={() => abrir("")} onCantidad={onCantidad} /> : <ListaCampanias onAbrir={abrir} onCantidad={onCantidad} />;
 };
 
 /* ─────────────────────────── Lista ─────────────────────────── */
 
-const ListaCampanias: React.FC<{ onAbrir: (id: string) => void }> = ({ onAbrir }) => {
+const ListaCampanias: React.FC<{ onAbrir: (id: string) => void; onCantidad?: (n: number | undefined) => void }> = ({ onAbrir, onCantidad }) => {
   const [campanias, setCampanias] = useState<Campania[] | null>(null);
+  useEffect(() => {
+    onCantidad?.(campanias ? campanias.length : undefined);
+  }, [campanias, onCantidad]);
   const [creando, setCreando] = useState(false);
   // La campaña a la que se le está cambiando la fecha límite (el lápiz de la fila), o null.
   const [editando, setEditando] = useState<Campania | null>(null);
@@ -387,7 +394,7 @@ const ContratoDeLaFila: React.FC<{ i: Invitacion }> = ({ i }) => {
   );
 };
 
-const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, onVolver }) => {
+const TableroCampania: React.FC<{ id: string; onVolver: () => void; onCantidad?: (n: number | undefined) => void }> = ({ id, onVolver, onCantidad }) => {
   const [datos, setDatos] = useState<Tablero | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
   /*
@@ -490,6 +497,10 @@ const TableroCampania: React.FC<{ id: string; onVolver: () => void }> = ({ id, o
       }),
     [datos, participacion, estados, tiposFiltro, vigencia, empresasFiltro, proyectosFiltro, acuse, cuenta, conAlertas, busqueda],
   );
+  // El número del título: las que se ven con los filtros aplicados.
+  useEffect(() => {
+    onCantidad?.(datos ? filas.length : undefined);
+  }, [datos, filas, onCantidad]);
   // Las opciones de cada filtro salen de lo que hay en la campaña, con cuántas personas tiene cada una.
   const opciones = useMemo(() => {
     const contar = (valores: string[]): FilterOption[] => {
