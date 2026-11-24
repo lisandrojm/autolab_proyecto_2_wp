@@ -20,6 +20,8 @@ import { contratosPorVencerAPI } from "../../../../api/contratosPorVencer";
 import { MOBILE_ACTIVITY_COMPLIANCE, MOBILE_ACTIVITY_LOGS, MOBILE_APPROVALS, MOBILE_ORDERS, MOBILE_REGISTRO, MOBILE_USERS, MOBILE_VACATIONS } from "../../../../utils/permisosMobile";
 import { vacationsAPI } from "../../../../api/vacations";
 import { campaniasVacacionesAPI, type MiInvitacion } from "../../../../api/campaniasVacaciones";
+import { fechaCorta } from "@compartido/planVacaciones/fechas";
+import { OTORGADOS } from "@compartido/vacaciones/campania";
 import { esFechaBajaVigente } from "../../../../utils/contratoVigencia";
 
 /** La notificación destacada arriba de las tarjetas, apagada hasta que vivan en la campanita. Ver el render. */
@@ -38,6 +40,27 @@ const ORDEN_DE_TARJETAS: ViewType[] = ["user_history", "registro", "activity_log
 
 interface HomeProps {
   onNavigate: (view: ViewType) => void;
+}
+
+/**
+ * EL RENGLÓN BAJO «VACACIONES» CON LA CAMPAÑA EN CURSO (24/11/2026): qué hay que hacer y hasta cuándo, en
+ * palabras. Antes era un globo «24 d» en la esquina y se leía como 24 días de vacaciones. `urgente` lo pinta en
+ * ámbar: queda una semana o menos, vence hoy o mañana, venció, o hay un aviso sin acusar.
+ */
+function subtituloDeCampania(c: MiInvitacion): { texto: string; urgente: boolean } {
+  const inv = c.invitacion;
+  const hasta = fechaCorta(inv.fechaLimite || c.campania.fechaLimite);
+  if (c.puedeProponer) {
+    const faltan = c.diasParaLaFechaLimite;
+    if (faltan <= 0) return { texto: `Hoy vence el plazo para elegir tus fechas (${hasta})`, urgente: true };
+    if (faltan === 1) return { texto: `Mañana vence el plazo para elegir tus fechas (${hasta})`, urgente: true };
+    return { texto: `Elegí tus fechas: quedan ${faltan} días, hasta el ${hasta}`, urgente: faltan <= 7 };
+  }
+  if (inv.estado === "propuso_fechas") return { texto: "Propuesta enviada: esperando la aprobación", urgente: false };
+  if (inv.estado === "vencido_sin_definir") return { texto: "Venció el plazo para elegir: la empresa te propone las fechas", urgente: true };
+  if (OTORGADOS.includes(inv.estado) && !inv.acuseOtorgamientoAt) return { texto: "Llegó el aviso de tus vacaciones: acusá recibo", urgente: true };
+  if (c.turno && !c.turno.abierto) return { texto: `Todavía no es tu turno para elegir · plazo hasta el ${hasta}`, urgente: false };
+  return { texto: `Elegí tus fechas hasta el ${hasta}`, urgente: false };
 }
 
 export default function Home({ onNavigate }: HomeProps) {
@@ -91,8 +114,9 @@ export default function Home({ onNavigate }: HomeProps) {
   useRefrescoEnFoco(contarParaAprobar);
   /*
     CAMPAÑA DE GOCE (15/11/2026): la tarjeta «Elegí tus vacaciones» aparece sólo mientras hay algo que
-    hacer (elegir, esperar la aprobación, acusar recibo del aviso). Su número son los días que faltan
-    para la fecha límite.
+    hacer (elegir, esperar la aprobación, acusar recibo del aviso). Debajo del nombre dice qué hay que
+    hacer y hasta cuándo (`subtituloDeCampania`): antes era un globo «24 d» en la esquina, que se leía
+    como 24 días de vacaciones (pedido del usuario, 24/11/2026).
   */
   const [campania, setCampania] = useState<MiInvitacion | null>(null);
   const cargarCampania = useCallback(() => {
@@ -230,12 +254,12 @@ export default function Home({ onNavigate }: HomeProps) {
 
   /*
     UNA SOLA TARJETA «VACACIONES» (16/11/2026, pedido del usuario): con la campaña de goce en curso, la
-    tarjeta abre la campaña (con los días que faltan) y la de siempre no se muestra; desde la campaña se
-    llega a «Mis Vacaciones». Sin campaña, es la de siempre.
+    tarjeta abre la campaña (con qué hay que hacer y hasta cuándo, debajo del nombre) y la de siempre no
+    se muestra; desde la campaña se llega a «Mis Vacaciones». Sin campaña, es la de siempre.
   */
   const conCampania = puede(MOBILE_VACATIONS) && !!campania?.pendienteDeAccion;
   if (conCampania) {
-    quickActions.push({ icon: faUmbrellaBeach, title: "Vacaciones", view: "campania" as ViewType, disabled: false, badge: campania!.puedeProponer ? `${Math.max(0, campania!.diasParaLaFechaLimite)} d` : undefined });
+    quickActions.push({ icon: faUmbrellaBeach, title: "Vacaciones", view: "campania" as ViewType, disabled: false, subtitulo: subtituloDeCampania(campania!) });
   }
 
   if (puede(MOBILE_VACATIONS) && !conCampania) {
@@ -385,7 +409,13 @@ export default function Home({ onNavigate }: HomeProps) {
               */}
               <FontAwesomeIcon icon={action.icon} className={`h-4 w-4 shrink-0 ${action.disabled ? "text-slate-400 dark:text-slate-500" : "text-primary"}`} />
               {/* Con contador, el título deja libre la esquina: si no, un nombre largo le pasa por debajo. */}
-              <h2 className={`min-w-0 break-words text-[15px] font-bold leading-tight sm:text-base text-slate-900 dark:text-slate-100 ${(action as any).badge ? "pr-8" : (action as any).nuevos > 0 ? "pr-5" : ""}`}>{action.title}</h2>
+              <div className="min-w-0 flex-1">
+                <h2 className={`min-w-0 break-words text-[15px] font-bold leading-tight sm:text-base text-slate-900 dark:text-slate-100 ${(action as any).badge ? "pr-8" : (action as any).nuevos > 0 ? "pr-5" : ""}`}>{action.title}</h2>
+                {/* Un renglón que dice qué hay que hacer y hasta cuándo (la campaña de goce): en ámbar cuando apura. */}
+                {(action as any).subtitulo && (
+                  <p className={`mt-0.5 text-[11px] leading-snug ${(action as any).subtitulo.urgente ? "font-semibold text-amber-700 dark:text-amber-300" : "text-slate-500 dark:text-slate-400"}`}>{(action as any).subtitulo.texto}</p>
+                )}
+              </div>
 
               {/*
                 CUÁNTO HAY SIN MIRAR: EN LA ESQUINA, CHICO Y VERDE.
