@@ -2353,10 +2353,15 @@ export const NewsReportsModal: React.FC<NewsReportsModalProps> = ({ isOpen, onCl
                     <FontAwesomeIcon icon={faFilter} />
                     {/* Con rótulo: un embudo solo obliga a adivinar, y este botón esconde siete filtros. */}
                     <span>Filtros</span>
-                    {/* CUÁNTOS FILTROS HAY PUESTOS: por grupo (proyectos, tipo, modalidad…), no por opción; el mismo globo que el botón de filtros del resto de la app. */}
-                    {filtrosActivos > 0 && (
-                      <span title={`${filtrosActivos} filtro(s) aplicado(s)`} className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center shadow">
-                        {filtrosActivos}
+                    {/*
+                      EL GLOBO SUMA TODO LO FILTRADO (25/11/2026, pedido del usuario): cada proyecto, tipo o modalidad
+                      sacado, cada rol, área o turno elegido y cada llave puesta, lo mismo que los chips de arriba del
+                      reporte. Con tres proyectos sacados dice 3, no 1 (un grupo). El mismo globo que el botón de filtros
+                      del resto de la app.
+                    */}
+                    {chipsDeFiltros.length > 0 && (
+                      <span title={`${chipsDeFiltros.length} filtrado(s) en ${filtrosActivos} filtro(s)`} className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center shadow">
+                        {chipsDeFiltros.length}
                       </span>
                     )}
                   </button>
