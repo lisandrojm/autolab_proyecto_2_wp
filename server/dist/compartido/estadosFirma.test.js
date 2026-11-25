@@ -3,7 +3,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { estadoPermitidoParaTipo, esEstadoDeFirma, pareceEstadoDeFirma, quedaContratadoAlCrearse, tipoEnviaAFirmar } from "./estadosFirma.js";
+import { estadoPermitidoParaTipo, esEstadoDeFirma, pareceEstadoDeFirma, quedaContratadoAlCrearse, tipoEnviaAFirmar, tipoValidaCuit } from "./estadosFirma.js";
 const SIN_FIRMA = { requiereFirma: false, requiereFirmaRelease: false, requiereFirmaAlta: false };
 const FIRMA = { data: { vinculadoAFirma: true } };
 const DISPONIBLE = { data: {} };
@@ -41,6 +41,15 @@ describe("un contrato nuevo queda contratado al crearse sólo si no tiene nada q
     const NADA_A_FIRMAR = { requiereFirma: false, requiereFirmaRelease: false, requiereFirmaAlta: false };
     it("Servicios (constancia de CUIT) que no manda nada a firmar → NO: tiene que validarse el CUIT antes de llegar a Contratos", () => {
         assert.equal(quedaContratadoAlCrearse(NADA_A_FIRMAR, "constancia_cuit"), false);
+    });
+    it("Servicios con «Valida el CUIT en ARCA antes de Contratos» apagado en el tipo → SÍ, como antes del 14/11 (25/11/2026)", () => {
+        assert.equal(quedaContratadoAlCrearse({ ...NADA_A_FIRMAR, validaCuit: false }, "constancia_cuit"), true);
+        assert.equal(tipoValidaCuit({ validaCuit: false }), false);
+        assert.equal(tipoValidaCuit({}), true);
+        // Si además manda algo a firmar, sigue el circuito igual.
+        assert.equal(quedaContratadoAlCrearse({ ...NADA_A_FIRMAR, requiereFirma: true, validaCuit: false }, "constancia_cuit"), false);
+        // Con alta temprana el check no cuenta: el alta se hace igual.
+        assert.equal(quedaContratadoAlCrearse({ ...NADA_A_FIRMAR, validaCuit: false }, "alta_temprana_afip"), false);
     });
     it("con alta temprana de ARCA → no (lleva el alta), firme o no la constancia", () => {
         assert.equal(quedaContratadoAlCrearse(NADA_A_FIRMAR, "alta_temprana_afip"), false);

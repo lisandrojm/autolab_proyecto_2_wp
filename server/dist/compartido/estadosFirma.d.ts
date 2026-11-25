@@ -13,6 +13,8 @@ export interface TipoParaFirma {
     requiereFirmaRelease?: boolean | null;
     requiereFirmaAlta?: boolean | null;
     generaAlta?: boolean | null;
+    /** «Valida el CUIT en ARCA antes de Contratos» (sólo cuenta con constancia de CUIT). Ausente = sí, como en el modelo. */
+    validaCuit?: boolean | null;
 }
 /** ¿El tipo manda a firmar algo? La firma del alta sólo cuenta si el tipo genera alta (como se muestra el check). */
 export declare function tipoEnviaAFirmar(t: TipoParaFirma | null | undefined): boolean;
@@ -26,9 +28,16 @@ export declare function tipoEnviaAFirmar(t: TipoParaFirma | null | undefined): b
  *     no se firme nada, pasa por Trámite impositivo › Constancia de CUIT y no llega a Contratos hasta que
  *     el Padrón de ARCA diga que el CUIT está activo. A un CUIT que da mal no se le puede facturar. Antes
  *     estos contratos nacían contratados y el CUIT no lo validaba nadie.
+ *     SALVO QUE EL TIPO DIGA QUE NO (25/11/2026, «Valida el CUIT en ARCA antes de Contratos» apagado):
+ *     Servicios Adicional e Intercambio son para quien ya tiene una Jornada vigente; nadie factura, y el
+ *     padrón puede dar inactivo a alguien que sólo está en relación de dependencia. Ese contrato quedaba
+ *     en el Paso 2 para siempre. Con el check apagado nace en Contratos, como antes del 14/11. El check
+ *     va en el tipo y no en el estado porque «Servicios» lo comparten varios tipos y sólo algunos lo saltean.
  * Validada la constancia, lo que no se firma va a Contratos sin pasar por Generar Documentos (eso no cambia).
  */
 export declare function quedaContratadoAlCrearse(tipo: TipoParaFirma | null | undefined, tipoImpositivo: string | null | undefined): boolean;
+/** ¿El tipo valida el CUIT en ARCA antes de Contratos? Ausente = sí: sólo se saltea si alguien lo apagó. */
+export declare const tipoValidaCuit: (t: TipoParaFirma | null | undefined) => boolean;
 export interface EstadoParaFirma {
     data?: {
         vinculadoAFirma?: boolean | null;

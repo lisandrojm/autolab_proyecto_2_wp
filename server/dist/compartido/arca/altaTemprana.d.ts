@@ -37,6 +37,10 @@ type EstadoConTramite = Pick<InfoItem, 'name'> & {
  * el `tipoImpositivo` viejo en la base, y mirar solo el trámite lo daría por vigente.
  */
 export declare const estadoGeneraAltaTemprana: (estado: EstadoConTramite | null | undefined) => boolean;
+/** El otro trámite impositivo: la constancia de CUIT (Servicios). */
+export declare const TRAMITE_CONSTANCIA_CUIT = "constancia_cuit";
+/** `true` si el estado es impositivo Y su trámite es constancia de CUIT: ahí el tipo puede apagar «Valida el CUIT en ARCA antes de Contratos». */
+export declare const estadoPideConstanciaCuit: (estado: EstadoConTramite | null | undefined) => boolean;
 /**
  * El estado impositivo elegido entre un conjunto de ids. Hay uno solo por diseño.
  *

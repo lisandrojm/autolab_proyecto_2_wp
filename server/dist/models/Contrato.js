@@ -17,6 +17,7 @@ const contratoSchema = new Schema({
         requiereFirma: { type: Boolean, default: true },
         requiereFirmaRelease: { type: Boolean, default: true },
         requiereFirmaAlta: { type: Boolean, default: true },
+        validaCuit: { type: Boolean, default: true },
         afipModalidadContrato: { type: String },
         afipTipoServicio: { type: String },
         afipActividad: { type: String },

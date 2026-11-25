@@ -27,15 +27,24 @@ export function tipoEnviaAFirmar(t) {
  *     no se firme nada, pasa por Trámite impositivo › Constancia de CUIT y no llega a Contratos hasta que
  *     el Padrón de ARCA diga que el CUIT está activo. A un CUIT que da mal no se le puede facturar. Antes
  *     estos contratos nacían contratados y el CUIT no lo validaba nadie.
+ *     SALVO QUE EL TIPO DIGA QUE NO (25/11/2026, «Valida el CUIT en ARCA antes de Contratos» apagado):
+ *     Servicios Adicional e Intercambio son para quien ya tiene una Jornada vigente; nadie factura, y el
+ *     padrón puede dar inactivo a alguien que sólo está en relación de dependencia. Ese contrato quedaba
+ *     en el Paso 2 para siempre. Con el check apagado nace en Contratos, como antes del 14/11. El check
+ *     va en el tipo y no en el estado porque «Servicios» lo comparten varios tipos y sólo algunos lo saltean.
  * Validada la constancia, lo que no se firma va a Contratos sin pasar por Generar Documentos (eso no cambia).
  */
 export function quedaContratadoAlCrearse(tipo, tipoImpositivo) {
     if (!tipo)
         return false;
-    if (tipoImpositivo === "alta_temprana_afip" || tipoImpositivo === "constancia_cuit")
+    if (tipoImpositivo === "alta_temprana_afip")
+        return false;
+    if (tipoImpositivo === "constancia_cuit" && tipoValidaCuit(tipo))
         return false;
     return !tipoEnviaAFirmar({ ...tipo, generaAlta: false });
 }
+/** ¿El tipo valida el CUIT en ARCA antes de Contratos? Ausente = sí: sólo se saltea si alguien lo apagó. */
+export const tipoValidaCuit = (t) => t?.validaCuit !== false;
 /** Un impositivo nunca es de firma: es el trámite de ARCA, no lo que firma la persona. */
 export const esEstadoDeFirma = (e) => e?.data?.vinculadoAFirma === true && e?.data?.esImpositivo !== true;
 /** ¿Se le puede asignar este estado a un tipo con estos checks? */

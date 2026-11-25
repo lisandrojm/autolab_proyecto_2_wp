@@ -372,6 +372,8 @@ export interface ContratoItem {
         requiereFirmaRelease?: boolean;
         /** «Se envía a firmar el alta de ARCA» (sólo con alta temprana). Ausente = sí. */
         requiereFirmaAlta?: boolean;
+        /** «Valida el CUIT en ARCA antes de Contratos» (sólo con constancia de CUIT). Ausente = sí. Ver `estadosFirma.ts`. */
+        validaCuit?: boolean;
         /** Códigos ARCA para el TXT de Alta masiva (específicos de convenio/modalidad). */
         afipModalidadContrato?: string;
         afipTipoServicio?: string;

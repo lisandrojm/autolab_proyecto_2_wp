@@ -12,6 +12,8 @@ export declare function estadoContratado(): Promise<IInfo | null>;
  *
  * DESDE EL 14/11/2026 LOS DE SERVICIOS (constancia de CUIT) NO: aunque no firmen nada pasan por Trámite
  * impositivo › Constancia de CUIT, y recién con el CUIT validado van a Contratos (`destinoSiNoSeFirma`).
+ * Salvo que el tipo tenga apagado «Valida el CUIT en ARCA antes de Contratos» (25/11/2026): Servicios
+ * Adicional e Intercambio, donde nadie factura. Ver `quedaContratadoAlCrearse`.
  *
  * Si genera alta lo dice el estado impositivo que ya trae el contrato (el de su plantilla): el
  * `generaAlta` guardado en el tipo quedó viejo, ahora lo decide ese estado (ver ContractTypesTab).

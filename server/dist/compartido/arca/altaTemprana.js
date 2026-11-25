@@ -30,6 +30,10 @@ export const TRAMITE_ALTA_TEMPRANA = 'alta_temprana_afip';
  * el `tipoImpositivo` viejo en la base, y mirar solo el trámite lo daría por vigente.
  */
 export const estadoGeneraAltaTemprana = (estado) => !!estado?.data?.esImpositivo && estado.data.tipoImpositivo === TRAMITE_ALTA_TEMPRANA;
+/** El otro trámite impositivo: la constancia de CUIT (Servicios). */
+export const TRAMITE_CONSTANCIA_CUIT = 'constancia_cuit';
+/** `true` si el estado es impositivo Y su trámite es constancia de CUIT: ahí el tipo puede apagar «Valida el CUIT en ARCA antes de Contratos». */
+export const estadoPideConstanciaCuit = (estado) => !!estado?.data?.esImpositivo && estado.data.tipoImpositivo === TRAMITE_CONSTANCIA_CUIT;
 /**
  * El estado impositivo elegido entre un conjunto de ids. Hay uno solo por diseño.
  *
